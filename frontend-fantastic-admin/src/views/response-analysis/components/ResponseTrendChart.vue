@@ -248,6 +248,14 @@ function formatBucket(bucket: string) {
   border-radius: var(--mrr-radius-pill);
 }
 
+/* Chrome 86 回退：小节标题胶囊的底色与描边不能一起失效。 */
+@supports not (color: color-mix(in srgb, #000 50%, #fff)) {
+  .section-heading small {
+    background: var(--mrr-tone-primary-soft);
+    border-color: var(--mrr-tone-primary-border);
+  }
+}
+
 @media (max-width: 900px) {
   .chart-overview {
     grid-template-columns: repeat(2, minmax(0, 1fr));

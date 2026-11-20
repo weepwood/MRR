@@ -170,4 +170,12 @@ onBeforeUnmount(() => {
   border: 1px solid color-mix(in srgb, var(--el-color-danger) 35%, var(--mrr-navigation-border));
   border-radius: 999px;
 }
+
+/* Chrome 86 回退：开发者模式徽标是「当前处于危险模式」的唯一视觉信号。 */
+@supports not (color: color-mix(in srgb, #000 50%, #fff)) {
+  .developer-mode-badge {
+    background: rgb(209 60 60 / 12%);
+    border-color: rgb(209 60 60 / 40%);
+  }
+}
 </style>

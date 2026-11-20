@@ -828,6 +828,51 @@ watch(storageKey, loadPreferences, { immediate: true })
   --widget-border: color-mix(in srgb, var(--mrr-tone-violet) 26%, var(--mrr-border));
 }
 
+/*
+ * Chrome 86 回退：widget 的着色底面与描边是工作台上「这个区块属于哪类」的
+ * 分层实色底信号，不能随 color-mix 一起失效。tone-soft / tone-border 在
+ * browser-compatibility.css 已有静态定义，86 上可直接落到具体色值。
+ */
+@supports not (color: color-mix(in srgb, #000 50%, #fff)) {
+  .dashboard-widget--color-blue {
+    --widget-surface: var(--mrr-tone-primary-soft);
+    --widget-border: var(--mrr-tone-primary-border);
+  }
+
+  .dashboard-widget--color-green {
+    --widget-surface: var(--mrr-tone-success-soft);
+    --widget-border: var(--mrr-tone-success-border);
+  }
+
+  .dashboard-widget--color-orange {
+    --widget-surface: var(--mrr-tone-warning-soft);
+    --widget-border: var(--mrr-tone-warning-border);
+  }
+
+  .dashboard-widget--color-red {
+    --widget-surface: var(--mrr-tone-danger-soft);
+    --widget-border: var(--mrr-tone-danger-border);
+  }
+
+  .dashboard-widget--color-purple {
+    --widget-border: var(--mrr-tone-violet-border);
+  }
+
+  .dashboard-widget:hover {
+    border-color: var(--widget-accent);
+  }
+
+  .dashboard-widget__icon,
+  .widget-manager-item__icon {
+    background: var(--widget-surface);
+    border: 1px solid var(--widget-border);
+  }
+
+  .pin-badge {
+    background: var(--widget-surface);
+  }
+}
+
 .dashboard-widget--small {
   grid-row: span 1;
   grid-column: span 1;
@@ -993,7 +1038,9 @@ watch(storageKey, loadPreferences, { immediate: true })
   color: var(--mrr-muted-foreground);
 }
 
-.dashboard-widget--small .dashboard-widget__footer {
+/* 小卡高度有限：描述与「进入模块」暗示二选一，保留暗示以保证全部卡片
+ * 的可点性提示一致（此前 small 隐藏 footer 导致 2/6 卡无入口暗示）。 */
+.dashboard-widget--small .dashboard-widget__body p {
   display: none;
 }
 

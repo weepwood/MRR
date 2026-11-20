@@ -80,6 +80,9 @@ const countText = computed(() => Number(props.count ?? 0).toLocaleString('zh-CN'
 
 .mrr-data-table-panel__content {
   min-width: 0;
+
+  /* 表格自带圆角边框（元素自身 border 绘制），与卡片外框之间留出呼吸间隙。 */
+  padding: 12px 16px 16px;
   overflow: hidden;
 }
 
@@ -104,6 +107,10 @@ const countText = computed(() => Number(props.count ?? 0).toLocaleString('zh-CN'
 @media (max-width: 760px) {
   .mrr-data-table-panel__filters {
     padding: var(--mrr-space-3) var(--mrr-space-3) 0;
+  }
+
+  .mrr-data-table-panel__content {
+    padding: var(--mrr-space-3);
   }
 
   .mrr-data-table-panel__pagination {

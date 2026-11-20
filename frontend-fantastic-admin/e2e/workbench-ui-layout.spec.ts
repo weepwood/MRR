@@ -76,6 +76,7 @@ for (const theme of ['light', 'dark']) {
     await page.getByRole('textbox', { name: '病案查询值', exact: true }).fill(archive.bah)
     await page.getByRole('textbox', { name: '病案查询值', exact: true }).press('Enter')
     await expect(page.getByText('合成布局示例', { exact: true }).last()).toBeVisible()
+    await expect(page.locator('.archive-detail-stack .mrr-status-tag--success').filter({ hasText: '一致' })).toHaveCount(1)
     await expect.poll(() => page.locator('.relation-workbench').evaluate(element => element.scrollWidth <= element.clientWidth + 1)).toBe(true)
     await page.getByRole('tab', { name: '检查与异常', exact: true }).click()
     await page.locator('.quality-stack').getByRole('button', { name: /更多/ }).click()
@@ -86,3 +87,26 @@ for (const theme of ['light', 'dark']) {
     await expect.poll(() => drawer.evaluate(element => element.getBoundingClientRect().right <= document.documentElement.clientWidth + 1)).toBe(true)
   })
 }
+
+test('候选病案可通过键盘操作查看关系，并显示匹配方式', async ({ page }) => {
+  const candidates = [
+    { id: 91001, bah: '000123', matchType: 'EXACT' },
+    { id: 91002, bah: '123', matchType: 'FORMAT_ONLY' },
+  ]
+  await page.route('**/api/v1/system/data-relations/archives/**', async (route) => {
+    const data = route.request().url().includes('/search')
+      ? candidates
+      : { archive: candidates[1], statistics: [], patients: [], boxes: [], scanSummary: {}, scanSamples: [], comparisons: [], warnings: [] }
+    await route.fulfill({ json: { code: 200, data } })
+  })
+  await page.getByRole('tab', { name: '病案关系查询', exact: true }).click()
+  const input = page.getByRole('textbox', { name: '病案查询值', exact: true })
+  await input.fill('000123')
+  await input.press('Enter')
+  await expect(page.getByText('格式差异（FORMAT_ONLY）', { exact: true })).toBeVisible()
+  const action = page.getByRole('button', { name: '查看病案主档 91002 的关系' })
+  await action.focus()
+  await page.keyboard.press('Enter')
+  await expect(page.getByText('病案主档 #91002', { exact: true })).toBeVisible()
+  await expect(page.locator('.archive-header')).toContainText('病案号（BAH）：123')
+})

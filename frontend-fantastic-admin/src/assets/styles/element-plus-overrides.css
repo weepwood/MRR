@@ -347,8 +347,13 @@ body .el-button--info.is-plain:not(.is-disabled):hover {
   border-radius: var(--mrr-radius-lg);
 }
 
+/* 用 .el-select .el-select__wrapper 提高优先级：EP 按需样式注入晚于本文件，
+ * 单类选择器会被其自带的 4px 圆角与 --el-fill-color-blank 底色覆盖，导致控件
+ * 不响应 --mrr-control-radius / --mrr-control-bg 令牌（与输入框底色不一致）。 */
 .el-select .el-select__wrapper {
   padding-block: 4px;
+  background: var(--mrr-control-bg);
+  border-radius: var(--mrr-control-radius);
 }
 
 .el-input__wrapper:hover,
@@ -439,6 +444,7 @@ body .el-button--info.is-plain:not(.is-disabled):hover {
 }
 
 .el-input.is-disabled .el-input__wrapper,
+.el-select .el-select__wrapper.is-disabled,
 .el-select__wrapper.is-disabled,
 .el-textarea.is-disabled .el-textarea__inner,
 .el-input-number.is-disabled {
@@ -527,6 +533,23 @@ body .el-button--info.is-plain:not(.is-disabled):hover {
 .el-popper.is-light .el-popper__arrow::before {
   background: var(--mrr-popover);
   border-color: var(--mrr-border);
+}
+
+/*
+ * ===== Messages and notifications =====
+ * notify() 统一走 ElMessage（顶部居中）；此段让消息/通知与全站圆角、阴影令牌一致。
+ * EP 按需样式注入晚于本文件，需 body 前缀提权（与上方桥接惯例相同）。
+ */
+body .el-message {
+  border-color: var(--mrr-border);
+  border-radius: var(--mrr-radius-md);
+  box-shadow: var(--mrr-shadow-md);
+}
+
+body .el-notification {
+  border-color: var(--mrr-border);
+  border-radius: var(--mrr-radius-lg);
+  box-shadow: var(--mrr-shadow-lg);
 }
 
 @media (max-width: 760px) {
@@ -635,10 +658,57 @@ body .el-table {
   background: var(--mrr-card);
 }
 
-/* 圆角表格保留横向边界和列间分隔，移除容易在裁切时露出直角的左右外框。 */
+/*
+ * 圆角表格的外框。
+ *
+ * Element Plus 用绝对定位的矩形线段拼出 `el-table--border` 外框：顶边是
+ * .el-table__inner-wrapper::after、底边是 ::before、左右是本元素的
+ * ::before/::after，固定列另有 border-*-patch。圆角表格走 overflow: hidden
+ * 的圆角裁切路径，这些直线段的两端在四角圆弧区域被裁掉，表现为四角边框
+ * 缺一截，且全局圆角（--radius）越大越明显。
+ *
+ * 解法是改由元素自身 border 绘制外框——自身 border 天然跟随 border-radius
+ * 弯曲——矩形线段与贴边的单元格边框全部退场，避免四角缺边或与外框叠成
+ * 2px。这里只依赖 border 与 display，不涉及 color-mix，Chrome 86 可用。
+ */
+body .el-table--border {
+  border: 1px solid var(--el-table-border-color);
+}
+
+/* Element Plus 默认 .el-table--fit 会清掉元素的 bottom/right border，这里恢复。 */
+body .el-table--border.el-table--fit {
+  border-right: 1px solid var(--el-table-border-color);
+  border-bottom: 1px solid var(--el-table-border-color);
+}
+
 body .el-table--border::before,
-body .el-table--border::after {
+body .el-table--border::after,
+body .el-table--border .el-table__inner-wrapper::before,
+body .el-table--border .el-table__inner-wrapper::after {
   display: none;
+}
+
+/*
+ * 最后一行的下边框与外框相邻，交给外框绘制，避免叠成 2px。
+ * 有 footer 时例外：body 与 footer 的分隔线正是 body 末行 td 的
+ * border-bottom（footer 单元格没有 border-top），不能用外框替代，
+ * 用 :not(.has-footer) 保留它（简单选择器的 :not() Chrome 86 可用）。
+ */
+body .el-table--border:not(.has-footer) .el-table__body-wrapper tr:last-child td.el-table__cell,
+body .el-table--border .el-table__footer-wrapper tr:last-child td.el-table__cell {
+  border-bottom: 0;
+}
+
+/* 固定列布局的边框补丁是同样的矩形线段，外框已由元素 border 覆盖。 */
+body .el-table--border .el-table__border-left-patch,
+body .el-table--border .el-table__border-right-patch,
+body .el-table--border .el-table__border-bottom-patch {
+  display: none;
+}
+
+/* 滚动条占位列的右边框与外框相邻，同样交给外框绘制。 */
+body .el-table--border .el-table__cell.gutter {
+  border-right: 0;
 }
 
 body .el-table--border .el-table__header-wrapper tr > th.el-table__cell:last-child,
@@ -895,9 +965,17 @@ body .el-descriptions__table {
 }
 
 @media (max-width: 640px) {
+  /*
+   * 窄屏弹窗定位。
+   *
+   * 不能用固定 `margin-inline`：各页面用 `width="min(900px, 92vw)"` 指定宽度，
+   * 而 `vw` 含垂直滚动条宽度，容器实际可用宽度比 `100vw` 少约 10px。此时
+   * 「92vw + 左右各 12px」会超出容器，弹窗内出现 4px 横向滚动条。
+   * 改为 auto 居中：宽度被 `max-width` 约束时也只会变小，不会溢出。
+   */
   .el-dialog {
     max-width: calc(100vw - 24px);
-    margin-inline: 12px;
+    margin-inline: auto;
   }
 }
 
@@ -943,4 +1021,152 @@ body .el-descriptions__table {
   .el-button--danger:focus-visible {
     border-color: var(--mrr-destructive);
   }
+}
+
+/*
+ * 圆角桥接：Element Plus 的按需样式可能在全局样式之后注入。
+ * 通过控件级变量与更具体的选择器保持尺寸变体，同时保留组合控件的接缝。
+ * 不在内部内容节点（如 el-tag__content）画背景或圆角。
+ */
+body .el-input,
+body .el-textarea {
+  --el-input-border-radius: var(--mrr-control-radius);
+}
+
+body .el-input--small {
+  --el-input-border-radius: var(--mrr-radius-sm);
+}
+
+body .el-input--large {
+  --el-input-border-radius: var(--mrr-radius-lg);
+}
+
+body .el-input .el-input__wrapper,
+body .el-textarea .el-textarea__inner,
+body .el-select .el-select__wrapper,
+body .el-date-editor.el-input__wrapper {
+  border-radius: var(--mrr-control-radius);
+}
+
+body .el-input--small .el-input__wrapper,
+body .el-select--small .el-select__wrapper,
+body .el-date-editor.el-range-editor--small {
+  border-radius: var(--mrr-radius-sm);
+}
+
+body .el-input--large .el-input__wrapper,
+body .el-select--large .el-select__wrapper,
+body .el-date-editor.el-range-editor--large {
+  border-radius: var(--mrr-radius-lg);
+}
+
+/* 拼接输入框的内部相邻边必须为直角，外缘由 EP 读取同一输入圆角变量。 */
+body .el-input-group--prepend > .el-input__wrapper {
+  border-top-left-radius: 0;
+  border-bottom-left-radius: 0;
+}
+
+body .el-input-group--append > .el-input__wrapper {
+  border-top-right-radius: 0;
+  border-bottom-right-radius: 0;
+}
+
+body .el-input-number {
+  --el-border-radius-base: var(--mrr-control-radius);
+
+  border-radius: var(--el-border-radius-base);
+}
+
+body .el-input-number--small {
+  --el-border-radius-base: var(--mrr-radius-sm);
+}
+
+body .el-input-number--large {
+  --el-border-radius-base: var(--mrr-radius-lg);
+}
+
+body .el-radio-group {
+  --el-border-radius-base: var(--mrr-control-radius);
+}
+
+body .el-radio-button--small {
+  --el-border-radius-base: var(--mrr-radius-sm);
+}
+
+body .el-radio-button--large {
+  --el-border-radius-base: var(--mrr-radius-lg);
+}
+
+body .el-tag {
+  --el-tag-border-radius: var(--mrr-radius-sm);
+
+  border-radius: var(--el-tag-border-radius);
+}
+
+/* 胶囊和正圆是明确的几何变体，不跟随矩形控件圆角。 */
+body .el-tag.is-round {
+  border-radius: var(--el-tag-border-radius-rounded);
+}
+
+body .el-button.is-round {
+  border-radius: var(--mrr-radius-pill);
+}
+
+body .el-button.is-circle {
+  border-radius: 50%;
+}
+
+body .el-checkbox {
+  --el-checkbox-border-radius: min(4px, var(--mrr-radius-sm));
+}
+
+body .el-checkbox .el-checkbox__inner {
+  border-radius: var(--el-checkbox-border-radius);
+}
+
+/* 其他直接使用 Element Plus 局部固定圆角的控件。 */
+body .el-pagination {
+  --el-pagination-border-radius: var(--mrr-radius-sm);
+}
+
+body .el-pagination .btn-prev,
+body .el-pagination .btn-next,
+body .el-pagination .el-pager li {
+  border-radius: var(--mrr-radius-sm);
+}
+
+body .el-message-box {
+  border-radius: var(--mrr-radius-dialog);
+}
+
+/* 卡片式页签按方向保留与内容区相邻的直角。 */
+body .el-tabs--card > .el-tabs__header .el-tabs__nav {
+  border-radius: var(--mrr-control-radius) var(--mrr-control-radius) 0 0;
+}
+
+body .el-tabs--left.el-tabs--card > .el-tabs__header .el-tabs__nav {
+  border-radius: var(--mrr-control-radius) 0 0 var(--mrr-control-radius);
+}
+
+body .el-tabs--right.el-tabs--card > .el-tabs__header .el-tabs__nav {
+  border-radius: 0 var(--mrr-control-radius) var(--mrr-control-radius) 0;
+}
+
+body .el-tabs--bottom.el-tabs--card > .el-tabs__header .el-tabs__nav {
+  border-radius: 0 0 var(--mrr-control-radius) var(--mrr-control-radius);
+}
+
+/* 按钮组保留相邻边为直角，即使使用 round 变体也是如此。 */
+body .el-button-group > .el-button:first-child:not(:last-child) {
+  border-top-right-radius: 0;
+  border-bottom-right-radius: 0;
+}
+
+body .el-button-group > .el-button:last-child:not(:first-child) {
+  border-top-left-radius: 0;
+  border-bottom-left-radius: 0;
+}
+
+body .el-button-group > .el-button:not(:first-child):not(:last-child) {
+  border-radius: 0;
 }

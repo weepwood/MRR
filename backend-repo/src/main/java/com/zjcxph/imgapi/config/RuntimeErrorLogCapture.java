@@ -9,8 +9,13 @@ import org.slf4j.LoggerFactory;
 import org.springframework.context.SmartLifecycle;
 import org.springframework.stereotype.Component;
 
+/**
+ * 把 WARN/ERROR 日志实时捕获进运行错误中心的常驻挂载器。
+ *
+ * <p>原实现与运行日志 journal 功能互斥（开关二选一）；journal 链路已按 ADR-0008 取消，
+ * 本类成为错误中心唯一的数据来源，无条件生效。</p>
+ */
 @Component
-@org.springframework.boot.autoconfigure.condition.ConditionalOnProperty(name = "app.runtime-logs.enabled", havingValue = "false", matchIfMissing = true)
 public class RuntimeErrorLogCapture implements SmartLifecycle {
 
     private static final String APPENDER_NAME = "MRR_RUNTIME_ERROR_CAPTURE";

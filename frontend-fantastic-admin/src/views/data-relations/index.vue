@@ -23,7 +23,10 @@ import {
   runDataQualityChecks,
   searchDataRelationArchives,
 } from '@/api/modules/data-relations'
+import AppError from '@/components/AppError/index.vue'
 import MrrFilterActionButton from '@/components/MrrFilterActionButton/index.vue'
+import MrrSectionCard from '@/components/MrrSectionCard/index.vue'
+import MrrStatusTag from '@/components/MrrStatusTag/index.vue'
 import MrrTableActions from '@/components/MrrTableActions/index.vue'
 import { useTableActionLayout } from '@/composables/useTableActionLayout'
 import { formatDateTime } from '@/utils/display-format'
@@ -42,7 +45,12 @@ const issues = ref<DataQualityIssue[]>([])
 const searchType = ref('BAH')
 const searchValue = ref('')
 const searchResults = ref<ArchiveSearchResult[]>([])
-const selectedArchiveId = ref<number | null>(null)
+const selectedArchive = ref<ArchiveSearchResult | null>(null)
+const searchError = ref(false)
+const searchCompleted = ref(false)
+const detailError = ref(false)
+let searchVersion = 0
+let detailVersion = 0
 const relationDetail = ref<ArchiveRelationDetail | null>(null)
 const issueSeverity = ref('ALL')
 const issueKeyword = ref('')
@@ -135,7 +143,7 @@ function issueEntityId(issue: DataQualityIssue) {
 }
 
 function relationTagType(status: RelationCoverage['status']) {
-  if (status === 'UNKNOWN') return 'info'
+  if (status === 'UNKNOWN') return 'neutral'
   if (status === 'HEALTHY') return 'success'
   if (status === 'WARNING' || status === 'LEGACY') return 'warning'
   return 'danger'
@@ -144,7 +152,7 @@ function relationTagType(status: RelationCoverage['status']) {
 function comparisonTagType(status: ComparisonStatus) {
   if (status === 'EXACT') return 'success'
   if (status === 'FORMAT_ONLY' || status === 'NO_CANONICAL') return 'warning'
-  if (status === 'MISSING') return 'info'
+  if (status === 'MISSING') return 'neutral'
   return 'danger'
 }
 
@@ -194,35 +202,56 @@ async function searchArchives() {
     return
   }
 
+  const current = ++searchVersion
+  ++detailVersion
   searchLoading.value = true
+  detailLoading.value = false
+  searchError.value = false
+  searchCompleted.value = false
+  detailError.value = false
+  searchResults.value = []
   relationDetail.value = null
-  selectedArchiveId.value = null
+  selectedArchive.value = null
   try {
     const response = await searchDataRelationArchives(searchType.value, value, 20)
+    if (current !== searchVersion) return
     searchResults.value = response.data ?? []
+    searchCompleted.value = true
     if (searchResults.value.length === 1) {
       await openArchive(searchResults.value[0])
     }
-    else if (searchResults.value.length === 0) {
-      ElMessage.info('没有找到匹配的病案主档')
-    }
+  }
+  catch {
+    if (current === searchVersion) searchError.value = true
   }
   finally {
-    searchLoading.value = false
+    if (current === searchVersion) searchLoading.value = false
   }
 }
 
 async function openArchive(row: ArchiveSearchResult) {
-  selectedArchiveId.value = row.id
+  const current = ++detailVersion
+  selectedArchive.value = row
+  relationDetail.value = null
+  detailError.value = false
   detailLoading.value = true
   activeTab.value = 'archive'
   try {
     const response = await getArchiveRelationDetail(row.id)
-    relationDetail.value = response.data ?? null
+    if (current !== detailVersion) return
+    if (!response.data) throw new Error('Empty archive detail')
+    relationDetail.value = response.data
+  }
+  catch {
+    if (current === detailVersion) detailError.value = true
   }
   finally {
-    detailLoading.value = false
+    if (current === detailVersion) detailLoading.value = false
   }
+}
+
+function retryArchive() {
+  if (selectedArchive.value) void openArchive(selectedArchive.value)
 }
 
 async function runChecks() {
@@ -333,9 +362,7 @@ onMounted(loadDashboard)
                   <strong>{{ relation.label }}</strong>
                   <code>{{ relation.tableName }}</code>
                 </div>
-                <el-tag :type="relationTagType(relation.status)" effect="light">
-                  {{ relation.status }}
-                </el-tag>
+                <MrrStatusTag :label="relation.status" :tone="relationTagType(relation.status)" />
               </div>
               <p>{{ relation.relation }}</p>
               <div class="coverage-row">
@@ -386,9 +413,7 @@ onMounted(loadDashboard)
               </el-table-column>
               <el-table-column label="级别" width="100">
                 <template #default="{ row }">
-                  <el-tag :type="row.severity === 'CRITICAL' ? 'danger' : 'warning'">
-                    {{ row.severity }}
-                  </el-tag>
+                  <MrrStatusTag :label="row.severity" :tone="row.severity === 'CRITICAL' ? 'danger' : 'warning'" />
                 </template>
               </el-table-column>
               <el-table-column label="异常数量" width="130">
@@ -417,62 +442,82 @@ onMounted(loadDashboard)
 
       <el-tab-pane label="病案关系查询" name="archive">
         <div class="archive-stack">
-          <el-card shadow="never" class="section-card search-card">
+          <MrrSectionCard class="search-card" title="查找病案" description="选择编号类型，查询病案主档及其跨表关系。">
             <div class="search-row">
-              <el-select v-model="searchType" class="search-type" aria-label="查询类型">
-                <el-option label="病案主档 ID" value="ARCHIVE_ID" />
-                <el-option label="病案号 BAH" value="BAH" />
-                <el-option label="上架号 SJH" value="SJH" />
-              </el-select>
-              <el-input
-                v-model="searchValue"
-                aria-label="病案查询值"
-                clearable
-                placeholder="输入 archive_id、病案号或上架号"
-                @keyup.enter="searchArchives"
-              />
-              <MrrFilterActionButton action="search" :pending="searchLoading" :busy="searchLoading" type="primary" @click="searchArchives">
+              <div class="search-field search-field--type">
+                <label for="relation-search-type">查询类型</label>
+                <el-select id="relation-search-type" v-model="searchType" class="search-type" aria-label="查询类型">
+                  <el-option label="病案主档 ID" value="ARCHIVE_ID" />
+                  <el-option label="病案号 BAH" value="BAH" />
+                  <el-option label="上架号 SJH" value="SJH" />
+                </el-select>
+              </div>
+              <div class="search-field search-field--value">
+                <label for="relation-search-value">查询值</label>
+                <el-input
+                  id="relation-search-value"
+                  v-model="searchValue"
+                  aria-label="病案查询值"
+                  clearable
+                  placeholder="输入主档 ID、病案号或上架号"
+                  @keyup.enter="searchArchives"
+                />
+              </div>
+              <MrrFilterActionButton type="primary" action="search" :pending="searchLoading" :busy="searchLoading" @click="searchArchives">
                 查询
               </MrrFilterActionButton>
             </div>
-          </el-card>
+          </MrrSectionCard>
 
           <el-card v-if="searchResults.length" shadow="never" class="section-card">
             <template #header>
               <div class="card-header">
                 <div>
                   <strong>病案主档候选</strong>
-                  <span>精确匹配优先，补零差异会标记为 FORMAT_ONLY</span>
+                  <span>精确匹配优先；仅前导零差异标记为格式差异（FORMAT_ONLY）</span>
                 </div>
               </div>
             </template>
             <el-table :data="searchResults" highlight-current-row @row-click="openArchive">
-              <el-table-column prop="id" label="archive_id" width="120" />
-              <el-table-column prop="bah" label="BAH" width="130" />
-              <el-table-column prop="sjh" label="SJH" width="130" />
+              <el-table-column prop="id" label="主档 ID" width="120" />
+              <el-table-column prop="bah" label="病案号（BAH）" min-width="150" />
+              <el-table-column prop="sjh" label="上架号（SJH）" min-width="150" />
               <el-table-column prop="patientName" label="患者" width="120" />
               <el-table-column prop="department" label="科室" min-width="140" />
               <el-table-column prop="scanCount" label="扫描数" width="100" />
-              <el-table-column label="匹配方式" width="130">
+              <el-table-column label="匹配方式" min-width="180">
                 <template #default="{ row }">
                   <el-tag :type="row.matchType === 'EXACT' ? 'success' : 'warning'">
-                    {{ row.matchType }}
+                    {{ row.matchType === 'EXACT' ? '精确匹配（EXACT）' : row.matchType === 'FORMAT_ONLY' ? '格式差异（FORMAT_ONLY）' : row.matchType }}
                   </el-tag>
+                </template>
+              </el-table-column>
+              <el-table-column label="操作" width="110" fixed="right">
+                <template #default="{ row }">
+                  <el-button text type="primary" :aria-label="`查看病案主档 ${row.id} 的关系`" @click.stop="openArchive(row as ArchiveSearchResult)">
+                    查看关系
+                  </el-button>
                 </template>
               </el-table-column>
             </el-table>
           </el-card>
+          <AppError v-else-if="searchError" message="病案查询失败，请重试" @retry="searchArchives" />
+          <el-empty v-else-if="searchCompleted && !searchLoading" description="当前条件未找到病案主档" />
 
           <div v-loading="detailLoading" class="archive-detail-stack">
-            <template v-if="relationDetail">
+            <p v-if="detailLoading && selectedArchive" class="archive-detail-status" role="status">
+              正在加载病案主档 #{{ selectedArchive.id }} 的关系…
+            </p>
+            <AppError v-else-if="detailError" message="病案关系加载失败，请重试" @retry="retryArchive" />
+            <template v-else-if="relationDetail">
               <el-card shadow="never" class="section-card archive-header-card">
                 <div class="archive-header">
                   <div>
                     <span>病案主档 #{{ relationDetail.archive.id }}</span>
                     <h3>{{ relationDetail.archive.patientName || '未记录患者姓名' }}</h3>
                     <p>
-                      BAH：{{ relationDetail.archive.bah || '—' }} ·
-                      SJH：{{ relationDetail.archive.sjh || '—' }} ·
+                      病案号（BAH）：{{ relationDetail.archive.bah || '—' }} ·
+                      上架号（SJH）：{{ relationDetail.archive.sjh || '—' }} ·
                       科室：{{ relationDetail.archive.department || '—' }}
                     </p>
                   </div>
@@ -525,9 +570,7 @@ onMounted(loadDashboard)
                   <el-table-column prop="sourceValue" label="来源值" min-width="150" />
                   <el-table-column label="判断" width="140">
                     <template #default="{ row }">
-                      <el-tag :type="comparisonTagType(row.status)">
-                        {{ comparisonLabel(row.status) }}
-                      </el-tag>
+                      <MrrStatusTag :label="comparisonLabel(row.status) || row.status" :tone="comparisonTagType(row.status)" />
                     </template>
                   </el-table-column>
                 </el-table>
@@ -579,7 +622,7 @@ onMounted(loadDashboard)
                 </el-tab-pane>
               </el-tabs>
             </template>
-            <el-empty v-else description="查询并选择一份病案后查看跨表关系" />
+            <el-empty v-else-if="!searchLoading && !searchError && (!searchCompleted || searchResults.length)" description="查询并选择一份病案后查看跨表关系" />
           </div>
         </div>
       </el-tab-pane>
@@ -593,9 +636,7 @@ onMounted(loadDashboard)
                   <strong>检查规则结果</strong>
                   <span>关联、编号、文件元数据、重复扫描和迁移一致性</span>
                 </div>
-                <el-tag v-if="qualitySummary?.running" type="warning">
-                  检查运行中
-                </el-tag>
+                <MrrStatusTag v-if="qualitySummary?.running" label="检查运行中" tone="warning" />
               </div>
             </template>
             <el-table :data="checks" stripe empty-text="尚未执行数据质量检查">
@@ -609,9 +650,7 @@ onMounted(loadDashboard)
               </el-table-column>
               <el-table-column label="严重程度" width="120">
                 <template #default="{ row }">
-                  <el-tag :type="row.severity === 'CRITICAL' ? 'danger' : 'warning'">
-                    {{ row.severity }}
-                  </el-tag>
+                  <MrrStatusTag :label="row.severity" :tone="row.severity === 'CRITICAL' ? 'danger' : 'warning'" />
                 </template>
               </el-table-column>
               <el-table-column label="异常数" width="120">
@@ -652,9 +691,7 @@ onMounted(loadDashboard)
             <el-table :data="filteredIssues" stripe empty-text="当前没有异常样本">
               <el-table-column label="级别" width="95">
                 <template #default="{ row }">
-                  <el-tag :type="row.severity === 'CRITICAL' ? 'danger' : 'warning'">
-                    {{ row.severity === 'CRITICAL' ? '严重' : '警告' }}
-                  </el-tag>
+                  <MrrStatusTag :label="row.severity === 'CRITICAL' ? '严重' : '警告'" :tone="row.severity === 'CRITICAL' ? 'danger' : 'warning'" />
                 </template>
               </el-table-column>
               <el-table-column label="规则" min-width="250">
@@ -856,13 +893,42 @@ p {
   border-radius: var(--mrr-radius-card);
 }
 
-.search-row .el-input {
-  flex: 1;
+.search-row {
+  flex-wrap: wrap;
+  align-items: flex-end;
 }
 
-.search-type,
+.search-field {
+  display: grid;
+  gap: var(--mrr-space-1);
+  min-width: 0;
+}
+
+.search-field label {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--mrr-foreground);
+}
+
+.search-field--type {
+  flex: 0 1 180px;
+}
+
+.search-field--value {
+  flex: 1 1 240px;
+}
+
+.search-type {
+  width: 100%;
+}
+
 .severity-select {
   width: 180px;
+}
+
+.archive-detail-status {
+  margin: 0;
+  color: var(--mrr-muted-foreground);
 }
 
 .archive-header-card {
@@ -943,6 +1009,11 @@ p {
   .search-row {
     flex-direction: column;
     align-items: stretch;
+  }
+
+  .search-field--type,
+  .search-field--value {
+    flex: 0 1 auto;
   }
 
   .issue-filters {

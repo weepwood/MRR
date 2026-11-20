@@ -24,6 +24,7 @@ import AppEmpty from '@/components/AppEmpty/index.vue'
 import AppError from '@/components/AppError/index.vue'
 import AppLoading from '@/components/AppLoading/index.vue'
 import MrrFilterActionButton from '@/components/MrrFilterActionButton/index.vue'
+import MrrFilterBar from '@/components/MrrFilterBar/index.vue'
 import MrrTableActions from '@/components/MrrTableActions/index.vue'
 import { useTableActionLayout } from '@/composables/useTableActionLayout'
 import { actionDialog } from '@/ui/components/ActionDialog'
@@ -160,6 +161,9 @@ const metricCards = computed<MetricCard[]>(() => [
     icon: 'i-lucide:triangle-alert',
   },
 ])
+
+/* 空库/空筛态下数值指标全零时收纳指标区，为表格让出首屏（N5）。 */
+const hasMetricActivity = computed(() => metricCards.value.some(card => Number(card.value) > 0))
 
 function statusMeta(status?: string) {
   return statusOptions.find(item => item.value === status)
@@ -446,7 +450,7 @@ onMounted(refreshAll)
       </div>
     </header>
 
-    <section class="mrr-metric-grid">
+    <section v-if="hasMetricActivity" class="mrr-metric-grid">
       <MrrMetricCard
         v-for="card in metricCards"
         :key="card.label"
@@ -479,52 +483,49 @@ onMounted(refreshAll)
 
     <template v-if="activeView === 'records'">
       <el-card shadow="never" class="filter-card">
-        <div class="filter-grid">
-          <el-input
-            v-model="filters.keyword"
-            clearable
-            placeholder="综合搜索编号、箱号、状态或备注"
-            @keyup.enter="handleSearch"
-          >
-            <template #prefix>
-              <el-icon><Search /></el-icon>
-            </template>
-          </el-input>
-          <el-input
-            v-model="filters.bah"
-            clearable
-            placeholder="病案号"
-            @keyup.enter="handleSearch"
-          />
-          <el-input
-            v-model="filters.sjh"
-            clearable
-            placeholder="上架号"
-            @keyup.enter="handleSearch"
-          />
-          <el-input
-            v-model="filters.boxNo"
-            clearable
-            placeholder="实际箱号"
-            @keyup.enter="handleSearch"
-          />
-          <el-select v-model="filters.status" clearable placeholder="装箱状态">
-            <el-option
-              v-for="item in statusOptions"
-              :key="item.value"
-              :label="item.label"
-              :value="item.value"
-            />
-          </el-select>
-          <div class="filter-actions">
-            <MrrFilterActionButton action="search" :pending="loading" :busy="loading" type="primary" @click="handleSearch">
+        <!-- 筛选栏对齐用户管理页模式：无可见标签，控件 aria-label + 自描述占位符 -->
+        <MrrFilterBar embedded class="archive-filter-bar">
+          <div class="archive-filter__field archive-filter__keyword">
+            <el-input
+              v-model="filters.keyword"
+              clearable
+              aria-label="综合搜索"
+              placeholder="综合搜索编号、箱号、状态或备注"
+              @keyup.enter="handleSearch"
+            >
+              <template #prefix>
+                <el-icon><Search /></el-icon>
+              </template>
+            </el-input>
+          </div>
+          <div class="archive-filter__field">
+            <el-input v-model="filters.bah" clearable aria-label="病案号" placeholder="病案号" @keyup.enter="handleSearch" />
+          </div>
+          <div class="archive-filter__field">
+            <el-input v-model="filters.sjh" clearable aria-label="上架号" placeholder="上架号" @keyup.enter="handleSearch" />
+          </div>
+          <div class="archive-filter__field">
+            <el-input v-model="filters.boxNo" clearable aria-label="实际箱号" placeholder="实际箱号" @keyup.enter="handleSearch" />
+          </div>
+          <div class="archive-filter__field">
+            <el-select v-model="filters.status" clearable aria-label="装箱状态" placeholder="全部状态">
+              <el-option
+                v-for="item in statusOptions"
+                :key="item.value"
+                :label="item.label"
+                :value="item.value"
+              />
+            </el-select>
+          </div>
+          <template #actions>
+            <MrrFilterActionButton action="search" :pending="loading" :busy="loading" @click="handleSearch">
               查询
             </MrrFilterActionButton>
             <MrrFilterActionButton action="reset" :pending="loading" :busy="loading" @click="resetFilters">
               重置
             </MrrFilterActionButton>
-          </div>
-        </div>
+          </template>
+        </MrrFilterBar>
       </el-card>
 
       <el-card shadow="never" class="table-card">
@@ -610,24 +611,29 @@ onMounted(refreshAll)
 
     <template v-else>
       <el-card shadow="never" class="filter-card">
-        <div class="box-filter">
-          <el-input
-            v-model="boxKeyword"
-            clearable
-            placeholder="搜索箱号"
-            @keyup.enter="searchBoxes"
-          >
-            <template #prefix>
-              <el-icon><Search /></el-icon>
-            </template>
-          </el-input>
-          <MrrFilterActionButton action="search" :pending="loading" :busy="loading" type="primary" @click="searchBoxes">
-            查询
-          </MrrFilterActionButton>
-          <MrrFilterActionButton action="reset" :pending="loading" :busy="loading" @click="resetBoxSearch">
-            重置
-          </MrrFilterActionButton>
-        </div>
+        <MrrFilterBar embedded class="archive-filter-bar">
+          <div class="archive-filter__field archive-filter__keyword">
+            <el-input
+              v-model="boxKeyword"
+              clearable
+              aria-label="搜索箱号"
+              placeholder="搜索箱号"
+              @keyup.enter="searchBoxes"
+            >
+              <template #prefix>
+                <el-icon><Search /></el-icon>
+              </template>
+            </el-input>
+          </div>
+          <template #actions>
+            <MrrFilterActionButton action="search" :pending="loading" :busy="loading" @click="searchBoxes">
+              查询
+            </MrrFilterActionButton>
+            <MrrFilterActionButton action="reset" :pending="loading" :busy="loading" @click="resetBoxSearch">
+              重置
+            </MrrFilterActionButton>
+          </template>
+        </MrrFilterBar>
       </el-card>
 
       <el-card shadow="never" class="table-card">
@@ -782,8 +788,6 @@ h1 {
 }
 
 .header-actions,
-.filter-actions,
-.box-filter,
 .view-switcher {
   display: flex;
   gap: 12px;
@@ -805,19 +809,25 @@ h1 {
   color: var(--el-text-color-secondary);
 }
 
-.filter-grid {
+.archive-filter__field {
   display: grid;
-  grid-template-columns: minmax(240px, 1.5fr) repeat(4, minmax(140px, 1fr)) auto;
-  gap: 12px;
-  align-items: center;
+  flex: 0 1 190px;
+  width: 190px;
+  min-width: 0;
 }
 
-.box-filter {
-  max-width: 620px;
+.archive-filter__keyword {
+  flex: 1 1 320px;
+  width: auto;
+  min-width: 260px;
 }
 
-.box-filter :deep(.el-input) {
-  min-width: 320px;
+@media (max-width: 760px) {
+  .archive-filter__field,
+  .archive-filter__keyword {
+    flex: 1 1 100%;
+    width: 100%;
+  }
 }
 
 .table-card :deep(.el-card__body) {
@@ -880,35 +890,20 @@ h1 {
   width: 100%;
 }
 
-@media (max-width: 1200px) {
-  .filter-grid {
-    grid-template-columns: repeat(3, minmax(180px, 1fr));
-  }
-}
-
 @media (max-width: 720px) {
   .page-header,
   .view-switcher,
-  .header-actions,
-  .box-filter {
+  .header-actions {
     flex-direction: column;
     align-items: stretch;
   }
 
-  .filter-grid,
   .form-grid {
     grid-template-columns: 1fr;
   }
 
   .form-span {
     grid-column: auto;
-  }
-
-  .box-filter,
-  .box-filter :deep(.el-input) {
-    width: 100%;
-    min-width: 0;
-    max-width: none;
   }
 
   .pagination-bar {

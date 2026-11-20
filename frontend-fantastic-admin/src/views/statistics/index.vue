@@ -58,6 +58,13 @@ const summaryData = ref<SummaryData>({
   byType: [],
 })
 const dateSummaryData = ref<DateStatItem[]>([])
+
+/* 空库/空时间范围内数值指标全零时收纳指标区，为图表让出首屏（N5）。 */
+const hasMetricActivity = computed(() => [
+  summaryData.value.total?.totalRecords,
+  summaryData.value.total?.totalPages,
+  summaryData.value.uniqueBAHCount,
+].some(value => Number(value ?? 0) > 0))
 const statisticsListData = ref<StatisticsListResult>({
   total: 0,
   size: 100,
@@ -344,7 +351,7 @@ onMounted(refreshAll)
       </el-button>
     </div>
 
-    <section class="mrr-metric-grid" aria-label="核心统计指标">
+    <section v-if="hasMetricActivity" class="mrr-metric-grid" aria-label="核心统计指标">
       <MrrMetricCard
         label="总记录数"
         icon="i-lucide:layout-grid"
@@ -434,7 +441,7 @@ onMounted(refreshAll)
         />
         <el-select
           v-model="listSearchType"
-          placeholder="类型筛选"
+          placeholder="全部类型"
           clearable
           class="search-type"
           @change="handleListSearch"
@@ -449,7 +456,7 @@ onMounted(refreshAll)
         </el-select>
         <el-select
           v-model="listSearchYear"
-          placeholder="快速选择年份"
+          placeholder="全部年份"
           clearable
           class="search-year"
           @change="handleYearChange"
@@ -476,7 +483,7 @@ onMounted(refreshAll)
           @change="handleDateRangeChange"
         />
         <div class="search-actions">
-          <MrrFilterActionButton action="search" :pending="listLoading" :busy="listLoading" type="primary" @click="handleListSearch">
+          <MrrFilterActionButton action="search" :pending="listLoading" :busy="listLoading" @click="handleListSearch">
             查询
           </MrrFilterActionButton>
           <MrrFilterActionButton action="reset" :pending="listLoading" :busy="listLoading" @click="resetListSearch">
@@ -596,6 +603,13 @@ onMounted(refreshAll)
   border-radius: var(--mrr-radius-card);
 }
 
+/* Chrome 86 回退：趋势摘要块的分层底失效后会与卡面融为一体。 */
+@supports not (color: color-mix(in srgb, #000 50%, #fff)) {
+  .trend-summary > div {
+    background: var(--mrr-muted);
+  }
+}
+
 .trend-summary span,
 .trend-summary strong {
   display: block;
@@ -630,11 +644,11 @@ onMounted(refreshAll)
 }
 
 .search-type {
-  flex: 0 0 150px;
+  flex: 0 0 190px;
 }
 
 .search-year {
-  flex: 0 0 160px;
+  flex: 0 0 190px;
 }
 
 .search-date {

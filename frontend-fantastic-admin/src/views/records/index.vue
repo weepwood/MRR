@@ -2,24 +2,29 @@
 import type { ScanRecord } from '@/api/types'
 import type { MetricTone } from '@/components/MrrMetricCard/types'
 import type { MrrTableAction } from '@/components/MrrTableActions/types'
-import { ElMessage, ElNotification } from 'element-plus'
 import { Download } from 'lucide-vue-next'
-import { computed, onMounted, reactive, ref, watch } from 'vue'
+import { computed, onMounted, reactive, ref } from 'vue'
 import { batchDownloadRecords, getScanCursor } from '@/api/modules/records'
 import AppEmpty from '@/components/AppEmpty/index.vue'
 import AppError from '@/components/AppError/index.vue'
 import AppLoading from '@/components/AppLoading/index.vue'
+import MrrDataTablePanel from '@/components/MrrDataTablePanel/index.vue'
 import MrrFilterActionButton from '@/components/MrrFilterActionButton/index.vue'
+import MrrFilterBar from '@/components/MrrFilterBar/index.vue'
+import MrrPageHeader from '@/components/MrrPageHeader/index.vue'
+import MrrPageShell from '@/components/MrrPageShell/index.vue'
+import MrrStatusTag from '@/components/MrrStatusTag/index.vue'
 import MrrTableActions from '@/components/MrrTableActions/index.vue'
 import { useTableActionLayout } from '@/composables/useTableActionLayout'
 import { getMedicalRecordTypeLabel, MEDICAL_RECORD_TYPES } from '@/constants/medical-record-types'
+import { notify } from '@/utils/notification'
 
 defineOptions({ name: 'RecordsPage' })
 
-const migrationStatusMap: Record<string, { label: string, type: string }> = {
-  not_migrated: { label: '未迁移', type: 'info' },
-  migrated: { label: '已迁移', type: 'success' },
-  verified: { label: '已验证', type: 'success' },
+const migrationStatusMap: Record<string, { label: string, tone: 'neutral' | 'success' }> = {
+  not_migrated: { label: '未迁移', tone: 'neutral' },
+  migrated: { label: '已迁移', tone: 'success' },
+  verified: { label: '已验证', tone: 'success' },
 }
 
 // 业务状态（非 CRUD 通用部分）
@@ -60,14 +65,15 @@ const pageSize = ref(20)
 const query = reactive({ bah: '', brxh: '', sjh: '', openerNo: '', btype: '' })
 const appliedQuery = ref({ ...query })
 const unapplied = computed(() => JSON.stringify(query) !== JSON.stringify(appliedQuery.value))
-watch(unapplied, (changed) => {
-  if (changed) {
-    ElNotification.info({
-      title: '筛选条件已修改',
-      message: '点击“查询”后生效；翻页仍使用上次已提交条件',
-      duration: 4500,
-    })
-  }
+const appliedSummary = computed(() => {
+  const fields = [
+    ['病案号', appliedQuery.value.bah.trim()],
+    ['病人序号', appliedQuery.value.brxh.trim()],
+    ['上架号', appliedQuery.value.sjh.trim()],
+    ['扫描人员', appliedQuery.value.openerNo.trim()],
+    ['类型', appliedQuery.value.btype ? typeLabel(appliedQuery.value.btype) : ''],
+  ]
+  return fields.filter(([, value]) => value).map(([label, value]) => `${label}：${value}`).join('；') || '全部记录'
 })
 const cursors = ref<number[]>([0])
 const nextCursor = ref<number | undefined>()
@@ -76,6 +82,8 @@ let version = 0
 async function loadData() {
   const current = ++version
   loading.value = true
+  list.value = []
+  selectedRows.value = []
   error.value = ''
   try {
     const submitted = appliedQuery.value
@@ -94,7 +102,13 @@ async function loadData() {
     if (current === version) { loading.value = false }
   }
 }
-function handleSearch() { appliedQuery.value = { ...query }; pageNum.value = 1; cursors.value = [0]; void loadData() }
+function reloadFirstBatch() {
+  pageNum.value = 1
+  cursors.value = [0]
+  hasMore.value = false
+  void loadData()
+}
+function handleSearch() { appliedQuery.value = { ...query }; reloadFirstBatch() }
 function resetFilters() { Object.assign(query, { bah: '', brxh: '', sjh: '', openerNo: '', btype: '' }); handleSearch() }
 function nextPage() {
   if (!hasMore.value || nextCursor.value == null) { return } cursors.value[pageNum.value] = nextCursor.value; pageNum.value++; void loadData()
@@ -106,32 +120,24 @@ onMounted(loadData)
 
 const summaryCards = computed(() => [
   {
-    label: '当前页记录数',
+    label: '当前批记录数',
     value: list.value.length,
     note: '当前筛选结果中已加载的数据条数',
     tone: 'blue' as MetricTone,
-    icon: 'i-lucide:contact-round',
   },
   {
-    label: '读取方式',
-    value: '游标',
-    note: '按完整编号筛选；未执行全表总数统计',
-    tone: 'teal' as MetricTone,
-    icon: 'i-lucide:database',
-  },
-  {
+    // 「读取方式：游标」是常量枚举，占指标卡位会稀释真指标的信噪比；
+    // 读取方式说明保留在筛选栏下方提示文案中。
     label: '已选记录',
     value: selectedRows.value.length,
     note: '可用于批量打包下载',
     tone: 'violet' as MetricTone,
-    icon: 'i-lucide:circle-check',
   },
   {
-    label: '当前页码',
+    label: '当前批次',
     value: pageNum.value,
-    note: `每页 ${pageSize.value} 条`,
+    note: `每批 ${pageSize.value} 条`,
     tone: 'amber' as MetricTone,
-    icon: 'i-lucide:list',
   },
 ])
 
@@ -152,7 +158,7 @@ function handleRecordAction(action: string, row: ScanRecord) {
 
 async function handleBatchDownload() {
   if (!selectedRows.value.length) {
-    ElMessage.warning('请先选择要下载的记录')
+    notify.warning('请先选择要下载的记录')
     return
   }
 
@@ -166,10 +172,10 @@ async function handleBatchDownload() {
     link.download = `scan-batch-${Date.now()}.zip`
     link.click()
     URL.revokeObjectURL(url)
-    ElMessage.success('批量下载已开始')
+    notify.success('批量下载已开始')
   }
   catch (error: any) {
-    ElMessage.error(error?.message || '批量下载失败')
+    notify.error(error?.message || '批量下载失败')
   }
   finally {
     downloading.value = false
@@ -182,59 +188,72 @@ function typeLabel(value: unknown) {
 </script>
 
 <template>
-  <div class="page-shell">
-    <div class="page-header">
-      <div>
-        <p class="eyebrow">
-          Scan Records
-        </p>
-        <h2>记录管理</h2>
-        <p class="subtitle">
-          按完整编号检索扫描记录，采用游标读取；病案号、上架号兼容原始前导零。
-        </p>
-      </div>
-      <el-button type="primary" :loading="downloading" @click="handleBatchDownload">
-        <el-icon><Download /></el-icon>
-        批量下载
-      </el-button>
-    </div>
+  <MrrPageShell class="records-page">
+    <MrrPageHeader
+      title="记录管理"
+      eyebrow="Scan Records"
+      description="按完整编号检索扫描记录，采用游标读取；病案号、上架号兼容原始前导零。"
+    >
+      <template #actions>
+        <el-button type="primary" :loading="downloading" @click="handleBatchDownload">
+          <el-icon><Download /></el-icon>
+          批量下载
+        </el-button>
+      </template>
+    </MrrPageHeader>
 
-    <section class="mrr-metric-grid mrr-metric-grid--four">
+    <section class="mrr-metric-grid" aria-label="当前批次概况">
       <MrrMetricCard v-for="item in summaryCards" :key="item.label" v-bind="item" />
     </section>
 
-    <el-card shadow="never">
-      <el-form inline @submit.prevent>
-        <el-form-item label="病案号">
-          <el-input v-model="query.bah" clearable placeholder="输入病案号" @keyup.enter="handleSearch" />
-        </el-form-item>
-        <el-form-item label="病人序号">
-          <el-input v-model="query.brxh" clearable placeholder="输入病人序号" @keyup.enter="handleSearch" />
-        </el-form-item>
-        <el-form-item label="上架号">
-          <el-input v-model="query.sjh" clearable placeholder="输入上架号" @keyup.enter="handleSearch" />
-        </el-form-item>
-        <el-form-item label="扫描人员">
-          <el-input v-model="query.openerNo" clearable placeholder="输入工号" @keyup.enter="handleSearch" />
-        </el-form-item>
-        <el-form-item label="类型">
-          <el-select v-model="query.btype" clearable placeholder="全部类型" class="records-type-select">
-            <el-option v-for="item in typeOptions" :key="item.value" :label="item.label" :value="item.value" />
-          </el-select>
-        </el-form-item>
-        <el-form-item>
-          <MrrFilterActionButton action="search" :pending="loading" :busy="loading" type="primary" @click="handleSearch">
-            查询
-          </MrrFilterActionButton>
-          <MrrFilterActionButton action="reset" :pending="loading" :busy="loading" @click="resetFilters">
-            重置
-          </MrrFilterActionButton>
-        </el-form-item>
-      </el-form>
+    <MrrDataTablePanel title="扫描记录" description="按条件查询，结果按批次读取。">
+      <template #filters>
+        <MrrFilterBar embedded class="records-filter-bar">
+          <div class="records-filter__field">
+            <label for="records-bah">病案号</label>
+            <el-input id="records-bah" v-model="query.bah" clearable aria-label="病案号" placeholder="病案号" @keyup.enter="handleSearch" />
+          </div>
+          <div class="records-filter__field">
+            <label for="records-brxh">病人序号</label>
+            <el-input id="records-brxh" v-model="query.brxh" clearable aria-label="病人序号" placeholder="病人序号" @keyup.enter="handleSearch" />
+          </div>
+          <div class="records-filter__field">
+            <label for="records-sjh">上架号</label>
+            <el-input id="records-sjh" v-model="query.sjh" clearable aria-label="上架号" placeholder="上架号" @keyup.enter="handleSearch" />
+          </div>
+          <div class="records-filter__field">
+            <label for="records-opener">扫描人员</label>
+            <el-input id="records-opener" v-model="query.openerNo" clearable aria-label="扫描人员" placeholder="扫描人员工号" @keyup.enter="handleSearch" />
+          </div>
+          <div class="records-filter__field">
+            <label for="records-btype">类型</label>
+            <el-select id="records-btype" v-model="query.btype" clearable aria-label="类型" placeholder="全部类型">
+              <el-option v-for="item in typeOptions" :key="item.value" :label="item.label" :value="item.value" />
+            </el-select>
+          </div>
+          <template #actions>
+            <MrrFilterActionButton type="primary" action="search" :pending="loading" :busy="loading" @click="handleSearch">
+              查询
+            </MrrFilterActionButton>
+            <MrrFilterActionButton action="reset" :pending="loading" :busy="loading" @click="resetFilters">
+              重置
+            </MrrFilterActionButton>
+          </template>
+        </MrrFilterBar>
+      </template>
+
+      <template #toolbar>
+        <div class="records-query-context" aria-live="polite">
+          <p><strong>已提交条件：</strong>{{ appliedSummary }}</p>
+          <p v-if="unapplied" class="records-query-context__pending">
+            筛选条件已修改，点击“查询”后生效；翻批仍使用已提交条件。
+          </p>
+        </div>
+      </template>
 
       <AppLoading v-if="loading && !list.length" type="table" :rows="8" />
       <AppError v-else-if="error" :message="error" @retry="loadData" />
-      <AppEmpty v-else-if="!list.length" description="暂无扫描记录" />
+      <AppEmpty v-else-if="!list.length" description="当前条件未找到扫描记录" action-text="重置条件" @action="resetFilters" />
       <el-table
         v-else
         v-loading="loading"
@@ -262,13 +281,11 @@ function typeLabel(value: unknown) {
         <el-table-column prop="folder" label="目录" min-width="130" show-overflow-tooltip />
         <el-table-column prop="migrationStatus" label="迁移状态" min-width="96">
           <template #default="{ row }">
-            <el-tag
+            <MrrStatusTag
               v-if="row.migrationStatus"
-              :type="(migrationStatusMap[row.migrationStatus]?.type || 'info') as any"
-              size="small"
-            >
-              {{ migrationStatusMap[row.migrationStatus]?.label || row.migrationStatus }}
-            </el-tag>
+              :label="migrationStatusMap[row.migrationStatus]?.label || row.migrationStatus"
+              :tone="migrationStatusMap[row.migrationStatus]?.tone || 'neutral'"
+            />
             <span v-else class="text-muted">-</span>
           </template>
         </el-table-column>
@@ -288,21 +305,23 @@ function typeLabel(value: unknown) {
         </el-table-column>
       </el-table>
 
-      <div class="pager">
-        <el-select v-model="pageSize" aria-label="每批条数" class="records-page-size-select" @change="handleSearch">
-          <el-option v-for="size in [10, 20, 50, 100]" :key="size" :value="size" :label="`${size}条/批`" />
-        </el-select>
-        <div class="pager__navigation">
-          <el-button :disabled="pageNum <= 1 || loading" @click="previousPage">
-            上一批
-          </el-button>
-          <span>第 {{ pageNum }} 批</span>
-          <el-button :disabled="!hasMore || loading" @click="nextPage">
-            下一批
-          </el-button>
+      <template #pagination>
+        <div class="pager">
+          <el-select v-model="pageSize" aria-label="每批条数" class="records-page-size-select" @change="reloadFirstBatch">
+            <el-option v-for="size in [10, 20, 50, 100]" :key="size" :value="size" :label="`${size}条/批`" />
+          </el-select>
+          <div class="pager__navigation">
+            <el-button :disabled="pageNum <= 1 || loading" @click="previousPage">
+              上一批
+            </el-button>
+            <span>第 {{ pageNum }} 批</span>
+            <el-button :disabled="!hasMore || loading" @click="nextPage">
+              下一批
+            </el-button>
+          </div>
         </div>
-      </div>
-    </el-card>
+      </template>
+    </MrrDataTablePanel>
 
     <el-dialog v-model="detailVisible" title="记录详情" width="720px" :close-on-click-modal="false">
       <el-descriptions v-if="currentRecord" :column="2" border>
@@ -334,13 +353,11 @@ function typeLabel(value: unknown) {
           {{ currentRecord.folder || '-' }}
         </el-descriptions-item>
         <el-descriptions-item label="迁移状态">
-          <el-tag
+          <MrrStatusTag
             v-if="currentRecord.migrationStatus"
-            :type="(migrationStatusMap[currentRecord.migrationStatus]?.type || 'info') as any"
-            size="small"
-          >
-            {{ migrationStatusMap[currentRecord.migrationStatus]?.label || currentRecord.migrationStatus }}
-          </el-tag>
+            :label="migrationStatusMap[currentRecord.migrationStatus]?.label || currentRecord.migrationStatus"
+            :tone="migrationStatusMap[currentRecord.migrationStatus]?.tone || 'neutral'"
+          />
           <span v-else>-</span>
         </el-descriptions-item>
         <el-descriptions-item label="文件大小">
@@ -351,56 +368,67 @@ function typeLabel(value: unknown) {
         </el-descriptions-item>
       </el-descriptions>
     </el-dialog>
-  </div>
+  </MrrPageShell>
 </template>
 
 <style scoped>
-.page-shell {
-  display: grid;
-  gap: 20px;
-}
-
-.page-header {
-  display: flex;
-  gap: 16px;
-  align-items: flex-start;
-  justify-content: space-between;
-}
-
-.eyebrow {
-  margin: 0 0 6px;
-  font-size: 12px;
-  font-weight: 700;
-  color: var(--text-secondary);
-  text-transform: uppercase;
-  letter-spacing: 0.12em;
-}
-
-h2 {
-  margin: 0;
-  font-size: 28px;
-}
-
-.subtitle {
-  margin: 8px 0 0;
-  color: var(--text-secondary);
-}
-
 .pager {
   display: flex;
   flex-wrap: wrap;
   gap: var(--mrr-space-2);
   align-items: center;
-  justify-content: center;
-  margin-top: 16px;
+  justify-content: flex-end;
+  width: 100%;
 }
 
-.records-type-select {
-  width: 180px;
+.records-filter__field {
+  display: grid;
+  flex: 1 1 150px;
+  gap: var(--mrr-space-1);
+  min-width: 0;
 }
 
-.records-table {
-  margin-top: 12px;
+.records-filter__field label {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--mrr-foreground);
+}
+
+.records-filter-bar :deep(.mrr-filter-bar__actions) {
+  flex: 0 0 auto;
+  flex-wrap: nowrap;
+  align-self: flex-end;
+}
+
+.records-query-context {
+  display: grid;
+  gap: var(--mrr-space-1);
+  min-width: 0;
+  font-size: 13px;
+  line-height: 1.6;
+  color: var(--mrr-muted-foreground);
+  overflow-wrap: anywhere;
+}
+
+.records-query-context p {
+  margin: 0;
+}
+
+.records-query-context strong {
+  color: var(--mrr-foreground);
+}
+
+.records-query-context__pending {
+  padding-left: var(--mrr-space-2);
+  color: var(--mrr-foreground);
+  border-left: 3px solid var(--mrr-tone-warning);
+}
+
+@media (max-width: 760px) {
+  .records-filter__field {
+    flex: 1 1 100%;
+    width: 100%;
+  }
 }
 
 .records-page-size-select {

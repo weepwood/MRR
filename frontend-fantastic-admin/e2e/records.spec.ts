@@ -35,25 +35,68 @@ test('免登录模式下可以查看扫描记录详情', async ({ page }) => {
   await expect(page.getByRole('heading', { name: '记录管理' })).toBeVisible({ timeout: 20_000 })
   await expect(page.getByRole('cell', { name: 'E2E-2026-001' })).toBeVisible({ timeout: 20_000 })
 
+  await expect(page.locator('.records-table .mrr-status-tag--success')).toHaveText('已验证')
   await page.getByRole('button', { name: '详情' }).click()
 
-  await expect(page.getByRole('dialog', { name: '记录详情' })).toContainText('synthetic-record.pdf', { timeout: 20_000 })
+  const detail = page.getByRole('dialog', { name: '记录详情' })
+  await expect(detail).toContainText('synthetic-record.pdf', { timeout: 20_000 })
+  await expect(detail.locator('.mrr-status-tag--success')).toHaveText('已验证')
+})
+
+test('迁移状态保留已知文案、未知值和缺失值', async ({ page }) => {
+  const statuses = ['not_migrated', 'migrated', 'verified', 'future_status', null]
+  await page.route('**/api/v1/scan/cursor/condition?**', route => route.fulfill({
+    json: { code: 200, data: { list: statuses.map((status, index) => ({ id: index + 1, bah: `SYN-${index}`, migrationStatus: status })), hasMore: false } },
+  }))
+  await page.goto('/records')
+  const table = page.locator('.records-table')
+  for (const [index, label] of ['未迁移', '已迁移', '已验证', 'future_status'].entries()) {
+    const row = table.locator('tbody tr').filter({ hasText: `SYN-${index}` })
+    await expect(row.locator('.mrr-status-tag')).toHaveText(label)
+  }
+  const missing = table.locator('tbody tr').filter({ hasText: 'SYN-4' })
+  await expect(missing.locator('.mrr-status-tag')).toHaveCount(0)
+  await expect(missing.locator('.text-muted')).toHaveText('-')
 })
 
 test('编辑筛选不会把旧游标用于新条件，提交查询后从头读取', async ({ page }) => {
   const requests: { afterId: string | null, bah?: string }[] = []
-  await page.route('**/api/v1/scan/cursor/condition?**', async route => {
+  await page.route('**/api/v1/scan/cursor/condition?**', async (route) => {
     const url = new URL(route.request().url())
     requests.push({ afterId: url.searchParams.get('afterId'), bah: route.request().postDataJSON().bah })
     await route.fulfill({ json: { code: 200, data: { list: [{ id: 100, bah: '123', filename: 'synthetic.jpg' }], hasMore: true, nextCursorId: 100, size: 20 } } })
   })
   await page.goto('/records')
   await expect(page.getByRole('cell', { name: '123', exact: true })).toBeVisible()
-  await page.getByPlaceholder('输入病案号').fill('456')
+  await expect(page.locator('label[for="records-bah"]')).toBeVisible()
+  await page.getByLabel('病案号', { exact: true }).fill('000456')
+  await expect(page.getByText('筛选条件已修改', { exact: false })).toBeVisible()
+  await expect(page.locator('.records-query-context')).toContainText('已提交条件：全部记录')
   await page.getByRole('button', { name: '下一批', exact: true }).click()
   await expect.poll(() => requests.length).toBe(2)
   expect(requests[1]).toEqual({ afterId: '100', bah: undefined })
   await page.getByRole('button', { name: '查询', exact: true }).click()
   await expect.poll(() => requests.length).toBe(3)
-  expect(requests[2]).toEqual({ afterId: '0', bah: '456' })
+  expect(requests[2]).toEqual({ afterId: '0', bah: '000456' })
+  await expect(page.locator('.records-query-context')).toContainText('病案号：000456')
+  await expect(page.getByText('筛选条件已修改', { exact: false })).toHaveCount(0)
 })
+
+for (const theme of ['light', 'dark']) {
+  test(`${theme} 主题下查询面板在宽窄屏保持可读`, async ({ page }) => {
+    await page.addInitScript((scheme) => {
+      localStorage.setItem('MRR-ADMIN:app-settings', JSON.stringify({
+        app: { colorScheme: scheme, pageTitleStyle: 'card' },
+        layout: { enableMobileAdaptation: true },
+      }))
+    }, theme)
+    await page.goto('/records')
+    await expect(page.getByRole('heading', { name: '扫描记录', exact: true })).toBeVisible()
+    for (const width of [1366, 375]) {
+      await page.setViewportSize({ width, height: 900 })
+      await expect(page.locator('.records-query-context')).toBeVisible()
+      await expect(page.locator('label[for="records-bah"]')).toBeVisible()
+      await expect.poll(() => page.locator('.records-page').evaluate(element => element.scrollWidth <= element.clientWidth + 1)).toBe(true)
+    }
+  })
+}

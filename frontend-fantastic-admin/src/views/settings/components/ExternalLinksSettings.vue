@@ -229,6 +229,13 @@ function openExternalLink(url: string) {
   border-radius: var(--mrr-radius-lg);
 }
 
+/* Chrome 86 回退：图标块的浅色底失效后图标会裸浮在卡面上。 */
+@supports not (color: color-mix(in srgb, #000 50%, #fff)) {
+  .header-icon {
+    background: var(--mrr-tone-primary-soft);
+  }
+}
+
 .header-copy {
   flex: 1;
   min-width: 0;

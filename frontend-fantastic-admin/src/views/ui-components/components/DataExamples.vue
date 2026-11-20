@@ -50,7 +50,7 @@ function search(reset = false) {
               <FaInput :id="`${id}-query`" v-model="keyword" placeholder="示例编号或名称" class="example-full-width" />
             </div>
             <template #actions>
-              <FaButton type="submit">
+              <FaButton type="submit" variant="outline">
                 查询示例
               </FaButton>
               <FaButton type="button" variant="outline" @click="search(true)">
@@ -81,12 +81,23 @@ function search(reset = false) {
     <p class="example-note" role="status">
       {{ message }}
     </p>
+    <p class="example-note">
+      业务状态使用状态标签；分类、计数和可关闭项使用普通标签。
+    </p>
     <div class="example-row" aria-label="状态标签示例">
       <MrrStatusTag status="completed" label="已完成" />
       <MrrStatusTag status="processing" label="进行中" />
       <MrrStatusTag status="pending" label="待处理" />
       <MrrStatusTag status="failed" label="失败" />
       <MrrStatusTag label="未知" />
+    </div>
+    <div class="example-row" aria-label="普通标签示例">
+      <el-tag effect="plain">
+        分类标签
+      </el-tag>
+      <el-tag type="info" effect="plain" round>
+        胶囊标签
+      </el-tag>
     </div>
   </div>
 </template>

@@ -79,6 +79,8 @@ watch(() => routeInfo.path, () => {
 
 onMounted(() => {
   eventBus.on('global-hotkeys-intro-toggle', toggleHotkeysIntro)
+  // 运行错误中心角标轮询：有 system:error:read 权限的会话才开始拉取。
+  useRuntimeErrorsBadgeStore().start()
 })
 
 onBeforeUnmount(() => {
@@ -103,7 +105,7 @@ onBeforeUnmount(() => {
           <MainSidebar />
           <SubSidebar />
         </div>
-        <button type="button" class="invisible fixed inset-0 z-1009 bg-black/50 op-0 backdrop-blur-sm transition-opacity" :class="{ 'op-100! visible!': settingsStore.mode === 'mobile' && !settingsStore.settings.menu.subMenuCollapse }" @click="settingsStore.toggleSidebarCollapse()" />
+        <button type="button" class="invisible fixed inset-0 z-1009 bg-black/50 op-0 transition-opacity" :class="{ 'op-100! visible!': settingsStore.mode === 'mobile' && !settingsStore.settings.menu.subMenuCollapse }" @click="settingsStore.toggleSidebarCollapse()" />
         <div class="main-container pb-[var(--g-main-container-padding-bottom)]">
           <Topbar />
           <div class="main">
@@ -201,6 +203,11 @@ onBeforeUnmount(() => {
       padding: clamp(18px, 2vw, 28px);
       margin: calc(var(--g-tabbar-actual-height) + var(--g-toolbar-actual-height)) 0 0;
       overflow: hidden;
+
+      /* overflow: clip 同样裁剪内容，但不产生滚动容器——页面内 position: sticky
+       * 才能相对窗口滚动生效（如 UI 组件页左侧目录）。Chrome 86 不支持 clip，
+       * 回退到 hidden，sticky 失效为既有状态。 */
+      overflow: clip;
       background-color: var(--mrr-workspace-bg);
     }
   }

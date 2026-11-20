@@ -11,6 +11,15 @@
   --g-tabbar-height: 44px;
   --g-toolbar-height: 48px;
 
+  /*
+   * 等宽字体：表名、提交号、迁移版本等标识符。
+   * 必须显式点名 Consolas —— Windows 上「monospace」通用族会落到新宋体（NSimSun），
+   * 笔画细、字距宽，与正文 HarmonyOS Sans SC 明显不是一套
+   * （Chrome 实测该处 24 个字形全部命中 NSimSun）。
+   * 中文字体排在 Consolas 之后、通用族之前：Consolas 无汉字，缺字时才不会又退回宋体。
+   */
+  --mrr-font-mono: ui-monospace, "SFMono-Regular", "Menlo", "Monaco", "Consolas", "Liberation Mono", "Microsoft YaHei", "HarmonyOS Sans SC", monospace;
+
   /* 页面宽度 */
   --mrr-content-fluid: 1720px;
   --mrr-content-standard: 1440px;
@@ -131,9 +140,11 @@
   --surface-alt: var(--mrr-secondary);
   --divider: var(--mrr-border);
 
-  /* 控件表面与交互 */
-  --mrr-control-bg: var(--mrr-background);
-  --mrr-control-bg-hover: var(--mrr-background);
+  /* 控件表面与交互
+   * 控件底色全局统一为筛选栏同款灰调（对齐用户管理页下拉），hover 加深一档；
+   * 此前筛选栏内用局部 color-mix 覆盖、表单区用纯底色，造成两套观感。 */
+  --mrr-control-bg: color-mix(in srgb, var(--mrr-muted) 18%, var(--mrr-card));
+  --mrr-control-bg-hover: color-mix(in srgb, var(--mrr-muted) 26%, var(--mrr-card));
   --mrr-control-bg-disabled: color-mix(in srgb, var(--mrr-muted) 82%, var(--mrr-card));
   --mrr-control-border: var(--mrr-input);
   --mrr-control-border-hover: color-mix(in srgb, var(--mrr-foreground) 22%, var(--mrr-input));
@@ -166,8 +177,6 @@
 
     --scrollbar-color: 240 3.7% 15.9%;
     --mrr-input: color-mix(in srgb, var(--mrr-foreground) 15%, transparent);
-    --mrr-control-bg: color-mix(in srgb, var(--mrr-card) 88%, white 2%);
-    --mrr-control-bg-hover: color-mix(in srgb, var(--mrr-card) 84%, white 4%);
     --mrr-control-bg-disabled: color-mix(in srgb, var(--mrr-muted) 80%, black);
     --mrr-control-border: var(--mrr-input);
     --mrr-control-border-hover: color-mix(in srgb, var(--mrr-foreground) 24%, var(--mrr-input));

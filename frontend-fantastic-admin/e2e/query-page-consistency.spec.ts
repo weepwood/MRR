@@ -78,7 +78,10 @@ for (const item of pages) {
     const form = page.locator('form').first()
     const keyword = form.getByLabel('关键字', { exact: true })
     await keyword.fill('synthetic-filter')
+    // 用户筛选已升级为可搜索下拉（MrrUserSearchSelect）：fill 只产生检索文本，
+    // 需等 allow-create 的创建项出现后点选，值才会提交。
     await form.getByLabel('用户', { exact: true }).fill('synthetic-user')
+    await page.locator('.el-select-dropdown__item').filter({ hasText: 'synthetic-user' }).first().click()
     const waitQuery = () => page.waitForRequest(request => request.method() === 'GET' && new URL(request.url()).pathname.endsWith(item.endpoint))
     const query = waitQuery()
     await keyword.press('Enter')

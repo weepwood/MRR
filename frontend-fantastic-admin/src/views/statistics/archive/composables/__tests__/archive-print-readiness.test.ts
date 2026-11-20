@@ -141,6 +141,10 @@ describe('print readiness and cleanup', () => {
     const html = p.doc.write.mock.calls[0][0] as string
     expect(html).toContain('rotate-landscape')
     expect(html).toContain('rotate(-90deg)')
+    // 页容器高度必须留出余量并禁止拆分，否则恰好整页会被分页舍入切出空白页
+    expect(html).toContain('calc(100vh - 2px)')
+    expect(html).toContain('break-inside: avoid')
+    expect(html).toContain('size: A4 portrait')
     await vi.advanceTimersByTimeAsync(2000)
     expect(document.querySelector('iframe')).toBeNull()
   })

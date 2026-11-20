@@ -55,7 +55,9 @@ public class NginxManagementService {
     }
 
     public Map<String, Object> status() {
-        boolean installed = Files.isRegularFile(binary()) && Files.isRegularFile(config());
+        // 关闭或非 Windows 环境不触碰本机网关文件，也不启动任何子进程。
+        boolean probe = enabled && windows;
+        boolean installed = probe && Files.isRegularFile(binary()) && Files.isRegularFile(config());
         Map<String, Object> response = new LinkedHashMap<>();
         response.put("enabled", enabled);
         response.put("supported", windows);
@@ -63,7 +65,7 @@ public class NginxManagementService {
         response.put("serviceName", "MRR-Gateway");
         response.put("serviceState", "UNAVAILABLE");
         response.put("version", "");
-        response.put("configurationPresent", Files.isRegularFile(config()));
+        response.put("configurationPresent", probe && Files.isRegularFile(config()));
         response.put("lastCheckedAt", Instant.now().toString());
         if (!enabled || !windows || !installed) {
             return response;

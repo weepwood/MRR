@@ -12,7 +12,7 @@ vi.mock('../../index', () => ({
   postRequest: vi.fn(),
 }))
 
-describe('Nginx management API', () => {
+describe('nginx management API', () => {
   beforeEach(() => {
     vi.resetAllMocks()
   })

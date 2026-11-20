@@ -147,7 +147,7 @@ const pdfButtonLoading = computed(() =>
   exportingPdf.value || pdfJobDownloading.value || pdfJobCancelling.value,
 )
 const downloadButtonType = computed(() => resolveExportButtonType(downloadJob.value, ''))
-const pdfButtonType = computed(() => resolveExportButtonType(pdfJob.value, 'primary'))
+const pdfButtonType = computed(() => resolveExportButtonType(pdfJob.value, ''))
 const downloadButtonLabel = computed(() => {
   const job = downloadJob.value
   if (job?.status === 'PENDING' || job?.status === 'PROCESSING') {
@@ -161,9 +161,9 @@ const downloadButtonLabel = computed(() => {
     const imageCount = Math.max(0, Number(job.processedCount || job.plannedCount || 0))
     return `下载病案（${imageCount} 张，${formatBytes(job.outputBytes)}）`
   }
-  return '下载病案（整份病案）'
+  return '下载病案（整份）'
 })
-const pdfButtonLabel = computed(() => `导出 PDF（${selectedCount.value}）`)
+const pdfButtonLabel = computed(() => `导出选中 PDF（${selectedCount.value}）`)
 
 const {
   job: selectedZipJob,
@@ -895,7 +895,7 @@ onUnmounted(() => {
                 {{ selectedZipLabel }}
               </el-button>
               <el-button size="small" :icon="Printer" :loading="printing" :disabled="!selectedCount" @click="handlePrint">
-                打印选中
+                打印选中页面
                 <template v-if="selectedCount">
                   （{{ selectedCount }}）
                 </template>
@@ -990,7 +990,7 @@ onUnmounted(() => {
               {{ selectedZipLabel }}
             </el-button>
             <el-button v-if="!isExternalTicketMode" :icon="Printer" :loading="printing" :disabled="!selectedCount" @click="handlePrint">
-              打印选中<template v-if="selectedCount">
+              打印选中页面<template v-if="selectedCount">
                 ({{ selectedCount }})
               </template>
             </el-button>

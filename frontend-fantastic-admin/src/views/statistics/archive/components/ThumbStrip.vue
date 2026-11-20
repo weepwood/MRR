@@ -79,6 +79,14 @@ function onImageError(img: GalleryImage, index: number) {
   failedImageKeys.value = next
 }
 
+/* 加载完成打标：写目标元素 class，不走响应式状态，缩略图条整批加载零重渲染。 */
+function onImgLoad(event: Event) {
+  const target = event.target as HTMLImageElement
+  if (target.naturalWidth > 0) {
+    target.classList.add('is-loaded')
+  }
+}
+
 /* 卡片上的 Enter/Space 由页面级快捷键统一接管（回车=勾选当前预览图、空格=开关全屏），
  * 焦点跟随预览（@focus=selectItem），无需卡片本地处理；
  * 勾选框是独立控件，保留自己的 Enter/Space 语义。 */
@@ -148,6 +156,7 @@ defineExpose({ resetVisible, scrollToIndex })
           :src="img.imageUrl"
           :alt="`第 ${index + 1} 张影像缩略图`"
           loading="lazy"
+          @load="onImgLoad"
           @error="onImageError(img, index)"
         >
         <div class="thumb-meta" @click="onMetaClick(img, $event)">
@@ -317,6 +326,27 @@ defineExpose({ resetVisible, scrollToIndex })
   height: auto;
   object-fit: contain;
   background: var(--surface-alt);
+}
+
+/* 未加载完成时显示低频微光占位（关动效时为静态占位底色），加载后由图像内容覆盖。
+ * 同时给未就绪缩略图保底高度：height:auto 的空 img 会塌陷成 0 高，卡片会随加载跳动。 */
+.thumb-item img:not(.is-loaded) {
+  min-height: 96px;
+  background-image: linear-gradient(100deg, transparent 30%, rgb(255 255 255 / 45%) 50%, transparent 70%);
+  background-size: 220% 100%;
+  animation: var(--mrr-motion-decor, thumb-shimmer var(--mrr-motion-loop-soft, 1.5s) linear infinite);
+}
+
+@supports (aspect-ratio: 3 / 4) {
+  .thumb-item img:not(.is-loaded) {
+    min-height: 0;
+    aspect-ratio: 3 / 4;
+  }
+}
+
+@keyframes thumb-shimmer {
+  from { background-position: 180% 0; }
+  to { background-position: -80% 0; }
 }
 
 .thumb-image-placeholder {

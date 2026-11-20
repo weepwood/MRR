@@ -76,6 +76,14 @@ function markImageFailed(image: GalleryImage, index: number) {
   failedImageKeys.value = next
 }
 
+/* 加载完成打标：写目标元素 class，不走响应式状态，平铺墙整批图片加载零重渲染。 */
+function onImgLoad(event: Event) {
+  const target = event.target as HTMLImageElement
+  if (target.naturalWidth > 0) {
+    target.classList.add('is-loaded')
+  }
+}
+
 function ensureVisible(index: number) {
   if (index >= visibleCount.value) {
     visibleCount.value = Math.min(props.images.length, index + LOAD_MORE_COUNT)
@@ -307,6 +315,7 @@ onUnmounted(() => {
             :alt="`第 ${index + 1} 张影像`"
             loading="lazy"
             decoding="async"
+            @load="onImgLoad"
             @error="markImageFailed(image, index)"
           >
         </div>
@@ -506,6 +515,19 @@ onUnmounted(() => {
   height: 100%;
   object-fit: contain;
   transition: transform 0.18s ease;
+}
+
+/* 未加载完成时显示低频微光占位，加载后由图像内容覆盖（关动效时为静态占位底色） */
+.archive-wall-image-stage img:not(.is-loaded) {
+  background-color: var(--surface-alt);
+  background-image: linear-gradient(100deg, transparent 30%, rgb(255 255 255 / 45%) 50%, transparent 70%);
+  background-size: 220% 100%;
+  animation: var(--mrr-motion-decor, wall-shimmer var(--mrr-motion-loop-soft, 1.5s) linear infinite);
+}
+
+@keyframes wall-shimmer {
+  from { background-position: 180% 0; }
+  to { background-position: -80% 0; }
 }
 
 .archive-wall-card:hover .archive-wall-image-stage img {

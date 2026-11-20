@@ -130,6 +130,17 @@ function markImageFailed(imageUrl: string | undefined) {
   failedImageUrls.value = next
 }
 
+/**
+ * 图片加载完成打标：直接写目标元素 class，不进响应式状态，
+ * 几百张连续页加载不会触发任何组件重渲染。慢速网络下加载占位靠该 class 退场。
+ */
+function onImgLoad(event: Event) {
+  const target = event.target as HTMLImageElement
+  if (target.naturalWidth > 0) {
+    target.classList.add('is-loaded')
+  }
+}
+
 function observePages() {
   pageObserver?.disconnect()
   pageObserver = null
@@ -212,8 +223,10 @@ onUnmounted(() => {
           :src="props.image.imageUrl"
           :alt="`第 ${props.index + 1} 张影像`"
           @click="openImageViewer"
+          @load="onImgLoad"
           @error="markImageFailed(props.image.imageUrl)"
         >
+        <span class="img-loading-tip" aria-hidden="true">影像加载中…</span>
       </div>
 
       <ElImageViewer
@@ -261,8 +274,10 @@ onUnmounted(() => {
             :src="imageUrl"
             :alt="`第 ${pageIndex + 1} 张影像`"
             loading="lazy"
+            @load="onImgLoad"
             @error="markImageFailed(imageUrl)"
           >
+          <span class="img-loading-tip" aria-hidden="true">P{{ pageIndex + 1 }} 加载中…</span>
         </article>
       </div>
     </template>
@@ -291,10 +306,45 @@ onUnmounted(() => {
 }
 
 .single-stage {
+  position: relative;
   display: grid;
   grid-template-rows: minmax(0, 1fr);
   place-items: center;
   overflow: hidden;
+}
+
+/*
+ * 慢速网络下的图片加载占位：img 未加载完成时背景显示低频微光，
+ * 内容加载完直接覆盖背景，无需响应式状态参与。
+ */
+.preview-image:not(.is-loaded) {
+  background-color: var(--surface-alt);
+  background-image: linear-gradient(100deg, transparent 30%, rgb(255 255 255 / 45%) 50%, transparent 70%);
+  background-size: 220% 100%;
+  animation: var(--mrr-motion-decor, preview-shimmer var(--mrr-motion-loop-soft, 1.5s) linear infinite);
+}
+
+@keyframes preview-shimmer {
+  from { background-position: 180% 0; }
+  to { background-position: -80% 0; }
+}
+
+/* 加载提示与 img 相邻，img 完成加载（is-loaded）后相邻选择器自动失效隐藏 */
+.img-loading-tip {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  display: none;
+  font-size: 12px;
+  color: var(--text-secondary);
+  letter-spacing: 0.04em;
+  white-space: nowrap;
+  pointer-events: none;
+  transform: translate(-50%, -50%);
+}
+
+.preview-image:not(.is-loaded) + .img-loading-tip {
+  display: block;
 }
 
 .preview-image {
@@ -382,6 +432,9 @@ onUnmounted(() => {
   box-sizing: border-box;
   width: 100%;
   min-width: 0;
+
+  /* 慢速网络下图片未就绪时给页容器保底高度，避免内容随加载逐页塌陷跳动 */
+  min-height: 200px;
   padding: 8px;
   margin-bottom: 16px;
 }

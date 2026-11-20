@@ -981,16 +981,6 @@ onUnmounted(() => {
 
           <div v-if="images.length > 0" class="archive-bottom-actions">
             <el-button
-              v-if="!isExternalTicketMode"
-              class="download-action"
-              :type="downloadButtonType || undefined"
-              :icon="Download"
-              :loading="downloadButtonLoading"
-              @click="handleDownloadAction"
-            >
-              {{ downloadButtonLabel }}
-            </el-button>
-            <el-button
               v-if="showSelectionStatus"
               :icon="Download"
               :disabled="!selectedCount"
@@ -1013,6 +1003,15 @@ onUnmounted(() => {
               @click="handleExportPdfAction"
             >
               {{ pdfButtonLabel }}
+            </el-button>
+            <el-button
+              v-if="!isExternalTicketMode"
+              :type="downloadButtonType || undefined"
+              :icon="Download"
+              :loading="downloadButtonLoading"
+              @click="handleDownloadAction"
+            >
+              {{ downloadButtonLabel }}
             </el-button>
           </div>
         </section>
@@ -1246,10 +1245,6 @@ onUnmounted(() => {
   padding-top: 10px;
   margin-top: auto;
   border-top: 1px solid var(--divider);
-}
-
-.archive-bottom-actions .download-action {
-  grid-column: 1 / -1;
 }
 
 .archive-bottom-actions :deep(.el-button) {

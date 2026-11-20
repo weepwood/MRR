@@ -281,6 +281,16 @@ const asyncRoutes: Route.recordMainRaw[] = [
         },
       },
       {
+        path: '/nginx-management',
+        component: () => import('@/views/nginx-management/index.vue'),
+        meta: {
+          title: 'Nginx 管理',
+          icon: 'i-lucide:server-cog',
+          auth: ['system:read'],
+          cache: false,
+        },
+      },
+      {
         path: '/database-browse',
         component: () => import('@/views/database-browse/index.vue'),
         meta: {

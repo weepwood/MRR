@@ -179,15 +179,23 @@ onMounted(() => {
   <div class="nginx-management">
     <header class="page-heading">
       <div class="heading-copy">
-        <div class="page-icon"><ServerCog :size="23" :stroke-width="1.7" /></div>
+        <div class="page-icon">
+          <ServerCog :size="23" :stroke-width="1.7" />
+        </div>
         <div>
-          <h1>Nginx 管理</h1>
-          <p>MRR 网关运行状态、配置检查与日志诊断</p>
+          <h1>
+            Nginx 管理
+          </h1>
+          <p>
+            MRR 网关运行状态、配置检查与日志诊断
+          </p>
         </div>
       </div>
       <el-button :loading="statusLoading" @click="loadStatus">
         <RefreshCw :size="15" />
-        <span>刷新状态</span>
+        <span>
+          刷新状态
+        </span>
       </el-button>
     </header>
 
@@ -221,41 +229,73 @@ onMounted(() => {
 
     <section v-loading="statusLoading" class="overview-grid">
       <article class="overview-card">
-        <div class="card-label"><Activity :size="16" /> 网关状态</div>
-        <div class="card-value"><el-tag :type="statusType" effect="light" round>{{ status ? statusLabel : '加载中' }}</el-tag></div>
-        <div class="card-foot">{{ status?.serviceName || 'MRR-Gateway' }}</div>
+        <div class="card-label">
+          <Activity :size="16" /> 网关状态
+        </div>
+        <div class="card-value">
+          <el-tag :type="statusType" effect="light" round>
+            {{ status ? statusLabel : '加载中' }}
+          </el-tag>
+        </div>
+        <div class="card-foot">
+          {{ status?.serviceName || 'MRR-Gateway' }}
+        </div>
       </article>
       <article class="overview-card">
-        <div class="card-label"><ServerCog :size="16" /> Nginx 版本</div>
-        <div class="card-value small">{{ status?.version || '-' }}</div>
-        <div class="card-foot">Windows 原生服务</div>
+        <div class="card-label">
+          <ServerCog :size="16" /> Nginx 版本
+        </div>
+        <div class="card-value small">
+          {{ status?.version || '-' }}
+        </div>
+        <div class="card-foot">
+          Windows 原生服务
+        </div>
       </article>
       <article class="overview-card">
-        <div class="card-label"><FileCheck2 :size="16" /> 配置文件</div>
-        <div class="card-value small">{{ status?.configurationPresent ? '已检测到' : '未检测到' }}</div>
-        <div class="card-foot">上次刷新 {{ fmtTime(status?.lastCheckedAt) }}</div>
+        <div class="card-label">
+          <FileCheck2 :size="16" /> 配置文件
+        </div>
+        <div class="card-value small">
+          {{ status?.configurationPresent ? '已检测到' : '未检测到' }}
+        </div>
+        <div class="card-foot">
+          上次刷新 {{ fmtTime(status?.lastCheckedAt) }}
+        </div>
       </article>
     </section>
 
     <div class="workspace">
       <div class="workspace-title">
         <div>
-          <h2>网关运维工作台</h2>
-          <p>仅提供只读检查。启动、停止、重载与配置修改仍由服务器本地管理中心负责。</p>
+          <h2>
+            网关运维工作台
+          </h2>
+          <p>
+            仅提供只读检查。启动、停止、重载与配置修改仍由服务器本地管理中心负责。
+          </p>
         </div>
-        <el-tag type="info" effect="plain"><ShieldCheck :size="13" /> 只读模式</el-tag>
+        <el-tag type="info" effect="plain">
+          <ShieldCheck :size="13" /> 只读模式
+        </el-tag>
       </div>
 
       <el-tabs v-model="activeTab" class="management-tabs">
         <el-tab-pane label="配置检查" name="config">
           <div class="config-toolbar">
             <div>
-              <h3>配置状态</h3>
-              <p>检查 Nginx 配置文件语法；通过不代表已经应用或业务请求全部正常。</p>
+              <h3>
+                配置状态
+              </h3>
+              <p>
+                检查 Nginx 配置文件语法；通过不代表已经应用或业务请求全部正常。
+              </p>
             </div>
             <el-button type="primary" :disabled="!ready || !canManage" :loading="checking" @click="testConfiguration">
               <FileCheck2 :size="15" />
-              <span>运行 nginx -t</span>
+              <span>
+                运行 nginx -t
+              </span>
             </el-button>
           </div>
           <el-alert
@@ -276,17 +316,27 @@ onMounted(() => {
           <el-table v-if="canManage" v-loading="filesLoading" :data="files" class="file-table" empty-text="暂无可读取的配置文件信息">
             <el-table-column label="文件" min-width="210">
               <template #default="{ row }">
-                <span class="filename"><FileCode2 :size="16" /> {{ row.name }}</span>
+                <span class="filename">
+                  <FileCode2 :size="16" /> {{ row.name }}
+                </span>
               </template>
             </el-table-column>
             <el-table-column label="状态" width="100">
-              <template #default="{ row }"><el-tag :type="row.present ? 'success' : 'info'" size="small">{{ row.present ? '存在' : '缺失' }}</el-tag></template>
+              <template #default="{ row }">
+                <el-tag :type="row.present ? 'success' : 'info'" size="small">
+                  {{ row.present ? '存在' : '缺失' }}
+                </el-tag>
+              </template>
             </el-table-column>
             <el-table-column label="大小" width="110">
-              <template #default="{ row }">{{ fmtSize(row.bytes) }}</template>
+              <template #default="{ row }">
+                {{ fmtSize(row.bytes) }}
+              </template>
             </el-table-column>
             <el-table-column label="修改时间" min-width="170">
-              <template #default="{ row }">{{ fmtTime(row.modifiedAt) }}</template>
+              <template #default="{ row }">
+                {{ fmtTime(row.modifiedAt) }}
+              </template>
             </el-table-column>
           </el-table>
         </el-tab-pane>
@@ -294,7 +344,9 @@ onMounted(() => {
         <el-tab-pane label="访问与错误日志" name="logs">
           <div v-if="!canViewLogs" class="empty-state">
             <FileText :size="28" />
-            <p>需要同时拥有 system:read 和 log:read 权限</p>
+            <p>
+              需要同时拥有 system:read 和 log:read 权限
+            </p>
           </div>
           <template v-else>
             <div class="log-toolbar">
@@ -310,18 +362,26 @@ onMounted(() => {
               <el-input v-model="keyword" placeholder="仅筛选当前已加载日志" clearable class="search-input" />
               <el-button :loading="logsLoading" :disabled="!status?.enabled" @click="loadLogs">
                 <RefreshCw :size="15" />
-                <span>查询</span>
+                <span>
+                  查询
+                </span>
               </el-button>
             </div>
             <div v-loading="logsLoading" class="log-surface" role="log" aria-label="Nginx 日志">
               <div v-if="visibleLogs.length" class="log-lines">
-                <div v-for="(line, index) in visibleLogs" :key="index" class="log-line">{{ line }}</div>
+                <div v-for="(line, index) in visibleLogs" :key="index" class="log-line">
+                  {{ line }}
+                </div>
               </div>
-              <div v-else class="log-empty">暂无日志记录</div>
+              <div v-else class="log-empty">
+                暂无日志记录
+              </div>
             </div>
             <p class="log-note">
               单次最多读取 200 行 / 128 KB，敏感查询参数会脱敏。
-              <span v-if="logTail?.truncated">当前日志已截断，仅展示尾部内容。</span>
+              <span v-if="logTail?.truncated">
+                当前日志已截断，仅展示尾部内容。
+              </span>
             </p>
           </template>
         </el-tab-pane>

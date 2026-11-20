@@ -105,7 +105,7 @@ export const themePalettePresets = [
       line: GR8R_COLORS.light.line,
     },
   },
-] as const satisfies ReadonlyArray<{ id: ThemePaletteId, name: string, description: string }>
+] as const satisfies ReadonlyArray<{ id: ThemePaletteId, name: string, description: string, preview: Record<'canvas' | 'sidebar' | 'surface' | 'ink' | 'accent' | 'line', string> }>
 
 export function normalizeThemePalette(value: unknown): ThemePaletteId {
   return value === 'gr8r' ? 'gr8r' : 'mrr'

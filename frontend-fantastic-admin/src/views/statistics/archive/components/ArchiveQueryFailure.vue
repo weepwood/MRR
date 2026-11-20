@@ -11,8 +11,7 @@ const props = defineProps<{
   /** 后端 reasonCode，决定卡片语气与下一步建议。 */
   reason?: string
   requestId?: string
-  bah?: string
-  sjh?: string
+  query: { bah: string, sjh: string } | null
 }>()
 
 const emit = defineEmits<{ retry: [] }>()
@@ -56,7 +55,10 @@ const FALLBACK_META = {
   hint: '服务暂时不可用或响应异常。可以点「重新查询」重试；持续失败时请把追踪编号提供给管理员。',
 }
 
-const meta = computed(() => REASON_META[props.reason || ''] || FALLBACK_META)
+const meta = computed(() => REASON_META[props.reason || ''] || {
+  ...FALLBACK_META,
+  hint: props.query ? FALLBACK_META.hint : '请核对查询条件后再次提交。',
+})
 
 function selectTrace(event: FocusEvent) {
   const input = event.target as HTMLInputElement | null
@@ -115,7 +117,7 @@ async function copyTrace() {
       </div>
     </div>
 
-    <div class="query-failure-actions">
+    <div v-if="props.query" class="query-failure-actions">
       <el-button v-if="canDiagnose" type="primary" plain @click="diagnosticsVisible = true">
         排查本次查询
       </el-button>
@@ -125,10 +127,10 @@ async function copyTrace() {
     </div>
 
     <ScanQueryDiagnostics
-      v-if="canDiagnose"
+      v-if="canDiagnose && props.query"
       v-model="diagnosticsVisible"
-      :bah="props.bah || ''"
-      :sjh="props.sjh || ''"
+      :bah="props.query.bah"
+      :sjh="props.query.sjh"
       :request-id="props.requestId || ''"
     />
   </section>

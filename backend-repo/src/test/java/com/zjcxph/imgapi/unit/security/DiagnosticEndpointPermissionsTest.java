@@ -3,18 +3,24 @@ package com.zjcxph.imgapi.unit.security;
 import com.zjcxph.imgapi.common.AuthSession;
 import com.zjcxph.imgapi.controller.OperationsDiagnosticsController;
 import com.zjcxph.imgapi.controller.QueryDiagnosticsController;
+import com.zjcxph.imgapi.handler.ResultHttpStatusAdvice;
 import com.zjcxph.imgapi.interceptors.AuthorizationInterceptor;
 import com.zjcxph.imgapi.interceptors.LoginInterceptor;
 import com.zjcxph.imgapi.mapper.AuthUserMapper;
 import com.zjcxph.imgapi.security.TokenBlacklist;
 import com.zjcxph.imgapi.service.*;
 import org.junit.jupiter.api.Test;
+import org.springframework.http.MediaType;
 import org.springframework.mock.web.MockHttpServletRequest;
 import org.springframework.mock.web.MockHttpServletResponse;
+import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.web.method.HandlerMethod;
 import java.util.List;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.*;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 class DiagnosticEndpointPermissionsTest {
     @Test void anonymousRequestGets401WithoutExistenceEvidence() throws Exception {
@@ -27,7 +33,7 @@ class DiagnosticEndpointPermissionsTest {
 
     @Test void diagnosticRequiresBothMedicalAndOperationsPermissions() throws Exception {
         var service = mock(QueryDiagnosticsService.class);
-        var controller = new QueryDiagnosticsController(service);
+        var controller = new QueryDiagnosticsController(service, true);
         var handler = new HandlerMethod(controller, QueryDiagnosticsController.class.getMethod("diagnose",QueryDiagnosticsController.Query.class));
         for (var permissions : List.of(List.of("system:manage"),List.of("record:read"))) {
             var response = new MockHttpServletResponse();
@@ -35,6 +41,22 @@ class DiagnosticEndpointPermissionsTest {
             assertThat(response.getStatus()).isEqualTo(403);
         }
         assertThat(new AuthorizationInterceptor().preHandle(request(List.of("system:manage","record:read")),new MockHttpServletResponse(),handler)).isTrue();
+        verifyNoInteractions(service);
+    }
+
+    @Test
+    void disabledQueryDiagnosticsReturns404WithoutProbing() throws Exception {
+        var service = mock(QueryDiagnosticsService.class);
+        var mvc = MockMvcBuilders.standaloneSetup(new QueryDiagnosticsController(service, false))
+                .setControllerAdvice(new ResultHttpStatusAdvice())
+                .build();
+
+        mvc.perform(post("/api/v1/operations/query-diagnostics")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"bah\":\"123\",\"sjh\":\"\"}"))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.code").value(404))
+                .andExpect(jsonPath("$.data").doesNotExist());
         verifyNoInteractions(service);
     }
 

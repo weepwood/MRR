@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import type { QueryDiagnostic } from '@/api/modules/query-diagnostics'
-import { ElMessage } from 'element-plus'
-import { computed, ref, watch } from 'vue'
+import axios from 'axios'
+import { computed, onBeforeUnmount, onDeactivated, ref, watch } from 'vue'
 import { diagnoseQuery } from '@/api/modules/query-diagnostics'
 import { ACTION_DIALOG_Z_INDEX } from '@/ui/components/ActionDialog'
 import useAuth from '@/utils/composables/useAuth'
@@ -11,17 +11,19 @@ defineOptions({ name: 'ScanQueryDiagnostics' })
 const props = defineProps<{ bah: string, sjh: string, requestId: string }>()
 const visible = defineModel<boolean>({ default: false })
 
+const user = useUserStore()
 const { auth } = useAuth()
-const canReadLog = computed(() => auth('log:read'))
+const canReadLog = computed(() => auth('log:read') && /^[a-f0-9]{16}$/i.test(props.requestId))
 
 const loading = ref(false)
-const failed = ref(false)
+const problem = ref<{ message: string, retryable: boolean } | null>(null)
 const report = ref<QueryDiagnostic | null>(null)
+let activeRequest: AbortController | undefined
 
 /** 探测步骤的 code 是运维口径，不给业务同事看英文；这里逐条翻成人话。 */
 const STEP_TITLES: Record<string, string> = {
   INPUT: '查询条件',
-  REQUEST_RECEIVED: '原请求到达',
+  REQUEST_RECEIVED: '原请求访问日志',
   DATABASE: '数据库连接',
   ARCHIVE_EXACT: '主档精确匹配',
   ARCHIVE_COMPAT: '主档兼容匹配',
@@ -39,18 +41,22 @@ const STATUS_META: Record<string, { label: string, tone: StatusTone, icon: strin
   AMBIGUOUS: { label: '多个候选', tone: 'warning', icon: 'i-lucide:triangle-alert' },
   NEEDS_SJH: { label: '需补上架号', tone: 'warning', icon: 'i-lucide:triangle-alert' },
   NOT_CHECKED: { label: '未检查', tone: 'info', icon: 'i-lucide:info' },
+  NO_SAMPLE: { label: '无匹配样本', tone: 'warning', icon: 'i-lucide:search-x' },
+  MISMATCH: { label: '与预期不一致', tone: 'warning', icon: 'i-lucide:triangle-alert' },
   UNKNOWN: { label: '探测失败', tone: 'danger', icon: 'i-lucide:circle-alert' },
   INFO: { label: '提示', tone: 'info', icon: 'i-lucide:info' },
   CLIENT_CONFIRMATION_REQUIRED: { label: '需人工确认', tone: 'warning', icon: 'i-lucide:info' },
 }
 
-interface DiagnosticStep {
-  code: string
-  status: string
-  message: string
-  durationMs: number
-  details: Record<string, unknown>
-}
+const SAMPLE_COLUMNS = [
+  { key: 'id', label: '记录 ID' },
+  { key: 'archive_id', label: '关联主档 ID' },
+  { key: 'uploadflag', label: '上传状态值' },
+  { key: 'access_time', label: '访问时间' },
+  { key: 'response_status', label: 'HTTP 状态' },
+  { key: 'execute_time', label: '响应耗时（ms）' },
+  { key: 'expected_schema', label: '默认 Schema 符合预期' },
+]
 
 interface StepView {
   code: string
@@ -62,7 +68,7 @@ interface StepView {
   message: string
   durationMs: number
   facts: { label: string, value: string }[]
-  columns: string[]
+  columns: typeof SAMPLE_COLUMNS
   samples: Record<string, unknown>[]
 }
 
@@ -73,45 +79,27 @@ function formatCell(value: unknown): string {
   if (typeof value === 'boolean') {
     return value ? '是' : '否'
   }
-  if (typeof value === 'object') {
-    return JSON.stringify(value)
-  }
-  return String(value)
+  return typeof value === 'number' || typeof value === 'string' ? String(value) : '—'
 }
 
 /**
  * details 里混着两种东西：探测样本（表格）和零散结论（键值对）。
  * 旧版把整块 JSON 原样倒出来，业务同事看不懂；这里拆成「事实行 + 样本表」。
  */
-function buildStep(raw: DiagnosticStep): StepView {
+function buildStep(raw: QueryDiagnostic['steps'][number]): StepView {
   const meta = STATUS_META[raw.status] ?? { label: raw.status || '未知', tone: 'info' as StatusTone, icon: 'i-lucide:info' }
   const details = raw.details || {}
   const facts: { label: string, value: string }[] = []
-  const rest: Record<string, unknown> = { ...details }
-  delete rest.samples
-  delete rest.sampledCount
-  delete rest.truncated
-
   if (typeof details.hit === 'boolean') {
     facts.push({ label: '缓存', value: details.hit ? '命中' : '未命中' })
-    delete rest.hit
   }
   if (typeof details.sampledCount === 'number') {
-    facts.push({ label: '样本', value: `${details.sampledCount} 条${details.truncated ? '（已截断）' : ''}` })
+    facts.push({ label: '样本', value: `${details.sampledCount} 条${details.truncated ? '（达到采样上限）' : ''}` })
   }
-  for (const [key, value] of Object.entries(rest)) {
-    facts.push({ label: key, value: formatCell(value) })
-  }
-
-  const samples = Array.isArray(details.samples) ? (details.samples as Record<string, unknown>[]) : []
-  const columns: string[] = []
-  for (const row of samples) {
-    for (const key of Object.keys(row || {})) {
-      if (!columns.includes(key)) {
-        columns.push(key)
-      }
-    }
-  }
+  const samples = Array.isArray(details.samples)
+    ? details.samples.filter((row): row is Record<string, unknown> => !!row && typeof row === 'object')
+    : []
+  const columns = SAMPLE_COLUMNS.filter(column => samples.some(row => column.key in row))
 
   return {
     code: raw.code,
@@ -152,28 +140,85 @@ const queryLabel = computed(() => {
   return parts.join(' · ') || '未提供查询条件'
 })
 
-async function run() {
-  loading.value = true
-  failed.value = false
-  report.value = null
-  try {
-    report.value = (await diagnoseQuery({ bah: props.bah, sjh: props.sjh, requestId: props.requestId })).data || null
-  }
-  catch {
-    failed.value = true
-    ElMessage.error('诊断失败，请检查运维权限和服务状态')
-  }
-  finally {
-    loading.value = false
+function describeFailure(error: unknown) {
+  const status = axios.isAxiosError(error)
+    ? error.response?.status
+    : Number((error as { code?: number } | null)?.code)
+  switch (status) {
+    case 400: return { message: '诊断条件无效，请更正查询条件后重试。', retryable: false }
+    case 401: return { message: '登录已失效，请重新登录后再诊断。', retryable: false }
+    case 403: return { message: '当前账号没有病案查询诊断权限。', retryable: false }
+    case 404: return { message: '当前环境未提供病案查询诊断，请联系管理员。', retryable: false }
+    default: return { message: '诊断服务暂时不可用，可以重新探测。', retryable: true }
   }
 }
 
-// 弹窗即排查：点「排查本次查询」才发起只读探测，打开后直接给结果。
+function resetReport() {
+  const request = activeRequest
+  activeRequest = undefined
+  request?.abort()
+  loading.value = false
+  problem.value = null
+  report.value = null
+}
+
+async function run() {
+  if (!visible.value || activeRequest) {
+    return
+  }
+  const request = new AbortController()
+  activeRequest = request
+  loading.value = true
+  problem.value = null
+  report.value = null
+  try {
+    const response = await diagnoseQuery(
+      { bah: props.bah, sjh: props.sjh, requestId: props.requestId },
+      request.signal,
+      user.token,
+    )
+    if (activeRequest !== request) {
+      return
+    }
+    const data = response?.data
+    if (!Array.isArray(data?.steps) || !data.steps.every(step =>
+      step && typeof step.code === 'string' && typeof step.status === 'string' && typeof step.message === 'string',
+    )) {
+      problem.value = { message: '诊断返回格式异常，可以重新探测。', retryable: true }
+      return
+    }
+    report.value = data
+  }
+  catch (error) {
+    if (activeRequest === request) {
+      problem.value = describeFailure(error)
+    }
+  }
+  finally {
+    if (activeRequest === request) {
+      activeRequest = undefined
+      loading.value = false
+    }
+  }
+}
+
 watch(visible, (open) => {
   if (open) {
     void run()
   }
-})
+  else {
+    resetReport()
+  }
+}, { flush: 'sync' })
+
+function dismiss() {
+  visible.value = false
+  resetReport()
+}
+
+watch([() => props.bah, () => props.sjh, () => props.requestId, () => user.token], dismiss)
+onDeactivated(dismiss)
+onBeforeUnmount(resetReport)
 </script>
 
 <template>
@@ -186,8 +231,9 @@ watch(visible, (open) => {
     :z-index="ACTION_DIALOG_Z_INDEX"
     append-to-body
     destroy-on-close
+    @close="dismiss"
   >
-    <div v-loading="loading" class="diagnostics-body">
+    <div class="diagnostics-body" :aria-busy="loading">
       <div class="diagnostics-meta">
         <div class="diagnostics-query">
           <span class="meta-label">查询对象</span>
@@ -199,7 +245,14 @@ watch(visible, (open) => {
         </div>
       </div>
 
-      <div class="diagnostics-summary">
+      <p class="diagnostics-hint">
+        对本次失败查询使用的编号进行当前时刻的只读探测。原请求可通过访问日志追溯。
+      </p>
+      <p v-if="loading" class="diagnostics-hint" role="status">
+        正在探测…
+      </p>
+      <el-alert v-else-if="problem" :title="problem.message" type="error" :closable="false" show-icon />
+      <div v-if="steps.length" class="diagnostics-summary">
         <span class="summary-pill" data-tone="success">{{ summary.ok }} 项通过</span>
         <span v-if="summary.attention" class="summary-pill" data-tone="warning">{{ summary.attention }} 项需关注</span>
         <span v-if="summary.skipped" class="summary-pill" data-tone="info">{{ summary.skipped }} 项未检查</span>
@@ -232,19 +285,19 @@ watch(visible, (open) => {
               </template>
             </dl>
 
-            <div v-if="step.samples.length" class="step-samples">
+            <div v-if="step.columns.length" class="step-samples">
               <table>
                 <thead>
                   <tr>
-                    <th v-for="column in step.columns" :key="column">
-                      {{ column }}
+                    <th v-for="column in step.columns" :key="column.key" scope="col">
+                      {{ column.label }}
                     </th>
                   </tr>
                 </thead>
                 <tbody>
                   <tr v-for="(row, rowIndex) in step.samples.slice(0, 5)" :key="rowIndex">
-                    <td v-for="column in step.columns" :key="column">
-                      {{ formatCell(row?.[column]) }}
+                    <td v-for="column in step.columns" :key="column.key">
+                      {{ formatCell(row[column.key]) }}
                     </td>
                   </tr>
                 </tbody>
@@ -257,26 +310,21 @@ watch(visible, (open) => {
         </li>
       </ol>
 
-      <el-empty v-else-if="!loading && failed" description="诊断请求失败，可稍后重试">
-        <el-button size="small" @click="run">
-          重新诊断
-        </el-button>
-      </el-empty>
-      <el-empty v-else-if="!loading" description="本次没有可展示的探测步骤" />
+      <el-empty v-else-if="report" description="本次没有可展示的探测步骤" />
     </div>
 
     <template #footer>
       <div class="diagnostics-footer">
         <router-link
-          v-if="canReadLog && props.requestId"
+          v-if="canReadLog && (!problem || problem.retryable)"
           class="diagnostics-log-link"
           :to="{ path: '/logs', query: { requestId: props.requestId } }"
         >
           按追踪编号查看访问日志
         </router-link>
-        <span v-else class="diagnostics-hint">只读探测最多采样 51 条，不代表全量统计。</span>
+        <span v-if="report?.scope" class="diagnostics-hint">{{ report.scope }}</span>
         <div class="diagnostics-footer-actions">
-          <el-button :loading="loading" @click="run">
+          <el-button v-if="!problem || problem.retryable" :loading="loading" @click="run">
             重新探测
           </el-button>
           <el-button type="primary" @click="visible = false">
@@ -548,6 +596,7 @@ watch(visible, (open) => {
 }
 
 .diagnostics-hint {
+  margin: 0;
   font-size: 12px;
   color: var(--text-tertiary);
 }

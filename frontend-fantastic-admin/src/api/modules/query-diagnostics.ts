@@ -5,4 +5,10 @@ export interface QueryDiagnostic {
   readOnly: boolean
   scope?: string
 }
-export const diagnoseQuery = (data: { bah?: string, sjh?: string, requestId?: string }) => postRequest<QueryDiagnostic>('/api/v1/operations/query-diagnostics', data)
+export function diagnoseQuery(data: { bah: string, sjh: string, requestId: string }, signal: AbortSignal, authSessionToken: string) {
+  return postRequest<QueryDiagnostic>('/api/v1/operations/query-diagnostics', data, {
+    signal,
+    authSessionToken,
+    skipGlobalError: true,
+  })
+}

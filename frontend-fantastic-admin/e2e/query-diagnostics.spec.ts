@@ -92,9 +92,9 @@ test('诊断弹窗按步骤中文化展示，样本用表格而不是原始 JSON
   await expect(dialog).toContainText('探测失败')
   // 摘要按「通过 / 需关注 / 未检查」计数，一眼看结论
   await expect(dialog).toContainText('项需关注')
-  // 样本渲染成表格：表头 id + 两行数据，而不是整块 JSON 倒出来
+  // 样本使用可读表头，并限制展示字段。
   await expect(dialog.locator('.step-samples tbody tr')).toHaveCount(2)
-  await expect(dialog.locator('.step-samples thead')).toContainText('id')
+  await expect(dialog.locator('.step-samples thead')).toContainText('记录 ID')
   await expect(dialog).not.toContainText('"sampledCount"')
   await expect(dialog).toContainText('只读探测')
 
@@ -106,4 +106,113 @@ test('诊断弹窗按步骤中文化展示，样本用表格而不是原始 JSON
   })
   expect(footprint).not.toBeNull()
   expect(footprint!.bottom).toBeLessThanOrEqual(footprint!.viewport)
+})
+
+test('编辑输入框后仍诊断实际失败的查询', async ({ page }) => {
+  await page.route('**/api/v1/img/search?**', route => route.fulfill({ json: emptyResult('NO_MATCHING_IMAGES') }))
+  let submitted: unknown
+  await page.route('**/api/v1/operations/query-diagnostics', async (route) => {
+    submitted = route.request().postDataJSON()
+    await route.fulfill({ json: { code: 200, data: { readOnly: true, steps: [] } } })
+  })
+  await page.goto('/archive?bah=123&sjh=456')
+  await expect(page.getByLabel('本次请求追踪编号')).toHaveValue('0123456789abcdef')
+  await page.locator('input[name="archive-bah"]').fill('789')
+  await page.getByRole('button', { name: '排查本次查询' }).click()
+  await expect.poll(() => submitted).toMatchObject({ bah: '123', sjh: '', requestId: '0123456789abcdef' })
+  await expect(page.getByRole('dialog')).toContainText('病案号 123')
+})
+
+test('前端校验失败不继承上一笔请求的追踪编号和操作', async ({ page }) => {
+  await page.route('**/api/v1/img/search?**', route => route.fulfill({ json: emptyResult('NO_MATCHING_IMAGES') }))
+  await page.goto('/archive?bah=123')
+  const card = page.locator('.query-failure')
+  await expect(card.getByLabel('本次请求追踪编号')).toBeVisible()
+  await page.locator('input[name="archive-bah"]').fill('10000001')
+  await page.locator('.search-card').getByRole('button', { name: '查询', exact: true }).click()
+  await expect(card).toContainText('必须输入上架号')
+  await expect(card.getByLabel('本次请求追踪编号')).toHaveCount(0)
+  await expect(card.getByRole('button', { name: '排查本次查询' })).toHaveCount(0)
+  await expect(card.getByRole('button', { name: '重新查询' })).toHaveCount(0)
+})
+
+test('关闭诊断会取消未完成请求，重开后显示新报告', async ({ page }) => {
+  await page.route('**/api/v1/img/search?**', route => route.fulfill({ json: emptyResult('NO_MATCHING_IMAGES') }))
+  let releaseFirst!: () => void
+  const firstGate = new Promise<void>((resolve) => { releaseFirst = resolve })
+  let firstRequest: import('@playwright/test').Request | undefined
+  const failedRequests: import('@playwright/test').Request[] = []
+  page.on('requestfailed', request => failedRequests.push(request))
+  await page.route('**/api/v1/operations/query-diagnostics', async (route) => {
+    const isFirst = !firstRequest
+    if (isFirst) {
+      firstRequest = route.request()
+      await firstGate
+    }
+    await route.fulfill({
+      json: { code: 200, data: { readOnly: true, steps: [{ code: 'DATABASE', status: 'OK', message: isFirst ? '上一轮样本' : '新一轮样本', durationMs: 1, details: {} }] } },
+    }).catch(() => {})
+  })
+
+  try {
+    await page.goto('/archive?bah=123')
+    const open = page.getByRole('button', { name: '排查本次查询' })
+    const dialog = page.getByRole('dialog', { name: '病案查询诊断' })
+    await open.click()
+    await expect.poll(() => firstRequest?.method()).toBe('POST')
+    await dialog.locator('.el-dialog__headerbtn').click()
+    await expect(dialog).toBeHidden()
+    await expect.poll(() => failedRequests.includes(firstRequest), { timeout: 3000 }).toBe(true)
+    await open.click()
+    await expect(dialog).toContainText('新一轮样本')
+    releaseFirst()
+    await expect(dialog).not.toContainText('上一轮样本')
+  }
+  finally {
+    releaseFirst()
+  }
+})
+
+test('诊断权限拒绝时只显示安全提示与关闭入口', async ({ page }) => {
+  await page.route('**/api/v1/img/search?**', route => route.fulfill({ json: emptyResult('NO_MATCHING_IMAGES') }))
+  await page.route('**/api/v1/operations/query-diagnostics', route => route.fulfill({
+    status: 403,
+    json: { code: 403, message: '合成底层错误内容' },
+  }))
+  await page.goto('/archive?bah=123')
+  await page.getByRole('button', { name: '排查本次查询' }).click()
+  const dialog = page.getByRole('dialog', { name: '病案查询诊断' })
+  await expect(dialog).toContainText('当前账号没有病案查询诊断权限')
+  await expect(dialog).not.toContainText('合成底层错误内容')
+  await expect(dialog.getByRole('button', { name: '重新探测' })).toHaveCount(0)
+})
+
+test('诊断服务暂不可用时可用原条件重试', async ({ page }) => {
+  await page.route('**/api/v1/img/search?**', route => route.fulfill({ json: emptyResult('NO_MATCHING_IMAGES') }))
+  const attempts: unknown[] = []
+  await page.route('**/api/v1/operations/query-diagnostics', async (route) => {
+    attempts.push(route.request().postDataJSON())
+    if (attempts.length === 1) {
+      await route.fulfill({ status: 503, json: { code: 503, message: '合成底层错误内容' } })
+      return
+    }
+    if (attempts.length === 2) {
+      await route.fulfill({ json: { code: 200, data: { readOnly: true, steps: [null] } } })
+      return
+    }
+    await route.fulfill({
+      json: { code: 200, data: { readOnly: true, steps: [{ code: 'ARCHIVE_EXACT', status: 'NO_SAMPLE', message: '本次探测未返回样本', durationMs: 1, details: { sampledCount: 0 } }] } },
+    })
+  })
+  await page.goto('/archive?sjh=123')
+  await page.getByRole('button', { name: '排查本次查询' }).click()
+  const dialog = page.getByRole('dialog', { name: '病案查询诊断' })
+  await expect(dialog).toContainText('诊断服务暂时不可用')
+  await expect(dialog).not.toContainText('0 项通过')
+  await dialog.getByRole('button', { name: '重新探测' }).click()
+  await expect(dialog).toContainText('诊断返回格式异常', { timeout: 5000 })
+  await dialog.getByRole('button', { name: '重新探测' }).click()
+  await expect(dialog).toContainText('无匹配样本')
+  expect(attempts).toHaveLength(3)
+  expect(attempts.slice(1)).toEqual([attempts[0], attempts[0]])
 })

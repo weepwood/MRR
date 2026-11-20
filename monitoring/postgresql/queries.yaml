@@ -1,0 +1,165 @@
+# MRR postgres_exporter 自定义聚合查询
+#
+# 启动方式（postgres_exporter 0.11 及以上，含 0.21.x 实测）：
+#   postgres_exporter.exe --extend.query-path="C:\MRR\monitoring\postgresql\queries.yaml"
+#
+# 注意：0.15 起新增的 --config.file 是「多实例认证配置」（auth_modules），
+# 不是查询文件。把本文件传给 --config.file 会报
+#   field mrr_pg_stat_statements not found in type config.AuthConfig
+# --extend.query-path 虽被标记 DEPRECATED，但目前仍是加载自定义查询的唯一入口。
+#
+# 设计约束（务必遵守，否则会拖垮 Prometheus）：
+#   1. 每条查询只返回单行聚合值，绝不把 queryid、query 文本、relname 放进 label；
+#      PostgreSQL 有上万个标准化语句，一旦成为 label 就是不可控的基数爆炸。
+#   2. 逐语句明细留在 diagnostics/ 的 SQL 报告里做人工分析，Prometheus 只保留趋势信号。
+#   3. 重查询用 cache_seconds 降频：膨胀与 vacuum 画像 5 分钟一次足够。
+#   4. 指标名 = <查询键>_<列别名>，列别名统一以 _total 结尾表示累计量（COUNTER）。
+
+mrr_pg_stat_statements:
+  query: |
+    SELECT
+        coalesce(sum(calls), 0)::double precision                                        AS calls_total,
+        coalesce(sum(total_exec_time), 0)::double precision / 1000.0                     AS exec_seconds_total,
+        coalesce(sum(rows), 0)::double precision                                        AS rows_total,
+        coalesce(sum(shared_blks_hit), 0)::double precision                             AS shared_hit_total,
+        coalesce(sum(shared_blks_read), 0)::double precision                            AS shared_read_total,
+        coalesce(sum(temp_blks_written), 0)::double precision                           AS temp_blocks_total,
+        coalesce(sum(wal_bytes), 0)::double precision                                   AS wal_bytes_total,
+        coalesce(max(mean_exec_time) FILTER (WHERE calls > 0), 0)::double precision / 1000.0
+                                                                                        AS worst_mean_seconds,
+        (count(*) FILTER (WHERE calls > 0 AND mean_exec_time > 200))::double precision   AS slow_200ms,
+        (count(*) FILTER (WHERE calls > 0 AND mean_exec_time > 1000))::double precision  AS slow_1s
+    FROM pg_stat_statements
+    WHERE dbid = (SELECT oid FROM pg_database WHERE datname = current_database())
+      AND query NOT ILIKE '%pg_stat_statements%'
+  master: true
+  cache_seconds: 60
+  metrics:
+    - calls_total:
+        usage: "COUNTER"
+        description: "语句累计执行次数"
+    - exec_seconds_total:
+        usage: "COUNTER"
+        description: "语句累计执行时间（秒）"
+    - rows_total:
+        usage: "COUNTER"
+        description: "语句累计返回行数"
+    - shared_hit_total:
+        usage: "COUNTER"
+        description: "语句累计共享缓冲区命中块数"
+    - shared_read_total:
+        usage: "COUNTER"
+        description: "语句累计共享缓冲区物理读块数"
+    - temp_blocks_total:
+        usage: "COUNTER"
+        description: "语句累计写入临时文件块数"
+    - wal_bytes_total:
+        usage: "COUNTER"
+        description: "语句累计产生 WAL 字节数"
+    - worst_mean_seconds:
+        usage: "GAUGE"
+        description: "当前统计窗口内平均耗时最长语句的平均单次耗时（秒）"
+    - slow_200ms:
+        usage: "GAUGE"
+        description: "平均单次耗时超过 200 毫秒的语句条数"
+    - slow_1s:
+        usage: "GAUGE"
+        description: "平均单次耗时超过 1 秒的语句条数"
+
+mrr_pg_bloat:
+  query: |
+    WITH stat AS (
+        SELECT
+            c.oid,
+            n.nspname,
+            c.relname,
+            c.relpages,
+            c.reltuples::bigint AS reltuples,
+            (SELECT sum((1 - s.null_frac) * s.avg_width)
+               FROM pg_stats s
+              WHERE s.schemaname = n.nspname AND s.tablename = c.relname) AS data_width
+        FROM pg_class c
+        JOIN pg_namespace n ON n.oid = c.relnamespace
+        WHERE c.relkind = 'r'
+          AND n.nspname NOT IN ('pg_catalog', 'information_schema')
+    ), calc AS (
+        SELECT
+            relpages,
+            reltuples,
+            ceil(reltuples * (coalesce(data_width, 0) + 24)
+                 / current_setting('block_size')::int) AS est_pages
+        FROM stat
+        WHERE relpages > 128 AND reltuples > 1000
+    )
+    SELECT
+        coalesce(max(greatest(relpages - est_pages, 0)::numeric / NULLIF(relpages, 0)), 0)::double precision
+                                                                                        AS max_ratio,
+        coalesce(max(greatest(relpages - est_pages, 0) * 8192), 0)::double precision     AS max_bytes,
+        (count(*) FILTER (WHERE greatest(relpages - est_pages, 0)::numeric
+                                / NULLIF(relpages, 0) > 0.20))::double precision        AS tables_over_20pct
+    FROM calc
+  master: true
+  cache_seconds: 300
+  metrics:
+    - max_ratio:
+        usage: "GAUGE"
+        description: "膨胀率最高的表的估算膨胀比例（0-1）"
+    - max_bytes:
+        usage: "GAUGE"
+        description: "膨胀率最高表的估算膨胀字节数"
+    - tables_over_20pct:
+        usage: "GAUGE"
+        description: "估算膨胀率超过 20% 的表数量"
+
+mrr_pg_maintenance:
+  query: |
+    SELECT
+        -- 无死元组下限时，小表（配置表、字典表被整表 UPDATE）会出现
+        -- 「0 活元组 / 7 死元组 = 100%」，导致告警长期常亮。这里与
+        -- tables_needing_vacuum 使用同一个 1 万条下限，两者口径一致。
+        coalesce(max(CASE WHEN n_dead_tup > 10000
+                          THEN n_dead_tup::numeric / NULLIF(n_live_tup + n_dead_tup, 0) END), 0)::double precision
+                                                                                        AS dead_tuple_ratio,
+        coalesce(max(extract(epoch FROM now() - coalesce(last_autovacuum, last_vacuum))), -1)::double precision
+                                                                                        AS max_vacuum_age_seconds,
+        (count(*) FILTER (WHERE n_dead_tup > 10000
+                            AND n_dead_tup::numeric / NULLIF(n_live_tup + n_dead_tup, 0) > 0.20))::double precision
+                                                                                        AS tables_needing_vacuum
+    FROM pg_stat_user_tables
+    WHERE schemaname NOT IN ('pg_catalog', 'information_schema')
+  master: true
+  cache_seconds: 300
+  metrics:
+    - dead_tuple_ratio:
+        usage: "GAUGE"
+        description: "死元组超过 1 万的表中，死元组占比最高者的比例（0-1）；无满足条件的表时为 0"
+    - max_vacuum_age_seconds:
+        usage: "GAUGE"
+        description: "最近一次 vacuum/autovacuum 距今最长秒数，-1 表示从未执行"
+    - tables_needing_vacuum:
+        usage: "GAUGE"
+        description: "死元组超过 1 万且占比超过 20% 的表数量"
+
+mrr_pg_transactions:
+  query: |
+    SELECT
+        coalesce(max(extract(epoch FROM now() - xact_start)), 0)::double precision        AS longest_xact_seconds,
+        coalesce(max(extract(epoch FROM now() - state_change))
+                 FILTER (WHERE state LIKE 'idle in transaction%'), 0)::double precision  AS longest_idle_xact_seconds,
+        (count(*) FILTER (WHERE now() - xact_start > interval '60 seconds'))::double precision
+                                                                                         AS xacts_over_60s
+    FROM pg_stat_activity
+    WHERE xact_start IS NOT NULL
+      AND pid <> pg_backend_pid()
+  master: true
+  cache_seconds: 30
+  metrics:
+    - longest_xact_seconds:
+        usage: "GAUGE"
+        description: "当前运行最久的事务已持续秒数"
+    - longest_idle_xact_seconds:
+        usage: "GAUGE"
+        description: "当前最久的 idle in transaction 会话已持续秒数，0 表示没有"
+    - xacts_over_60s:
+        usage: "GAUGE"
+        description: "运行超过 60 秒的事务数量"

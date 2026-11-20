@@ -40,28 +40,28 @@ onUnmounted(() => {
       <component :is="useSlots('main-sidebar-after-logo')" />
       <FaScrollArea :scrollbar="false" mask gradient-color="var(--mrr-navigation-bg-solid)" class="menu flex-1 overscroll-contain">
         <!-- 侧边栏模式（含主导航） -->
-        <div class="w-full flex flex-col of-hidden py-1 transition-all">
+        <nav aria-label="主导航" class="w-full flex flex-col of-hidden py-1 transition-all">
           <template v-for="(item, index) in menuStore.allMenus" :key="index">
             <div
               class="menu-item relative px-2 py-1 transition-all" :class="{
                 active: index === menuStore.actived,
               }"
             >
-              <div
-                v-if="item.children && item.children.length !== 0" class="group menu-item-container relative h-full w-full flex cursor-pointer items-center justify-between gap-1 rounded-lg py-4 text-[var(--g-main-sidebar-menu-color)] transition-colors px-2!" :class="{
+              <button
+                v-if="item.children && item.children.length !== 0" type="button" aria-controls="mrr-sub-navigation" :aria-pressed="index === menuStore.actived" class="mrr-navigation-control group menu-item-container relative h-full w-full flex cursor-pointer items-center justify-between gap-1 rounded-lg py-4 text-[var(--g-main-sidebar-menu-color)] transition-colors px-2!" :class="{
                   active: index === menuStore.actived,
                 }" :title="typeof item.meta?.title === 'function' ? item.meta?.title() : item.meta?.title" @click="switchTo(index)"
               >
-                <div class="w-full inline-flex flex-1 flex-col items-center justify-center gap-[3px]">
+                <span class="w-full inline-flex flex-1 flex-col items-center justify-center gap-[3px]">
                   <FaIcon v-if="item.meta?.icon" :name="item.meta?.icon" class="menu-item-container-icon" />
                   <span class="w-full flex-1 truncate text-center transition-height transition-opacity transition-width">
                     {{ typeof item.meta?.title === 'function' ? item.meta?.title() : item.meta?.title }}
                   </span>
-                </div>
-              </div>
+                </span>
+              </button>
             </div>
           </template>
-        </div>
+        </nav>
       </FaScrollArea>
       <component :is="useSlots('main-sidebar-after-menu')" />
       <div class="account-area flex-center px-3 py-3">
@@ -109,7 +109,7 @@ onUnmounted(() => {
         color: var(--text-secondary) !important;
         border: 1px solid transparent;
         border-radius: var(--mrr-radius-lg);
-        transition: color 140ms ease, background-color 140ms ease, border-color 140ms ease;
+        transition: color var(--mrr-motion-feedback) var(--mrr-ease-out), background-color var(--mrr-motion-feedback) var(--mrr-ease-out), border-color var(--mrr-motion-feedback) var(--mrr-ease-out);
 
         &:hover {
           color: var(--text-primary) !important;

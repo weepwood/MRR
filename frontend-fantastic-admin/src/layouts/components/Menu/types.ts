@@ -24,10 +24,10 @@ export interface MenuInjection {
   subMenus: Record<string, MenuItem>
   activeIndex: MenuProps['value']
   openedMenus: string[]
-  mouseInMenu: string[]
+  mouseInMenu: string
   isMenuPopup: boolean
   openMenu: (index: string, indexPath: string[]) => void
-  closeMenu: (index: string | string[]) => void
+  closeMenu: (index: string) => void
   handleMenuItemClick: (index: string) => void
   handleSubMenuClick: (index: string, indexPath: string[]) => void
 }
@@ -46,4 +46,5 @@ export interface SubMenuItemProps {
   level?: number
   subMenu?: boolean
   expand?: boolean
+  popupId?: string
 }

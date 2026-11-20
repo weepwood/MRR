@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import type { QueryDiagnostic } from '@/api/modules/query-diagnostics'
 import axios from 'axios'
-import { computed, onBeforeUnmount, onDeactivated, ref, watch } from 'vue'
+import { computed, onBeforeUnmount, onDeactivated, ref, useTemplateRef, watch } from 'vue'
 import { diagnoseQuery } from '@/api/modules/query-diagnostics'
 import { ACTION_DIALOG_Z_INDEX } from '@/ui/components/ActionDialog'
 import useAuth from '@/utils/composables/useAuth'
@@ -18,6 +18,7 @@ const canReadLog = computed(() => auth('log:read') && /^[a-f0-9]{16}$/i.test(pro
 const loading = ref(false)
 const problem = ref<{ message: string, retryable: boolean } | null>(null)
 const report = ref<QueryDiagnostic | null>(null)
+const reportBody = useTemplateRef<HTMLElement>('reportBody')
 let activeRequest: AbortController | undefined
 
 /** 探测步骤的 code 是运维口径，不给业务同事看英文；这里逐条翻成人话。 */
@@ -70,6 +71,7 @@ interface StepView {
   facts: { label: string, value: string }[]
   columns: typeof SAMPLE_COLUMNS
   samples: Record<string, unknown>[]
+  sampleCount: number
 }
 
 function formatCell(value: unknown): string {
@@ -112,17 +114,22 @@ function buildStep(raw: QueryDiagnostic['steps'][number]): StepView {
     durationMs: Number(raw.durationMs) || 0,
     facts,
     columns,
-    samples,
+    samples: samples.slice(0, 5),
+    sampleCount: samples.length,
   }
 }
 
 const steps = computed<StepView[]>(() => (report.value?.steps || []).map(buildStep))
+const attentionSteps = computed(() => steps.value
+  .map((step, index) => ({ step, index }))
+  .filter(({ step }) => step.tone === 'warning' || step.tone === 'danger')
+  .sort((a, b) => Number(b.step.tone === 'danger') - Number(a.step.tone === 'danger')))
 
 const summary = computed(() => {
   const list = steps.value
   return {
     ok: list.filter(step => step.status === 'OK').length,
-    attention: list.filter(step => step.tone === 'warning' || step.tone === 'danger').length,
+    attention: attentionSteps.value.length,
     skipped: list.filter(step => step.status === 'NOT_CHECKED').length,
     totalMs: list.reduce((sum, step) => sum + step.durationMs, 0),
     count: list.length,
@@ -139,6 +146,12 @@ const queryLabel = computed(() => {
   }
   return parts.join(' · ') || '未提供查询条件'
 })
+
+function jumpToStep(index: number) {
+  const heading = reportBody.value?.querySelector<HTMLElement>(`[data-step-index="${index}"] .step-title`)
+  heading?.focus({ preventScroll: true })
+  heading?.scrollIntoView({ block: 'start' })
+}
 
 function describeFailure(error: unknown) {
   const status = axios.isAxiosError(error)
@@ -171,6 +184,9 @@ async function run() {
   loading.value = true
   problem.value = null
   report.value = null
+  if (reportBody.value) {
+    reportBody.value.scrollTop = 0
+  }
   try {
     const response = await diagnoseQuery(
       { bah: props.bah, sjh: props.sjh, requestId: props.requestId },
@@ -226,14 +242,15 @@ onBeforeUnmount(resetReport)
     v-model="visible"
     title="病案查询诊断"
     width="min(760px, calc(100% - 24px))"
-    top="min(12vh, 5rem)"
     class="query-diagnostics"
+    modal-class="query-diagnostics-overlay"
+    align-center
     :z-index="ACTION_DIALOG_Z_INDEX"
     append-to-body
     destroy-on-close
     @close="dismiss"
   >
-    <div class="diagnostics-body" :aria-busy="loading">
+    <div ref="reportBody" class="diagnostics-body" role="region" aria-label="诊断报告" tabindex="0">
       <div class="diagnostics-meta">
         <div class="diagnostics-query">
           <span class="meta-label">查询对象</span>
@@ -243,6 +260,13 @@ onBeforeUnmount(resetReport)
           <span class="meta-label">追踪编号</span>
           <code class="meta-code">{{ props.requestId }}</code>
         </div>
+        <router-link
+          v-if="canReadLog && (!problem || problem.retryable)"
+          class="diagnostics-log-link"
+          :to="{ path: '/logs', query: { requestId: props.requestId } }"
+        >
+          查看原请求访问日志
+        </router-link>
       </div>
 
       <p class="diagnostics-hint">
@@ -256,18 +280,32 @@ onBeforeUnmount(resetReport)
         <span class="summary-pill" data-tone="success">{{ summary.ok }} 项通过</span>
         <span v-if="summary.attention" class="summary-pill" data-tone="warning">{{ summary.attention }} 项需关注</span>
         <span v-if="summary.skipped" class="summary-pill" data-tone="info">{{ summary.skipped }} 项未检查</span>
-        <span class="summary-total">共 {{ summary.count }} 项 · 耗时 {{ summary.totalMs }} ms</span>
+        <span class="summary-total">共 {{ summary.count }} 项 · 探测累计耗时 {{ summary.totalMs }} ms</span>
         <el-tag v-if="report?.readOnly" size="small" type="info" effect="plain">
           只读探测
         </el-tag>
       </div>
 
+      <section v-if="attentionSteps.length" class="diagnostics-attention">
+        <h3>优先核对</h3>
+        <ul>
+          <li v-for="{ step, index } in attentionSteps.slice(0, 3)" :key="index">
+            <button type="button" @click="jumpToStep(index)">
+              {{ step.title }} · {{ step.statusLabel }}
+            </button>
+          </li>
+        </ul>
+      </section>
+      <p v-if="report?.scope && steps.length" class="diagnostics-hint">
+        {{ report.scope }}
+      </p>
+
       <ol v-if="steps.length" class="diagnostics-steps">
-        <li v-for="step in steps" :key="step.code" class="diagnostics-step" :data-tone="step.tone">
+        <li v-for="(step, index) in steps" :key="step.code" class="diagnostics-step" :data-tone="step.tone" :data-step-index="index">
           <span class="step-dot" aria-hidden="true"><FaIcon :name="step.icon" /></span>
           <div class="step-body">
             <div class="step-head">
-              <h4 class="step-title">
+              <h4 class="step-title" tabindex="-1">
                 {{ step.title }}
               </h4>
               <code class="step-code">{{ step.code }}</code>
@@ -286,7 +324,7 @@ onBeforeUnmount(resetReport)
             </dl>
 
             <div v-if="step.columns.length" class="step-samples">
-              <table>
+              <table class="step-sample-table">
                 <thead>
                   <tr>
                     <th v-for="column in step.columns" :key="column.key" scope="col">
@@ -295,15 +333,23 @@ onBeforeUnmount(resetReport)
                   </tr>
                 </thead>
                 <tbody>
-                  <tr v-for="(row, rowIndex) in step.samples.slice(0, 5)" :key="rowIndex">
+                  <tr v-for="(row, rowIndex) in step.samples" :key="rowIndex">
                     <td v-for="column in step.columns" :key="column.key">
                       {{ formatCell(row[column.key]) }}
                     </td>
                   </tr>
                 </tbody>
               </table>
-              <p v-if="step.samples.length > 5" class="samples-note">
-                仅显示前 5 条，共 {{ step.samples.length }} 条
+              <div class="step-sample-list">
+                <dl v-for="(row, rowIndex) in step.samples" :key="rowIndex">
+                  <template v-for="column in step.columns" :key="column.key">
+                    <dt>{{ column.label }}</dt>
+                    <dd>{{ formatCell(row[column.key]) }}</dd>
+                  </template>
+                </dl>
+              </div>
+              <p v-if="step.sampleCount > step.samples.length" class="samples-note">
+                展示前 {{ step.samples.length }} 条，共采样 {{ step.sampleCount }} 条
               </p>
             </div>
           </div>
@@ -315,39 +361,64 @@ onBeforeUnmount(resetReport)
 
     <template #footer>
       <div class="diagnostics-footer">
-        <router-link
-          v-if="canReadLog && (!problem || problem.retryable)"
-          class="diagnostics-log-link"
-          :to="{ path: '/logs', query: { requestId: props.requestId } }"
-        >
-          按追踪编号查看访问日志
-        </router-link>
-        <span v-if="report?.scope" class="diagnostics-hint">{{ report.scope }}</span>
-        <div class="diagnostics-footer-actions">
-          <el-button v-if="!problem || problem.retryable" :loading="loading" @click="run">
-            重新探测
-          </el-button>
-          <el-button type="primary" @click="visible = false">
-            关闭
-          </el-button>
-        </div>
+        <el-button v-if="!problem || problem.retryable" :loading="loading" @click="run">
+          重新探测
+        </el-button>
+        <el-button type="primary" @click="visible = false">
+          关闭
+        </el-button>
       </div>
     </template>
   </el-dialog>
 </template>
 
 <style scoped>
-/*
- * 九步探测展开后轻松超过一屏，弹窗必须自己滚，否则底部按钮被推到视口外，
- * 高分辨率笔记本上要拖整页才能关掉。表头以外的内容都在这里滚。
- */
+:global(.query-diagnostics-overlay) {
+  --el-transition-duration: var(--mrr-motion-overlay);
+}
+
+:global(.query-diagnostics-overlay.dialog-fade-enter-active),
+:global(.query-diagnostics-overlay.dialog-fade-leave-active),
+:global(.query-diagnostics-overlay.dialog-fade-enter-active .el-overlay-dialog),
+:global(.query-diagnostics-overlay.dialog-fade-leave-active .el-overlay-dialog) {
+  animation-timing-function: var(--mrr-ease-out);
+}
+
+:global(.el-dialog.query-diagnostics) {
+  box-sizing: border-box;
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr) auto;
+  height: min(42rem, calc(100vh - 24px));
+}
+
+:global(.query-diagnostics > .el-dialog__body) {
+  display: flex;
+  min-width: 0;
+  min-height: 0;
+  padding: 0;
+  overflow: hidden;
+}
+
+:global(.query-diagnostics > .el-dialog__footer) {
+  padding: 12px 0 0;
+}
+
 .diagnostics-body {
   display: grid;
+  flex: 1;
   gap: 14px;
-  min-height: 180px;
-  max-height: min(60vh, 560px);
-  padding-right: 4px;
-  overflow-y: auto;
+  align-content: start;
+  min-width: 0;
+  min-height: 0;
+  padding: 2px 6px 12px 2px;
+  overflow: auto;
+  scroll-behavior: auto;
+  overscroll-behavior: contain;
+}
+
+.diagnostics-body:focus-visible {
+  outline: 2px solid var(--el-color-primary);
+  outline-offset: -2px;
 }
 
 .diagnostics-meta {
@@ -364,11 +435,18 @@ onBeforeUnmount(resetReport)
 }
 
 .meta-label {
+  flex-shrink: 0;
   font-size: 11px;
   font-weight: 700;
   color: var(--text-tertiary);
   text-transform: uppercase;
   letter-spacing: 0.06em;
+}
+
+.meta-value,
+.meta-code {
+  min-width: 0;
+  overflow-wrap: anywhere;
 }
 
 .meta-value {
@@ -414,6 +492,41 @@ onBeforeUnmount(resetReport)
 .summary-total {
   font-size: 12px;
   color: var(--text-tertiary);
+}
+
+.diagnostics-attention h3 {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.diagnostics-attention ul {
+  display: grid;
+  gap: 2px;
+  padding: 0;
+  margin: 4px 0 0;
+  list-style: none;
+}
+
+.diagnostics-attention button {
+  min-height: var(--mrr-control-height, 32px);
+  padding: 2px 4px;
+  color: var(--el-color-primary);
+  text-align: left;
+  cursor: pointer;
+  background: transparent;
+  border: 0;
+  border-radius: var(--mrr-radius-sm);
+}
+
+.diagnostics-attention button:hover {
+  background: var(--el-fill-color-light);
+}
+
+.diagnostics-attention button:focus-visible,
+.step-title:focus-visible {
+  outline: 2px solid var(--el-color-primary);
+  outline-offset: 2px;
 }
 
 .diagnostics-steps {
@@ -481,6 +594,7 @@ onBeforeUnmount(resetReport)
   font-size: 13px;
   font-weight: 600;
   color: var(--text-primary);
+  scroll-margin-top: 8px;
 }
 
 .step-code {
@@ -551,10 +665,10 @@ onBeforeUnmount(resetReport)
   overflow-x: auto;
 }
 
-.step-samples table {
-  width: auto;
-  min-width: 50%;
+.step-sample-table {
+  width: 100%;
   font-size: 12px;
+  table-layout: fixed;
   border-collapse: collapse;
 }
 
@@ -562,7 +676,7 @@ onBeforeUnmount(resetReport)
 .step-samples td {
   padding: 4px 8px;
   text-align: left;
-  white-space: nowrap;
+  overflow-wrap: anywhere;
   border-bottom: 1px solid var(--divider);
 }
 
@@ -576,6 +690,10 @@ onBeforeUnmount(resetReport)
   color: var(--text-primary);
 }
 
+.step-sample-list {
+  display: none;
+}
+
 .samples-note {
   margin: 4px 0 0;
   font-size: 11px;
@@ -587,7 +705,7 @@ onBeforeUnmount(resetReport)
   flex-wrap: wrap;
   gap: 8px;
   align-items: center;
-  justify-content: space-between;
+  justify-content: flex-end;
 }
 
 .diagnostics-log-link {
@@ -601,19 +719,44 @@ onBeforeUnmount(resetReport)
   color: var(--text-tertiary);
 }
 
-.diagnostics-footer-actions {
-  display: flex;
-  gap: 8px;
-  margin-left: auto;
-}
-
-@media (max-width: 720px) {
-  .diagnostics-footer {
-    justify-content: flex-start;
+@media (max-width: 560px) {
+  .diagnostics-step {
+    grid-template-columns: 20px minmax(0, 1fr);
+    gap: 8px;
   }
 
-  .diagnostics-footer-actions {
-    margin-left: 0;
+  .step-dot {
+    width: 20px;
+    height: 20px;
+  }
+
+  .step-sample-table {
+    display: none;
+  }
+
+  .step-sample-list {
+    display: grid;
+    gap: 6px;
+    font-size: 12px;
+  }
+
+  .step-sample-list dl {
+    display: grid;
+    grid-template-columns: minmax(0, 2fr) minmax(0, 3fr);
+    gap: 4px 8px;
+    padding: 6px;
+    margin: 0;
+    border: 1px solid var(--divider);
+    border-radius: var(--mrr-radius-sm);
+  }
+
+  .step-sample-list dt {
+    color: var(--text-tertiary);
+  }
+
+  .step-sample-list dd {
+    margin: 0;
+    overflow-wrap: anywhere;
   }
 }
 </style>

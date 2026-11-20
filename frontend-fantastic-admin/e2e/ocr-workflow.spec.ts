@@ -1,7 +1,7 @@
 import { expect, test } from '@playwright/test'
 
-const syntheticJobId = '11111111-1111-4111-8111-111111111111'
 const reply = (data: unknown) => ({ code: 200, message: 'success', data })
+const syntheticJobId = '11111111-1111-4111-8111-111111111111'
 
 test('历史 OCR 创建绑定预览范围，缺少验收证据时不能授权自动分类', async ({ page }) => {
   let created: Record<string, unknown> | undefined

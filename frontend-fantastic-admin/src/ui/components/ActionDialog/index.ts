@@ -1,5 +1,15 @@
 import { computed, shallowReactive } from 'vue'
 
+/**
+ * 确认/输入类弹窗的层级。
+ *
+ * Element Plus 的浮层基数是 2000，每打开一个浮层自增；页面里还叠着更靠上的「沉浸层」：
+ * 全屏影像查看器 3000、影像预览悬浮工具栏 3001、OCR 抽屉基座 3100。
+ * 弹窗若用默认基数，会整块压在影像下面——看得见遮罩、看不见弹窗，按钮点不到。
+ * 这里显式抬到页面浮层之上，但仍低于档案水印（4000，`pointer-events: none`）。
+ */
+export const ACTION_DIALOG_Z_INDEX = 3200
+
 /** 提交前需要复核的单项变更，`before` 缺省时只显示结果值。 */
 export interface DialogDetail {
   label: string

@@ -3,11 +3,11 @@ import type { ArchiveFitMode } from '../composables/useArchiveLocalPreferences'
 import type { GalleryImage } from '../types'
 import type { ArchivePreviewMode } from '@/utils/system-settings'
 import { ElImageViewer } from 'element-plus'
-import { ArrowLeft, ArrowRight } from 'lucide-vue-next'
-import { nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
-import { actionDialog } from '@/ui/components/ActionDialog'
+import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
 import { isMotionEnabled } from '@/utils/motion-preference'
-import { TYPE_OPTIONS } from '../constants'
+import { suppressFocusSelect } from '../utils/viewer-close-focus-guard'
+import PreviewActionBar from './PreviewActionBar.vue'
+import PreviewViewerToolbar from './PreviewViewerToolbar.vue'
 import 'element-plus/es/components/image-viewer/style/css'
 
 defineOptions({ name: 'PreviewPanel' })
@@ -43,22 +43,33 @@ const emit = defineEmits<{
 const displayMode = defineModel<ArchivePreviewMode>('displayMode', { default: 'single' })
 const previewScroller = ref<HTMLElement | null>(null)
 const pageRefs = ref<(HTMLElement | null)[]>([])
-const pendingType = ref(0)
 const failedImageUrls = ref<Set<string>>(new Set())
 const isImageViewerOpen = ref(false)
 const imageViewerIndex = ref(0)
 const imageViewerRef = ref<{ setActiveItem: (index: number) => void } | null>(null)
 let touchStartX = 0
 let pageObserver: IntersectionObserver | null = null
-
-const currentType = computed({
-  get: () => Number(props.image?.btype || 0),
-  set: (value: number) => emit('saveType', value),
-})
+/* 滚轮连续触发会一次跳多页：一次手势只允许切换一张（300ms 锁） */
+let wheelNavLockUntil = 0
+/* 滚动驱动的选中（IntersectionObserver）不回滚对齐，外部选中（点缩略图/键盘）才居中 */
+let scrollDrivenSelection = false
 
 const scrollPreviewStyle = computed(() => ({
   '--scroll-preview-scale': String(props.previewScale / 100),
 }))
+
+function handleWheelNav(event: WheelEvent) {
+  if (Date.now() < wheelNavLockUntil) {
+    return
+  }
+  const delta = Math.abs(event.deltaY) >= Math.abs(event.deltaX) ? event.deltaY : event.deltaX
+  if (!delta) {
+    return
+  }
+  event.preventDefault()
+  wheelNavLockUntil = Date.now() + 300
+  emit('navigate', delta > 0 ? 1 : -1)
+}
 
 function handleTouchStart(event: TouchEvent) {
   touchStartX = event.touches[0]?.clientX ?? 0
@@ -85,7 +96,13 @@ function openImageViewer() {
 
 function closeImageViewer() {
   isImageViewerOpen.value = false
+  // focus-trap 释放时会把焦点还原到打开前的卡片并触发 @focus 回选旧图（P1→P5 关闭回跳 P1），
+  // 短暂抑制卡片 @focus 的预览切换，让预览停留在关闭时的那张。
+  suppressFocusSelect()
 }
+
+/* 页面级快捷键（空格开/关全屏）通过 ref 调用 */
+defineExpose({ openImageViewer, closeImageViewer })
 
 function handleImageViewerSwitch(index: number) {
   imageViewerIndex.value = index
@@ -126,6 +143,8 @@ function observePages() {
         .sort((first, second) => second.intersectionRatio - first.intersectionRatio)[0]
       const index = Number((visiblePage?.target as HTMLElement | undefined)?.dataset.index)
       if (Number.isInteger(index) && index !== props.index) {
+        // 用户手动滚动导致的选中变化：标记后跳过 watch 里的 scrollIntoView，避免打断滚动
+        scrollDrivenSelection = true
         emit('select', index)
       }
     }, { root: previewScroller.value, threshold: 0.6 })
@@ -138,37 +157,20 @@ function observePages() {
   })
 }
 
-async function confirmType() {
-  if (pendingType.value === currentType.value) {
-    return
-  }
-  const label = TYPE_OPTIONS.find(item => item.value === pendingType.value)?.label || '所选分类'
-  try {
-    await actionDialog.confirm(
-      `确认将当前影像分类切换为“${label}”吗？`,
-      '确认分类变更',
-      { confirmButtonText: '确认切换', cancelButtonText: '取消', type: 'warning' },
-    )
-    currentType.value = pendingType.value
-  }
-  catch {
-    pendingType.value = currentType.value
-  }
-}
-
 watch(() => props.index, (index) => {
   if (isImageViewerOpen.value && index !== imageViewerIndex.value) {
     imageViewerIndex.value = index
     nextTick(() => imageViewerRef.value?.setActiveItem(index))
   }
   if (displayMode.value === 'scroll') {
+    if (scrollDrivenSelection) {
+      // 滚动中观察器报上来的选中：页面已在正确位置，不做居中对齐
+      scrollDrivenSelection = false
+      return
+    }
     nextTick(() => syncCurrentPage(index))
   }
 })
-
-watch(() => props.image?.btype, () => {
-  pendingType.value = currentType.value
-}, { immediate: true })
 
 watch(displayMode, observePages)
 
@@ -183,33 +185,19 @@ onUnmounted(() => {
 <template>
   <div v-loading="props.loading" class="preview-panel" @touchstart.passive="handleTouchStart" @touchend="handleTouchEnd">
     <template v-if="props.image">
-      <div class="preview-toolbar" :class="{ 'preview-toolbar--navigation-only': !props.showSelectionStatus }">
-        <el-select
-          v-model="pendingType"
-          class="preview-type-select"
-          aria-label="影像分类"
-          :loading="props.savingType"
-          size="small"
-          @change="confirmType"
-        >
-          <el-option v-for="item in TYPE_OPTIONS" :key="item.value" :label="item.label" :value="item.value" />
-        </el-select>
+      <PreviewActionBar
+        :image="props.image"
+        :index="props.index"
+        :total="props.total"
+        :is-selected="props.isSelected"
+        :show-selection-status="props.showSelectionStatus"
+        :saving-type="props.savingType"
+        @save-type="emit('saveType', $event)"
+        @navigate="emit('navigate', $event)"
+        @toggle="emit('toggle')"
+      />
 
-        <div
-          class="preview-controls"
-          :class="{ 'preview-controls--navigation-only': !props.showSelectionStatus }"
-        >
-          <div class="page-navigation" aria-label="影像翻页">
-            <el-button circle size="small" :icon="ArrowLeft" :disabled="props.index === 0" aria-label="上一张影像" @click="emit('navigate', -1)" />
-            <el-button circle size="small" :icon="ArrowRight" :disabled="props.index >= props.total - 1" aria-label="下一张影像" @click="emit('navigate', 1)" />
-          </div>
-          <el-button v-if="props.showSelectionStatus" size="small" type="primary" :plain="!props.isSelected" @click="emit('toggle')">
-            P{{ props.image.pages ?? '-' }} {{ props.isSelected ? '已选' : '选中' }}
-          </el-button>
-        </div>
-      </div>
-
-      <div v-if="displayMode === 'single'" class="preview-stage single-stage" :class="`is-fit-${props.fitMode}`">
+      <div v-if="displayMode === 'single'" class="preview-stage single-stage" :class="`is-fit-${props.fitMode}`" @wheel="handleWheelNav">
         <div v-if="imageUnavailable(props.image.imageUrl)" class="preview-image-placeholder" role="img" :aria-label="`第 ${props.index + 1} 张影像加载失败`">
           <svg viewBox="0 0 48 48" aria-hidden="true">
             <path d="M8 11a3 3 0 0 1 3-3h26a3 3 0 0 1 3 3v19.76l-6.06-6.06a2 2 0 0 0-2.82 0l-2.4 2.4-6.68-6.68a2 2 0 0 0-2.82 0L8 31.64V11Zm0 26.28 12.64-12.64 6.68 6.68a2 2 0 0 0 2.82 0l2.4-2.4L40 36.4v.6a3 3 0 0 1-3 3H11a3 3 0 0 1-3-3v.28ZM31 18a3 3 0 1 0 0-6 3 3 0 0 0 0 6Z" fill="currentColor" />
@@ -234,13 +222,21 @@ onUnmounted(() => {
         :url-list="props.previewList"
         :initial-index="imageViewerIndex"
         :infinite="false"
-        :hide-on-click-modal="false"
+        hide-on-click-modal
         :z-index="3000"
         teleported
-        show-progress
         @close="closeImageViewer"
         @switch="handleImageViewerSwitch"
-      />
+      >
+        <template #toolbar="{ actions, reset, activeIndex }">
+          <PreviewViewerToolbar
+            :actions="actions"
+            :reset="reset"
+            :active-index="activeIndex"
+            :total="props.previewList.length"
+          />
+        </template>
+      </ElImageViewer>
 
       <div v-if="displayMode === 'scroll'" ref="previewScroller" class="preview-stage" :style="scrollPreviewStyle">
         <article
@@ -296,6 +292,7 @@ onUnmounted(() => {
 
 .single-stage {
   display: grid;
+  grid-template-rows: minmax(0, 1fr);
   place-items: center;
   overflow: hidden;
 }
@@ -310,42 +307,32 @@ onUnmounted(() => {
 
 .single-stage .fit-image {
   cursor: zoom-in;
+  object-fit: contain; /* 尺寸盒与图片比例可能不一致（任一维先铺满后被另一维夹住），靠 contain 保证画面等比 */
   background: transparent;
   box-shadow: none;
 }
 
+/* 适应宽度：尺寸盒占满容器，图像等比落在盒内（小图会放大，永不裁切）。 */
 .single-stage .fit-image.fit-width {
   width: 100%;
-  min-width: 0;
+  max-width: 100%;
+  height: 100%;
+  max-height: 100%;
+}
+
+/* 适应高度：尺寸盒由图片等比决定，只在超出容器时缩小，不放大原尺寸图。 */
+.single-stage .fit-image.fit-height {
+  width: auto;
   max-width: 100%;
   height: auto;
   max-height: 100%;
 }
 
-.single-stage .fit-image.fit-height {
-  width: auto;
-  max-width: 100%;
-  height: 100%;
-  min-height: 0;
-  max-height: 100%;
-}
-
-.fit-scroll-image.fit-width {
-  width:
-    min(
-      calc(100% * var(--scroll-preview-scale)),
-      calc(980px * var(--scroll-preview-scale))
-    );
-}
-
+/* 滚动模式：每页图片按容器最大宽度显示（乘以缩放设置），高度随比例自适应——不裁切不变形 */
+.fit-scroll-image.fit-width,
 .fit-scroll-image.fit-height {
-  width: auto;
-  max-width: none;
-  height:
-    min(
-      calc(64vh * var(--scroll-preview-scale)),
-      calc(720px * var(--scroll-preview-scale))
-    );
+  width: calc(100% * var(--scroll-preview-scale));
+  height: auto;
 }
 
 .preview-image-placeholder {
@@ -389,86 +376,21 @@ onUnmounted(() => {
   min-height: 420px;
 }
 
+/* 图片按容器宽定宽后，页容器统一占满滚动宽度（不再按内容收缩，避免百分比宽度在 max-content 盒里循环解析） */
 .continuous-page {
   position: relative;
-  width: max-content;
-  min-width: 100%;
+  box-sizing: border-box;
+  width: 100%;
+  min-width: 0;
   padding: 8px;
   margin-bottom: 16px;
 }
 
-.continuous-page.is-fit-width {
-  box-sizing: border-box;
-  width: 100%;
-  min-width: 0;
-}
-
-.preview-toolbar {
-  position: fixed;
-  right: 16px;
-  bottom: 16px;
-  z-index: 3001;
-  display: grid;
-  gap: 6px;
-  width: min(180px, calc(100vw - 32px));
-  min-width: 0;
-  padding: 8px;
-  background: hsl(var(--card) / 92%);
-  border: 1px solid var(--divider);
-  border-radius: var(--mrr-radius-md);
-  box-shadow: 0 4px 12px rgb(0 0 0 / 6%);
-}
-
-.preview-controls,
-.page-navigation {
-  display: flex;
-  align-items: center;
-}
-
-.preview-controls {
-  gap: 6px;
-  justify-content: space-between;
-  width: 100%;
-}
-
-.preview-controls--navigation-only {
-  justify-content: flex-start;
-}
-
-.preview-toolbar--navigation-only {
-  width: auto;
-}
-
-.preview-toolbar--navigation-only .preview-controls {
-  width: auto;
-}
-
-.page-navigation {
-  flex: none;
-  gap: 2px;
-}
-
-.preview-type-select {
-  width: 100%;
-}
-
-.preview-type-select :deep(.el-select__wrapper) {
-  min-height: var(--mrr-input-height);
-}
+/* 全屏影像之上留一层悬浮工具条，样式与层级由 PreviewActionBar 自身维护。 */
 
 @media (max-width: 720px) {
   .preview-stage {
     padding: 16px;
-  }
-
-  .preview-toolbar {
-    right: 8px;
-    bottom: 8px;
-    width: min(180px, calc(100vw - 16px));
-  }
-
-  .preview-controls {
-    gap: 4px;
   }
 
   .preview-image-placeholder {

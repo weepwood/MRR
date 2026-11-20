@@ -22,6 +22,7 @@ import {
   requiresSjhForBah,
   resolveArchiveLookup,
 } from '@/utils/medical-record-code'
+import { getRequestErrorMessage } from '@/utils/request-error-message'
 import { archiveAccessMode } from '../access-mode'
 import { padCode, readArchiveImageVersion, resolveImageUrl, writeArchiveImageVersion } from '../constants'
 import { useArchiveExportJob } from './useArchiveExportJob'
@@ -267,7 +268,7 @@ export function useArchiveImages(options: UseArchiveImagesOptions = {}) {
       const failed = err as { payload?: ApiResult, response?: { data?: ApiResult, headers?: Record<string, unknown> } }
       requestId.value = failed.payload?.meta?.requestId || failed.response?.data?.meta?.requestId || String(failed.response?.headers?.['x-request-id'] || '') || requestId.value
       lookupReason.value = failed.payload?.meta?.reasonCode || failed.response?.data?.meta?.reasonCode || 'QUERY_FAILED'
-      errorMsg.value = (err as { message?: string })?.message || '影像加载失败'
+      errorMsg.value = getRequestErrorMessage(err)
       images.value = []
       patientList.value = []
       if (!externalSession) {

@@ -5,12 +5,24 @@
       "origin": "http://127.0.0.1:9000",
       "localStorage": [
         {
-          "name": "mrr:auth:schema-version",
-          "value": "1"
-        },
-        {
           "name": "mrr:auth:token",
           "value": "mock-access-token"
+        },
+        {
+          "name": "mrr:auth:avatar",
+          "value": ""
+        },
+        {
+          "name": "MRR-ADMIN:system-settings",
+          "value": "{\"systemName\":\"MRR 病案文件管理系统\",\"systemShortName\":\"MRR\",\"systemEnglishName\":\"Medical Record Repository\",\"organizationName\":\"\",\"systemDescription\":\"面向病案影像、档案记录与运行审计的一体化工作平台。\",\"loginEnvironmentLabel\":\"医院内网系统\",\"loginFormDescription\":\"使用管理员分配的账号进入系统工作区。\",\"loginHelpText\":\"账号创建、角色调整或密码问题请联系系统管理员。\",\"loginFooterText\":\"医院内网部署 · 数据由本地服务管理\",\"loginFeatureEnabled\":true,\"loginFeature1Title\":\"统一档案管理\",\"loginFeature1Description\":\"集中检索病案、影像和装箱记录。\",\"loginFeature2Title\":\"运行数据可视化\",\"loginFeature2Description\":\"查看扫描、访问和服务状态。\",\"loginFeature3Title\":\"权限与审计\",\"loginFeature3Description\":\"按角色控制功能并保留访问记录。\",\"systemAdminContactEnabled\":false,\"systemAdminPublicVisible\":false,\"systemAdminDisplayName\":\"系统管理员\",\"systemAdminDepartment\":\"信息科\",\"systemAdminPhone\":\"\",\"systemAdminExtension\":\"\",\"systemAdminEmail\":\"\",\"systemAdminServiceHours\":\"\",\"systemAdminDescription\":\"\",\"documentationUserGuideUrl\":\"/docs/\",\"documentationDeveloperUrl\":\"/docs/internal/\",\"documentationOperationsUrl\":\"/docs/internal/deployment.html\",\"imageSource\":\"local\",\"archiveDefaultView\":\"thumb\",\"archivePreviewMode\":\"single\",\"archiveThumbnailSize\":200,\"archivePreloadCount\":20,\"archiveAutoFit\":true,\"archiveRememberSelection\":true,\"archiveWatermarkEnabled\":true,\"archiveWatermarkOpacity\":14,\"archiveIpMaxChanges\":3,\"patientIdCardRevealEnabled\":false,\"patientIdCardCopyEnabled\":false,\"developerModeEnabled\":false,\"developerModeApiAccessEnabled\":false,\"developerModeAllowedSources\":\"127.0.0.1\\n::1\"}"
+        },
+        {
+          "name": "mrr:auth:permissions",
+          "value": "[\"*\"]"
+        },
+        {
+          "name": "mrr:auth:schema-version",
+          "value": "1"
         },
         {
           "name": "mrr:auth:account",
@@ -18,11 +30,7 @@
         },
         {
           "name": "mrr:auth:profile",
-          "value": "{\"id\":1,\"username\":\"admin\",\"displayName\":\"系统管理员\",\"roleCode\":\"ADMIN\",\"roleName\":\"管理员\",\"status\":\"ACTIVE\",\"permissions\":[\"*\"],\"mustChangePassword\":false}"
-        },
-        {
-          "name": "mrr:auth:permissions",
-          "value": "[\"*\"]"
+          "value": "{\"id\":1,\"username\":\"br_admin\",\"displayName\":\"系统管理员\",\"roleCode\":\"ADMIN\",\"roleName\":\"管理员\",\"permissions\":[\"*\"],\"status\":\"ACTIVE\",\"lastLoginAt\":\"2026-07-13T08:00:00.000Z\"}"
         }
       ]
     }

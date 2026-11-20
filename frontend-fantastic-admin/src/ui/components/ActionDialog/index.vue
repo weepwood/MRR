@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import type { ElInput } from 'element-plus'
 import { onBeforeUnmount, ref, useTemplateRef, watch } from 'vue'
-import { ACTION_DIALOG_EXTRA, cancelActionDialogs, currentActionDialog, finishActionDialog } from './index'
+import { ACTION_DIALOG_EXTRA, ACTION_DIALOG_Z_INDEX, cancelActionDialogs, currentActionDialog, finishActionDialog } from './index'
 
 const visible = ref(false)
 const input = ref('')
@@ -63,6 +63,7 @@ onBeforeUnmount(cancelActionDialogs)
     :close-on-click-modal="currentActionDialog?.options.closeOnClickModal ?? true"
     :close-on-press-escape="currentActionDialog?.options.closeOnPressEscape ?? true"
     :width="currentActionDialog?.options.details ? 'min(560px, calc(100vw - 32px))' : 'min(480px, calc(100vw - 32px))'"
+    :z-index="ACTION_DIALOG_Z_INDEX"
     align-center
     append-to-body
     destroy-on-close

@@ -3,6 +3,7 @@ import type { GalleryImage, ViewMode } from '../types'
 import { isMotionEnabled } from '@/utils/motion-preference'
 import { useThumbLayout } from '../composables/useThumbLayout'
 import { getTypeLabel } from '../constants'
+import { isFocusSelectSuppressed } from '../utils/viewer-close-focus-guard'
 
 defineOptions({ name: 'ThumbStrip' })
 
@@ -42,9 +43,26 @@ function selectItem(index: number) {
   emit('select', index)
 }
 
+function onCardFocus(index: number) {
+  // 全屏查看器关闭时 focus-trap 会还原焦点到打开前的卡片，
+  // 还原引发的 focus 不切换预览（避免 P1→P5 关闭后回跳 P1）
+  if (isFocusSelectSuppressed()) {
+    return
+  }
+  selectItem(index)
+}
+
 function toggleItem(img: GalleryImage, event: Event) {
   event.stopPropagation()
   emit('toggle', img)
+}
+
+function onMetaClick(img: GalleryImage, event: MouseEvent) {
+  // 缩略图模式下悬浮条整块可点：点页码/类型文字等同点勾选框；
+  // 列表模式 meta 是行内文字，不拦截，保持「点整行 = 选中预览」的原行为。
+  if (viewMode.value === 'thumb') {
+    toggleItem(img, event)
+  }
 }
 
 function imageKey(img: GalleryImage, index: number) {
@@ -61,13 +79,9 @@ function onImageError(img: GalleryImage, index: number) {
   failedImageKeys.value = next
 }
 
-function onItemKeydown(index: number, event: KeyboardEvent) {
-  if (event.key === 'Enter' || event.key === ' ') {
-    event.preventDefault()
-    selectItem(index)
-  }
-}
-
+/* 卡片上的 Enter/Space 由页面级快捷键统一接管（回车=勾选当前预览图、空格=开关全屏），
+ * 焦点跟随预览（@focus=selectItem），无需卡片本地处理；
+ * 勾选框是独立控件，保留自己的 Enter/Space 语义。 */
 function onToggleKeydown(img: GalleryImage, event: KeyboardEvent) {
   if (event.key === 'Enter' || event.key === ' ') {
     event.preventDefault()
@@ -114,12 +128,10 @@ defineExpose({ resetVisible, scrollToIndex })
         :aria-current="index === props.selectedIndex ? 'true' : undefined"
         :aria-label="`第 ${index + 1} 张影像，${getTypeLabel(img.btype)}`"
         tabindex="0"
+        @focus="onCardFocus(index)"
         @click="selectItem(index)"
-        @keydown="onItemKeydown(index, $event)"
+        @dblclick="toggleItem(img, $event)"
       >
-        <span class="thumb-check" :class="{ checked: props.isSelected(img) }" role="checkbox" :aria-checked="props.isSelected(img)" tabindex="0" @click="toggleItem(img, $event)" @keydown="onToggleKeydown(img, $event)">
-          <svg v-if="props.isSelected(img)" viewBox="0 0 16 16" width="12" height="12"><path d="M13.485 4.485a1 1 0 0 1 0 1.415l-6.5 6.5a1 1 0 0 1-1.414 0l-3-3a1 1 0 1 1 1.414-1.414L6.278 10.586l5.793-5.793a1 1 0 0 1 1.414 0z" fill="currentColor" /></svg>
-        </span>
         <div
           v-if="viewMode === 'thumb' && isImageFailed(img, index)"
           class="thumb-image-placeholder"
@@ -138,7 +150,19 @@ defineExpose({ resetVisible, scrollToIndex })
           loading="lazy"
           @error="onImageError(img, index)"
         >
-        <div class="thumb-meta">
+        <div class="thumb-meta" @click="onMetaClick(img, $event)">
+          <!-- 勾选框放在页码前面：影像左上角不再压一块角标，meta 行就是「勾选 + 页码 + 类型」 -->
+          <span
+            class="thumb-check"
+            :class="{ checked: props.isSelected(img) }"
+            role="checkbox"
+            :aria-checked="props.isSelected(img)"
+            tabindex="0"
+            @click="toggleItem(img, $event)"
+            @keydown="onToggleKeydown(img, $event)"
+          >
+            <svg v-if="props.isSelected(img)" viewBox="0 0 16 16" width="10" height="10"><path d="M13.485 4.485a1 1 0 0 1 0 1.415l-6.5 6.5a1 1 0 0 1-1.414 0l-3-3a1 1 0 1 1 1.414-1.414L6.278 10.586l5.793-5.793a1 1 0 0 1 1.414 0z" fill="currentColor" /></svg>
+          </span>
           <span class="thumb-page">P{{ img.pages ?? '-' }}</span>
           <small>{{ getTypeLabel(img.btype) }}</small>
         </div>
@@ -184,16 +208,12 @@ defineExpose({ resetVisible, scrollToIndex })
 }
 
 .thumb-strip.list .thumb-item {
-  grid-template-columns: 20px minmax(0, 1fr);
+  grid-template-columns: minmax(0, 1fr);
   gap: 8px;
   align-items: center;
   width: 100% !important;
   min-height: 42px;
   padding: 8px 10px;
-}
-
-.thumb-strip.list .thumb-check {
-  position: static;
 }
 
 .thumb-item {
@@ -204,13 +224,22 @@ defineExpose({ resetVisible, scrollToIndex })
   min-width: 0;
   padding: 6px;
   cursor: pointer;
+
+  /* 双击卡片是「切换选中」手势，禁掉浏览器默认的文本选区（会把页码/类型名拖蓝） */
+  user-select: none;
   background: var(--surface);
   border: 1px solid var(--divider);
   border-radius: var(--mrr-radius-md);
   transition: border-color 0.15s, box-shadow 0.15s;
 }
 
-.thumb-item:focus-visible,
+/* 键盘焦点不再单独画圈：@focus → selectItem 让预览跟随焦点，active 圈即唯一指示；
+ * 这里压掉浏览器 UA 的默认焦点圈（卡片基类没设 outline:none，必须显式关掉）。
+ * 勾选框是独立控件，保留自己的焦点外圈。 */
+.thumb-item:focus-visible {
+  outline: none;
+}
+
 .thumb-check:focus-visible {
   outline: 2px solid var(--color-primary);
   outline-offset: 2px;
@@ -220,34 +249,60 @@ defineExpose({ resetVisible, scrollToIndex })
   border-color: var(--mrr-navigation-active-border);
 }
 
-.thumb-item.active,
+/*
+ * 两种「选中」用形态区分：
+ * - checked（勾选待复制）→ 面：淡蓝底填充，外圈不加强调描边
+ * - active（正在预览）→ 线：底色不变，主题色实线双圈描边
+ * 两者各设不同属性互不覆盖，叠加态自动 = 填充 + 实线圈。
+ */
 .thumb-item.checked {
   background: var(--mrr-navigation-active);
-  border-color: var(--mrr-navigation-active-border);
-  box-shadow: 0 0 0 2px color-mix(in srgb, var(--color-primary) 18%, transparent);
 }
 
+.thumb-item.active {
+  border-color: var(--color-primary);
+  box-shadow: inset 0 0 0 1px var(--color-primary);
+}
+
+/*
+ * 勾选框默认不再带白色实底：选中卡片是浅蓝底，白色角标叠上去会像「两层底色」。
+ * 常驻形态只有一层描边（白描边 + 轻投影，暗色影像和浅色卡片上都看得清），
+ * 悬停时才填充白色给出可点的暗示；勾选后为主题色实底 + 白勾。
+ */
 .thumb-check {
-  position: absolute;
-  top: 4px;
-  left: 4px;
-  z-index: 1;
+  position: relative; /* 行内占位，::after 命中区相对自身扩展 */
   display: flex;
+  flex: none;
   align-items: center;
   justify-content: center;
-  width: 18px;
-  height: 18px;
+  width: 16px;
+  height: 16px;
   color: var(--mrr-primary-foreground);
-  background: rgb(255 255 255 / 88%);
-  border: 1.5px solid var(--divider);
+  cursor: pointer;
+  background: transparent;
+  border: 1.5px solid rgb(255 255 255 / 85%);
   border-radius: var(--mrr-radius-sm);
   transition: color 0.15s, background-color 0.15s, border-color 0.15s;
+}
+
+/* 命中区比视觉块大一圈，但只在上下与左侧外扩，不盖住右侧页码的点击范围。 */
+.thumb-check::after {
+  position: absolute;
+  inset: -4px -2px -4px -4px;
+  content: "";
+  border-radius: inherit;
+}
+
+.thumb-check:hover {
+  background: rgb(255 255 255 / 86%);
+  border-color: rgb(255 255 255 / 95%);
 }
 
 .thumb-check.checked {
   color: var(--mrr-primary-foreground);
   background: var(--color-primary);
   border-color: var(--color-primary);
+  box-shadow: none;
 }
 
 .thumb-item img,
@@ -294,18 +349,42 @@ defineExpose({ resetVisible, scrollToIndex })
   opacity: 0.62;
 }
 
+/*
+ * 绝对定位元素 width:auto 时按内容收缩（shrink-to-fit），
+ * 只锚定左下角即可让深色背景宽度跟随文字，不再横向撑满整张卡片；
+ * max-width 兜底防止类型名过长时溢出卡片，此时 small 走省略号。
+ * 遮罩 72% 不透明度：55% 在白底文档影像上会被垫亮成中灰，
+ * 白字对比度跌到 3.6/2.9（AA 要求 4.5），72% 后页码 6.3、类型名 5.4。
+ */
 .thumb-meta {
+  position: absolute;
+  bottom: 11px;
+  left: 11px;
   display: flex;
   gap: 6px;
   align-items: center;
   min-width: 0;
+  max-width: calc(100% - 22px);
+  padding: 4px 8px;
+  background: rgb(15 23 42 / 72%);
+  border-radius: var(--mrr-radius-sm);
 }
 
+/* 缩略图模式下整块悬浮条可点（见 onMetaClick），悬停微亮给出可点暗示 */
+.thumb-strip.thumb .thumb-meta {
+  cursor: pointer;
+}
+
+.thumb-strip.thumb .thumb-meta:hover {
+  background: rgb(15 23 42 / 82%);
+}
+
+/* 悬浮条压在影像上，文字固定用浅色，不随主题反转（遮罩本身恒为深色）。 */
 .thumb-page {
   flex: none;
   font-size: 12px;
   font-weight: 800;
-  color: var(--text-primary);
+  color: rgb(255 255 255 / 92%);
 }
 
 .thumb-item small {
@@ -314,8 +393,29 @@ defineExpose({ resetVisible, scrollToIndex })
   overflow: hidden;
   text-overflow: ellipsis;
   font-size: 11px;
-  color: var(--text-secondary);
+
+  /* 白底文档上遮罩会被垫亮，82% 白字才能在遮罩最浅处也保持 5.4:1 对比度 */
+  color: rgb(255 255 255 / 82%);
   white-space: nowrap;
+}
+
+/*
+ * 列表模式没有影像可悬浮，meta 行回到行内样式，
+ * 文字色也恢复主题色（列表行的底色是卡片底色而非深遮罩）。
+ */
+.thumb-strip.list .thumb-meta {
+  position: static;
+  padding: 0;
+  background: none;
+  border-radius: 0;
+}
+
+.thumb-strip.list .thumb-page {
+  color: var(--text-primary);
+}
+
+.thumb-strip.list .thumb-item small {
+  color: var(--text-secondary);
 }
 
 .empty-list,

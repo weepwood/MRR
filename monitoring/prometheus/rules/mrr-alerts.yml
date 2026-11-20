@@ -1,3 +1,5 @@
+# 库名不写死：规则只排除系统库（template0/template1/postgres）与 datname 为空的后台进程，
+# 指向现场实际库名时无需改本文件。同一实例若共存多个业务库，连接与缓存指标为合并口径。
 groups:
   - name: mrr-availability
     rules:
@@ -9,6 +11,7 @@ groups:
         annotations:
           summary: MRR 后端监控端点不可用
           description: Prometheus 连续 1 分钟无法抓取 MRR Actuator 指标。
+          runbook_url: docs/engineering/database-monitoring-and-tuning.md
 
       - alert: MrrPostgreSQLDown
         expr: up{job="mrr-postgresql"} == 0 OR pg_up == 0
@@ -18,60 +21,178 @@ groups:
         annotations:
           summary: PostgreSQL 不可用
           description: postgres_exporter 连续 1 分钟无法连接数据库。
+          runbook_url: docs/engineering/database-monitoring-and-tuning.md
 
   - name: mrr-database
     rules:
       - alert: MrrDatabaseConnectionsHigh
-        expr: sum(pg_stat_activity_count{datname="imgapi"}) / clamp_min(max(pg_settings_max_connections), 1) > 0.80
+        expr: sum(pg_stat_activity_count{datname!~"template[01]|postgres", datname!=""}) / clamp_min(max(pg_settings_max_connections), 1) > 0.80
         for: 5m
         labels:
           severity: warning
         annotations:
           summary: PostgreSQL 连接使用率超过 80%
-          description: 数据库连接连续 5 分钟高于最大连接数的 80%。
+          description: 连续 5 分钟高于最大连接数 80%。先看连接画像，确认是池过大、长事务还是泄漏，不要直接调大 max_connections。
+          runbook_url: monitoring/postgresql/diagnostics/06-connections.sql
 
       - alert: MrrDatabaseConnectionsCritical
-        expr: sum(pg_stat_activity_count{datname="imgapi"}) / clamp_min(max(pg_settings_max_connections), 1) > 0.90
+        expr: sum(pg_stat_activity_count{datname!~"template[01]|postgres", datname!=""}) / clamp_min(max(pg_settings_max_connections), 1) > 0.90
         for: 2m
         labels:
           severity: critical
         annotations:
           summary: PostgreSQL 连接使用率超过 90%
-          description: 数据库连接接近耗尽，可能导致新请求失败。
+          description: 数据库连接接近耗尽，新请求可能直接失败。
+          runbook_url: monitoring/postgresql/diagnostics/06-connections.sql
 
       - alert: MrrDatabaseDeadlockDetected
-        expr: increase(pg_stat_database_deadlocks{datname="imgapi"}[5m]) > 0
+        expr: increase(pg_stat_database_deadlocks{datname!~"template[01]|postgres", datname!=""}[5m]) > 0
         labels:
           severity: critical
         annotations:
           summary: PostgreSQL 检测到死锁
-          description: 最近 5 分钟数据库出现死锁，请检查事务与锁等待。
+          description: 最近 5 分钟出现死锁，检查事务加锁顺序与锁等待链。
+          runbook_url: monitoring/postgresql/diagnostics/04-locks-and-transactions.sql
 
       - alert: MrrHikariPoolPending
-        expr: hikaricp_connections_pending{application="imgapi"} > 0
+        expr: hikaricp_connections_pending{application="mrr"} > 0
         for: 2m
         labels:
           severity: warning
         annotations:
           summary: HikariCP 出现连接等待
-          description: 后端线程连续 2 分钟等待数据库连接。
+          description: 后端线程连续 2 分钟等待数据库连接，说明数据库侧变慢或池过小。
+          runbook_url: monitoring/postgresql/diagnostics/06-connections.sql
 
       - alert: MrrHikariPoolNearExhaustion
-        expr: hikaricp_connections_active{application="imgapi"} / clamp_min(hikaricp_connections_max{application="imgapi"}, 1) > 0.90
+        expr: hikaricp_connections_active{application="mrr"} / clamp_min(hikaricp_connections_max{application="mrr"}, 1) > 0.90
         for: 2m
         labels:
           severity: critical
         annotations:
           summary: HikariCP 连接池接近耗尽
           description: 活跃连接连续 2 分钟超过连接池上限的 90%。
+          runbook_url: monitoring/postgresql/diagnostics/06-connections.sql
 
       - alert: MrrHikariConnectionTimeout
-        expr: increase(hikaricp_connections_timeout_total{application="imgapi"}[5m]) > 0
+        expr: increase(hikaricp_connections_timeout_total{application="mrr"}[5m]) > 0
         labels:
           severity: critical
         annotations:
           summary: HikariCP 获取连接超时
           description: 最近 5 分钟发生数据库连接获取超时。
+          runbook_url: monitoring/postgresql/diagnostics/06-connections.sql
+
+  # 查询级与数据库健康度：依赖 monitoring/postgresql/queries.yaml 已加载。
+  - name: mrr-database-health
+    rules:
+      - alert: MrrQueryAvgLatencyHigh
+        expr: |
+          rate(mrr_pg_stat_statements_exec_seconds_total[10m])
+          / clamp_min(rate(mrr_pg_stat_statements_calls_total[10m]), 0.000001) > 0.5
+        for: 15m
+        labels:
+          severity: warning
+        annotations:
+          summary: 语句平均执行耗时超过 500 毫秒
+          description: 全库平均单次执行耗时连续 15 分钟高于 500ms，常见原因是索引失效、数据量增长或锁等待。
+          runbook_url: docs/engineering/database-monitoring-and-tuning.md
+
+      - alert: MrrQueryAvgLatencyCritical
+        expr: |
+          rate(mrr_pg_stat_statements_exec_seconds_total[10m])
+          / clamp_min(rate(mrr_pg_stat_statements_calls_total[10m]), 0.000001) > 2
+        for: 10m
+        labels:
+          severity: critical
+        annotations:
+          summary: 语句平均执行耗时超过 2 秒
+          description: 全库平均单条耗时持续高于 2 秒，页面已明显超时，按诊断决策树从连接池、锁、单条 SQL 逐层排查。
+          runbook_url: docs/engineering/database-monitoring-and-tuning.md
+
+      - alert: MrrSlowStatementAccumulated
+        expr: mrr_pg_stat_statements_slow_1s > 10
+        for: 1h
+        labels:
+          severity: warning
+        annotations:
+          summary: 平均耗时超过 1 秒的语句超过 10 条
+          description: 属基线体检信号而非事故信号，纳入本周调优清单，不要求立即处置。
+          runbook_url: monitoring/postgresql/diagnostics/01-slow-queries.sql
+
+      - alert: MrrPgCacheHitLow
+        expr: |
+          100 * sum(pg_stat_database_blks_hit{datname!~"template[01]|postgres", datname!=""})
+          / clamp_min(sum(pg_stat_database_blks_hit{datname!~"template[01]|postgres", datname!=""} + pg_stat_database_blks_read{datname!~"template[01]|postgres", datname!=""}), 1) < 99
+        for: 15m
+        labels:
+          severity: warning
+        annotations:
+          summary: 缓存命中率低于 99%
+          description: OLTP 目标为 99% 以上，持续偏低说明 shared_buffers 不足或存在大范围全表扫描。
+          runbook_url: monitoring/postgresql/diagnostics/05-capacity-io.sql
+
+      - alert: MrrPgCacheHitCritical
+        expr: |
+          100 * sum(pg_stat_database_blks_hit{datname!~"template[01]|postgres", datname!=""})
+          / clamp_min(sum(pg_stat_database_blks_hit{datname!~"template[01]|postgres", datname!=""} + pg_stat_database_blks_read{datname!~"template[01]|postgres", datname!=""}), 1) < 95
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: 缓存命中率低于 95%
+          description: 大量请求直接读盘，磁盘 IO 将成为瓶颈。
+          runbook_url: monitoring/postgresql/diagnostics/05-capacity-io.sql
+
+      - alert: MrrPgTempSpillHigh
+        expr: increase(pg_stat_database_temp_bytes{datname!~"template[01]|postgres", datname!=""}[10m]) > 2e8
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: 10 分钟内临时文件写入超过 200MB
+          description: 排序或哈希溢出到磁盘，常见原因是 work_mem 偏小、缺少可用索引或统计信息过期。
+          runbook_url: monitoring/postgresql/diagnostics/01-slow-queries.sql
+
+      - alert: MrrPgLongRunningTransaction
+        expr: max(mrr_pg_transactions_longest_xact_seconds) > 300
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: 存在运行超过 5 分钟的事务
+          description: 长事务阻塞 autovacuum 回收死元组，并放大锁等待范围。
+          runbook_url: monitoring/postgresql/diagnostics/04-locks-and-transactions.sql
+
+      - alert: MrrPgIdleInTransaction
+        expr: max(mrr_pg_transactions_longest_idle_xact_seconds) > 600
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: 存在空闲事务超过 10 分钟
+          description: 空闲事务持有快照与锁，是表膨胀与锁等待最常见的隐性原因。
+          runbook_url: monitoring/postgresql/diagnostics/04-locks-and-transactions.sql
+
+      - alert: MrrPgDeadTupleRatioHigh
+        expr: mrr_pg_maintenance_dead_tuple_ratio > 0.2
+        for: 30m
+        labels:
+          severity: warning
+        annotations:
+          summary: 单表死元组占比超过 20%（死元组数超过 1 万）
+          description: autovacuum 跟不上写入，扫描成本与索引膨胀会持续上升。指标已按死元组数 1 万下限过滤，小表不参与判定。
+          runbook_url: monitoring/postgresql/diagnostics/03-bloat-and-vacuum.sql
+
+      - alert: MrrPgTableBloatHigh
+        expr: mrr_pg_bloat_max_ratio > 0.3 and mrr_pg_bloat_max_bytes > 1.073741824e9
+        for: 6h
+        labels:
+          severity: warning
+        annotations:
+          summary: 存在膨胀超过 1GiB 且比例超过 30% 的表
+          description: 排入维护窗口评估 VACUUM FULL 或 pg_repack，属计划性治理而非紧急事故。
+          runbook_url: monitoring/postgresql/diagnostics/03-bloat-and-vacuum.sql
 
   - name: mrr-capacity
     rules:
@@ -114,6 +235,39 @@ groups:
         annotations:
           summary: 主机磁盘可用空间低于 8%
           description: 磁盘 {{ $labels.volume }}{{ $labels.mountpoint }} 即将耗尽。
+
+  # 监控自身的盲区告警：宁可报“采集没装上”，也不要让规则静默失效。
+  - name: mrr-monitoring-selfcheck
+    rules:
+      - alert: MrrQueryMetricsMissing
+        expr: absent(mrr_pg_stat_statements_calls_total)
+        for: 20m
+        labels:
+          severity: warning
+        annotations:
+          summary: 查询级指标未采集
+          description: 未发现 mrr_pg_stat_statements_* 指标，说明 queries.yaml 未加载或 pg_stat_statements 不可用，查询级告警全部处于失效状态。
+          runbook_url: monitoring/postgresql/queries.yaml
+
+      - alert: MrrTransactionMetricsMissing
+        expr: absent(mrr_pg_transactions_longest_xact_seconds)
+        for: 20m
+        labels:
+          severity: warning
+        annotations:
+          summary: 事务画像指标未采集
+          description: 长事务与空闲事务告警依赖 mrr_pg_transactions_*，指标缺失时这些规则不会触发。
+          runbook_url: monitoring/postgresql/queries.yaml
+
+      - alert: MrrPgExporterScrapeError
+        expr: max_over_time(pg_exporter_last_scrape_error[15m]) > 0
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: postgres_exporter 采集部分失败
+          description: 至少一条自定义查询执行失败，相关指标缺失，按 exporter 日志排查权限或版本兼容性。
+          runbook_url: monitoring/postgresql/queries.yaml
 
   - name: mrr-data-quality
     rules:

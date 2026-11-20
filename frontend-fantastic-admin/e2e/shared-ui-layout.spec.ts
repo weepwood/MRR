@@ -64,6 +64,11 @@ for (const theme of ['light', 'dark'] as const) {
       await page.setViewportSize(viewport)
       await expect.poll(() => page.evaluate(() => document.body.dataset.mode)).toBe(viewport.width < 1024 ? 'mobile' : 'pc')
       await expectContained(page, '.mrr-page-header, .mrr-filter-bar, .mrr-section-card__header, .mrr-data-table-panel__pagination')
+      await expect.poll(() => page.locator('.users-table-panel').evaluate((panel) => {
+        const filters = panel.querySelector('.users-filter-bar')!.getBoundingClientRect()
+        const table = panel.querySelector('.mrr-data-table-panel__content > .el-table')!.getBoundingClientRect()
+        return { left: Math.round(table.left - filters.left), right: Math.round(filters.right - table.right) }
+      })).toEqual({ left: 0, right: 0 })
       const contentWidth = await page.evaluate(() => document.documentElement.scrollWidth)
       expect(contentWidth).toBeLessThanOrEqual(viewport.width)
       await expect(page.getByRole('button', { name: '查询', exact: true })).toBeVisible()

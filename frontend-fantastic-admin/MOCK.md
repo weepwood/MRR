@@ -66,7 +66,7 @@ cd frontend-fantastic-admin
 pnpm install --frozen-lockfile
 cp .env.pages.example .env.pages
 pnpm build:pages
-node scripts/smoke-pages-demo.mjs
+node e2e/smoke-pages-demo.mjs
 ```
 
 预期站点地址：`https://weepwood.github.io/MRR/`。页面使用 `/MRR/#/records` 等 hash 路由，以兼容 GitHub Pages 不提供 SPA 回退规则的限制。浏览器 Mock 数据在页面会话中模拟，重新载入页面会重置。原 `dev:mock` 与正式 `build` 不受影响。

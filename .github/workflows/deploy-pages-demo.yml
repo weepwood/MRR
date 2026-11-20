@@ -58,7 +58,7 @@ jobs:
         run: pnpm exec playwright install --with-deps chromium
 
       - name: Pages 静态演示冒烟
-        run: node scripts/smoke-pages-demo.mjs
+        run: node e2e/smoke-pages-demo.mjs
 
       - name: 上传 Pages 构建产物
         if: github.event_name != 'pull_request'

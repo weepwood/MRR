@@ -36,9 +36,15 @@ const activeTab = ref<Tab>('config')
 
 const ready = computed(() => status.value?.enabled && status.value?.supported && status.value?.installed)
 const statusLabel = computed(() => {
-  if (!status.value?.enabled) return '未启用'
-  if (!status.value.supported) return '平台不支持'
-  if (!status.value.installed) return '未安装'
+  if (!status.value?.enabled) {
+    return '未启用'
+  }
+  if (!status.value.supported) {
+    return '平台不支持'
+  }
+  if (!status.value.installed) {
+    return '未安装'
+  }
   return ({
     RUNNING: '运行中',
     STOPPED: '已停止',
@@ -55,13 +61,17 @@ const visibleLogs = computed(() => {
 })
 
 function fmtTime(value?: string | null) {
-  if (!value) return '-'
+  if (!value) {
+    return '-'
+  }
   const timestamp = new Date(value)
   return Number.isNaN(timestamp.getTime()) ? '-' : timestamp.toLocaleString('zh-CN')
 }
 
 function fmtSize(value?: number | null) {
-  if (value == null) return '-'
+  if (value == null) {
+    return '-'
+  }
   if (value < 1024) return `${value} B`
   if (value < 1024 ** 2) return `${(value / 1024).toFixed(1)} KB`
   return `${(value / 1024 ** 2).toFixed(1)} MB`
@@ -88,7 +98,9 @@ async function loadStatus() {
 }
 
 async function loadFiles() {
-  if (!canManage.value || !status.value?.enabled) return
+  if (!canManage.value || !status.value?.enabled) {
+    return
+  }
   filesLoading.value = true
   try {
     files.value = await getNginxManagedFiles()
@@ -102,7 +114,9 @@ async function loadFiles() {
 }
 
 async function testConfiguration() {
-  if (!ready.value || !canManage.value || checking.value) return
+  if (!ready.value || !canManage.value || checking.value) {
+    return
+  }
   checking.value = true
   try {
     lastTest.value = await testNginxManagedConfig()
@@ -122,7 +136,9 @@ async function testConfiguration() {
 }
 
 async function loadLogs() {
-  if (!status.value?.enabled || !canViewLogs.value) return
+  if (!status.value?.enabled || !canViewLogs.value) {
+    return
+  }
   logsLoading.value = true
   try {
     logTail.value = await getNginxManagedLogs(logType.value, logLineCount.value)
@@ -136,7 +152,9 @@ async function loadLogs() {
 }
 
 watch(activeTab, (tab) => {
-  if (tab === 'logs' && !logTail.value) void loadLogs()
+  if (tab === 'logs' && !logTail.value) {
+    void loadLogs()
+  }
 })
 watch(logType, () => { if (activeTab.value === 'logs') void loadLogs() })
 watch(logLineCount, () => { if (activeTab.value === 'logs') void loadLogs() })
@@ -241,7 +259,7 @@ onMounted(() => { void loadStatus() })
             :description="`耗时 ${lastTest.durationMs} ms · 未执行配置写入或重载`"
             class="notice"
           />
-          <el-table v-if="canManage" :data="files" v-loading="filesLoading" class="file-table" empty-text="暂无可读取的配置文件信息">
+          <el-table v-if="canManage" v-loading="filesLoading" :data="files" class="file-table" empty-text="暂无可读取的配置文件信息">
             <el-table-column label="文件" min-width="210">
               <template #default="{ row }">
                 <span class="filename"><FileCode2 :size="16" /> {{ row.name }}</span>
@@ -299,42 +317,227 @@ onMounted(() => { void loadStatus() })
 </template>
 
 <style scoped>
-.nginx-management { display: flex; flex-direction: column; gap: 20px; min-width: 0; padding-bottom: 28px; }
-.page-heading, .heading-copy, .card-label, .workspace-title, .config-toolbar, .log-toolbar, .filename { display: flex; align-items: center; }
-.page-heading, .workspace-title, .config-toolbar { justify-content: space-between; gap: 16px; }
-.heading-copy { gap: 14px; }
-.heading-copy h1 { font-size: 22px; line-height: 1.35; font-weight: 650; margin: 0 0 4px; }
-.heading-copy p, .workspace-title p, .config-toolbar p { color: var(--el-text-color-secondary); margin: 0; font-size: 13px; line-height: 1.6; }
-.page-icon { height: 44px; width: 44px; display: grid; place-items: center; flex-shrink: 0; border: 1px solid var(--el-border-color-light); border-radius: 13px; color: var(--el-color-primary); background: var(--el-fill-color-light); }
-.overview-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; min-height: 115px; }
-.overview-card, .workspace { border: 1px solid var(--el-border-color-light); background: var(--el-bg-color-overlay); border-radius: 14px; }
-.overview-card { display: flex; flex-direction: column; gap: 12px; padding: 18px 20px; min-width: 0; }
-.card-label { gap: 8px; color: var(--el-text-color-secondary); font-size: 13px; }
-.card-value { min-height: 25px; font-weight: 650; font-size: 24px; }
-.card-value.small { font-size: 19px; overflow-wrap: anywhere; }
-.card-foot { color: var(--el-text-color-placeholder); font-size: 12px; }
-.workspace { padding: 22px 24px; min-width: 0; }
-.workspace-title { align-items: flex-start; margin-bottom: 16px; }
-.workspace-title h2 { font-size: 17px; font-weight: 650; margin: 0 0 6px; }
-.workspace-title .el-tag { display: inline-flex; align-items: center; gap: 6px; }
-.config-toolbar { margin: 10px 0 18px; align-items: flex-start; }
-.config-toolbar h3 { font-size: 15px; margin: 0 0 6px; }
-.notice { margin: 8px 0 16px; }
-.file-table { width: 100%; }
-.filename { gap: 8px; font-weight: 500; }
-.log-toolbar { flex-wrap: wrap; gap: 8px; margin: 12px 0; }
-.type-select { width: 128px; }
-.line-select { width: 135px; }
-.search-input { width: min(270px, 100%); }
-.log-surface { min-height: 230px; max-height: 530px; overflow: auto; background: var(--el-fill-color-light); border: 1px solid var(--el-border-color-light); border-radius: 9px; }
-.log-lines { padding: 10px 14px; font: 12px/1.8 ui-monospace, SFMono-Regular, Consolas, monospace; }
-.log-line { white-space: pre-wrap; overflow-wrap: anywhere; padding: 2px 0; border-bottom: 1px solid var(--el-border-color-extra-light); }
-.log-empty, .empty-state { color: var(--el-text-color-placeholder); display: grid; place-items: center; min-height: 180px; gap: 10px; font-size: 13px; }
-.log-note { font-size: 12px; line-height: 1.6; color: var(--el-text-color-secondary); margin: 10px 0 0; }
+.nginx-management {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  min-width: 0;
+  padding-bottom: 28px;
+}
+
+.page-heading,
+.heading-copy,
+.card-label,
+.workspace-title,
+.config-toolbar,
+.log-toolbar,
+.filename {
+  display: flex;
+  align-items: center;
+}
+
+.page-heading,
+.workspace-title,
+.config-toolbar {
+  gap: 16px;
+  justify-content: space-between;
+}
+
+.heading-copy {
+  gap: 14px;
+}
+
+.heading-copy h1 {
+  margin: 0 0 4px;
+  font-size: 22px;
+  font-weight: 650;
+  line-height: 1.35;
+}
+
+.heading-copy p,
+.workspace-title p,
+.config-toolbar p {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.6;
+  color: var(--el-text-color-secondary);
+}
+
+.page-icon {
+  display: grid;
+  flex-shrink: 0;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  color: var(--el-color-primary);
+  background: var(--el-fill-color-light);
+  border: 1px solid var(--el-border-color-light);
+  border-radius: 13px;
+}
+
+.overview-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+  min-height: 115px;
+}
+
+.overview-card,
+.workspace {
+  background: var(--el-bg-color-overlay);
+  border: 1px solid var(--el-border-color-light);
+  border-radius: 14px;
+}
+
+.overview-card {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-width: 0;
+  padding: 18px 20px;
+}
+
+.card-label {
+  gap: 8px;
+  font-size: 13px;
+  color: var(--el-text-color-secondary);
+}
+
+.card-value {
+  min-height: 25px;
+  font-size: 24px;
+  font-weight: 650;
+}
+
+.card-value.small {
+  overflow-wrap: anywhere;
+  font-size: 19px;
+}
+
+.card-foot {
+  font-size: 12px;
+  color: var(--el-text-color-placeholder);
+}
+
+.workspace {
+  min-width: 0;
+  padding: 22px 24px;
+}
+
+.workspace-title {
+  align-items: flex-start;
+  margin-bottom: 16px;
+}
+
+.workspace-title h2 {
+  margin: 0 0 6px;
+  font-size: 17px;
+  font-weight: 650;
+}
+
+.workspace-title .el-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.config-toolbar {
+  align-items: flex-start;
+  margin: 10px 0 18px;
+}
+
+.config-toolbar h3 {
+  margin: 0 0 6px;
+  font-size: 15px;
+}
+
+.notice {
+  margin: 8px 0 16px;
+}
+
+.file-table {
+  width: 100%;
+}
+
+.filename {
+  gap: 8px;
+  font-weight: 500;
+}
+
+.log-toolbar {
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 12px 0;
+}
+
+.type-select {
+  width: 128px;
+}
+
+.line-select {
+  width: 135px;
+}
+
+.search-input {
+  width: min(270px, 100%);
+}
+
+.log-surface {
+  min-height: 230px;
+  max-height: 530px;
+  overflow: auto;
+  background: var(--el-fill-color-light);
+  border: 1px solid var(--el-border-color-light);
+  border-radius: 9px;
+}
+
+.log-lines {
+  padding: 10px 14px;
+  font: 12px/1.8 ui-monospace, SFMono-Regular, Consolas, monospace;
+}
+
+.log-line {
+  padding: 2px 0;
+  overflow-wrap: anywhere;
+  white-space: pre-wrap;
+  border-bottom: 1px solid var(--el-border-color-extra-light);
+}
+
+.log-empty,
+.empty-state {
+  display: grid;
+  place-items: center;
+  gap: 10px;
+  min-height: 180px;
+  font-size: 13px;
+  color: var(--el-text-color-placeholder);
+}
+
+.log-note {
+  margin: 10px 0 0;
+  font-size: 12px;
+  line-height: 1.6;
+  color: var(--el-text-color-secondary);
+}
+
 @media (max-width: 760px) {
-  .overview-grid { grid-template-columns: 1fr; }
-  .page-heading, .workspace-title, .config-toolbar { align-items: flex-start; flex-wrap: wrap; }
-  .workspace { padding: 16px; }
-  .search-input { flex: 1 1 190px; }
+  .overview-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .page-heading,
+  .workspace-title,
+  .config-toolbar {
+    flex-wrap: wrap;
+    align-items: flex-start;
+  }
+
+  .workspace {
+    padding: 16px;
+  }
+
+  .search-input {
+    flex: 1 1 190px;
+  }
 }
 </style>

@@ -153,6 +153,17 @@ watch(() => props.entries, async () => {
   }
 })
 
+// 在路径栏里粘贴文件相对路径时，上层会进入父目录并选中该项；把它带回可视区，
+// 否则选中行可能落在长列表的可视范围之外，看起来像「什么都没发生」。
+watch(() => props.selected, async (entry) => {
+  if (!entry) {
+    return
+  }
+  await nextTick()
+  const index = visibleEntries.value.findIndex(item => item === entry)
+  filePane.value?.querySelectorAll<HTMLElement>('button[data-file-entry]')[index]?.scrollIntoView({ block: 'nearest' })
+})
+
 async function copyLocation(entry: Entry) {
   try {
     await navigator.clipboard.writeText(props.location(entry))

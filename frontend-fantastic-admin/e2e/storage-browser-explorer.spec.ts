@@ -147,3 +147,30 @@ test('占满模式下长列表在盒内滚动，不再把页面撑高', async ({
   await expect.poll(() => pane.evaluate(node => node.scrollTop)).toBeGreaterThan(0)
   expect(await page.evaluate(() => window.scrollY)).toBe(pageScrollBefore)
 })
+
+test('Nginx 路径栏粘贴文件相对路径会进入父目录并选中该文件', async ({ page }) => {
+  await page.goto('/nginx-browser')
+  await expect(page.getByRole('table', { name: '文件列表' })).toBeVisible()
+  const address = page.getByRole('textbox', { name: '目录路径' })
+
+  // 详情里「复制路径」得到的就是这个形式，末尾没有斜杠。
+  await address.fill('样例目录/示例图标.png')
+  await address.press('Enter')
+
+  await expect(address).toHaveValue('样例目录/')
+  await expect(page.getByRole('button', { name: '示例图标.png', exact: true })).toHaveAttribute('aria-pressed', 'true')
+  // 选中即触发详情内的图片预览，说明确实定位到了这个文件。
+  await expect(page.locator('.inline-preview img')).toHaveAttribute('alt', '示例图标.png')
+})
+
+test('OSS 路径栏粘贴文件 key 会进入父目录并选中该文件', async ({ page }) => {
+  await page.goto('/oss-browser')
+  await expect(page.getByRole('table', { name: '文件列表' })).toBeVisible()
+  const address = page.getByRole('textbox', { name: '目录路径' })
+
+  await address.fill('medical-records/0012/00123456-00789124/0001.jpg')
+  await address.press('Enter')
+
+  await expect(address).toHaveValue('medical-records/0012/00123456-00789124/')
+  await expect(page.getByRole('button', { name: '0001.jpg', exact: true })).toHaveAttribute('aria-pressed', 'true')
+})

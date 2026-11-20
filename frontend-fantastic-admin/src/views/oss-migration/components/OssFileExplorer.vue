@@ -85,7 +85,7 @@ function normalizeRequestedPrefix(value: string) {
 async function loadDirectory(
   prefix: string,
   continuationToken?: string,
-  options: { rememberFolder?: boolean, resetPageHistory?: boolean, navigation?: 'back' | 'next' | 'previous' } = {},
+  options: { rememberFolder?: boolean, resetPageHistory?: boolean, navigation?: 'back' | 'next' | 'previous', selectKey?: string } = {},
 ) {
   if (disposed || suspended) {
     return
@@ -134,6 +134,18 @@ async function loadDirectory(
     pageTokenHistory.value = tokens
     selectedEntry.value = null
     localFilter.value = ''
+    if (options.selectKey) {
+      const match = response.data.entries.find(entry => entry.key === options.selectKey)
+      if (match?.directory) {
+        // 末段带点也可能是目录（如版本号 v1.2）：直接进入它，不再拿旧 key 去找文件。
+        await loadDirectory(match.key, undefined, { rememberFolder: true })
+        return
+      }
+      if (!match) {
+        ElMessage.warning('未在当前目录中找到该文件，已打开所在目录。')
+      }
+      selectedEntry.value = match ?? null
+    }
   }
   catch (error) {
     if (request.signal.aborted) {
@@ -220,7 +232,24 @@ function goUp() {
   void loadDirectory(parentPrefix(currentPrefix.value), undefined, { rememberFolder: true })
 }
 
+// 复制路径给的是文件 key（末尾没有斜杠）。补成目录前缀会列出一个空目录，
+// 所以这里先拆出父前缀，进入后按 key 选中文件。
+function looksLikeFile(input: string) {
+  if (!input || input.endsWith('/')) {
+    return false
+  }
+  const name = input.slice(input.lastIndexOf('/') + 1)
+  return name.includes('.') && !name.startsWith('.')
+}
+
 function navigate(path: string) {
+  const raw = path.trim()
+  if (looksLikeFile(raw)) {
+    const key = raw.startsWith(rootPrefix.value) ? raw : `${rootPrefix.value}${raw.replace(/^\/+/, '')}`
+    const parent = key.slice(0, key.lastIndexOf('/') + 1) || rootPrefix.value
+    void loadDirectory(parent, undefined, { rememberFolder: true, selectKey: key })
+    return
+  }
   void loadDirectory(path, undefined, { rememberFolder: true })
 }
 

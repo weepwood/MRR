@@ -6,8 +6,8 @@ import { browseOssObjects, getOssBrowserUrl } from '@/api/modules/oss'
 import OssFileExplorer from './OssFileExplorer.vue'
 
 vi.mock('@/api/modules/oss', () => ({ browseOssObjects: vi.fn(), getOssBrowserUrl: vi.fn() }))
-const { error } = vi.hoisted(() => ({ error: vi.fn() }))
-vi.mock('element-plus', () => ({ ElMessage: { error } }))
+const { error, warning } = vi.hoisted(() => ({ error: vi.fn(), warning: vi.fn() }))
+vi.mock('element-plus', () => ({ ElMessage: { error, warning } }))
 
 const root = 'medical-records/'
 function directory(prefix = root, token: string | null = 'next') {
@@ -22,6 +22,7 @@ function deferred<T>() {
 const image = (name: string) => ({ name, key: `${root}${name}`, directory: false, size: 10 })
 interface Explorer {
   loadDirectory: (prefix: string, token?: string, options?: { rememberFolder?: boolean }) => Promise<void>
+  navigate: (path: string) => void
   nextPage: () => void
   previousPage: () => void
   goBack: () => void
@@ -34,6 +35,7 @@ interface Explorer {
   previewVisible: boolean
   previewUrl: string
   previewLoading: boolean
+  selectedEntry?: ReturnType<typeof image> | null
 }
 const globalOptions = { stubs: Object.fromEntries(['el-card', 'el-icon', 'el-tooltip', 'el-tag', 'el-button', 'el-input', 'el-button-group', 'el-breadcrumb', 'el-breadcrumb-item', 'el-empty', 'el-table', 'el-table-column', 'el-dialog', 'el-image', 'el-alert'].map(name => [name, true])), directives: { loading: () => {} } }
 const wrappers: ReturnType<typeof shallowMount>[] = []
@@ -275,5 +277,34 @@ describe('oSS只读浏览器恢复', () => {
     await task
     expect(error).not.toHaveBeenCalled()
     expect(vm.previewUrl).toBe('')
+  })
+
+  it('路径栏粘贴文件 key 时进入父目录并选中该文件', async () => {
+    const { vm } = await setup()
+    const prefix = `${root}0012/00123456-00789124/`
+    const key = `${prefix}0001.jpg`
+    vi.mocked(browseOssObjects).mockResolvedValueOnce({
+      data: {
+        configured: true,
+        rootPrefix: root,
+        prefix,
+        entries: [{ name: '0001.jpg', key, directory: false, size: 10 }],
+        truncated: false,
+        nextContinuationToken: null,
+        maxKeys: 200,
+        loadedDirectories: 0,
+        loadedFiles: 1,
+        loadedBytes: 10,
+      } as OssBrowserPage,
+    } as Awaited<ReturnType<typeof browseOssObjects>>)
+
+    vm.navigate(key)
+    await flushPromises()
+
+    // 不能把文件 key 补成「…/0001.jpg/」这种空目录。
+    expect(browseOssObjects).toHaveBeenLastCalledWith(expect.objectContaining({ prefix }), expect.any(AbortSignal))
+    expect(vm.currentPrefix).toBe(prefix)
+    expect(vm.selectedEntry?.key).toBe(key)
+    expect(warning).not.toHaveBeenCalled()
   })
 })

@@ -111,8 +111,8 @@ async function loadServers() {
   }
 }
 
-async function loadDirectory(target: DirectoryLocation, nextHistory: DirectoryLocation[]) {
-  const request = beginDirectoryRequest(() => void loadDirectory(target, nextHistory))
+async function loadDirectory(target: DirectoryLocation, nextHistory: DirectoryLocation[], selectPath?: string) {
+  const request = beginDirectoryRequest(() => void loadDirectory(target, nextHistory, selectPath))
   previewVisible.value = false
   fileRequest?.abort()
   try {
@@ -128,6 +128,18 @@ async function loadDirectory(target: DirectoryLocation, nextHistory: DirectoryLo
     addressInput.value = response.data.path
     localFilter.value = ''
     selectedEntry.value = undefined
+    if (selectPath) {
+      const match = response.data.entries.find(entry => entry.path === selectPath)
+      if (match?.directory) {
+        // 末段带点也可能是目录（如版本号 v1.2）：继续进入它，而不是当文件选中。
+        await loadDirectory({ server: target.server, path: match.path, offset: 0 }, nextHistory)
+        return
+      }
+      if (!match) {
+        ElMessage.warning('未在当前目录中找到该文件，已打开所在目录。')
+      }
+      selectedEntry.value = match
+    }
   }
   catch (failure) {
     if (!request.signal.aborted) {
@@ -175,13 +187,31 @@ function normalizePath(input: string) {
   return path && !path.endsWith('/') ? `${path}/` : path
 }
 
+// 详情里的「复制路径」给的是文件相对路径（末尾没有斜杠）。若路径栏一律当目录补斜杠，
+// 会去请求「…/示例图标.png/」这种不存在的目录，现场表现为「复制了却打不开」。
+function looksLikeFile(input: string) {
+  if (!input || input.endsWith('/')) {
+    return false
+  }
+  const name = input.slice(input.lastIndexOf('/') + 1)
+  return name.includes('.') && !name.startsWith('.')
+}
+
 function navigate(input: string) {
   const current = page.value
   if (!current) {
     return
   }
-  const path = normalizePath(input)
+  const raw = input.trim().replace(/^\/+/, '')
   const { server, offset } = current
+  if (looksLikeFile(raw)) {
+    const parent = raw.slice(0, raw.lastIndexOf('/') + 1)
+    const nextHistory = parent === current.path ? history.value : [...history.value, { server, path: current.path, offset }]
+    // 进入文件所在目录并选中它，相当于「打开到指定文件」。
+    void loadDirectory({ server, path: parent, offset: 0 }, nextHistory, raw)
+    return
+  }
+  const path = normalizePath(raw)
   const nextHistory = path === current.path ? history.value : [...history.value, { server, path: current.path, offset }]
   void loadDirectory({ server, path, offset: 0 }, nextHistory)
 }

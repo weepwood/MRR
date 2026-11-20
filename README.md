@@ -341,6 +341,7 @@ npm run docs:build
 - [配置参考](vitepress-doc/internal/configuration-reference.md)
 - [部署总览](vitepress-doc/internal/deployment.md)
 - [Windows Server 部署](vitepress-doc/internal/windows-deployment.md)
+- [Nginx Web 运维管理（第一阶段）](vitepress-doc/internal/nginx-web-management.md)
 - [单体 JAR 部署](vitepress-doc/internal/standalone-jar.md)
 - [运行错误中心](vitepress-doc/internal/runtime-errors.md)
 - [外部系统影像接入](vitepress-doc/internal/external-archive-integration.md)

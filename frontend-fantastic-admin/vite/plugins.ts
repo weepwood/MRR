@@ -97,6 +97,10 @@ export default function createVitePlugins(mode: string, isBuild = false) {
     viteEnv.VITE_BUILD_MOCK && vitePluginFakeServer({
       logger: !isBuild,
       include: 'src/mock',
+      // Pages 浏览器产物不能打包 node:fs/node:path 及 rawResponse。
+      exclude: mode === 'pages'
+        ? ['**/nginx-browser.ts']
+        : ['**/nginx-browser.pages.ts'],
       infixName: false,
       basename: '/proxy',
       timeout: 120,

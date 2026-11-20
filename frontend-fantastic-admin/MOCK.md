@@ -56,3 +56,20 @@ Playwright 默认以 `mock` 模式启动 Vite，因此本地和 CI 均不依赖�
 Mock 数据固定生成，便于截图、回归测试和断言。创建、更新、删除、设置保存等操作只保存在当前 Vite 进程内存中，重启开发服务器后恢复初始数据。
 
 Mock 请求仍使用前端现有的 `/proxy` 地址。`vite-plugin-fake-server` 在 Mock 模式下接管该前缀；普通开发模式则继续将 `/proxy` 转发到真实后端，两者不会同时工作。
+
+## GitHub Pages 静态演示
+
+Pages 使用独立的 `pages` 构建模式，复用现有 Mock 数据；演示站不包含真实的患者数据、影像凭据或后端连接。
+
+```bash
+cd frontend-fantastic-admin
+pnpm install --frozen-lockfile
+pnpm build:pages
+node scripts/smoke-pages-demo.mjs
+```
+
+预期站点地址：`https://weepwood.github.io/MRR/`。页面使用 `/MRR/#/records` 等 hash 路由，以兼容 GitHub Pages 不提供 SPA 回退规则的限制。浏览器 Mock 数据在页面会话中模拟，重新载入页面会重置。原 `dev:mock` 与正式 `build` 不受影响。
+
+部署工作流见 `.github/workflows/deploy-pages-demo.yml`。合并到 `main` 后，在仓库 **Settings → Pages → Build and deployment → Source** 选择 **GitHub Actions**，由工作流自动发布；如仓库已有其它 Pages 站点，请先确认覆盖策略。GitHub Pages 为公网静态站，**不要上传真实病历、患者影像、内网地址、口令或凭据**。
+
+提示：Nginx 文件浏览器在静态演示中仅支持目录及示例文件文本，不能模拟真实的文件流和下载；实际后端行为请使用内网联调环境验证。

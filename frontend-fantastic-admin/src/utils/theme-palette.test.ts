@@ -4,9 +4,9 @@ import {
   applyThemePalette,
   GR8R_COLORS,
   gr8rCssVariables,
-  themePalettePresets,
   gr8rPrimary,
   normalizeThemePalette,
+  themePalettePresets,
 } from './theme-palette'
 
 describe('暖色扁平风格配色方案', () => {

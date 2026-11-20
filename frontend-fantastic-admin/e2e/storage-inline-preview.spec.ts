@@ -74,3 +74,58 @@ test('Nginx 实际响应超过文本预览预算时显示提示', async ({ page 
   await expect(preview).toContainText('文件超出预览上限')
   await expect(preview.locator('pre')).toHaveCount(0)
 })
+
+test('图片加载完成前后预览区与详情栏高度不变', async ({ page }) => {
+  let release: (() => void) | undefined
+  const gate = new Promise<void>(resolve => release = resolve)
+  await page.route('**/api/v1/nginx-browser/file?*', async (route) => {
+    await gate
+    await route.fallback()
+  })
+
+  await page.goto('/nginx-browser')
+  const address = page.getByRole('textbox', { name: '目录路径' })
+  await address.fill(cases[0].path)
+  await address.press('Enter')
+  await page.getByRole('button', { name: cases[0].image, exact: true }).click()
+
+  const details = page.getByRole('complementary', { name: '文件详情' })
+  const preview = details.getByRole('region', { name: '内容预览' })
+  await expect(preview).toContainText('正在读取文件')
+  const loading = { preview: await preview.boundingBox(), details: await details.boundingBox() }
+  expect(loading.preview).not.toBeNull()
+  expect(loading.details).not.toBeNull()
+
+  release!()
+  const image = preview.getByRole('img', { name: cases[0].image })
+  await expect(image).toBeVisible()
+  await expect.poll(() => image.evaluate((node: HTMLImageElement) => node.naturalWidth)).toBeGreaterThan(0)
+  const loaded = { preview: await preview.boundingBox(), details: await details.boundingBox() }
+  expect(loaded.preview).not.toBeNull()
+  expect(loaded.details).not.toBeNull()
+
+  // 占位态与图片态必须共用同一个盒子高度，否则整页会被顶起来再落回，
+  // 用户看到的就是「加载完成后高度闪烁」。
+  expect(Math.abs(loaded.preview!.height - loading.preview!.height)).toBeLessThan(1)
+  expect(Math.abs(loaded.details!.height - loading.details!.height)).toBeLessThan(1)
+})
+
+test('文本预览与图片预览共用同一高度，切换文件不带动详情栏抖动', async ({ page }) => {
+  await page.goto('/nginx-browser')
+  const address = page.getByRole('textbox', { name: '目录路径' })
+  await address.fill(cases[0].path)
+  await address.press('Enter')
+  const files = page.getByRole('table', { name: '文件列表' })
+  const details = page.getByRole('complementary', { name: '文件详情' })
+
+  await files.getByRole('button', { name: cases[0].image, exact: true }).click()
+  const preview = details.getByRole('region', { name: '内容预览' })
+  await expect(preview.getByRole('img', { name: cases[0].image })).toBeVisible()
+  const imageHeight = (await preview.boundingBox())!.height
+
+  await files.getByRole('button', { name: cases[0].text, exact: true }).click()
+  await expect(preview).toContainText(cases[0].excerpt)
+  const textHeight = (await preview.boundingBox())!.height
+
+  expect(Math.abs(textHeight - imageHeight)).toBeLessThan(1)
+})

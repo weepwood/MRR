@@ -44,9 +44,15 @@ const title = computed(() => props.name ? `预览 · ${props.name}` : '图片预
 </template>
 
 <style scoped>
+/*
+ * 加载遮罩、失败空态和图片共用同一个固定高度的盒子：
+ * 之前这里只给了 min-height，图片解码完成后 el-image 才撑到 66vh，
+ * 对话框会突然变高并重新居中，看起来就是一次高度闪烁。
+ */
 .preview-content {
   display: grid;
-  min-height: min(42vh, 300px);
+  height: min(66vh, 680px);
+  min-height: 240px;
   overflow: hidden;
   background: var(--el-fill-color-light);
   border-radius: var(--mrr-radius-md);
@@ -54,8 +60,19 @@ const title = computed(() => props.name ? `预览 · ${props.name}` : '图片预
 
 .preview-content :deep(.el-image) {
   display: grid;
+  grid-template-rows: minmax(0, 1fr);
   width: 100%;
-  height: min(66vh, 680px);
+  height: 100%;
+}
+
+/*
+ * el-image 默认只给 inner 设宽度，高图会按原比例撑高再被 overflow 裁掉。
+ * 这里按盒子收口，靠 object-fit: contain 完整显示，同时保证图片高度恒等于盒子高度。
+ */
+.preview-content :deep(.el-image__inner) {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
 }
 
 .preview-content :deep(.el-empty) {

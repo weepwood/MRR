@@ -55,11 +55,12 @@ test('关闭旧预览后，迟到签名不能替换新图片', async ({ page }) 
   await expect.poll(() => Boolean(pending)).toBe(true)
   await page.locator('.el-dialog__headerbtn').click()
   await expect(page.getByRole('dialog')).toBeHidden()
+  // 关闭预览即取消在途签名请求：迟到的响应连送达的机会都没有。
+  await expect.poll(() => Boolean(pending!.request().failure())).toBe(true)
   await page.locator('.file-tile').filter({ hasText: 'b.png' }).press('Enter')
   await expect(page.locator('.preview-content img')).toHaveAttribute('src', '/synthetic-b.svg')
-  const finished = page.waitForEvent('requestfinished', request => request.url().includes('/oss/browser/url') && request.url().includes('a.png'))
-  await pending!.fulfill({ json: { code: 200, data: { ossUrl: '/synthetic-a.svg' } } })
-  await finished
+  // 再把迟到的签名强行送达一次，确认也不会替换当前图片。
+  await pending!.fulfill({ json: { code: 200, data: { ossUrl: '/synthetic-a.svg' } } }).catch(() => {})
   await page.evaluate(() => new Promise(requestAnimationFrame))
   await expect(page.locator('.preview-content img')).toHaveAttribute('src', '/synthetic-b.svg')
 })

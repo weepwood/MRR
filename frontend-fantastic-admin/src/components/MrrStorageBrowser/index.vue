@@ -1,8 +1,8 @@
 <script setup lang="ts" generic="Entry extends StorageEntry">
 import type { StorageEntry } from './presentation'
 import { ElMessage } from 'element-plus'
-import { ArrowLeft, ArrowUp, ChevronDown, ChevronRight, ChevronUp, Copy, File, FileArchive, FileImage, FileText, Folder, Info, LayoutGrid, List, RefreshCw, Search } from 'lucide-vue-next'
-import { computed, nextTick, ref, watch } from 'vue'
+import { ArrowLeft, ArrowUp, ChevronDown, ChevronRight, ChevronUp, Copy, File, FileArchive, FileImage, FileText, Folder, Info, LayoutGrid, List, Maximize, Minimize, RefreshCw, Search } from 'lucide-vue-next'
+import { computed, nextTick, onBeforeUnmount, onDeactivated, onMounted, ref, watch } from 'vue'
 import { entryType, formatDate, formatFileSize, isImage } from './presentation'
 
 const props = defineProps<{
@@ -162,10 +162,119 @@ async function copyLocation(entry: Entry) {
     ElMessage.error('复制失败，请选中路径后手动复制')
   }
 }
+
+/*
+ * 占满内容区：把工作区提到布局右侧内容区（.main）之上，站点的头部、标签栏和侧边栏
+ * 保持可见可操作，只把页面标题与外壳留白让给文件列表。
+ * 尺寸由 .main 的实际矩形决定而不是写死 CSS 变量——顶栏可能是 static（随页面滚走）
+ * 也可能是 sticky，只有测量才能两种情况都对；侧边栏折叠与窗口缩放会重新测量。
+ */
+const root = ref<HTMLElement>()
+const maximizeAnchor = ref<HTMLElement>()
+const maximized = ref(false)
+const overlayStyle = ref<{ top: string, left: string, width: string, height: string }>()
+let overlayObserver: ResizeObserver | undefined
+
+function measureOverlay() {
+  const main = root.value?.closest<HTMLElement>('.main')
+  if (!main) {
+    overlayStyle.value = { top: '0px', left: '0px', width: `${window.innerWidth}px`, height: `${window.innerHeight}px` }
+    return
+  }
+  const rect = main.getBoundingClientRect()
+  // 顶栏可能是 static（随页面滚走）：此时 .main 的顶边会跑到视口上方，
+  // 收口到固定页头之下，避免把内容压到页头后面。
+  const headerHeight = Number.parseFloat(getComputedStyle(main).getPropertyValue('--g-header-actual-height')) || 0
+  const top = Math.max(0, Math.round(rect.top), Math.round(headerHeight))
+  overlayStyle.value = {
+    top: `${top}px`,
+    left: `${Math.round(rect.left)}px`,
+    width: `${Math.round(rect.width)}px`,
+    // 页面滚到底时 .main 底部可能已在视口外，用视口高度收口，避免盖到屏幕下方。
+    height: `${Math.max(Math.round(window.innerHeight - top), 240)}px`,
+  }
+}
+
+function stopTracking() {
+  window.removeEventListener('resize', measureOverlay)
+  overlayObserver?.disconnect()
+  overlayObserver = undefined
+}
+
+function exitMaximize(restoreFocus = true) {
+  if (!maximized.value) {
+    return
+  }
+  maximized.value = false
+  overlayStyle.value = undefined
+  stopTracking()
+  if (restoreFocus) {
+    maximizeAnchor.value?.querySelector('button')?.focus()
+  }
+}
+
+function toggleMaximize() {
+  if (maximized.value) {
+    exitMaximize()
+    return
+  }
+  // 先按当前文档流位置量一次，避免 class 生效的首帧没有定位信息而闪一下。
+  measureOverlay()
+  maximized.value = true
+  window.addEventListener('resize', measureOverlay)
+  const main = root.value?.closest<HTMLElement>('.main')
+  if (main && typeof ResizeObserver !== 'undefined') {
+    overlayObserver = new ResizeObserver(measureOverlay)
+    // 工作区脱离文档流后 .main 可能变矮（滚动条消失、页面回弹），侧边栏折叠也会改宽度，
+    // 靠观察器重新收口；页面滚动不参与，占满层在视口里的位置保持不动。
+    overlayObserver.observe(main)
+  }
+  void nextTick(measureOverlay)
+}
+
+function hasOpenOverlay() {
+  // el-dialog 的 .el-overlay 常驻 DOM，只有 v-show 切换显示，必须按实际可见性判断。
+  return Array.from(document.querySelectorAll<HTMLElement>('.el-overlay')).some((node) => {
+    const style = getComputedStyle(node)
+    return style.display !== 'none' && style.visibility !== 'hidden'
+  })
+}
+
+function onMaximizeKeydown(event: KeyboardEvent) {
+  if (!maximized.value || event.key !== 'Escape' || event.defaultPrevented) {
+    return
+  }
+  const target = event.target as HTMLElement | null
+  // 对话框、下拉和输入框先消化自己的 Esc，不能顺手把占满也退掉。
+  if (hasOpenOverlay() || target?.closest('input, textarea, .el-select, .el-popper')) {
+    return
+  }
+  event.preventDefault()
+  exitMaximize()
+}
+
+onMounted(() => {
+  window.addEventListener('keydown', onMaximizeKeydown)
+})
+
+onDeactivated(() => {
+  exitMaximize(false)
+})
+
+onBeforeUnmount(() => {
+  window.removeEventListener('keydown', onMaximizeKeydown)
+  exitMaximize(false)
+})
 </script>
 
 <template>
-  <section class="storage-browser" aria-label="文件浏览工作区">
+  <section
+    ref="root"
+    class="storage-browser"
+    :class="{ 'storage-browser--maximized': maximized }"
+    :style="maximized ? overlayStyle : undefined"
+    aria-label="文件浏览工作区"
+  >
     <div class="source-bar">
       <div class="source-identity">
         <slot name="source" />
@@ -175,9 +284,22 @@ async function copyLocation(entry: Entry) {
           </button>
         </el-tooltip>
       </div>
-      <el-button :icon="RefreshCw" :loading="loading" @click="emit('refresh')">
-        刷新
-      </el-button>
+      <div class="source-actions">
+        <span ref="maximizeAnchor" class="maximize-anchor">
+          <el-button
+            :icon="maximized ? Minimize : Maximize"
+            :aria-pressed="maximized"
+            :aria-label="maximized ? '退出占满区域' : '占满右侧内容区'"
+            :title="maximized ? '还原到页面布局（Esc）' : '占满右侧内容区（Esc 退出）'"
+            @click="toggleMaximize"
+          >
+            {{ maximized ? '还原' : '占满' }}
+          </el-button>
+        </span>
+        <el-button :icon="RefreshCw" :loading="loading" @click="emit('refresh')">
+          刷新
+        </el-button>
+      </div>
     </div>
 
     <div class="browser-body">
@@ -384,6 +506,7 @@ async function copyLocation(entry: Entry) {
 
 .source-bar,
 .source-identity,
+.source-actions,
 .navigation-bar,
 .location-bar,
 .listing-toolbar,
@@ -417,6 +540,14 @@ async function copyLocation(entry: Entry) {
 .source-identity {
   flex-wrap: wrap;
   overflow-wrap: anywhere;
+}
+
+.source-actions {
+  flex: none;
+}
+
+.maximize-anchor {
+  display: inline-flex;
 }
 
 .source-info {
@@ -758,6 +889,49 @@ async function copyLocation(entry: Entry) {
   border-left: 1px solid var(--mrr-border);
 }
 
+/*
+ * 占满内容区：脱离文档流铺在 .main 上（坐标由脚本测量后写成行内样式），
+ * 文件区与详情区改为在盒内滚动、表头吸顶，页面本身不再被长列表撑高。
+ */
+.storage-browser--maximized {
+  position: fixed;
+  z-index: 1000;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  box-shadow: var(--mrr-shadow-lg);
+}
+
+.storage-browser--maximized .source-bar,
+.storage-browser--maximized .browser-footer {
+  flex: none;
+}
+
+.storage-browser--maximized .browser-body {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.storage-browser--maximized .explorer-layout {
+  flex: 1;
+  grid-template-rows: minmax(0, 1fr);
+  min-height: 0;
+}
+
+.storage-browser--maximized .file-pane,
+.storage-browser--maximized .details-pane {
+  min-height: 0;
+  overflow: auto;
+}
+
+.storage-browser--maximized .file-table th {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+}
+
 @media (max-width: 1100px) {
   .explorer-layout {
     grid-template-columns: minmax(0, 1fr);
@@ -767,6 +941,12 @@ async function copyLocation(entry: Entry) {
     grid-row: 1;
     border-bottom: 1px solid var(--mrr-border);
     border-left: 0;
+  }
+
+  /* 单列时详情在上、列表在下：详情拿六成高度、超出部分自己滚动，
+   * 列表至少留四成，两个区都不会被压没。 */
+  .storage-browser--maximized .explorer-layout {
+    grid-template-rows: minmax(0, 60%) minmax(0, 1fr);
   }
 }
 

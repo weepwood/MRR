@@ -86,20 +86,22 @@ onDeactivated(() => { active.value = false })
 <template>
   <section class="inline-preview" aria-label="内容预览" :aria-busy="state === 'loading'">
     <h4>内容预览</h4>
-    <button v-if="state === 'image'" type="button" class="inline-image" :aria-label="`查看大图 · ${entry.name}`" title="查看大图" @click="emit('expand')">
-      <img :key="content" :src="content" :alt="entry.name" decoding="async" referrerpolicy="no-referrer" @error="imageFailed">
-      <span class="expand-icon" aria-hidden="true"><Maximize2 :size="14" /></span>
-    </button>
-    <pre v-else-if="state === 'text' && content.length" class="inline-text" tabindex="0" aria-label="文件文本">{{ content }}</pre>
-    <div v-else class="preview-state" role="status">
-      <span v-if="state === 'loading'">正在读取文件…</span>
-      <template v-else-if="state === 'error'">
-        <span>{{ error }}</span>
-        <el-button size="small" text :icon="RefreshCw" @click="attempt++">
-          重试
-        </el-button>
-      </template>
-      <span v-else>{{ unavailable || (state === 'text' ? '此文件为空。' : '预览已暂停。') }}</span>
+    <div class="preview-stage" :class="{ 'preview-stage--previewable': kind }">
+      <button v-if="state === 'image'" type="button" class="inline-image" :aria-label="`查看大图 · ${entry.name}`" title="查看大图" @click="emit('expand')">
+        <img :key="content" :src="content" :alt="entry.name" decoding="async" referrerpolicy="no-referrer" @error="imageFailed">
+        <span class="expand-icon" aria-hidden="true"><Maximize2 :size="14" /></span>
+      </button>
+      <pre v-else-if="state === 'text' && content.length" class="inline-text" tabindex="0" aria-label="文件文本">{{ content }}</pre>
+      <div v-else class="preview-state" role="status">
+        <span v-if="state === 'loading'">正在读取文件…</span>
+        <template v-else-if="state === 'error'">
+          <span>{{ error }}</span>
+          <el-button size="small" text :icon="RefreshCw" @click="attempt++">
+            重试
+          </el-button>
+        </template>
+        <span v-else>{{ unavailable || (state === 'text' ? '此文件为空。' : '预览已暂停。') }}</span>
+      </div>
     </div>
   </section>
 </template>
@@ -117,6 +119,24 @@ onDeactivated(() => { active.value = false })
   color: var(--mrr-muted-foreground);
 }
 
+/*
+ * 预览区高度按「可预览」与否固定：加载占位、失败提示和最终内容共用同一个盒子，
+ * 图片解码完成后不会因为「44px 占位 → 208px 图片」把详情栏和整页高度顶起来。
+ * 同一目录里图片、文本、不可预览文件之间切换时，详情栏高度也不再跳变。
+ */
+.preview-stage {
+  display: grid;
+  min-width: 0;
+}
+
+.preview-stage--previewable {
+  height: clamp(132px, 22vh, 208px);
+}
+
+.preview-stage--previewable > * {
+  min-height: 0;
+}
+
 .inline-image,
 .inline-text,
 .preview-state {
@@ -131,7 +151,7 @@ onDeactivated(() => { active.value = false })
   grid-template: minmax(0, 1fr) / minmax(0, 1fr);
   place-items: center;
   width: 100%;
-  height: clamp(132px, 22vh, 208px);
+  height: 100%;
   padding: 8px;
   cursor: zoom-in;
 }
@@ -159,7 +179,8 @@ onDeactivated(() => { active.value = false })
 }
 
 .inline-text {
-  max-height: min(32vh, 280px);
+  height: 100%;
+  max-height: 100%;
   padding: 10px 12px;
   margin: 0;
   overflow: auto;

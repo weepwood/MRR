@@ -22,7 +22,7 @@ export function useArchivePrint(selectedImages?: Readonly<Ref<readonly GalleryIm
 
     return `<!DOCTYPE html><html><head><meta charset="utf-8"><title>影像打印</title>
       <style>
-        /* 显式钉住 A4 竖版：纸型不受打印机默认值影响，vh/viscape 才有确定基准。 */
+        /* 显式钉住 A4 竖版：纸型不受打印机默认值影响，vh 才有确定基准。 */
         @page { size: A4 portrait; margin: 0; }
         * { box-sizing: border-box; margin: 0; padding: 0; }
         body { margin: 0; }

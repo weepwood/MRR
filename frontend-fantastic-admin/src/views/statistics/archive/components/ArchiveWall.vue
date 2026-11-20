@@ -32,7 +32,7 @@ const props = withDefaults(defineProps<{
 const emit = defineEmits<{
   select: [index: number]
   toggle: [image: GalleryImage]
-  saveType: [type: number]
+  saveType: [image: GalleryImage, type: number]
 }>()
 
 const INITIAL_VISIBLE_COUNT = 60
@@ -311,6 +311,7 @@ onUnmounted(() => {
           </div>
           <img
             v-else
+            :key="image.imageUrl"
             :src="image.imageUrl"
             :alt="`第 ${index + 1} 张影像`"
             loading="lazy"
@@ -322,7 +323,7 @@ onUnmounted(() => {
 
         <!-- meta 悬浮在影像左下角，结构与缩略图条一致：勾选框 + 页码 + 类型 -->
         <footer
-          v-if="props.showMeta"
+          v-if="props.showMeta || props.selectionEnabled"
           class="archive-wall-meta"
           :class="{ 'wall-meta--interactive': props.selectionEnabled }"
           @click="onMetaClick(image, index, $event)"
@@ -340,8 +341,10 @@ onUnmounted(() => {
               <path d="M13.485 4.485a1 1 0 0 1 0 1.415l-6.5 6.5a1 1 0 0 1-1.414 0l-3-3a1 1 0 1 1 1.414-1.414L6.278 10.586l5.793-5.793a1 1 0 0 1 1.414 0z" fill="currentColor" />
             </svg>
           </button>
-          <strong>P{{ image.pages ?? index + 1 }}</strong>
-          <span>{{ getTypeLabel(image.btype) }}</span>
+          <template v-if="props.showMeta">
+            <strong>P{{ image.pages ?? index + 1 }}</strong>
+            <span>{{ getTypeLabel(image.btype) }}</span>
+          </template>
         </footer>
       </article>
     </div>
@@ -389,7 +392,7 @@ onUnmounted(() => {
       :is-selected="props.isSelected(viewerImage)"
       :show-selection-status="props.selectionEnabled"
       :saving-type="props.savingType"
-      @save-type="emit('saveType', $event)"
+      @save-type="(image, type) => emit('saveType', image, type)"
       @navigate="navigateViewer"
       @toggle="toggleViewerImage"
     />

@@ -24,7 +24,7 @@ import {
 } from '@/utils/medical-record-code'
 import { getRequestErrorMessage } from '@/utils/request-error-message'
 import { archiveAccessMode } from '../access-mode'
-import { padCode, readArchiveImageVersion, resolveImageUrl, writeArchiveImageVersion } from '../constants'
+import { readArchiveImageVersion, resolveImageUrl, writeArchiveImageVersion } from '../constants'
 import { useArchiveExportJob } from './useArchiveExportJob'
 import { addArchiveSearchHistory, captureArchiveSearchHistorySession } from './useArchiveSearchHistory'
 
@@ -115,7 +115,7 @@ export function useArchiveImages(options: UseArchiveImagesOptions = {}) {
   }
 
   function bindDownloadArchive(bah: string, sjh: string) {
-    const nextKey = `${padCode(bah)}|${padCode(sjh)}`
+    const nextKey = `${normalizeMedicalRecordCode(bah)}|${normalizeMedicalRecordCode(sjh)}`
     if (downloadArchiveKey && downloadArchiveKey !== nextKey) {
       void exportJob.discard()
     }
@@ -379,8 +379,8 @@ export function useArchiveImages(options: UseArchiveImagesOptions = {}) {
   async function handleDownload(): Promise<void> {
     const externalSession = currentExternalSession()
     const firstImage = images.value[0]
-    const bah = padCode(searchBah.value || firstImage?.bah || '')
-    const sjh = padCode(searchSjh.value || firstImage?.sjh || '')
+    const bah = normalizeMedicalRecordCode(searchBah.value || firstImage?.bah || '')
+    const sjh = normalizeMedicalRecordCode(searchSjh.value || firstImage?.sjh || '')
 
     if (isExternalTicketMode()) {
       if (!externalSession) {

@@ -29,22 +29,6 @@ export function formatMedicalRecordCode(value: unknown, fallback = '-'): string 
 }
 
 /**
- * 把不足 8 位的纯数字编号补前导零，得到台账里的完整写法。
- *
- * 录入时常见省略前导零（00123456 记成 123456），补零后输入框和列表里显示的
- * 就是实际会查的那个号，也才能和纸质档案逐位对照。
- * 非纯数字的历史异常值（SJH-A1、NULL）和已超过 8 位的值原样返回 —— 补零不能
- * 替用户改写不认识的数据，截断更不行。
- */
-export function padMedicalRecordCode(value: unknown): string {
-  const text = normalizeMedicalRecordCode(value)
-  if (!/^\d+$/.test(text) || text.length >= MEDICAL_RECORD_CODE_LENGTH) {
-    return text
-  }
-  return text.padStart(MEDICAL_RECORD_CODE_LENGTH, '0')
-}
-
-/**
  * 生成无前导零搜索词，使 123 与 00000123 具有相同搜索语义。
  */
 export function toMedicalRecordCodeSearchTerm(value: unknown): string {

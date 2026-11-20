@@ -35,7 +35,7 @@ const props = withDefaults(defineProps<{
 
 const emit = defineEmits<{
   toggle: []
-  saveType: [type: number]
+  saveType: [image: GalleryImage, type: number]
   navigate: [delta: number]
   select: [index: number]
 }>()
@@ -203,7 +203,7 @@ onUnmounted(() => {
         :is-selected="props.isSelected"
         :show-selection-status="props.showSelectionStatus"
         :saving-type="props.savingType"
-        @save-type="emit('saveType', $event)"
+        @save-type="(image, type) => emit('saveType', image, type)"
         @navigate="emit('navigate', $event)"
         @toggle="emit('toggle')"
       />
@@ -218,6 +218,7 @@ onUnmounted(() => {
         </div>
         <img
           v-else
+          :key="props.image.imageUrl"
           class="preview-image fit-image"
           :class="`fit-${props.fitMode}`"
           :src="props.image.imageUrl"

@@ -31,7 +31,7 @@ const REASON_META: Record<string, { tone: Tone, icon: string, hint: string }> = 
   NO_MATCHING_IMAGES: {
     tone: 'info',
     icon: 'i-lucide:file-search',
-    hint: '病案号与上架号已经定位到病案，但没有扫描影像。可能尚未扫描上架，或影像仍在处理中。',
+    hint: '未找到匹配的扫描影像。请核对原始编号，或确认是否已经扫描上架。',
   },
   NEEDS_SJH: {
     tone: 'warning',
@@ -46,7 +46,7 @@ const REASON_META: Record<string, { tone: Tone, icon: string, hint: string }> = 
   INVALID_INPUT: {
     tone: 'warning',
     icon: 'i-lucide:info',
-    hint: '请检查身份证号、病案号或上架号的位数与格式，位数不足会查不到病案。',
+    hint: '请核对身份证号格式，或按病案号、上架号的原始编号重新查询。',
   },
 }
 

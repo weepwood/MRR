@@ -37,7 +37,7 @@ import {
 import { useArchivePrint } from './archive/composables/useArchivePrint'
 import { useArchiveSelectedZip } from './archive/composables/useArchiveSelectedZip'
 import { useSelection } from './archive/composables/useSelection'
-import { buildTypeStats, padCode } from './archive/constants'
+import { buildTypeStats } from './archive/constants'
 
 defineOptions({ name: 'StatisticsArchivePage' })
 
@@ -205,8 +205,8 @@ async function handleSelectedZipAction() {
 }
 
 const selectionStorageKey = computed(() => {
-  const bah = normalizeSearchParam(searchBah.value)
-  const sjh = normalizeSearchParam(searchSjh.value)
+  const bah = sanitizeParam(searchBah.value)
+  const sjh = sanitizeParam(searchSjh.value)
   if (!bah && !sjh) {
     return ''
   }
@@ -219,14 +219,9 @@ function sanitizeParam(val: unknown): string {
   return text.startsWith(':') ? '' : text
 }
 
-function normalizeSearchParam(value: unknown): string {
-  const text = sanitizeParam(value)
-  return text ? padCode(text) : ''
-}
-
 function caseMatches(item: IdCardArchiveCase, bah: string, sjh: string) {
-  return normalizeSearchParam(item.bah) === bah
-    && normalizeSearchParam(item.sjh) === sjh
+  return sanitizeParam(item.bah) === bah
+    && sanitizeParam(item.sjh) === sjh
 }
 
 function formatBytes(value: number | undefined): string {
@@ -357,8 +352,8 @@ function clearArchiveState(message = '') {
 }
 
 async function loadSelectedArchiveCase(archiveCase: IdCardArchiveCase, forceRefresh = false) {
-  searchBah.value = normalizeSearchParam(archiveCase.bah)
-  searchSjh.value = normalizeSearchParam(archiveCase.sjh)
+  searchBah.value = sanitizeParam(archiveCase.bah)
+  searchSjh.value = sanitizeParam(archiveCase.sjh)
   selectedType.value = 'all'
   selectedImageIndex.value = 0
   selectedIds.value = new Set()
@@ -391,8 +386,8 @@ async function syncIdCardSearchFromRoute(idParam: string, bah: string, sjh: stri
     return
   }
 
-  const selectedBah = normalizeSearchParam(selectedCase.bah)
-  const selectedSjh = normalizeSearchParam(selectedCase.sjh)
+  const selectedBah = sanitizeParam(selectedCase.bah)
+  const selectedSjh = sanitizeParam(selectedCase.sjh)
   if (resolvedToken !== idParam || selectedBah !== bah || selectedSjh !== sjh) {
     await router.replace({
       path: archivePath.value,
@@ -409,8 +404,8 @@ async function syncIdCardSearchFromRoute(idParam: string, bah: string, sjh: stri
 }
 
 async function syncSearchFromRoute(forceRefresh = false) {
-  const bah = normalizeSearchParam(route.query.bah)
-  const sjh = normalizeSearchParam(route.query.sjh)
+  const bah = sanitizeParam(route.query.bah)
+  const sjh = sanitizeParam(route.query.sjh)
   const idToken = sanitizeParam(route.query.id)
 
   searchBah.value = bah
@@ -446,8 +441,8 @@ async function handleIdCardSearch() {
     return
   }
 
-  const bah = normalizeSearchParam(firstCase.bah)
-  const sjh = normalizeSearchParam(firstCase.sjh)
+  const bah = sanitizeParam(firstCase.bah)
+  const sjh = sanitizeParam(firstCase.sjh)
   await router.push({
     path: archivePath.value,
     query: {
@@ -465,8 +460,8 @@ async function handleSearch() {
   }
 
   clearIdCardSearch()
-  const bah = normalizeSearchParam(searchBah.value)
-  const sjh = normalizeSearchParam(searchSjh.value)
+  const bah = sanitizeParam(searchBah.value)
+  const sjh = sanitizeParam(searchSjh.value)
   const validationMessage = getArchiveLookupValidationMessage(bah, sjh)
 
   searchBah.value = bah
@@ -509,8 +504,8 @@ async function selectArchiveCase(archiveCase: IdCardArchiveCase) {
   if (!token) {
     return
   }
-  const bah = normalizeSearchParam(archiveCase.bah)
-  const sjh = normalizeSearchParam(archiveCase.sjh)
+  const bah = sanitizeParam(archiveCase.bah)
+  const sjh = sanitizeParam(archiveCase.sjh)
   const location = {
     path: archivePath.value,
     query: {
@@ -568,10 +563,12 @@ function toggleCurrent() {
   }
 }
 
-function handleSaveType(type: number) {
-  if (currentImage.value) {
-    saveImageType(currentImage.value, type)
+function handleSaveType(image: GalleryImage, type: number) {
+  if (currentImage.value !== image) {
+    ElMessage.warning('当前影像已切换，请重新确认分类')
+    return
   }
+  saveImageType(image, type)
 }
 
 function handlePrint() {

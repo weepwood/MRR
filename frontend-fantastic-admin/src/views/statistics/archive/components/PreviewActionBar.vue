@@ -21,7 +21,7 @@ const props = withDefaults(defineProps<{
 })
 
 const emit = defineEmits<{
-  saveType: [type: number]
+  saveType: [image: GalleryImage, type: number]
   navigate: [delta: number]
   toggle: []
 }>()
@@ -31,24 +31,26 @@ const pendingType = ref(0)
 const currentType = computed(() => Number(props.image?.btype || 0))
 
 async function confirmType() {
-  if (pendingType.value === currentType.value) {
+  const image = props.image
+  const type = pendingType.value
+  if (!image || type === currentType.value) {
     return
   }
-  const label = TYPE_OPTIONS.find(item => item.value === pendingType.value)?.label || '所选分类'
+  const label = TYPE_OPTIONS.find(item => item.value === type)?.label || '所选分类'
   try {
     await actionDialog.confirm(
-      `确认将当前影像分类切换为“${label}”吗？`,
+      `确认将第 ${props.index + 1} 张影像的分类切换为“${label}”吗？`,
       '确认分类变更',
       { confirmButtonText: '确认切换', cancelButtonText: '取消', type: 'warning' },
     )
-    emit('saveType', pendingType.value)
+    emit('saveType', image, type)
   }
   catch {
     pendingType.value = currentType.value
   }
 }
 
-watch(() => props.image?.btype, () => {
+watch(() => props.image, () => {
   pendingType.value = currentType.value
 }, { immediate: true })
 </script>

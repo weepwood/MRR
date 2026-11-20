@@ -6,17 +6,7 @@ import {
   ID_CARD_LEGACY_LENGTH,
   ID_CARD_PATTERN,
   normalizeIdCardInput,
-  normalizeMedicalRecordCodeInput,
 } from './identifier-input'
-
-describe('normalizeMedicalRecordCodeInput', () => {
-  it('剔除半角与全角空白，其余字符原样保留', () => {
-    expect(normalizeMedicalRecordCodeInput(' 0012 3456 ')).toBe('00123456')
-    expect(normalizeMedicalRecordCodeInput('　00123456　')).toBe('00123456')
-    expect(normalizeMedicalRecordCodeInput('00123456')).toBe('00123456')
-    expect(normalizeMedicalRecordCodeInput(null)).toBe('')
-  })
-})
 
 describe('normalizeIdCardInput', () => {
   it('剔除空白并把末位小写 x 转成大写', () => {
@@ -37,14 +27,9 @@ describe('describeMedicalRecordCodeInput', () => {
     expect(describeMedicalRecordCodeInput('00123456')).toEqual({ length: 8, tone: 'ok', message: '' })
   })
 
-  it('不足 8 位时报出当前位数与补齐后用于匹配的号', () => {
-    // 这条是「省略前两位 00」的核心反馈：让用户自己核对补零后的值对不对
-    expect(describeMedicalRecordCodeInput('123456')).toEqual({
-      length: 6,
-      tone: 'warn',
-      message: '不足 8 位，查询时按 0012 3456 匹配',
-    })
-    expect(describeMedicalRecordCodeInput('1').message).toContain('0000 0001')
+  it('合法短编号只显示原始位数', () => {
+    expect(describeMedicalRecordCodeInput('　123456　')).toEqual({ length: 6, tone: 'neutral', message: '' })
+    expect(describeMedicalRecordCodeInput('1')).toEqual({ length: 1, tone: 'neutral', message: '' })
   })
 
   it('超过 8 位提示核对而不是静默接受', () => {

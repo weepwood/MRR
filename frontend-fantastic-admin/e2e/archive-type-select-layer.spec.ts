@@ -475,3 +475,51 @@ test('平铺模式下的全屏查看同样带分类切换、翻页与选中工�
   await confirmButton.click()
   await expect(toolbar.locator('.preview-type-select')).toContainText('08-检验单')
 })
+
+test('平铺模式隐藏页码和分类后仍可勾选影像', async ({ page }) => {
+  await mockArchivePage(page)
+  await page.addInitScript(() => {
+    localStorage.setItem('MRR-ADMIN:archive-local-preferences', JSON.stringify({
+      archiveLayoutMode: 'wall',
+      archiveWallShowMeta: false,
+    }))
+  })
+  await page.goto('/archive?bah=00009301')
+
+  const card = page.locator('.archive-wall-card').first()
+  await expect(card.locator('.archive-wall-meta strong, .archive-wall-meta > span')).toHaveCount(0)
+  await card.getByRole('button', { name: '选择第 1 张影像', exact: true }).click({ timeout: 3000 })
+  await expect(card.getByRole('button', { name: '取消选择第 1 张影像', exact: true })).toHaveAttribute('aria-pressed', 'true')
+})
+
+test('全屏分类确认期间切换影像时取消本次修改', async ({ page }) => {
+  await mockArchivePage(page, 2)
+  await page.addInitScript(() => {
+    localStorage.setItem('MRR-ADMIN:archive-local-preferences', JSON.stringify({ archiveLayoutMode: 'wall' }))
+  })
+  const updates: { path: string, btype: number }[] = []
+  await page.route('**/api/v1/img/updateImageType/**', async (route) => {
+    updates.push({
+      path: new URL(route.request().url()).pathname,
+      btype: route.request().postDataJSON().btype,
+    })
+    await route.fulfill({ json: reply(null) })
+  })
+  await page.goto('/archive?bah=00009301')
+
+  await page.locator('.archive-wall-image-stage').first().click()
+  await expect(page.locator('.el-image-viewer__wrapper')).toBeVisible()
+  await page.locator('.preview-type-select').click()
+  await page.locator('.el-select__popper.preview-type-popper .el-select-dropdown__item', { hasText: '08-检验单' }).click()
+
+  const confirmButton = page.getByRole('button', { name: '确认切换' })
+  await expect(confirmButton).toBeVisible()
+  await page.keyboard.press('ArrowRight')
+  await expect(page.locator('.viewer-progress')).toHaveText('2 / 2')
+  await confirmButton.click()
+
+  await expect(page.locator('.el-message')).toBeVisible()
+  expect(updates).toEqual([])
+  await expect(page.locator('.el-message')).toContainText('当前影像已切换，请重新确认分类')
+  await expect(page.locator('.preview-type-select')).toContainText('03-手术记录')
+})

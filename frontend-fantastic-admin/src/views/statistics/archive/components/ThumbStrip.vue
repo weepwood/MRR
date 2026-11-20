@@ -153,6 +153,7 @@ defineExpose({ resetVisible, scrollToIndex })
         </div>
         <img
           v-else-if="viewMode === 'thumb'"
+          :key="img.imageUrl"
           :src="img.imageUrl"
           :alt="`第 ${index + 1} 张影像缩略图`"
           loading="lazy"

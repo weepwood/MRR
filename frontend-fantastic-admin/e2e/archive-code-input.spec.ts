@@ -62,11 +62,7 @@ async function measureInput(page: import('@playwright/test').Page, name: string)
   }, name)
 }
 
-/**
- * 台账里的病案号、上架号都是 8 位，但录入时常省略前导零（00123456 记成 123456）。
- * 失焦后必须补回 8 位：输入框里留下的就是实际会查的号，用户才能逐位核对。
- */
-test('病案号与上架号不足 8 位时，失焦后补前导零', async ({ page }) => {
+test('短编号失焦后保留原值，位数徽标只在聚焦时显示', async ({ page }) => {
   await mockArchivePage(page)
   await page.goto('/archive?bah=00009301')
 
@@ -75,20 +71,18 @@ test('病案号与上架号不足 8 位时，失焦后补前导零', async ({ pa
 
   await bah.fill('123456')
   await sjh.fill('9999')
-  // 点身份证框让前两个输入框失焦
   await page.locator('input[name="archive-id-card"]').click()
 
-  await expect(bah).toHaveValue('00123456')
-  await expect(sjh).toHaveValue('00009999')
+  await expect(bah).toHaveValue('123456')
+  await expect(sjh).toHaveValue('9999')
 
-  // 位数徽标只在聚焦时显示：失焦后隐藏
-  const bahBadge = page.locator('input[name="archive-bah"]').locator('xpath=ancestor::div[contains(@class,"el-input")]').locator('.length-badge')
+  const bahBadge = bah.locator('xpath=ancestor::div[contains(@class,"el-input")]').locator('.length-badge')
   await expect(bahBadge).toHaveCount(0)
   await bah.click()
-  await expect(bahBadge).toHaveText('8/8')
+  await expect(bahBadge).toHaveText('6/8')
   await sjh.click()
   await expect(bahBadge).toHaveCount(0)
-  await expect(page.locator('input[name="archive-sjh"]').locator('xpath=ancestor::div[contains(@class,"el-input")]').locator('.length-badge')).toHaveText('8/8')
+  await expect(sjh.locator('xpath=ancestor::div[contains(@class,"el-input")]').locator('.length-badge')).toHaveText('4/8')
 })
 
 test('已满 8 位与非数字的历史编号不被改写', async ({ page }) => {
@@ -108,15 +102,46 @@ test('已满 8 位与非数字的历史编号不被改写', async ({ page }) => 
   await expect(bah).toHaveValue('SJH-A1')
 })
 
-test('查询时按补齐后的 8 位号码请求', async ({ page }) => {
+test('短上架号和带前导零的上架号各自命中原始病案', async ({ page }) => {
   await mockArchivePage(page)
-  await page.goto('/archive?bah=00009301')
+  const observedShelfCodes: string[] = []
+  const archiveByShelfCode = new Map([['1234', '10000020'], ['00001234', '10000021']])
+  await page.route('**/api/v1/img/search?**', async (route) => {
+    const sjh = new URL(route.request().url()).searchParams.get('sjh') ?? ''
+    observedShelfCodes.push(sjh)
+    const bah = archiveByShelfCode.get(sjh)
+    await route.fulfill({
+      json: reply(bah
+        ? [{
+            id: Number(bah),
+            brxh: 'SYNTH-ARCHIVE',
+            bah,
+            sjh,
+            filename: 'synthetic-1.png',
+            btype: 3,
+            pages: 1,
+            uploadFlag: 1,
+            img_url: '/mock/scan-1.png',
+          }]
+        : []),
+    })
+  })
+  await page.goto('/archive')
 
-  await page.locator('input[name="archive-bah"]').fill('123456')
-  await page.locator('.search-card').getByRole('button', { name: '查询', exact: true }).click()
+  const shelf = page.locator('input[name="archive-sjh"]')
+  const search = page.locator('.search-card').getByRole('button', { name: '查询', exact: true })
+  for (const sjh of archiveByShelfCode.keys()) {
+    await shelf.fill(sjh)
+    await search.click()
+    await expect.poll(() => observedShelfCodes.at(-1)).toBe(sjh)
+    await expect.poll(() => new URL(page.url()).searchParams.get('sjh')).toBe(sjh)
+    await expect(shelf).toHaveValue(sjh)
+    await expect(page.locator('.preview-stage img.preview-image')).toBeVisible()
+  }
 
-  await expect.poll(() => new URL(page.url()).searchParams.get('bah')).toBe('00123456')
-  await expect(page.locator('input[name="archive-bah"]')).toHaveValue('00123456')
+  await page.goto('/archive?sjh=1234')
+  await expect.poll(() => observedShelfCodes.at(-1)).toBe('1234')
+  await expect(shelf).toHaveValue('1234')
 })
 
 /**

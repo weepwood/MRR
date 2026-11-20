@@ -2,7 +2,6 @@ import { describe, expect, it } from 'vitest'
 import {
   getArchiveLookupValidationMessage,
   normalizeMedicalRecordCode,
-  padMedicalRecordCode,
   requiresSjhForBah,
   resolveArchiveLookup,
 } from '../medical-record-code'
@@ -56,33 +55,5 @@ describe('medical record archive lookup rules', () => {
       requestSjh: '456',
       validationMessage: '',
     })
-  })
-})
-
-describe('padMedicalRecordCode', () => {
-  it('补齐省略的前导零到 8 位', () => {
-    expect(padMedicalRecordCode('123456')).toBe('00123456')
-    expect(padMedicalRecordCode('1')).toBe('00000001')
-    expect(padMedicalRecordCode('1234567')).toBe('01234567')
-  })
-
-  it('已满 8 位或超长时不改值', () => {
-    expect(padMedicalRecordCode('00123456')).toBe('00123456')
-    expect(padMedicalRecordCode('12345678')).toBe('12345678')
-    // 超长说明号本身不合规，补零也救不了，原样留给用户核对
-    expect(padMedicalRecordCode('123456789')).toBe('123456789')
-  })
-
-  it('非数字的历史异常编号原样保留', () => {
-    for (const code of ['SJH-A1', 'NULL', 'A1']) {
-      expect(padMedicalRecordCode(code)).toBe(code)
-    }
-  })
-
-  it('清理首尾空白后再判断，空值仍是空值', () => {
-    expect(padMedicalRecordCode(' 123456 ')).toBe('00123456')
-    expect(padMedicalRecordCode('')).toBe('')
-    expect(padMedicalRecordCode('   ')).toBe('')
-    expect(padMedicalRecordCode(null)).toBe('')
   })
 })

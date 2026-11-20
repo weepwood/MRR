@@ -21,8 +21,7 @@ test('空影像查询显示追踪编号，管理员显式触发深入诊断', as
   await page.route('**/api/v1/img/search?**', route => route.fulfill({ json: emptyResult('NO_MATCHING_IMAGES') }))
   await page.route('**/api/v1/operations/query-diagnostics', async (route) => {
     diagnoses++
-    // 编号输入不足 8 位会自动补前导零（padMedicalRecordCode），诊断请求带补齐后的 8 位
-    expect(route.request().postDataJSON()).toMatchObject({ bah: '00000123', requestId: '0123456789abcdef' })
+    expect(route.request().postDataJSON()).toMatchObject({ bah: '123', requestId: '0123456789abcdef' })
     await route.fulfill({ json: { code: 200, data: { readOnly: true, steps: [{ code: 'ARCHIVE_COMPAT', status: 'AMBIGUOUS', durationMs: 1, message: '存在多个候选，禁止自动关联', details: { sampledCount: 2 } }] } } })
   })
   await page.goto('/archive?bah=123')
@@ -57,7 +56,7 @@ test('查询失败卡片给出下一步建议，追踪编号可一键复制', as
 test('不同失败原因给出不同建议，而不是一律「查不到」', async ({ page }) => {
   await page.route('**/api/v1/img/search?**', route => route.fulfill({ json: emptyResult('NO_MATCHING_IMAGES') }))
   await page.goto('/archive?bah=123')
-  await expect(page.locator('.query-failure')).toContainText('没有扫描影像')
+  await expect(page.locator('.query-failure')).toContainText('请核对原始编号')
 
   await page.unroute('**/api/v1/img/search?**')
   await page.route('**/api/v1/img/search?**', route => route.fulfill({ json: emptyResult('AMBIGUOUS_CODE') }))

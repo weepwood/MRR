@@ -6,9 +6,8 @@ import {
   describeIdCardInput,
   describeMedicalRecordCodeInput,
   normalizeIdCardInput,
-  normalizeMedicalRecordCodeInput,
 } from '@/utils/identifier-input'
-import { padMedicalRecordCode, requiresSjhForBah } from '@/utils/medical-record-code'
+import { MEDICAL_RECORD_CODE_LENGTH, requiresSjhForBah } from '@/utils/medical-record-code'
 import {
   archiveAccessMode,
   shouldShowArchiveSearchCard,
@@ -27,9 +26,6 @@ const searchBah = defineModel<string>('searchBah', { default: '' })
 const searchSjh = defineModel<string>('searchSjh', { default: '' })
 const searchIdCard = defineModel<string>('searchIdCard', { default: '' })
 
-/** 病案号、上架号都是 8 位；身份证 15 位或 18 位。 */
-const CODE_LENGTH = 8
-
 const showSearchCard = computed(() => shouldShowArchiveSearchCard(archiveAccessMode.value))
 
 const bahHint = computed(() => describeMedicalRecordCodeInput(searchBah.value))
@@ -37,7 +33,7 @@ const sjhHint = computed(() => describeMedicalRecordCodeInput(searchSjh.value))
 const idCardHint = computed(() => describeIdCardInput(searchIdCard.value))
 
 /**
- * 位数徽标只在输入框聚焦时显示：离开输入框后号码已经是补齐/归一化的最终值，
+ * 位数徽标只在输入框聚焦时显示：离开输入框后号码仍按原始值展示，
  * 常驻徽标反而和号码抢 141px 半栏的空间。
  */
 const focusedField = ref<'bah' | 'sjh' | 'idCard' | null>(null)
@@ -46,51 +42,18 @@ const focusedField = ref<'bah' | 'sjh' | 'idCard' | null>(null)
 const idCardTakesOver = computed(() => Boolean(normalizeIdCardInput(searchIdCard.value)))
 const sjhRequired = computed(() => !idCardTakesOver.value && requiresSjhForBah(searchBah.value))
 
-/**
- * 粘贴常带上空格、全角空格或末位小写 x。只在归一化前后不一致时回写，
- * 手敲数字时值不变、不会触发写回，也就不会有光标跳到末尾的问题。
- */
-const normalizers: [typeof searchBah, (value: unknown) => string][] = [
-  [searchBah, normalizeMedicalRecordCodeInput],
-  [searchSjh, normalizeMedicalRecordCodeInput],
-  [searchIdCard, normalizeIdCardInput],
-]
-
-for (const [model, normalize] of normalizers) {
-  watch(model, (value) => {
-    const normalized = normalize(value)
-    if (normalized !== value) {
-      model.value = normalized
-    }
-  })
-}
-
-/**
- * 离开输入框时把不足 8 位的纯数字编号补前导零。
- *
- * 台账里的号是 8 位（00123456），但录入时常写成 123456。补零放在失焦时做：
- * 敲键过程中不打断输入，离开后输入框里留下的就是实际会查的那个号，
- * 用户能一眼看出系统按哪个号匹配。非纯数字的历史异常值原样保留。
- */
-function padCodeOnBlur(target: 'bah' | 'sjh') {
-  // 模板里 defineModel 的 ref 会被自动解包，只能在这里按字段取回 ref 本身
-  const model = target === 'bah' ? searchBah : searchSjh
-  const padded = padMedicalRecordCode(model.value)
-  if (padded !== model.value) {
-    model.value = padded
+watch(searchIdCard, (value) => {
+  const normalized = normalizeIdCardInput(value)
+  if (normalized !== value) {
+    searchIdCard.value = normalized
   }
-}
+})
 
 function onFieldFocus(field: 'bah' | 'sjh' | 'idCard') {
   focusedField.value = field
 }
 
-function onFieldBlur(target: 'bah' | 'sjh') {
-  padCodeOnBlur(target)
-  focusedField.value = null
-}
-
-function onIdCardBlur() {
+function onFieldBlur() {
   focusedField.value = null
 }
 </script>
@@ -108,11 +71,11 @@ function onIdCardBlur() {
             clearable
             placeholder="病案号"
             @focus="onFieldFocus('bah')"
-            @blur="onFieldBlur('bah')"
+            @blur="onFieldBlur()"
             @keyup.enter="emit('search')"
           >
             <template #suffix>
-              <MrrInputLengthBadge v-if="focusedField === 'bah'" :length="bahHint.length" :total="CODE_LENGTH" :tone="bahHint.tone" label="病案号" />
+              <MrrInputLengthBadge v-if="focusedField === 'bah'" :length="bahHint.length" :total="MEDICAL_RECORD_CODE_LENGTH" :tone="bahHint.tone" label="病案号" />
             </template>
           </el-input>
           <el-input
@@ -124,11 +87,11 @@ function onIdCardBlur() {
             clearable
             :placeholder="sjhRequired ? '上架号 *' : '上架号'"
             @focus="onFieldFocus('sjh')"
-            @blur="onFieldBlur('sjh')"
+            @blur="onFieldBlur()"
             @keyup.enter="emit('search')"
           >
             <template #suffix>
-              <MrrInputLengthBadge v-if="focusedField === 'sjh'" :length="sjhHint.length" :total="CODE_LENGTH" :tone="sjhHint.tone" label="上架号" />
+              <MrrInputLengthBadge v-if="focusedField === 'sjh'" :length="sjhHint.length" :total="MEDICAL_RECORD_CODE_LENGTH" :tone="sjhHint.tone" label="上架号" />
             </template>
           </el-input>
         </div>
@@ -143,7 +106,7 @@ function onIdCardBlur() {
             placeholder="身份证号"
             @keyup.enter="emit('search')"
             @focus="onFieldFocus('idCard')"
-            @blur="onIdCardBlur()"
+            @blur="onFieldBlur()"
           >
             <template #suffix>
               <MrrInputLengthBadge v-if="focusedField === 'idCard'" :length="idCardHint.length" :tone="idCardHint.tone" label="身份证号" />

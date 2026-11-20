@@ -3,7 +3,6 @@ import {
   getMedicalRecordTypeLabel,
   MEDICAL_RECORD_TYPES,
 } from '@/constants/medical-record-types'
-import { padMedicalRecordCode } from '@/utils/medical-record-code'
 
 export const TYPE_OPTIONS: TypeOption[] = MEDICAL_RECORD_TYPES.map(item => ({ ...item }))
 
@@ -28,14 +27,6 @@ export function formatDate(value: string | undefined): string {
     return '-'
   }
   return String(value).replace(/\//g, '-')
-}
-
-/**
- * 界面与路由里的编号规范形式：8 位、前导零补齐。
- * 展示、缓存键、路由参数三处只有一种写法，123456 与 00123456 不会再各存一份。
- */
-export function padCode(value: string): string {
-  return padMedicalRecordCode(value)
 }
 
 export function buildTypeStats(images: { btype?: number | null }[]): TypeStatItem[] {

@@ -1,0 +1,47 @@
+# 本地演示用 Prometheus 配置（Windows 单机，不依赖 Docker）
+#
+# 与 monitoring/prometheus/prometheus.yml 的差别只有目标地址与告警管理器：
+#   - 采集目标全部落在本机回环地址
+#   - 不配置 alertmanager（本地没有部署，规则仍会评估并在 Prometheus 页面显示 FIRING）
+#   - 规则文件直接复用生产同一份 rules/mrr-alerts.yml，避免口径漂移
+#
+# 启动：
+#   D:\App\DevEnv\prometheus\prometheus.exe ^
+#     --config.file="D:\Project\MRR\monitoring\local\prometheus.local.yml" ^
+#     --storage.tsdb.path="D:\Project\MRR\.workbuddy\prom-data" ^
+#     --web.listen-address=127.0.0.1:9090
+
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+  external_labels:
+    project: mrr
+    env: local
+
+rule_files:
+  - ../prometheus/rules/mrr-alerts.yml
+
+scrape_configs:
+  # 应用侧：Spring Boot Actuator 的 Micrometer Prometheus 端点。
+  # management.server.port 默认 18046，与业务端口 18045 分离，故这里连 18046。
+  - job_name: mrr-backend
+    metrics_path: /actuator/prometheus
+    static_configs:
+      - targets: ["127.0.0.1:18046"]
+        labels:
+          instance_name: mrr-local
+
+  # 数据库侧：postgres_exporter，自定义聚合查询走 monitoring/postgresql/queries.yaml
+  - job_name: mrr-postgresql
+    static_configs:
+      - targets: ["127.0.0.1:9187"]
+
+  - job_name: prometheus
+    static_configs:
+      - targets: ["127.0.0.1:9090"]
+
+# 本机没有 windows_exporter，故不配置 mrr-host；
+# 若后续安装了 windows_exporter（默认 9182），取消下面注释即可。
+#  - job_name: mrr-host
+#    static_configs:
+#      - targets: ["127.0.0.1:9182"]

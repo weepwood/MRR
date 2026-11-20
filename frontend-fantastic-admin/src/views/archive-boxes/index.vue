@@ -7,7 +7,7 @@ import type {
   ArchiveBoxStatus,
   ArchiveBoxSummary,
 } from '@/api/modules/archive-boxes'
-import type { MetricTone } from '@/components/MrrMetricCard/types'
+import type { MetricTone, MetricValueTone } from '@/components/MrrMetricCard/types'
 import type { MrrTableAction } from '@/components/MrrTableActions/types'
 import { ElMessage } from 'element-plus'
 import { Plus, RefreshCw as Refresh, Search } from 'lucide-vue-next'
@@ -23,8 +23,12 @@ import {
 import AppEmpty from '@/components/AppEmpty/index.vue'
 import AppError from '@/components/AppError/index.vue'
 import AppLoading from '@/components/AppLoading/index.vue'
+import MrrDataTablePanel from '@/components/MrrDataTablePanel/index.vue'
 import MrrFilterActionButton from '@/components/MrrFilterActionButton/index.vue'
 import MrrFilterBar from '@/components/MrrFilterBar/index.vue'
+import MrrPageHeader from '@/components/MrrPageHeader/index.vue'
+import MrrPageShell from '@/components/MrrPageShell/index.vue'
+import MrrStatusTag from '@/components/MrrStatusTag/index.vue'
 import MrrTableActions from '@/components/MrrTableActions/index.vue'
 import { useTableActionLayout } from '@/composables/useTableActionLayout'
 import { actionDialog } from '@/ui/components/ActionDialog'
@@ -36,15 +40,15 @@ type ViewMode = 'records' | 'boxes'
 interface StatusOption {
   value: ArchiveBoxStatus
   label: string
-  type: 'success' | 'danger' | 'warning' | 'info' | 'primary'
+  tone: 'success' | 'danger' | 'warning' | 'neutral' | 'info'
 }
 
 const statusOptions: StatusOption[] = [
-  { value: 'NORMAL', label: '正常', type: 'success' },
-  { value: 'MISSING', label: '缺失', type: 'danger' },
-  { value: 'MISPLACED', label: '存放在其他箱子', type: 'warning' },
-  { value: 'CONFLICT', label: '箱号冲突', type: 'primary' },
-  { value: 'OTHER', label: '其他异常', type: 'info' },
+  { value: 'NORMAL', label: '正常', tone: 'success' },
+  { value: 'MISSING', label: '缺失', tone: 'danger' },
+  { value: 'MISPLACED', label: '存放在其他箱子', tone: 'warning' },
+  { value: 'CONFLICT', label: '箱号冲突', tone: 'info' },
+  { value: 'OTHER', label: '其他异常', tone: 'neutral' },
 ]
 
 const activeView = ref<ViewMode>('records')
@@ -128,7 +132,7 @@ interface MetricCard {
   value: number
   note: string
   tone: MetricTone
-  icon: string
+  valueTone?: MetricValueTone
 }
 
 const metricCards = computed<MetricCard[]>(() => [
@@ -137,37 +141,39 @@ const metricCards = computed<MetricCard[]>(() => [
     value: summary.value.totalRecords,
     note: '已登记实体病案数量',
     tone: 'blue',
-    icon: 'i-lucide:file-lock',
   },
   {
     label: '已用箱数',
     value: summary.value.totalBoxes,
     note: '存在实际存放记录的箱号',
     tone: 'green',
-    icon: 'i-lucide:inbox',
   },
   {
     label: '缺失病案',
     value: summary.value.missingCount,
     note: '尚未确认实际存放位置',
     tone: 'danger',
-    icon: 'i-lucide:circle-x',
+    valueTone: summary.value.missingCount > 0 ? 'danger' : 'default',
   },
   {
     label: '异常记录',
     value: summary.value.abnormalCount,
     note: '缺失、错箱、冲突及其他异常',
     tone: 'amber',
-    icon: 'i-lucide:triangle-alert',
+    valueTone: summary.value.abnormalCount > 0 ? 'warning' : 'default',
   },
 ])
 
 /* 空库/空筛态下数值指标全零时收纳指标区，为表格让出首屏（N5）。 */
 const hasMetricActivity = computed(() => metricCards.value.some(card => Number(card.value) > 0))
+const resultCount = computed(() => activeView.value === 'records' ? total.value : boxTotal.value)
 
 function statusMeta(status?: string) {
-  return statusOptions.find(item => item.value === status)
-    ?? { value: 'OTHER' as const, label: status || '未知', type: 'info' as const }
+  const option = statusOptions.find(item => item.value === status)
+  return {
+    label: option?.label ?? (status || '未知'),
+    tone: option?.tone ?? 'neutral',
+  }
 }
 
 function normalizeText(value?: string) {
@@ -429,121 +435,116 @@ onMounted(refreshAll)
 </script>
 
 <template>
-  <div class="archive-box-page">
-    <header class="page-header">
-      <div>
-        <p class="eyebrow">
-          Archive Boxing
-        </p>
-        <h1>档案装箱管理</h1>
-        <p class="subtitle">
-          维护实体病案与箱号的对应关系，支持按病案反查位置和按箱号查看箱内病案。
-        </p>
-      </div>
-      <div class="header-actions">
+  <MrrPageShell compact>
+    <MrrPageHeader
+      title="档案装箱管理"
+      description="维护实体病案与箱号的对应关系，支持按病案反查位置和按箱号查看箱内病案。"
+    >
+      <template #actions>
         <el-button :icon="Refresh" :loading="loading" @click="refreshAll">
           刷新
         </el-button>
         <el-button type="primary" :icon="Plus" @click="openCreate">
           新增装箱记录
         </el-button>
-      </div>
-    </header>
+      </template>
+    </MrrPageHeader>
 
-    <section v-if="hasMetricActivity" class="mrr-metric-grid">
+    <section v-if="hasMetricActivity" class="mrr-metric-grid mrr-metric-grid--four mrr-metric-grid--dense" aria-label="装箱概况">
       <MrrMetricCard
         v-for="card in metricCards"
         :key="card.label"
-        :label="card.label"
-        :value="card.value"
-        :note="card.note"
-        :tone="card.tone"
-        :icon="card.icon"
+        v-bind="card"
       />
     </section>
 
-    <el-card shadow="never" class="workspace-card">
-      <div class="view-switcher">
-        <el-radio-group
-          :model-value="activeView"
-          @update:model-value="handleViewChange"
-        >
-          <el-radio-button value="records">
-            装箱明细
-          </el-radio-button>
-          <el-radio-button value="boxes">
-            箱号视图
-          </el-radio-button>
-        </el-radio-group>
-        <span class="view-hint">
-          {{ activeView === 'records' ? '一条记录对应一份实体病案' : '点击箱号可查看箱内全部病案' }}
-        </span>
-      </div>
-    </el-card>
+    <MrrDataTablePanel
+      :title="activeView === 'records' ? '装箱明细' : '箱号列表'"
+      :count="loading || error ? undefined : resultCount"
+    >
+      <template #filters>
+        <div class="view-switcher">
+          <el-radio-group
+            :model-value="activeView"
+            aria-label="装箱查看方式"
+            @update:model-value="handleViewChange"
+          >
+            <el-radio-button value="records">
+              装箱明细
+            </el-radio-button>
+            <el-radio-button value="boxes">
+              箱号视图
+            </el-radio-button>
+          </el-radio-group>
+          <span class="view-hint">
+            {{ activeView === 'records' ? '一条记录对应一份实体病案' : '点击箱号可查看箱内全部病案' }}
+          </span>
+        </div>
 
-    <template v-if="activeView === 'records'">
-      <el-card shadow="never" class="filter-card">
-        <!-- 筛选栏对齐用户管理页模式：无可见标签，控件 aria-label + 自描述占位符 -->
-        <MrrFilterBar embedded class="archive-filter-bar">
-          <div class="archive-filter__field archive-filter__keyword">
-            <el-input
-              v-model="filters.keyword"
-              clearable
-              aria-label="综合搜索"
-              placeholder="综合搜索编号、箱号、状态或备注"
-              @keyup.enter="handleSearch"
-            >
+        <MrrFilterBar embedded class="mrr-filter-bar--labelled archive-filter-bar">
+          <template v-if="activeView === 'records'">
+            <div class="mrr-filter-field archive-filter__keyword">
+              <label for="archive-keyword">综合搜索</label>
+              <el-input id="archive-keyword" v-model="filters.keyword" clearable aria-label="综合搜索" placeholder="编号、箱号、状态或备注" @keyup.enter="handleSearch">
+                <template #prefix>
+                  <el-icon><Search /></el-icon>
+                </template>
+              </el-input>
+            </div>
+            <div class="mrr-filter-field archive-filter__field">
+              <label for="archive-bah">病案号</label>
+              <el-input id="archive-bah" v-model="filters.bah" clearable aria-label="病案号" @keyup.enter="handleSearch" />
+            </div>
+            <div class="mrr-filter-field archive-filter__field">
+              <label for="archive-sjh">上架号</label>
+              <el-input id="archive-sjh" v-model="filters.sjh" clearable aria-label="上架号" @keyup.enter="handleSearch" />
+            </div>
+            <div class="mrr-filter-field archive-filter__field">
+              <label for="archive-box-number">实际箱号</label>
+              <el-input id="archive-box-number" v-model="filters.boxNo" clearable aria-label="实际箱号" @keyup.enter="handleSearch" />
+            </div>
+            <div class="mrr-filter-field archive-filter__field">
+              <label for="archive-status">装箱状态</label>
+              <el-select id="archive-status" v-model="filters.status" clearable aria-label="装箱状态" placeholder="全部状态">
+                <el-option v-for="item in statusOptions" :key="item.value" :label="item.label" :value="item.value" />
+              </el-select>
+            </div>
+          </template>
+          <div v-else class="mrr-filter-field archive-filter__keyword">
+            <label for="archive-box-keyword">搜索箱号</label>
+            <el-input id="archive-box-keyword" v-model="boxKeyword" clearable aria-label="搜索箱号" @keyup.enter="searchBoxes">
               <template #prefix>
                 <el-icon><Search /></el-icon>
               </template>
             </el-input>
           </div>
-          <div class="archive-filter__field">
-            <el-input v-model="filters.bah" clearable aria-label="病案号" placeholder="病案号" @keyup.enter="handleSearch" />
-          </div>
-          <div class="archive-filter__field">
-            <el-input v-model="filters.sjh" clearable aria-label="上架号" placeholder="上架号" @keyup.enter="handleSearch" />
-          </div>
-          <div class="archive-filter__field">
-            <el-input v-model="filters.boxNo" clearable aria-label="实际箱号" placeholder="实际箱号" @keyup.enter="handleSearch" />
-          </div>
-          <div class="archive-filter__field">
-            <el-select v-model="filters.status" clearable aria-label="装箱状态" placeholder="全部状态">
-              <el-option
-                v-for="item in statusOptions"
-                :key="item.value"
-                :label="item.label"
-                :value="item.value"
-              />
-            </el-select>
-          </div>
           <template #actions>
-            <MrrFilterActionButton action="search" :pending="loading" :busy="loading" @click="handleSearch">
+            <MrrFilterActionButton action="search" :pending="loading" :busy="loading" @click="activeView === 'records' ? handleSearch() : searchBoxes()">
               查询
             </MrrFilterActionButton>
-            <MrrFilterActionButton action="reset" :pending="loading" :busy="loading" @click="resetFilters">
+            <MrrFilterActionButton action="reset" :pending="loading" :busy="loading" @click="activeView === 'records' ? resetFilters() : resetBoxSearch()">
               重置
             </MrrFilterActionButton>
           </template>
         </MrrFilterBar>
-      </el-card>
+      </template>
 
-      <el-card shadow="never" class="table-card">
-        <AppLoading v-if="loading" type="table" :rows="8" />
-        <AppError v-else-if="error" :message="error" @retry="loadRecords" />
-        <AppEmpty v-else-if="!records.length" description="暂无符合条件的装箱记录" />
+      <AppLoading v-if="loading" type="table" :rows="8" />
+      <AppError v-else-if="error" :message="error" @retry="activeView === 'records' ? loadRecords() : loadBoxes()" />
+      <template v-else-if="activeView === 'records'">
+        <AppEmpty v-if="!records.length" description="暂无符合条件的装箱记录" />
         <el-table v-else :data="records" stripe>
-          <el-table-column label="病案号" min-width="130">
+          <el-table-column label="病案号" min-width="110">
             <template #default="{ row }">
               <span class="record-code">{{ normalizeText(row.bah) }}</span>
             </template>
           </el-table-column>
-          <el-table-column label="上架号" min-width="130">
+          <el-table-column label="上架号" min-width="110">
             <template #default="{ row }">
               <span class="record-code">{{ normalizeText(row.sjh) }}</span>
             </template>
           </el-table-column>
-          <el-table-column label="实际箱号" min-width="150">
+          <el-table-column label="实际箱号" min-width="135">
             <template #default="{ row }">
               <el-button
                 v-if="row.boxNo"
@@ -557,19 +558,17 @@ onMounted(refreshAll)
               <span v-else class="empty-value">未确认</span>
             </template>
           </el-table-column>
-          <el-table-column label="原计划箱号" min-width="150">
+          <el-table-column label="状态" min-width="145">
+            <template #default="{ row }">
+              <MrrStatusTag v-bind="statusMeta(row.status)" />
+            </template>
+          </el-table-column>
+          <el-table-column label="原计划箱号" min-width="135">
             <template #default="{ row }">
               {{ normalizeText(row.expectedBoxNo) }}
             </template>
           </el-table-column>
-          <el-table-column label="状态" width="150">
-            <template #default="{ row }">
-              <el-tag :type="statusMeta(row.status).type" effect="light">
-                {{ statusMeta(row.status).label }}
-              </el-tag>
-            </template>
-          </el-table-column>
-          <el-table-column prop="remark" label="备注" min-width="260" show-overflow-tooltip>
+          <el-table-column prop="remark" label="备注" min-width="185" show-overflow-tooltip>
             <template #default="{ row }">
               {{ normalizeText(row.remark) }}
             </template>
@@ -594,57 +593,14 @@ onMounted(refreshAll)
             </template>
           </el-table-column>
         </el-table>
-
-        <div v-if="records.length || total" class="pagination-bar">
-          <el-pagination
-            v-model:current-page="page"
-            v-model:page-size="size"
-            :total="total"
-            :page-sizes="[10, 20, 50, 100]"
-            layout="total, sizes, prev, pager, next, jumper"
-            @current-change="loadRecords"
-            @size-change="handleRecordSizeChange"
-          />
-        </div>
-      </el-card>
-    </template>
-
-    <template v-else>
-      <el-card shadow="never" class="filter-card">
-        <MrrFilterBar embedded class="archive-filter-bar">
-          <div class="archive-filter__field archive-filter__keyword">
-            <el-input
-              v-model="boxKeyword"
-              clearable
-              aria-label="搜索箱号"
-              placeholder="搜索箱号"
-              @keyup.enter="searchBoxes"
-            >
-              <template #prefix>
-                <el-icon><Search /></el-icon>
-              </template>
-            </el-input>
-          </div>
-          <template #actions>
-            <MrrFilterActionButton action="search" :pending="loading" :busy="loading" @click="searchBoxes">
-              查询
-            </MrrFilterActionButton>
-            <MrrFilterActionButton action="reset" :pending="loading" :busy="loading" @click="resetBoxSearch">
-              重置
-            </MrrFilterActionButton>
-          </template>
-        </MrrFilterBar>
-      </el-card>
-
-      <el-card shadow="never" class="table-card">
-        <AppLoading v-if="loading" type="table" :rows="8" />
-        <AppError v-else-if="error" :message="error" @retry="loadBoxes" />
-        <AppEmpty v-else-if="!boxes.length" description="暂无箱号记录" />
+      </template>
+      <template v-else>
+        <AppEmpty v-if="!boxes.length" description="暂无箱号记录" />
         <el-table v-else :data="boxes" stripe>
           <el-table-column label="箱号" min-width="220">
             <template #default="{ row }">
               <button class="box-number-button" type="button" @click="openBox(row.boxNo)">
-                <span class="i-lucide:inbox" />
+                <span class="i-lucide:inbox" aria-hidden="true" />
                 {{ row.boxNo }}
               </button>
             </template>
@@ -677,25 +633,37 @@ onMounted(refreshAll)
             </template>
           </el-table-column>
         </el-table>
+      </template>
 
-        <div v-if="boxes.length || boxTotal" class="pagination-bar">
-          <el-pagination
-            v-model:current-page="boxPage"
-            v-model:page-size="boxSize"
-            :total="boxTotal"
-            :page-sizes="[10, 20, 50, 100]"
-            layout="total, sizes, prev, pager, next, jumper"
-            @current-change="loadBoxes"
-            @size-change="handleBoxSizeChange"
-          />
-        </div>
-      </el-card>
-    </template>
+      <template v-if="resultCount > 0 && !error" #pagination>
+        <el-pagination
+          v-if="activeView === 'records'"
+          v-model:current-page="page"
+          v-model:page-size="size"
+          :total="total"
+          :page-sizes="[10, 20, 50, 100]"
+          layout="sizes, prev, pager, next, jumper"
+          @current-change="loadRecords"
+          @size-change="handleRecordSizeChange"
+        />
+        <el-pagination
+          v-else
+          v-model:current-page="boxPage"
+          v-model:page-size="boxSize"
+          :total="boxTotal"
+          :page-sizes="[10, 20, 50, 100]"
+          layout="sizes, prev, pager, next, jumper"
+          @current-change="loadBoxes"
+          @size-change="handleBoxSizeChange"
+        />
+      </template>
+    </MrrDataTablePanel>
 
     <el-dialog
       v-model="dialogVisible"
       :title="dialogTitle"
-      width="620px"
+      width="min(620px, calc(100% - 24px))"
+      top="min(15vh, 6rem)"
       destroy-on-close
       @closed="resetForm"
     >
@@ -749,89 +717,33 @@ onMounted(refreshAll)
         </el-button>
       </template>
     </el-dialog>
-  </div>
+  </MrrPageShell>
 </template>
 
 <style scoped>
-.archive-box-page {
-  display: grid;
-  gap: 16px;
-}
-
-.page-header {
-  display: flex;
-  gap: 24px;
-  align-items: flex-start;
-  justify-content: space-between;
-}
-
-.eyebrow {
-  margin: 0 0 6px;
-  font-size: 12px;
-  font-weight: 700;
-  color: var(--el-text-color-secondary);
-  text-transform: uppercase;
-  letter-spacing: 0.12em;
-}
-
-h1 {
-  margin: 0;
-  font-size: 28px;
-  color: var(--el-text-color-primary);
-}
-
-.subtitle {
-  max-width: 760px;
-  margin: 8px 0 0;
-  line-height: 1.6;
-  color: var(--el-text-color-secondary);
-}
-
-.header-actions,
 .view-switcher {
   display: flex;
-  gap: 12px;
+  flex-wrap: wrap;
+  gap: var(--mrr-space-2) var(--mrr-space-3);
   align-items: center;
+  margin-bottom: var(--mrr-space-3);
 }
 
-.workspace-card,
-.filter-card,
-.table-card {
-  border-radius: var(--mrr-radius-card);
-}
-
-.view-switcher {
-  justify-content: space-between;
+.view-switcher :deep(.el-radio-button) {
+  --el-radio-button-checked-text-color: var(--mrr-primary-foreground);
 }
 
 .view-hint {
   font-size: 13px;
-  color: var(--el-text-color-secondary);
+  color: var(--mrr-muted-foreground);
 }
 
 .archive-filter__field {
-  display: grid;
-  flex: 0 1 190px;
-  width: 190px;
-  min-width: 0;
+  flex: 1 1 116px;
 }
 
 .archive-filter__keyword {
-  flex: 1 1 320px;
-  width: auto;
-  min-width: 260px;
-}
-
-@media (max-width: 760px) {
-  .archive-filter__field,
-  .archive-filter__keyword {
-    flex: 1 1 100%;
-    width: 100%;
-  }
-}
-
-.table-card :deep(.el-card__body) {
-  min-height: 260px;
+  flex: 2 1 204px;
 }
 
 .record-code,
@@ -858,10 +770,16 @@ h1 {
   padding: 0;
   font: inherit;
   font-weight: 700;
-  color: var(--el-color-primary);
   cursor: pointer;
   background: transparent;
   border: 0;
+}
+
+.box-link.el-button,
+.box-number-button {
+  color: var(--mrr-navigation-active-foreground);
+  text-decoration: underline;
+  text-underline-offset: 2px;
 }
 
 .box-number-button:focus-visible {
@@ -870,16 +788,10 @@ h1 {
   border-radius: 4px;
 }
 
-.pagination-bar {
-  display: flex;
-  justify-content: flex-end;
-  margin-top: 16px;
-}
-
 .form-grid {
   display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 0 16px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0 var(--mrr-space-4);
 }
 
 .form-span {
@@ -890,25 +802,15 @@ h1 {
   width: 100%;
 }
 
-@media (max-width: 720px) {
-  .page-header,
-  .view-switcher,
-  .header-actions {
-    flex-direction: column;
-    align-items: stretch;
+@media (max-width: 760px) {
+  .archive-filter__keyword {
+    flex: 1 1 100%;
   }
+}
 
+@media (max-width: 640px) {
   .form-grid {
-    grid-template-columns: 1fr;
-  }
-
-  .form-span {
-    grid-column: auto;
-  }
-
-  .pagination-bar {
-    justify-content: flex-start;
-    overflow-x: auto;
+    grid-template-columns: minmax(0, 1fr);
   }
 }
 </style>

@@ -97,6 +97,7 @@ CSS 请求字重与字体文件字重不是一回事，按浏览器字体匹配�
 - 表格在自身区域横向滚动，页面主体不因表格固有宽度撑开。
 - 分页在窄屏分别安排总数/条数、页码导航和跳页，前后翻页与页码保持同组。
 - 筛选栏按可用宽度换行，显式 `gap` 操作组不叠加相邻按钮左边距。
+- 同一数据面板内，表格外沿与整行筛选区（含操作按钮）对齐，使用共享面板的左右留白。
 - 窄屏日期范围、数字输入和抽屉按实际容器约束；日期弹层复用 [picker-options.ts](src/ui/provider/picker-options.ts)。
 - 设置中的配色行隐藏列头后，应显示各字段标签，按钮也允许换行。
 - 历史 `.page-shell` 与新增共享壳层遵守相同的可收缩约束。档案袋可以有业务特有布局，但不能无界加载整案原图。
@@ -206,6 +207,7 @@ Element Plus 按需 CSS 可能晚于全局样式注入；[圆角桥接](src/asse
 | [MrrMetricCard](src/components/MrrMetricCard/index.vue) | 核心指标统一使用 label/value/note/icon/tone/valueTone/compactValue 与 extra 插槽；语义色和数值色取自[公共类型](src/components/MrrMetricCard/types.ts)，不复制同类摘要卡 CSS |
 | [MrrSectionCard](src/components/MrrSectionCard/index.vue) | 分区标题、说明、操作区与 bodyPadding；计数不附加装饰状态点 |
 | [MrrDataTablePanel](src/components/MrrDataTablePanel/index.vue) | 组合 filters/toolbar/content/pagination，统一数量和分页区域 |
+| [MrrStorageBrowser](src/components/MrrStorageBrowser/index.vue) | OSS 和 Nginx 共用的只读浏览工作区。图标和列表共用文件类型图标与键盘选中交互，列表外框负责圆角裁切。选中文件后在详情区显示有大小限制的图片或文本，窄屏保留预览与操作 |
 | [MrrFilterBar](src/components/MrrFilterBar/index.vue) | 组合筛选条件与 actions；embedded 变体用于已有数据面板，不再套第二层卡片；多条件表单可选 `layout="grid"`，默认 inline 保持既有行为 |
 | [MrrTableActions](src/components/MrrTableActions/index.vue) | 行内/更多操作、禁用及可访问名称；`placement` 当前表示排序优先级，空间足够时低优先级操作也可直显，不能当作强制隐藏授权规则 |
 | [MrrStatusTag](src/components/MrrStatusTag/index.vue) | 复用状态文案和语义色，避免只有颜色没有含义 |
@@ -222,6 +224,10 @@ Element Plus 按需 CSS 可能晚于全局样式注入；[圆角桥接](src/asse
 
 选中导航文字及焦点使用 `--mrr-navigation-active-foreground`，从现有可配置主色派生：亮色混入黑色，暗色混入白色，保留浅色选中底。Chrome 86 在既有兼容层的 `:root` 与 `:root.dark` 均回退为正文色。当前导航链接声明 `aria-current="page"`，键盘焦点为独立 2px 轮廓。验证覆盖默认主色、绿、黄、白、黑的明暗组合，不据此推断其他控件或全站已达到对比度标准。
 
+桌面双侧栏与顶栏以原生按钮切换主导航分组，以按下状态标明当前分组。次导航有子项的目录以原生按钮和展开状态表达，叶子使用链接。三种布局统一使用内侧焦点轮廓，避免被滚动区域裁切。
+
+使用 Tab 到达分组，用 Enter 或 Space 激活。收起的次侧栏仍可通过鼠标悬停显示浮层，键盘激活后进入首项，按 Escape 返回触发按钮。移动侧栏关闭时移出 Tab 顺序，键盘开启后焦点进入导航，按 Escape 将焦点交还工具栏。工具栏在 Chrome 86 使用基础定位与工作区对齐。验证覆盖现有手风琴设置、明暗主题和旧浏览器展开降级。[导航键盘回归](e2e/navigation-keyboard.spec.ts)
+
 顶部导航搜索仅显示当前账号可见的菜单，支持标题、URL、面包屑文字和标题拼音首字母前缀。输入 `yx` 可找到「影像档案袋」，按回车打开当前选中的结果。[导航搜索回归用例](e2e/nav-search.spec.ts)
 
 ### 表单、按钮与可访问性
@@ -233,6 +239,10 @@ Element Plus 按需 CSS 可能晚于全局样式注入；[圆角桥接](src/asse
 键盘焦点使用独立的 2px 轮廓，危险操作沿用危险色；不能因按钮阴影、变体或浏览器降级而失去焦点。验证 Tab 顺序、标签点击聚焦、下拉键盘操作及浮层关闭后焦点恢复。可访问名称测试通过不等于完成了屏幕阅读器人工验收。
 
 ### 筛选、查询与结果归属
+
+患者管理把关键词放在「患者表格」内，切到统计明细后由当前视图显示自己的控件。档案装箱在同一面板内切换装箱明细和箱号列表，各自保留筛选与分页。搜索动作与筛选字段底部对齐，窄屏让综合搜索占整行、较短字段并排。表格面板已显示结果总数时，分页区只保留每页条数和翻页控件。
+
+这两个列表使用无图标的紧凑指标卡，窄屏以两列展示并允许标签、说明换行。患者统计失败时显示错误提示，患者列表继续可用。浏览器回归覆盖窄屏标签页、装箱表单、筛选与箱号联查。[列表工作区回归](e2e/list-workspace-ui.spec.ts)
 
 - 字段标签说明“这是什么条件”，placeholder 只补充格式或示例；选择后仍保留可辨认的字段名称。标签应关联实际可聚焦的输入，不只给外层容器加文案。
 - 沿用页面既有的显式查询或即时筛选方式，不为视觉优化私自增加自动提交、请求节流或第二套状态机制。查询按钮、Enter、重置和清空的具体范围应由页面契约说明并验证。

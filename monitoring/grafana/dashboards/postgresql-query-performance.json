@@ -1,0 +1,132 @@
+{
+  "annotations": {"list": []},
+  "editable": false,
+  "graphTooltip": 1,
+  "id": null,
+  "links": [],
+  "panels": [
+    {
+      "type": "stat",
+      "title": "语句平均耗时",
+      "description": "全库语句平均单次执行耗时，来自 pg_stat_statements 聚合。告警阈值 500ms / 2s。",
+      "id": 1,
+      "gridPos": {"h": 5, "w": 6, "x": 0, "y": 0},
+      "targets": [{"expr": "rate(mrr_pg_stat_statements_exec_seconds_total[10m]) / clamp_min(rate(mrr_pg_stat_statements_calls_total[10m]), 0.000001)", "refId": "A", "legendFormat": "平均耗时"}],
+      "fieldConfig": {"defaults": {"unit": "s", "decimals": 3, "thresholds": {"mode": "absolute", "steps": [{"color": "green", "value": null}, {"color": "yellow", "value": 0.5}, {"color": "red", "value": 2}]}}, "overrides": []}
+    },
+    {
+      "type": "stat",
+      "title": "语句执行速率",
+      "description": "每秒执行语句数，用于确认业务量与延迟变化是否同步。",
+      "id": 2,
+      "gridPos": {"h": 5, "w": 6, "x": 6, "y": 0},
+      "targets": [{"expr": "sum(rate(mrr_pg_stat_statements_calls_total[5m]))", "refId": "A", "legendFormat": "QPS"}],
+      "fieldConfig": {"defaults": {"unit": "ops", "decimals": 1}, "overrides": []}
+    },
+    {
+      "type": "stat",
+      "title": "慢语句条数 (>200ms)",
+      "description": "平均单次耗时超过 200ms 的语句条数，属基线体检指标，不要求即时处置。",
+      "id": 3,
+      "gridPos": {"h": 5, "w": 6, "x": 12, "y": 0},
+      "targets": [{"expr": "mrr_pg_stat_statements_slow_200ms", "refId": "A", "legendFormat": "慢语句"}],
+      "fieldConfig": {"defaults": {"unit": "short", "decimals": 0, "thresholds": {"mode": "absolute", "steps": [{"color": "green", "value": null}, {"color": "yellow", "value": 10}, {"color": "red", "value": 30}]}}, "overrides": []}
+    },
+    {
+      "type": "stat",
+      "title": "最慢语句平均耗时",
+      "description": "当前统计窗口内平均耗时最长的单条语句。用于快速判断是否存在病态 SQL。",
+      "id": 4,
+      "gridPos": {"h": 5, "w": 6, "x": 18, "y": 0},
+      "targets": [{"expr": "mrr_pg_stat_statements_worst_mean_seconds", "refId": "A", "legendFormat": "最慢均值"}],
+      "fieldConfig": {"defaults": {"unit": "s", "decimals": 2, "thresholds": {"mode": "absolute", "steps": [{"color": "green", "value": null}, {"color": "yellow", "value": 1}, {"color": "red", "value": 3}]}}, "overrides": []}
+    },
+    {
+      "type": "timeseries",
+      "title": "语句平均耗时趋势",
+      "description": "延迟回归的主要判据。若与发版时间点对齐，优先怀疑新 SQL 或索引变更。",
+      "id": 5,
+      "gridPos": {"h": 7, "w": 12, "x": 0, "y": 5},
+      "targets": [{"expr": "rate(mrr_pg_stat_statements_exec_seconds_total[10m]) / clamp_min(rate(mrr_pg_stat_statements_calls_total[10m]), 0.000001)", "refId": "A", "legendFormat": "平均耗时"}],
+      "fieldConfig": {"defaults": {"unit": "s", "custom": {"lineWidth": 2, "fillOpacity": 8, "showPoints": "never"}}, "overrides": []}
+    },
+    {
+      "type": "timeseries",
+      "title": "执行速率与返回行数",
+      "description": "调用量上升但返回行数不增，常见于循环单查（N+1）。",
+      "id": 6,
+      "gridPos": {"h": 7, "w": 12, "x": 12, "y": 5},
+      "targets": [
+        {"expr": "sum(rate(mrr_pg_stat_statements_calls_total[5m]))", "refId": "A", "legendFormat": "语句/秒"},
+        {"expr": "sum(rate(mrr_pg_stat_statements_rows_total[5m]))", "refId": "B", "legendFormat": "返回行/秒"}
+      ],
+      "fieldConfig": {"defaults": {"unit": "ops", "custom": {"lineWidth": 1, "fillOpacity": 0, "showPoints": "never"}}, "overrides": []}
+    },
+    {
+      "type": "timeseries",
+      "title": "语句级缓存命中率",
+      "description": "语句访问的共享缓冲区命中比例。持续低于 99% 需要评估 shared_buffers 与全表扫描。",
+      "id": 7,
+      "gridPos": {"h": 7, "w": 12, "x": 0, "y": 12},
+      "targets": [{"expr": "100 * rate(mrr_pg_stat_statements_shared_hit_total[10m]) / clamp_min(rate(mrr_pg_stat_statements_shared_hit_total[10m]) + rate(mrr_pg_stat_statements_shared_read_total[10m]), 1)", "refId": "A", "legendFormat": "命中率"}],
+      "fieldConfig": {"defaults": {"unit": "percent", "min": 80, "max": 100, "custom": {"lineWidth": 2, "fillOpacity": 8, "showPoints": "never"}, "thresholds": {"mode": "absolute", "steps": [{"color": "red", "value": null}, {"color": "yellow", "value": 99}, {"color": "green", "value": 99.9}]}}, "overrides": []}
+    },
+    {
+      "type": "timeseries",
+      "title": "临时文件写入速率",
+      "description": "排序/哈希溢出的直接证据。飙高时先看 01-slow-queries.sql 的第 5 段。",
+      "id": 8,
+      "gridPos": {"h": 7, "w": 12, "x": 12, "y": 12},
+      "targets": [{"expr": "rate(mrr_pg_stat_statements_temp_blocks_total[5m]) * 8192", "refId": "A", "legendFormat": "临时写入"}],
+      "fieldConfig": {"defaults": {"unit": "Bps", "custom": {"lineWidth": 2, "fillOpacity": 8, "showPoints": "never"}}, "overrides": []}
+    },
+    {
+      "type": "timeseries",
+      "title": "膨胀与死元组",
+      "description": "左侧纵轴为百分比。膨胀 >30% 且 >1GiB 需排入维护窗口。",
+      "id": 9,
+      "gridPos": {"h": 6, "w": 12, "x": 0, "y": 19},
+      "targets": [
+        {"expr": "mrr_pg_bloat_max_ratio * 100", "refId": "A", "legendFormat": "最高膨胀率"},
+        {"expr": "mrr_pg_maintenance_dead_tuple_ratio * 100", "refId": "B", "legendFormat": "最高死元组占比"}
+      ],
+      "fieldConfig": {"defaults": {"unit": "percent", "min": 0, "custom": {"lineWidth": 2, "fillOpacity": 5, "showPoints": "never"}}, "overrides": []}
+    },
+    {
+      "type": "stat",
+      "title": "Exporter 采集错误",
+      "description": "非 0 表示自定义查询失败，相关指标会缺失，必须排障而不是忽略空白图。",
+      "id": 10,
+      "gridPos": {"h": 6, "w": 4, "x": 12, "y": 19},
+      "targets": [{"expr": "pg_exporter_last_scrape_error", "refId": "A", "legendFormat": "错误"}],
+      "fieldConfig": {"defaults": {"unit": "short", "decimals": 0, "thresholds": {"mode": "absolute", "steps": [{"color": "green", "value": null}, {"color": "red", "value": 1}]}}, "overrides": []}
+    },
+    {
+      "type": "stat",
+      "title": "最长事务",
+      "description": "超过 5 分钟会阻塞 autovacuum，属膨胀的前置原因。",
+      "id": 11,
+      "gridPos": {"h": 6, "w": 4, "x": 16, "y": 19},
+      "targets": [{"expr": "mrr_pg_transactions_longest_xact_seconds", "refId": "A", "legendFormat": "最长事务"}],
+      "fieldConfig": {"defaults": {"unit": "s", "decimals": 0, "thresholds": {"mode": "absolute", "steps": [{"color": "green", "value": null}, {"color": "yellow", "value": 60}, {"color": "red", "value": 300}]}}, "overrides": []}
+    },
+    {
+      "type": "stat",
+      "title": "空闲事务",
+      "description": "idle in transaction 最长持续时间，超过 10 分钟必须排查连接泄漏或未提交分支。",
+      "id": 12,
+      "gridPos": {"h": 6, "w": 4, "x": 20, "y": 19},
+      "targets": [{"expr": "mrr_pg_transactions_longest_idle_xact_seconds", "refId": "A", "legendFormat": "空闲事务"}],
+      "fieldConfig": {"defaults": {"unit": "s", "decimals": 0, "thresholds": {"mode": "absolute", "steps": [{"color": "green", "value": null}, {"color": "yellow", "value": 300}, {"color": "red", "value": 600}]}}, "overrides": []}
+    }
+  ],
+  "refresh": "1m",
+  "schemaVersion": 39,
+  "tags": ["mrr", "postgresql", "query"],
+  "templating": {"list": []},
+  "time": {"from": "now-24h", "to": "now"},
+  "timezone": "browser",
+  "title": "MRR 查询性能",
+  "uid": "mrr-postgresql-query-performance",
+  "version": 1
+}

@@ -180,12 +180,21 @@ function filteredRecords(records: typeof pendingRecords | typeof waitingRecords,
 
 export default defineFakeRoute([
   {
+    url: '/api/v1/oss/browser/mock-content',
+    rawResponse: (_request, response) => {
+      response.setHeader('Content-Type', 'text/plain; charset=utf-8')
+      response.setHeader('Cache-Control', 'no-store')
+      response.end('OSS 文件浏览演示数据\n<示例>用于检查目录说明的文本显示。</示例>\n')
+    },
+  },
+  {
     url: '/api/v1/oss/browser/url',
     response: ({ query }) => {
       const key = String((query as Record<string, unknown>)?.key || '')
+      const demoImage = /\.(?:jpg|tif)$/i.test(key)
       return ok({
         key,
-        ossUrl: `https://images.example.test/${encodeURIComponent(key)}?signature=mock`,
+        ossUrl: demoImage ? '/pwa/icon-192.png' : '/proxy/api/v1/oss/browser/mock-content',
       })
     },
   },

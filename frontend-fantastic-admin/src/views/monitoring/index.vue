@@ -2,9 +2,9 @@
 import type { DatabaseOverview, DataQualityIssue, DataQualitySummary } from '@/api/modules/database-monitoring'
 import type { HealthInfo, MemoryInfo, RuntimeInfo, SystemInfo } from '@/api/types'
 import type { MetricTone } from '@/components/MrrMetricCard/types'
-import { useIntervalFn } from '@vueuse/core'
+import { useDocumentVisibility, useIntervalFn } from '@vueuse/core'
 import { ElMessage } from 'element-plus'
-import { computed, onMounted, onUnmounted, ref } from 'vue'
+import { computed, onActivated, onDeactivated, onMounted, onUnmounted, ref, watch } from 'vue'
 import {
   getDatabaseOverview,
   getDataQualityIssues,
@@ -156,48 +156,52 @@ function statusType(status?: string) {
   return 'danger'
 }
 
-async function loadAll(showLoading = true) {
+async function fetchMonitoringSnapshot() {
+  const [healthRes, runtimeRes, memoryRes, infoRes, databaseRes, qualityRes, issuesRes] = await Promise.allSettled([
+    getSystemHealth(),
+    getSystemRuntime(),
+    getSystemMemory(),
+    getSystemInfo(),
+    getDatabaseOverview(),
+    getDataQualitySummary(),
+    getDataQualityIssues(100),
+  ])
+
+  if (healthRes.status === 'fulfilled') {
+    healthStatus.value = healthRes.value.data ?? {}
+  }
+  if (runtimeRes.status === 'fulfilled') {
+    runtimeInfo.value = runtimeRes.value.data ?? {}
+  }
+  if (memoryRes.status === 'fulfilled') {
+    memoryInfo.value = memoryRes.value.data ?? { heap: {}, nonHeap: {} }
+  }
+  if (infoRes.status === 'fulfilled') {
+    systemInfo.value = infoRes.value.data ?? { application: {}, jvm: {}, operatingSystem: {} }
+  }
+  if (databaseRes.status === 'fulfilled') {
+    databaseOverview.value = databaseRes.value.data ?? emptyDatabase()
+  }
+  if (qualityRes.status === 'fulfilled') {
+    qualitySummary.value = qualityRes.value.data ?? qualitySummary.value
+  }
+  if (issuesRes.status === 'fulfilled') {
+    qualityIssues.value = issuesRes.value.data ?? []
+  }
+
+  lastRefresh.value = new Date().toLocaleTimeString()
+}
+
+let refreshInFlight: Promise<void> | undefined
+function loadAll(showLoading = true) {
   if (showLoading) {
     loading.value = true
   }
-  try {
-    const [healthRes, runtimeRes, memoryRes, infoRes, databaseRes, qualityRes, issuesRes] = await Promise.allSettled([
-      getSystemHealth(),
-      getSystemRuntime(),
-      getSystemMemory(),
-      getSystemInfo(),
-      getDatabaseOverview(),
-      getDataQualitySummary(),
-      getDataQualityIssues(100),
-    ])
-
-    if (healthRes.status === 'fulfilled') {
-      healthStatus.value = healthRes.value.data ?? {}
-    }
-    if (runtimeRes.status === 'fulfilled') {
-      runtimeInfo.value = runtimeRes.value.data ?? {}
-    }
-    if (memoryRes.status === 'fulfilled') {
-      memoryInfo.value = memoryRes.value.data ?? { heap: {}, nonHeap: {} }
-    }
-    if (infoRes.status === 'fulfilled') {
-      systemInfo.value = infoRes.value.data ?? { application: {}, jvm: {}, operatingSystem: {} }
-    }
-    if (databaseRes.status === 'fulfilled') {
-      databaseOverview.value = databaseRes.value.data ?? emptyDatabase()
-    }
-    if (qualityRes.status === 'fulfilled') {
-      qualitySummary.value = qualityRes.value.data ?? qualitySummary.value
-    }
-    if (issuesRes.status === 'fulfilled') {
-      qualityIssues.value = issuesRes.value.data ?? []
-    }
-
-    lastRefresh.value = new Date().toLocaleTimeString()
-  }
-  finally {
+  refreshInFlight ??= fetchMonitoringSnapshot().finally(() => {
+    refreshInFlight = undefined
     loading.value = false
-  }
+  })
+  return refreshInFlight
 }
 
 async function runQualityCheck() {
@@ -227,31 +231,43 @@ function openGrafana() {
   window.open(url, '_blank', 'noopener,noreferrer')
 }
 
+const active = ref(false)
+const visibility = useDocumentVisibility()
+const shouldPoll = computed(() => active.value && autoRefresh.value && visibility.value === 'visible')
 const { pause, resume } = useIntervalFn(() => {
-  if (autoRefresh.value) {
+  if (shouldPoll.value) {
     void loadAll(false)
   }
-}, 15000)
+}, 15_000, { immediate: false })
 
-function handleVisibilityChange() {
-  if (document.hidden) {
-    pause()
-  }
-  else if (autoRefresh.value) {
+watch(shouldPoll, (enabled) => {
+  if (enabled) {
     resume()
   }
-}
+  else {
+    pause()
+  }
+})
 
 onMounted(() => {
+  active.value = true
   void loadAll()
-  resume()
-  document.addEventListener('visibilitychange', handleVisibilityChange)
 })
 
-onUnmounted(() => {
-  pause()
-  document.removeEventListener('visibilitychange', handleVisibilityChange)
+onActivated(() => {
+  // KeepAlive also activates on first mount, which already starts the initial read.
+  if (!active.value) {
+    active.value = true
+    if (shouldPoll.value) {
+      void loadAll(false)
+    }
+  }
 })
+
+onDeactivated(() => {
+  active.value = false
+})
+onUnmounted(pause)
 </script>
 
 <template>

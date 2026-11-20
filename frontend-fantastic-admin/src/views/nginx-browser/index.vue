@@ -1,1064 +1,474 @@
 <script setup lang="ts">
-import type {
-  NginxBrowserEntry,
-  NginxBrowserPage,
-  NginxBrowserServer,
-} from '@/api/modules/nginx-browser'
+import type { NginxBrowserEntry, NginxBrowserPage, NginxBrowserServer } from '@/api/modules/nginx-browser'
+import type { PreviewKind } from '@/components/MrrStorageBrowser/inline-preview'
 import { ElMessage } from 'element-plus'
-import {
-  ArrowLeft,
-  ArrowRight,
-  FileText as Document,
-  Download,
-  Folder,
-  LayoutGrid as Grid,
-  Info as InfoFilled,
-  List,
-  Image as Picture,
-  RefreshCw as Refresh,
-  Search,
-  ArrowUp as Top,
-  Eye as View,
-} from 'lucide-vue-next'
-import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
-import {
-  browseNginxDirectory,
-  fetchNginxBrowserFile,
-  getNginxBrowserServers,
-} from '@/api/modules/nginx-browser'
+import { Download, ExternalLink, Eye, FolderOpen } from 'lucide-vue-next'
+import { computed, onActivated, onBeforeUnmount, onDeactivated, onMounted, ref, watch } from 'vue'
+import { browseNginxDirectory, fetchNginxBrowserFile, getNginxBrowserServers } from '@/api/modules/nginx-browser'
+import MrrPageHeader from '@/components/MrrPageHeader/index.vue'
+import MrrPageShell from '@/components/MrrPageShell/index.vue'
+import MrrStorageBrowser from '@/components/MrrStorageBrowser/index.vue'
+import { decodePreviewText, inlinePreviewLimit } from '@/components/MrrStorageBrowser/inline-preview'
+import MrrStorageInlinePreview from '@/components/MrrStorageBrowser/InlinePreview.vue'
+import { accessDenied, formatFileSize, isImage } from '@/components/MrrStorageBrowser/presentation'
+import MrrStoragePreview from '@/components/MrrStorageBrowser/Preview.vue'
 
 defineOptions({ name: 'NginxBrowserPage' })
 
-type ViewMode = 'icons' | 'details'
-
-interface BreadcrumbItem {
-  label: string
+interface DirectoryLocation {
+  server: string
   path: string
+  offset: number
 }
 
 const PAGE_SIZE = 200
-const IMAGE_EXTENSIONS = new Set(['jpg', 'jpeg', 'png', 'gif', 'bmp', 'tif', 'tiff', 'webp'])
-
-const loading = ref(false)
-const fileLoading = ref(false)
+const inlineTypes = new Set(['image/jpeg', 'image/png', 'image/gif', 'image/webp', 'image/bmp', 'image/tiff', 'application/pdf', 'text/plain'])
 const servers = ref<NginxBrowserServer[]>([])
-const selectedServer = ref('default')
 const page = ref<NginxBrowserPage>()
-const currentPath = ref('')
+const loading = ref(false)
+const error = ref('')
 const addressInput = ref('')
-const currentOffset = ref(0)
-const folderHistory = ref<string[]>([])
 const localFilter = ref('')
-const viewMode = ref<ViewMode>('icons')
 const selectedEntry = ref<NginxBrowserEntry>()
+const history = ref<DirectoryLocation[]>([])
+let directoryRequest: AbortController | undefined
+let retryDirectory: (() => void) | undefined
+let resumeDirectory: (() => void) | undefined
+
+const fileLoading = ref(false)
+const previewLoading = ref(false)
 const previewVisible = ref(false)
-const previewUrl = ref('')
+const previewFailed = ref(false)
 const previewEntry = ref<NginxBrowserEntry>()
+const previewUrl = ref('')
+let fileRequest: AbortController | undefined
+let previewRequest: AbortController | undefined
 
-const currentServer = computed(() => servers.value.find(server => server.key === selectedServer.value))
-const entries = computed(() => page.value?.entries ?? [])
-const visibleEntries = computed(() => {
-  const keyword = localFilter.value.trim().toLocaleLowerCase()
-  return keyword
-    ? entries.value.filter(entry => entry.name.toLocaleLowerCase().includes(keyword))
-    : entries.value
-})
-const quickFolders = computed(() => entries.value.filter(entry => entry.directory).slice(0, 50))
-const canGoBack = computed(() => folderHistory.value.length > 0)
-const canGoUp = computed(() => Boolean(currentPath.value))
-const canPreviousPage = computed(() => currentOffset.value > 0)
-const canNextPage = computed(() => {
-  const total = page.value?.totalEntries ?? 0
-  return currentOffset.value + entries.value.length < total
-})
-const selectedIsImage = computed(() => isImage(selectedEntry.value))
-const breadcrumbs = computed<BreadcrumbItem[]>(() => {
-  const result: BreadcrumbItem[] = [{ label: currentServer.value?.name || '根目录', path: '' }]
-  const segments = currentPath.value.split('/').filter(Boolean)
+const currentServer = computed(() => servers.value.find(server => server.key === page.value?.server))
+const currentPath = computed(() => page.value?.path ?? '')
+const canNextPage = computed(() => Boolean(page.value && page.value.offset + page.value.entries.length < page.value.totalEntries))
+const breadcrumbs = computed(() => {
+  const crumbs = [{ label: currentServer.value?.name || '根目录', path: '' }]
   let path = ''
-  for (const segment of segments) {
+  for (const segment of currentPath.value.split('/').filter(Boolean)) {
     path += `${segment}/`
-    result.push({ label: segment, path })
+    crumbs.push({ label: segment, path })
   }
-  return result
+  return crumbs
 })
 
-function errorMessage(error: unknown, fallback: string) {
-  return error instanceof Error && error.message ? error.message : fallback
+function entryLocation(entry: NginxBrowserEntry) {
+  return entry.path
 }
 
-function normalizeDirectoryPath(value: string) {
-  let path = value.trim().replace(/^\/+/, '')
-  if (path && !path.endsWith('/')) {
-    path += '/'
-  }
-  return path
-}
-
-function parentPath(path: string) {
-  const normalized = path.replace(/\/$/, '')
-  const index = normalized.lastIndexOf('/')
-  return index < 0 ? '' : normalized.slice(0, index + 1)
-}
-
-function fileExtension(entry?: NginxBrowserEntry) {
-  if (!entry || entry.directory) {
-    return ''
-  }
-  const index = entry.name.lastIndexOf('.')
-  return index < 0 ? '' : entry.name.slice(index + 1).toLocaleLowerCase()
-}
-
-function isImage(entry?: NginxBrowserEntry) {
-  return Boolean(entry && !entry.directory && IMAGE_EXTENSIONS.has(fileExtension(entry)))
-}
-
-function entryIcon(entry: NginxBrowserEntry) {
-  if (entry.directory) {
-    return Folder
-  }
-  return isImage(entry) ? Picture : Document
-}
-
-function formatFileSize(value?: number | null) {
-  const bytes = Number(value ?? 0)
-  if (bytes <= 0) {
-    return bytes === 0 ? '0 B' : '-'
-  }
-  const units = ['B', 'KB', 'MB', 'GB', 'TB']
-  let size = bytes
-  let unitIndex = 0
-  while (size >= 1024 && unitIndex < units.length - 1) {
-    size /= 1024
-    unitIndex++
-  }
-  const precision = unitIndex === 0 ? 0 : size >= 100 ? 0 : size >= 10 ? 1 : 2
-  return `${size.toFixed(precision)} ${units[unitIndex]}`
-}
-
-function formatDate(value?: string | null) {
-  return value ? new Date(value).toLocaleString('zh-CN') : '-'
-}
-
-async function loadServers() {
-  try {
-    const response = await getNginxBrowserServers()
-    servers.value = response.data ?? []
-    const preferred = servers.value.find(server => server.key === selectedServer.value && server.configured)
-      ?? servers.value.find(server => server.configured)
-    if (preferred) {
-      selectedServer.value = preferred.key
-      await loadDirectory('')
-    }
-  }
-  catch (error: unknown) {
-    ElMessage.error(errorMessage(error, '读取 Nginx 图片服务器配置失败'))
-  }
-}
-
-async function loadDirectory(
-  path: string,
-  offset = 0,
-  options: { rememberFolder?: boolean } = {},
-) {
+async function loadInlinePreview(entry: NginxBrowserEntry, kind: PreviewKind, signal: AbortSignal) {
   const server = currentServer.value
-  if (!server?.configured) {
-    page.value = undefined
-    return
+  if (!server) {
+    throw new Error('No server selected')
   }
-  const normalizedPath = normalizeDirectoryPath(path)
-  if (options.rememberFolder && normalizedPath !== currentPath.value) {
-    folderHistory.value.push(currentPath.value)
-  }
+  const blob = await fetchNginxBrowserFile(server.key, entry.path, signal, inlinePreviewLimit[kind])
+  return kind === 'image' ? blob : decodePreviewText(new Uint8Array(await blob.arrayBuffer()))
+}
 
+function beginDirectoryRequest(retry: () => void) {
+  directoryRequest?.abort()
+  const request = new AbortController()
+  directoryRequest = request
+  retryDirectory = retry
   loading.value = true
-  selectedEntry.value = undefined
-  localFilter.value = ''
-  try {
-    const response = await browseNginxDirectory({
-      server: selectedServer.value,
-      path: normalizedPath,
-      offset,
-      limit: PAGE_SIZE,
-    })
-    if (!response.data) {
-      throw new Error('Nginx 目录响应为空')
-    }
-    page.value = response.data
-    currentPath.value = response.data.path
-    addressInput.value = response.data.path
-    currentOffset.value = response.data.offset
-  }
-  catch (error: unknown) {
-    ElMessage.error(errorMessage(error, '读取 Nginx 目录失败'))
-  }
-  finally {
+  error.value = ''
+  return request
+}
+
+function endDirectoryRequest(request: AbortController) {
+  if (directoryRequest === request) {
+    directoryRequest = undefined
     loading.value = false
   }
 }
 
-function changeServer() {
-  folderHistory.value = []
-  currentPath.value = ''
-  addressInput.value = ''
-  currentOffset.value = 0
-  void loadDirectory('')
+async function loadServers() {
+  const request = beginDirectoryRequest(() => void loadServers())
+  try {
+    const response = await getNginxBrowserServers(request.signal)
+    if (request.signal.aborted) {
+      return
+    }
+    servers.value = response.data ?? []
+    const preferred = servers.value.find(server => server.configured && server.key === 'default')
+      ?? servers.value.find(server => server.configured)
+    if (preferred) {
+      await loadDirectory({ server: preferred.key, path: '', offset: 0 }, [])
+    }
+  }
+  catch (failure) {
+    if (!request.signal.aborted) {
+      error.value = accessDenied(failure) ? '当前账号没有文件浏览权限。' : '无法读取 Nginx 节点，请重试。'
+    }
+  }
+  finally {
+    endDirectoryRequest(request)
+  }
 }
 
-function selectServer(server: NginxBrowserServer) {
-  if (!server.configured || server.key === selectedServer.value) {
+async function loadDirectory(target: DirectoryLocation, nextHistory: DirectoryLocation[], selectPath?: string) {
+  const request = beginDirectoryRequest(() => void loadDirectory(target, nextHistory, selectPath))
+  previewVisible.value = false
+  fileRequest?.abort()
+  try {
+    const response = await browseNginxDirectory({ ...target, limit: PAGE_SIZE }, request.signal)
+    if (request.signal.aborted) {
+      return
+    }
+    if (!response.data) {
+      throw new Error('目录响应为空')
+    }
+    page.value = response.data
+    history.value = nextHistory
+    addressInput.value = response.data.path
+    localFilter.value = ''
+    selectedEntry.value = undefined
+    if (selectPath) {
+      const match = response.data.entries.find(entry => entry.path === selectPath)
+      if (match?.directory) {
+        // 末段带点也可能是目录（如版本号 v1.2）：继续进入它，而不是当文件选中。
+        await loadDirectory({ server: target.server, path: match.path, offset: 0 }, nextHistory)
+        return
+      }
+      if (!match) {
+        ElMessage.warning('未在当前目录中找到该文件，已打开所在目录。')
+      }
+      selectedEntry.value = match
+    }
+  }
+  catch (failure) {
+    if (!request.signal.aborted) {
+      if (accessDenied(failure)) {
+        page.value = undefined
+        history.value = []
+        selectedEntry.value = undefined
+        localFilter.value = ''
+        error.value = '当前账号没有文件浏览权限。'
+      }
+      else {
+        error.value = page.value
+          ? '目录读取失败，仍显示上次成功读取的内容。'
+          : '无法读取 Nginx 目录，请重试。'
+      }
+      addressInput.value = currentPath.value
+    }
+  }
+  finally {
+    endDirectoryRequest(request)
+  }
+}
+
+function refresh() {
+  if (page.value) {
+    const { server, path, offset } = page.value
+    void loadDirectory({ server, path, offset }, history.value)
+  }
+  else if (error.value && retryDirectory) {
+    retryDirectory()
+  }
+  else {
+    void loadServers()
+  }
+}
+
+function changeServer(server: string) {
+  if (servers.value.some(item => item.key === server && item.configured)) {
+    void loadDirectory({ server, path: '', offset: 0 }, [])
+  }
+}
+
+function normalizePath(input: string) {
+  const path = input.trim().replace(/^\/+/, '')
+  return path && !path.endsWith('/') ? `${path}/` : path
+}
+
+// 详情里的「复制路径」给的是文件相对路径（末尾没有斜杠）。若路径栏一律当目录补斜杠，
+// 会去请求「…/示例图标.png/」这种不存在的目录，现场表现为「复制了却打不开」。
+function looksLikeFile(input: string) {
+  if (!input || input.endsWith('/')) {
+    return false
+  }
+  const name = input.slice(input.lastIndexOf('/') + 1)
+  return name.includes('.') && !name.startsWith('.')
+}
+
+function navigate(input: string) {
+  const current = page.value
+  if (!current) {
     return
   }
-  selectedServer.value = server.key
-  changeServer()
-}
-
-function selectEntry(entry?: NginxBrowserEntry) {
-  selectedEntry.value = entry
-}
-
-function openFolder(entry: NginxBrowserEntry) {
-  if (entry.directory) {
-    void loadDirectory(entry.path, 0, { rememberFolder: true })
-  }
-}
-
-function handleEntryDoubleClick(entry: NginxBrowserEntry) {
-  if (entry.directory) {
-    openFolder(entry)
+  const raw = input.trim().replace(/^\/+/, '')
+  const { server, offset } = current
+  if (looksLikeFile(raw)) {
+    const parent = raw.slice(0, raw.lastIndexOf('/') + 1)
+    const nextHistory = parent === current.path ? history.value : [...history.value, { server, path: current.path, offset }]
+    // 进入文件所在目录并选中它，相当于「打开到指定文件」。
+    void loadDirectory({ server, path: parent, offset: 0 }, nextHistory, raw)
     return
   }
-  void openFile(entry)
+  const path = normalizePath(raw)
+  const nextHistory = path === current.path ? history.value : [...history.value, { server, path: current.path, offset }]
+  void loadDirectory({ server, path, offset: 0 }, nextHistory)
 }
 
 function goBack() {
-  const path = folderHistory.value.pop()
-  if (path !== undefined) {
-    void loadDirectory(path)
+  const target = history.value[history.value.length - 1]
+  if (target && !loading.value) {
+    void loadDirectory(target, history.value.slice(0, -1))
   }
 }
 
 function goUp() {
-  if (canGoUp.value) {
-    void loadDirectory(parentPath(currentPath.value), 0, { rememberFolder: true })
-  }
+  const path = currentPath.value.replace(/\/$/, '')
+  navigate(path.slice(0, path.lastIndexOf('/') + 1))
 }
 
-function jumpToAddress() {
-  void loadDirectory(addressInput.value, 0, { rememberFolder: true })
-}
-
-function jumpToBreadcrumb(item: BreadcrumbItem) {
-  if (item.path !== currentPath.value) {
-    void loadDirectory(item.path, 0, { rememberFolder: true })
-  }
-}
-
-function previousPage() {
-  void loadDirectory(currentPath.value, Math.max(0, currentOffset.value - PAGE_SIZE))
-}
-
-function nextPage() {
-  void loadDirectory(currentPath.value, currentOffset.value + PAGE_SIZE)
-}
-
-async function loadFileBlob(entry: NginxBrowserEntry) {
-  if (entry.directory) {
-    throw new Error('目录不能作为文件读取')
-  }
-  return fetchNginxBrowserFile(selectedServer.value, entry.path)
-}
-
-async function openFile(entry = selectedEntry.value) {
-  if (!entry || entry.directory) {
+function turnPage(direction: -1 | 1) {
+  const current = page.value
+  if (!current || loading.value || (direction === 1 ? !canNextPage.value : !current.offset)) {
     return
   }
-  const target = window.open('about:blank', '_blank')
+  const { server, path, offset, limit } = current
+  void loadDirectory({ server, path, offset: Math.max(0, offset + direction * limit) }, history.value)
+}
+
+function selectEntry(entry?: NginxBrowserEntry) {
+  if (selectedEntry.value !== entry) {
+    previewVisible.value = false
+  }
+  selectedEntry.value = entry
+}
+
+function openEntry(entry: NginxBrowserEntry) {
+  if (entry.directory) {
+    navigate(entry.path)
+  }
+  else if (isImage(entry)) {
+    void previewFile(entry)
+  }
+  else {
+    void readFile(entry, 'open')
+  }
+}
+
+async function readFile(entry: NginxBrowserEntry, action: 'open' | 'download') {
+  const server = currentServer.value
+  if (!server || entry.directory || fileLoading.value) {
+    return
+  }
+  const request = new AbortController()
+  fileRequest = request
   fileLoading.value = true
+  const target = action === 'open' ? window.open('about:blank', '_blank') : null
+  if (target) {
+    target.opener = null
+  }
   try {
-    const blob = await loadFileBlob(entry)
+    const blob = await fetchNginxBrowserFile(server.key, entry.path, request.signal)
+    if (request.signal.aborted) {
+      target?.close()
+      return
+    }
     const url = URL.createObjectURL(blob)
-    if (target) {
-      target.opener = null
+    if (target && inlineTypes.has(blob.type.split(';')[0])) {
+      // 新标签页把 blob URL 当作自己的文档地址：定时回收会让该标签页的刷新、另存、PDF 下载全部失效。
+      // 它的生命周期跟随本页面（本页面销毁时浏览器统一回收），这里不设定时器。
       target.location.href = url
     }
     else {
-      window.open(url, '_blank', 'noopener,noreferrer')
+      target?.close()
+      const link = document.createElement('a')
+      link.href = url
+      link.download = entry.name
+      link.click()
+      // 下载在 click 时已启动，延迟回收只为兼容启动较慢的内核。
+      window.setTimeout(() => URL.revokeObjectURL(url), 60_000)
     }
-    window.setTimeout(() => URL.revokeObjectURL(url), 60_000)
   }
-  catch (error: unknown) {
+  catch {
     target?.close()
-    ElMessage.error(errorMessage(error, '打开 Nginx 文件失败'))
+    if (!request.signal.aborted) {
+      ElMessage.error('文件读取失败，请重试。')
+    }
   }
   finally {
-    fileLoading.value = false
+    if (fileRequest === request) {
+      fileRequest = undefined
+      fileLoading.value = false
+    }
   }
 }
 
-async function downloadFile(entry = selectedEntry.value) {
-  if (!entry || entry.directory) {
-    return
-  }
-  fileLoading.value = true
-  try {
-    const blob = await loadFileBlob(entry)
-    const url = URL.createObjectURL(blob)
-    const link = document.createElement('a')
-    link.href = url
-    link.download = entry.name
-    link.click()
-    URL.revokeObjectURL(url)
-  }
-  catch (error: unknown) {
-    ElMessage.error(errorMessage(error, '下载 Nginx 文件失败'))
-  }
-  finally {
-    fileLoading.value = false
-  }
-}
-
-async function previewFile(entry = selectedEntry.value) {
-  if (!entry || !isImage(entry)) {
-    return
-  }
-  fileLoading.value = true
-  try {
-    revokePreviewUrl()
-    const blob = await loadFileBlob(entry)
-    previewEntry.value = entry
-    previewUrl.value = URL.createObjectURL(blob)
-    previewVisible.value = true
-  }
-  catch (error: unknown) {
-    ElMessage.error(errorMessage(error, '加载 Nginx 图片预览失败'))
-  }
-  finally {
-    fileLoading.value = false
-  }
-}
-
-function revokePreviewUrl() {
+function clearPreview() {
+  previewRequest?.abort()
   if (previewUrl.value) {
     URL.revokeObjectURL(previewUrl.value)
-    previewUrl.value = ''
+  }
+  previewUrl.value = ''
+  previewEntry.value = undefined
+  previewLoading.value = false
+  previewFailed.value = false
+}
+
+async function previewFile(entry: NginxBrowserEntry) {
+  const server = currentServer.value
+  if (!server || !isImage(entry)) {
+    return
+  }
+  clearPreview()
+  const request = new AbortController()
+  previewRequest = request
+  previewEntry.value = entry
+  previewVisible.value = true
+  previewLoading.value = true
+  try {
+    const blob = await fetchNginxBrowserFile(server.key, entry.path, request.signal)
+    if (!request.signal.aborted) {
+      previewUrl.value = URL.createObjectURL(blob)
+    }
+  }
+  catch {
+    if (!request.signal.aborted) {
+      previewFailed.value = true
+    }
+  }
+  finally {
+    if (!request.signal.aborted) {
+      previewLoading.value = false
+    }
   }
 }
 
-onMounted(() => {
-  void loadServers()
-})
+watch(previewVisible, (visible) => {
+  if (!visible) {
+    clearPreview()
+  }
+}, { flush: 'sync' })
 
-onBeforeUnmount(revokePreviewUrl)
+function cancelRequests() {
+  directoryRequest?.abort()
+  directoryRequest = undefined
+  loading.value = false
+  fileRequest?.abort()
+  previewVisible.value = false
+}
+
+onMounted(() => void loadServers())
+onDeactivated(() => {
+  if (loading.value) {
+    resumeDirectory = page.value ? refresh : retryDirectory
+  }
+  cancelRequests()
+})
+onActivated(() => {
+  const resume = resumeDirectory
+  resumeDirectory = undefined
+  resume?.()
+})
+onBeforeUnmount(cancelRequests)
 </script>
 
 <template>
-  <div class="page-shell">
-    <header class="page-header">
-      <div>
-        <p class="eyebrow">
-          Nginx Static Resource Browser
-        </p>
-        <div class="page-title-row">
-          <h2>
-            Nginx 文件浏览
-          </h2>
-          <el-tooltip
-            content="目录浏览依赖 Nginx autoindex。对应 location 需要启用 autoindex on；推荐使用 autoindex_format json。页面为只读模式，文件通过后端代理读取，不向浏览器暴露 Nginx Basic Auth 凭据。"
-            placement="right"
-            :show-after="200"
-          >
-            <button type="button" class="info-trigger" aria-label="目录浏览说明">
-              <el-icon><InfoFilled /></el-icon>
-            </button>
-          </el-tooltip>
-        </div>
-        <p class="subtitle">
-          浏览 IMAGE_SERVER_URL_DEFAULT 与 BA01、BA02、BA03 对应的静态资源目录。
-        </p>
-      </div>
-    </header>
-
-    <el-card shadow="never" class="browser-card">
-      <template #header>
-        <div class="browser-header">
-          <div>
-            <strong>
-              Nginx 静态资源管理器
-            </strong>
-            <p>
-              所有路径均限制在所选服务器的配置根目录内。
-            </p>
-          </div>
-          <div class="header-actions">
-            <el-select v-model="selectedServer" class="server-select" @change="changeServer">
-              <el-option
-                v-for="server in servers"
-                :key="server.key"
-                :label="server.name"
-                :value="server.key"
-                :disabled="!server.configured"
-              >
-                <span>
-                  {{ server.name }}
-                </span>
-                <el-tag class="server-option-tag" size="small" :type="server.configured ? 'success' : 'info'">
-                  {{ server.configured ? '已配置' : '未配置' }}
-                </el-tag>
-              </el-option>
-            </el-select>
-            <el-tag :type="currentServer?.configured ? 'success' : 'danger'">
-              {{ currentServer?.configured ? '可访问' : '未配置' }}
-            </el-tag>
-            <el-button :icon="Refresh" :loading="loading" @click="loadDirectory(currentPath, currentOffset)">
-              刷新
-            </el-button>
-          </div>
-        </div>
+  <MrrPageShell>
+    <MrrPageHeader
+      class="page-header"
+      title="Nginx 文件浏览"
+      description="浏览已配置图片节点中的目录与文件。"
+    >
+      <template #badge>
+        <el-tag effect="plain" type="info" size="small">
+          只读
+        </el-tag>
       </template>
+    </MrrPageHeader>
 
-      <div class="summary-grid">
-        <div class="summary-item summary-wide">
-          <span>
-            静态资源根地址
-          </span>
-          <strong>
-            {{ page?.baseUrl || currentServer?.baseUrl || '-' }}
-          </strong>
-        </div>
-        <div class="summary-item">
-          <span>
-            当前页目录
-          </span>
-          <strong>
-            {{ page?.loadedDirectories ?? 0 }}
-          </strong>
-        </div>
-        <div class="summary-item">
-          <span>
-            当前页文件
-          </span>
-          <strong>
-            {{ page?.loadedFiles ?? 0 }}
-          </strong>
-        </div>
-        <div class="summary-item">
-          <span>
-            目录总条目
-          </span>
-          <strong>
-            {{ page?.totalEntries ?? 0 }}
-          </strong>
-        </div>
-        <div class="summary-item">
-          <span>
-            当前页大小
-          </span>
-          <strong>
-            {{ formatFileSize(page?.loadedBytes) }}
-          </strong>
-        </div>
-      </div>
-
-      <div class="toolbar">
-        <div class="navigation-actions">
-          <el-button :icon="ArrowLeft" circle :disabled="!canGoBack" title="返回" @click="goBack" />
-          <el-button :icon="Top" circle :disabled="!canGoUp" title="上一级" @click="goUp" />
-        </div>
-        <el-input v-model="addressInput" class="address-input" @keyup.enter="jumpToAddress">
-          <template #prefix>
-            <el-icon><Folder /></el-icon>
-          </template>
-          <template #append>
-            <el-button :icon="Search" @click="jumpToAddress" />
-          </template>
-        </el-input>
-        <el-input v-model="localFilter" clearable class="filter-input" placeholder="筛选当前页">
-          <template #prefix>
-            <el-icon><Search /></el-icon>
-          </template>
-        </el-input>
-        <el-button-group>
-          <el-button :type="viewMode === 'icons' ? 'primary' : 'default'" :icon="Grid" @click="viewMode = 'icons'" />
-          <el-button :type="viewMode === 'details' ? 'primary' : 'default'" :icon="List" @click="viewMode = 'details'" />
-        </el-button-group>
-      </div>
-
-      <div class="breadcrumb-row">
-        <el-breadcrumb separator=">">
-          <el-breadcrumb-item v-for="item in breadcrumbs" :key="item.path">
-            <button type="button" class="breadcrumb-button" @click="jumpToBreadcrumb(item)">
-              {{ item.label }}
-            </button>
-          </el-breadcrumb-item>
-        </el-breadcrumb>
-        <span>
-          第 {{ page ? Math.floor(page.offset / page.limit) + 1 : 1 }} 页 ·
-          显示 {{ entries.length }} / {{ page?.totalEntries ?? 0 }} 项
-        </span>
-      </div>
-
-      <div v-loading="loading" class="explorer-layout">
-        <aside class="folder-pane">
-          <div class="pane-title">
-            服务器
-          </div>
-          <button
+    <MrrStorageBrowser
+      v-model:address="addressInput"
+      v-model:filter="localFilter"
+      :entries="page?.entries ?? []"
+      :location="entryLocation"
+      :breadcrumbs="breadcrumbs"
+      :selected="selectedEntry"
+      :page-label="page ? `第 ${Math.floor(page.offset / page.limit) + 1} 页 · 共 ${page.totalEntries} 项` : '目录内容'"
+      :summary="page ? `${page.loadedDirectories} 个目录 · ${page.loadedFiles} 个文件 · ${formatFileSize(page.loadedBytes)}` : undefined"
+      :source-detail="page?.baseUrl ? { label: '查看节点根地址', value: page.baseUrl } : undefined"
+      :loading="loading"
+      :available="Boolean(page)"
+      :can-go-back="history.length > 0"
+      :can-go-up="Boolean(currentPath)"
+      :can-previous-page="Boolean(page?.offset)"
+      :can-next-page="canNextPage"
+      :error="error"
+      unavailable-text="没有可用的 Nginx 节点"
+      location-label="相对路径"
+      @back="goBack"
+      @up="goUp"
+      @refresh="refresh"
+      @retry="retryDirectory?.()"
+      @navigate="navigate"
+      @select="selectEntry"
+      @open="openEntry"
+      @previous="turnPage(-1)"
+      @next="turnPage(1)"
+    >
+      <template #source>
+        <strong>图片节点</strong>
+        <el-select
+          :model-value="currentServer?.key"
+          class="node-select"
+          aria-label="图片节点"
+          :disabled="!servers.some(server => server.configured)"
+          placeholder="选择节点"
+          @change="changeServer"
+        >
+          <el-option
             v-for="server in servers"
             :key="server.key"
-            type="button"
-            class="tree-button"
-            :class="{ active: server.key === selectedServer }"
+            :label="server.configured ? server.name : `${server.name}（未配置）`"
+            :value="server.key"
             :disabled="!server.configured"
-            @click="selectServer(server)"
-          >
-            <el-icon><Folder /></el-icon>
-            <span>
-              {{ server.name }}
-            </span>
-          </button>
-          <div class="pane-title folder-title">
-            当前目录
-          </div>
-          <button
-            v-for="folder in quickFolders"
-            :key="folder.path"
-            type="button"
-            class="tree-button"
-            @click="selectEntry(folder)"
-            @dblclick="openFolder(folder)"
-          >
-            <el-icon><Folder /></el-icon>
-            <span>
-              {{ folder.name }}
-            </span>
-          </button>
-        </aside>
-
-        <main class="file-pane" @click.self="selectEntry()">
-          <el-empty v-if="!loading && visibleEntries.length === 0" description="当前目录没有可显示的文件" />
-
-          <div v-else-if="viewMode === 'icons'" class="icon-grid">
-            <button
-              v-for="entry in visibleEntries"
-              :key="entry.path"
-              type="button"
-              class="file-card"
-              :class="{ selected: selectedEntry?.path === entry.path }"
-              @click="selectEntry(entry)"
-              @dblclick="handleEntryDoubleClick(entry)"
-            >
-              <el-icon class="file-icon" :class="{ folder: entry.directory }">
-                <component :is="entryIcon(entry)" />
-              </el-icon>
-              <span class="file-name" :title="entry.name">
-                {{ entry.name }}
-              </span>
-              <small>
-                {{ entry.directory ? '文件夹' : formatFileSize(entry.size) }}
-              </small>
-            </button>
-          </div>
-
-          <el-table
-            v-else
-            :data="visibleEntries"
-            height="100%"
-            highlight-current-row
-            @row-click="selectEntry"
-            @row-dblclick="handleEntryDoubleClick"
-          >
-            <el-table-column label="名称" min-width="300">
-              <template #default="scope">
-                <div class="table-name">
-                  <el-icon :class="{ folder: scope.row.directory }">
-                    <component :is="entryIcon(scope.row as NginxBrowserEntry)" />
-                  </el-icon>
-                  <span>
-                    {{ scope.row.name }}
-                  </span>
-                </div>
-              </template>
-            </el-table-column>
-            <el-table-column label="类型" width="120">
-              <template #default="scope">
-                {{ scope.row.directory ? '文件夹' : (fileExtension(scope.row as NginxBrowserEntry).toUpperCase() || '文件') }}
-              </template>
-            </el-table-column>
-            <el-table-column label="大小" width="130">
-              <template #default="scope">
-                {{ scope.row.directory ? '-' : formatFileSize(scope.row.size) }}
-              </template>
-            </el-table-column>
-            <el-table-column label="修改时间" width="190">
-              <template #default="scope">
-                {{ formatDate(scope.row.lastModified) }}
-              </template>
-            </el-table-column>
-          </el-table>
-        </main>
-
-        <aside class="detail-pane">
-          <div class="pane-title">
-            详细信息
-          </div>
-          <template v-if="selectedEntry">
-            <el-icon class="detail-icon" :class="{ folder: selectedEntry.directory }">
-              <component :is="entryIcon(selectedEntry)" />
-            </el-icon>
-            <h3>
-              {{ selectedEntry.name }}
-            </h3>
-            <dl>
-              <dt>
-                类型
-              </dt>
-              <dd>
-                {{ selectedEntry.directory ? '文件夹' : (fileExtension(selectedEntry).toUpperCase() || '文件') }}
-              </dd>
-              <dt>
-                大小
-              </dt>
-              <dd>
-                {{ selectedEntry.directory ? '-' : formatFileSize(selectedEntry.size) }}
-              </dd>
-              <dt>
-                修改时间
-              </dt>
-              <dd>
-                {{ formatDate(selectedEntry.lastModified) }}
-              </dd>
-              <dt>
-                相对路径
-              </dt>
-              <dd class="path-value">
-                {{ selectedEntry.path }}
-              </dd>
-              <dt>
-                服务器
-              </dt>
-              <dd>
-                {{ currentServer?.name || '-' }}
-              </dd>
-            </dl>
-            <div v-if="!selectedEntry.directory" class="detail-actions">
-              <el-button :icon="View" :loading="fileLoading" @click="openFile()">
-                打开
-              </el-button>
-              <el-button v-if="selectedIsImage" :icon="Picture" :loading="fileLoading" @click="previewFile()">
-                预览
-              </el-button>
-              <el-button :icon="Download" :loading="fileLoading" @click="downloadFile()">
-                下载
-              </el-button>
-            </div>
-          </template>
-          <el-empty v-else description="选择一个文件或目录" :image-size="72" />
-        </aside>
-      </div>
-
-      <div class="pagination-bar">
-        <el-button :icon="ArrowLeft" :disabled="!canPreviousPage" @click="previousPage">
-          上一页
+          />
+        </el-select>
+      </template>
+      <template #preview="{ entry }">
+        <MrrStorageInlinePreview :entry="entry" :paused="loading || previewVisible" :load="loadInlinePreview" @expand="previewFile(entry)" />
+      </template>
+      <template #actions="{ entry }">
+        <el-button v-if="entry.directory" :icon="FolderOpen" type="primary" @click="navigate(entry.path)">
+          打开文件夹
         </el-button>
-        <el-button :icon="ArrowRight" :disabled="!canNextPage" @click="nextPage">
-          下一页
-        </el-button>
-      </div>
-    </el-card>
+        <template v-else>
+          <el-button v-if="isImage(entry)" :icon="Eye" type="primary" @click="previewFile(entry)">
+            预览
+          </el-button>
+          <el-button :icon="ExternalLink" :disabled="fileLoading" @click="readFile(entry, 'open')">
+            打开
+          </el-button>
+          <el-button :icon="Download" :loading="fileLoading" @click="readFile(entry, 'download')">
+            下载
+          </el-button>
+        </template>
+      </template>
+    </MrrStorageBrowser>
 
-    <el-dialog
+    <MrrStoragePreview
       v-model="previewVisible"
-      :title="previewEntry?.name || '图片预览'"
-      width="min(92vw, 1200px)"
-      destroy-on-close
-      @closed="revokePreviewUrl"
-    >
-      <div class="preview-stage">
-        <img v-if="previewUrl" :src="previewUrl" :alt="previewEntry?.name">
-      </div>
-    </el-dialog>
-  </div>
+      :name="previewEntry?.name"
+      :url="previewUrl"
+      :loading="previewLoading"
+      :failed="previewFailed"
+      @retry="previewEntry && previewFile(previewEntry)"
+    />
+  </MrrPageShell>
 </template>
 
 <style scoped>
-.page-shell {
-  display: grid;
-  gap: 18px;
-  padding: var(--g-main-padding);
-}
-
-.page-title-row {
-  display: flex;
-  gap: 8px;
-  align-items: center;
-}
-
-.page-title-row h2 {
-  margin: 0;
-}
-
-.info-trigger {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  padding: 4px;
-  color: var(--el-text-color-secondary);
-  cursor: help;
-  background: transparent;
-  border: 0;
-  border-radius: var(--mrr-radius-pill);
-}
-
-.info-trigger:hover,
-.info-trigger:focus-visible {
-  color: var(--el-color-primary);
-}
-
-.info-trigger:focus-visible {
-  outline: 2px solid var(--el-color-primary);
-  outline-offset: 2px;
-}
-
-/* 页头排版由全局 page-header.css 统一维护，此处只保留页面内自有元素。 */
-.browser-header p {
-  margin: 6px 0 0;
-  color: var(--el-text-color-secondary);
-}
-
-.detail-pane h3 {
-  margin: 0;
-}
-
-.browser-header,
-.header-actions,
-.toolbar,
-.navigation-actions,
-.breadcrumb-row,
-.pagination-bar,
-.table-name,
-.detail-actions {
-  display: flex;
-  align-items: center;
-}
-
-.browser-header,
-.breadcrumb-row {
-  gap: 16px;
-  justify-content: space-between;
-}
-
-.header-actions,
-.toolbar,
-.detail-actions {
-  gap: 10px;
-}
-
-.server-select {
-  width: 220px;
-}
-
-.server-option-tag {
-  float: right;
-  margin-left: 12px;
-}
-
-.summary-grid {
-  display: grid;
-  grid-template-columns: minmax(280px, 2fr) repeat(4, minmax(120px, 1fr));
-  gap: 10px;
-  margin-bottom: 14px;
-}
-
-.summary-item {
-  min-width: 0;
-  padding: 12px 14px;
-
-  /* 与统一层保持一致：中性表面、统一边框与圆角令牌，不再单独用 Element Plus 填充色。 */
-  background: var(--mrr-muted);
-  border: 1px solid var(--mrr-border);
-  border-radius: var(--mrr-radius-md);
-}
-
-.summary-item span,
-.summary-item strong {
-  display: block;
-}
-
-.summary-item span {
-  margin-bottom: 5px;
-  font-size: 12px;
-  color: var(--mrr-muted-foreground);
-}
-
-.summary-item strong {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.toolbar {
-  margin-bottom: 12px;
-}
-
-.address-input {
-  flex: 1;
-  min-width: 260px;
-}
-
-.filter-input {
-  width: 220px;
-}
-
-.breadcrumb-row {
-  min-height: 36px;
-  padding: 0 4px 10px;
-  font-size: 13px;
-  color: var(--el-text-color-secondary);
-}
-
-.breadcrumb-button {
-  padding: 0;
-  color: inherit;
-  cursor: pointer;
-  background: transparent;
-  border: 0;
-}
-
-.explorer-layout {
-  display: grid;
-  grid-template-columns: 210px minmax(0, 1fr) 280px;
-  min-height: 560px;
-  overflow: hidden;
-  background: var(--el-bg-color);
-  border: 1px solid var(--el-border-color-lighter);
-  border-radius: var(--mrr-radius-card);
-}
-
-.folder-pane,
-.detail-pane {
-  min-width: 0;
-  padding: 14px;
-  background: var(--el-fill-color-extra-light);
-}
-
-.folder-pane {
-  overflow: auto;
-  border-right: 1px solid var(--el-border-color-lighter);
-}
-
-.detail-pane {
-  overflow: auto;
-  border-left: 1px solid var(--el-border-color-lighter);
-}
-
-.pane-title {
-  margin-bottom: 10px;
-  font-size: 12px;
-  font-weight: 700;
-  color: var(--el-text-color-secondary);
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
-}
-
-.folder-title {
-  margin-top: 18px;
-}
-
-.tree-button {
-  display: flex;
-  gap: 8px;
-  align-items: center;
-  width: 100%;
-  padding: 8px 9px;
-  overflow: hidden;
-  color: var(--el-text-color-primary);
-  text-align: left;
-  cursor: pointer;
-  background: transparent;
-  border: 0;
-  border-radius: var(--mrr-radius-md);
-}
-
-.tree-button span {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.tree-button:hover,
-.tree-button.active {
-  background: var(--el-color-primary-light-9);
-}
-
-.tree-button:disabled {
-  cursor: not-allowed;
-  opacity: 0.45;
-}
-
-.file-pane {
-  min-width: 0;
-  padding: 12px;
-  overflow: auto;
-}
-
-.icon-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(118px, 1fr));
-  gap: 10px;
-}
-
-.file-card {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  min-height: 122px;
-  padding: 14px 8px 10px;
-  color: var(--el-text-color-primary);
-  cursor: default;
-  background: transparent;
-  border: 1px solid transparent;
-  border-radius: var(--mrr-radius-card);
-}
-
-.file-card:hover,
-.file-card.selected {
-  background: var(--el-color-primary-light-9);
-  border-color: var(--el-color-primary-light-5);
-}
-
-.file-icon,
-.detail-icon {
-  color: var(--el-text-color-secondary);
-}
-
-.file-icon.folder,
-.detail-icon.folder,
-.table-name .folder {
-  color: var(--el-color-warning);
-}
-
-.file-icon {
-  margin-bottom: 9px;
-  font-size: 42px;
-}
-
-.file-name {
-  width: 100%;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  font-size: 13px;
-  text-align: center;
-  white-space: nowrap;
-}
-
-.file-card small {
-  margin-top: 4px;
-  color: var(--el-text-color-secondary);
-}
-
-.table-name {
-  gap: 8px;
-}
-
-.detail-pane {
-  text-align: center;
-}
-
-.detail-icon {
-  margin: 18px 0 10px;
-  font-size: 64px;
-}
-
-.detail-pane h3 {
-  overflow-wrap: anywhere;
-}
-
-.detail-pane dl {
-  display: grid;
-  grid-template-columns: 72px minmax(0, 1fr);
-  gap: 10px;
-  margin: 24px 0;
-  text-align: left;
-}
-
-.detail-pane dt {
-  color: var(--el-text-color-secondary);
-}
-
-.detail-pane dd {
-  min-width: 0;
-  margin: 0;
-}
-
-.path-value {
-  overflow-wrap: anywhere;
-}
-
-.detail-actions {
-  flex-wrap: wrap;
-  justify-content: center;
-}
-
-.pagination-bar {
-  gap: 8px;
-  justify-content: flex-end;
-  margin-top: 12px;
-}
-
-.preview-stage {
-  display: grid;
-  place-items: center;
-  min-height: 320px;
-  overflow: auto;
-  background: var(--el-fill-color-dark);
-}
-
-.preview-stage img {
-  max-width: 100%;
-  max-height: 76vh;
-  object-fit: contain;
-}
-
-@media (max-width: 1180px) {
-  .summary-grid {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-
-  .summary-wide {
-    grid-column: 1 / -1;
-  }
-
-  .explorer-layout {
-    grid-template-columns: 180px minmax(0, 1fr);
-  }
-
-  .detail-pane {
-    display: none;
-  }
-}
-
-@media (max-width: 760px) {
-  .browser-header,
-  .header-actions,
-  .toolbar,
-  .breadcrumb-row {
-    flex-direction: column;
-    align-items: stretch;
-  }
-
-  .server-select,
-  .filter-input {
-    width: 100%;
-  }
-
-  .summary-grid,
-  .explorer-layout {
-    grid-template-columns: 1fr;
-  }
-
-  .folder-pane {
-    display: none;
-  }
+.node-select {
+  width: 160px;
 }
 </style>

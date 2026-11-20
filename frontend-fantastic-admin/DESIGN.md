@@ -207,6 +207,7 @@ Element Plus 按需 CSS 可能晚于全局样式注入；[圆角桥接](src/asse
 | [MrrMetricCard](src/components/MrrMetricCard/index.vue) | 核心指标统一使用 label/value/note/icon/tone/valueTone/compactValue 与 extra 插槽；语义色和数值色取自[公共类型](src/components/MrrMetricCard/types.ts)，不复制同类摘要卡 CSS |
 | [MrrSectionCard](src/components/MrrSectionCard/index.vue) | 分区标题、说明、操作区与 bodyPadding；计数不附加装饰状态点 |
 | [MrrDataTablePanel](src/components/MrrDataTablePanel/index.vue) | 组合 filters/toolbar/content/pagination，统一数量和分页区域 |
+| [MrrStorageBrowser](src/components/MrrStorageBrowser/index.vue) | OSS 和 Nginx 共用的只读浏览工作区。图标和列表共用文件类型图标与键盘选中交互，列表外框负责圆角裁切。选中文件后在详情区显示有大小限制的图片或文本，窄屏保留预览与操作 |
 | [MrrFilterBar](src/components/MrrFilterBar/index.vue) | 组合筛选条件与 actions；embedded 变体用于已有数据面板，不再套第二层卡片；多条件表单可选 `layout="grid"`，默认 inline 保持既有行为 |
 | [MrrTableActions](src/components/MrrTableActions/index.vue) | 行内/更多操作、禁用及可访问名称；`placement` 当前表示排序优先级，空间足够时低优先级操作也可直显，不能当作强制隐藏授权规则 |
 | [MrrStatusTag](src/components/MrrStatusTag/index.vue) | 复用状态文案和语义色，避免只有颜色没有含义 |
@@ -222,6 +223,10 @@ Element Plus 按需 CSS 可能晚于全局样式注入；[圆角桥接](src/asse
 [Logo 组件](src/layouts/components/Logo/index.vue) 的品牌与侧栏控制图标为 17px；桌面单侧栏的控制按钮保持 33px 正方形。悬停或键盘聚焦时显示收起图标，收起后显示展开图标；标题链接继续返回首页，其他导航模式保留原品牌链接。子目录点击不播放涟漪，但保留悬停、选中、焦点、导航和展开行为。
 
 选中导航文字及焦点使用 `--mrr-navigation-active-foreground`，从现有可配置主色派生：亮色混入黑色，暗色混入白色，保留浅色选中底。Chrome 86 在既有兼容层的 `:root` 与 `:root.dark` 均回退为正文色。当前导航链接声明 `aria-current="page"`，键盘焦点为独立 2px 轮廓。验证覆盖默认主色、绿、黄、白、黑的明暗组合，不据此推断其他控件或全站已达到对比度标准。
+
+桌面双侧栏与顶栏以原生按钮切换主导航分组，以按下状态标明当前分组。次导航有子项的目录以原生按钮和展开状态表达，叶子使用链接。三种布局统一使用内侧焦点轮廓，避免被滚动区域裁切。
+
+使用 Tab 到达分组，用 Enter 或 Space 激活。收起的次侧栏仍可通过鼠标悬停显示浮层，键盘激活后进入首项，按 Escape 返回触发按钮。移动侧栏关闭时移出 Tab 顺序，键盘开启后焦点进入导航，按 Escape 将焦点交还工具栏。工具栏在 Chrome 86 使用基础定位与工作区对齐。验证覆盖现有手风琴设置、明暗主题和旧浏览器展开降级。[导航键盘回归](e2e/navigation-keyboard.spec.ts)
 
 顶部导航搜索仅显示当前账号可见的菜单，支持标题、URL、面包屑文字和标题拼音首字母前缀。输入 `yx` 可找到「影像档案袋」，按回车打开当前选中的结果。[导航搜索回归用例](e2e/nav-search.spec.ts)
 

@@ -130,12 +130,13 @@ export function getOssUrl(scanId: number) {
 
 export function browseOssObjects(
   params: { prefix?: string, continuationToken?: string, maxKeys?: number } = {},
+  signal?: AbortSignal,
 ) {
-  return getRequest<OssBrowserPage>('/api/v1/oss/browser', { params })
+  return getRequest<OssBrowserPage>('/api/v1/oss/browser', { params, signal, skipGlobalError: true })
 }
 
-export function getOssBrowserUrl(key: string) {
-  return getRequest<{ key: string, ossUrl: string }>('/api/v1/oss/browser/url', { params: { key } })
+export function getOssBrowserUrl(key: string, signal?: AbortSignal) {
+  return getRequest<{ key: string, ossUrl: string }>('/api/v1/oss/browser/url', { params: { key }, signal, skipGlobalError: true })
 }
 
 export function getMigrationStatistics() {

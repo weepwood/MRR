@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import type { SubMenuProps } from './types'
-import { useTimeoutFn } from '@vueuse/core'
 import { cn } from '@/utils'
 import Item from './item.vue'
 import { rootMenuInjectionKey } from './types'
@@ -20,7 +19,9 @@ const itemRef = useTemplateRef('itemRef')
 const subMenuRef = useTemplateRef('subMenuRef')
 const rootMenu = inject(rootMenuInjectionKey)!
 
-const index = props.menu.path ?? rootMenu.getUseId(props.menu)
+const index = props.uniqueKey.at(-1)!
+const popupId = useId()
+const branch = computed(() => props.uniqueKey.map(key => encodeURIComponent(key)).join(' '))
 
 const opened = computed(() => rootMenu.openedMenus.includes(props.uniqueKey.at(-1)!))
 
@@ -52,10 +53,13 @@ const transitionEvent = computed(() => {
   return {
     enter(el: HTMLElement) {
       requestAnimationFrame(() => {
-        el.dataset.height = el.offsetHeight.toString()
+        if (!el.isConnected || !opened.value) {
+          return
+        }
+        const height = el.offsetHeight
         el.style.maxHeight = '0'
         void el.offsetHeight
-        el.style.maxHeight = `${el.dataset.height}px`
+        el.style.maxHeight = `${height}px`
         el.style.overflow = 'hidden'
       })
     },
@@ -106,108 +110,140 @@ const transitionClass = computed(() => {
   }
 })
 
-const hasChildren = computed(() => props.menu.children?.some((item: any) => item.meta?.menu !== false) ?? false)
+const hasChildren = computed(() => props.menu.children?.some(item => item.meta?.menu !== false) ?? false)
 
-function handleClick() {
-  if (
-    (rootMenu.isMenuPopup && hasChildren.value)
-    || props.menu.meta?.link
-  ) {
+let hoverTimer: number | undefined
+
+async function openPopup(moveFocus = false) {
+  const focusedBranch = getMenuBranch(document.activeElement, '.saas-popup-menu')
+  if (!moveFocus && focusedBranch && !isInBranch(branch.value, focusedBranch) && !isInBranch(focusedBranch, branch.value)) {
     return
   }
-  requestAnimationFrame(() => {
-    if (hasChildren.value) {
-      rootMenu.handleSubMenuClick(index, props.uniqueKey)
-    }
-    else {
-      rootMenu.handleMenuItemClick(index)
-    }
-  })
+
+  rootMenu.openMenu(index, props.uniqueKey)
+  await nextTick()
+  const anchor = itemRef.value?.ref
+  const popup = subMenuRef.value?.$el as HTMLElement | undefined
+  if (!opened.value || !anchor || !popup) {
+    return
+  }
+
+  const { top, left, right, bottom } = anchor.getBoundingClientRect()
+  const opensToSide = rootMenu.props.mode === 'vertical' || props.level !== 0
+  const popupWidth = popup.offsetWidth
+  const popupHeight = popup.offsetHeight
+  const viewportWidth = document.documentElement.clientWidth
+  const popupLeft = opensToSide
+    ? right + popupWidth <= viewportWidth ? right : left - popupWidth
+    : left
+  const popupTop = Math.max(0, opensToSide ? Math.min(top, window.innerHeight - popupHeight) : bottom)
+  popup.style.top = `${String(popupTop)}px`
+  popup.style.left = `${String(Math.max(0, Math.min(popupLeft, viewportWidth - popupWidth)))}px`
+  popup.style.maxHeight = `${String(Math.max(0, window.innerHeight - popupTop))}px`
+
+  if (moveFocus) {
+    popup.querySelector<HTMLElement>('.mrr-navigation-control')?.focus()
+  }
 }
 
-let timeout: (() => void) | undefined
+function closePopup(restoreFocus: boolean) {
+  clearTimeout(hoverTimer)
+  rootMenu.closeMenu(index)
+  if (restoreFocus) {
+    itemRef.value?.ref?.querySelector('button')?.focus()
+  }
+}
 
-function handleMouseenter() {
+function handleClick(event: MouseEvent) {
+  if (hasChildren.value && rootMenu.isMenuPopup) {
+    clearTimeout(hoverTimer)
+    if (opened.value && event.detail === 0) {
+      void openPopup(true)
+    }
+    else if (opened.value) {
+      closePopup(false)
+    }
+    else {
+      void openPopup(event.detail === 0)
+    }
+  }
+  else if (hasChildren.value) {
+    rootMenu.handleSubMenuClick(index, props.uniqueKey)
+  }
+  else if (!props.menu.meta?.link) {
+    rootMenu.handleMenuItemClick(index)
+  }
+}
+
+function handleEscape(event: KeyboardEvent) {
+  if (rootMenu.isMenuPopup && opened.value) {
+    event.stopPropagation()
+    closePopup(true)
+  }
+}
+
+function getMenuBranch(target: EventTarget | null, selector: string) {
+  return target instanceof Element
+    ? target.closest<HTMLElement>(selector)?.dataset.menuBranch ?? ''
+    : ''
+}
+
+function isInBranch(path: string, branch: string) {
+  return path === branch || path.startsWith(`${branch} `)
+}
+
+function closeAbandonedMenus(target: EventTarget | null) {
+  const focusBranch = getMenuBranch(target, '.saas-popup-menu')
+  for (let level = props.uniqueKey.length; level > 0; level--) {
+    const prefix = props.uniqueKey.slice(0, level).map(key => encodeURIComponent(key)).join(' ')
+    if (isInBranch(rootMenu.mouseInMenu, prefix) || isInBranch(focusBranch, prefix)) {
+      return
+    }
+    rootMenu.closeMenu(props.uniqueKey[level - 1]!)
+  }
+}
+
+function handleMouseenter(event: MouseEvent) {
   if (!rootMenu.isMenuPopup) {
     return
   }
-  rootMenu.mouseInMenu = props.uniqueKey
-  timeout?.()
-  ;({ stop: timeout } = useTimeoutFn(() => {
-    if (hasChildren.value) {
-      rootMenu.openMenu(index, props.uniqueKey)
-      nextTick(() => {
-        requestAnimationFrame(() => {
-          const el = itemRef.value?.ref
-          const subMenuEl = subMenuRef.value?.$el
-          if (!el || !subMenuEl) {
-            return
-          }
-          const rect = el.getBoundingClientRect()
-          const { top, left, width, height } = rect
-          let menuTop = 0
-          let menuLeft = 0
-          if (rootMenu.props.mode === 'vertical' || props.level !== 0) {
-            menuTop = top + el.scrollTop
-            menuLeft = left + width
-            if (menuTop + subMenuEl.offsetHeight > window.innerHeight) {
-              menuTop = Math.max(0, window.innerHeight - subMenuEl.offsetHeight)
-            }
-          }
-          else {
-            menuTop = top + height
-            menuLeft = left
-            if (menuTop + subMenuEl.offsetHeight > window.innerHeight) {
-              subMenuEl.style.height = `${window.innerHeight - menuTop}px`
-            }
-          }
-          if (menuLeft + subMenuEl.offsetWidth > document.documentElement.clientWidth) {
-            menuLeft = left - width
-          }
-          Object.assign(subMenuEl.style, {
-            top: `${menuTop}px`,
-            insetInlineStart: `${menuLeft}px`,
-            willChange: 'transform',
-            transform: 'translateZ(0)',
-          })
-        })
-      })
-    }
-    else {
-      const path = props.menu.children ? rootMenu.subMenus[index].indexPath.at(-1)! : rootMenu.items[index].indexPath.at(-1)!
-      rootMenu.openMenu(path, rootMenu.subMenus[path].indexPath)
-    }
-  }, 240))
+  rootMenu.mouseInMenu = branch.value
+  clearTimeout(hoverTimer)
+  if (hasChildren.value && !opened.value && event.currentTarget === itemRef.value?.ref) {
+    hoverTimer = window.setTimeout(() => void openPopup(), 240)
+  }
 }
 
-function handleMouseleave() {
+function handleMouseleave(event: MouseEvent) {
   if (!rootMenu.isMenuPopup) {
     return
   }
-  rootMenu.mouseInMenu = []
-  timeout?.()
-  ;({ stop: timeout } = useTimeoutFn(() => {
-    requestAnimationFrame(() => {
-      if (rootMenu.mouseInMenu.length === 0) {
-        rootMenu.closeMenu(props.uniqueKey)
-      }
-      else if (hasChildren.value) {
-        !rootMenu.mouseInMenu.includes(props.uniqueKey.at(-1)!) && rootMenu.closeMenu(props.uniqueKey.at(-1)!)
-      }
-    })
-  }, 240))
+  rootMenu.mouseInMenu = getMenuBranch(event.relatedTarget, '[data-menu-branch]')
+  clearTimeout(hoverTimer)
+  hoverTimer = window.setTimeout(closeAbandonedMenus, 240, document.activeElement)
 }
+
+function handleFocusout(event: FocusEvent) {
+  if (rootMenu.isMenuPopup) {
+    closeAbandonedMenus(event.relatedTarget)
+  }
+}
+
+onBeforeUnmount(() => clearTimeout(hoverTimer))
 </script>
 
 <template>
-  <Item ref="itemRef" :unique-key="uniqueKey" :item="menu" :level="level" :sub-menu="hasChildren" :expand="opened" @click="handleClick" @mouseenter="handleMouseenter" @mouseleave="handleMouseleave" />
+  <Item
+    ref="itemRef" :unique-key="uniqueKey" :item="menu" :level="level" :sub-menu="hasChildren" :expand="opened"
+    :popup-id="opened && hasChildren ? popupId : undefined" :data-menu-branch="rootMenu.isMenuPopup ? branch : undefined"
+    @click="handleClick" @mouseenter="handleMouseenter" @mouseleave="handleMouseleave" @keydown.esc="handleEscape"
+  />
   <Teleport v-if="hasChildren" to="body" :disabled="!rootMenu.isMenuPopup">
     <Transition v-bind="transitionClass" v-on="transitionEvent">
       <FaScrollArea
-        v-if="opened" ref="subMenuRef" :scrollbar="false" :mask="rootMenu.isMenuPopup" :class="cn('sub-menu static h-[calc-size(auto,size)] rounded-lg will-change-transform', {
+        v-if="opened" :id="popupId" ref="subMenuRef" :data-menu-branch="rootMenu.isMenuPopup ? branch : undefined" :scrollbar="false" :mask="rootMenu.isMenuPopup" :class="cn('sub-menu static h-[calc-size(auto,size)] rounded-lg', {
           'saas-popup-menu fixed z-3000 w-[220px] p-1 overscroll-contain': rootMenu.isMenuPopup,
-          'mx-1': rootMenu.isMenuPopup && (rootMenu.props.mode === 'vertical' || level !== 0),
-        })"
+        })" @mouseenter="handleMouseenter" @mouseleave="handleMouseleave" @focusout="handleFocusout" @keydown.esc="handleEscape"
       >
         <template v-for="item in menu.children" :key="item.path ?? rootMenu.getUseId(item)">
           <SubMenu v-if="item.meta?.menu !== false" :unique-key="[...uniqueKey, item.path ?? rootMenu.getUseId(item)]" :menu="item" :level="level + 1" />
@@ -219,6 +255,7 @@ function handleMouseleave() {
 
 <style scoped>
 .saas-popup-menu {
+  max-width: 100vw;
   color: var(--mrr-popover-foreground);
 
   /*

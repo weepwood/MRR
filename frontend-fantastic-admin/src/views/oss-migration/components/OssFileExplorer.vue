@@ -1,40 +1,29 @@
 <script setup lang="ts">
 import type { OssBrowserEntry, OssBrowserPage } from '@/api/modules/oss'
+import type { PreviewKind } from '@/components/MrrStorageBrowser/inline-preview'
 import { ElMessage } from 'element-plus'
-import {
-  ArrowLeft,
-  FileText as Document,
-  Folder,
-  LayoutGrid as Grid,
-  Info as InfoFilled,
-  List,
-  Image as Picture,
-  RefreshCw as Refresh,
-  Search,
-  ArrowUp as Top,
-  Eye as View,
-} from 'lucide-vue-next'
+import { ExternalLink, Eye, FolderOpen } from 'lucide-vue-next'
 import { computed, onActivated, onBeforeUnmount, onDeactivated, onMounted, ref, watch } from 'vue'
 import { browseOssObjects, getOssBrowserUrl } from '@/api/modules/oss'
-import OssFolderIcon from './OssFolderIcon.vue'
+import MrrStorageBrowser from '@/components/MrrStorageBrowser/index.vue'
+import { readSignedPreviewText } from '@/components/MrrStorageBrowser/inline-preview'
+import MrrStorageInlinePreview from '@/components/MrrStorageBrowser/InlinePreview.vue'
+import { accessDenied, formatFileSize, isImage } from '@/components/MrrStorageBrowser/presentation'
+import MrrStoragePreview from '@/components/MrrStorageBrowser/Preview.vue'
 
 defineOptions({ name: 'OssFileExplorer' })
 
-type ViewMode = 'icons' | 'details'
-
-interface BreadcrumbItem {
-  label: string
-  prefix: string
-}
-
 const DEFAULT_ROOT_PREFIX = 'medical-records/'
 const MAX_KEYS = 200
-const IMAGE_EXTENSIONS = new Set(['jpg', 'jpeg', 'png', 'gif', 'bmp', 'tif', 'tiff', 'webp'])
 
 const loading = ref(false)
-const directoryError = ref(false)
+const directoryError = ref('')
 let directoryGeneration = 0
+let retryDirectory: (() => void) | undefined
 let previewGeneration = 0
+// 与 Nginx 浏览一致：切目录 / 关预览时真正取消在途请求，不能只丢结果让请求继续跑。
+let directoryRequest: AbortController | undefined
+let previewRequest: AbortController | undefined
 let disposed = false
 let suspended = false
 let reloadOnActivation = false
@@ -43,7 +32,6 @@ const page = ref<OssBrowserPage>()
 const currentPrefix = ref(DEFAULT_ROOT_PREFIX)
 const addressInput = ref(DEFAULT_ROOT_PREFIX)
 const localFilter = ref('')
-const viewMode = ref<ViewMode>('icons')
 const selectedEntry = ref<OssBrowserEntry | null>(null)
 const previewEntry = ref<OssBrowserEntry>()
 const previewUrl = ref('')
@@ -54,81 +42,30 @@ const folderHistory = ref<string[]>([])
 
 const rootPrefix = computed(() => page.value?.rootPrefix || DEFAULT_ROOT_PREFIX)
 const entries = computed(() => page.value?.entries ?? [])
-const visibleEntries = computed(() => {
-  const keyword = localFilter.value.trim().toLocaleLowerCase()
-  if (!keyword) {
-    return entries.value
-  }
-  return entries.value.filter(entry => entry.name.toLocaleLowerCase().includes(keyword))
-})
-const directoryEntries = computed(() => entries.value.filter(entry => entry.directory))
 const canGoBack = computed(() => folderHistory.value.length > 0)
 const canGoUp = computed(() => currentPrefix.value !== rootPrefix.value)
 const canPreviousPage = computed(() => pageTokenHistory.value.length > 0)
 const canNextPage = computed(() => Boolean(page.value?.truncated && page.value.nextContinuationToken))
-const breadcrumbs = computed<BreadcrumbItem[]>(() => {
+const breadcrumbs = computed(() => {
   const root = rootPrefix.value
   const rootLabel = root.replace(/\/$/, '') || 'medical-records'
   const relative = currentPrefix.value.startsWith(root)
     ? currentPrefix.value.slice(root.length).replace(/\/$/, '')
     : ''
-  const result: BreadcrumbItem[] = [{ label: rootLabel, prefix: root }]
+  const result = [{ label: rootLabel, path: root }]
   if (!relative) {
     return result
   }
   let prefix = root
   for (const segment of relative.split('/').filter(Boolean)) {
     prefix += `${segment}/`
-    result.push({ label: segment, prefix })
+    result.push({ label: segment, path: prefix })
   }
   return result
 })
-const selectedIsImage = computed(() => isImage(selectedEntry.value))
 
-function errorMessage(error: unknown, fallback: string) {
-  return error instanceof Error && error.message ? error.message : fallback
-}
-
-function formatFileSize(value?: number | null) {
-  const bytes = Number(value ?? 0)
-  if (bytes <= 0) {
-    return bytes === 0 ? '0 B' : '-'
-  }
-  const units = ['B', 'KB', 'MB', 'GB', 'TB']
-  let size = bytes
-  let unitIndex = 0
-  while (size >= 1024 && unitIndex < units.length - 1) {
-    size /= 1024
-    unitIndex++
-  }
-  const precision = unitIndex === 0 ? 0 : size >= 100 ? 0 : size >= 10 ? 1 : 2
-  return `${size.toFixed(precision)} ${units[unitIndex]}`
-}
-
-function formatDate(value?: string | null) {
-  if (!value) {
-    return '-'
-  }
-  return new Date(value).toLocaleString('zh-CN')
-}
-
-function fileExtension(entry?: OssBrowserEntry) {
-  if (!entry || entry.directory) {
-    return ''
-  }
-  const index = entry.name.lastIndexOf('.')
-  return index >= 0 ? entry.name.slice(index + 1).toLocaleLowerCase() : ''
-}
-
-function isImage(entry?: OssBrowserEntry | null) {
-  return Boolean(entry && !entry.directory && IMAGE_EXTENSIONS.has(fileExtension(entry)))
-}
-
-function entryIcon(entry: OssBrowserEntry) {
-  if (entry.directory) {
-    return Folder
-  }
-  return isImage(entry) ? Picture : Document
+function entryLocation(entry: OssBrowserEntry) {
+  return entry.key
 }
 
 function normalizeRequestedPrefix(value: string) {
@@ -148,12 +85,15 @@ function normalizeRequestedPrefix(value: string) {
 async function loadDirectory(
   prefix: string,
   continuationToken?: string,
-  options: { rememberFolder?: boolean, resetPageHistory?: boolean, navigation?: 'back' | 'next' | 'previous' } = {},
+  options: { rememberFolder?: boolean, resetPageHistory?: boolean, navigation?: 'back' | 'next' | 'previous', selectKey?: string } = {},
 ) {
   if (disposed || suspended) {
     return
   }
   const generation = ++directoryGeneration
+  directoryRequest?.abort()
+  const request = new AbortController()
+  directoryRequest = request
   const normalizedPrefix = normalizeRequestedPrefix(prefix)
   // Navigation history describes only successfully displayed pages.
   const folders = [...folderHistory.value]
@@ -170,14 +110,16 @@ async function loadDirectory(
   if (options.navigation === 'previous') {
     tokens.pop()
   }
+  retryDirectory = () => void loadDirectory(normalizedPrefix, continuationToken, options)
+  previewVisible.value = false
   loading.value = true
-  directoryError.value = false
+  directoryError.value = ''
   try {
     const response = await browseOssObjects({
       prefix: normalizedPrefix,
       continuationToken,
       maxKeys: MAX_KEYS,
-    })
+    }, request.signal)
     if (generation !== directoryGeneration) {
       return
     }
@@ -192,15 +134,46 @@ async function loadDirectory(
     pageTokenHistory.value = tokens
     selectedEntry.value = null
     localFilter.value = ''
+    if (options.selectKey) {
+      const match = response.data.entries.find(entry => entry.key === options.selectKey)
+      if (match?.directory) {
+        // 末段带点也可能是目录（如版本号 v1.2）：直接进入它，不再拿旧 key 去找文件。
+        await loadDirectory(match.key, undefined, { rememberFolder: true })
+        return
+      }
+      if (!match) {
+        ElMessage.warning('未在当前目录中找到该文件，已打开所在目录。')
+      }
+      selectedEntry.value = match ?? null
+    }
   }
-  catch (error: unknown) {
+  catch (error) {
+    if (request.signal.aborted) {
+      return
+    }
     if (generation === directoryGeneration) {
-      directoryError.value = true
+      if (accessDenied(error)) {
+        page.value = undefined
+        currentPrefix.value = rootPrefix.value
+        folderHistory.value = []
+        pageTokenHistory.value = []
+        currentContinuationToken.value = undefined
+        selectedEntry.value = null
+        localFilter.value = ''
+        directoryError.value = '当前账号没有文件浏览权限。'
+      }
+      else {
+        directoryError.value = page.value
+          ? '读取失败，当前仍显示上次成功读取的目录。请重试原操作或刷新。'
+          : '目录读取失败，请检查 OSS 服务状态后刷新重试。'
+      }
       addressInput.value = currentPrefix.value
-      ElMessage.error(errorMessage(error, '读取 OSS 目录失败'))
     }
   }
   finally {
+    if (directoryRequest === request) {
+      directoryRequest = undefined
+    }
     if (generation === directoryGeneration) {
       loading.value = false
     }
@@ -215,15 +188,22 @@ function openFolder(entry: OssBrowserEntry) {
 }
 
 function selectEntry(entry: OssBrowserEntry | null = null) {
+  if (selectedEntry.value !== entry) {
+    previewVisible.value = false
+  }
   selectedEntry.value = entry
 }
 
-function handleEntryDoubleClick(entry: OssBrowserEntry) {
+function openEntry(entry: OssBrowserEntry) {
   if (entry.directory) {
     openFolder(entry)
-    return
   }
-  void openFile(entry)
+  else if (isImage(entry)) {
+    void previewFile(entry)
+  }
+  else {
+    void openFile(entry)
+  }
 }
 
 function goBack() {
@@ -252,15 +232,25 @@ function goUp() {
   void loadDirectory(parentPrefix(currentPrefix.value), undefined, { rememberFolder: true })
 }
 
-function jumpToAddress() {
-  void loadDirectory(addressInput.value, undefined, { rememberFolder: true })
+// 复制路径给的是文件 key（末尾没有斜杠）。补成目录前缀会列出一个空目录，
+// 所以这里先拆出父前缀，进入后按 key 选中文件。
+function looksLikeFile(input: string) {
+  if (!input || input.endsWith('/')) {
+    return false
+  }
+  const name = input.slice(input.lastIndexOf('/') + 1)
+  return name.includes('.') && !name.startsWith('.')
 }
 
-function jumpToBreadcrumb(item: BreadcrumbItem) {
-  if (item.prefix === currentPrefix.value) {
+function navigate(path: string) {
+  const raw = path.trim()
+  if (looksLikeFile(raw)) {
+    const key = raw.startsWith(rootPrefix.value) ? raw : `${rootPrefix.value}${raw.replace(/^\/+/, '')}`
+    const parent = key.slice(0, key.lastIndexOf('/') + 1) || rootPrefix.value
+    void loadDirectory(parent, undefined, { rememberFolder: true, selectKey: key })
     return
   }
-  void loadDirectory(item.prefix, undefined, { rememberFolder: true })
+  void loadDirectory(path, undefined, { rememberFolder: true })
 }
 
 function nextPage() {
@@ -279,13 +269,21 @@ function previousPage() {
   void loadDirectory(currentPrefix.value, previousToken, { resetPageHistory: false, navigation: 'previous' })
 }
 
-async function requestSignedUrl(entry: OssBrowserEntry) {
-  const response = await getOssBrowserUrl(entry.key)
+async function requestSignedUrl(entry: OssBrowserEntry, signal?: AbortSignal) {
+  const response = await getOssBrowserUrl(entry.key, signal)
   const signedUrl = response.data?.ossUrl
   if (!signedUrl) {
     throw new Error('未获取到 OSS 文件地址')
   }
   return signedUrl
+}
+
+async function loadInlinePreview(entry: OssBrowserEntry, kind: PreviewKind, signal: AbortSignal) {
+  const url = new URL(await requestSignedUrl(entry, signal), window.location.href)
+  if (url.protocol !== 'https:' && url.protocol !== 'http:') {
+    throw new Error('Unsupported preview URL')
+  }
+  return kind === 'image' ? url.href : readSignedPreviewText(url, signal)
 }
 
 async function openFile(entry = selectedEntry.value) {
@@ -303,9 +301,9 @@ async function openFile(entry = selectedEntry.value) {
       window.open(signedUrl, '_blank', 'noopener,noreferrer')
     }
   }
-  catch (error: unknown) {
+  catch {
     target?.close()
-    ElMessage.error(errorMessage(error, '打开 OSS 文件失败'))
+    ElMessage.error('打开 OSS 文件失败，请重试。')
   }
 }
 
@@ -315,23 +313,29 @@ async function previewFile(entry = selectedEntry.value) {
   }
   if (disposed || suspended) { return }
   const generation = ++previewGeneration
+  previewRequest?.abort()
+  const request = new AbortController()
+  previewRequest = request
   previewEntry.value = entry
   previewUrl.value = ''
   previewVisible.value = true
   previewLoading.value = true
   try {
-    const url = await requestSignedUrl(entry)
+    const url = await requestSignedUrl(entry, request.signal)
     if (generation === previewGeneration) {
       previewUrl.value = url
     }
   }
-  catch (error: unknown) {
-    if (generation === previewGeneration) {
+  catch {
+    if (generation === previewGeneration && !request.signal.aborted) {
       previewVisible.value = false
-      ElMessage.error(errorMessage(error, '加载 OSS 图片预览失败'))
+      ElMessage.error('加载 OSS 图片预览失败，请重试。')
     }
   }
   finally {
+    if (previewRequest === request) {
+      previewRequest = undefined
+    }
     if (generation === previewGeneration) {
       previewLoading.value = false
     }
@@ -340,6 +344,8 @@ async function previewFile(entry = selectedEntry.value) {
 
 function clearPreview() {
   previewGeneration++
+  previewRequest?.abort()
+  previewRequest = undefined
   previewUrl.value = ''
   previewEntry.value = undefined
   previewLoading.value = false
@@ -353,6 +359,8 @@ onDeactivated(() => {
   suspended = true
   reloadOnActivation = loading.value
   directoryGeneration++
+  directoryRequest?.abort()
+  directoryRequest = undefined
   loading.value = false
   previewVisible.value = false
   clearPreview()
@@ -369,6 +377,8 @@ onActivated(() => {
 onBeforeUnmount(() => {
   disposed = true
   directoryGeneration++
+  directoryRequest?.abort()
+  directoryRequest = undefined
   clearPreview()
 })
 
@@ -378,651 +388,70 @@ onMounted(() => {
 </script>
 
 <template>
-  <el-card shadow="never" class="oss-explorer-card">
-    <template #header>
-      <div class="explorer-title-row">
-        <div>
-          <strong>OSS 文件资源管理器</strong>
-        </div>
-        <div class="explorer-status">
-          <el-tooltip
-            content="以只读方式浏览 medical-records 下的目录和文件，不执行全桶扫描或精确总数统计。"
-            placement="top"
-            :show-after="200"
-          >
-            <button type="button" class="info-trigger" aria-label="OSS 文件浏览说明">
-              <el-icon><InfoFilled /></el-icon>
-            </button>
-          </el-tooltip>
-          <el-tag :type="directoryError ? 'warning' : page?.configured ? 'success' : 'info'">
-            {{ directoryError ? '目录读取失败' : loading ? '正在读取' : page?.configured ? 'OSS 已连接' : 'OSS 未配置' }}
-          </el-tag>
-          <el-button
-            :icon="Refresh"
-            :loading="loading"
-            @click="loadDirectory(currentPrefix, currentContinuationToken, { resetPageHistory: false })"
-          >
-            刷新
-          </el-button>
-        </div>
-      </div>
+  <MrrStorageBrowser
+    v-model:address="addressInput"
+    v-model:filter="localFilter"
+    :entries="entries"
+    :location="entryLocation"
+    :breadcrumbs="breadcrumbs"
+    :selected="selectedEntry"
+    :page-label="page?.configured ? `第 ${pageTokenHistory.length + 1} 页` : '目录内容'"
+    :summary="page?.configured ? `${page.loadedDirectories} 个目录 · ${page.loadedFiles} 个文件 · ${formatFileSize(page.loadedBytes)}` : undefined"
+    :source-detail="page?.endpoint ? { label: '查看 Endpoint', value: page.endpoint } : undefined"
+    :loading="loading"
+    :available="Boolean(page?.configured)"
+    :can-go-back="canGoBack"
+    :can-go-up="canGoUp"
+    :can-previous-page="canPreviousPage"
+    :can-next-page="canNextPage"
+    :error="directoryError"
+    unavailable-text="OSS 未配置"
+    location-label="对象路径"
+    @back="goBack"
+    @up="goUp"
+    @refresh="loadDirectory(currentPrefix, currentContinuationToken, { resetPageHistory: false })"
+    @retry="retryDirectory?.()"
+    @navigate="navigate"
+    @select="selectEntry"
+    @open="openEntry"
+    @previous="previousPage"
+    @next="nextPage"
+  >
+    <template #source>
+      <strong>Bucket</strong>
+      <span v-if="page?.bucket">{{ page.bucket }}</span>
     </template>
-
-    <el-alert
-      v-if="directoryError"
-      type="warning"
-      :closable="false"
-      show-icon
-      :title="page ? '读取失败，当前仍显示上次成功读取的目录。请重试原操作或刷新。' : '目录读取失败，请检查 OSS 服务状态后刷新重试。'"
-    />
-
-    <div class="repository-summary">
-      <div class="summary-item">
-        <span>Bucket</span>
-        <strong>{{ page?.bucket || '-' }}</strong>
-      </div>
-      <div class="summary-item">
-        <span>Endpoint</span>
-        <strong>{{ page?.endpoint || '-' }}</strong>
-      </div>
-      <div class="summary-item">
-        <span>当前页目录</span>
-        <strong>{{ page?.loadedDirectories ?? 0 }}</strong>
-      </div>
-      <div class="summary-item">
-        <span>当前页文件</span>
-        <strong>{{ page?.loadedFiles ?? 0 }}</strong>
-      </div>
-      <div class="summary-item">
-        <span>当前页大小</span>
-        <strong>{{ formatFileSize(page?.loadedBytes) }}</strong>
-      </div>
-    </div>
-
-    <div class="explorer-toolbar">
-      <div class="navigation-actions">
-        <el-button :icon="ArrowLeft" circle :disabled="loading || !canGoBack" title="返回" @click="goBack" />
-        <el-button :icon="Top" circle :disabled="!canGoUp" title="上一级" @click="goUp" />
-      </div>
-
-      <div class="address-bar">
-        <el-input v-model="addressInput" @keyup.enter="jumpToAddress">
-          <template #prefix>
-            <el-icon><Folder /></el-icon>
-          </template>
-          <template #append>
-            <el-button :icon="Search" @click="jumpToAddress" />
-          </template>
-        </el-input>
-      </div>
-
-      <el-input v-model="localFilter" clearable class="local-search" placeholder="筛选当前页文件">
-        <template #prefix>
-          <el-icon><Search /></el-icon>
-        </template>
-      </el-input>
-
-      <el-button-group>
-        <el-button :type="viewMode === 'icons' ? 'primary' : 'default'" :icon="Grid" @click="viewMode = 'icons'" />
-        <el-button :type="viewMode === 'details' ? 'primary' : 'default'" :icon="List" @click="viewMode = 'details'" />
-      </el-button-group>
-    </div>
-
-    <div class="breadcrumb-row">
-      <el-breadcrumb separator=">">
-        <el-breadcrumb-item v-for="item in breadcrumbs" :key="item.prefix">
-          <button type="button" class="breadcrumb-button" @click="jumpToBreadcrumb(item)">
-            {{ item.label }}
-          </button>
-        </el-breadcrumb-item>
-      </el-breadcrumb>
-      <span v-if="page?.truncated" class="pagination-hint">当前目录还有更多对象</span>
-    </div>
-
-    <div class="explorer-layout">
-      <aside class="folder-sidebar">
-        <button
-          type="button"
-          class="sidebar-item root"
-          @click="loadDirectory(rootPrefix, undefined, { rememberFolder: true })"
-        >
-          <el-icon><Folder /></el-icon>
-          <span>{{ rootPrefix.replace(/\/$/, '') }}</span>
-        </button>
-        <div class="sidebar-section-title">
-          当前目录
-        </div>
-        <button
-          v-for="entry in directoryEntries"
-          :key="entry.key"
-          type="button"
-          class="sidebar-item"
-          @click="openFolder(entry)"
-        >
-          <el-icon><Folder /></el-icon>
-          <span>{{ entry.name }}</span>
-        </button>
-        <el-empty v-if="!directoryEntries.length && !loading" description="没有子目录" :image-size="48" />
-      </aside>
-
-      <main v-loading="loading" class="file-pane">
-        <div v-if="viewMode === 'icons'" class="file-grid">
-          <button
-            v-for="entry in visibleEntries"
-            :key="entry.key"
-            type="button"
-            class="file-tile"
-            :class="{ selected: selectedEntry?.key === entry.key }"
-            @click="selectEntry(entry)"
-            @dblclick="handleEntryDoubleClick(entry)"
-          >
-            <OssFolderIcon v-if="entry.directory" class="file-tile-icon folder" />
-            <el-icon v-else class="file-tile-icon" :class="{ image: isImage(entry) }">
-              <component :is="entryIcon(entry)" />
-            </el-icon>
-            <span class="file-tile-name" :title="entry.name">{{ entry.name }}</span>
-            <small v-if="!entry.directory">{{ formatFileSize(entry.size) }}</small>
-          </button>
-        </div>
-
-        <el-table
-          v-else
-          :data="visibleEntries"
-          highlight-current-row
-          row-key="key"
-          empty-text="当前目录没有文件"
-          @current-change="selectEntry"
-          @row-dblclick="handleEntryDoubleClick"
-        >
-          <el-table-column label="名称" min-width="260">
-            <template #default="{ row }">
-              <div class="name-cell">
-                <OssFolderIcon v-if="row.directory" class="folder" />
-                <el-icon v-else :class="{ image: isImage(row as OssBrowserEntry) }">
-                  <component :is="entryIcon(row as OssBrowserEntry)" />
-                </el-icon>
-                <span>{{ row.name }}</span>
-              </div>
-            </template>
-          </el-table-column>
-          <el-table-column label="修改日期" width="190">
-            <template #default="{ row }">
-              {{ formatDate(row.lastModified) }}
-            </template>
-          </el-table-column>
-          <el-table-column label="类型" width="120">
-            <template #default="{ row }">
-              {{ row.directory ? '文件夹' : (fileExtension(row as OssBrowserEntry).toUpperCase() || '文件') }}
-            </template>
-          </el-table-column>
-          <el-table-column label="大小" width="120" align="right">
-            <template #default="{ row }">
-              {{ row.directory ? '-' : formatFileSize(row.size) }}
-            </template>
-          </el-table-column>
-          <el-table-column prop="storageClass" label="存储类型" width="130">
-            <template #default="{ row }">
-              {{ row.storageClass || '-' }}
-            </template>
-          </el-table-column>
-        </el-table>
-
-        <el-empty v-if="viewMode === 'icons' && !visibleEntries.length && !loading" description="当前目录没有文件" />
-
-        <div class="cursor-pager">
-          <span>每次最多读取 {{ page?.maxKeys ?? MAX_KEYS }} 个对象，不统计整个 Bucket。</span>
-          <div>
-            <el-button :disabled="loading || !canPreviousPage" @click="previousPage">
-              上一页
-            </el-button>
-            <el-button type="primary" plain :disabled="loading || !canNextPage" @click="nextPage">
-              下一页
-            </el-button>
-          </div>
-        </div>
-      </main>
-
-      <aside class="details-pane">
-        <template v-if="selectedEntry">
-          <div class="details-icon-wrap">
-            <OssFolderIcon v-if="selectedEntry.directory" class="details-icon folder" />
-            <el-icon v-else class="details-icon" :class="{ image: selectedIsImage }">
-              <component :is="entryIcon(selectedEntry)" />
-            </el-icon>
-          </div>
-          <h3>{{ selectedEntry.name }}</h3>
-          <dl>
-            <dt>类型</dt>
-            <dd>
-              {{ selectedEntry.directory ? '文件夹' : (fileExtension(selectedEntry).toUpperCase() || '文件') }}
-            </dd>
-            <dt>大小</dt>
-            <dd>
-              {{ selectedEntry.directory ? '-' : formatFileSize(selectedEntry.size) }}
-            </dd>
-            <dt>修改时间</dt>
-            <dd>
-              {{ formatDate(selectedEntry.lastModified) }}
-            </dd>
-            <dt>存储类型</dt>
-            <dd>
-              {{ selectedEntry.storageClass || '-' }}
-            </dd>
-            <dt>ETag</dt>
-            <dd class="break-text">
-              {{ selectedEntry.etag || '-' }}
-            </dd>
-            <dt>Object Key</dt>
-            <dd class="break-text">
-              {{ selectedEntry.key }}
-            </dd>
-          </dl>
-          <div class="details-actions">
-            <el-button
-              v-if="selectedEntry.directory"
-              type="primary"
-              :icon="Folder"
-              @click="openFolder(selectedEntry)"
-            >
-              打开文件夹
-            </el-button>
-            <template v-else>
-              <el-button v-if="selectedIsImage" :icon="View" @click="previewFile(selectedEntry)">
-                预览
-              </el-button>
-              <el-button type="primary" :icon="View" @click="openFile(selectedEntry)">
-                新窗口打开
-              </el-button>
-            </template>
-          </div>
-        </template>
-        <el-empty v-else description="选择文件查看详情" :image-size="72" />
-      </aside>
-    </div>
-
-    <el-dialog v-model="previewVisible" width="min(920px, 92vw)" destroy-on-close>
-      <template #header>
-        <div class="preview-title">
-          <strong>{{ previewEntry?.name }}</strong>
-          <span>{{ previewEntry ? formatFileSize(previewEntry.size) : '' }}</span>
-        </div>
+    <template #preview="{ entry }">
+      <MrrStorageInlinePreview :entry="entry" :paused="loading || previewVisible" :load="loadInlinePreview" @expand="previewFile(entry)" />
+    </template>
+    <template #metadata="{ entry }">
+      <template v-if="!entry.directory">
+        <dt>存储类型</dt>
+        <dd>{{ entry.storageClass || '—' }}</dd>
+        <dt>ETag</dt>
+        <dd>{{ entry.etag || '—' }}</dd>
       </template>
-      <div v-loading="previewLoading" class="preview-content">
-        <el-image
-          v-if="previewUrl"
-          :src="previewUrl"
-          :preview-src-list="[previewUrl]"
-          fit="contain"
-          hide-on-click-modal
-        />
-      </div>
-    </el-dialog>
-  </el-card>
+    </template>
+    <template #actions="{ entry }">
+      <el-button v-if="entry.directory" :icon="FolderOpen" type="primary" @click="openFolder(entry)">
+        打开文件夹
+      </el-button>
+      <template v-else>
+        <el-button v-if="isImage(entry)" :icon="Eye" type="primary" @click="previewFile(entry)">
+          预览
+        </el-button>
+        <el-button :icon="ExternalLink" @click="openFile(entry)">
+          新窗口打开
+        </el-button>
+      </template>
+    </template>
+  </MrrStorageBrowser>
+
+  <MrrStoragePreview
+    v-model="previewVisible"
+    :name="previewEntry?.name"
+    :url="previewUrl"
+    :loading="previewLoading"
+    @retry="previewEntry && previewFile(previewEntry)"
+  />
 </template>
-
-<style scoped>
-.oss-explorer-card {
-  overflow: hidden;
-}
-
-.explorer-title-row,
-.explorer-status,
-.explorer-toolbar,
-.navigation-actions,
-.breadcrumb-row,
-.cursor-pager,
-.preview-title,
-.name-cell,
-.details-actions {
-  display: flex;
-  gap: 12px;
-  align-items: center;
-}
-
-.info-trigger {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  padding: 4px;
-  color: var(--el-text-color-secondary);
-  cursor: help;
-  background: transparent;
-  border: 0;
-  border-radius: var(--mrr-radius-pill);
-}
-
-.info-trigger:hover,
-.info-trigger:focus-visible {
-  color: var(--el-color-primary);
-}
-
-.info-trigger:focus-visible {
-  outline: 2px solid var(--el-color-primary);
-  outline-offset: 2px;
-}
-
-.explorer-title-row,
-.breadcrumb-row,
-.cursor-pager,
-.preview-title {
-  justify-content: space-between;
-}
-
-.repository-summary {
-  display: grid;
-  grid-template-columns: repeat(5, minmax(140px, 1fr));
-  gap: 12px;
-  margin-bottom: 14px;
-}
-
-.summary-item {
-  display: grid;
-  gap: 6px;
-  padding: 12px 14px;
-  background: var(--el-fill-color-lighter);
-  border: 1px solid var(--el-border-color-lighter);
-  border-radius: var(--el-border-radius-base);
-}
-
-.summary-item span {
-  font-size: 12px;
-  color: var(--el-text-color-secondary);
-}
-
-.summary-item strong {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.explorer-toolbar {
-  padding: 10px;
-  background: var(--el-fill-color-light);
-  border: 1px solid var(--el-border-color-lighter);
-  border-radius: var(--el-border-radius-base);
-}
-
-.address-bar {
-  flex: 1;
-  min-width: 280px;
-}
-
-.local-search {
-  width: 220px;
-}
-
-.breadcrumb-row {
-  min-height: 42px;
-  padding: 0 10px;
-  border-bottom: 1px solid var(--el-border-color-lighter);
-}
-
-.breadcrumb-button,
-.sidebar-item,
-.file-tile {
-  padding: 0;
-  font: inherit;
-  color: inherit;
-  cursor: pointer;
-  background: transparent;
-  border: 0;
-}
-
-.breadcrumb-button:hover {
-  color: var(--el-color-primary);
-}
-
-.pagination-hint {
-  font-size: 12px;
-  color: var(--el-color-warning);
-}
-
-.explorer-layout {
-  display: grid;
-  grid-template-columns: 210px minmax(0, 1fr) 280px;
-  min-height: 520px;
-  border: 1px solid var(--el-border-color-lighter);
-  border-radius: var(--el-border-radius-base);
-}
-
-.folder-sidebar,
-.details-pane {
-  padding: 12px;
-  overflow: auto;
-  background: var(--el-fill-color-lighter);
-}
-
-.folder-sidebar {
-  border-right: 1px solid var(--el-border-color-lighter);
-}
-
-.details-pane {
-  border-left: 1px solid var(--el-border-color-lighter);
-}
-
-.sidebar-section-title {
-  margin: 18px 8px 8px;
-  font-size: 12px;
-  font-weight: 700;
-  color: var(--el-text-color-secondary);
-}
-
-.sidebar-item {
-  display: flex;
-  gap: 9px;
-  align-items: center;
-  width: 100%;
-  padding: 8px 10px;
-  overflow: hidden;
-  text-align: left;
-  border-radius: 6px;
-}
-
-.sidebar-item:hover,
-.sidebar-item.root {
-  background: var(--el-color-primary-light-9);
-}
-
-.sidebar-item span {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.file-pane {
-  position: relative;
-  display: flex;
-  flex-direction: column;
-  min-width: 0;
-  min-height: 520px;
-  padding: 14px;
-}
-
-.file-grid {
-  display: grid;
-  flex: 1;
-  grid-template-columns: repeat(auto-fill, minmax(122px, 1fr));
-  gap: 10px;
-  align-content: start;
-}
-
-.file-tile {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  align-items: center;
-  min-height: 126px;
-  padding: 14px 10px;
-  border: 1px solid transparent;
-  border-radius: var(--mrr-radius-md);
-}
-
-.file-tile:hover {
-  background: var(--el-fill-color-light);
-}
-
-.file-tile.selected {
-  background: var(--el-color-primary-light-9);
-  border-color: var(--el-color-primary-light-5);
-}
-
-.file-tile-icon,
-.details-icon {
-  color: var(--el-text-color-secondary);
-}
-
-.file-tile-icon {
-  font-size: 48px;
-}
-
-.file-tile-icon.folder {
-  font-size: 80px;
-}
-
-.file-tile-icon.folder,
-.details-icon.folder,
-.name-cell .folder {
-  color: var(--el-color-warning);
-}
-
-.file-tile-icon.image,
-.details-icon.image,
-.name-cell .image {
-  color: var(--el-color-primary);
-}
-
-.file-tile-name {
-  display: -webkit-box;
-  max-width: 100%;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  -webkit-box-orient: vertical;
-  -webkit-line-clamp: 2;
-  text-align: center;
-}
-
-.file-tile small {
-  color: var(--el-text-color-secondary);
-}
-
-.name-cell {
-  min-width: 0;
-}
-
-.name-cell span {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.cursor-pager {
-  padding-top: 14px;
-  margin-top: auto;
-  font-size: 12px;
-  color: var(--el-text-color-secondary);
-  border-top: 1px solid var(--el-border-color-lighter);
-}
-
-.details-icon-wrap {
-  display: flex;
-  justify-content: center;
-  padding: 20px 0 10px;
-}
-
-.details-icon {
-  font-size: 72px;
-}
-
-.details-pane h3 {
-  margin: 8px 0 18px;
-  text-align: center;
-  overflow-wrap: anywhere;
-}
-
-.details-pane dl {
-  display: grid;
-  grid-template-columns: 82px minmax(0, 1fr);
-  gap: 10px;
-  margin: 0;
-  font-size: 13px;
-}
-
-.details-pane dt {
-  color: var(--el-text-color-secondary);
-}
-
-.details-pane dd {
-  min-width: 0;
-  margin: 0;
-}
-
-.break-text {
-  overflow-wrap: anywhere;
-}
-
-.details-actions {
-  flex-wrap: wrap;
-  margin-top: 22px;
-}
-
-.preview-title span {
-  font-size: 12px;
-  color: var(--el-text-color-secondary);
-}
-
-.preview-content {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  min-height: 460px;
-  background: var(--el-fill-color-darker);
-}
-
-.preview-content :deep(.el-image) {
-  width: 100%;
-  height: 70vh;
-}
-
-@media (max-width: 1280px) {
-  .repository-summary {
-    grid-template-columns: repeat(3, minmax(140px, 1fr));
-  }
-
-  .explorer-layout {
-    grid-template-columns: 190px minmax(0, 1fr);
-  }
-
-  .details-pane {
-    display: none;
-  }
-}
-
-@media (max-width: 860px) {
-  .repository-summary {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-
-  .explorer-toolbar {
-    flex-wrap: wrap;
-  }
-
-  .address-bar,
-  .local-search {
-    width: 100%;
-    min-width: 0;
-  }
-
-  .explorer-layout {
-    grid-template-columns: 1fr;
-  }
-
-  .folder-sidebar {
-    display: none;
-  }
-
-  .cursor-pager {
-    flex-direction: column;
-    align-items: flex-start;
-  }
-}
-</style>

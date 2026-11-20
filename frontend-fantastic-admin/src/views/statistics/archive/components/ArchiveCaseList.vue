@@ -12,8 +12,8 @@ import {
   resolveArchiveDepartmentTheme,
   saveArchiveDepartmentThemesToLocal,
 } from '@/utils/archive-department-theme'
+import { formatMedicalRecordCode, normalizeMedicalRecordCode } from '@/utils/medical-record-code'
 import { hasKey } from '@/utils/object'
-import { padCode } from '../constants'
 
 const props = defineProps<{
   cases: IdCardArchiveCase[]
@@ -41,8 +41,8 @@ function inpatientLocation(item: IdCardArchiveCase) {
 }
 
 function isActive(item: IdCardArchiveCase) {
-  return padCode(item.bah || '') === padCode(props.activeBah || '')
-    && padCode(item.sjh || '') === padCode(props.activeSjh || '')
+  return normalizeMedicalRecordCode(item.bah) === normalizeMedicalRecordCode(props.activeBah)
+    && normalizeMedicalRecordCode(item.sjh) === normalizeMedicalRecordCode(props.activeSjh)
 }
 
 function departmentStyle(department: string | undefined) {
@@ -105,8 +105,8 @@ onBeforeUnmount(() => window.removeEventListener(ARCHIVE_DEPARTMENT_THEME_UPDATE
           <small>入院：{{ normalizeDate(item.ruyuan || item.admissionTime) }}</small>
         </span>
         <span class="case-codes">
-          <span><small>病案号</small>{{ padCode(item.bah || '') || '--' }}</span>
-          <span><small>上架号</small>{{ padCode(item.sjh || '') || '--' }}</span>
+          <span><small>病案号</small>{{ formatMedicalRecordCode(item.bah, '--') }}</span>
+          <span><small>上架号</small>{{ formatMedicalRecordCode(item.sjh, '--') }}</span>
         </span>
       </button>
     </div>

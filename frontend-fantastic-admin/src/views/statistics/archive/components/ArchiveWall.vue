@@ -5,6 +5,9 @@ import { ElImageViewer } from 'element-plus'
 import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
 import { isMotionEnabled } from '@/utils/motion-preference'
 import { getTypeLabel } from '../constants'
+import { isFocusSelectSuppressed, suppressFocusSelect } from '../utils/viewer-close-focus-guard'
+import PreviewActionBar from './PreviewActionBar.vue'
+import PreviewViewerToolbar from './PreviewViewerToolbar.vue'
 import 'element-plus/es/components/image-viewer/style/css'
 
 const props = withDefaults(defineProps<{
@@ -15,18 +18,21 @@ const props = withDefaults(defineProps<{
   density?: ArchiveWallDensity
   showMeta?: boolean
   selectionEnabled?: boolean
+  savingType?: boolean
   loading?: boolean
 }>(), {
   cardWidth: 240,
   density: 'comfortable',
   showMeta: true,
   selectionEnabled: true,
+  savingType: false,
   loading: false,
 })
 
 const emit = defineEmits<{
   select: [index: number]
   toggle: [image: GalleryImage]
+  saveType: [image: GalleryImage, type: number]
 }>()
 
 const INITIAL_VISIBLE_COUNT = 60
@@ -39,11 +45,13 @@ const visibleCount = ref(Math.max(INITIAL_VISIBLE_COUNT, props.selectedIndex + 1
 const columnCount = ref(1)
 const isImageViewerOpen = ref(false)
 const imageViewerIndex = ref(0)
+const imageViewerRef = ref<{ setActiveItem: (index: number) => void } | null>(null)
 let loadObserver: IntersectionObserver | null = null
 let resizeObserver: ResizeObserver | null = null
 
 const displayedImages = computed(() => props.images.slice(0, visibleCount.value))
 const previewList = computed(() => props.images.map(image => image.imageUrl || ''))
+const viewerImage = computed(() => props.images[imageViewerIndex.value] || null)
 const wallGap = computed(() => ({
   compact: 6,
   comfortable: 10,
@@ -68,6 +76,14 @@ function markImageFailed(image: GalleryImage, index: number) {
   failedImageKeys.value = next
 }
 
+/* 加载完成打标：写目标元素 class，不走响应式状态，平铺墙整批图片加载零重渲染。 */
+function onImgLoad(event: Event) {
+  const target = event.target as HTMLImageElement
+  if (target.naturalWidth > 0) {
+    target.classList.add('is-loaded')
+  }
+}
+
 function ensureVisible(index: number) {
   if (index >= visibleCount.value) {
     visibleCount.value = Math.min(props.images.length, index + LOAD_MORE_COUNT)
@@ -77,6 +93,15 @@ function ensureVisible(index: number) {
 function selectImage(index: number) {
   ensureVisible(index)
   emit('select', index)
+}
+
+function onCardFocus(index: number) {
+  // 全屏查看器关闭时 focus-trap 会还原焦点到打开前的卡片，
+  // 还原引发的 focus 不切换预览（避免 P1→P5 关闭后回跳 P1）
+  if (isFocusSelectSuppressed()) {
+    return
+  }
+  selectImage(index)
 }
 
 function openImageViewer(index: number) {
@@ -91,11 +116,42 @@ function openImageViewer(index: number) {
 
 function closeImageViewer() {
   isImageViewerOpen.value = false
+  // focus-trap 释放时会把焦点还原到打开前的卡片并触发 @focus 回选旧图（P1→P5 关闭回跳 P1），
+  // 短暂抑制卡片 @focus 的预览切换，让预览停留在关闭时的那张。
+  suppressFocusSelect()
 }
+
+/* 页面级快捷键（空格开/关全屏）通过 ref 调用：不带参时默认打开当前预览卡 */
+defineExpose({
+  openImageViewer: (index?: number) => openImageViewer(index ?? props.selectedIndex),
+  closeImageViewer,
+})
 
 function handleImageViewerSwitch(index: number) {
   imageViewerIndex.value = index
   selectImage(index)
+}
+
+/** 全屏里的翻页工具条：同步卡片选中态，并驱动 ElImageViewer 切到同一张。 */
+function navigateViewer(delta: number) {
+  if (!props.images.length) {
+    return
+  }
+  const next = Math.min(props.images.length - 1, Math.max(0, imageViewerIndex.value + delta))
+  if (next === imageViewerIndex.value) {
+    return
+  }
+  imageViewerIndex.value = next
+  selectImage(next)
+  nextTick(() => imageViewerRef.value?.setActiveItem(next))
+}
+
+function toggleViewerImage() {
+  const image = viewerImage.value
+  if (!image || !props.selectionEnabled) {
+    return
+  }
+  emit('toggle', image)
 }
 
 function toggleImage(image: GalleryImage | undefined, index: number) {
@@ -104,6 +160,16 @@ function toggleImage(image: GalleryImage | undefined, index: number) {
   }
   selectImage(index)
   emit('toggle', image)
+}
+
+function onMetaClick(image: GalleryImage | undefined, index: number, event: MouseEvent) {
+  // 悬浮条整块可点（与缩略图条一致）：点页码/类型文字等同点勾选框；
+  // 未开启选择时条只是展示，放行点击不做拦截。
+  if (!props.selectionEnabled || !image) {
+    return
+  }
+  event.stopPropagation()
+  toggleImage(image, index)
 }
 
 function updateColumnCount() {
@@ -128,12 +194,8 @@ function focusCard(index: number) {
 }
 
 function onItemKeydown(index: number, event: KeyboardEvent) {
-  if (event.key === 'Enter' || event.key === ' ') {
-    event.preventDefault()
-    toggleImage(props.images[index], index)
-    return
-  }
-
+  // Enter/Space 已由页面级快捷键统一接管（回车=勾选当前预览图、空格=开关全屏），
+  // 不能在这里拦冒泡；卡片只负责方向键/Home/End 的网格移动（拦截冒泡防止页面重复导航）。
   let nextIndex: number | null = null
   if (event.key === 'ArrowLeft') {
     nextIndex = index - 1
@@ -156,6 +218,8 @@ function onItemKeydown(index: number, event: KeyboardEvent) {
 
   if (nextIndex !== null) {
     event.preventDefault()
+    // 只拦方向键/Home/End 的冒泡（防页面级监听重复导航）；Enter/Space 必须放行给全局快捷键
+    event.stopPropagation()
     focusCard(nextIndex)
   }
 }
@@ -181,7 +245,14 @@ watch(() => props.images, () => {
   nextTick(observeLoadSentinel)
 })
 
-watch(() => props.selectedIndex, index => ensureVisible(index))
+watch(() => props.selectedIndex, (index) => {
+  ensureVisible(index)
+  // 键盘左右键等外部翻页也要带动已打开的全屏查看器，避免工具条显示的页码与画面对不上
+  if (isImageViewerOpen.value && index !== imageViewerIndex.value) {
+    imageViewerIndex.value = index
+    nextTick(() => imageViewerRef.value?.setActiveItem(index))
+  }
+})
 watch([() => props.cardWidth, () => props.density], () => nextTick(updateColumnCount))
 watch(displayedImages, () => nextTick(observeLoadSentinel))
 
@@ -223,23 +294,9 @@ onUnmounted(() => {
         :aria-pressed="props.selectionEnabled ? props.isSelected(image) : undefined"
         :aria-label="`第 ${index + 1} 张影像，${getTypeLabel(image.btype)}。按 Enter 选中，点击图片查看大图`"
         tabindex="0"
-        @focus="selectImage(index)"
-        @keydown.stop="onItemKeydown(index, $event)"
+        @focus="onCardFocus(index)"
+        @keydown="onItemKeydown(index, $event)"
       >
-        <button
-          v-if="props.selectionEnabled"
-          type="button"
-          class="archive-wall-check"
-          :class="{ checked: props.isSelected(image) }"
-          :aria-label="props.isSelected(image) ? `取消选择第 ${index + 1} 张影像` : `选择第 ${index + 1} 张影像`"
-          :aria-pressed="props.isSelected(image)"
-          @click.stop="toggleImage(image, index)"
-        >
-          <svg v-if="props.isSelected(image)" viewBox="0 0 16 16" width="12" height="12" aria-hidden="true">
-            <path d="M13.485 4.485a1 1 0 0 1 0 1.415l-6.5 6.5a1 1 0 0 1-1.414 0l-3-3a1 1 0 1 1 1.414-1.414L6.278 10.586l5.793-5.793a1 1 0 0 1 1.414 0z" fill="currentColor" />
-          </svg>
-        </button>
-
         <div class="archive-wall-image-stage" @click="openImageViewer(index)">
           <div
             v-if="isImageFailed(image, index)"
@@ -254,18 +311,40 @@ onUnmounted(() => {
           </div>
           <img
             v-else
+            :key="image.imageUrl"
             :src="image.imageUrl"
             :alt="`第 ${index + 1} 张影像`"
             loading="lazy"
             decoding="async"
+            @load="onImgLoad"
             @error="markImageFailed(image, index)"
           >
-          <span v-if="!isImageFailed(image, index)" class="archive-wall-zoom-hint">查看大图</span>
         </div>
 
-        <footer v-if="props.showMeta" class="archive-wall-meta">
-          <strong>P{{ image.pages ?? index + 1 }}</strong>
-          <span>{{ getTypeLabel(image.btype) }}</span>
+        <!-- meta 悬浮在影像左下角，结构与缩略图条一致：勾选框 + 页码 + 类型 -->
+        <footer
+          v-if="props.showMeta || props.selectionEnabled"
+          class="archive-wall-meta"
+          :class="{ 'wall-meta--interactive': props.selectionEnabled }"
+          @click="onMetaClick(image, index, $event)"
+        >
+          <button
+            v-if="props.selectionEnabled"
+            type="button"
+            class="archive-wall-check"
+            :class="{ checked: props.isSelected(image) }"
+            :aria-label="props.isSelected(image) ? `取消选择第 ${index + 1} 张影像` : `选择第 ${index + 1} 张影像`"
+            :aria-pressed="props.isSelected(image)"
+            @click.stop="toggleImage(image, index)"
+          >
+            <svg v-if="props.isSelected(image)" viewBox="0 0 16 16" width="10" height="10" aria-hidden="true">
+              <path d="M13.485 4.485a1 1 0 0 1 0 1.415l-6.5 6.5a1 1 0 0 1-1.414 0l-3-3a1 1 0 1 1 1.414-1.414L6.278 10.586l5.793-5.793a1 1 0 0 1 1.414 0z" fill="currentColor" />
+            </svg>
+          </button>
+          <template v-if="props.showMeta">
+            <strong>P{{ image.pages ?? index + 1 }}</strong>
+            <span>{{ getTypeLabel(image.btype) }}</span>
+          </template>
         </footer>
       </article>
     </div>
@@ -282,15 +361,40 @@ onUnmounted(() => {
 
     <ElImageViewer
       v-if="isImageViewerOpen"
+      ref="imageViewerRef"
       :url-list="previewList"
       :initial-index="imageViewerIndex"
       :infinite="false"
-      :hide-on-click-modal="false"
+      hide-on-click-modal
       :z-index="3000"
       teleported
-      show-progress
       @close="closeImageViewer"
       @switch="handleImageViewerSwitch"
+    >
+      <!-- 底部工具条与右侧预览面板共用一份：页码放进胶囊内部，不再单独漂浮 -->
+      <template #toolbar="{ actions, reset, activeIndex }">
+        <PreviewViewerToolbar
+          :actions="actions"
+          :reset="reset"
+          :active-index="activeIndex"
+          :total="previewList.length"
+        />
+      </template>
+    </ElImageViewer>
+
+    <!-- 全屏查看时同一套「分类切换 + 翻页 + 选中」工具条：平铺模式没有 PreviewPanel，
+         这里必须自己挂一份，否则点开大图就只能看不能改。 -->
+    <PreviewActionBar
+      v-if="isImageViewerOpen && viewerImage"
+      :image="viewerImage"
+      :index="imageViewerIndex"
+      :total="props.images.length"
+      :is-selected="props.isSelected(viewerImage)"
+      :show-selection-status="props.selectionEnabled"
+      :saving-type="props.savingType"
+      @save-type="(image, type) => emit('saveType', image, type)"
+      @navigate="navigateViewer"
+      @toggle="toggleViewerImage"
     />
   </section>
 </template>
@@ -335,35 +439,59 @@ onUnmounted(() => {
   transform: var(--mrr-motion-decor, translateY(-1px));
 }
 
-.archive-wall-card:focus-visible,
-.archive-wall-card.active,
+/* 勾选态用「面」：淡蓝底填充，外圈不加强调描边 */
 .archive-wall-card.checked {
-  border-color: var(--color-primary);
-  box-shadow: 0 0 0 2px rgb(64 158 255 / 18%);
+  background: var(--mrr-navigation-active);
 }
 
+/* 预览选中态用「线」：底色不变，主题色实线双圈描边；叠加态自动 = 填充 + 实线圈。
+ * 键盘焦点不再单独画圈：方向键/Tab 走 @focus → selectImage，预览跟随焦点，
+ * active 圈就是唯一的焦点指示（base 的 outline:none 保持）。 */
+.archive-wall-card.active {
+  border-color: var(--color-primary);
+
+  /* 平铺卡大且多为白底文档，1+1px 细圈贴在影像边缘不显眼：
+     内圈加粗到 3px，外圈再罩一层 18% 主题色柔光，远看也能定位预览卡 */
+  box-shadow:
+    inset 0 0 0 2px var(--color-primary),
+    0 0 0 3px hsl(var(--primary) / 18%);
+}
+
+/* 勾选框与缩略图条同一形态：行内 16px，常驻只有白描边，悬停才填充白色，勾选后主题色实底。 */
 .archive-wall-check {
-  position: absolute;
-  top: 7px;
-  left: 7px;
-  z-index: 2;
+  position: relative; /* 行内占位，::after 命中区相对自身扩展 */
   display: flex;
+  flex: none;
   align-items: center;
   justify-content: center;
-  width: 22px;
-  height: 22px;
+  width: 16px;
+  height: 16px;
   padding: 0;
   color: var(--mrr-primary-foreground);
   cursor: pointer;
-  background: rgb(255 255 255 / 90%);
-  border: 1.5px solid var(--divider);
+  background: transparent;
+  border: 1.5px solid rgb(255 255 255 / 85%);
   border-radius: var(--mrr-radius-sm);
-  box-shadow: 0 2px 8px rgb(0 0 0 / 10%);
+  transition: color 0.15s, background-color 0.15s, border-color 0.15s;
+}
+
+/* 命中区比视觉块大一圈，但只在上下与左侧外扩，不盖住右侧页码的点击范围。 */
+.archive-wall-check::after {
+  position: absolute;
+  inset: -4px -2px -4px -4px;
+  content: "";
+  border-radius: inherit;
+}
+
+.archive-wall-check:hover {
+  background: rgb(255 255 255 / 86%);
+  border-color: rgb(255 255 255 / 95%);
 }
 
 .archive-wall-check.checked {
   background: var(--color-primary);
   border-color: var(--color-primary);
+  box-shadow: none;
 }
 
 .archive-wall-check:focus-visible {
@@ -392,29 +520,21 @@ onUnmounted(() => {
   transition: transform 0.18s ease;
 }
 
+/* 未加载完成时显示低频微光占位，加载后由图像内容覆盖（关动效时为静态占位底色） */
+.archive-wall-image-stage img:not(.is-loaded) {
+  background-color: var(--surface-alt);
+  background-image: linear-gradient(100deg, transparent 30%, rgb(255 255 255 / 45%) 50%, transparent 70%);
+  background-size: 220% 100%;
+  animation: var(--mrr-motion-decor, wall-shimmer var(--mrr-motion-loop-soft, 1.5s) linear infinite);
+}
+
+@keyframes wall-shimmer {
+  from { background-position: 180% 0; }
+  to { background-position: -80% 0; }
+}
+
 .archive-wall-card:hover .archive-wall-image-stage img {
   transform: var(--mrr-motion-decor, scale(1.01));
-}
-
-.archive-wall-zoom-hint {
-  position: absolute;
-  right: 8px;
-  bottom: 8px;
-  padding: 4px 7px;
-  font-size: 11px;
-  color: var(--mrr-primary-foreground);
-  pointer-events: none;
-  background: rgb(0 0 0 / 56%);
-  border-radius: var(--mrr-radius-pill);
-  opacity: 0;
-  transform: translateY(3px);
-  transition: opacity 0.15s ease, transform 0.15s ease;
-}
-
-.archive-wall-card:hover .archive-wall-zoom-hint,
-.archive-wall-card:focus-visible .archive-wall-zoom-hint {
-  opacity: 1;
-  transform: translateY(0);
 }
 
 .archive-wall-placeholder {
@@ -436,27 +556,48 @@ onUnmounted(() => {
   font-size: 12px;
 }
 
+/*
+ * meta 悬浮条与 ThumbStrip 同款：只锚定左下角、宽度贴内容（shrink-to-fit），
+ * 72% 深遮罩上白字（白底文档不垫灰，对比度页码 6.3 / 类型名 5.4）。
+ */
 .archive-wall-meta {
+  position: absolute;
+  bottom: 11px;
+  left: 11px;
+  z-index: 2;
   display: flex;
-  gap: 8px;
+  gap: 6px;
   align-items: center;
   min-width: 0;
-  padding: 8px 9px;
-  border-top: 1px solid var(--divider);
+  max-width: calc(100% - 22px);
+  padding: 4px 8px;
+  background: rgb(15 23 42 / 72%);
+  border-radius: var(--mrr-radius-sm);
+}
+
+/* 开启选择时整条可点（见 onMetaClick），悬停微亮给出可点暗示 */
+.archive-wall-meta.wall-meta--interactive {
+  cursor: pointer;
+}
+
+.archive-wall-meta.wall-meta--interactive:hover {
+  background: rgb(15 23 42 / 82%);
 }
 
 .archive-wall-meta strong {
   flex: none;
   font-size: 12px;
-  color: var(--text-primary);
+  font-weight: 800;
+  color: rgb(255 255 255 / 92%);
 }
 
 .archive-wall-meta span {
+  flex: 1;
   min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
   font-size: 11px;
-  color: var(--text-secondary);
+  color: rgb(255 255 255 / 82%);
   white-space: nowrap;
 }
 

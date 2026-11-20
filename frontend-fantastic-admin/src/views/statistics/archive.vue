@@ -8,8 +8,8 @@ import { ElMessage } from 'element-plus'
 import { FileText as Document, Download, Printer } from 'lucide-vue-next'
 import { computed, nextTick, onMounted, onUnmounted, reactive, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import ScanQueryDiagnostics from '@/components/ScanQueryDiagnostics/index.vue'
 import { actionDialog } from '@/ui/components/ActionDialog'
+import { describeIdCardInput, ID_CARD_PATTERN, normalizeIdCardInput } from '@/utils/identifier-input'
 import { getArchiveLookupValidationMessage } from '@/utils/medical-record-code'
 import {
   createDefaultSystemSettings,
@@ -20,9 +20,9 @@ import { archiveAccessMode } from './archive/access-mode'
 import ArchiveCaseList from './archive/components/ArchiveCaseList.vue'
 import ArchiveHeader from './archive/components/ArchiveHeader.vue'
 import ArchiveMoreSettings from './archive/components/ArchiveMoreSettings.vue'
+import ArchiveQueryFailure from './archive/components/ArchiveQueryFailure.vue'
 import ArchiveSearchBar from './archive/components/ArchiveSearchBar.vue'
 import ArchiveWall from './archive/components/ArchiveWall.vue'
-import OcrPanel from './archive/components/OcrPanel.vue'
 import PatientCard from './archive/components/PatientCard.vue'
 import PreviewPanel from './archive/components/PreviewPanel.vue'
 import ThumbStrip from './archive/components/ThumbStrip.vue'
@@ -37,11 +37,10 @@ import {
 import { useArchivePrint } from './archive/composables/useArchivePrint'
 import { useArchiveSelectedZip } from './archive/composables/useArchiveSelectedZip'
 import { useSelection } from './archive/composables/useSelection'
-import { buildTypeStats, padCode } from './archive/constants'
+import { buildTypeStats } from './archive/constants'
 
 defineOptions({ name: 'StatisticsArchivePage' })
 
-const ID_CARD_PATTERN = /^\d{15}(?:\d{2}[\dX])?$/i
 const route = useRoute()
 const router = useRouter()
 
@@ -85,6 +84,8 @@ const previewMode = ref<ArchivePreviewMode>('single')
 const typeDisplayMode = ref<ArchiveTypeDisplayMode>('double-column')
 const archiveLocalPreferences = ref<ArchiveLocalPreferences>(readArchiveLocalPreferences())
 const thumbStripRef = ref<InstanceType<typeof ThumbStrip> | null>(null)
+const previewPanelRef = ref<InstanceType<typeof PreviewPanel> | null>(null)
+const archiveWallRef = ref<InstanceType<typeof ArchiveWall> | null>(null)
 
 const filteredImages = computed<GalleryImage[]>(() =>
   selectedType.value === 'all'
@@ -146,7 +147,7 @@ const pdfButtonLoading = computed(() =>
   exportingPdf.value || pdfJobDownloading.value || pdfJobCancelling.value,
 )
 const downloadButtonType = computed(() => resolveExportButtonType(downloadJob.value, ''))
-const pdfButtonType = computed(() => resolveExportButtonType(pdfJob.value, 'primary'))
+const pdfButtonType = computed(() => resolveExportButtonType(pdfJob.value, ''))
 const downloadButtonLabel = computed(() => {
   const job = downloadJob.value
   if (job?.status === 'PENDING' || job?.status === 'PROCESSING') {
@@ -160,9 +161,9 @@ const downloadButtonLabel = computed(() => {
     const imageCount = Math.max(0, Number(job.processedCount || job.plannedCount || 0))
     return `下载病案（${imageCount} 张，${formatBytes(job.outputBytes)}）`
   }
-  return '下载病案（整份病案）'
+  return '下载病案（整份）'
 })
-const pdfButtonLabel = computed(() => `导出 PDF（${selectedCount.value}）`)
+const pdfButtonLabel = computed(() => `导出选中 PDF（${selectedCount.value}）`)
 
 const {
   job: selectedZipJob,
@@ -204,8 +205,8 @@ async function handleSelectedZipAction() {
 }
 
 const selectionStorageKey = computed(() => {
-  const bah = normalizeSearchParam(searchBah.value)
-  const sjh = normalizeSearchParam(searchSjh.value)
+  const bah = sanitizeParam(searchBah.value)
+  const sjh = sanitizeParam(searchSjh.value)
   if (!bah && !sjh) {
     return ''
   }
@@ -218,14 +219,9 @@ function sanitizeParam(val: unknown): string {
   return text.startsWith(':') ? '' : text
 }
 
-function normalizeSearchParam(value: unknown): string {
-  const text = sanitizeParam(value)
-  return text ? padCode(text) : ''
-}
-
 function caseMatches(item: IdCardArchiveCase, bah: string, sjh: string) {
-  return normalizeSearchParam(item.bah) === bah
-    && normalizeSearchParam(item.sjh) === sjh
+  return sanitizeParam(item.bah) === bah
+    && sanitizeParam(item.sjh) === sjh
 }
 
 function formatBytes(value: number | undefined): string {
@@ -356,8 +352,8 @@ function clearArchiveState(message = '') {
 }
 
 async function loadSelectedArchiveCase(archiveCase: IdCardArchiveCase, forceRefresh = false) {
-  searchBah.value = normalizeSearchParam(archiveCase.bah)
-  searchSjh.value = normalizeSearchParam(archiveCase.sjh)
+  searchBah.value = sanitizeParam(archiveCase.bah)
+  searchSjh.value = sanitizeParam(archiveCase.sjh)
   selectedType.value = 'all'
   selectedImageIndex.value = 0
   selectedIds.value = new Set()
@@ -390,8 +386,8 @@ async function syncIdCardSearchFromRoute(idParam: string, bah: string, sjh: stri
     return
   }
 
-  const selectedBah = normalizeSearchParam(selectedCase.bah)
-  const selectedSjh = normalizeSearchParam(selectedCase.sjh)
+  const selectedBah = sanitizeParam(selectedCase.bah)
+  const selectedSjh = sanitizeParam(selectedCase.sjh)
   if (resolvedToken !== idParam || selectedBah !== bah || selectedSjh !== sjh) {
     await router.replace({
       path: archivePath.value,
@@ -408,8 +404,8 @@ async function syncIdCardSearchFromRoute(idParam: string, bah: string, sjh: stri
 }
 
 async function syncSearchFromRoute(forceRefresh = false) {
-  const bah = normalizeSearchParam(route.query.bah)
-  const sjh = normalizeSearchParam(route.query.sjh)
+  const bah = sanitizeParam(route.query.bah)
+  const sjh = sanitizeParam(route.query.sjh)
   const idToken = sanitizeParam(route.query.id)
 
   searchBah.value = bah
@@ -430,9 +426,9 @@ async function syncSearchFromRoute(forceRefresh = false) {
 }
 
 async function handleIdCardSearch() {
-  const idCard = searchIdCard.value.trim()
+  const idCard = normalizeIdCardInput(searchIdCard.value)
   if (!ID_CARD_PATTERN.test(idCard)) {
-    const message = '请输入正确的 15 位或 18 位身份证号'
+    const message = describeIdCardInput(idCard).message || '请输入正确的 15 位或 18 位身份证号'
     clearArchiveState(message)
     ElMessage.warning(message)
     return
@@ -445,8 +441,8 @@ async function handleIdCardSearch() {
     return
   }
 
-  const bah = normalizeSearchParam(firstCase.bah)
-  const sjh = normalizeSearchParam(firstCase.sjh)
+  const bah = sanitizeParam(firstCase.bah)
+  const sjh = sanitizeParam(firstCase.sjh)
   await router.push({
     path: archivePath.value,
     query: {
@@ -464,8 +460,8 @@ async function handleSearch() {
   }
 
   clearIdCardSearch()
-  const bah = normalizeSearchParam(searchBah.value)
-  const sjh = normalizeSearchParam(searchSjh.value)
+  const bah = sanitizeParam(searchBah.value)
+  const sjh = sanitizeParam(searchSjh.value)
   const validationMessage = getArchiveLookupValidationMessage(bah, sjh)
 
   searchBah.value = bah
@@ -508,8 +504,8 @@ async function selectArchiveCase(archiveCase: IdCardArchiveCase) {
   if (!token) {
     return
   }
-  const bah = normalizeSearchParam(archiveCase.bah)
-  const sjh = normalizeSearchParam(archiveCase.sjh)
+  const bah = sanitizeParam(archiveCase.bah)
+  const sjh = sanitizeParam(archiveCase.sjh)
   const location = {
     path: archivePath.value,
     query: {
@@ -567,10 +563,12 @@ function toggleCurrent() {
   }
 }
 
-function handleSaveType(type: number) {
-  if (currentImage.value) {
-    saveImageType(currentImage.value, type)
+function handleSaveType(image: GalleryImage, type: number) {
+  if (currentImage.value !== image) {
+    ElMessage.warning('当前影像已切换，请重新确认分类')
+    return
   }
+  saveImageType(image, type)
 }
 
 function handlePrint() {
@@ -641,9 +639,38 @@ function isImagePreviewOpen() {
   })
 }
 
+function openCurrentImageViewer() {
+  if (isWallLayout.value) {
+    archiveWallRef.value?.openImageViewer()
+  }
+  else {
+    previewPanelRef.value?.openImageViewer()
+  }
+}
+
+function closeImageViewers() {
+  previewPanelRef.value?.closeImageViewer()
+  archiveWallRef.value?.closeImageViewer()
+}
+
+/** 焦点在自带激活语义的控件上时，Enter/Space 交给控件本身（按钮点击、勾选框切换），避免双重触发。 */
+function isActivatableTarget(target: HTMLElement | null): boolean {
+  if (!target) {
+    return false
+  }
+  if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable) {
+    return true
+  }
+  return Boolean(target.closest('button, a, select, [role="checkbox"], [role="switch"], [contenteditable]'))
+}
+
 function onKeydown(e: KeyboardEvent) {
+  // 带修饰键的组合（Ctrl+W / Ctrl+S 等）是浏览器/系统快捷键，不参与页面导航
+  if (e.ctrlKey || e.metaKey || e.altKey) {
+    return
+  }
   const target = e.target as HTMLElement | null
-  if (target?.tagName === 'INPUT' || target?.tagName === 'TEXTAREA' || target?.isContentEditable) {
+  if (isActivatableTarget(target)) {
     return
   }
   if (!filteredImages.value.length) {
@@ -651,17 +678,35 @@ function onKeydown(e: KeyboardEvent) {
   }
 
   const previewOpen = isImagePreviewOpen()
-  if (previewOpen && (e.key === 'ArrowUp' || e.key === 'ArrowDown' || e.key === 'Enter' || e.key === ' ')) {
+
+  // 全局统一快捷键（无论缩略图/平铺/全屏模式）：
+  // 空格 = 开启全屏预览，再按一次关闭；回车 = 勾选/取消当前预览的这张图。
+  if (e.key === ' ' || e.code === 'Space') {
+    e.preventDefault()
+    if (previewOpen) {
+      closeImageViewers()
+    }
+    else {
+      openCurrentImageViewer()
+    }
     return
   }
-
-  if (isWallLayout.value && e.key === 'Enter') {
+  if (e.key === 'Enter') {
     e.preventDefault()
     if (showSelectionStatus.value) {
       toggleCurrent()
     }
+    return
   }
-  else if (e.key === 'ArrowLeft') {
+
+  // 全屏查看器自己监听方向键（左右切图），页面再处理一次会一次翻两张，交还给查看器。
+  // W/S 不在查看器的监听里，走页面 selectImage 后由 watcher 同步查看器翻页。
+  if (previewOpen && (e.key === 'ArrowLeft' || e.key === 'ArrowRight'
+    || e.key === 'ArrowUp' || e.key === 'ArrowDown')) {
+    return
+  }
+
+  if (e.key === 'ArrowLeft') {
     e.preventDefault()
     navigate(-1)
   }
@@ -674,6 +719,14 @@ function onKeydown(e: KeyboardEvent) {
     navigate(-1)
   }
   else if ((previewMode.value === 'single' || isWallLayout.value) && e.key === 'ArrowDown') {
+    e.preventDefault()
+    navigate(1)
+  }
+  else if (e.key === 'w' || e.key === 'W') {
+    e.preventDefault()
+    navigate(-1)
+  }
+  else if (e.key === 's' || e.key === 'S') {
     e.preventDefault()
     navigate(1)
   }
@@ -730,9 +783,6 @@ onUnmounted(() => {
 
 <template>
   <div class="archive-page" :class="`scrollbars-${archiveDisplaySettings.archiveScrollbarMode}`">
-    <div v-if="archiveAccessMode === 'internal' && currentImage?.id" class="archive-ocr-toolbar">
-      <OcrPanel :scan-id="currentImage.id" :image-url="currentImage.imageUrl" :unclassified="currentImage.btype === 0" />
-    </div>
     <ArchiveMoreSettings
       class="archive-more-settings-float"
       :view-mode="viewMode"
@@ -775,6 +825,7 @@ onUnmounted(() => {
     >
       <section v-if="isWallLayout" class="archive-wall-shell">
         <ArchiveWall
+          ref="archiveWallRef"
           :images="filteredImages"
           :selected-index="selectedImageIndex"
           :is-selected="isSelected"
@@ -782,9 +833,11 @@ onUnmounted(() => {
           :density="archiveDisplaySettings.archiveWallDensity"
           :show-meta="archiveDisplaySettings.archiveWallShowMeta"
           :selection-enabled="showSelectionStatus"
+          :saving-type="savingType"
           :loading="loading"
           @select="selectImage"
           @toggle="toggleSelect"
+          @save-type="handleSaveType"
         />
 
         <div class="archive-wall-toolbar" aria-label="全景平铺操作工具条">
@@ -839,7 +892,7 @@ onUnmounted(() => {
                 {{ selectedZipLabel }}
               </el-button>
               <el-button size="small" :icon="Printer" :loading="printing" :disabled="!selectedCount" @click="handlePrint">
-                打印选中
+                打印选中页面
                 <template v-if="selectedCount">
                   （{{ selectedCount }}）
                 </template>
@@ -892,8 +945,16 @@ onUnmounted(() => {
 
           <PatientCard :patient="patient" :sjh="currentImage?.sjh || searchSjh" :loading="patientLoading" />
 
-          <el-alert v-if="errorMsg" :title="errorMsg" :type="lookupReason === 'NO_MATCHING_IMAGES' ? 'info' : lookupReason === 'NEEDS_SJH' ? 'warning' : 'error'" show-icon />
-          <ScanQueryDiagnostics v-if="errorMsg && !isExternalTicketMode" :bah="searchBah" :sjh="searchSjh" :request-id="requestId" />
+          <ArchiveQueryFailure
+            v-if="errorMsg && !isExternalTicketMode"
+            :message="errorMsg"
+            :reason="lookupReason"
+            :request-id="requestId"
+            :bah="searchBah"
+            :sjh="searchSjh"
+            @retry="handleRefresh"
+          />
+          <el-alert v-else-if="errorMsg" :title="errorMsg" type="error" show-icon />
 
           <template v-if="images.length > 0">
             <TypeFilterBar
@@ -917,16 +978,6 @@ onUnmounted(() => {
 
           <div v-if="images.length > 0" class="archive-bottom-actions">
             <el-button
-              v-if="!isExternalTicketMode"
-              class="download-action"
-              :type="downloadButtonType || undefined"
-              :icon="Download"
-              :loading="downloadButtonLoading"
-              @click="handleDownloadAction"
-            >
-              {{ downloadButtonLabel }}
-            </el-button>
-            <el-button
               v-if="showSelectionStatus"
               :icon="Download"
               :disabled="!selectedCount"
@@ -936,7 +987,7 @@ onUnmounted(() => {
               {{ selectedZipLabel }}
             </el-button>
             <el-button v-if="!isExternalTicketMode" :icon="Printer" :loading="printing" :disabled="!selectedCount" @click="handlePrint">
-              打印选中<template v-if="selectedCount">
+              打印选中页面<template v-if="selectedCount">
                 ({{ selectedCount }})
               </template>
             </el-button>
@@ -949,6 +1000,15 @@ onUnmounted(() => {
               @click="handleExportPdfAction"
             >
               {{ pdfButtonLabel }}
+            </el-button>
+            <el-button
+              v-if="!isExternalTicketMode"
+              :type="downloadButtonType || undefined"
+              :icon="Download"
+              :loading="downloadButtonLoading"
+              @click="handleDownloadAction"
+            >
+              {{ downloadButtonLabel }}
             </el-button>
           </div>
         </section>
@@ -969,6 +1029,7 @@ onUnmounted(() => {
 
         <PreviewPanel
           v-if="showViewer"
+          ref="previewPanelRef"
           v-model:display-mode="previewMode"
           :image="currentImage"
           :preview-list="previewList"
@@ -1181,10 +1242,6 @@ onUnmounted(() => {
   padding-top: 10px;
   margin-top: auto;
   border-top: 1px solid var(--divider);
-}
-
-.archive-bottom-actions .download-action {
-  grid-column: 1 / -1;
 }
 
 .archive-bottom-actions :deep(.el-button) {

@@ -129,6 +129,25 @@ describe('print readiness and cleanup', () => {
     expect(document.querySelector('iframe')).toBeNull()
     expect(p.task.printing.value).toBe(false)
   })
+  it('marks landscape pages for rotation while keeping portrait and square pages upright', async () => {
+    const p = printer([true, true, true])
+    Object.defineProperty(p.pages[0], 'naturalHeight', { value: 50 })
+    Object.defineProperty(p.pages[1], 'naturalHeight', { value: 200 })
+    Object.defineProperty(p.pages[2], 'naturalHeight', { value: 100 })
+    await p.task.printSelected(p.images)
+    expect(p.pages[0].classList.contains('rotate-landscape')).toBe(true)
+    expect(p.pages[1].classList.contains('rotate-landscape')).toBe(false)
+    expect(p.pages[2].classList.contains('rotate-landscape')).toBe(false)
+    const html = p.doc.write.mock.calls[0][0] as string
+    expect(html).toContain('rotate-landscape')
+    expect(html).toContain('rotate(-90deg)')
+    // 页容器高度必须留出余量并禁止拆分，否则恰好整页会被分页舍入切出空白页
+    expect(html).toContain('calc(100vh - 2px)')
+    expect(html).toContain('break-inside: avoid')
+    expect(html).toContain('size: A4 portrait')
+    await vi.advanceTimersByTimeAsync(2000)
+    expect(document.querySelector('iframe')).toBeNull()
+  })
   it('preserves selected order and prints once only after every page succeeds', async () => {
     const p = printer([true, 'pending'])
     const pending = p.task.printSelected(p.images)

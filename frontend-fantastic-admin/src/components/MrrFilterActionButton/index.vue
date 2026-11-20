@@ -88,7 +88,9 @@ const iconName = computed(() => {
 
 <style scoped>
 .mrr-filter-action-button__icon {
-  margin-right: 6px;
+  /* 间距交给全局 .el-button > span 的 6px flex gap，图标不再叠加自身 margin
+     （原先 6+6=12px，侧栏窄按钮里显得松散） */
+  margin-right: 0;
 }
 
 .mrr-filter-action-button__icon.is-spinning {

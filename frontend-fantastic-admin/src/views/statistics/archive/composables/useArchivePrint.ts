@@ -22,12 +22,16 @@ export function useArchivePrint(selectedImages?: Readonly<Ref<readonly GalleryIm
 
     return `<!DOCTYPE html><html><head><meta charset="utf-8"><title>影像打印</title>
       <style>
-        @page { margin: 0; }
+        /* 显式钉住 A4 竖版：纸型不受打印机默认值影响，vh 才有确定基准。 */
+        @page { size: A4 portrait; margin: 0; }
         * { box-sizing: border-box; margin: 0; padding: 0; }
         body { margin: 0; }
-        .print-page { break-after: page; page-break-after: always; display: flex; align-items: center; justify-content: center; height: 100vh; }
+        /* 高度刻意比整页少 2px：A4 页高是 1122.5px 非整数值，恰好 100vh 会被
+           Chromium 分页舍入切出半像素尾巴，产生贴底裁切和整页空白。 */
+        .print-page { break-after: page; page-break-after: always; break-inside: avoid; page-break-inside: avoid; display: flex; align-items: center; justify-content: center; height: calc(100vh - 2px); overflow: hidden; }
         .print-page:last-child { break-after: auto; page-break-after: auto; }
-        .print-page img { max-width: 100%; max-height: 100vh; object-fit: contain; }
+        .print-page img { max-width: 100%; max-height: calc(100vh - 2px); object-fit: contain; }
+        .print-page img.rotate-landscape { width: calc(100vh - 2px); height: 100vw; max-width: none; max-height: none; transform: rotate(-90deg); }
       </style></head><body>${imagesHtml}</body></html>`
   }
 
@@ -113,6 +117,10 @@ export function useArchivePrint(selectedImages?: Readonly<Ref<readonly GalleryIm
       doc.close()
       await waitForImages(doc)
       if (disposed) { cleanup(); return }
+      // 横图逆时针转 90° 铺满竖版 A4（阅读时顺时针转纸）；宽高相等或竖图保持原样。
+      for (const image of doc.images) {
+        if (image.naturalWidth > image.naturalHeight) { image.classList.add('rotate-landscape') }
+      }
       win.addEventListener('afterprint', cleanup, { once: true })
       win.focus()
       win.print()

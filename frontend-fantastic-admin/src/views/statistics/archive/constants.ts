@@ -3,7 +3,6 @@ import {
   getMedicalRecordTypeLabel,
   MEDICAL_RECORD_TYPES,
 } from '@/constants/medical-record-types'
-import { normalizeMedicalRecordCode } from '@/utils/medical-record-code'
 
 export const TYPE_OPTIONS: TypeOption[] = MEDICAL_RECORD_TYPES.map(item => ({ ...item }))
 
@@ -28,10 +27,6 @@ export function formatDate(value: string | undefined): string {
     return '-'
   }
   return String(value).replace(/\//g, '-')
-}
-
-export function padCode(value: string): string {
-  return normalizeMedicalRecordCode(value)
 }
 
 export function buildTypeStats(images: { btype?: number | null }[]): TypeStatItem[] {

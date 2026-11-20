@@ -541,6 +541,10 @@ body .el-button--info.is-plain:not(.is-disabled):hover {
  * EP 按需样式注入晚于本文件，需 body 前缀提权（与上方桥接惯例相同）。
  */
 body .el-message {
+  /* 提示条必须压住页面级沉浸层：全屏影像 3000、预览工具栏 3001、确认弹窗 3200，
+   * 否则在影像全屏预览里改完分类，成功提示整条被图片盖住，看着像没生效。
+   * EP 把 z-index 写在行内 style 上，只能 !important 覆盖。 */
+  z-index: 3300 !important;
   border-color: var(--mrr-border);
   border-radius: var(--mrr-radius-md);
   box-shadow: var(--mrr-shadow-md);
@@ -905,9 +909,14 @@ body .el-card {
 body .el-table,
 body .el-alert,
 body .el-descriptions,
-body .el-segmented,
 body .el-collapse {
   border-radius: var(--mrr-radius-md);
+}
+
+/* 分段选择器统一胶囊形态：EP 默认选中指示只有 2px 圆角，宽选项（如「工作区布局」）下呈方形 */
+body .el-segmented,
+body .el-segmented .el-segmented__item-selected {
+  border-radius: 999px;
 }
 
 /* 需要按外层圆角裁剪内部背景、表头或图表内容的表面。 */
@@ -1169,4 +1178,99 @@ body .el-button-group > .el-button:last-child:not(:first-child) {
 
 body .el-button-group > .el-button:not(:first-child):not(:last-child) {
   border-radius: 0;
+}
+
+/*
+ * 全屏看图：先把背后的页面虚化再压暗，图片从背景里浮出来。
+ * Element Plus 默认是 #000 半透明遮罩，这里改成「模糊 + 半透明黑」并补一点投影。
+ *
+ * 虚化必须挂在 wrapper 上，不能挂在 mask 上：打开时 Element 用
+ * `.viewer-fade-enter-active` 给 wrapper 做 opacity 0→1 的淡入，而 opacity < 1
+ * 的祖先会成为 backdrop root —— 挂在里面的 mask 采样到的背景是空的，
+ * 于是淡入的 300ms 里只有「图已全屏、背景还是清晰的」，等动画结束才突然糊掉。
+ * 挂在 wrapper 自己身上没有中间 backdrop root，第一帧就能拿到真实背景。
+ * 同时把淡入缩短到 120ms，观感上是「和图片一起淡入」，不会再有先清晰后糊的跳变。
+ *
+ * backdrop-filter 自 Chrome 76 起可用（基线 86 命中），老内核走下方 @supports 回退，
+ * 退回更实的遮罩，避免出现「背景没虚化、只剩 58% 黑」的半成品观感。
+ * 注：项目里毛玻璃已在浮层表面整体下线（见 glass-surface.css），这里是唯一例外——
+ * 全屏看图需要把背后页面推远，才让影像成为视觉焦点。
+ */
+body .el-image-viewer__wrapper {
+  --el-transition-duration: 120ms;
+
+  backdrop-filter: blur(10px);
+}
+
+body .el-image-viewer__mask {
+  background: rgb(0 0 0 / 58%);
+  opacity: 1;
+}
+
+/*
+ * 图片层（canvas）铺满整个视口，会把空白处的点击全部吃掉，
+ * 遮罩上的 hide-on-click-modal 永远收不到事件。事件只透传下去、图片自己仍接收，
+ * 点击图片之外的空白就能关闭全屏（拖拽和缩放仍然只作用在图上是安全的）。
+ */
+body .el-image-viewer__canvas {
+  pointer-events: none;
+}
+
+body .el-image-viewer__img {
+  pointer-events: auto;
+  box-shadow: 0 20px 56px rgb(0 0 0 / 42%);
+}
+
+/*
+ * 操作控件（缩放条、左右翻页、关闭、页码）Element 默认是「深灰底 + 白图标」。
+ * 这套配色只在纯黑遮罩上成立，一到浅色主题就像贴了块深色补丁 —— 与页面里
+ * 所有浮层（工具条、下拉、对话框）的语言都不一致。
+ * 改成跟随主题的浮层卡片：亮色主题是白色玻璃 + 深色图标，暗色主题自动反转为
+ * 深色玻璃 + 浅色图标。遮罩仍保持半透明黑 —— 看图要压暗背景才有对比，与控件无关。
+ * 透明度走 `hsl(var(--card) / 92%)`（而非 color-mix），基线 Chrome 86 可直接解析。
+ */
+body .el-image-viewer__actions,
+body .el-image-viewer__prev,
+body .el-image-viewer__next,
+body .el-image-viewer__close {
+  color: var(--text-primary);
+  background-color: hsl(var(--card) / 92%);
+  border: 1px solid var(--divider);
+  box-shadow: var(--mrr-shadow-md);
+  opacity: 1;
+}
+
+body .el-image-viewer__actions__inner {
+  color: inherit;
+}
+
+body .el-image-viewer__prev:hover,
+body .el-image-viewer__next:hover,
+body .el-image-viewer__close:hover {
+  background-color: hsl(var(--card));
+  border-color: var(--mrr-primary);
+}
+
+body .el-image-viewer__prev:focus-visible,
+body .el-image-viewer__next:focus-visible,
+body .el-image-viewer__close:focus-visible {
+  outline: 2px solid var(--mrr-ring);
+  outline-offset: 2px;
+}
+
+/*
+ * 页码由使用方通过 toolbar 插槽画进胶囊内部（见 PreviewPanel），
+ * 不再用 Element 那个 bottom: 90px 的独立漂浮节点。
+ * 这里只统一胶囊内图标与页码之间的分隔线颜色。
+ */
+body .el-image-viewer__actions__divider {
+  width: 1px;
+  height: 18px;
+  background-color: var(--divider);
+}
+
+@supports not (backdrop-filter: blur(4px)) {
+  body .el-image-viewer__mask {
+    background: rgb(0 0 0 / 78%);
+  }
 }

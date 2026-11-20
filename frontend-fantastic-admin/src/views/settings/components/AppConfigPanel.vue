@@ -6,6 +6,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/ui/components/FaTabs
 import { notify } from '@/utils/notification'
 import { diffTwoObj } from '@/utils/object'
 import { normalizeThemeColor, readableInkOn, themeColorPresets } from '@/utils/theme-color'
+import { gr8rPrimary, normalizeThemePalette, themePalettePresets } from '@/utils/theme-palette'
 
 defineOptions({ name: 'AppConfigPanel' })
 
@@ -31,6 +32,8 @@ const appearanceGroups = [
 
 /** 当前主色，统一规范化后与预设比对，避免大小写或 `#RGB` 写法导致选中态丢失。 */
 const activeThemeColor = computed(() => normalizeThemeColor(settingsStore.settings.app.themeColor))
+const activeThemePalette = computed(() => normalizeThemePalette(settingsStore.settings.app.themePalette))
+const gr8rAccent = computed(() => gr8rPrimary(settingsStore.currentColorScheme ?? 'light'))
 
 /** 预设色块的墨色随底色深浅自动切换，自定义成亮黄/近白时对勾仍可见。 */
 function swatchInk(color: string): string {
@@ -206,6 +209,45 @@ function handleReset() {
         <div class="config-section">
           <div class="setting-item setting-item--stack">
             <div class="label-copy">
+              <strong>整体配色方案</strong>
+              <small>选择整套页面、侧栏、卡片和状态色；不会改变现有布局或业务功能。</small>
+            </div>
+            <div class="theme-palette-options" role="group" aria-label="整体配色方案">
+              <button
+                v-for="palette in themePalettePresets"
+                :key="palette.id"
+                type="button"
+                class="theme-palette-option"
+                :aria-pressed="activeThemePalette === palette.id"
+                @click="settingsStore.settings.app.themePalette = palette.id"
+              >
+                <span
+                  class="theme-palette-preview"
+                  aria-hidden="true"
+                  :style="{ backgroundColor: palette.preview.canvas, borderColor: palette.preview.line }"
+                >
+                  <span class="theme-palette-preview__sidebar" :style="{ backgroundColor: palette.preview.sidebar, borderColor: palette.preview.line }">
+                    <span :style="{ backgroundColor: palette.preview.ink, opacity: 0.5 }" />
+                    <span :style="{ backgroundColor: palette.preview.ink, opacity: 0.25 }" />
+                    <span :style="{ backgroundColor: palette.preview.accent, opacity: 0.75 }" />
+                  </span>
+                  <span class="theme-palette-preview__panel" :style="{ backgroundColor: palette.preview.surface, borderColor: palette.preview.line }">
+                    <span class="theme-palette-preview__heading" :style="{ backgroundColor: palette.preview.ink }" />
+                    <span class="theme-palette-preview__line" :style="{ backgroundColor: palette.preview.ink, opacity: 0.2 }" />
+                    <span class="theme-palette-preview__line theme-palette-preview__line--short" :style="{ backgroundColor: palette.preview.ink, opacity: 0.2 }" />
+                    <span class="theme-palette-preview__action" :style="{ backgroundColor: palette.preview.accent }" />
+                  </span>
+                </span>
+                <span class="theme-palette-option__name">
+                  <strong>{{ palette.name }}</strong>
+                  <FaIcon v-if="activeThemePalette === palette.id" name="i-lucide:check-circle-2" aria-hidden="true" />
+                </span>
+                <small>{{ palette.description }}</small>
+              </button>
+            </div>
+          </div>
+          <div class="setting-item setting-item--stack">
+            <div class="label-copy">
               <strong>颜色主题</strong>
               <small>可固定明亮、暗黑模式，或跟随操作系统。</small>
             </div>
@@ -223,9 +265,9 @@ function handleReset() {
           <div class="setting-item">
             <div class="label-copy">
               <strong>主题主色</strong>
-              <small>菜单、主要按钮和选中状态会同步使用此颜色。</small>
+              <small>{{ activeThemePalette === 'gr8r' ? 'Gr8r Studio 使用固定配套主色，随明暗模式自动调整；切回 MRR 经典可自由选色。' : '菜单、主要按钮和选中状态会同步使用此颜色。' }}</small>
             </div>
-            <div class="theme-colors" role="group" aria-label="主题主色">
+            <div v-if="activeThemePalette === 'mrr'" class="theme-colors" role="group" aria-label="主题主色">
               <button
                 v-for="preset in themeColorPresets"
                 :key="preset.color"
@@ -247,6 +289,16 @@ function handleReset() {
                 />
                 <span>自定义</span>
               </div>
+            </div>
+            <div v-else class="theme-palette-accent" aria-label="Gr8r Studio 当前主色">
+              <span class="theme-palette-accent__swatch" :style="{ backgroundColor: gr8rAccent }" aria-hidden="true" />
+              <span class="theme-palette-accent__copy">
+                <strong>{{ gr8rAccent }}</strong>
+                <small>原 MRR 主色设置已保留</small>
+              </span>
+              <button type="button" class="theme-palette-accent__reset" @click="settingsStore.settings.app.themePalette = 'mrr'">
+                自定义主色
+              </button>
             </div>
           </div>
 
@@ -780,6 +832,108 @@ function handleReset() {
   width: 240px;
 }
 
+/* 颜色预览使用真实调色板色值，避免选中方案前的预览受到当前主题覆盖。 */
+.theme-palette-options {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--mrr-space-3);
+  width: 100%;
+}
+.theme-palette-option {
+  display: grid;
+  gap: var(--mrr-space-2);
+  min-width: 0;
+  padding: 12px;
+  text-align: start;
+  cursor: pointer;
+  background: var(--mrr-card);
+  border: 1px solid var(--mrr-border);
+  border-radius: var(--mrr-radius-card);
+  transition: border-color var(--mrr-motion-feedback) ease, box-shadow var(--mrr-motion-feedback) ease;
+}
+.theme-palette-option[aria-pressed="true"] {
+  border-color: var(--mrr-primary);
+  box-shadow: inset 0 0 0 1px var(--mrr-primary);
+}
+.theme-palette-option:focus-visible,
+.theme-palette-accent__reset:focus-visible {
+  outline: 2px solid var(--mrr-navigation-active-foreground, var(--mrr-primary));
+  outline-offset: 2px;
+}
+@media (hover: hover) {
+  .theme-palette-option:not([aria-pressed="true"]):hover { border-color: var(--mrr-control-border-hover); }
+}
+.theme-palette-preview {
+  display: flex;
+  gap: 8px;
+  width: 100%;
+  height: 84px;
+  padding: 8px;
+  overflow: hidden;
+  border: 1px solid;
+  border-radius: var(--mrr-radius-md);
+}
+.theme-palette-preview__sidebar {
+  display: grid;
+  flex: 0 0 24%;
+  gap: 7px;
+  align-content: start;
+  padding: 7px;
+  border-right: 1px solid;
+  border-radius: 4px;
+}
+.theme-palette-preview__sidebar > span { display: block; height: 5px; border-radius: 2px; }
+.theme-palette-preview__panel {
+  display: grid;
+  flex: 1;
+  gap: 7px;
+  align-content: start;
+  min-width: 0;
+  padding: 9px;
+  border: 1px solid;
+  border-radius: 4px;
+}
+.theme-palette-preview__heading { width: 66%; height: 7px; border-radius: 2px; }
+.theme-palette-preview__line { width: 92%; height: 5px; border-radius: 2px; }
+.theme-palette-preview__line--short { width: 70%; }
+.theme-palette-preview__action { width: 39%; height: 9px; border-radius: 3px; }
+.theme-palette-option__name {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--mrr-space-2);
+  color: var(--mrr-foreground);
+  font-size: 13px;
+}
+.theme-palette-option__name :deep(svg) { color: var(--mrr-primary); }
+.theme-palette-option > small { color: var(--mrr-muted-foreground); font-size: 11px; line-height: 1.5; }
+.theme-palette-accent {
+  display: flex;
+  gap: var(--mrr-space-2);
+  align-items: center;
+  min-width: 0;
+}
+.theme-palette-accent__swatch {
+  display: block;
+  flex: 0 0 32px;
+  height: 32px;
+  border: 2px solid var(--mrr-card);
+  border-radius: 50%;
+  box-shadow: 0 0 0 1px var(--mrr-border);
+}
+.theme-palette-accent__copy { display: grid; gap: 2px; font-size: 12px; }
+.theme-palette-accent__copy small { color: var(--mrr-muted-foreground); font-size: 11px; }
+.theme-palette-accent__reset {
+  margin-inline-start: auto;
+  padding: 7px 9px;
+  color: var(--mrr-navigation-active-foreground);
+  cursor: pointer;
+  background: var(--mrr-muted);
+  border: 1px solid var(--mrr-border);
+  border-radius: var(--mrr-radius-md);
+  font-size: 12px;
+}
+
 .title-style-tabs {
   width: min(360px, 55%);
 }
@@ -1052,6 +1206,8 @@ function handleReset() {
   .radius-control {
     width: 100%;
   }
+  .theme-palette-options { grid-template-columns: 1fr; }
+  .theme-palette-accent { flex-wrap: wrap; }
 
   .button-options {
     justify-content: flex-start;

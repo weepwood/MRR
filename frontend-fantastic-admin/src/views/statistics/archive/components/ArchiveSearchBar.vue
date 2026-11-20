@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, watch } from 'vue'
+import { computed, ref, watch } from 'vue'
 import MrrFilterActionButton from '@/components/MrrFilterActionButton/index.vue'
 import MrrInputLengthBadge from '@/components/MrrInputLengthBadge/index.vue'
 import {
@@ -35,6 +35,12 @@ const showSearchCard = computed(() => shouldShowArchiveSearchCard(archiveAccessM
 const bahHint = computed(() => describeMedicalRecordCodeInput(searchBah.value))
 const sjhHint = computed(() => describeMedicalRecordCodeInput(searchSjh.value))
 const idCardHint = computed(() => describeIdCardInput(searchIdCard.value))
+
+/**
+ * 位数徽标只在输入框聚焦时显示：离开输入框后号码已经是补齐/归一化的最终值，
+ * 常驻徽标反而和号码抢 141px 半栏的空间。
+ */
+const focusedField = ref<'bah' | 'sjh' | 'idCard' | null>(null)
 
 /** 身份证号优先于病案号/上架号生效，此时上架号不再强制。 */
 const idCardTakesOver = computed(() => Boolean(normalizeIdCardInput(searchIdCard.value)))
@@ -74,6 +80,19 @@ function padCodeOnBlur(target: 'bah' | 'sjh') {
     model.value = padded
   }
 }
+
+function onFieldFocus(field: 'bah' | 'sjh' | 'idCard') {
+  focusedField.value = field
+}
+
+function onFieldBlur(target: 'bah' | 'sjh') {
+  padCodeOnBlur(target)
+  focusedField.value = null
+}
+
+function onIdCardBlur() {
+  focusedField.value = null
+}
 </script>
 
 <template>
@@ -88,11 +107,12 @@ function padCodeOnBlur(target: 'bah' | 'sjh') {
             aria-label="病案号"
             clearable
             placeholder="病案号"
-            @blur="padCodeOnBlur('bah')"
+            @focus="onFieldFocus('bah')"
+            @blur="onFieldBlur('bah')"
             @keyup.enter="emit('search')"
           >
             <template #suffix>
-              <MrrInputLengthBadge :length="bahHint.length" :total="CODE_LENGTH" :tone="bahHint.tone" label="病案号" />
+              <MrrInputLengthBadge v-if="focusedField === 'bah'" :length="bahHint.length" :total="CODE_LENGTH" :tone="bahHint.tone" label="病案号" />
             </template>
           </el-input>
           <el-input
@@ -103,11 +123,12 @@ function padCodeOnBlur(target: 'bah' | 'sjh') {
             :aria-required="sjhRequired"
             clearable
             :placeholder="sjhRequired ? '上架号 *' : '上架号'"
-            @blur="padCodeOnBlur('sjh')"
+            @focus="onFieldFocus('sjh')"
+            @blur="onFieldBlur('sjh')"
             @keyup.enter="emit('search')"
           >
             <template #suffix>
-              <MrrInputLengthBadge :length="sjhHint.length" :total="CODE_LENGTH" :tone="sjhHint.tone" label="上架号" />
+              <MrrInputLengthBadge v-if="focusedField === 'sjh'" :length="sjhHint.length" :total="CODE_LENGTH" :tone="sjhHint.tone" label="上架号" />
             </template>
           </el-input>
         </div>
@@ -121,9 +142,11 @@ function padCodeOnBlur(target: 'bah' | 'sjh') {
             maxlength="18"
             placeholder="身份证号"
             @keyup.enter="emit('search')"
+            @focus="onFieldFocus('idCard')"
+            @blur="onIdCardBlur()"
           >
             <template #suffix>
-              <MrrInputLengthBadge :length="idCardHint.length" :tone="idCardHint.tone" label="身份证号" />
+              <MrrInputLengthBadge v-if="focusedField === 'idCard'" :length="idCardHint.length" :tone="idCardHint.tone" label="身份证号" />
             </template>
           </el-input>
           <MrrFilterActionButton action="search" :pending="loading" :busy="loading" type="primary" @click="emit('search')">

@@ -81,8 +81,14 @@ test('病案号与上架号不足 8 位时，失焦后补前导零', async ({ pa
   await expect(bah).toHaveValue('00123456')
   await expect(sjh).toHaveValue('00009999')
 
+  // 位数徽标只在聚焦时显示：失焦后隐藏
   const bahBadge = page.locator('input[name="archive-bah"]').locator('xpath=ancestor::div[contains(@class,"el-input")]').locator('.length-badge')
+  await expect(bahBadge).toHaveCount(0)
+  await bah.click()
   await expect(bahBadge).toHaveText('8/8')
+  await sjh.click()
+  await expect(bahBadge).toHaveCount(0)
+  await expect(page.locator('input[name="archive-sjh"]').locator('xpath=ancestor::div[contains(@class,"el-input")]').locator('.length-badge')).toHaveText('8/8')
 })
 
 test('已满 8 位与非数字的历史编号不被改写', async ({ page }) => {
@@ -140,8 +146,15 @@ test('三种编号在默认侧栏宽度下完整显示，字号与徽标符合�
   // 12px 是收紧前的字号，调大后不应再掉回来
   expect(bah!.fontSize).toBeGreaterThanOrEqual(13)
   expect(idCard!.fontSize).toBeGreaterThanOrEqual(13)
-  // 徽标要让位给号码，不能再和号码抢字号
-  expect(bah!.badgeFontSize ?? 0).toBeLessThanOrEqual(10)
+  // 徽标要让位给号码，不能再和号码抢字号（聚焦时才显示，字号 9px）
+  await page.locator('input[name="archive-bah"]').focus()
+  const bahFocused = await measureInput(page, 'archive-bah')
+  expect(bahFocused!.badgeFontSize).not.toBeNull()
+  expect(bahFocused!.badgeFontSize!).toBeLessThanOrEqual(10)
+  // 未聚焦时徽标不渲染，号码独占 suffix 区
+  await page.locator('input[name="archive-id-card"]').focus()
+  const bahBlurred = await measureInput(page, 'archive-bah')
+  expect(bahBlurred!.badgeText).toBeNull()
 
   // 末位是 X 的 18 位号同样不能被裁
   await page.locator('input[name="archive-id-card"]').fill('11010119900101123X')

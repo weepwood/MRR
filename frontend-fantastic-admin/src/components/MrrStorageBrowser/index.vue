@@ -164,34 +164,73 @@ async function copyLocation(entry: Entry) {
 }
 
 /*
- * 占满内容区：把工作区提到布局右侧内容区（.main）之上，站点的头部、标签栏和侧边栏
- * 保持可见可操作，只把页面标题与外壳留白让给文件列表。
- * 尺寸由 .main 的实际矩形决定而不是写死 CSS 变量——顶栏可能是 static（随页面滚走）
- * 也可能是 sticky，只有测量才能两种情况都对；侧边栏折叠与窗口缩放会重新测量。
+ * 占满内容区：工作区脱离文档流，铺满右侧内容区（左侧导航保留），顶边直接贴到视口顶部，
+ * 把站点头部、标签栏和工具栏一并让给文件列表。横向从内容区左边界量起、右边界贴视口，
+ * 所以侧边栏折叠（走动画）、窗口缩放时都能收口，不依赖写死的 CSS 变量。
+ *
+ * 同时锁住文档滚动：占满层是 fixed，滚轮在列表滚到底后会把滚动链传给背后页面，
+ * 造成「文件列表没动、整页却在滚」。锁的是 body 的 overflow（与 el-dialog 同一套做法），
+ * 退出时恢复原值，并修正被浏览器钳制过的滚动位置。
  */
 const root = ref<HTMLElement>()
 const maximizeAnchor = ref<HTMLElement>()
 const maximized = ref(false)
-const overlayStyle = ref<{ top: string, left: string, width: string, height: string }>()
+const overlayStyle = ref<{ top: string, left: string, width: string, height: string, zIndex: string }>()
 let overlayObserver: ResizeObserver | undefined
+let scrollLock: { bodyOverflow: string, bodyPaddingRight: string, scrollY: number } | undefined
 
 function measureOverlay() {
   const main = root.value?.closest<HTMLElement>('.main')
   if (!main) {
-    overlayStyle.value = { top: '0px', left: '0px', width: `${window.innerWidth}px`, height: `${window.innerHeight}px` }
+    overlayStyle.value = { top: '0px', left: '0px', width: `${window.innerWidth}px`, height: `${window.innerHeight}px`, zIndex: '1000' }
     return
   }
   const rect = main.getBoundingClientRect()
-  // 顶栏可能是 static（随页面滚走）：此时 .main 的顶边会跑到视口上方，
-  // 收口到固定页头之下，避免把内容压到页头后面。
-  const headerHeight = Number.parseFloat(getComputedStyle(main).getPropertyValue('--g-header-actual-height')) || 0
-  const top = Math.max(0, Math.round(rect.top), Math.round(headerHeight))
+  const contentLeft = Math.max(0, Math.round(rect.left))
+  // 窗口窄到右侧内容区不足以放下左右两栏时（本项目不启用移动端自适应，侧栏在窄屏仍常驻），
+  // 让占满层连侧栏一起盖住，并把层级提到侧栏之上，否则文件区会被挤成一条窄缝。
+  const takeover = window.innerWidth - contentLeft < 560
+  const left = takeover ? 0 : contentLeft
   overlayStyle.value = {
-    top: `${top}px`,
-    left: `${Math.round(rect.left)}px`,
-    width: `${Math.round(rect.width)}px`,
-    // 页面滚到底时 .main 底部可能已在视口外，用视口高度收口，避免盖到屏幕下方。
-    height: `${Math.max(Math.round(window.innerHeight - top), 240)}px`,
+    top: '0px',
+    left: `${left}px`,
+    // 宽度按视口算而不是 .main 的宽度：滚动条被锁掉后内容区会宽 15px 左右，
+    // 用视口收口可以始终铺满，也不跟着这一次重排抖动。
+    width: `${Math.max(window.innerWidth - left, 320)}px`,
+    height: `${window.innerHeight}px`,
+    zIndex: takeover ? '1012' : '1000',
+  }
+}
+
+function lockPageScroll() {
+  if (scrollLock) {
+    return
+  }
+  const body = document.body
+  const scrollbar = window.innerWidth - document.documentElement.clientWidth
+  scrollLock = {
+    bodyOverflow: body.style.overflow,
+    bodyPaddingRight: body.style.paddingRight,
+    scrollY: window.scrollY,
+  }
+  body.style.overflow = 'hidden'
+  // 隐藏滚动条会让整页横向扩宽，补上等宽内边距，打开瞬间背后内容不横向跳动。
+  if (scrollbar > 0) {
+    body.style.paddingRight = `${scrollbar}px`
+  }
+}
+
+function unlockPageScroll() {
+  if (!scrollLock) {
+    return
+  }
+  const { bodyOverflow, bodyPaddingRight, scrollY } = scrollLock
+  scrollLock = undefined
+  document.body.style.overflow = bodyOverflow
+  document.body.style.paddingRight = bodyPaddingRight
+  // 占满期间内容脱离文档流，浏览器可能把滚动位置钳到新的可滚范围；退出时还原。
+  if (Math.abs(window.scrollY - scrollY) > 1) {
+    window.scrollTo(0, scrollY)
   }
 }
 
@@ -208,6 +247,7 @@ function exitMaximize(restoreFocus = true) {
   maximized.value = false
   overlayStyle.value = undefined
   stopTracking()
+  unlockPageScroll()
   if (restoreFocus) {
     maximizeAnchor.value?.querySelector('button')?.focus()
   }
@@ -220,6 +260,7 @@ function toggleMaximize() {
   }
   // 先按当前文档流位置量一次，避免 class 生效的首帧没有定位信息而闪一下。
   measureOverlay()
+  lockPageScroll()
   maximized.value = true
   window.addEventListener('resize', measureOverlay)
   const main = root.value?.closest<HTMLElement>('.main')
@@ -890,8 +931,9 @@ onBeforeUnmount(() => {
 }
 
 /*
- * 占满内容区：脱离文档流铺在 .main 上（坐标由脚本测量后写成行内样式），
- * 文件区与详情区改为在盒内滚动、表头吸顶，页面本身不再被长列表撑高。
+ * 占满内容区：脱离文档流铺满视口右侧（坐标由脚本测量后写成行内样式），
+ * 顶边贴视口顶部，把站点头部与工具栏一并盖住；文件区与详情区改为在盒内滚动、
+ * 表头吸顶。铺满后不再有卡片感，边框与圆角归零。
  */
 .storage-browser--maximized {
   position: fixed;
@@ -899,7 +941,12 @@ onBeforeUnmount(() => {
   display: flex;
   flex-direction: column;
   overflow: hidden;
-  box-shadow: var(--mrr-shadow-lg);
+  border: 0;
+  border-radius: 0;
+}
+
+.storage-browser--maximized .source-bar {
+  border-radius: 0;
 }
 
 .storage-browser--maximized .source-bar,

@@ -54,16 +54,14 @@ test('图标视图使用方向键切换选择，并保留相同的目录导航',
 })
 
 for (const path of ['/nginx-browser', '/oss-browser']) {
-  test(`${path} 占满右侧内容区并可用 Esc 还原`, async ({ page }) => {
+  test(`${path} 占满整个右侧内容区，盖住顶栏且锁住背后页面`, async ({ page }) => {
     const viewport = { width: 1440, height: 900 }
     await page.setViewportSize(viewport)
     await page.goto(path)
     const browser = page.locator('.storage-browser')
-    const main = page.locator('.main')
     const initial = await browser.boundingBox()
-    const contentArea = await main.boundingBox()
+    const contentLeft = Math.round((await page.locator('.main').boundingBox())!.x)
     expect(initial).not.toBeNull()
-    expect(contentArea).not.toBeNull()
 
     await page.getByRole('button', { name: '占满右侧内容区' }).click()
     await expect(page.getByRole('button', { name: '退出占满区域' })).toHaveAttribute('aria-pressed', 'true')
@@ -71,19 +69,26 @@ for (const path of ['/nginx-browser', '/oss-browser']) {
 
     const expanded = await browser.boundingBox()
     expect(expanded).not.toBeNull()
-    // 与右侧内容区（.main）严格对齐：左边界贴侧边栏，底部贴视口。
-    expect(expanded!.x).toBeCloseTo(contentArea!.x, 0)
-    expect(expanded!.width).toBeCloseTo(contentArea!.width, 0)
-    expect(expanded!.y).toBeCloseTo(contentArea!.y, 0)
-    expect(expanded!.y + expanded!.height).toBeCloseTo(viewport.height, 0)
+    // 顶到视口顶部、右边缘贴视口：站点头部与工具栏不再占位，左侧导航仍保留。
+    expect(expanded!.x).toBeCloseTo(contentLeft, 0)
+    expect(expanded!.width).toBeCloseTo(viewport.width - contentLeft, 0)
+    expect(expanded!.y).toBeCloseTo(0, 0)
+    expect(expanded!.height).toBeCloseTo(viewport.height, 0)
     expect(expanded!.height).toBeGreaterThan(initial!.height)
 
-    // 页面标题和外壳留白被让出来，但站点导航仍然可见可操作。
-    await expect(page.locator('.mrr-page-header')).toBeVisible()
+    // 原先落在顶栏上的点现在命中占满层，说明工具栏确实被盖住而不是仍然露着。
+    const covered = await page.evaluate(({ x, y }) => {
+      return Boolean(document.elementFromPoint(x, y)?.closest('.storage-browser'))
+    }, { x: contentLeft + 40, y: 24 })
+    expect(covered).toBe(true)
+
+    // 背后页面被锁住：滚动条消失、body 不可滚，避免列表滚到底后整页跟着走。
+    expect(await page.evaluate(() => getComputedStyle(document.body).overflow)).toBe('hidden')
 
     await page.keyboard.press('Escape')
     await expect(browser).not.toHaveCSS('position', 'fixed')
     await expect(page.getByRole('button', { name: '占满右侧内容区' })).toHaveAttribute('aria-pressed', 'false')
+    expect(await page.evaluate(() => getComputedStyle(document.body).overflow)).not.toBe('hidden')
     const restored = await browser.boundingBox()
     expect(restored!.height).toBeCloseTo(initial!.height, 0)
   })
@@ -133,4 +138,12 @@ test('占满模式下长列表在盒内滚动，不再把页面撑高', async ({
   // 列表比可视区高，却在盒子内部滚动，溢出不会顶到视口外。
   expect(metrics.scrollHeight).toBeGreaterThan(metrics.clientHeight)
   expect(metrics.bottom).toBeLessThanOrEqual(620)
+
+  // 在列表里滚轮到底，页面本身不许跟着走。
+  const pageScrollBefore = await page.evaluate(() => window.scrollY)
+  const box = (await pane.boundingBox())!
+  await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2)
+  await page.mouse.wheel(0, 1200)
+  await expect.poll(() => pane.evaluate(node => node.scrollTop)).toBeGreaterThan(0)
+  expect(await page.evaluate(() => window.scrollY)).toBe(pageScrollBefore)
 })

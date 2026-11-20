@@ -94,7 +94,7 @@ export const themePalettePresets = [
   },
   {
     id: 'gr8r',
-    name: 'Gr8r Studio',
+    name: '暖色扁平风格',
     description: '暖灰中性色与柔和靛蓝，含明暗两套配色',
     preview: {
       canvas: GR8R_COLORS.light.canvas,

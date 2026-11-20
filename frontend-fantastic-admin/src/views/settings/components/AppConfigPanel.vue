@@ -265,7 +265,7 @@ function handleReset() {
           <div class="setting-item">
             <div class="label-copy">
               <strong>主题主色</strong>
-              <small>{{ activeThemePalette === 'gr8r' ? 'Gr8r Studio 使用固定配套主色，随明暗模式自动调整；切回 MRR 经典可自由选色。' : '菜单、主要按钮和选中状态会同步使用此颜色。' }}</small>
+              <small>{{ activeThemePalette === 'gr8r' ? '暖色扁平风格使用固定配套主色，随明暗模式自动调整；切回 MRR 经典可自由选色。' : '菜单、主要按钮和选中状态会同步使用此颜色。' }}</small>
             </div>
             <div v-if="activeThemePalette === 'mrr'" class="theme-colors" role="group" aria-label="主题主色">
               <button
@@ -290,7 +290,7 @@ function handleReset() {
                 <span>自定义</span>
               </div>
             </div>
-            <div v-else class="theme-palette-accent" aria-label="Gr8r Studio 当前主色">
+            <div v-else class="theme-palette-accent" aria-label="暖色扁平风格当前主色">
               <span class="theme-palette-accent__swatch" :style="{ backgroundColor: gr8rAccent }" aria-hidden="true" />
               <span class="theme-palette-accent__copy">
                 <strong>{{ gr8rAccent }}</strong>

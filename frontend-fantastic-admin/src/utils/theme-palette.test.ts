@@ -4,11 +4,17 @@ import {
   applyThemePalette,
   GR8R_COLORS,
   gr8rCssVariables,
+  themePalettePresets,
   gr8rPrimary,
   normalizeThemePalette,
 } from './theme-palette'
 
-describe('gr8r Studio 完整主题色板', () => {
+describe('暖色扁平风格配色方案', () => {
+  it('在设置界面使用新名称并保留旧配置标识', () => {
+    expect(themePalettePresets.find(palette => palette.id === 'gr8r')?.name).toBe('暖色扁平风格')
+    expect(normalizeThemePalette('gr8r')).toBe('gr8r')
+  })
+
   it('忠实映射独立组件库 v0.2.0 的明暗核心色', () => {
     expect(GR8R_COLORS.light).toMatchObject({
       canvas: '#FAF9F7',

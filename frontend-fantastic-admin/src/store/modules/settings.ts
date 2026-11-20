@@ -7,6 +7,7 @@ import { notify } from '@/utils/notification'
 import { merge } from '@/utils/object'
 import { checkSessionPermission } from '@/utils/permission'
 import { buildThemeColorScale, toCssVariables } from '@/utils/theme-color'
+import { applyThemePalette, gr8rPrimary, normalizeThemePalette } from '@/utils/theme-palette'
 
 const APP_SETTINGS_STORAGE_KEY = 'MRR-ADMIN:app-settings'
 
@@ -43,7 +44,7 @@ const UI_SETTINGS_PUSH_DELAY_MS = 800
  * </p>
  */
 const UI_SETTINGS_PICK: Record<string, readonly string[]> = {
-  app: ['colorScheme', 'themeColor', 'radius', 'radiusShape', 'pageTitleStyle', 'enableMournMode', 'enableColorAmblyopiaMode', 'enableDynamicTitle', 'enableProgress'],
+  app: ['colorScheme', 'themePalette', 'themeColor', 'radius', 'radiusShape', 'pageTitleStyle', 'enableMournMode', 'enableColorAmblyopiaMode', 'enableDynamicTitle', 'enableProgress'],
   layout: ['enableMobileAdaptation'],
   menu: ['mode', 'mainMenuClickMode', 'subMenuUniqueOpened', 'enableSubMenuCollapseButton', 'enableHotkeys', 'externalLinks'],
   topbar: ['mode'],
@@ -103,6 +104,7 @@ function getInitialSettings(): RecursiveRequired<Settings.all> {
     const savedSettings = localStorage.getItem(APP_SETTINGS_STORAGE_KEY)
     const initialSettings = savedSettings ? merge(JSON.parse(savedSettings), defaults) : defaults
     initialSettings.app.pageTitleStyle = normalizePageTitleStyle(initialSettings.app.pageTitleStyle)
+    initialSettings.app.themePalette = normalizeThemePalette(initialSettings.app.themePalette)
     return initialSettings
   }
   catch {
@@ -199,8 +201,17 @@ export const useSettingsStore = defineStore(
 
     watch([
       () => settings.value.app.themeColor,
+      () => settings.value.app.themePalette,
       currentColorScheme,
-    ], ([color, scheme]) => applyThemeColor(color, scheme ?? 'light'), {
+    ], ([color, palette, scheme]) => {
+      const resolvedScheme = scheme ?? 'light'
+      const selected = normalizeThemePalette(palette)
+      const root = document.documentElement
+      // 切换完整调色板时先更新背景/导航/状态色，然后由唯一写入点推导主色色阶。
+      applyThemePalette(root, selected, resolvedScheme)
+      // Gr8r 深色主色单独提亮，原 MRR 自定义主色始终保留，不会被选择主题覆盖。
+      applyThemeColor(selected === 'gr8r' ? gr8rPrimary(resolvedScheme) : color, resolvedScheme)
+    }, {
       immediate: true,
     })
 

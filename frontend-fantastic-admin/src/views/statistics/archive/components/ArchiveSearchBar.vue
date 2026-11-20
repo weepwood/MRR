@@ -235,4 +235,13 @@ function onIdCardBlur() {
 .search-fields :deep(.el-input__suffix-inner > :first-child) {
   margin-left: 0;
 }
+
+/*
+ * 位数徽标排在清空叉号左侧（EP 的 DOM 顺序叉号在前，用 order 反转）：
+ * 徽标随聚焦出现/消失，宽度变化只发生在叉号左侧，叉号永远贴住右缘、位置不动。
+ */
+.search-fields :deep(.el-input__suffix-inner .length-badge) {
+  order: -1;
+  margin-left: 0;
+}
 </style>

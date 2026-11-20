@@ -64,6 +64,7 @@ Pages 使用独立的 `pages` 构建模式，复用现有 Mock 数据；演示�
 ```bash
 cd frontend-fantastic-admin
 pnpm install --frozen-lockfile
+cp .env.pages.example .env.pages
 pnpm build:pages
 node scripts/smoke-pages-demo.mjs
 ```

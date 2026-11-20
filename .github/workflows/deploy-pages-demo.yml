@@ -48,6 +48,9 @@ jobs:
       - name: 安装依赖
         run: pnpm install --frozen-lockfile
 
+      - name: 生成演示环境文件
+        run: cp .env.pages.example .env.pages
+
       - name: 构建静态演示版本
         run: pnpm build:pages
 

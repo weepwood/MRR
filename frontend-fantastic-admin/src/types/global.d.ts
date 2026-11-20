@@ -17,6 +17,12 @@ declare namespace Settings {
      */
     colorScheme?: 'light' | 'dark' | ''
     /**
+     * 整体配色方案：mrr 为原主题；gr8r 使用完整暖灰/靛蓝色板。
+     * 该选项与 colorScheme（明暗模式）正交。
+     * @默认值 'mrr'
+     */
+    themePalette?: 'mrr' | 'gr8r'
+    /**
      * 主题主色（十六进制颜色）
      * @默认值 `'#2563eb'`
      */

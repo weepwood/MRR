@@ -25,9 +25,10 @@ export function useArchivePrint(selectedImages?: Readonly<Ref<readonly GalleryIm
         @page { margin: 0; }
         * { box-sizing: border-box; margin: 0; padding: 0; }
         body { margin: 0; }
-        .print-page { break-after: page; page-break-after: always; display: flex; align-items: center; justify-content: center; height: 100vh; }
+        .print-page { break-after: page; page-break-after: always; display: flex; align-items: center; justify-content: center; height: 100vh; overflow: hidden; }
         .print-page:last-child { break-after: auto; page-break-after: auto; }
         .print-page img { max-width: 100%; max-height: 100vh; object-fit: contain; }
+        .print-page img.rotate-landscape { width: 100vh; height: 100vw; max-width: none; max-height: none; transform: rotate(-90deg); }
       </style></head><body>${imagesHtml}</body></html>`
   }
 
@@ -113,6 +114,10 @@ export function useArchivePrint(selectedImages?: Readonly<Ref<readonly GalleryIm
       doc.close()
       await waitForImages(doc)
       if (disposed) { cleanup(); return }
+      // 横图逆时针转 90° 铺满竖版 A4（阅读时顺时针转纸）；宽高相等或竖图保持原样。
+      for (const image of doc.images) {
+        if (image.naturalWidth > image.naturalHeight) { image.classList.add('rotate-landscape') }
+      }
       win.addEventListener('afterprint', cleanup, { once: true })
       win.focus()
       win.print()

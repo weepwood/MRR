@@ -10,7 +10,11 @@ import { getPatients } from '@/api/modules/patients'
 import AppEmpty from '@/components/AppEmpty/index.vue'
 import AppError from '@/components/AppError/index.vue'
 import AppLoading from '@/components/AppLoading/index.vue'
+import MrrDataTablePanel from '@/components/MrrDataTablePanel/index.vue'
 import MrrFilterActionButton from '@/components/MrrFilterActionButton/index.vue'
+import MrrFilterBar from '@/components/MrrFilterBar/index.vue'
+import MrrPageHeader from '@/components/MrrPageHeader/index.vue'
+import MrrPageShell from '@/components/MrrPageShell/index.vue'
 import MrrTableActions from '@/components/MrrTableActions/index.vue'
 import { useTableActionLayout } from '@/composables/useTableActionLayout'
 import useAuth from '@/utils/composables/useAuth'
@@ -190,121 +194,123 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <div class="page-shell">
-    <div class="page-header">
-      <div>
-        <p class="eyebrow">
-          Patient Management
-        </p>
-        <h2>患者管理</h2>
-        <p class="subtitle">
-          查询和编辑患者基本信息，并查看身份证完整性与重复患者情况。数据导入导出统一在数据导入导出页面执行。
-        </p>
-      </div>
-      <div class="header-actions">
-        <el-button type="primary" :icon="Upload" @click="openDataExchange">
-          数据导入导出
-        </el-button>
+  <MrrPageShell compact>
+    <MrrPageHeader
+      title="患者管理"
+      description="查询和编辑患者基本信息，并查看身份证完整性与重复患者情况。"
+    >
+      <template #actions>
         <el-button :loading="loading" :icon="Refresh" @click="refreshAll">
           刷新
         </el-button>
-      </div>
-    </div>
+        <el-button :icon="Upload" @click="openDataExchange">
+          数据导入导出
+        </el-button>
+      </template>
+    </MrrPageHeader>
 
     <PatientAnalyticsPanel :refresh-key="analyticsRefreshKey">
-      <template #search>
-        <el-card shadow="never">
-          <div class="filter-bar">
-            <el-input
-              v-model="filters.keyword"
-              placeholder="搜索病案号 / 姓名 / 身份证号 / 科室 / 病区 / 床位"
-              clearable
-              class="filter-input"
-              @keyup.enter="handleSearch"
-            >
-              <template #prefix>
-                <el-icon><Search /></el-icon>
-              </template>
-            </el-input>
-            <div class="filter-actions">
-              <MrrFilterActionButton action="search" :pending="loading" :busy="loading" @click="handleSearch">
-                查询
-              </MrrFilterActionButton>
-              <MrrFilterActionButton action="reset" :pending="loading" :busy="loading" @click="resetFilters">
-                重置
-              </MrrFilterActionButton>
-            </div>
-          </div>
-        </el-card>
-      </template>
-
       <template #patients>
-        <AppLoading v-if="loading" type="table" :rows="8" />
-        <AppError v-else-if="error" :message="error" @retry="loadData" />
-        <AppEmpty v-else-if="!tableData.length" description="暂无患者记录" />
-        <el-table v-else :data="tableData" stripe class="patients-table">
-          <el-table-column prop="id" label="ID" width="100" />
-          <el-table-column prop="bah" label="病案号" width="140">
-            <template #default="{ row }">
-              <router-link
-                v-if="row.bah"
-                :to="{ path: '/archive', query: { bah: row.bah, from: 'patients' } }"
-                class="bah-link"
-                target="_blank"
-                rel="noopener noreferrer"
-              >
-                {{ row.bah }}
-              </router-link>
-              <span v-else>—</span>
-            </template>
-          </el-table-column>
-          <el-table-column prop="name" label="姓名" width="100" />
-          <el-table-column prop="idCard" label="身份证号" width="200">
-            <template #default="{ row }">
-              <el-button
-                v-if="patientIdCardRevealEnabled || patientIdCardCopyEnabled"
-                link
-                class="id-card-toggle"
-                @click="handleIdCardClick(row.idCard)"
-              >
-                {{ isIdCardRevealed(row.idCard) ? row.idCard : maskIdCard(row.idCard) }}
-              </el-button>
-              <span v-else>{{ maskIdCard(row.idCard) }}</span>
-            </template>
-          </el-table-column>
-          <el-table-column prop="department" label="科室" width="150" show-overflow-tooltip />
-          <el-table-column prop="bingqu" label="病区" width="150" show-overflow-tooltip />
-          <el-table-column prop="chuangwei" label="床位" width="120" show-overflow-tooltip />
-          <el-table-column prop="ruyuan" label="入院日期" width="120" />
-          <el-table-column prop="admissiontime" label="入院时间" min-width="160" show-overflow-tooltip />
-          <el-table-column
-            v-if="canEditPatients"
-            label="操作"
-            :width="patientActionColumnWidth"
-            fixed="right"
-            align="center"
-          >
-            <template #default="{ row }">
-              <MrrTableActions
-                :actions="patientActions"
-                :max-inline="patientMaxInlineActions"
-                @select="handlePatientAction($event, row)"
-              />
-            </template>
-          </el-table-column>
-        </el-table>
+        <MrrDataTablePanel
+          title="患者列表"
+          description="支持按病案号、姓名、身份证号、科室、病区或床位查询。"
+          :count="loading || error ? undefined : total"
+        >
+          <template #filters>
+            <MrrFilterBar embedded class="mrr-filter-bar--labelled">
+              <div class="mrr-filter-field patient-keyword">
+                <label for="patients-keyword">关键词</label>
+                <el-input
+                  id="patients-keyword"
+                  v-model="filters.keyword"
+                  aria-label="关键词"
+                  placeholder="例如病案号或姓名"
+                  clearable
+                  @keyup.enter="handleSearch"
+                >
+                  <template #prefix>
+                    <el-icon><Search /></el-icon>
+                  </template>
+                </el-input>
+              </div>
+              <template #actions>
+                <MrrFilterActionButton action="search" :pending="loading" :busy="loading" @click="handleSearch">
+                  查询
+                </MrrFilterActionButton>
+                <MrrFilterActionButton action="reset" :pending="loading" :busy="loading" @click="resetFilters">
+                  重置
+                </MrrFilterActionButton>
+              </template>
+            </MrrFilterBar>
+          </template>
 
-        <div class="pagination-bar">
-          <el-pagination
-            v-model:current-page="page"
-            v-model:page-size="size"
-            :total="total"
-            :page-sizes="[10, 20, 50, 100]"
-            layout="total, sizes, prev, pager, next, jumper"
-            @current-change="handlePageChange"
-            @size-change="handleSizeChange"
-          />
-        </div>
+          <AppLoading v-if="loading" type="table" :rows="8" />
+          <AppError v-else-if="error" :message="error" @retry="loadData" />
+          <AppEmpty v-else-if="!tableData.length" description="暂无患者记录" />
+          <el-table v-else :data="tableData" stripe class="patients-table">
+            <el-table-column prop="bah" label="病案号" width="140">
+              <template #default="{ row }">
+                <router-link
+                  v-if="row.bah"
+                  :to="{ path: '/archive', query: { bah: row.bah, from: 'patients' } }"
+                  class="bah-link"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  {{ row.bah }}
+                </router-link>
+                <span v-else>—</span>
+              </template>
+            </el-table-column>
+            <el-table-column prop="name" label="姓名" width="100" />
+            <el-table-column prop="idCard" label="身份证号" width="200">
+              <template #default="{ row }">
+                <el-button
+                  v-if="patientIdCardRevealEnabled || patientIdCardCopyEnabled"
+                  link
+                  class="id-card-toggle"
+                  @click="handleIdCardClick(row.idCard)"
+                >
+                  {{ isIdCardRevealed(row.idCard) ? row.idCard : maskIdCard(row.idCard) }}
+                </el-button>
+                <span v-else>{{ maskIdCard(row.idCard) }}</span>
+              </template>
+            </el-table-column>
+            <el-table-column prop="department" label="科室" width="150" show-overflow-tooltip />
+            <el-table-column prop="bingqu" label="病区" width="150" show-overflow-tooltip />
+            <el-table-column prop="chuangwei" label="床位" width="120" show-overflow-tooltip />
+            <el-table-column prop="ruyuan" label="入院日期" width="120" />
+            <el-table-column prop="admissiontime" label="入院时间" min-width="160" show-overflow-tooltip />
+            <el-table-column prop="id" label="ID" width="100" />
+            <el-table-column
+              v-if="canEditPatients"
+              label="操作"
+              :width="patientActionColumnWidth"
+              fixed="right"
+              align="center"
+            >
+              <template #default="{ row }">
+                <MrrTableActions
+                  :actions="patientActions"
+                  :max-inline="patientMaxInlineActions"
+                  @select="handlePatientAction($event, row)"
+                />
+              </template>
+            </el-table-column>
+          </el-table>
+
+          <template v-if="total > 0 && !error" #pagination>
+            <el-pagination
+              v-model:current-page="page"
+              v-model:page-size="size"
+              :total="total"
+              :page-sizes="[10, 20, 50, 100]"
+              layout="sizes, prev, pager, next, jumper"
+              @current-change="handlePageChange"
+              @size-change="handleSizeChange"
+            />
+          </template>
+        </MrrDataTablePanel>
       </template>
     </PatientAnalyticsPanel>
 
@@ -313,27 +319,27 @@ onUnmounted(() => {
       :patient="editingPatient"
       @saved="handlePatientSaved"
     />
-  </div>
+  </MrrPageShell>
 </template>
 
 <style scoped>
-.page-shell { display: grid; gap: 16px; }
-.page-header { display: flex; gap: 16px; align-items: flex-start; justify-content: space-between; }
-.header-actions { display: flex; gap: 10px; align-items: center; }
-.eyebrow { margin: 0 0 6px; font-size: 12px; font-weight: 700; color: var(--mrr-muted-foreground); text-transform: uppercase; letter-spacing: 0.12em; }
-h2 { margin: 0; font-size: 28px; }
-.subtitle { margin: 8px 0 0; color: var(--mrr-muted-foreground); }
-.filter-bar { display: flex; gap: 12px; align-items: center; }
-.filter-input { flex: 1; width: auto; min-width: 0; max-width: 560px; }
-.filter-actions { display: flex; gap: 12px; align-items: center; margin-left: auto; }
-.patients-table { width: 100%; }
-.pagination-bar { display: flex; justify-content: flex-end; margin-top: 16px; }
-.id-card-toggle { font-size: 12px; }
-.bah-link { color: var(--el-color-primary); text-decoration: none; }
-.bah-link:hover { text-decoration: underline; }
+.patient-keyword {
+  flex: 1 1 280px;
+}
+
+.id-card-toggle {
+  font-size: 12px;
+}
+
+.bah-link {
+  color: var(--mrr-navigation-active-foreground);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
 
 @media (max-width: 760px) {
-  .page-header { flex-direction: column; }
-  .header-actions { flex-wrap: wrap; width: 100%; }
+  .patient-keyword {
+    flex: 1 1 100%;
+  }
 }
 </style>

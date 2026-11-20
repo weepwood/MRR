@@ -50,6 +50,21 @@ beforeEach(() => {
 afterEach(() => { wrappers.splice(0).forEach(wrapper => wrapper.unmount()) })
 
 describe('oSS只读浏览器恢复', () => {
+  it('目录权限被撤销后清空当前位置和翻页历史', async () => {
+    const { vm } = await setup()
+    vm.nextPage()
+    await flushPromises()
+    expect(vm.canPreviousPage).toBe(true)
+
+    vi.mocked(browseOssObjects).mockRejectedValueOnce(Object.assign(new Error('forbidden'), { response: { status: 403 } }))
+    await vm.loadDirectory(`${root}protected/`, undefined, { rememberFolder: true })
+
+    expect(vm.currentPrefix).toBe(root)
+    expect(vm.currentContinuationToken).toBeUndefined()
+    expect(vm.canPreviousPage).toBe(false)
+    expect(vm.canGoBack).toBe(false)
+  })
+
   it('下一页失败不增加游标历史，成功重试后仍能返回第一页', async () => {
     const { vm } = await setup()
     vi.mocked(browseOssObjects).mockRejectedValueOnce(new Error('synthetic failure'))

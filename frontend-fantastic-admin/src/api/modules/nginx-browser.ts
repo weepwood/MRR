@@ -37,18 +37,20 @@ export interface NginxBrowseParams {
   limit?: number
 }
 
-export function getNginxBrowserServers() {
-  return getRequest<NginxBrowserServer[]>('/api/v1/nginx-browser/servers')
+export function getNginxBrowserServers(signal?: AbortSignal) {
+  return getRequest<NginxBrowserServer[]>('/api/v1/nginx-browser/servers', { signal, skipGlobalError: true })
 }
 
-export function browseNginxDirectory(params: NginxBrowseParams = {}) {
-  return getRequest<NginxBrowserPage>('/api/v1/nginx-browser', { params })
+export function browseNginxDirectory(params: NginxBrowseParams = {}, signal?: AbortSignal) {
+  return getRequest<NginxBrowserPage>('/api/v1/nginx-browser', { params, signal, skipGlobalError: true })
 }
 
-export async function fetchNginxBrowserFile(server: string, path: string): Promise<Blob> {
+export async function fetchNginxBrowserFile(server: string, path: string, signal?: AbortSignal): Promise<Blob> {
   const response = await api.get<Blob>('/api/v1/nginx-browser/file', {
     params: { server, path },
     responseType: 'blob',
+    signal,
+    skipGlobalError: true,
   })
   return response as unknown as Blob
 }

@@ -185,7 +185,7 @@ export default defineFakeRoute([
       const key = String((query as Record<string, unknown>)?.key || '')
       return ok({
         key,
-        ossUrl: `https://images.example.test/${encodeURIComponent(key)}?signature=mock`,
+        ossUrl: /\.(?:jpg|tif)$/i.test(key) ? '/pwa/icon-512.png' : `https://images.example.test/${encodeURIComponent(key)}?signature=mock`,
       })
     },
   },

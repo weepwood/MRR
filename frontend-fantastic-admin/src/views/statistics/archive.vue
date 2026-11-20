@@ -10,7 +10,7 @@ import { computed, nextTick, onMounted, onUnmounted, reactive, ref, watch } from
 import { useRoute, useRouter } from 'vue-router'
 import { actionDialog } from '@/ui/components/ActionDialog'
 import { describeIdCardInput, ID_CARD_PATTERN, normalizeIdCardInput } from '@/utils/identifier-input'
-import { getArchiveLookupValidationMessage } from '@/utils/medical-record-code'
+import { getArchiveLookupValidationMessage, requiresSjhForBah } from '@/utils/medical-record-code'
 import {
   createDefaultSystemSettings,
   loadEffectiveSystemSettings,
@@ -56,6 +56,7 @@ const {
   errorMsg,
   requestId,
   lookupReason,
+  submittedImageQuery,
   searchBah,
   searchSjh,
   searchIdCard,
@@ -65,9 +66,10 @@ const {
   downloadJobCancelling,
   downloadJobDownloading,
   loadImages,
+  resetImageLookup,
+  getImageLookupVersion,
   loadArchiveCasesByIdCard,
   loadArchiveCasesByToken,
-  setPatientFromArchiveCase,
   clearIdCardSearch,
   handleDownload,
   cancelDownloadJob,
@@ -342,7 +344,8 @@ function persistSelection() {
   }
 }
 
-function clearArchiveState(message = '') {
+function clearArchiveState(message = '', reason = '') {
+  resetImageLookup(reason)
   images.value = []
   patientList.value = []
   errorMsg.value = message
@@ -357,16 +360,20 @@ async function loadSelectedArchiveCase(archiveCase: IdCardArchiveCase, forceRefr
   selectedType.value = 'all'
   selectedImageIndex.value = 0
   selectedIds.value = new Set()
-  await loadImages(forceRefresh)
-  setPatientFromArchiveCase(archiveCase)
+  await loadImages(forceRefresh, archiveCase)
 }
 
 async function syncIdCardSearchFromRoute(idParam: string, bah: string, sjh: string, forceRefresh = false) {
   const isPlainIdCard = ID_CARD_PATTERN.test(idParam)
   if (forceRefresh || idCardToken.value !== idParam || !archiveCases.value.length) {
-    const result = isPlainIdCard
-      ? await loadArchiveCasesByIdCard(idParam)
-      : await loadArchiveCasesByToken(idParam)
+    const pending = isPlainIdCard
+      ? loadArchiveCasesByIdCard(idParam)
+      : loadArchiveCasesByToken(idParam)
+    const version = getImageLookupVersion()
+    const result = await pending
+    if (version !== getImageLookupVersion() || result === undefined) {
+      return
+    }
     if (!result) {
       clearArchiveState(errorMsg.value || '身份证查询链接无效')
       return
@@ -429,12 +436,17 @@ async function handleIdCardSearch() {
   const idCard = normalizeIdCardInput(searchIdCard.value)
   if (!ID_CARD_PATTERN.test(idCard)) {
     const message = describeIdCardInput(idCard).message || '请输入正确的 15 位或 18 位身份证号'
-    clearArchiveState(message)
+    clearArchiveState(message, 'INVALID_INPUT')
     ElMessage.warning(message)
     return
   }
 
-  const result = await loadArchiveCasesByIdCard(idCard)
+  const pending = loadArchiveCasesByIdCard(idCard)
+  const version = getImageLookupVersion()
+  const result = await pending
+  if (version !== getImageLookupVersion() || result === undefined) {
+    return
+  }
   const firstCase = result?.cases?.[0]
   if (!result?.token || !firstCase) {
     clearArchiveState(errorMsg.value || '未查询到该患者的影像病案')
@@ -468,7 +480,7 @@ async function handleSearch() {
   searchSjh.value = sjh
 
   if (validationMessage) {
-    clearArchiveState(validationMessage)
+    clearArchiveState(validationMessage, requiresSjhForBah(bah) && !sjh ? 'NEEDS_SJH' : 'INVALID_INPUT')
     ElMessage.warning(validationMessage)
     return
   }
@@ -950,8 +962,7 @@ onUnmounted(() => {
             :message="errorMsg"
             :reason="lookupReason"
             :request-id="requestId"
-            :bah="searchBah"
-            :sjh="searchSjh"
+            :query="submittedImageQuery"
             @retry="handleRefresh"
           />
           <el-alert v-else-if="errorMsg" :title="errorMsg" type="error" show-icon />

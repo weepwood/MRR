@@ -73,6 +73,7 @@ export function useArchiveImages(options: UseArchiveImagesOptions = {}) {
   const errorMsg = ref('')
   const requestId = ref('')
   const lookupReason = ref('')
+  const submittedImageQuery = shallowRef<{ bah: string, sjh: string } | null>(null)
   let queryVersion = 0
   const searchBah = ref('')
   const searchSjh = ref('')
@@ -159,13 +160,20 @@ export function useArchiveImages(options: UseArchiveImagesOptions = {}) {
     }
   }
 
-  async function loadImages(forceRefresh = false): Promise<void> {
-    const version = ++queryVersion
-    const historySession = captureArchiveSearchHistorySession()
-    patientLoading.value = false
+  function resetImageLookup(reason = '') {
+    queryVersion++
     loading.value = false
+    patientLoading.value = false
+    idCardLoading.value = false
     requestId.value = ''
-    lookupReason.value = ''
+    lookupReason.value = reason
+    submittedImageQuery.value = null
+    return queryVersion
+  }
+
+  async function loadImages(forceRefresh = false, archiveCase?: IdCardArchiveCase): Promise<void> {
+    const version = resetImageLookup()
+    const historySession = captureArchiveSearchHistorySession()
     const lookup = resolveArchiveLookup(searchBah.value, searchSjh.value)
     const { bah, sjh } = lookup
     const userid = searchUserId.value.trim()
@@ -203,6 +211,9 @@ export function useArchiveImages(options: UseArchiveImagesOptions = {}) {
 
     bindDownloadArchive(requestBah, requestSjh)
 
+    if (!externalSession) {
+      submittedImageQuery.value = { bah: requestBah, sjh: requestSjh }
+    }
     loading.value = true
     errorMsg.value = ''
     try {
@@ -281,7 +292,10 @@ export function useArchiveImages(options: UseArchiveImagesOptions = {}) {
       }
     }
     finally {
-      if (version === queryVersion) { loading.value = false }
+      if (version === queryVersion) {
+        loading.value = false
+        if (archiveCase) { setPatientFromArchiveCase(archiveCase) }
+      }
     }
   }
 
@@ -291,14 +305,16 @@ export function useArchiveImages(options: UseArchiveImagesOptions = {}) {
     archiveCases.value = Array.isArray(data?.cases) ? data.cases : []
   }
 
-  async function loadArchiveCasesByIdCard(idCard: string): Promise<IdCardArchiveSearchResponse | null> {
+  async function loadArchiveCasesByIdCard(idCard: string): Promise<IdCardArchiveSearchResponse | null | undefined> {
     if (isExternalTicketMode()) {
       return null
     }
+    const version = resetImageLookup()
     idCardLoading.value = true
     errorMsg.value = ''
     try {
       const res = await asResult<IdCardArchiveSearchResponse>(getArchiveCasesByIdCard(idCard))
+      if (version !== queryVersion) { return undefined }
       const data = res?.data
       applyArchiveCaseResponse(data)
       if (!archiveCases.value.length) {
@@ -307,16 +323,17 @@ export function useArchiveImages(options: UseArchiveImagesOptions = {}) {
       return data || null
     }
     catch (err: unknown) {
+      if (version !== queryVersion) { return undefined }
       applyArchiveCaseResponse(undefined)
       errorMsg.value = (err as { message?: string })?.message || '身份证查询失败'
       return null
     }
     finally {
-      idCardLoading.value = false
+      if (version === queryVersion) { idCardLoading.value = false }
     }
   }
 
-  async function loadArchiveCasesByToken(token: string): Promise<IdCardArchiveSearchResponse | null> {
+  async function loadArchiveCasesByToken(token: string): Promise<IdCardArchiveSearchResponse | null | undefined> {
     const externalSession = currentExternalSession()
     if (isExternalTicketMode()) {
       if (!externalSession || token !== EXTERNAL_CASE_TOKEN) {
@@ -330,10 +347,12 @@ export function useArchiveImages(options: UseArchiveImagesOptions = {}) {
         cases: archiveCases.value,
       }
     }
+    const version = resetImageLookup()
     idCardLoading.value = true
     errorMsg.value = ''
     try {
       const res = await asResult<IdCardArchiveSearchResponse>(getArchiveCasesByToken(token))
+      if (version !== queryVersion) { return undefined }
       const data = res?.data
       applyArchiveCaseResponse(data)
       if (!archiveCases.value.length) {
@@ -342,19 +361,17 @@ export function useArchiveImages(options: UseArchiveImagesOptions = {}) {
       return data || null
     }
     catch (err: unknown) {
+      if (version !== queryVersion) { return undefined }
       applyArchiveCaseResponse(undefined)
       errorMsg.value = (err as { message?: string })?.message || '身份证查询链接无效'
       return null
     }
     finally {
-      idCardLoading.value = false
+      if (version === queryVersion) { idCardLoading.value = false }
     }
   }
 
-  function setPatientFromArchiveCase(archiveCase: IdCardArchiveCase | undefined) {
-    if (!archiveCase) {
-      return
-    }
+  function setPatientFromArchiveCase(archiveCase: IdCardArchiveCase) {
     patientList.value = [{
       id: archiveCase.patientRecordId,
       bah: archiveCase.bah,
@@ -494,6 +511,7 @@ export function useArchiveImages(options: UseArchiveImagesOptions = {}) {
     errorMsg,
     requestId,
     lookupReason,
+    submittedImageQuery,
     searchBah,
     searchSjh,
     searchUserId,
@@ -504,9 +522,10 @@ export function useArchiveImages(options: UseArchiveImagesOptions = {}) {
     downloadJobCancelling: exportJob.cancelling,
     downloadJobDownloading: exportJob.downloading,
     loadImages,
+    resetImageLookup,
+    getImageLookupVersion: () => queryVersion,
     loadArchiveCasesByIdCard,
     loadArchiveCasesByToken,
-    setPatientFromArchiveCase,
     clearIdCardSearch,
     handleDownload,
     cancelDownloadJob: exportJob.cancel,

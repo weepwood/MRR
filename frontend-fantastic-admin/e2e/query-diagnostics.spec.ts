@@ -92,9 +92,15 @@ test('诊断弹窗按步骤中文化展示，样本用表格而不是原始 JSON
   await expect(dialog).toContainText('探测失败')
   // 摘要按「通过 / 需关注 / 未检查」计数，一眼看结论
   await expect(dialog).toContainText('项需关注')
-  // 样本渲染成表格：表头 id + 两行数据，而不是整块 JSON 倒出来
+  await expect(dialog).toContainText('探测累计耗时 2005 ms')
+  const priority = dialog.getByRole('button', { name: '扫描记录兼容匹配 · 探测失败' })
+  await expect(priority).toBeVisible()
+  await priority.focus()
+  await page.keyboard.press('Enter')
+  await expect(dialog.getByRole('heading', { name: '扫描记录兼容匹配' })).toBeFocused()
+  // 样本使用可读表头，并限制展示字段。
   await expect(dialog.locator('.step-samples tbody tr')).toHaveCount(2)
-  await expect(dialog.locator('.step-samples thead')).toContainText('id')
+  await expect(dialog.locator('.step-samples thead')).toContainText('记录 ID')
   await expect(dialog).not.toContainText('"sampledCount"')
   await expect(dialog).toContainText('只读探测')
 
@@ -107,3 +113,196 @@ test('诊断弹窗按步骤中文化展示，样本用表格而不是原始 JSON
   expect(footprint).not.toBeNull()
   expect(footprint!.bottom).toBeLessThanOrEqual(footprint!.viewport)
 })
+
+test('编辑输入框后仍诊断实际失败的查询', async ({ page }) => {
+  await page.route('**/api/v1/img/search?**', route => route.fulfill({ json: emptyResult('NO_MATCHING_IMAGES') }))
+  let submitted: unknown
+  await page.route('**/api/v1/operations/query-diagnostics', async (route) => {
+    submitted = route.request().postDataJSON()
+    await route.fulfill({ json: { code: 200, data: { readOnly: true, steps: [] } } })
+  })
+  await page.goto('/archive?bah=123&sjh=456')
+  await expect(page.getByLabel('本次请求追踪编号')).toHaveValue('0123456789abcdef')
+  await page.locator('input[name="archive-bah"]').fill('789')
+  await page.getByRole('button', { name: '排查本次查询' }).click()
+  await expect.poll(() => submitted).toMatchObject({ bah: '123', sjh: '', requestId: '0123456789abcdef' })
+  await expect(page.getByRole('dialog')).toContainText('病案号 123')
+})
+
+test('前端校验失败不继承上一笔请求的追踪编号和操作', async ({ page }) => {
+  await page.route('**/api/v1/img/search?**', route => route.fulfill({ json: emptyResult('NO_MATCHING_IMAGES') }))
+  await page.goto('/archive?bah=123')
+  const card = page.locator('.query-failure')
+  await expect(card.getByLabel('本次请求追踪编号')).toBeVisible()
+  await page.locator('input[name="archive-bah"]').fill('10000001')
+  await page.locator('.search-card').getByRole('button', { name: '查询', exact: true }).click()
+  await expect(card).toContainText('必须输入上架号')
+  await expect(card.getByLabel('本次请求追踪编号')).toHaveCount(0)
+  await expect(card.getByRole('button', { name: '排查本次查询' })).toHaveCount(0)
+  await expect(card.getByRole('button', { name: '重新查询' })).toHaveCount(0)
+})
+
+test('关闭诊断会取消未完成请求，重开后显示新报告', async ({ page }) => {
+  await page.route('**/api/v1/img/search?**', route => route.fulfill({ json: emptyResult('NO_MATCHING_IMAGES') }))
+  let releaseFirst!: () => void
+  const firstGate = new Promise<void>((resolve) => { releaseFirst = resolve })
+  let firstRequest: import('@playwright/test').Request | undefined
+  const failedRequests: import('@playwright/test').Request[] = []
+  page.on('requestfailed', request => failedRequests.push(request))
+  await page.route('**/api/v1/operations/query-diagnostics', async (route) => {
+    const isFirst = !firstRequest
+    if (isFirst) {
+      firstRequest = route.request()
+      await firstGate
+    }
+    await route.fulfill({
+      json: { code: 200, data: { readOnly: true, steps: [{ code: 'DATABASE', status: 'OK', message: isFirst ? '上一轮样本' : '新一轮样本', durationMs: 1, details: {} }] } },
+    }).catch(() => {})
+  })
+
+  try {
+    await page.goto('/archive?bah=123')
+    const open = page.getByRole('button', { name: '排查本次查询' })
+    const dialog = page.getByRole('dialog', { name: '病案查询诊断' })
+    await open.click()
+    await expect.poll(() => firstRequest?.method()).toBe('POST')
+    await dialog.locator('.el-dialog__headerbtn').click()
+    await expect(dialog).toBeHidden()
+    await expect.poll(() => failedRequests.includes(firstRequest), { timeout: 3000 }).toBe(true)
+    await open.click()
+    await expect(dialog).toContainText('新一轮样本')
+    releaseFirst()
+    await expect(dialog).not.toContainText('上一轮样本')
+  }
+  finally {
+    releaseFirst()
+  }
+})
+
+test('诊断权限拒绝时只显示安全提示与关闭入口', async ({ page }) => {
+  await page.route('**/api/v1/img/search?**', route => route.fulfill({ json: emptyResult('NO_MATCHING_IMAGES') }))
+  await page.route('**/api/v1/operations/query-diagnostics', route => route.fulfill({
+    status: 403,
+    json: { code: 403, message: '合成底层错误内容' },
+  }))
+  await page.goto('/archive?bah=123')
+  await page.getByRole('button', { name: '排查本次查询' }).click()
+  const dialog = page.getByRole('dialog', { name: '病案查询诊断' })
+  await expect(dialog).toContainText('当前账号没有病案查询诊断权限')
+  await expect(dialog).not.toContainText('合成底层错误内容')
+  await expect(dialog.getByRole('button', { name: '重新探测' })).toHaveCount(0)
+})
+
+test('诊断服务暂不可用时可用原条件重试', async ({ page }) => {
+  await page.route('**/api/v1/img/search?**', route => route.fulfill({ json: emptyResult('NO_MATCHING_IMAGES') }))
+  const attempts: unknown[] = []
+  await page.route('**/api/v1/operations/query-diagnostics', async (route) => {
+    attempts.push(route.request().postDataJSON())
+    if (attempts.length === 1) {
+      await route.fulfill({ status: 503, json: { code: 503, message: '合成底层错误内容' } })
+      return
+    }
+    if (attempts.length === 2) {
+      await route.fulfill({ json: { code: 200, data: { readOnly: true, steps: [null] } } })
+      return
+    }
+    await route.fulfill({
+      json: { code: 200, data: { readOnly: true, steps: [{ code: 'ARCHIVE_EXACT', status: 'NO_SAMPLE', message: '本次探测未返回样本', durationMs: 1, details: { sampledCount: 0 } }] } },
+    })
+  })
+  await page.goto('/archive?sjh=123')
+  await page.getByRole('button', { name: '排查本次查询' }).click()
+  const dialog = page.getByRole('dialog', { name: '病案查询诊断' })
+  await expect(dialog).toContainText('诊断服务暂时不可用')
+  await expect(dialog).not.toContainText('0 项通过')
+  await dialog.getByRole('button', { name: '重新探测' }).click()
+  await expect(dialog).toContainText('诊断返回格式异常', { timeout: 5000 })
+  await dialog.getByRole('button', { name: '重新探测' }).click()
+  await expect(dialog).toContainText('无匹配样本')
+  expect(attempts).toHaveLength(3)
+  expect(attempts.slice(1)).toEqual([attempts[0], attempts[0]])
+})
+
+for (const viewport of [{ width: 1024, height: 400 }, { width: 320, height: 568 }, { width: 1366, height: 768 }]) {
+  test(`诊断报告加载后操作区保持可见和稳定 ${viewport.width}×${viewport.height}`, async ({ page }) => {
+    await page.setViewportSize(viewport)
+    if (viewport.width === 320) {
+      await page.emulateMedia({ reducedMotion: 'reduce' })
+    }
+    await page.route('**/api/v1/img/search?**', route => route.fulfill({ json: emptyResult('NO_MATCHING_IMAGES') }))
+    let release!: () => void
+    const reportReady = new Promise<void>((resolve) => { release = resolve })
+    const accessTime = '2026-11-21T02:02:03.123456+08:00'
+    const bah = viewport.width === 320 ? 'SYNTH'.padEnd(64, '7') : '123'
+    await page.route('**/api/v1/operations/query-diagnostics', async (route) => {
+      await reportReady
+      await route.fulfill({ json: { code: 200, data: {
+        readOnly: true,
+        scope: '每个探测步骤最多取 51 条样本。',
+        steps: [
+          { code: 'INPUT', status: 'OK', durationMs: 0, message: '按病案号查询', details: {} },
+          { code: 'REQUEST_RECEIVED', status: 'OK', durationMs: 13, message: '已匹配原请求访问日志', details: { samples: [{ access_time: accessTime, response_status: 200, execute_time: 12345 }], sampledCount: 1 } },
+          { code: 'DATABASE', status: 'OK', durationMs: 1, message: '数据库连接及默认 Schema', details: { samples: [{ expected_schema: true }], sampledCount: 1 } },
+          { code: 'ARCHIVE_EXACT', status: 'OK', durationMs: 5, message: '主档原值精确匹配', details: { samples: [{ id: 234 }], sampledCount: 1 } },
+          { code: 'ARCHIVE_COMPAT', status: 'AMBIGUOUS', durationMs: 4, message: '比较键有多个兼容候选，请核对原始编号', details: { samples: [{ id: 234 }, { id: 235 }], sampledCount: 2, truncated: true } },
+          { code: 'SCAN_EXACT', status: 'OK', durationMs: 12, message: '扫描原值记录；0 为无效，NULL 状态需核实', details: { samples: Array.from({ length: 51 }, (_, i) => ({ id: 9900000000 + i, archive_id: i % 2 ? 234 : null, uploadflag: 1 })), sampledCount: 51, truncated: true } },
+          { code: 'SCAN_COMPAT', status: 'UNKNOWN', durationMs: 2000, message: '探测失败或超时', details: {} },
+          { code: 'CACHE', status: 'INFO', durationMs: 0, message: '以直接探测为准', details: { hit: false } },
+          { code: 'CLIENT', status: 'CLIENT_CONFIRMATION_REQUIRED', durationMs: 0, message: '核对原请求与分类', details: {} },
+        ],
+      } } })
+    })
+
+    const dialog = page.getByRole('dialog', { name: '病案查询诊断' })
+    const trigger = page.getByRole('button', { name: '排查本次查询' })
+    const close = dialog.getByRole('button', { name: '关闭', exact: true })
+    const footerBottom = () => close.evaluate(button => button.getBoundingClientRect().bottom)
+    try {
+      await page.goto(`/archive?bah=${bah}`)
+      await page.evaluate(() => {
+        document.addEventListener('animationstart', (event) => {
+          if (event.animationName === 'dialog-fade-in' && event.target instanceof HTMLElement) {
+            const style = getComputedStyle(event.target)
+            event.target.dataset.animationDuration = style.animationDuration
+            event.target.dataset.animationEasing = style.animationTimingFunction
+          }
+        })
+      })
+      await trigger.focus()
+      await page.keyboard.press('Enter')
+      await expect(dialog).toContainText('正在探测')
+      if (viewport.width === 320) {
+        await expect.poll(() => dialog.evaluate(el => getComputedStyle(el).animationDuration)).toBe('0.001s')
+      }
+      else {
+        await expect(dialog).toHaveAttribute('data-animation-duration', '0.22s')
+        await expect(dialog).toHaveAttribute('data-animation-easing', 'cubic-bezier(0.22, 1, 0.36, 1)')
+      }
+      await expect.poll(() => dialog.evaluate(el => el.getAnimations().length)).toBe(0)
+      const before = await footerBottom()
+      release()
+      await expect(dialog.locator('.diagnostics-step')).toHaveCount(9)
+      const after = await footerBottom()
+      expect(after).toBeLessThanOrEqual(viewport.height)
+      expect(Math.abs(after - before)).toBeLessThanOrEqual(2)
+      await expect(dialog).toContainText('展示前 5 条，共采样 51 条')
+
+      if (viewport.width === 320) {
+        const reportBody = dialog.getByRole('region', { name: '诊断报告' })
+        await expect(reportBody.locator('.meta-value')).toHaveText(`病案号 ${bah}`)
+        expect(await reportBody.evaluate(el => el.scrollWidth - el.clientWidth)).toBeLessThanOrEqual(1)
+        const logSample = dialog.locator('.step-sample-list').filter({ hasText: accessTime })
+        await expect(logSample.getByText('访问时间', { exact: true })).toBeVisible()
+        await expect(logSample.getByText(accessTime, { exact: true })).toBeVisible()
+        await expect(logSample.getByText('HTTP 状态', { exact: true })).toBeVisible()
+        expect(await logSample.evaluate(el => el.scrollWidth - el.clientWidth)).toBeLessThanOrEqual(1)
+      }
+      await page.keyboard.press('Escape')
+      await expect(dialog).toBeHidden()
+      await expect(trigger).toBeFocused()
+    }
+    finally {
+      release()
+    }
+  })
+}

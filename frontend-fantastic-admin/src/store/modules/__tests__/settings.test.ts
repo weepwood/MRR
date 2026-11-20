@@ -103,7 +103,37 @@ describe('settings store — 全站界面配置同步', () => {
     expect(JSON.parse(String(localStorage.getItem('MRR-ADMIN:app-settings'))).app.enableMotion).toBe(false)
   })
 
-  describe('推送（saveAppSettings → scheduleUiSettingsPush → pushUiSettings）', () => {
+  it('完整配色在明暗模式间切换，并在返回原主题后彻底清除覆盖', async () => {
+    const store = useSettingsStore()
+    const root = document.documentElement
+    expect(store.settings.app.themePalette).toBe('mrr')
+
+    store.settings.app.themePalette = 'gr8r'
+    await nextTick()
+    expect(root.dataset.mrrPalette).toBe('gr8r')
+    expect(root.style.getPropertyValue('--g-main-area-bg')).toBe('#FAF9F7')
+    expect(root.style.getPropertyValue('--mrr-navigation-bg-solid')).toBe('#F3F2EF')
+    expect(root.style.getPropertyValue('--color-primary')).toBe('#5362CE')
+
+    store.settings.app.colorScheme = 'dark'
+    await nextTick()
+    expect(root.style.getPropertyValue('--g-main-area-bg')).toBe('#1B1B1A')
+    expect(root.style.getPropertyValue('--color-primary')).toBe('#9DA8F7')
+    expect(root.classList.contains('dark')).toBe(true)
+
+    store.settings.app.themePalette = 'mrr'
+    await nextTick()
+    expect(root.dataset.mrrPalette).toBe('mrr')
+    expect(root.style.getPropertyValue('--g-main-area-bg')).toBe('')
+    expect(root.style.getPropertyValue('--mrr-navigation-bg-solid')).toBe('')
+    expect(root.style.getPropertyValue('--el-color-success-light-9')).toBe('')
+    expect(root.style.getPropertyValue('--color-primary')).toBe('#2563EB')
+
+    store.settings.app.colorScheme = 'light'
+    await nextTick()
+  })
+
+    describe('推送（saveAppSettings → scheduleUiSettingsPush → pushUiSettings）', () => {
     it('无登录令牌时不发起请求', async () => {
       mocks.readAuthStorage.mockReturnValue(session('ADMIN', [], ''))
       const store = useSettingsStore()
@@ -149,6 +179,7 @@ describe('settings store — 全站界面配置同步', () => {
       store.settings.menu.subMenuCollapse = true
       store.settings.menu.mode = 'head'
       store.settings.app.themeColor = '#16803C'
+      store.settings.app.themePalette = 'gr8r'
 
       await saveAndFlush(store)
 
@@ -157,6 +188,7 @@ describe('settings store — 全站界面配置同步', () => {
       const app = payload.app as Record<string, unknown>
 
       expect(app.themeColor).toBe('#16803C')
+      expect(app.themePalette).toBe('gr8r')
       expect(app).not.toHaveProperty('enableMotion')
       expect(menu.mode).toBe('head')
       expect(menu).not.toHaveProperty('subMenuCollapse')

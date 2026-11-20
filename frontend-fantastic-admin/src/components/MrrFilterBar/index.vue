@@ -103,6 +103,24 @@ const slots = useSlots()
   margin-left: 0;
 }
 
+.mrr-filter-bar--labelled :deep(.mrr-filter-field) {
+  display: grid;
+  gap: var(--mrr-space-1);
+  min-width: 0;
+}
+
+.mrr-filter-bar--labelled :deep(.mrr-filter-field > label) {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--mrr-card-foreground);
+}
+
+.mrr-filter-bar--labelled .mrr-filter-bar__actions {
+  flex: 0 0 auto;
+  flex-wrap: nowrap;
+  align-self: flex-end;
+}
+
 .mrr-filter-bar--grid {
   flex-direction: column;
   align-items: stretch;

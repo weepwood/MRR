@@ -11,6 +11,9 @@ import {
   getPatientMultiRecordGroups,
 } from '@/api/modules/patients'
 
+import AppLoading from '@/components/AppLoading/index.vue'
+import MrrDataTablePanel from '@/components/MrrDataTablePanel/index.vue'
+
 const props = withDefaults(defineProps<{
   refreshKey?: number
 }>(), {
@@ -132,46 +135,42 @@ onMounted(reloadAll)
       :closable="false"
     />
 
-    <div v-loading="summaryLoading" class="mrr-metric-grid">
+    <AppLoading v-else-if="summaryLoading && !summary" type="stats" />
+    <section v-if="summary" v-loading="summaryLoading" class="mrr-metric-grid mrr-metric-grid--four mrr-metric-grid--dense" aria-label="患者数据概况">
       <MrrMetricCard
         label="患者数据行"
-        icon="i-lucide:user-round"
-        :value="summary?.totalRecords ?? 0"
-        :note="`去重病案号 ${summary?.totalArchives ?? 0} 个`"
+        :value="summary.totalRecords"
+        :note="`去重病案号 ${summary.totalArchives} 个`"
       />
       <MrrMetricCard
         :label="`${currentYear} 年病案`"
-        icon="i-lucide:calendar-days"
-        :value="summary?.yearArchives ?? 0"
+        :value="summary.yearArchives"
         note="按入院日期去重统计"
       />
       <MrrMetricCard
         label="身份证号为空"
-        icon="i-lucide:triangle-alert"
         tone="warning"
-        :value="summary?.missingIdCardRecords ?? 0"
+        :value-tone="summary.missingIdCardRecords ? 'warning' : 'default'"
+        :value="summary.missingIdCardRecords"
         note="需要补录或人工核对"
       />
       <MrrMetricCard
         label="同一患者多病案"
-        icon="i-lucide:building-2"
-        :value="summary?.confirmedMultiRecordGroups ?? 0"
-        :note="`另有疑似 ${summary?.suspectedMultiRecordGroups ?? 0} 组`"
+        :value="summary.confirmedMultiRecordGroups"
+        :note="`另有疑似 ${summary.suspectedMultiRecordGroups} 组`"
       />
-    </div>
+    </section>
 
-    <slot name="search" />
+    <el-tabs v-model="activeDetailTab" class="detail-tabs">
+      <el-tab-pane label="患者表格" name="patients">
+        <slot name="patients" />
+      </el-tab-pane>
 
-    <el-card shadow="never" class="detail-card">
-      <el-tabs v-model="activeDetailTab">
-        <el-tab-pane label="患者表格" name="patients">
-          <slot name="patients" />
-        </el-tab-pane>
-
-        <el-tab-pane name="missing">
-          <template #label>
-            身份证为空病案（{{ summary?.missingIdCardRecords ?? missingTotal }}）
-          </template>
+      <el-tab-pane name="missing">
+        <template #label>
+          身份证为空病案（{{ summary?.missingIdCardRecords ?? missingTotal }}）
+        </template>
+        <MrrDataTablePanel title="缺少身份证号的病案">
           <el-table v-loading="missingLoading" :data="missingRecords" stripe>
             <el-table-column prop="bah" label="病案号" min-width="140">
               <template #default="{ row }">
@@ -193,7 +192,7 @@ onMounted(reloadAll)
             <el-table-column prop="bingqu" label="病区" min-width="130" show-overflow-tooltip />
             <el-table-column prop="chuangwei" label="床位" min-width="100" />
           </el-table>
-          <div class="pagination-bar">
+          <template #pagination>
             <el-pagination
               v-model:current-page="missingPage"
               v-model:page-size="missingSize"
@@ -203,17 +202,21 @@ onMounted(reloadAll)
               @current-change="handleMissingPageChange"
               @size-change="handleMissingSizeChange"
             />
-          </div>
-        </el-tab-pane>
-
-        <el-tab-pane name="multi">
-          <template #label>
-            同一患者多病案（{{ multiTotal }}）
           </template>
-          <div class="multi-toolbar">
-            <el-switch v-model="includeSuspected" active-text="包含仅姓名相同的疑似分组" />
-            <span>身份证号一致为高可信；仅姓名相同可能是同名患者，需要人工核对。</span>
-          </div>
+        </MrrDataTablePanel>
+      </el-tab-pane>
+
+      <el-tab-pane name="multi">
+        <template #label>
+          同一患者多病案（{{ multiTotal }}）
+        </template>
+        <MrrDataTablePanel title="多病案分组">
+          <template #toolbar>
+            <div class="multi-toolbar">
+              <el-switch v-model="includeSuspected" aria-label="包含仅姓名相同的疑似分组" active-text="包含仅姓名相同的疑似分组" />
+              <span>身份证号一致为高可信；仅姓名相同可能是同名患者，需要人工核对。</span>
+            </div>
+          </template>
           <el-table v-loading="multiLoading" :data="multiGroups" stripe>
             <el-table-column label="识别依据" width="130">
               <template #default="{ row }">
@@ -250,7 +253,7 @@ onMounted(reloadAll)
               </template>
             </el-table-column>
           </el-table>
-          <div class="pagination-bar">
+          <template #pagination>
             <el-pagination
               v-model:current-page="multiPage"
               v-model:page-size="multiSize"
@@ -260,52 +263,71 @@ onMounted(reloadAll)
               @current-change="handleMultiPageChange"
               @size-change="handleMultiSizeChange"
             />
-          </div>
-        </el-tab-pane>
-      </el-tabs>
-    </el-card>
+          </template>
+        </MrrDataTablePanel>
+      </el-tab-pane>
+    </el-tabs>
   </section>
 </template>
 
 <style scoped>
 .analytics-panel {
   display: grid;
-  gap: 16px;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--mrr-space-4);
 }
 
-.detail-card :deep(.el-card__body) {
-  padding-top: 4px;
+.detail-tabs {
+  min-width: 0;
+}
+
+.detail-tabs :deep(.el-tabs__item.is-active) {
+  color: var(--mrr-navigation-active-foreground);
 }
 
 .multi-toolbar {
   display: flex;
-  gap: 14px;
+  flex-wrap: wrap;
+  gap: var(--mrr-space-3);
   align-items: center;
-  justify-content: space-between;
-  margin-bottom: 12px;
   font-size: 13px;
   color: var(--el-text-color-secondary);
 }
 
-.pagination-bar {
-  display: flex;
-  justify-content: flex-end;
-  margin-top: 16px;
+.multi-toolbar :deep(.el-switch__label) {
+  color: var(--mrr-card-foreground);
 }
 
 .record-link {
-  color: var(--el-color-primary);
-  text-decoration: none;
-}
-
-.record-link:hover {
+  color: var(--mrr-navigation-active-foreground);
   text-decoration: underline;
+  text-underline-offset: 2px;
 }
 
 .archive-tags {
   display: flex;
   flex-wrap: wrap;
   gap: 6px 12px;
+}
+
+@media (max-width: 600px) {
+  .detail-tabs :deep(.el-tabs__nav) {
+    display: flex;
+    width: 100%;
+  }
+
+  .detail-tabs :deep(.el-tabs__item) {
+    flex: 1 1 0;
+    min-width: 0;
+    height: auto;
+    min-height: var(--mrr-control-height);
+    padding: var(--mrr-space-2);
+    font-size: 12px;
+    line-height: 1.4;
+    text-align: center;
+    overflow-wrap: anywhere;
+    white-space: normal;
+  }
 }
 
 @media (max-width: 720px) {

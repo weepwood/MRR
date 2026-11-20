@@ -216,6 +216,31 @@
   }
 }
 
+/* 查询工作区用紧凑摘要保留窄屏结果空间。该变体搭配无图标指标卡。 */
+.mrr-metric-grid--dense {
+  --mrr-summary-min-height: 84px;
+
+  gap: var(--mrr-space-3);
+}
+
+.mrr-metric-grid--dense .mrr-metric-card .el-card__body {
+  padding: var(--mrr-space-3);
+}
+
+.mrr-metric-grid--dense .mrr-metric-card__label {
+  white-space: normal;
+}
+
+.mrr-metric-grid--dense .mrr-metric-card__value {
+  font-size: 22px;
+}
+
+@media (max-width: 600px) {
+  .mrr-metric-grid--dense {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
 /*
  * Chrome 86 回退：卡面是分层实色底，丢了就与工作区背景糊成一片（亮色仅 1.02:1）。
  * 图标块与焦点边同样给实色，避免图标色块整块消失、焦点只剩一条 currentColor 描边。

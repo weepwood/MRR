@@ -909,9 +909,14 @@ body .el-card {
 body .el-table,
 body .el-alert,
 body .el-descriptions,
-body .el-segmented,
 body .el-collapse {
   border-radius: var(--mrr-radius-md);
+}
+
+/* 分段选择器统一胶囊形态：EP 默认选中指示只有 2px 圆角，宽选项（如「工作区布局」）下呈方形 */
+body .el-segmented,
+body .el-segmented .el-segmented__item-selected {
+  border-radius: 999px;
 }
 
 /* 需要按外层圆角裁剪内部背景、表头或图表内容的表面。 */

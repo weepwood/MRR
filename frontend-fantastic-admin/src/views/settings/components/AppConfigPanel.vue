@@ -832,13 +832,14 @@ function handleReset() {
   width: 240px;
 }
 
-/* 颜色预览使用真实调色板色值，避免选中方案前的预览受到当前主题覆盖。 */
+/* 配色预览始终显示方案自身的真实色值，而非当前主题的颜色。 */
 .theme-palette-options {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: var(--mrr-space-3);
   width: 100%;
 }
+
 .theme-palette-option {
   display: grid;
   gap: var(--mrr-space-2);
@@ -851,18 +852,24 @@ function handleReset() {
   border-radius: var(--mrr-radius-card);
   transition: border-color var(--mrr-motion-feedback) ease, box-shadow var(--mrr-motion-feedback) ease;
 }
+
 .theme-palette-option[aria-pressed="true"] {
   border-color: var(--mrr-primary);
   box-shadow: inset 0 0 0 1px var(--mrr-primary);
 }
+
 .theme-palette-option:focus-visible,
 .theme-palette-accent__reset:focus-visible {
   outline: 2px solid var(--mrr-navigation-active-foreground, var(--mrr-primary));
   outline-offset: 2px;
 }
+
 @media (hover: hover) {
-  .theme-palette-option:not([aria-pressed="true"]):hover { border-color: var(--mrr-control-border-hover); }
+  .theme-palette-option:not([aria-pressed="true"]):hover {
+    border-color: var(--mrr-control-border-hover);
+  }
 }
+
 .theme-palette-preview {
   display: flex;
   gap: 8px;
@@ -873,6 +880,7 @@ function handleReset() {
   border: 1px solid;
   border-radius: var(--mrr-radius-md);
 }
+
 .theme-palette-preview__sidebar {
   display: grid;
   flex: 0 0 24%;
@@ -882,7 +890,14 @@ function handleReset() {
   border-right: 1px solid;
   border-radius: 4px;
 }
-.theme-palette-preview__sidebar > span { display: block; height: 5px; border-radius: 2px; }
+
+.theme-palette-preview__sidebar > span {
+  display: block;
+  width: 100%;
+  height: 5px;
+  border-radius: 2px;
+}
+
 .theme-palette-preview__panel {
   display: grid;
   flex: 1;
@@ -893,26 +908,55 @@ function handleReset() {
   border: 1px solid;
   border-radius: 4px;
 }
-.theme-palette-preview__heading { width: 66%; height: 7px; border-radius: 2px; }
-.theme-palette-preview__line { width: 92%; height: 5px; border-radius: 2px; }
-.theme-palette-preview__line--short { width: 70%; }
-.theme-palette-preview__action { width: 39%; height: 9px; border-radius: 3px; }
+
+.theme-palette-preview__heading {
+  width: 66%;
+  height: 7px;
+  border-radius: 2px;
+}
+
+.theme-palette-preview__line {
+  width: 92%;
+  height: 5px;
+  border-radius: 2px;
+}
+
+.theme-palette-preview__line--short {
+  width: 70%;
+}
+
+.theme-palette-preview__action {
+  width: 39%;
+  height: 9px;
+  border-radius: 3px;
+}
+
 .theme-palette-option__name {
   display: flex;
+  gap: var(--mrr-space-2);
   align-items: center;
   justify-content: space-between;
-  gap: var(--mrr-space-2);
-  color: var(--mrr-foreground);
   font-size: 13px;
+  color: var(--mrr-foreground);
 }
-.theme-palette-option__name :deep(svg) { color: var(--mrr-primary); }
-.theme-palette-option > small { color: var(--mrr-muted-foreground); font-size: 11px; line-height: 1.5; }
+
+.theme-palette-option__name :deep(svg) {
+  color: var(--mrr-primary);
+}
+
+.theme-palette-option > small {
+  font-size: 11px;
+  line-height: 1.5;
+  color: var(--mrr-muted-foreground);
+}
+
 .theme-palette-accent {
   display: flex;
   gap: var(--mrr-space-2);
   align-items: center;
   min-width: 0;
 }
+
 .theme-palette-accent__swatch {
   display: block;
   flex: 0 0 32px;
@@ -921,17 +965,27 @@ function handleReset() {
   border-radius: 50%;
   box-shadow: 0 0 0 1px var(--mrr-border);
 }
-.theme-palette-accent__copy { display: grid; gap: 2px; font-size: 12px; }
-.theme-palette-accent__copy small { color: var(--mrr-muted-foreground); font-size: 11px; }
+
+.theme-palette-accent__copy {
+  display: grid;
+  gap: 2px;
+  font-size: 12px;
+}
+
+.theme-palette-accent__copy small {
+  font-size: 11px;
+  color: var(--mrr-muted-foreground);
+}
+
 .theme-palette-accent__reset {
-  margin-inline-start: auto;
   padding: 7px 9px;
+  margin-inline-start: auto;
+  font-size: 12px;
   color: var(--mrr-navigation-active-foreground);
   cursor: pointer;
   background: var(--mrr-muted);
   border: 1px solid var(--mrr-border);
   border-radius: var(--mrr-radius-md);
-  font-size: 12px;
 }
 
 .title-style-tabs {

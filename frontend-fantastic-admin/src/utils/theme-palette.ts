@@ -123,7 +123,7 @@ function parseColor(hex: string): [number, number, number] {
 function mixHex(color: string, surface: string, strength: number): string {
   const a = parseColor(color)
   const b = parseColor(surface)
-  return '#' + a.map((channel, index) => Math.round(channel * strength + b[index] * (1 - strength)).toString(16).padStart(2, '0')).join('').toUpperCase()
+  return `#${a.map((channel, index) => Math.round(channel * strength + b[index] * (1 - strength)).toString(16).padStart(2, '0')).join('').toUpperCase()}`
 }
 
 /** shadcn 的自定义属性约定使用原始 H S% L% 三元组，而不是 #RRGGBB。 */
@@ -136,12 +136,18 @@ function hslTuple(hex: string): string {
   const saturation = delta === 0 ? 0 : delta / (1 - Math.abs(2 * lightness - 1))
   let hue = 0
   if (delta > 0) {
-    if (max === r) hue = ((g - b) / delta) % 6
-    else if (max === g) hue = (b - r) / delta + 2
-    else hue = (r - g) / delta + 4
+    if (max === r) {
+      hue = ((g - b) / delta) % 6
+    }
+    else if (max === g) {
+      hue = (b - r) / delta + 2
+    }
+    else {
+      hue = (r - g) / delta + 4
+    }
     hue = ((hue * 60) + 360) % 360
   }
-  return Math.round(hue) + ' ' + Math.round(saturation * 100) + '% ' + Math.round(lightness * 100) + '%'
+  return `${Math.round(hue)} ${Math.round(saturation * 100)}% ${Math.round(lightness * 100)}%`
 }
 
 /** 生成包含布局表面、文本、导航、表单和状态语义的完整 MRR 变量映射。 */
@@ -264,18 +270,18 @@ export function gr8rCssVariables(scheme: ThemePaletteScheme): Record<string, str
     rose: c.rose,
   }
   for (const [name, color] of Object.entries(tones)) {
-    css['--mrr-tone-' + name + '-soft'] = mixHex(color, c.surface, 0.1)
+    css[`--mrr-tone-${name}-soft`] = mixHex(color, c.surface, 0.1)
   }
   for (const name of ['success', 'danger', 'warning', 'info', 'neutral', 'primary']) {
-    css['--mrr-tone-' + name + '-border'] = mixHex(tones[name], c.line, 0.22)
+    css[`--mrr-tone-${name}-border`] = mixHex(tones[name], c.line, 0.22)
   }
   for (const name of ['success', 'danger', 'warning', 'info']) {
     const color = tones[name]
-    css['--el-color-' + name] = color
+    css[`--el-color-${name}`] = color
     for (const [step, strength] of [['3', 0.7], ['5', 0.5], ['7', 0.3], ['8', 0.2], ['9', 0.1]] as const) {
-      css['--el-color-' + name + '-light-' + step] = mixHex(color, c.surface, strength)
+      css[`--el-color-${name}-light-${step}`] = mixHex(color, c.surface, strength)
     }
-    css['--el-color-' + name + '-dark-2'] = mixHex(color, '#000000', 0.8)
+    css[`--el-color-${name}-dark-2`] = mixHex(color, '#000000', 0.8)
   }
 
   return css
@@ -291,9 +297,13 @@ export function applyThemePalette(root: HTMLElement, selected: unknown, scheme: 
   const id = normalizeThemePalette(selected)
   root.dataset.mrrPalette = id
   if (id === 'mrr') {
-    for (const name of managedNames) root.style.removeProperty(name)
+    for (const name of managedNames) {
+      root.style.removeProperty(name)
+    }
     return
   }
   const variables = gr8rCssVariables(scheme)
-  for (const [name, value] of Object.entries(variables)) root.style.setProperty(name, value)
+  for (const [name, value] of Object.entries(variables)) {
+    root.style.setProperty(name, value)
+  }
 }

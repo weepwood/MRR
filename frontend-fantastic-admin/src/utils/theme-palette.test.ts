@@ -8,7 +8,7 @@ import {
   normalizeThemePalette,
 } from './theme-palette'
 
-describe('Gr8r Studio 完整主题色板', () => {
+describe('gr8r Studio 完整主题色板', () => {
   it('忠实映射独立组件库 v0.2.0 的明暗核心色', () => {
     expect(GR8R_COLORS.light).toMatchObject({
       canvas: '#FAF9F7',
@@ -56,7 +56,7 @@ describe('Gr8r Studio 完整主题色板', () => {
   it('文字和状态色在主要内容表面上保持至少 4.5:1 对比度', () => {
     for (const c of [GR8R_COLORS.light, GR8R_COLORS.dark]) {
       for (const name of ['ink', 'secondaryInk', 'mutedInk', 'accent', 'success', 'warning', 'danger', 'info'] as const) {
-        expect(contrastRatio(c[name], c.surface), name + ' on ' + c.surface).toBeGreaterThanOrEqual(4.5)
+        expect(contrastRatio(c[name], c.surface), `${name} on ${c.surface}`).toBeGreaterThanOrEqual(4.5)
       }
     }
   })

@@ -133,7 +133,7 @@ describe('settings store — 全站界面配置同步', () => {
     await nextTick()
   })
 
-    describe('推送（saveAppSettings → scheduleUiSettingsPush → pushUiSettings）', () => {
+  describe('推送（saveAppSettings → scheduleUiSettingsPush → pushUiSettings）', () => {
     it('无登录令牌时不发起请求', async () => {
       mocks.readAuthStorage.mockReturnValue(session('ADMIN', [], ''))
       const store = useSettingsStore()

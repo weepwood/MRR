@@ -1,10 +1,13 @@
 <script setup lang="ts">
 import type { OssBrowserEntry, OssBrowserPage } from '@/api/modules/oss'
+import type { PreviewKind } from '@/components/MrrStorageBrowser/inline-preview'
 import { ElMessage } from 'element-plus'
 import { ExternalLink, Eye, FolderOpen } from 'lucide-vue-next'
 import { computed, onActivated, onBeforeUnmount, onDeactivated, onMounted, ref, watch } from 'vue'
 import { browseOssObjects, getOssBrowserUrl } from '@/api/modules/oss'
 import MrrStorageBrowser from '@/components/MrrStorageBrowser/index.vue'
+import { readSignedPreviewText } from '@/components/MrrStorageBrowser/inline-preview'
+import MrrStorageInlinePreview from '@/components/MrrStorageBrowser/InlinePreview.vue'
 import { accessDenied, formatFileSize, isImage } from '@/components/MrrStorageBrowser/presentation'
 import MrrStoragePreview from '@/components/MrrStorageBrowser/Preview.vue'
 
@@ -225,13 +228,21 @@ function previousPage() {
   void loadDirectory(currentPrefix.value, previousToken, { resetPageHistory: false, navigation: 'previous' })
 }
 
-async function requestSignedUrl(entry: OssBrowserEntry) {
-  const response = await getOssBrowserUrl(entry.key)
+async function requestSignedUrl(entry: OssBrowserEntry, signal?: AbortSignal) {
+  const response = await getOssBrowserUrl(entry.key, signal)
   const signedUrl = response.data?.ossUrl
   if (!signedUrl) {
     throw new Error('未获取到 OSS 文件地址')
   }
   return signedUrl
+}
+
+async function loadInlinePreview(entry: OssBrowserEntry, kind: PreviewKind, signal: AbortSignal) {
+  const url = new URL(await requestSignedUrl(entry, signal), window.location.href)
+  if (url.protocol !== 'https:' && url.protocol !== 'http:') {
+    throw new Error('Unsupported preview URL')
+  }
+  return kind === 'image' ? url.href : readSignedPreviewText(url, signal)
 }
 
 async function openFile(entry = selectedEntry.value) {
@@ -356,6 +367,9 @@ onMounted(() => {
     <template #source>
       <strong>Bucket</strong>
       <span v-if="page?.bucket">{{ page.bucket }}</span>
+    </template>
+    <template #preview="{ entry }">
+      <MrrStorageInlinePreview :entry="entry" :paused="loading || previewVisible" :load="loadInlinePreview" @expand="previewFile(entry)" />
     </template>
     <template #metadata="{ entry }">
       <template v-if="!entry.directory">

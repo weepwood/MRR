@@ -9,7 +9,7 @@ const servers = [
   { key: 'BA02', name: 'BA02', configured: false },
   { key: 'BA03', name: 'BA03', configured: false },
 ]
-const demoImage = readFileSync(resolve('public/pwa/icon-512.png'))
+const demoImage = readFileSync(resolve('public/pwa/icon-192.png'))
 const demoText = 'MRR 文件浏览演示数据\n'
 const modifiedAt = '2026-01-15T09:30:00+08:00'
 const demoFolder = '样例目录/'

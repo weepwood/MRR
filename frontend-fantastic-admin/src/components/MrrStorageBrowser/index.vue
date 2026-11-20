@@ -322,6 +322,7 @@ async function copyLocation(entry: Entry) {
               <component :is="icon(selected)" class="entry-icon" aria-hidden="true" />
               {{ selected.name }}
             </h3>
+            <slot v-if="!selected.directory" name="preview" :entry="selected" />
             <dl>
               <dt>类型</dt>
               <dd>{{ entryType(selected) }}</dd>

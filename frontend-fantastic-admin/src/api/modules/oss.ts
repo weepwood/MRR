@@ -134,8 +134,8 @@ export function browseOssObjects(
   return getRequest<OssBrowserPage>('/api/v1/oss/browser', { params, skipGlobalError: true })
 }
 
-export function getOssBrowserUrl(key: string) {
-  return getRequest<{ key: string, ossUrl: string }>('/api/v1/oss/browser/url', { params: { key }, skipGlobalError: true })
+export function getOssBrowserUrl(key: string, signal?: AbortSignal) {
+  return getRequest<{ key: string, ossUrl: string }>('/api/v1/oss/browser/url', { params: { key }, signal, skipGlobalError: true })
 }
 
 export function getMigrationStatistics() {

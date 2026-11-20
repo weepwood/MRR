@@ -45,12 +45,41 @@ export function browseNginxDirectory(params: NginxBrowseParams = {}, signal?: Ab
   return getRequest<NginxBrowserPage>('/api/v1/nginx-browser', { params, signal, skipGlobalError: true })
 }
 
-export async function fetchNginxBrowserFile(server: string, path: string, signal?: AbortSignal): Promise<Blob> {
-  const response = await api.get<Blob>('/api/v1/nginx-browser/file', {
-    params: { server, path },
-    responseType: 'blob',
-    signal,
-    skipGlobalError: true,
-  })
-  return response as unknown as Blob
+export async function fetchNginxBrowserFile(server: string, path: string, signal?: AbortSignal, maxBytes?: number): Promise<Blob> {
+  const budget = maxBytes === undefined ? undefined : new AbortController()
+  let exceeded = false
+  const abort = () => budget?.abort()
+  signal?.addEventListener('abort', abort, { once: true })
+  if (signal?.aborted) {
+    abort()
+  }
+  try {
+    const blob = await api.get<Blob, Blob>('/api/v1/nginx-browser/file', {
+      params: { server, path },
+      responseType: 'blob',
+      signal: budget?.signal ?? signal,
+      skipGlobalError: true,
+      onDownloadProgress: maxBytes === undefined
+        ? undefined
+        : ({ loaded, total }) => {
+            if (loaded > maxBytes || (total !== undefined && total > maxBytes)) {
+              exceeded = true
+              abort()
+            }
+          },
+    })
+    if (maxBytes !== undefined && blob.size > maxBytes) {
+      throw new RangeError('Preview size exceeded')
+    }
+    return blob
+  }
+  catch (error) {
+    if (exceeded) {
+      throw new RangeError('Preview size exceeded')
+    }
+    throw error
+  }
+  finally {
+    signal?.removeEventListener('abort', abort)
+  }
 }

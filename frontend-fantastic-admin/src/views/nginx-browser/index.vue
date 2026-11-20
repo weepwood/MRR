@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import type { NginxBrowserEntry, NginxBrowserPage, NginxBrowserServer } from '@/api/modules/nginx-browser'
+import type { PreviewKind } from '@/components/MrrStorageBrowser/inline-preview'
 import { ElMessage } from 'element-plus'
 import { Download, ExternalLink, Eye, FolderOpen } from 'lucide-vue-next'
 import { computed, onActivated, onBeforeUnmount, onDeactivated, onMounted, ref, watch } from 'vue'
@@ -7,6 +8,8 @@ import { browseNginxDirectory, fetchNginxBrowserFile, getNginxBrowserServers } f
 import MrrPageHeader from '@/components/MrrPageHeader/index.vue'
 import MrrPageShell from '@/components/MrrPageShell/index.vue'
 import MrrStorageBrowser from '@/components/MrrStorageBrowser/index.vue'
+import { decodePreviewText, inlinePreviewLimit } from '@/components/MrrStorageBrowser/inline-preview'
+import MrrStorageInlinePreview from '@/components/MrrStorageBrowser/InlinePreview.vue'
 import { accessDenied, formatFileSize, isImage } from '@/components/MrrStorageBrowser/presentation'
 import MrrStoragePreview from '@/components/MrrStorageBrowser/Preview.vue'
 
@@ -56,6 +59,15 @@ const breadcrumbs = computed(() => {
 
 function entryLocation(entry: NginxBrowserEntry) {
   return entry.path
+}
+
+async function loadInlinePreview(entry: NginxBrowserEntry, kind: PreviewKind, signal: AbortSignal) {
+  const server = currentServer.value
+  if (!server) {
+    throw new Error('No server selected')
+  }
+  const blob = await fetchNginxBrowserFile(server.key, entry.path, signal, inlinePreviewLimit[kind])
+  return kind === 'image' ? blob : decodePreviewText(new Uint8Array(await blob.arrayBuffer()))
 }
 
 function beginDirectoryRequest(retry: () => void) {
@@ -389,6 +401,9 @@ onBeforeUnmount(cancelRequests)
             :disabled="!server.configured"
           />
         </el-select>
+      </template>
+      <template #preview="{ entry }">
+        <MrrStorageInlinePreview :entry="entry" :paused="loading || previewVisible" :load="loadInlinePreview" @expand="previewFile(entry)" />
       </template>
       <template #actions="{ entry }">
         <el-button v-if="entry.directory" :icon="FolderOpen" type="primary" @click="navigate(entry.path)">

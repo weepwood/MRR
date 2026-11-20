@@ -1,7 +1,8 @@
 {
-  "_说明": "轻量监控配置。密码不要写在这里，用 MRR_DB_DSN 环境变量或 pgpass.conf。",
+  "_说明": "轻量监控配置。密码不要写在这里：用 install-task.ps1 -Dsn 写入 dsn_file 指向的受限 ACL 连接串文件，或使用 pgpass.conf。",
   "psql": "",
   "dsn": "",
+  "dsn_file": "C:\\ProgramData\\MRR\\db-monitor\\db-dsn.txt",
   "dsn_env": "MRR_DB_DSN",
   "out_dir": "C:\\MRR\\monitoring-data\\db-monitor",
   "keep_days": 30,

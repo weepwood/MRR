@@ -136,13 +136,32 @@ New-Item -ItemType Directory -Force -Path $outDir | Out-Null
 $script:LogPath = Join-Path $outDir 'collect.log'
 
 $dsn = $cfg.dsn
+$dsnFile = ''
+if ($cfg.dsn_file) {
+    $dsnFile = [string]$cfg.dsn_file
+    if (-not [System.IO.Path]::IsPathRooted($dsnFile)) {
+        $dsnFile = Join-Path (Split-Path -Parent (Resolve-Path -LiteralPath $ConfigPath)) $dsnFile
+    }
+}
+if (-not $dsn -and $dsnFile -and (Test-Path -LiteralPath $dsnFile)) {
+    $dsn = ([System.IO.File]::ReadAllText($dsnFile)).Trim()
+    if (-not $dsn) {
+        Write-Log "连接串文件为空：$dsnFile" 'ERROR'
+        exit 3
+    }
+}
 if (-not $dsn) {
     $envName = $cfg.dsn_env
     if (-not $envName) { $envName = 'MRR_DB_DSN' }
     $dsn = [System.Environment]::GetEnvironmentVariable($envName)
 }
 if (-not $dsn) {
-    Write-Log "未配置连接串：请设置环境变量 $($cfg.dsn_env) 或 config.json 的 dsn 字段" 'ERROR'
+    if ($dsnFile) {
+        Write-Log "未配置连接串：请运行 install-task.ps1 -Dsn 写入 $dsnFile，或设置环境变量 $envName" 'ERROR'
+    }
+    else {
+        Write-Log "未配置连接串：请设置环境变量 $envName，或在 config.json 中配置 dsn_file" 'ERROR'
+    }
     exit 3
 }
 

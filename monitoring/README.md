@@ -16,6 +16,8 @@
 
 注意：Actuator 的统一标签是 `management.metrics.tags.application=mrr`，所有规则与看板必须以 `application="mrr"` 过滤。历史上曾误写成 `imgapi`，导致 Hikari 告警与部分面板静默失效。
 
+数据库相关告警同样不写死库名：连接、死锁、缓存命中、临时文件四条规则用 `datname!~"template[01]|postgres"` 与 `datname!=""` 只排除系统库和后台进程，现场库名与示例不同也无需改规则文件。同一实例若共存多个业务库，这些指标为合并口径。
+
 数据质量检查只允许管理员在“系统与数据库监控”页面点击“立即检查”触发，不配置后台定时任务。
 
 > **暂不部署 Prometheus / Grafana？** 用 `scripts/db_monitor/` 的计划任务采集器即可获得历史趋势、离线看板与事件日志告警，零新增服务。见 `docs/engineering/database-monitoring-without-prometheus.md`。本目录的配置保留不动，后续切换时指标口径与阈值一致。
@@ -66,6 +68,7 @@ ALTER ROLE mrr_monitor WITH LOGIN PASSWORD '替换为独立强密码';
 随后执行：
 
 ```bash
+# 库名换成现场实际库名：脚本按“当前连接的库”授权，不写死库名
 psql -U postgres -d imgapi -f monitoring/postgresql/enable-monitoring.sql
 ```
 

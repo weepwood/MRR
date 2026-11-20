@@ -5,14 +5,16 @@
 .DESCRIPTION
     做的事只有三件：
       1. 必要时创建 Windows 事件日志源（告警写入 Application 日志）；
-      2. 把连接串写入机器级环境变量（SYSTEM 账户能读到，用户级变量读不到）；
+      2. 把连接串写入断开继承、仅 SYSTEM 与 Administrators 可读的文件（默认
+         C:\ProgramData\MRR\db-monitor\db-dsn.txt，由 config.json 的 dsn_file 指定）；
       3. 注册每 N 分钟运行一次的 Scheduled Task。
 
     需要以管理员身份运行。卸载不会删除历史数据与看板。
 
 .PARAMETER Dsn
-    PostgreSQL 连接串。只写入机器级环境变量，不写进仓库文件。
-    留空则沿用已存在的机器级 MRR_DB_DSN。
+    PostgreSQL 连接串。只写入受限 ACL 的连接串文件，不写进仓库文件、不写机器级环境变量
+    （机器级环境变量存放在 HKLM，本机任何登录用户都能读到）。
+    留空则沿用已存在的连接串文件。
 
 .PARAMETER ConfigPath
     collect.ps1 使用的配置文件，默认同目录 config.json。
@@ -27,7 +29,7 @@
     删除计划任务（保留数据目录与事件日志源）。
 
 .EXAMPLE
-    .\install-task.ps1 -Dsn "postgresql://mrr_monitor:口令@127.0.0.1:5432/imgapi"
+    .\install-task.ps1 -Dsn "postgresql://mrr_monitor:口令@127.0.0.1:5432/<库名>"
 
 .EXAMPLE
     .\install-task.ps1 -Uninstall
@@ -49,6 +51,30 @@ function Assert-Admin {
     if (-not $principal.IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)) {
         throw '需要管理员权限：请右键“以管理员身份运行” PowerShell 后重试。'
     }
+}
+
+# 断开 ACL 继承，只保留 SYSTEM 与 Administrators：连接串文件不能沿用父目录给 Users 的读取权限。
+function Set-SecretAcl {
+    param([string]$Path, [switch]$Directory)
+    $system = New-Object System.Security.Principal.SecurityIdentifier('S-1-5-18')
+    $admins = New-Object System.Security.Principal.SecurityIdentifier('S-1-5-32-544')
+    if ($Directory) {
+        $acl = New-Object System.Security.AccessControl.DirectorySecurity
+        $acl.SetAccessRuleProtection($true, $false)
+        $inherit = [System.Security.AccessControl.InheritanceFlags]'ContainerInherit, ObjectInherit'
+        $propagation = [System.Security.AccessControl.PropagationFlags]::None
+        foreach ($sid in @($system, $admins)) {
+            $acl.AddAccessRule((New-Object System.Security.AccessControl.FileSystemAccessRule($sid, 'FullControl', $inherit, $propagation, 'Allow')))
+        }
+    }
+    else {
+        $acl = New-Object System.Security.AccessControl.FileSecurity
+        $acl.SetAccessRuleProtection($true, $false)
+        foreach ($sid in @($system, $admins)) {
+            $acl.AddAccessRule((New-Object System.Security.AccessControl.FileSystemAccessRule($sid, 'FullControl', 'Allow')))
+        }
+    }
+    Set-Acl -LiteralPath $Path -AclObject $acl
 }
 
 Assert-Admin
@@ -81,19 +107,44 @@ else {
     Write-Host "事件日志源已存在：$source"
 }
 
-# 2. 连接串写入机器级环境变量
-$envName = 'MRR_DB_DSN'
-if ($cfg.dsn_env) { $envName = $cfg.dsn_env }
+# 2. 连接串写入受限文件（默认 C:\ProgramData\MRR\db-monitor\db-dsn.txt）
+$dsnFile = [string]$cfg.dsn_file
+if (-not $dsnFile) { $dsnFile = 'C:\ProgramData\MRR\db-monitor\db-dsn.txt' }
+if (-not [System.IO.Path]::IsPathRooted($dsnFile)) { $dsnFile = Join-Path $PSScriptRoot $dsnFile }
+$envName = [string]$cfg.dsn_env
+if (-not $envName) { $envName = 'MRR_DB_DSN' }
+
 if ($Dsn) {
-    [System.Environment]::SetEnvironmentVariable($envName, $Dsn, 'Machine')
-    Write-Host "已写入机器级环境变量 $envName（仅本机管理员可见）" -ForegroundColor Green
+    $dsnDir = Split-Path -Parent $dsnFile
+    $createdDir = $false
+    if (-not (Test-Path -LiteralPath $dsnDir)) {
+        New-Item -ItemType Directory -Path $dsnDir -Force | Out-Null
+        $createdDir = $true
+    }
+    # 只收紧自己新建的目录：dsn_file 若被指到既有共享目录，改它的 ACL 会连带影响别的程序。
+    if ($createdDir) { Set-SecretAcl -Path $dsnDir -Directory }
+    [System.IO.File]::WriteAllText($dsnFile, $Dsn.Trim(), (New-Object System.Text.UTF8Encoding($false)))
+    Set-SecretAcl -Path $dsnFile
+    Write-Host "已写入连接串文件 $dsnFile（断开继承，仅 SYSTEM 与 Administrators 可读）" -ForegroundColor Green
+}
+elseif (Test-Path -LiteralPath $dsnFile) {
+    Write-Host "沿用已有连接串文件：$dsnFile"
 }
 else {
-    $current = [System.Environment]::GetEnvironmentVariable($envName, 'Machine')
-    if (-not $current) {
-        Write-Host "警告：机器级 $envName 为空，任务运行时会因缺少连接串而退出（退出码 3）。" -ForegroundColor Yellow
-        Write-Host "      可用 -Dsn 参数重跑，或手动执行：" -ForegroundColor Yellow
-        Write-Host "      setx /M $envName `"postgresql://mrr_monitor:口令@127.0.0.1:5432/imgapi`"" -ForegroundColor DarkGray
+    Write-Host "警告：找不到连接串文件 $dsnFile，任务运行时会因缺少连接串而退出（退出码 3）。" -ForegroundColor Yellow
+    Write-Host "      请以管理员重跑：.\install-task.ps1 -Dsn `"postgresql://mrr_monitor:口令@127.0.0.1:5432/<库名>`"" -ForegroundColor Yellow
+}
+
+# 早期版本把连接串写在机器级环境变量里。它存放在 HKLM，本机任何登录用户都能读到，这里只提示不自动删除。
+$legacy = [System.Environment]::GetEnvironmentVariable($envName, 'Machine')
+if ($legacy) {
+    if (Test-Path -LiteralPath $dsnFile) {
+        Write-Host "提示：检测到遗留的机器级环境变量 $envName，连接串文件优先且已生效，可用" -ForegroundColor Yellow
+        Write-Host "      [Environment]::SetEnvironmentVariable('$envName', `$null, 'Machine') 清除它。" -ForegroundColor Yellow
+    }
+    else {
+        Write-Host "提示：当前仍依赖机器级环境变量 $envName。它存放在 HKLM，本机任何登录用户都能读到；" -ForegroundColor Yellow
+        Write-Host "      建议用 -Dsn 重跑，把连接串迁到受限文件。" -ForegroundColor Yellow
     }
 }
 

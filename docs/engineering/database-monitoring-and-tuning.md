@@ -24,7 +24,7 @@
 缺口（本体系要补的部分）：
 
 1. **查询级不可见**：`pg_stat_statements` 扩展已安装，但没有任何指标、看板或告警消费它。慢 SQL 只能靠用户投诉发现。
-2. **告警标签错配**：Actuator 统一标签是 `management.metrics.tags.application=mrr`，而规则与看板里写的是 `application="imgapi"`。这些表达式选中的是空向量，**Hikari 三条关键告警此前不会触发**，应用看板的面板也是空白。本次已统一改为 `application="mrr"`。
+2. **告警标签错配**：Actuator 统一标签是 `management.metrics.tags.application=mrr`，而规则与看板里写的是 `application="imgapi"`。这些表达式选中的是空向量，**Hikari 三条关键告警此前不会触发**，应用看板的面板也是空白。本次已统一改为 `application="mrr"`；库名同理，规则改为排除系统库而不是写死 `datname="imgapi"`，库名不同的现场不必再改规则文件。
 3. **无膨胀与索引治理**：死元组、表膨胀、未使用索引没有任何测量，`mr_scan`（三千万级）与按月分区的 `runtime_log_event_*` 长期只增不减。
 4. **无慢 SQL 日志**：`log_min_duration_statement = -1`，出问题时没有事后证据链。
 5. **无调优流程与基线**：没有“改前快照 → 改后验证”的固定动作，效果无法证明。

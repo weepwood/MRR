@@ -84,10 +84,13 @@ GRANT CONNECT ON DATABASE imgapi TO mrr_monitor;
 GRANT pg_monitor TO mrr_monitor;
 ```
 
-口令不要写进仓库。两种放置方式，任选其一：
+口令不要写进仓库。按推荐顺序有三种放置方式：
 
-- **推荐**：`%APPDATA%\postgresql\pgpass.conf`（SYSTEM 账户对应 `C:\Windows\System32\config\systemprofile\AppData\Roaming\postgresql\pgpass.conf`），DSN 里不写口令；
-- 或把带口令的 DSN 写进机器级环境变量（`install-task.ps1 -Dsn`），权限仅本机管理员可读。
+1. **推荐**：`%APPDATA%\postgresql\pgpass.conf`（SYSTEM 账户对应 `C:\Windows\System32\config\systemprofile\AppData\Roaming\postgresql\pgpass.conf`），DSN 里不写口令；
+2. 或用 `install-task.ps1 -Dsn` 把带口令的 DSN 写入 `C:\ProgramData\MRR\db-monitor\db-dsn.txt`：脚本会断开目录与文件的 ACL 继承，只保留 SYSTEM 与 Administrators；
+3. 机器级环境变量 `MRR_DB_DSN` 仍被采集器识别，但机器级变量存放在 HKLM，**本机任何登录用户都能读到**，只建议临时过渡，不要当作长期方案。
+
+三处同时存在时，采集器按 `config.json` 的 `dsn` → `dsn_file` → 环境变量的顺序取第一个非空值。
 
 ### 5.2 试跑一次（不告警）
 
@@ -108,7 +111,7 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\collect.ps1 -NoAlert
 .\install-task.ps1 -Dsn "postgresql://mrr_monitor@127.0.0.1:5432/imgapi" -EveryMinutes 5
 ```
 
-脚本会创建事件日志源 `MRR-DB-Monitor`、写入机器级 `MRR_DB_DSN`、注册任务 `MRR-DB-Monitor`（SYSTEM 账户，每 5 分钟，忽略重叠实例，超时 10 分钟）。
+脚本会创建事件日志源 `MRR-DB-Monitor`、写入连接串文件 `db-dsn.txt`（断开 ACL 继承，仅 SYSTEM 与 Administrators 可读）、注册任务 `MRR-DB-Monitor`（SYSTEM 账户，每 5 分钟，忽略重叠实例，超时 10 分钟）。若本机还残留早期的机器级 `MRR_DB_DSN`，脚本会提示清理，但不会自动删除。
 
 验证：
 
@@ -191,7 +194,7 @@ Get-EventLog -LogName Application -Source MRR-DB-Monitor -Newest 20 |
 
 ## 11. 限制与注意事项
 
-- 采集器以 SYSTEM 运行，**用户级环境变量读不到**，DSN 必须放机器级或 `pgpass.conf`；
+- 采集器以 SYSTEM 运行，**用户级环境变量读不到**，DSN 必须放连接串文件（`dsn_file`）、机器级环境变量或 `pgpass.conf`；
 - 依赖 `psql` 客户端（随 PostgreSQL 安装），服务器若只有服务端无客户端需补装；
 - 采集 SQL 使用 PG16 已有视图（`pg_stat_io` 等仅在诊断 SQL 中使用），跨大版本升级前需复核；
 - 单实例单库设计，多库需复制一份配置与任务；

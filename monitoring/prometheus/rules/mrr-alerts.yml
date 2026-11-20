@@ -1,3 +1,5 @@
+# 库名不写死：规则只排除系统库（template0/template1/postgres）与 datname 为空的后台进程，
+# 指向现场实际库名时无需改本文件。同一实例若共存多个业务库，连接与缓存指标为合并口径。
 groups:
   - name: mrr-availability
     rules:
@@ -24,7 +26,7 @@ groups:
   - name: mrr-database
     rules:
       - alert: MrrDatabaseConnectionsHigh
-        expr: sum(pg_stat_activity_count{datname="imgapi"}) / clamp_min(max(pg_settings_max_connections), 1) > 0.80
+        expr: sum(pg_stat_activity_count{datname!~"template[01]|postgres", datname!=""}) / clamp_min(max(pg_settings_max_connections), 1) > 0.80
         for: 5m
         labels:
           severity: warning
@@ -34,7 +36,7 @@ groups:
           runbook_url: monitoring/postgresql/diagnostics/06-connections.sql
 
       - alert: MrrDatabaseConnectionsCritical
-        expr: sum(pg_stat_activity_count{datname="imgapi"}) / clamp_min(max(pg_settings_max_connections), 1) > 0.90
+        expr: sum(pg_stat_activity_count{datname!~"template[01]|postgres", datname!=""}) / clamp_min(max(pg_settings_max_connections), 1) > 0.90
         for: 2m
         labels:
           severity: critical
@@ -44,7 +46,7 @@ groups:
           runbook_url: monitoring/postgresql/diagnostics/06-connections.sql
 
       - alert: MrrDatabaseDeadlockDetected
-        expr: increase(pg_stat_database_deadlocks{datname="imgapi"}[5m]) > 0
+        expr: increase(pg_stat_database_deadlocks{datname!~"template[01]|postgres", datname!=""}[5m]) > 0
         labels:
           severity: critical
         annotations:
@@ -120,8 +122,8 @@ groups:
 
       - alert: MrrPgCacheHitLow
         expr: |
-          100 * sum(pg_stat_database_blks_hit{datname="imgapi"})
-          / clamp_min(sum(pg_stat_database_blks_hit{datname="imgapi"} + pg_stat_database_blks_read{datname="imgapi"}), 1) < 99
+          100 * sum(pg_stat_database_blks_hit{datname!~"template[01]|postgres", datname!=""})
+          / clamp_min(sum(pg_stat_database_blks_hit{datname!~"template[01]|postgres", datname!=""} + pg_stat_database_blks_read{datname!~"template[01]|postgres", datname!=""}), 1) < 99
         for: 15m
         labels:
           severity: warning
@@ -132,8 +134,8 @@ groups:
 
       - alert: MrrPgCacheHitCritical
         expr: |
-          100 * sum(pg_stat_database_blks_hit{datname="imgapi"})
-          / clamp_min(sum(pg_stat_database_blks_hit{datname="imgapi"} + pg_stat_database_blks_read{datname="imgapi"}), 1) < 95
+          100 * sum(pg_stat_database_blks_hit{datname!~"template[01]|postgres", datname!=""})
+          / clamp_min(sum(pg_stat_database_blks_hit{datname!~"template[01]|postgres", datname!=""} + pg_stat_database_blks_read{datname!~"template[01]|postgres", datname!=""}), 1) < 95
         for: 5m
         labels:
           severity: critical
@@ -143,7 +145,7 @@ groups:
           runbook_url: monitoring/postgresql/diagnostics/05-capacity-io.sql
 
       - alert: MrrPgTempSpillHigh
-        expr: increase(pg_stat_database_temp_bytes{datname="imgapi"}[10m]) > 2e8
+        expr: increase(pg_stat_database_temp_bytes{datname!~"template[01]|postgres", datname!=""}[10m]) > 2e8
         for: 10m
         labels:
           severity: warning

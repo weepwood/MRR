@@ -1,4 +1,4 @@
-import { mount } from '@vue/test-utils'
+import { flushPromises, mount } from '@vue/test-utils'
 import { createPinia, setActivePinia } from 'pinia'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import MainMenu from '../index.vue'
@@ -11,9 +11,10 @@ const menu = [
   { meta: { title: '数据治理' }, children: [{ path: '/relations', meta: { title: '数据关系' } }] },
 ]
 
-function mountMenu(accordion: boolean, initialMenu = menu) {
+function mountMenu(accordion: boolean, initialMenu = menu, collapse = false) {
   return mount(MainMenu, {
-    props: { menu: initialMenu, value: '/users', accordion },
+    props: { menu: initialMenu, value: '/users', accordion, collapse },
+    attachTo: collapse ? document.body : undefined,
     global: {
       stubs: {
         RouterLink: { props: ['to', 'custom'], template: '<slot :href="\'\'" :navigate="() => {}" />' },
@@ -74,6 +75,38 @@ describe('侧栏无路径目录', () => {
       expect(wrapper.find('[title="用户管理"]').exists()).toBe(false)
       expect(wrapper.find('[title="记录管理"]').exists()).toBe(true)
       expect(wrapper.find('[title="数据关系"]').exists()).toBe(false)
+      wrapper.unmount()
+    }
+  })
+  it('嵌套浮层逐层退出，并将焦点归还触发按钮', async () => {
+    const wrapper = mountMenu(false, [
+      { meta: { title: '业务' }, children: [
+        { meta: { title: '子目录' }, children: [{ path: '/records', meta: { title: '记录管理' } }] },
+      ] },
+    ], true)
+    try {
+      const group = wrapper.get('button[title="业务"]')
+      await group.trigger('click')
+      await flushPromises()
+      const nested = document.querySelector<HTMLButtonElement>('button[title="子目录"]')!
+      expect(document.activeElement).toBe(nested)
+      nested.click()
+      await flushPromises()
+      const leaf = document.querySelector<HTMLAnchorElement>('a[title="记录管理"]')!
+      expect(document.activeElement).toBe(leaf)
+
+      leaf.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }))
+      await flushPromises()
+      expect(document.activeElement).toBe(nested)
+      expect(group.attributes('aria-expanded')).toBe('true')
+      expect(nested.getAttribute('aria-expanded')).toBe('false')
+
+      nested.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }))
+      await flushPromises()
+      expect(document.activeElement).toBe(group.element)
+      expect(group.attributes('aria-expanded')).toBe('false')
+    }
+    finally {
       wrapper.unmount()
     }
   })

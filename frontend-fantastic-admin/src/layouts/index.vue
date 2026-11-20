@@ -52,6 +52,22 @@ const isToolbarHide = computed(() => {
     })
 })
 
+const sidebar = useTemplateRef('sidebar')
+const isMobileSidebarOpen = computed(() => settingsStore.mode === 'mobile' && !settingsStore.settings.menu.subMenuCollapse)
+
+function closeMobileSidebar(event: KeyboardEvent) {
+  if (isMobileSidebarOpen.value) {
+    event.stopPropagation()
+    settingsStore.toggleSidebarCollapse()
+  }
+}
+
+watch(isMobileSidebarOpen, (open) => {
+  if (!open && sidebar.value?.contains(document.activeElement)) {
+    document.getElementById('mrr-mobile-sidebar-toggle')?.focus()
+  }
+})
+
 const isLink = computed(() => !!routeInfo.meta.link)
 
 function toggleHotkeysIntro() {
@@ -101,11 +117,11 @@ onBeforeUnmount(() => {
     <div id="app-main">
       <Header />
       <div class="wrapper">
-        <div class="sidebar-container" :class="{ show: settingsStore.mode === 'mobile' && !settingsStore.settings.menu.subMenuCollapse }">
+        <div id="mrr-sidebar" ref="sidebar" class="sidebar-container" :class="{ show: isMobileSidebarOpen }" @keydown.esc="closeMobileSidebar">
           <MainSidebar />
           <SubSidebar />
         </div>
-        <button type="button" class="invisible fixed inset-0 z-1009 bg-black/50 op-0 transition-opacity" :class="{ 'op-100! visible!': settingsStore.mode === 'mobile' && !settingsStore.settings.menu.subMenuCollapse }" @click="settingsStore.toggleSidebarCollapse()" />
+        <button type="button" aria-label="关闭侧栏导航" tabindex="-1" class="invisible fixed inset-0 z-1009 bg-black/50 op-0 transition-opacity" :class="{ 'op-100! visible!': isMobileSidebarOpen }" @click="settingsStore.toggleSidebarCollapse()" />
         <div class="main-container pb-[var(--g-main-container-padding-bottom)]">
           <Topbar />
           <div class="main">
@@ -128,12 +144,18 @@ onBeforeUnmount(() => {
 
 <style scoped>
 [data-mode="mobile"] {
-  .sidebar-container {
+  /* 选择器带到 .wrapper，是为了让这里的声明压过下面 .wrapper .sidebar-container 的同优先级简写。 */
+  .wrapper .sidebar-container {
+    visibility: hidden;
     transform: translateX(calc((var(--g-main-sidebar-width) + var(--g-sub-sidebar-width)) * -1));
 
     &.show {
+      visibility: visible;
       box-shadow: 20px 0 48px rgb(15 23 42 / 18%);
       transform: translateX(0);
+
+      /* 展开方向不等延迟：延迟只留给收起，让滑出动画在隐藏前播完。 */
+      transition-delay: 0s;
     }
   }
 
@@ -180,7 +202,9 @@ onBeforeUnmount(() => {
     overflow: hidden;
     background: var(--mrr-navigation-bg);
     border-right: 1px solid var(--mrr-navigation-border);
-    transition: width 220ms ease, transform 220ms ease, top 220ms ease, box-shadow 220ms ease;
+
+    /* visibility 参与过渡（0 时长 + 220ms 延迟），收起时元素先滑出再退出无障碍树，避免关闭动画被瞬间掐断。 */
+    transition: width 220ms ease, transform 220ms ease, top 220ms ease, box-shadow 220ms ease, visibility 0s linear 220ms;
   }
 
   .main-sidebar-container:not(.main-sidebar-leave-active) + .sub-sidebar-container {

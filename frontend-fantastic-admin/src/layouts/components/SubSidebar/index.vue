@@ -43,7 +43,7 @@ watch(() => menuStore.actived, (val, oldVal) => {
 <template>
   <Transition name="sub-sidebar">
     <div
-      v-if="enableSidebar" class="sub-sidebar-container" :class="{
+      v-if="enableSidebar" id="mrr-sub-navigation" role="navigation" aria-label="次导航" class="sub-sidebar-container" :class="{
         'is-collapse': settingsStore.mode === 'pc' && settingsStore.settings.menu.subMenuCollapse,
       }"
     >
@@ -74,7 +74,7 @@ watch(() => menuStore.actived, (val, oldVal) => {
         </TransitionGroup>
       </FaScrollArea>
       <div v-if="settingsStore.mode === 'pc' && settingsStore.settings.menu.enableSubMenuCollapseButton" class="collapse-area relative flex items-center px-3 py-3" :class="[settingsStore.settings.menu.subMenuCollapse ? 'justify-center' : 'justify-end']">
-        <FaButton variant="ghost" size="icon" class="transition" :class="{ '-rotate-z-180': settingsStore.settings.menu.subMenuCollapse }" @click="settingsStore.toggleSidebarCollapse()">
+        <FaButton variant="ghost" size="icon" aria-controls="mrr-sub-navigation" :aria-label="settingsStore.settings.menu.subMenuCollapse ? '展开次导航' : '收起次导航'" class="transition" :class="{ '-rotate-z-180': settingsStore.settings.menu.subMenuCollapse }" @click="settingsStore.toggleSidebarCollapse()">
           <FaIcon name="toolbar-collapse" class="size-4" />
         </FaButton>
       </div>
@@ -180,7 +180,7 @@ watch(() => menuStore.actived, (val, oldVal) => {
     }
 
     /* 收进背景边界，同时抵消一层内容缩进，保留子项图标和文字的位置。 */
-    :deep(.sub-menu .menu-item-container > div) {
+    :deep(.sub-menu .menu-item-container > span) {
       padding-inline-start: calc((var(--indent-level) - 1) * 16px);
     }
   }

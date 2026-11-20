@@ -245,8 +245,9 @@ async function readFile(entry: NginxBrowserEntry, action: 'open' | 'download') {
       return
     }
     const url = URL.createObjectURL(blob)
-    window.setTimeout(() => URL.revokeObjectURL(url), 60_000)
     if (target && inlineTypes.has(blob.type.split(';')[0])) {
+      // 新标签页把 blob URL 当作自己的文档地址：定时回收会让该标签页的刷新、另存、PDF 下载全部失效。
+      // 它的生命周期跟随本页面（本页面销毁时浏览器统一回收），这里不设定时器。
       target.location.href = url
     }
     else {
@@ -255,6 +256,8 @@ async function readFile(entry: NginxBrowserEntry, action: 'open' | 'download') {
       link.href = url
       link.download = entry.name
       link.click()
+      // 下载在 click 时已启动，延迟回收只为兼容启动较慢的内核。
+      window.setTimeout(() => URL.revokeObjectURL(url), 60_000)
     }
   }
   catch {

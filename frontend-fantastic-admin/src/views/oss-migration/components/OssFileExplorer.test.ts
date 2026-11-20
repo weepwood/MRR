@@ -75,7 +75,7 @@ describe('oSS只读浏览器恢复', () => {
     await flushPromises()
     vm.previousPage()
     await flushPromises()
-    expect(browseOssObjects).toHaveBeenLastCalledWith(expect.objectContaining({ continuationToken: undefined }))
+    expect(browseOssObjects).toHaveBeenLastCalledWith(expect.objectContaining({ continuationToken: undefined }), expect.any(AbortSignal))
     expect(vm.canPreviousPage).toBe(false)
   })
 
@@ -222,8 +222,37 @@ describe('oSS只读浏览器恢复', () => {
     expect(vm.previewVisible).toBe(false)
     visible.value = true
     await flushPromises()
-    expect(browseOssObjects).toHaveBeenLastCalledWith(expect.objectContaining({ prefix: root, continuationToken: 'next' }))
+    expect(browseOssObjects).toHaveBeenLastCalledWith(expect.objectContaining({ prefix: root, continuationToken: 'next' }), expect.any(AbortSignal))
     expect(vm.canPreviousPage).toBe(true)
+  })
+
+  it('切目录与关闭预览会真正取消在途请求', async () => {
+    const { vm } = await setup()
+    const pending = deferred<ReturnType<typeof directory>>()
+    vi.mocked(browseOssObjects).mockReturnValueOnce(pending.promise as ReturnType<typeof browseOssObjects>)
+    const task = vm.loadDirectory(`${root}a/`)
+    const directoryCalls = vi.mocked(browseOssObjects).mock.calls
+    const directorySignal = directoryCalls[directoryCalls.length - 1][1] as AbortSignal
+    expect(directorySignal.aborted).toBe(false)
+
+    vi.mocked(browseOssObjects).mockResolvedValueOnce(directory(`${root}b/`) as Awaited<ReturnType<typeof browseOssObjects>>)
+    await vm.loadDirectory(`${root}b/`)
+    expect(directorySignal.aborted).toBe(true)
+    pending.resolve(directory(`${root}a/`))
+    await task
+    expect(vm.currentPrefix).toBe(`${root}b/`)
+
+    const signing = deferred<{ data: { ossUrl: string } }>()
+    vi.mocked(getOssBrowserUrl).mockReturnValueOnce(signing.promise as ReturnType<typeof getOssBrowserUrl>)
+    const preview = vm.previewFile(image('a.png'))
+    const signingCalls = vi.mocked(getOssBrowserUrl).mock.calls
+    const signingSignal = signingCalls[signingCalls.length - 1][1] as AbortSignal
+    vm.previewVisible = false
+    await nextTick()
+    expect(signingSignal.aborted).toBe(true)
+    signing.resolve({ data: { ossUrl: '/late.png' } })
+    await preview
+    expect(vm.previewUrl).toBe('')
   })
 
   it('最新预览失败可重试，卸载后签名失败不再提示', async () => {

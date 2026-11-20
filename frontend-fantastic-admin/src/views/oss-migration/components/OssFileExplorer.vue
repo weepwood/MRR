@@ -21,6 +21,9 @@ const directoryError = ref('')
 let directoryGeneration = 0
 let retryDirectory: (() => void) | undefined
 let previewGeneration = 0
+// 与 Nginx 浏览一致：切目录 / 关预览时真正取消在途请求，不能只丢结果让请求继续跑。
+let directoryRequest: AbortController | undefined
+let previewRequest: AbortController | undefined
 let disposed = false
 let suspended = false
 let reloadOnActivation = false
@@ -88,6 +91,9 @@ async function loadDirectory(
     return
   }
   const generation = ++directoryGeneration
+  directoryRequest?.abort()
+  const request = new AbortController()
+  directoryRequest = request
   const normalizedPrefix = normalizeRequestedPrefix(prefix)
   // Navigation history describes only successfully displayed pages.
   const folders = [...folderHistory.value]
@@ -113,7 +119,7 @@ async function loadDirectory(
       prefix: normalizedPrefix,
       continuationToken,
       maxKeys: MAX_KEYS,
-    })
+    }, request.signal)
     if (generation !== directoryGeneration) {
       return
     }
@@ -130,6 +136,9 @@ async function loadDirectory(
     localFilter.value = ''
   }
   catch (error) {
+    if (request.signal.aborted) {
+      return
+    }
     if (generation === directoryGeneration) {
       if (accessDenied(error)) {
         page.value = undefined
@@ -150,6 +159,9 @@ async function loadDirectory(
     }
   }
   finally {
+    if (directoryRequest === request) {
+      directoryRequest = undefined
+    }
     if (generation === directoryGeneration) {
       loading.value = false
     }
@@ -272,23 +284,29 @@ async function previewFile(entry = selectedEntry.value) {
   }
   if (disposed || suspended) { return }
   const generation = ++previewGeneration
+  previewRequest?.abort()
+  const request = new AbortController()
+  previewRequest = request
   previewEntry.value = entry
   previewUrl.value = ''
   previewVisible.value = true
   previewLoading.value = true
   try {
-    const url = await requestSignedUrl(entry)
+    const url = await requestSignedUrl(entry, request.signal)
     if (generation === previewGeneration) {
       previewUrl.value = url
     }
   }
   catch {
-    if (generation === previewGeneration) {
+    if (generation === previewGeneration && !request.signal.aborted) {
       previewVisible.value = false
       ElMessage.error('加载 OSS 图片预览失败，请重试。')
     }
   }
   finally {
+    if (previewRequest === request) {
+      previewRequest = undefined
+    }
     if (generation === previewGeneration) {
       previewLoading.value = false
     }
@@ -297,6 +315,8 @@ async function previewFile(entry = selectedEntry.value) {
 
 function clearPreview() {
   previewGeneration++
+  previewRequest?.abort()
+  previewRequest = undefined
   previewUrl.value = ''
   previewEntry.value = undefined
   previewLoading.value = false
@@ -310,6 +330,8 @@ onDeactivated(() => {
   suspended = true
   reloadOnActivation = loading.value
   directoryGeneration++
+  directoryRequest?.abort()
+  directoryRequest = undefined
   loading.value = false
   previewVisible.value = false
   clearPreview()
@@ -326,6 +348,8 @@ onActivated(() => {
 onBeforeUnmount(() => {
   disposed = true
   directoryGeneration++
+  directoryRequest?.abort()
+  directoryRequest = undefined
   clearPreview()
 })
 

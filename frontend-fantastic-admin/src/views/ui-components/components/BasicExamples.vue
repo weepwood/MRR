@@ -33,33 +33,58 @@ const options = [{ label: '本地示例', value: 'local' }, { label: '归档示�
       </el-radio-button>
     </el-radio-group>
     <div class="example-row">
-      <FaButton :disabled="buttonState === 'disabled'" :loading="buttonState === 'loading'" @click="clicks++">
+      <FaButton data-testid="fa-primary" :disabled="buttonState === 'disabled'" :loading="buttonState === 'loading'" @click="clicks++">
         主要操作
       </FaButton>
-      <FaButton variant="outline" :disabled="buttonState === 'disabled'" @click="clicks++">
+      <FaButton data-testid="fa-outline" variant="outline" :disabled="buttonState === 'disabled'" @click="clicks++">
         次要操作
       </FaButton>
       <FaButton variant="secondary" :disabled="buttonState === 'disabled'" @click="clicks++">
         辅助操作
       </FaButton>
-      <FaButton variant="ghost" :disabled="buttonState === 'disabled'" @click="clicks++">
+      <FaButton data-testid="fa-ghost" variant="ghost" :disabled="buttonState === 'disabled'" @click="clicks++">
         轻量操作
       </FaButton>
-      <FaButton variant="destructive" :disabled="buttonState === 'disabled'" @click="clicks++">
+      <FaButton data-testid="fa-destructive" variant="destructive" :disabled="buttonState === 'disabled'" @click="clicks++">
         危险操作示例
       </FaButton>
-      <FaButton variant="link" :disabled="buttonState === 'disabled'" @click="clicks++">
+      <FaButton data-testid="fa-link" variant="link" :disabled="buttonState === 'disabled'" @click="clicks++">
         文字操作
       </FaButton>
     </div>
+    <!--
+      与上一排逐一对位：同一角色在 Element Plus 与界面封装里应当是同一个控件的样子。
+      「辅助操作」是界面封装独有的中性实心底，Element Plus 没有等价变体，因此不参与对照。
+    -->
+    <div class="example-row" data-testid="el-button-parity">
+      <el-button data-testid="el-primary" type="primary" :disabled="buttonState === 'disabled'" :loading="buttonState === 'loading'" @click="clicks++">
+        主要操作
+      </el-button>
+      <el-button data-testid="el-outline" :disabled="buttonState === 'disabled'" @click="clicks++">
+        次要操作
+      </el-button>
+      <el-button data-testid="el-ghost" text :disabled="buttonState === 'disabled'" @click="clicks++">
+        轻量操作
+      </el-button>
+      <el-button data-testid="el-destructive" type="danger" :disabled="buttonState === 'disabled'" @click="clicks++">
+        危险操作示例
+      </el-button>
+      <el-button data-testid="el-link" link type="primary" :disabled="buttonState === 'disabled'" @click="clicks++">
+        文字操作
+      </el-button>
+    </div>
+    <p class="example-note">
+      上排为界面封装（FaButton），下排为 Element Plus 原生按钮：两族共用同一组尺寸与状态令牌。
+      图标按钮是唯一保留差异的形态——Element Plus 用 <code>circle</code>（正圆），界面封装用 <code>size="icon"</code>（随控件圆角），两者同为控件高度见方。
+    </p>
     <div class="example-row">
-      <FaButton size="sm" variant="outline" @click="clicks++">
+      <FaButton size="sm" variant="outline" data-testid="fa-sm" @click="clicks++">
         紧凑按钮
       </FaButton>
-      <FaButton size="lg" variant="outline" @click="clicks++">
+      <FaButton size="lg" variant="outline" data-testid="fa-lg" @click="clicks++">
         宽按钮
       </FaButton>
-      <FaButton size="icon" variant="outline" aria-label="图标按钮示例" @click="clicks++">
+      <FaButton size="icon" variant="outline" data-testid="fa-icon" aria-label="图标按钮示例" @click="clicks++">
         <FaIcon name="i-lucide:plus" aria-hidden="true" />
       </FaButton>
       <FaButtonGroup>
@@ -70,6 +95,17 @@ const options = [{ label: '本地示例', value: 'local' }, { label: '归档示�
           下一项
         </FaButton>
       </FaButtonGroup>
+    </div>
+    <div class="example-row" data-testid="el-size-parity">
+      <el-button size="small" data-testid="el-sm" @click="clicks++">
+        紧凑按钮
+      </el-button>
+      <el-button size="large" data-testid="el-lg" @click="clicks++">
+        宽按钮
+      </el-button>
+      <el-button circle data-testid="el-icon" aria-label="图标按钮示例" @click="clicks++">
+        <FaIcon name="i-lucide:plus" aria-hidden="true" />
+      </el-button>
     </div>
     <p class="example-note" role="status">
       已触发 {{ clicks }} 次示例操作

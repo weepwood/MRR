@@ -35,7 +35,8 @@ test('真实控件可编辑，禁用和加载按钮不可执行，示例不写�
       writes.push(request.method())
     }
   })
-  const primary = page.getByRole('button', { name: '主要操作', exact: true })
+  // 展示页把界面封装与 Element Plus 的同名按钮并排摆了对照行，这里按 testid 定位，避免歧义。
+  const primary = page.getByTestId('fa-primary')
   await primary.click()
   await expect(page.getByText('已触发 1 次示例操作')).toBeVisible()
   await page.getByText('禁用', { exact: true }).click()
@@ -120,11 +121,12 @@ for (const theme of ['light', 'dark'] as const) {
   })
 }
 
-test('未登录访问仍进入既有登录流程', async ({ browser }) => {
-  const context = await browser.newContext({ storageState: { cookies: [], origins: [] } })
+test('未登录访问仍进入既有登录流程', async ({ browser, baseURL }) => {
+  // 手动创建的上下文不会继承 use.baseURL，这里显式传入，避免把端口写死在某台机器上。
+  const context = await browser.newContext({ storageState: { cookies: [], origins: [] }, baseURL })
   try {
     const page = await context.newPage()
-    await page.goto('http://127.0.0.1:9000/ui-components')
+    await page.goto('/ui-components')
     await expect(page).toHaveURL(/\/login\?/)
     await expect(page.getByRole('heading', { name: 'UI 组件', exact: true })).not.toBeVisible()
   }

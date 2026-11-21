@@ -10,12 +10,16 @@ test.describe('slow application startup recovery', () => {
     await page.addInitScript(() => {
       const nativeSetTimeout = window.setTimeout.bind(window)
       window.setTimeout = ((handler: TimerHandler, timeout?: number) => {
-        const effectiveTimeout = timeout === 15_000 ? 20 : timeout
+        // 把「启动看门狗」的 15s 压到 20ms；用 >= 判断，避免页面把常量改成计算值后补丁失效。
+        const effectiveTimeout = (timeout ?? 0) >= 15_000 ? 20 : timeout
         return nativeSetTimeout(handler, effectiveTimeout)
       }) as typeof window.setTimeout
     })
 
-    await page.route('**/src/main.ts', async (route) => {
+    // 用正则而不是 glob：Vite 给改动过的入口会加 `?t=<时间戳>` 做缓存失效，
+    // `**/src/main.ts` 匹配不到带查询串的 URL，真实应用就会照常挂载并发出 app-ready，
+    // 看门狗随即被清掉，浮层永远不出现（表现为「元素存在但一直 hidden」）。
+    await page.route(/\/src\/main\.ts(?:\?.*)?$/, async (route) => {
       await route.fulfill({
         status: 200,
         contentType: 'application/javascript',

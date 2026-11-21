@@ -1,0 +1,349 @@
+/*
+ * 暖色扁平风格（Gr8r）· 组件设计层
+ *
+ * 与 `utils/theme-palette.ts` 的分工：
+ * - 颜色角色（画布/表面/文字/主色/状态色）由 JS 写入 <html> 内联变量，跟随明暗模式；
+ * - 形状、密度、层级与控件外观由本文件负责，只在 `data-mrr-palette="gr8r"` 时生效。
+ *
+ * 为什么用 CSS 而不是继续堆 JS 变量：这些是「结构令牌 + 组件选择器」，
+ * 放进 JS 会把 SFC 里 scoped 的组件样式也一起搬走，且失去 @supports / .dark 的分档能力。
+ * 退出调色板时 `data-mrr-palette` 变为 `mrr`，整份文件即刻失效，无需逐个回收。
+ *
+ * Chrome 86 红线：不使用 :is() / :has()，不使用嵌套语法；
+ * 新增颜色一律引用既有令牌（--mrr-*），不写死色值。
+ */
+
+/* ===== 1. 圆角：更小的手感，但滑块仍然有效 ===== */
+
+/*
+ * Gr8r 的圆角是 4/6/8/10/12 这一档，MRR 默认口径是 8 基准上下浮动 2~6px。
+ * 这里不写死成固定值，否则「全局圆角」滑块在暖色主题下会失灵；
+ * 改为按滑块值等比压缩并封顶，滑块拉到最大也不会回到圆润的大圆角。
+ */
+html[data-mrr-palette="gr8r"] {
+  --mrr-radius-sm: min(calc(var(--radius, 0.5rem) * 0.6), 7px);
+  --mrr-radius-md: min(calc(var(--radius, 0.5rem) * 0.8), 8px);
+  --mrr-radius-lg: min(calc(var(--radius, 0.5rem) * 1), 10px);
+  --mrr-radius-xl: min(calc(var(--radius, 0.5rem) * 1.2), 12px);
+  --mrr-radius-2xl: min(calc(var(--radius, 0.5rem) * 1.4), 14px);
+  --mrr-radius-base: var(--mrr-radius-lg);
+  --mrr-radius-card: var(--mrr-radius-lg);
+  --mrr-radius-dialog: var(--mrr-radius-xl);
+  --mrr-control-radius: var(--mrr-radius-md);
+
+  /* ===== 2. 密度：控件 30px、表格行 40px ===== */
+
+  /*
+   * 不是简单「变小」而是对齐 Gr8r 的 4pt 节奏：控件 22/26/30/36，
+   * 表头 38、行 40。信息密度提高后同一屏能多两行病案，扫读时更少翻页。
+   */
+  --mrr-input-height: 30px;
+  --mrr-control-height: 30px;
+  --mrr-control-height-compact: 26px;
+  --mrr-control-height-large: 36px;
+  --mrr-table-header-height: 38px;
+  --mrr-table-row-height: 40px;
+
+  /* ===== 3. 层级：发丝边框优先，投影只做方向性提示 ===== */
+
+  /*
+   * 平级投影（xs/sm/md/lg）由 theme-palette.ts 按明暗模式写入，这里只补齐
+   * 该文件不涉及的对话框别名，避免两份来源互相覆盖（内联变量优先级更高）。
+   */
+  --mrr-shadow-dialog: var(--mrr-shadow-md);
+}
+
+/* ===== 4. 按钮 ===== */
+
+/*
+ * 按钮密度只有一处定义：--mrr-button-* 令牌。
+ * el-button 与 FaButton 都读这组变量，所以这里不再分别给两族写 padding / font-size ——
+ * 之前两族各写一套（el 12.5px / Fa 14px），同一条工具栏里立刻能看出两种字号。
+ */
+html[data-mrr-palette="gr8r"] {
+  --mrr-button-font-size: 12.5px;
+  --mrr-button-padding-x: 11px;
+  --mrr-button-font-size-sm: 12px;
+  --mrr-button-padding-x-sm: 9px;
+  --mrr-button-font-size-lg: 13.5px;
+  --mrr-button-padding-x-lg: 16px;
+
+  /* text / link 的左右留白两族都收在 8px，扁平风格里文字按钮不该有横向余量。 */
+  --mrr-button-padding-x-text: 8px;
+}
+
+/*
+ * 默认按钮原来用画布色（--mrr-background）当底，在暖白画布上几乎看不出边界；
+ * 扁平风格里按钮坐在卡片上，必须给出「白底 + 发丝描边」。
+ * 描边取 --mrr-border-strong（暖色 #D9D6CE），与参考实现 .btn-secondary 同口径。
+ * 主按钮加一条 inset 底边高光，是 Gr8r 让填充色仍读起来像实体按键的做法。
+ *
+ * 圆角不在这里写：按钮模板已经读 --mrr-control-radius，而上面把 radius-* 令牌整体换成了
+ * Gr8r 口径；在这里再声明一次会把 `.el-button.is-circle` 的 50% 一起压平成圆角方块。
+ */
+html[data-mrr-palette="gr8r"] .el-button {
+  box-shadow: none;
+}
+
+/* 禁用的默认按钮必须退出这条规则，否则发丝描边和白底会盖掉下面的禁用灰。 */
+html[data-mrr-palette="gr8r"] .el-button:not(.el-button--primary):not(.el-button--success):not(.el-button--warning):not(.el-button--danger):not(.el-button--info):not(.is-link):not(.is-text):not(.is-disabled) {
+  background: var(--mrr-card);
+  border-color: var(--mrr-border-strong);
+  box-shadow: none;
+}
+
+/* 悬停只加深底色，描边维持不动：描边再深一档会被读成「选中态」。 */
+html[data-mrr-palette="gr8r"] .el-button:not(.el-button--primary):not(.el-button--success):not(.el-button--warning):not(.el-button--danger):not(.el-button--info):not(.is-link):not(.is-text):not(.is-disabled):hover {
+  color: var(--mrr-foreground);
+  background: var(--mrr-muted);
+  border-color: var(--mrr-border-strong);
+}
+
+html[data-mrr-palette="gr8r"] .el-button--primary:not(.is-link):not(.is-text):not(.is-plain) {
+  box-shadow: inset 0 -1px 0 rgb(0 0 0 / 12%);
+}
+
+html[data-mrr-palette="gr8r"] .el-button--primary:not(.is-link):not(.is-text):not(.is-plain):not(.is-disabled):hover {
+  box-shadow: inset 0 -1px 0 rgb(0 0 0 / 16%);
+}
+
+/* 按压回弹比 MRR 的「下沉 1px」更短促，与 140ms 动效节奏一致。 */
+html[data-mrr-palette="gr8r"] .el-button:not(.is-disabled):not(.is-loading):active {
+  transform: var(--mrr-motion-decor, scale(0.97));
+}
+
+/* ===== 4.1 shadcn 原语（FaButton / FaTextarea / FaPinInput）===== */
+
+/*
+ * 输入类控件的边线使用较深的令牌，确保白底输入区的边界可辨认。
+ */
+html[data-mrr-palette="gr8r"] .border-input {
+  border-color: var(--mrr-control-border);
+}
+
+/* 文本域仍是画布色底，坐在白卡片上会显脏；换成卡片白与输入框对齐。 */
+html[data-mrr-palette="gr8r"] textarea.bg-background {
+  background: var(--mrr-card);
+}
+
+/* FaButton 与 el-button 同源：扁平层只去掉投影，几何与配色继续走共用令牌。 */
+html[data-mrr-palette="gr8r"] .fa-button-control {
+  box-shadow: none;
+}
+
+/* outline 变体与 el-button 默认按钮同底同边：白卡片 + 发丝描边。 */
+html[data-mrr-palette="gr8r"] .fa-button-control[data-variant="outline"] {
+  background: var(--mrr-card);
+  border-color: var(--mrr-border-strong);
+}
+
+/* 悬停只加深底色，描边维持不动：描边再深一档会被读成「选中态」。 */
+html[data-mrr-palette="gr8r"] .fa-button-control[data-variant="outline"]:not(:disabled):hover {
+  color: var(--mrr-foreground);
+  background: var(--mrr-muted);
+  border-color: var(--mrr-border-strong);
+}
+
+/* 主按钮的 inset 底高光，与 .el-button--primary 用同一条声明。 */
+html[data-mrr-palette="gr8r"] .fa-button-control[data-variant="default"]:not(:disabled) {
+  box-shadow: inset 0 -1px 0 rgb(0 0 0 / 12%);
+}
+
+html[data-mrr-palette="gr8r"] .fa-button-control[data-variant="default"]:not(:disabled):hover {
+  box-shadow: inset 0 -1px 0 rgb(0 0 0 / 16%);
+}
+
+/* 按压回弹与 el-button 相同，两族按钮的手感才一致。 */
+html[data-mrr-palette="gr8r"] .fa-button-control:not(:disabled):not([data-loading]):active {
+  transform: var(--mrr-motion-decor, scale(0.97));
+}
+
+/* ===== 5. 输入、下拉与文本域 ===== */
+
+/*
+ * 控件底色由 JS 置为表面白（原先是有填充的灰调），这里只收描边：
+ * 静置 1px 中性边、hover 一档加深、聚焦交给主色 ring，去掉输入框自带的小投影。
+ */
+html[data-mrr-palette="gr8r"] .el-input__wrapper,
+html[data-mrr-palette="gr8r"] .el-select__wrapper {
+  padding-inline: 10px;
+  box-shadow: 0 0 0 1px var(--mrr-control-border) inset;
+}
+
+html[data-mrr-palette="gr8r"] .el-input__wrapper:hover,
+html[data-mrr-palette="gr8r"] .el-select__wrapper:hover,
+html[data-mrr-palette="gr8r"] .el-textarea__inner:hover {
+  box-shadow: 0 0 0 1px var(--mrr-control-border-hover) inset;
+}
+
+html[data-mrr-palette="gr8r"] .el-input__wrapper.is-focus,
+html[data-mrr-palette="gr8r"] .el-select__wrapper.is-focused,
+html[data-mrr-palette="gr8r"] .el-date-editor.el-input__wrapper.is-active,
+html[data-mrr-palette="gr8r"] .el-date-editor.el-input__wrapper:focus-within {
+  background: var(--mrr-card);
+  box-shadow: 0 0 0 1px var(--mrr-ring) inset, var(--mrr-focus-ring);
+}
+
+html[data-mrr-palette="gr8r"] .el-textarea__inner {
+  padding: 7px 10px;
+  box-shadow: 0 0 0 1px var(--mrr-control-border) inset;
+}
+
+html[data-mrr-palette="gr8r"] .el-textarea__inner:focus {
+  background: var(--mrr-card);
+  box-shadow: 0 0 0 1px var(--mrr-ring) inset, var(--mrr-focus-ring);
+}
+
+/* ===== 6. 表格：安静的表头 + 更紧的行 ===== */
+
+/*
+ * 表头从「灰底块」改为同色底 + 加粗字与下边框，这是扁平表格的典型处理：
+ * 表头与数据不再被一块深灰切开，扫读时视线连续。
+ */
+html[data-mrr-palette="gr8r"] body .el-table {
+  --el-table-header-bg-color: var(--mrr-muted);
+  --el-table-row-hover-bg-color: var(--mrr-muted);
+
+  font-size: 12.5px;
+}
+
+html[data-mrr-palette="gr8r"] .el-table th.el-table__cell {
+  height: var(--mrr-table-header-height);
+  padding-block: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--mrr-muted-foreground);
+  letter-spacing: 0.01em;
+}
+
+html[data-mrr-palette="gr8r"] .el-table td.el-table__cell {
+  height: var(--mrr-table-row-height);
+  padding-block: 4px;
+}
+
+/* 行悬停只换底色、不叠加描边，避免逐行核对时出现网格噪点。 */
+html[data-mrr-palette="gr8r"] .el-table--enable-row-hover .el-table__body tr:hover > td.el-table__cell {
+  background: var(--mrr-muted);
+}
+
+/* ===== 7. 标签与状态胶囊 ===== */
+
+/*
+ * 柔和底 + 无描边 + 5px 圆角：状态是「色块」，不是「按钮」。
+ * 语义色仍来自 tones.css / Element Plus 的 light-9，切主题不会丢失语义。
+ */
+html[data-mrr-palette="gr8r"] .el-tag {
+  min-height: 20px;
+  padding-inline: 7px;
+  font-size: 12px;
+  border-radius: 5px;
+}
+
+html[data-mrr-palette="gr8r"] .el-tag.el-tag--light,
+html[data-mrr-palette="gr8r"] .el-tag.el-tag--plain {
+  border-color: transparent;
+}
+
+/* ===== 8. 卡片、区块与指标卡 ===== */
+
+/*
+ * 卡片：只保留 1px 描边，投影归零。区块头从浅灰条改为与卡面同色 + 分隔线，
+ * 减少「每块都顶着一条灰带」的碎片感。
+ * 选择器带上 .mrr-section-card 是为了压过组件内 scoped 样式（scoped 会多一个属性选择器）。
+ */
+html[data-mrr-palette="gr8r"] .mrr-section-card {
+  box-shadow: none;
+}
+
+html[data-mrr-palette="gr8r"] .mrr-section-card .el-card__header {
+  padding: 13px 16px;
+  background: var(--mrr-card);
+}
+
+html[data-mrr-palette="gr8r"] .mrr-metric-card {
+  background: var(--mrr-card);
+  box-shadow: none;
+}
+
+/* 指标卡只在 hover / focus 时给一档描边反馈，不再靠阴影浮起。 */
+html[data-mrr-palette="gr8r"] .mrr-metric-card:hover {
+  border-color: var(--mrr-border-strong);
+  box-shadow: none;
+}
+
+/* ===== 9. 弹窗、抽屉与浮层 ===== */
+html[data-mrr-palette="gr8r"] body .el-dialog {
+  border-radius: var(--mrr-radius-dialog);
+  box-shadow: var(--mrr-shadow-dialog);
+}
+
+html[data-mrr-palette="gr8r"] .el-dialog__header {
+  padding: 16px 20px 12px;
+}
+
+html[data-mrr-palette="gr8r"] .el-dialog__body {
+  padding: 16px 20px;
+}
+
+html[data-mrr-palette="gr8r"] .el-dialog__footer {
+  padding: 12px 20px;
+  background: var(--mrr-card);
+}
+
+/* ===== 10. 分段控件与选项卡 ===== */
+
+/*
+ * 分段控件从胶囊改为 6px 轨道：胶囊属于「圆润」语汇，与扁平主题的方角冲突。
+ * 选中项用白底 + 发丝描边抬起，不使用主色填充，避免与主按钮抢注意力。
+ */
+html[data-mrr-palette="gr8r"] body .el-segmented {
+  border-radius: var(--mrr-radius-sm);
+}
+
+html[data-mrr-palette="gr8r"] body .el-segmented .el-segmented__item-selected {
+  border-radius: var(--mrr-radius-sm);
+  box-shadow: var(--mrr-shadow-xs), 0 0 0 1px var(--mrr-border);
+}
+
+html[data-mrr-palette="gr8r"] .el-tabs__active-bar {
+  height: 2px;
+  border-radius: 2px;
+}
+
+/* ===== 11. 分页 ===== */
+html[data-mrr-palette="gr8r"] .el-pagination .el-pager li {
+  border-radius: var(--mrr-radius-sm);
+}
+
+/* ===== 12. 导航 ===== */
+
+/*
+ * 选中项不再用主色浅填充，而是「白色药丸 + 发丝描边」——颜色留给主按钮与状态，
+ * 导航靠表面差与字重表达选中。深色模式由 theme-palette.ts 换成 raisedSurface。
+ */
+html[data-mrr-palette="gr8r"] .menu-item-container {
+  min-height: 32px;
+  border-radius: var(--mrr-radius-sm);
+}
+
+html[data-mrr-palette="gr8r"] .menu-item-container.active,
+html[data-mrr-palette="gr8r"] .menu-item.active .menu-item-container {
+  box-shadow: var(--mrr-shadow-xs);
+}
+
+/* ===== 13. 导航搜索浮层的悬停色 ===== */
+
+/*
+ * 该浮层的悬停底色原本写死 rgb(37 99 235 / 6%)（冷蓝），在暖色主题下是唯一的冷色残留。
+ * 改用调色板写入的静态 soft/border 令牌：已是实色，Chrome 86 也能解析。
+ */
+html[data-mrr-palette="gr8r"] body .mrr-vscode-search [data-index]:hover > a {
+  background-color: var(--mrr-tone-primary-soft);
+  border-color: var(--mrr-tone-primary-border);
+}
+
+html[data-mrr-palette="gr8r"] body .mrr-vscode-search [data-index] > a.bg-accent {
+  color: var(--mrr-foreground);
+  background-color: var(--mrr-tone-primary-soft);
+  border-color: var(--mrr-tone-primary-border);
+}

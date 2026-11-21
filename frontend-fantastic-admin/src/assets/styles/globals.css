@@ -10,6 +10,8 @@
  * 6. components/corner-shape.css：G2 连续圆角的生效范围与退出规则
  * 7. components/form-controls.css：Element Plus 尺寸令牌桥接及 FaInput/FaSelect 外观
  * 8. 其余 components/：跨页面复用的业务组件样式
+ * 9. themes/warm-flat.css：暖色扁平风格的形状/密度/层级层，必须排在最后，
+ *    否则同权重的组件规则会被前面文件的默认外观覆盖。
  */
 @import "./fonts.css";
 @import "./tokens.css";
@@ -23,3 +25,4 @@
 @import "./components/metric-card.css";
 @import "./components/archive-workspace.css";
 @import "./components/glass-surface.css";
+@import "./themes/warm-flat.css";

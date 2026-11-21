@@ -119,6 +119,11 @@ class StatisticsControllerTest {
         void exportCsvUsesDedicatedQuery() throws Exception {
             Statistics item = new Statistics();
             item.setBah("00001234");
+            item.setPatientId("1234567890123456");
+            item.setInpatientDepartment("\tward");
+            item.setDischargeDate("\rward");
+            item.setCid("-1+2");
+            item.setOpenerNo("@SUM(1,2)");
             item.setPatientName("张三");
             item.setDate("2026-01-02");
             item.setPages(3);
@@ -140,7 +145,12 @@ class StatisticsControllerTest {
             assertThat(response.getHeader("Cache-Control")).isEqualTo("private, no-store");
             assertThat(response.getContentAsString(StandardCharsets.UTF_8))
                     .startsWith("\uFEFF病案号,")
-                    .contains("00001234,张三")
+                    .contains("'00001234,张三")
+                    .contains("'1234567890123456")
+                    .contains("'\tward")
+                    .contains("\"'\rward\"")
+                    .contains("'-1+2")
+                    .contains("\"'@SUM(1,2)\"")
                     .contains("2026-01-02")
                     .contains(",3,");
         }

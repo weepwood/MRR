@@ -4,15 +4,21 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import LogsPage from '../index.vue'
 
 const pushMock = vi.hoisted(() => vi.fn())
+const replaceMock = vi.hoisted(() => vi.fn())
+const access = vi.hoisted(() => ({ profile: { roleCode: 'OPERATOR' }, permissions: ['log:read', 'system:error:read'] }))
+const routeState = vi.hoisted(() => ({ route: null as { path: string, query: Record<string, unknown> } | null }))
 const api = vi.hoisted(() => ({
   searchSystemLogs: vi.fn(),
   getLogById: vi.fn(),
 }))
 vi.mock('@/api/modules/logs', () => api)
-vi.mock('vue-router', () => ({
-  useRoute: () => ({ path: '/logs', query: {} }),
-  useRouter: () => ({ push: pushMock }),
-}))
+vi.mock('vue-router', async () => {
+  const { reactive } = await import('vue')
+  const route = reactive({ path: '/logs', query: {} as Record<string, unknown> })
+  routeState.route = route
+  return { useRoute: () => route, useRouter: () => ({ push: pushMock, replace: replaceMock }) }
+})
+vi.mock('@/store/modules/user', () => ({ useUserStore: () => access }))
 vi.mock('@vueuse/core', () => ({ useMediaQuery: () => ({ value: false }) }))
 vi.mock('element-plus', () => ({ ElMessage: { success: vi.fn(), error: vi.fn() } }))
 vi.mock('@/api/modules/user', () => ({ default: { getUsers: vi.fn().mockResolvedValue({ data: { list: [], total: 0 } }) } }))
@@ -91,6 +97,13 @@ function setupState(wrapper: ReturnType<typeof mount>): Record<string, unknown> 
 
 beforeEach(() => {
   vi.resetAllMocks()
+  routeState.route!.path = '/logs'
+  routeState.route!.query = {}
+  access.permissions = ['log:read', 'system:error:read']
+  replaceMock.mockImplementation(({ query }) => {
+    routeState.route!.query = query
+    return Promise.resolve()
+  })
   api.searchSystemLogs.mockResolvedValue({ data: { list: [rowFixture], total: 1 } })
   api.getLogById.mockResolvedValue({ data: failedRowFixture })
 })
@@ -101,6 +114,42 @@ afterEach(() => {
 })
 
 describe('日志管理', () => {
+  it('缓存页面打开追踪链接时清除旧筛选，重置可清除链接中的编号', async () => {
+    const wrapper = openPage()
+    await flushPromises()
+    const state = setupState(wrapper)
+    Object.assign(state.query as object, {
+      username: 'synthetic-operator',
+      method: 'POST',
+      responseStatus: '200',
+      timeRange: ['2026-11-19 09:00:00', '2026-11-19 10:00:00'],
+    })
+    await (state.handlePageChange as (page: number) => Promise<void>)(2)
+    routeState.route!.path = '/runtime-errors'
+    routeState.route!.query = { requestId: 'req-500-001' }
+    await flushPromises()
+    expect(api.searchSystemLogs).toHaveBeenCalledTimes(2)
+
+    routeState.route!.path = '/logs'
+    await flushPromises()
+    expect(api.searchSystemLogs).toHaveBeenLastCalledWith({ page: 1, size: 20, keyword: 'req-500-001' })
+
+    await wrapper.get('[data-action="reset"]').trigger('click')
+    await flushPromises()
+    expect(routeState.route!.query.requestId).toBeUndefined()
+    expect(api.searchSystemLogs).toHaveBeenLastCalledWith({ page: 1, size: 20 })
+  })
+
+  it('首次打开追踪链接后重置可恢复全部日志', async () => {
+    routeState.route!.query = { requestId: 'req-500-001' }
+    const wrapper = openPage()
+    await flushPromises()
+    expect(api.searchSystemLogs).toHaveBeenCalledExactlyOnceWith({ page: 1, size: 20, keyword: 'req-500-001' })
+    await wrapper.get('[data-action="reset"]').trigger('click')
+    await flushPromises()
+    expect(api.searchSystemLogs).toHaveBeenLastCalledWith({ page: 1, size: 20 })
+  })
+
   it('列表正常渲染且头部显示自动刷新说明', async () => {
     const wrapper = openPage()
     await flushPromises()
@@ -160,5 +209,12 @@ describe('日志管理', () => {
     await (setupState(wrapper).openDetail as (row: typeof rowFixture) => Promise<void>)(rowFixture)
     await flushPromises()
     expect(wrapper.findAll('button').some(item => item.text().trim() === '查看相关运行错误')).toBe(false)
+  })
+
+  it('仅有日志权限时不显示运行错误跳转', async () => {
+    access.permissions = ['log:read']
+    const wrapper = openPage()
+    await (setupState(wrapper).openDetail as (row: typeof failedRowFixture) => Promise<void>)(failedRowFixture)
+    expect(wrapper.text()).not.toContain('查看相关运行错误')
   })
 })

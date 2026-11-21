@@ -32,6 +32,53 @@ test('空影像查询显示追踪编号，管理员显式触发深入诊断', as
   expect(diagnoses).toBe(1)
 })
 
+test('从病案诊断追踪访问日志和运行错误，重置后恢复普通列表', async ({ page }) => {
+  const requestId = '0123456789abcdef'
+  const accessLog = {
+    id: 921,
+    requestId,
+    requestUri: '/api/v1/img/search',
+    method: 'GET',
+    responseStatus: 500,
+  }
+  const errorGroup = { id: 72, errorId: 'ERR-SYNTHETIC-72', requestId, level: 'ERROR', occurrenceCount: 1 }
+  await page.route('**/api/v1/img/search?**', route => route.fulfill({ json: emptyResult('NO_MATCHING_IMAGES') }))
+  await page.route('**/api/v1/operations/query-diagnostics', route => route.fulfill({
+    json: { code: 200, data: { readOnly: true, steps: [{ code: 'REQUEST_RECEIVED', status: 'OK', message: '找到访问记录' }] } },
+  }))
+  await page.route('**/api/v1/logs/search?**', (route) => {
+    const matches = new URL(route.request().url()).searchParams.get('keyword') === requestId
+    return route.fulfill({ json: { code: 200, data: { list: matches ? [accessLog] : [], total: Number(matches) } } })
+  })
+  await page.route('**/api/v1/logs/921', route => route.fulfill({ json: { code: 200, data: accessLog } }))
+  await page.route('**/api/v1/system-errors?**', (route) => {
+    const matches = new URL(route.request().url()).searchParams.get('keyword') === requestId
+    return route.fulfill({ json: { code: 200, data: { list: matches ? [errorGroup] : [], total: Number(matches) } } })
+  })
+  await page.route('**/api/v1/system-errors/72', route => route.fulfill({ json: { code: 200, data: errorGroup } }))
+  await page.route('**/api/v1/system-errors/overview', route => route.fulfill({ json: { code: 200, data: null } }))
+  await page.route('**/api/v1/system-errors/modules', route => route.fulfill({ json: { code: 200, data: [] } }))
+
+  await page.goto('/archive?bah=123')
+  await page.getByRole('button', { name: '排查本次查询' }).click()
+  await page.getByRole('link', { name: '查看原请求访问日志' }).click()
+  await expect(page).toHaveURL(`/logs?requestId=${requestId}`)
+  await expect(page.getByLabel('关键字', { exact: true })).toHaveValue(requestId)
+  await page.getByRole('row').filter({ hasText: requestId }).getByRole('button', { name: '查看详情' }).click()
+  await page.getByRole('button', { name: '查看相关运行错误' }).click()
+
+  await expect(page).toHaveURL(`/runtime-errors?requestId=${requestId}`)
+  await page.getByRole('row').filter({ hasText: errorGroup.errorId }).getByRole('button', { name: '详情', exact: true }).click()
+  await page.getByRole('button', { name: '查看访问记录' }).click()
+  await expect(page).toHaveURL(`/logs?requestId=${requestId}`)
+  await expect(page.getByRole('row').filter({ hasText: requestId })).toBeVisible()
+
+  await page.getByRole('button', { name: '重置', exact: true }).click()
+  await expect(page).toHaveURL('/logs')
+  await expect(page.getByLabel('关键字', { exact: true })).toHaveValue('')
+  await expect(page.getByText('暂无日志记录', { exact: true })).toBeVisible()
+})
+
 test('查询失败卡片给出下一步建议，追踪编号可一键复制', async ({ page }) => {
   await page.route('**/api/v1/img/search?**', route => route.fulfill({
     status: 500,

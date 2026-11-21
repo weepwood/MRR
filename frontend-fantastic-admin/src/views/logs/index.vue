@@ -5,7 +5,7 @@ import type { MrrTableAction } from '@/components/MrrTableActions/types'
 import { useMediaQuery } from '@vueuse/core'
 import { ElMessage } from 'element-plus'
 import { Copy as CopyIcon, RefreshCw as Refresh } from 'lucide-vue-next'
-import { onBeforeUnmount, onMounted, ref, watch } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { getLogById, searchSystemLogs } from '@/api/modules/logs'
 import AppEmpty from '@/components/AppEmpty/index.vue'
@@ -20,18 +20,27 @@ import MrrTableActions from '@/components/MrrTableActions/index.vue'
 import MrrUserSearchSelect from '@/components/MrrUserSearchSelect/index.vue'
 import { useCrudList } from '@/composables/useCrudList'
 import { useTableActionLayout } from '@/composables/useTableActionLayout'
+import { useUserStore } from '@/store/modules/user'
 import { rangePickerPopperOptions } from '@/ui/provider/picker-options'
 import { formatDateTime, isRedactedLogText } from '@/utils/display-format'
+import { checkSessionPermission } from '@/utils/permission'
 
 defineOptions({ name: 'LogsPage' })
 
 const route = useRoute()
 const router = useRouter()
+const userStore = useUserStore()
+const canReadRuntimeErrors = computed(() => checkSessionPermission(
+  userStore.profile.roleCode,
+  userStore.permissions,
+  'system:error:read',
+))
 
 const detailVisible = ref(false)
 const isNarrowScreen = useMediaQuery('(max-width: 760px)')
 const currentLog = ref<LogRecord | null>(null)
 const error = ref('')
+const lastRefreshedAt = ref('')
 
 async function copyText(text: string, message: string) {
   if (!text.trim()) { return }
@@ -81,13 +90,25 @@ interface LogsQuery {
   timeRange: string[]
 }
 
-const { list, total, loading, pageNum, pageSize, query, handleSearch, resetFilters, handlePageChange, loadData } = useCrudList<
+const defaultQuery: LogsQuery = {
+  keyword: '',
+  username: '',
+  clientIp: '',
+  requestUri: '',
+  method: '',
+  responseStatus: '',
+  timeRange: [],
+}
+const routeRequestId = computed(() => typeof route.query.requestId === 'string' ? route.query.requestId.trim() : '')
+const linkedRequestId = ref(routeRequestId.value)
+
+const { list, total, loading, pageNum, pageSize, query, handleSearch, handlePageChange, loadData } = useCrudList<
   LogRecord,
   LogsQuery
 >({
   fetchApi: async (params, { isCurrent, silent }) => {
     const { page, size, keyword, username, clientIp, requestUri, method, responseStatus, timeRange } = params
-    const apiParams: Record<string, any> = { page, size }
+    const apiParams: Parameters<typeof searchSystemLogs>[0] = { page, size }
     if (keyword?.trim()) apiParams.keyword = keyword.trim()
     if (username?.trim()) apiParams.username = username.trim()
     if (clientIp?.trim()) apiParams.clientIp = clientIp.trim()
@@ -99,8 +120,12 @@ const { list, total, loading, pageNum, pageSize, query, handleSearch, resetFilte
       apiParams.endTime = timeRange[1]
     }
     try {
-      error.value = ''
-      return await searchSystemLogs(apiParams as Parameters<typeof searchSystemLogs>[0])
+      const response = await searchSystemLogs(apiParams)
+      if (isCurrent()) {
+        error.value = ''
+        lastRefreshedAt.value = new Date().toLocaleTimeString('zh-CN', { hour12: false })
+      }
+      return response
     }
     catch (e: unknown) {
       // 静默轮询失败返回 undefined：useCrudList 保留现有列表，不进空态/错误态。
@@ -110,36 +135,36 @@ const { list, total, loading, pageNum, pageSize, query, handleSearch, resetFilte
       return { list: [], total: 0, page: 1, size: 20 } as PaginatedResult<LogRecord>
     }
   },
-  defaultQuery: { keyword: String(route.query.requestId || ''), username: '', clientIp: '', requestUri: '', method: '', responseStatus: '', timeRange: [] },
+  defaultQuery: { ...defaultQuery, keyword: linkedRequestId.value },
 })
 
-/** 页面被缓存时从「运行日志」跳转过来不会重新 mount；跟随 requestId 重新检索。 */
-watch(() => route.query.requestId, (value) => {
-  // 缓存组件里 route 指向全局当前路由；离开本页后跳到别处的参数不应改动本页检索。
-  if (route.path !== '/logs') { return }
-  if (typeof value !== 'string' || !value) { return }
-  query.keyword = value
-  handleSearch()
+function searchFromStart(keyword = '') {
+  Object.assign(query, defaultQuery, { keyword, timeRange: [] })
+  return handleSearch()
+}
+
+// 监听路径以覆盖两页之间携带同一个 Request ID 的跳转。
+watch([() => route.path, routeRequestId], ([path, requestId]) => {
+  if (path !== '/logs' || (!requestId && !linkedRequestId.value)) { return }
+  linkedRequestId.value = requestId
+  detailVisible.value = false
+  void searchFromStart(requestId)
 })
+
+function resetFilters() {
+  if (linkedRequestId.value) {
+    return router.replace({ query: { ...route.query, requestId: undefined } })
+  }
+  return searchFromStart()
+}
 
 /** 30 秒静默轮询：页面隐藏时跳过，重新可见立即补一次；失败保留旧数据。 */
 const REFRESH_INTERVAL_MS = 30_000
 let refreshTimer: ReturnType<typeof setInterval> | undefined
-const lastRefreshedAt = ref('')
-
-function updateLastRefreshed() {
-  lastRefreshedAt.value = new Date().toLocaleTimeString('zh-CN', { hour12: false })
-}
-
-async function refresh() {
-  await loadData()
-  updateLastRefreshed()
-}
 
 async function silentRefresh() {
-  if (document.hidden) { return }
+  if (route.path !== '/logs' || document.hidden || loading.value) { return }
   await loadData({ silent: true })
-  updateLastRefreshed()
 }
 
 function startAutoRefresh() {
@@ -168,10 +193,10 @@ onBeforeUnmount(() => {
   stopAutoRefresh()
 })
 
-/** 失败请求（≥400）通常伴随后端异常；带 Request ID 跳运行错误中心按编号检索。 */
+/** 失败请求可用 Request ID 到运行错误中心查找相关记录。 */
 function openRelatedErrors(row: LogRecord) {
-  const requestId = row.requestId || currentLog.value?.requestId
-  if (!requestId) { return }
+  const requestId = row.requestId
+  if (!canReadRuntimeErrors.value || !requestId) { return }
   detailVisible.value = false
   void router.push({ path: '/runtime-errors', query: { requestId } })
 }
@@ -224,7 +249,7 @@ function statusTagType(status: string | number) {
       <template #actions>
         <div class="header-actions">
           <span class="auto-refresh-note">每 30 秒自动刷新<template v-if="lastRefreshedAt"> · 上次 {{ lastRefreshedAt }}</template></span>
-          <el-button :loading="loading" @click="refresh">
+          <el-button :loading="loading" @click="loadData()">
             <el-icon><Refresh /></el-icon>
             刷新
           </el-button>
@@ -293,7 +318,10 @@ function statusTagType(status: string | number) {
 
       <AppLoading v-if="loading" type="table" :rows="8" />
       <AppError v-else-if="error" :message="error" @retry="loadData" />
-      <AppEmpty v-else-if="!list.length" description="暂无日志记录" />
+      <AppEmpty
+        v-else-if="!list.length"
+        :description="linkedRequestId && query.keyword === linkedRequestId ? '未找到该 Request ID 对应的访问日志' : '暂无日志记录'"
+      />
       <el-table v-else :data="list" stripe>
         <el-table-column prop="accessTime" label="访问时间" min-width="180">
           <template #default="{ row }">{{ formatDateTime(row.accessTime) }}</template>
@@ -371,7 +399,8 @@ function statusTagType(status: string | number) {
             复制
           </el-button>
           <el-button
-            v-if="Number(currentLog.responseStatus) >= 400 && currentLog.requestId" link type="warning" class="detail-link"
+            v-if="canReadRuntimeErrors && Number(currentLog.responseStatus) >= 400 && currentLog.requestId"
+            link type="warning" class="detail-link"
             @click="openRelatedErrors(currentLog)"
           >
             查看相关运行错误

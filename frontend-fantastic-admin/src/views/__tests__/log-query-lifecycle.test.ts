@@ -9,7 +9,8 @@ vi.mock('@/api/modules/logs', () => api)
 // route store → router/routes.ts 引入 virtual:generated-pages（vitest 无该插件），
 // 必须在此 mock 掐断依赖链。
 vi.mock('@/api/modules/user', () => ({ default: { getUsers: vi.fn().mockResolvedValue({ data: { list: [], total: 0 } }) } }))
-// 访问日志页新增了「查看运行日志」跳转，需要 useRouter；path 与真实路由一致，
+vi.mock('@/store/modules/user', () => ({ useUserStore: () => ({ profile: { roleCode: 'OPERATOR' }, permissions: ['log:read'] }) }))
+// 访问日志页的运行错误跳转需要 useRouter；path 与真实路由一致，
 // 避免页面的「仅在本页时跟随 query」守卫把用例挡掉。
 vi.mock('vue-router', () => ({ useRoute: () => ({ path: '/logs', query: {} }), useRouter: () => ({ push: vi.fn() }) }))
 const stubs = {

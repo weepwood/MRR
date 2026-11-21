@@ -1,6 +1,8 @@
 import { flushPromises, mount } from '@vue/test-utils'
+import { ElMessage } from 'element-plus'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
+import { downloadBlob } from '@/utils/file-download'
 import StatisticsDetailPage from '../index.vue'
 
 const api = vi.hoisted(() => ({
@@ -15,6 +17,7 @@ const settingsApi = vi.hoisted(() => ({
 
 vi.mock('@/api/modules/statistics', () => api)
 vi.mock('@/api/modules/settings', () => settingsApi)
+vi.mock('@/utils/file-download', () => ({ downloadBlob: vi.fn() }))
 vi.mock('vue-router', () => ({
   useRouter: () => ({ push: vi.fn() }),
 }))
@@ -105,6 +108,36 @@ describe('statistics detail responsive pagination', () => {
 
   afterEach(() => {
     vi.unstubAllGlobals()
+    vi.restoreAllMocks()
+  })
+
+  it('shows the export limit message when the CSV request is rejected', async () => {
+    const limitMessage = '统计导出超过单次 100000 条上限，请缩小筛选范围'
+    const showError = vi.spyOn(ElMessage, 'error').mockReturnValue({ close: vi.fn() })
+    api.exportStatisticsCsv.mockRejectedValue(new Error(limitMessage))
+    const wrapper = mount(StatisticsDetailPage, { global: { stubs } })
+    await flushPromises()
+
+    await wrapper.get('.header-actions button').trigger('click')
+    await flushPromises()
+
+    expect(showError).toHaveBeenCalledWith(`导出失败：${limitMessage}`)
+    wrapper.unmount()
+  })
+
+  it('downloads the Blob returned by the CSV request without changing its bytes', async () => {
+    const csv = new Blob(['bah,patientName\n0001,Sample'], { type: 'text/csv' })
+    api.exportStatisticsCsv.mockResolvedValue(csv)
+    const wrapper = mount(StatisticsDetailPage, { global: { stubs } })
+    await flushPromises()
+
+    await wrapper.get('.header-actions button').trigger('click')
+    await flushPromises()
+
+    expect(downloadBlob).toHaveBeenCalledOnce()
+    expect(vi.mocked(downloadBlob).mock.calls[0]?.[0]).toBe(csv)
+    expect(vi.mocked(downloadBlob).mock.calls[0]?.[1]).toMatch(/^statistics-\d+\.csv$/)
+    wrapper.unmount()
   })
 
   it('uses a complete-row page size on the first request', async () => {

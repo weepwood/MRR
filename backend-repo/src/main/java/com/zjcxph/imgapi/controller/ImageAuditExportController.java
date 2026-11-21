@@ -3,6 +3,7 @@ package com.zjcxph.imgapi.controller;
 import com.zjcxph.imgapi.annotation.RequirePermissions;
 import com.zjcxph.imgapi.entity.Log;
 import com.zjcxph.imgapi.service.LogService;
+import com.zjcxph.imgapi.service.importer.DataExchangeImportSupport;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.http.HttpHeaders;
@@ -220,7 +221,10 @@ public class ImageAuditExportController {
 
     private String csv(Object value) {
         String text = value == null ? "" : String.valueOf(value);
-        return '"' + text.replace("\"", "\"\"") + '"';
+        // 文本字段不可信；数值型耗时保持原格式，文本复用可逆的表格安全前缀。
+        String safeText = value instanceof Number ? text
+                : DataExchangeImportSupport.protectSpreadsheetValue(text);
+        return '"' + safeText.replace("\"", "\"\"") + '"';
     }
 
     private record AuditIdentifiers(String bah, String sjh, String idCard) {

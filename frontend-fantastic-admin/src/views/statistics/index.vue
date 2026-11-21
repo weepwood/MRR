@@ -51,6 +51,7 @@ interface StatisticsFilterParams {
 
 const overviewLoading = ref(false)
 const listLoading = ref(false)
+const listError = ref('')
 const exportLoading = ref(false)
 const summaryData = ref<SummaryData>({
   total: { totalRecords: undefined, totalPages: undefined },
@@ -80,6 +81,15 @@ const listSearchType = ref('')
 const listSearchYear = ref('')
 const listSearchDateRange = ref<string[]>([])
 const tableSort = ref({ prop: 'date', order: 'descending' })
+let listRequestId = 0
+const loadedFilters = ref<StatisticsFilterParams>()
+const canExportList = computed(() => {
+  const loaded = loadedFilters.value
+  const draft = buildStatisticsFilters()
+  return Boolean(!listLoading.value && loaded
+    && loaded.keyword === draft.keyword && loaded.type === draft.type
+    && loaded.startDate === draft.startDate && loaded.endDate === draft.endDate)
+})
 
 const sortedDateData = computed<DateStatItem[]>(() => {
   const valid = (dateSummaryData.value ?? []).filter(
@@ -226,7 +236,11 @@ async function loadOverview() {
 }
 
 async function loadStatisticsList() {
+  const requestId = ++listRequestId
+  const filters = buildStatisticsFilters()
+  loadedFilters.value = undefined
   listLoading.value = true
+  listError.value = ''
   try {
     const { prop, order } = tableSort.value
     const res = await getStatisticsList({
@@ -234,8 +248,11 @@ async function loadStatisticsList() {
       size: pageSize.value,
       sortBy: prop || 'date',
       sortOrder: getBackendSortOrder(order),
-      ...buildStatisticsFilters(),
+      ...filters,
     })
+    if (requestId !== listRequestId) {
+      return
+    }
     const raw = res.data ?? { list: [], total: 0, page: 1, size: 20 }
     statisticsListData.value = {
       ...raw,
@@ -244,13 +261,18 @@ async function loadStatisticsList() {
         ? raw.list.filter((item): item is StatisticsRecord => item != null)
         : [],
     }
+    loadedFilters.value = filters
   }
   catch (error: unknown) {
-    const message = error instanceof Error ? error.message : '未知错误'
-    ElMessage.error(`加载病案列表失败：${message}`)
+    if (requestId === listRequestId) {
+      const message = error instanceof Error ? error.message : '未知错误'
+      listError.value = `加载病案列表失败：${message}`
+    }
   }
   finally {
-    listLoading.value = false
+    if (requestId === listRequestId) {
+      listLoading.value = false
+    }
   }
 }
 
@@ -295,9 +317,14 @@ function handleSortChange({ prop, order }: { prop: string | null, order: string 
 }
 
 async function handleExportTable() {
+  const filters = loadedFilters.value
+  if (!filters || !canExportList.value || exportLoading.value) {
+    return
+  }
+  const scope = listSearchYear.value || 'all'
   exportLoading.value = true
   try {
-    const response = await exportStatisticsCsv(buildStatisticsFilters())
+    const response = await exportStatisticsCsv(filters)
     const payload: unknown = response instanceof Blob ? response : response.data
     if (!(payload instanceof Blob)) {
       throw new TypeError('导出接口未返回有效文件')
@@ -308,7 +335,6 @@ async function handleExportTable() {
       : new Blob([payload], { type: 'text/csv;charset=utf-8;' })
     const url = URL.createObjectURL(blob)
     const link = document.createElement('a')
-    const scope = listSearchYear.value || 'all'
     const date = new Date().toISOString().slice(0, 10)
     link.href = url
     link.download = `statistics-${scope}-${date}.csv`
@@ -494,7 +520,8 @@ onMounted(refreshAll)
             plain
             :icon="Download"
             :loading="exportLoading"
-            title="导出当前筛选结果，单次最多 100,000 条"
+            :disabled="!canExportList"
+            :title="canExportList ? '导出当前筛选结果，单次最多 100,000 条' : '查询当前筛选条件后可导出'"
             @click="handleExportTable"
           >
             导出表格
@@ -502,7 +529,9 @@ onMounted(refreshAll)
         </div>
       </div>
 
+      <AppError v-if="listError" :message="listError" @retry="loadStatisticsList" />
       <el-table
+        v-else
         v-loading="listLoading"
         :data="statisticsListData.list"
         stripe
@@ -518,7 +547,7 @@ onMounted(refreshAll)
         <el-table-column prop="cid" label="CID" min-width="120" show-overflow-tooltip />
       </el-table>
 
-      <div class="pagination-wrapper">
+      <div v-if="!listError" class="pagination-wrapper">
         <el-pagination
           v-model:current-page="currentPage"
           v-model:page-size="pageSize"

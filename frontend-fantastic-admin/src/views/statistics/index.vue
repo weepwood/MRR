@@ -531,7 +531,7 @@ onMounted(refreshAll)
 
       <AppError v-if="listError" :message="listError" @retry="loadStatisticsList" />
       <el-table
-        v-else
+        v-show="!listError"
         v-loading="listLoading"
         :data="statisticsListData.list"
         stripe
@@ -547,7 +547,7 @@ onMounted(refreshAll)
         <el-table-column prop="cid" label="CID" min-width="120" show-overflow-tooltip />
       </el-table>
 
-      <div v-if="!listError" class="pagination-wrapper">
+      <div v-show="!listError" class="pagination-wrapper">
         <el-pagination
           v-model:current-page="currentPage"
           v-model:page-size="pageSize"

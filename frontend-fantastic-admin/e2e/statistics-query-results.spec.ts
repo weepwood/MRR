@@ -49,3 +49,35 @@ async function statsRepro(page: Page) {
 test('迟到查询不覆盖最新列表，导出只使用当前已加载的筛选', async ({ page }) => {
   await statsRepro(page)
 })
+
+test('统计查询失败后重试会保留表头和请求的排序', async ({ page }) => {
+  let failNext = false
+  const sortRequests: string[] = []
+  await page.route(/\/api\/v1\/statistics(?:\?|$)/, (route) => {
+    const query = new URL(route.request().url()).searchParams
+    sortRequests.push(`${query.get('sortBy')}:${query.get('sortOrder')}`)
+    if (failNext) {
+      failNext = false
+      return route.fulfill({ status: 503, json: { code: 503, message: '合成查询失败' } })
+    }
+    const keyword = query.get('keyword')
+    return route.fulfill(ok({ list: [{ id: 41, bah: keyword ? 'SYN-RETRY' : 'SYN-BASE', pages: 2 }], total: 1, page: 1, size: 100 }))
+  })
+
+  await page.goto('/statistics')
+  const table = page.locator('.el-table')
+  await expect(table.getByText('SYN-BASE', { exact: true })).toBeVisible()
+  const header = table.getByRole('columnheader', { name: /^页数/ })
+  await header.locator('.sort-caret.descending').click()
+  await expect.poll(() => sortRequests.at(-1)).toBe('pages:desc')
+  await expect(header).toHaveAttribute('aria-sort', 'descending')
+
+  failNext = true
+  const filter = page.getByPlaceholder('搜索病案号 / 上架号 / 操作员')
+  await filter.fill('SYN-RETRY')
+  await filter.press('Enter')
+  await page.getByRole('button', { name: '重试', exact: true }).click()
+  await expect(table.getByText('SYN-RETRY', { exact: true })).toBeVisible()
+  expect(sortRequests.at(-1)).toBe('pages:desc')
+  await expect(header).toHaveAttribute('aria-sort', 'descending')
+})

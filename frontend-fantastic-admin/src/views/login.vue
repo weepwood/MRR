@@ -290,12 +290,19 @@ onBeforeUnmount(() => {
         </div>
 
         <div class="brand-footer">
+          <!--
+            trigger-keys 置空的原因：Element Plus 的触发器默认把 Enter / Space 当作 toggle，
+            而徽章自己用 @keydown.enter 打开面板 —— 同一个按键两处都命中，EP 看到「已经打开」
+            就立刻请求关闭，hide-after(220ms) 后真正隐藏并把焦点弹回徽章，键盘用户刚看到的
+            诊断面板会自己消失。键盘开合统一由本组件的 keydown 处理，EP 只保留指针悬停这一条通道。
+          -->
           <el-popover
             v-model:visible="environmentOpen"
             placement="top-start"
             :width="760"
             :popper-style="{ maxWidth: 'calc(100vw - 24px)' }"
             trigger="hover"
+            :trigger-keys="[]"
             :show-after="120"
             :hide-after="220"
             popper-class="login-environment-popper"
@@ -477,10 +484,6 @@ onBeforeUnmount(() => {
   padding: var(--mrr-space-5);
   color: var(--mrr-foreground);
   background-color: var(--mrr-app-shell-bg);
-  background-image:
-    linear-gradient(var(--mrr-app-shell-grid) 1px, transparent 1px),
-    linear-gradient(90deg, var(--mrr-app-shell-grid) 1px, transparent 1px);
-  background-size: 32px 32px;
 }
 .environment-badge {
   display: inline-flex;
@@ -501,12 +504,17 @@ onBeforeUnmount(() => {
   box-shadow: var(--mrr-shadow-xs);
   transition: color 160ms ease, background-color 160ms ease, border-color 160ms ease, box-shadow 160ms ease, transform 160ms ease;
 }
+
+/*
+ * 悬停/展开态只保留描边与位移：原先那圈写死的蓝色光晕 rgb(37 99 235 / 8%)
+ * 切到暖色主题后成了唯一的冷色残留，且与描边反馈重复。
+ */
 .environment-badge:hover,
 .environment-badge[aria-expanded='true'] {
   color: var(--mrr-foreground);
   background: var(--mrr-card);
   border-color: var(--mrr-primary);
-  box-shadow: 0 0 0 3px rgb(37 99 235 / 8%), var(--mrr-shadow-xs);
+  box-shadow: var(--mrr-shadow-xs);
   transform: var(--mrr-motion-decor, translateY(-1px));
 }
 .environment-badge:focus-visible { outline: 2px solid var(--mrr-primary); outline-offset: 3px; }

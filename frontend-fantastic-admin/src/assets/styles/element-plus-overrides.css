@@ -31,8 +31,8 @@ html:root {
   justify-content: center;
   height: var(--mrr-control-height);
   min-height: var(--mrr-control-height);
-  padding: 0 14px;
-  font-size: 13px;
+  padding: 0 var(--mrr-button-padding-x);
+  font-size: var(--mrr-button-font-size);
   font-weight: 500;
   line-height: 1;
   color: var(--mrr-foreground);
@@ -42,12 +42,12 @@ html:root {
   border-radius: var(--mrr-control-radius);
   box-shadow: var(--mrr-shadow-xs);
   transition:
-    color 120ms ease,
-    background-color 120ms ease,
-    border-color 120ms ease,
-    box-shadow 120ms ease,
-    opacity 120ms ease,
-    transform 80ms ease;
+    color var(--mrr-motion-feedback) ease,
+    background-color var(--mrr-motion-feedback) ease,
+    border-color var(--mrr-motion-feedback) ease,
+    box-shadow var(--mrr-motion-feedback) ease,
+    opacity var(--mrr-motion-feedback) ease,
+    transform var(--mrr-motion-press) ease;
 }
 
 .el-button > span {
@@ -69,16 +69,16 @@ html:root {
 .el-button.el-button--small {
   height: var(--mrr-control-height-compact);
   min-height: var(--mrr-control-height-compact);
-  padding-inline: 11px;
-  font-size: 12px;
+  padding-inline: var(--mrr-button-padding-x-sm);
+  font-size: var(--mrr-button-font-size-sm);
   border-radius: var(--mrr-radius-sm);
 }
 
 .el-button.el-button--large {
   height: var(--mrr-control-height-large);
   min-height: var(--mrr-control-height-large);
-  padding-inline: 16px;
-  font-size: 14px;
+  padding-inline: var(--mrr-button-padding-x-lg);
+  font-size: var(--mrr-button-font-size-lg);
   border-radius: var(--mrr-radius-lg);
 }
 
@@ -108,8 +108,10 @@ html:root {
   margin-left: 0;
 }
 
-/* Outline / default */
-.el-button:not(.el-button--primary):not(.el-button--success):not(.el-button--warning):not(.el-button--danger):not(.el-button--info):not(.is-link):not(.is-text) {
+/* Outline / default
+ * :not(.is-disabled) 是必需的：这条选择器的特异性（8 个伪类）高于下面的禁用态规则，
+ * 少了它，禁用的默认按钮会拿到可用的白底与前景色，看起来仍可点击。 */
+.el-button:not(.el-button--primary):not(.el-button--success):not(.el-button--warning):not(.el-button--danger):not(.el-button--info):not(.is-link):not(.is-text):not(.is-disabled) {
   color: var(--mrr-foreground);
   background: var(--mrr-background);
   border-color: var(--mrr-border);
@@ -230,11 +232,22 @@ body .el-button--info.is-plain:not(.is-disabled):hover {
 .el-button.is-link {
   height: var(--mrr-control-height);
   min-height: var(--mrr-control-height);
-  padding: 0 8px;
+  padding: 0 var(--mrr-button-padding-x-text);
   background: transparent;
   border-color: transparent;
   border-radius: var(--mrr-radius-sm);
   box-shadow: none;
+}
+
+/* 文字颜色回到 MRR 前景色 / 主色：Element Plus 的 --el-text-color-regular 在暗色模式下
+ * 是偏冷的灰蓝，与另一套按钮（FaButton 的 ghost/link）并排时能看出两种灰。 */
+.el-button.is-text:not(.is-disabled),
+.el-button.is-link:not(.is-disabled) {
+  color: var(--mrr-foreground);
+}
+
+.el-button.is-link:not(.is-disabled) {
+  color: var(--mrr-primary);
 }
 
 .el-button.is-text:not(.is-disabled):hover,
@@ -247,7 +260,9 @@ body .el-button--info.is-plain:not(.is-disabled):hover {
   text-underline-offset: 4px;
 }
 
+/* 悬停保持主色与下划线：Element Plus 默认会把 link 文字降到 light-3，白底上只剩淡蓝。 */
 .el-button.is-link:not(.is-disabled):hover {
+  color: var(--mrr-primary);
   text-decoration: underline;
 }
 
@@ -291,6 +306,15 @@ body .el-button--info.is-plain:not(.is-disabled):hover {
   box-shadow: none;
   opacity: 0.5;
   transform: none;
+}
+
+/* 文字类按钮的禁用态：Element Plus 会把 link 降到 light-5 的主色，
+ * 读起来像「浅蓝色的可点链接」。这里统一成中性灰，与有底色按钮的禁用语义一致。 */
+.el-button.is-disabled.is-text:not(.is-plain),
+.el-button.is-disabled.is-link:not(.is-plain),
+.el-button.is-disabled.is-text:not(.is-plain):hover,
+.el-button.is-disabled.is-link:not(.is-plain):hover {
+  color: var(--mrr-muted-foreground);
 }
 
 .el-button-group .el-button + .el-button {

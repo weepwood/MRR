@@ -201,8 +201,23 @@ public class ExternalArchiveController {
             throw new BusinessException(404, "未找到匹配档案的图片");
         }
 
-        StreamingResponseBody body = outputStream ->
+        String clientIp = IpUtil.getClientIp(request);
+        String userAgent = request.getHeader("User-Agent");
+        String currentRequestId = requestId(request);
+        StreamingResponseBody body = outputStream -> {
+            try {
                 archiveExportService.writeBatchZip(export, outputStream);
+                // SUCCESS 仅表示服务器完成输出流写入，不能证明客户端已将文件保存到磁盘。
+                externalArchiveAccessService.recordAudit(
+                        grant, normalizedBah, normalizedSjh, "ARCHIVE_DOWNLOAD", null,
+                        clientIp, userAgent, currentRequestId, "SUCCESS", "images=" + export.itemCount());
+            } catch (IOException | RuntimeException exception) {
+                externalArchiveAccessService.recordAudit(
+                        grant, normalizedBah, normalizedSjh, "ARCHIVE_DOWNLOAD", null,
+                        clientIp, userAgent, currentRequestId, "FAILED", "images=" + export.itemCount());
+                throw exception;
+            }
+        };
         String archiveCode = normalizedBah + (normalizedSjh.isEmpty() ? "" : "-" + normalizedSjh);
         String fileName = archiveCode + ".zip";
         String contentDisposition = ContentDisposition.attachment()
@@ -210,11 +225,6 @@ public class ExternalArchiveController {
                 .build()
                 .toString();
 
-        externalArchiveAccessService.recordAudit(
-                grant, normalizedBah, normalizedSjh, "ARCHIVE_DOWNLOAD", null,
-                IpUtil.getClientIp(request), request.getHeader("User-Agent"), requestId(request),
-                "SUCCESS", "images=" + export.itemCount()
-        );
         return ResponseEntity.ok()
                 .header(HttpHeaders.CONTENT_DISPOSITION, contentDisposition)
                 .header(HttpHeaders.CACHE_CONTROL, "private, no-store")

@@ -87,7 +87,13 @@ function normalizeRequestedPrefix(value: string) {
 async function loadDirectory(
   prefix: string,
   continuationToken?: string,
-  options: { rememberFolder?: boolean, resetPageHistory?: boolean, navigation?: 'back' | 'next' | 'previous', selectKey?: string } = {},
+  options: {
+    rememberFolder?: boolean
+    resetPageHistory?: boolean
+    navigation?: 'back' | 'next' | 'previous'
+    selectKey?: string
+    fallbackDirectoryKey?: string
+  } = {},
 ) {
   if (disposed || suspended) {
     return
@@ -117,6 +123,8 @@ async function loadDirectory(
   loading.value = true
   directoryError.value = ''
   canContinueLookup.value = false
+  const { selectKey } = options
+  let fallbackDirectoryKey = options.fallbackDirectoryKey
   try {
     const result = await locateDirectoryEntry(
       continuationToken,
@@ -131,12 +139,15 @@ async function loadDirectory(
         }
         return response.data
       },
-      directory => options.selectKey
-        ? directory.entries.find(entry =>
-            entry.key === options.selectKey || (entry.directory && entry.key === `${options.selectKey}/`),
-          )
-        : undefined,
-      directory => options.selectKey && directory.truncated ? directory.nextContinuationToken || undefined : undefined,
+      (directory) => {
+        if (!selectKey) {
+          return
+        }
+        // OSS may list both an exact object and a same-name directory prefix.
+        fallbackDirectoryKey ??= directory.entries.find(entry => entry.directory && entry.key === `${selectKey}/`)?.key
+        return directory.entries.find(entry => entry.key === selectKey)
+      },
+      directory => selectKey && directory.truncated ? directory.nextContinuationToken || undefined : undefined,
       request.signal,
     )
     if (!result || generation !== directoryGeneration) {
@@ -150,15 +161,15 @@ async function loadDirectory(
     pageTokenHistory.value = [...tokens, ...result.previousCursors]
     selectedEntry.value = null
     localFilter.value = ''
-    if (options.selectKey) {
+    if (selectKey) {
       const match = result.entry
-      if (match?.directory) {
-        // 末段带点也可能是目录（如版本号 v1.2）：直接进入它，不再拿旧 key 去找文件。
-        await loadDirectory(match.key, undefined, { rememberFolder: true })
+      const { nextCursor } = result
+      const directoryKey = match?.directory ? match.key : !match && nextCursor === undefined ? fallbackDirectoryKey : undefined
+      if (directoryKey) {
+        await loadDirectory(directoryKey, undefined, { rememberFolder: true })
         return
       }
       if (!match) {
-        const { nextCursor } = result
         if (nextCursor === undefined) {
           ElMessage.warning('未在当前目录中找到该文件，已打开所在目录。')
         }
@@ -166,7 +177,8 @@ async function loadDirectory(
           directoryError.value = '已检查一批目录页，还有后续页面可继续定位。'
           canContinueLookup.value = true
           retryDirectory = () => void loadDirectory(normalizedPrefix, nextCursor, {
-            selectKey: options.selectKey,
+            selectKey,
+            fallbackDirectoryKey,
             navigation: 'next',
             resetPageHistory: false,
           })

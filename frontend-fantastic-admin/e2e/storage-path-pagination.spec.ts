@@ -49,3 +49,26 @@ for (const kind of ['OSS', 'Nginx']) {
     await storageRepro(page, kind === 'OSS')
   })
 }
+
+test('Nginx 输入带点目录名后仍可返回上一目录', async ({ page }) => {
+  await page.route('**/api/v1/nginx-browser/servers', route =>
+    route.fulfill(ok([{ key: 'default', name: '审查样例节点', configured: true }])))
+  await page.route(/\/api\/v1\/nginx-browser(?:\?|$)/, (route) => {
+    const path = new URL(route.request().url()).searchParams.get('path') ?? ''
+    const entries = path
+      ? [{ name: 'sample.bin', path: `${path}sample.bin`, directory: false, size: 4 }]
+      : [{ name: 'v1.2', path: 'v1.2/', directory: true, size: 0 }]
+    return route.fulfill(ok({ server: 'default', path, offset: 0, limit: 200, totalEntries: entries.length, entries }))
+  })
+
+  await page.goto('/nginx-browser')
+  await expect(page.locator('.file-pane').getByText('v1.2', { exact: true })).toBeVisible()
+  const address = page.getByRole('textbox', { name: '目录路径' })
+  await address.fill('v1.2')
+  await address.press('Enter')
+  await expect(page.locator('.file-pane').getByText('sample.bin', { exact: true })).toBeVisible()
+  const back = page.getByRole('button', { name: '返回', exact: true })
+  await expect(back).toBeEnabled()
+  await back.click()
+  await expect(page.locator('.file-pane').getByText('v1.2', { exact: true })).toBeVisible()
+})

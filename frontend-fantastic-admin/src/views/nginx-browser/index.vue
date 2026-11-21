@@ -142,6 +142,7 @@ async function loadDirectory(target: DirectoryLocation, nextHistory: DirectoryLo
     if (!result || request.signal.aborted) {
       return
     }
+    const previous = page.value
     page.value = result.page
     history.value = nextHistory
     addressInput.value = result.page.path
@@ -151,7 +152,10 @@ async function loadDirectory(target: DirectoryLocation, nextHistory: DirectoryLo
       const match = result.entry
       if (match?.directory) {
         // 末段带点也可能是目录（如版本号 v1.2）：继续进入它，而不是当文件选中。
-        await loadDirectory({ server: target.server, path: match.path, offset: 0 }, nextHistory)
+        const folderHistory = previous && previous.server === target.server && previous.path === target.path
+          ? [...nextHistory, { server: previous.server, path: previous.path, offset: previous.offset }]
+          : nextHistory
+        await loadDirectory({ server: target.server, path: match.path, offset: 0 }, folderHistory)
         return
       }
       if (!match) {

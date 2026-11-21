@@ -35,6 +35,7 @@ const loading = ref(false)
 const qualityRunning = ref(false)
 const autoRefresh = ref(true)
 const lastRefresh = ref('')
+const failedSections = ref<string[]>([])
 const healthStatus = ref<HealthInfo>({})
 const runtimeInfo = ref<RuntimeInfo>({})
 const memoryInfo = ref<MemoryInfo>({ heap: {}, nonHeap: {} })
@@ -157,7 +158,7 @@ function statusType(status?: string) {
 }
 
 async function fetchMonitoringSnapshot() {
-  const [healthRes, runtimeRes, memoryRes, infoRes, databaseRes, qualityRes, issuesRes] = await Promise.allSettled([
+  const results = await Promise.allSettled([
     getSystemHealth(),
     getSystemRuntime(),
     getSystemMemory(),
@@ -166,30 +167,38 @@ async function fetchMonitoringSnapshot() {
     getDataQualitySummary(),
     getDataQualityIssues(100),
   ])
+  const [healthRes, runtimeRes, memoryRes, infoRes, databaseRes, qualityRes, issuesRes] = results
 
-  if (healthRes.status === 'fulfilled') {
-    healthStatus.value = healthRes.value.data ?? {}
+  if (healthRes.status === 'fulfilled' && healthRes.value.data != null) {
+    healthStatus.value = healthRes.value.data
   }
-  if (runtimeRes.status === 'fulfilled') {
-    runtimeInfo.value = runtimeRes.value.data ?? {}
+  if (runtimeRes.status === 'fulfilled' && runtimeRes.value.data != null) {
+    runtimeInfo.value = runtimeRes.value.data
   }
-  if (memoryRes.status === 'fulfilled') {
-    memoryInfo.value = memoryRes.value.data ?? { heap: {}, nonHeap: {} }
+  if (memoryRes.status === 'fulfilled' && memoryRes.value.data != null) {
+    memoryInfo.value = memoryRes.value.data
   }
-  if (infoRes.status === 'fulfilled') {
-    systemInfo.value = infoRes.value.data ?? { application: {}, jvm: {}, operatingSystem: {} }
+  if (infoRes.status === 'fulfilled' && infoRes.value.data != null) {
+    systemInfo.value = infoRes.value.data
   }
-  if (databaseRes.status === 'fulfilled') {
-    databaseOverview.value = databaseRes.value.data ?? emptyDatabase()
+  if (databaseRes.status === 'fulfilled' && databaseRes.value.data != null) {
+    databaseOverview.value = databaseRes.value.data
   }
-  if (qualityRes.status === 'fulfilled') {
-    qualitySummary.value = qualityRes.value.data ?? qualitySummary.value
+  if (qualityRes.status === 'fulfilled' && qualityRes.value.data != null) {
+    qualitySummary.value = qualityRes.value.data
   }
-  if (issuesRes.status === 'fulfilled') {
-    qualityIssues.value = issuesRes.value.data ?? []
+  if (issuesRes.status === 'fulfilled' && issuesRes.value.data != null) {
+    qualityIssues.value = issuesRes.value.data
   }
 
-  lastRefresh.value = new Date().toLocaleTimeString()
+  const labels = ['健康状态', '运行时间', '内存', '系统信息', '数据库概览', '数据质量摘要', '数据质量明细']
+  failedSections.value = labels.filter((_, index) => {
+    const result = results[index]
+    return result?.status !== 'fulfilled' || result.value.data == null
+  })
+  if (!failedSections.value.length) {
+    lastRefresh.value = new Date().toLocaleTimeString()
+  }
 }
 
 let refreshInFlight: Promise<void> | undefined
@@ -279,7 +288,7 @@ onUnmounted(pause)
         </p>
         <h2>系统与数据库监控</h2>
         <p class="subtitle">
-          {{ autoRefresh ? '每 15 秒自动刷新' : '自动刷新已暂停' }} · 上次刷新 {{ lastRefresh || '--' }}
+          {{ autoRefresh ? '每 15 秒自动刷新' : '自动刷新已暂停' }} · 上次完整刷新 {{ lastRefresh || '--' }}
         </p>
       </div>
       <div class="header-actions">
@@ -295,6 +304,14 @@ onUnmounted(pause)
       </div>
     </div>
 
+    <el-alert
+      v-if="failedSections.length"
+      title="本次监控刷新未完整完成"
+      :description="`${failedSections.join('、')}未取得新数据，相应区域可能显示上次读取的值。`"
+      type="warning"
+      :closable="false"
+      show-icon
+    />
     <section class="mrr-metric-grid mrr-metric-grid--compact">
       <MrrMetricCard
         v-for="item in summaryCards"

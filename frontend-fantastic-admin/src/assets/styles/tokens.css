@@ -80,6 +80,22 @@
   --mrr-table-header-height: 42px;
   --mrr-table-row-height: 46px;
 
+  /*
+   * 按钮几何：项目并存两套按钮（Element Plus 的 .el-button 与 reka-ui 封装的
+   * .fa-button-control），两族必须读同一组数值，否则同一条工具栏里出现
+   * 13/14px 字号、11/14/16px 内边距的混合排版，看起来像两个系统拼起来。
+   * 修改按钮字号或内边距只改这里；主题若要换密度，在主题文件里覆盖同名令牌。
+   */
+  --mrr-button-font-size: 13px;
+  --mrr-button-padding-x: 14px;
+  --mrr-button-font-size-sm: 12px;
+  --mrr-button-padding-x-sm: 11px;
+  --mrr-button-font-size-lg: 14px;
+  --mrr-button-padding-x-lg: 16px;
+
+  /* text / link / ghost 没有底与描边，左右留白收窄一档，与 Element Plus 对齐。 */
+  --mrr-button-padding-x-text: 8px;
+
   /* MRR 品牌色：运行时会按「主题主色」重新推导，这里的值对应默认主色 #2563EB 的明亮模式。 */
   --color-primary: #2563eb;
   --color-primary-hover: #1f55cc;
@@ -105,6 +121,13 @@
   --mrr-accent-foreground: hsl(var(--accent-foreground));
   --mrr-border: hsl(var(--border));
   --mrr-input: hsl(var(--border));
+
+  /*
+   * 「比 --mrr-border 明确一档」的中性描边：按钮、指标卡 hover、分隔线使用。
+   * 必须是静态色值 —— browser-compatibility.css 的 color-mix 回退分支直接引用它，
+   * 若这里写成 color-mix()，Chrome 86 上整条声明失效会退化成 currentColor（墨色描边）。
+   */
+  --mrr-border-strong: rgb(15 23 42 / 16%);
   --mrr-ring: color-mix(in srgb, var(--color-primary) 72%, hsl(var(--ring)));
   --mrr-primary: var(--color-primary);
   --mrr-primary-foreground: #fff;
@@ -177,6 +200,7 @@
 
     --scrollbar-color: 240 3.7% 15.9%;
     --mrr-input: color-mix(in srgb, var(--mrr-foreground) 15%, transparent);
+    --mrr-border-strong: rgb(255 255 255 / 16%);
     --mrr-control-bg-disabled: color-mix(in srgb, var(--mrr-muted) 80%, black);
     --mrr-control-border: var(--mrr-input);
     --mrr-control-border-hover: color-mix(in srgb, var(--mrr-foreground) 24%, var(--mrr-input));

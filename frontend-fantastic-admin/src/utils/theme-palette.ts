@@ -95,7 +95,7 @@ export const themePalettePresets = [
   {
     id: 'gr8r',
     name: '暖色扁平风格',
-    description: '暖灰中性色与柔和靛蓝，含明暗两套配色',
+    description: '暖灰中性色、描边控件与紧凑密度，含明暗两套',
     preview: {
       canvas: GR8R_COLORS.light.canvas,
       sidebar: GR8R_COLORS.light.sidebar,
@@ -154,9 +154,15 @@ function hslTuple(hex: string): string {
 export function gr8rCssVariables(scheme: ThemePaletteScheme): Record<string, string> {
   const c = GR8R_COLORS[scheme]
   const dark = scheme === 'dark'
-  const selection = mixHex(c.accent, c.sidebar, dark ? 0.19 : 0.09)
-  const selectionBorder = mixHex(c.accent, c.sidebar, dark ? 0.36 : 0.22)
   const onDanger = dark ? '#222220' : '#FFFFFF'
+  /*
+   * 导航选中项：白底药丸 + 发丝描边，不用主色浅填充。
+   * 扁平风格把「颜色」留给主按钮与状态色，导航靠表面差与字重表达选中；
+   * 深色下用 raisedSurface，否则白底会变成一块刺眼的亮斑。
+   */
+  const navActive = dark ? c.raisedSurface : c.surface
+  const navActiveBorder = dark ? c.strongLine : c.line
+  const focusRing = mixHex(c.accent, c.surface, dark ? 0.42 : 0.3)
 
   const css: Record<string, string> = {
     'color-scheme': scheme,
@@ -187,20 +193,20 @@ export function gr8rCssVariables(scheme: ThemePaletteScheme): Record<string, str
     '--g-header-menu-color': c.secondaryInk,
     '--g-header-menu-hover-bg': c.raisedSurface,
     '--g-header-menu-hover-color': c.ink,
-    '--g-header-menu-active-bg': selection,
-    '--g-header-menu-active-color': c.accent,
+    '--g-header-menu-active-bg': navActive,
+    '--g-header-menu-active-color': c.ink,
     '--g-main-sidebar-bg': c.sidebar,
     '--g-main-sidebar-menu-color': c.secondaryInk,
     '--g-main-sidebar-menu-hover-bg': c.raisedSurface,
     '--g-main-sidebar-menu-hover-color': c.ink,
-    '--g-main-sidebar-menu-active-bg': selection,
-    '--g-main-sidebar-menu-active-color': c.accent,
+    '--g-main-sidebar-menu-active-bg': navActive,
+    '--g-main-sidebar-menu-active-color': c.ink,
     '--g-sub-sidebar-bg': c.sidebar,
     '--g-sub-sidebar-menu-color': c.secondaryInk,
     '--g-sub-sidebar-menu-hover-bg': c.raisedSurface,
     '--g-sub-sidebar-menu-hover-color': c.ink,
-    '--g-sub-sidebar-menu-active-bg': selection,
-    '--g-sub-sidebar-menu-active-color': c.accent,
+    '--g-sub-sidebar-menu-active-bg': navActive,
+    '--g-sub-sidebar-menu-active-color': c.ink,
     '--g-tabbar-bg': c.canvas,
     '--g-tabbar-dividers-bg': c.strongLine,
     '--g-tabbar-tab-color': c.secondaryInk,
@@ -214,25 +220,32 @@ export function gr8rCssVariables(scheme: ThemePaletteScheme): Record<string, str
     '--mrr-navigation-bg-solid': c.sidebar,
     '--mrr-navigation-border': c.line,
     '--mrr-navigation-hover': c.raisedSurface,
-    '--mrr-navigation-active': selection,
-    '--mrr-navigation-active-foreground': c.accent,
-    '--mrr-navigation-active-border': selectionBorder,
+    '--mrr-navigation-active': navActive,
+    '--mrr-navigation-active-foreground': c.ink,
+    '--mrr-navigation-active-border': navActiveBorder,
     '--mrr-shell-divider': c.line,
     '--mrr-input': c.controlLine,
-    '--mrr-control-bg': c.mutedSurface,
-    '--mrr-control-bg-hover': c.raisedSurface,
+    // 控件底色改为表面白：暖色主题用「描边控件」而不是「填充控件」。
+    '--mrr-control-bg': c.surface,
+    '--mrr-control-bg-hover': c.mutedSurface,
     '--mrr-control-bg-disabled': c.mutedSurface,
-    '--mrr-control-border': c.controlLine,
+    '--mrr-control-border': c.strongLine,
     '--mrr-control-border-hover': c.controlLine,
+    // 按钮/指标卡 hover 的描边：比控件描边再柔和一档，避免在暖白卡面上读成「墨色框」。
+    '--mrr-border-strong': c.strongLine,
     '--mrr-primary-foreground': c.accentContrast,
     '--mrr-destructive-foreground': onDanger,
+    '--mrr-destructive-muted': mixHex(c.danger, c.surface, dark ? 0.2 : 0.1),
     '--mrr-ring': c.accent,
+    // 焦点环提供实色版本：Chrome 86 上 color-mix() 会让整条 box-shadow 失效。
+    '--mrr-focus-ring': `0 0 0 3px ${focusRing}`,
     '--mrr-accent-tone': c.violet,
-    '--mrr-shell-shadow': dark ? '0 1px 3px rgb(0 0 0 / 22%)' : '0 1px 3px rgb(27 26 24 / 5%)',
-    '--mrr-shadow-xs': dark ? '0 1px 2px rgb(0 0 0 / 22%)' : '0 1px 2px rgb(27 26 24 / 4%)',
-    '--mrr-shadow-sm': dark ? '0 6px 16px rgb(0 0 0 / 24%)' : '0 4px 10px rgb(27 26 24 / 7%)',
-    '--mrr-shadow-md': dark ? '0 16px 36px rgb(0 0 0 / 32%)' : '0 12px 28px rgb(27 26 24 / 11%)',
-    '--mrr-shadow-lg': dark ? '0 28px 72px rgb(0 0 0 / 48%)' : '0 24px 56px rgb(27 26 24 / 16%)',
+    // 扁平层级：投影只做方向性提示，分层交给 1px 描边与表面亮度差。
+    '--mrr-shell-shadow': dark ? '0 1px 2px rgb(0 0 0 / 30%)' : '0 1px 2px rgb(28 25 20 / 4%)',
+    '--mrr-shadow-xs': dark ? '0 1px 2px rgb(0 0 0 / 30%)' : '0 1px 2px rgb(28 25 20 / 5%)',
+    '--mrr-shadow-sm': dark ? '0 0 0 1px rgb(255 255 255 / 4%), 0 6px 16px -8px rgb(0 0 0 / 45%)' : '0 1px 2px rgb(28 25 20 / 4%), 0 4px 12px -6px rgb(28 25 20 / 10%)',
+    '--mrr-shadow-md': dark ? '0 16px 40px -10px rgb(0 0 0 / 60%), 0 0 0 1px rgb(255 255 255 / 6%)' : '0 12px 32px -8px rgb(28 25 20 / 16%), 0 2px 6px -2px rgb(28 25 20 / 6%)',
+    '--mrr-shadow-lg': dark ? '0 18px 44px -10px rgb(0 0 0 / 70%), 0 0 0 1px rgb(255 255 255 / 7%)' : '0 16px 40px -10px rgb(28 25 20 / 22%), 0 2px 6px -2px rgb(28 25 20 / 8%)',
 
     '--color-success': c.success,
     '--color-warning': c.warning,

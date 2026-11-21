@@ -49,6 +49,7 @@
   --mrr-tone-info-border: color-mix(in srgb, var(--mrr-tone-info) 22%, var(--mrr-border));
   --mrr-tone-neutral-border: color-mix(in srgb, var(--mrr-tone-neutral) 22%, var(--mrr-border));
   --mrr-tone-primary-border: color-mix(in srgb, var(--mrr-tone-primary) 22%, var(--mrr-border));
+  --mrr-tone-violet-border: color-mix(in srgb, var(--mrr-tone-violet) 22%, var(--mrr-border));
 
   /*
    * Element Plus 语义色桥接。

@@ -28,11 +28,14 @@ for (const preference of ['normal', 'reduced', 'off'] as const) {
   test(`按压与展开状态：${preference}`, async ({ page }) => {
     await page.emulateMedia({ reducedMotion: preference === 'reduced' ? 'reduce' : 'no-preference' })
     await page.evaluate((off) => { document.documentElement.dataset.motion = off ? 'off' : 'on' }, preference === 'off')
+    // 两套按钮（FaButton 与 el-button）共用同一套按压反馈：正常动效下沉 1px，
+    // 减弱/关闭动效时都由 --mrr-motion-decor 退成 none。
+    const pressed = preference === 'normal' ? 'matrix(1, 0, 0, 1, 0, 1)' : 'none'
     for (const name of ['确认查询', 'Element 操作']) {
       const button = page.getByRole('button', { name })
       await button.hover()
       await page.mouse.down()
-      await expect(button).toHaveCSS('transform', name === 'Element 操作' && preference === 'normal' ? 'matrix(1, 0, 0, 1, 0, 1)' : 'none')
+      await expect(button).toHaveCSS('transform', pressed)
       await page.mouse.up()
       await expect(button).toHaveCSS('transform', 'none')
     }
@@ -41,6 +44,8 @@ for (const preference of ['normal', 'reduced', 'off'] as const) {
     await expect(page.locator('.el-select__selected-item').filter({ hasText: '待处理' })).toBeVisible()
     const structural = page.getByRole('button', { name: '重置条件' })
     await structural.evaluate(el => el.style.transform = 'translateY(-50%) rotate(180deg)')
+    // 按钮的 transform 有 80ms 过渡（与 el-button 一致），立即读取会拿到过渡的起始帧。
+    await page.waitForTimeout(200)
     const originalTransform = await structural.evaluate(el => getComputedStyle(el).transform)
     await structural.hover()
     await page.mouse.down()

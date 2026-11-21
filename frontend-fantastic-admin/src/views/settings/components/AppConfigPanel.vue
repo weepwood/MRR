@@ -210,7 +210,7 @@ function handleReset() {
           <div class="setting-item setting-item--stack">
             <div class="label-copy">
               <strong>整体配色方案</strong>
-              <small>选择整套页面、侧栏、卡片和状态色；不会改变现有布局或业务功能。</small>
+              <small>选择整套页面、侧栏、卡片和状态色；暖色扁平风格还会一并调整控件高度、圆角与描边层次。不改变布局结构与业务功能。</small>
             </div>
             <div class="theme-palette-options" role="group" aria-label="整体配色方案">
               <button
@@ -245,6 +245,10 @@ function handleReset() {
                 <small>{{ palette.description }}</small>
               </button>
             </div>
+            <!-- 主题不只换色：把同时变化的结构项说清楚，避免用户以为是页面「变紧/变松」出了问题。 -->
+            <p v-if="activeThemePalette === 'gr8r'" class="theme-palette-note">
+              当前主题同时调整：控件高度 30px、表格行高 40px、卡片改为 1px 描边且去投影、圆角上限 10px。
+            </p>
           </div>
           <div class="setting-item setting-item--stack">
             <div class="label-copy">
@@ -305,7 +309,7 @@ function handleReset() {
           <div class="setting-item">
             <div class="label-copy">
               <strong :id="radiusLabelId">圆角系数</strong>
-              <small>统一调整页面卡片与面板的圆角程度。</small>
+              <small>{{ activeThemePalette === 'gr8r' ? '统一调整页面卡片与面板的圆角程度；暖色扁平风格会把上限收敛到 10px。' : '统一调整页面卡片与面板的圆角程度。' }}</small>
             </div>
             <div class="radius-control">
               <FaSlider v-model="appRadius" :aria-labelledby="radiusLabelId" :min="0" :max="1" :step="0.25" class="slider-field" />
@@ -947,6 +951,14 @@ function handleReset() {
 .theme-palette-option > small {
   font-size: 11px;
   line-height: 1.5;
+  color: var(--mrr-muted-foreground);
+}
+
+/* 主题附带的结构变化说明：弱化处理，不与选项卡片争夺注意力。 */
+.theme-palette-note {
+  margin: 0;
+  font-size: 11px;
+  line-height: 1.6;
   color: var(--mrr-muted-foreground);
 }
 

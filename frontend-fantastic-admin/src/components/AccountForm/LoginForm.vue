@@ -376,10 +376,15 @@ const onSubmit = form.handleSubmit(async (values) => {
   gap: var(--mrr-space-1);
 }
 
+/*
+ * 登录面板的输入框用局部 --auth-input-height（38px），提交按钮与它们同高；
+ * 注册面板的提交按钮必须写同一个值，否则切换时两个主按钮的顶边相差 5px
+ * （e2e/login-switch-spacing 会逐帧比对这条基线）。
+ */
 .login-submit-btn {
   flex-shrink: 0;
   width: 100%;
-  height: var(--mrr-control-height);
+  height: var(--auth-input-height, var(--mrr-control-height));
   margin-top: auto;
   border-radius: var(--mrr-control-radius);
 }

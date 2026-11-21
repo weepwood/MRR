@@ -72,3 +72,35 @@ export function getRequestErrorMessage(error: unknown): string {
   if (code === 'ERR_CANCELED') return '请求已取消'
   return '请求失败，请稍后重试'
 }
+
+/**
+ * Blob 下载失败时，Axios 会按 responseType=blob 保留服务器返回的 JSON 错误体。
+ * 仅解析小型 JSON 错误响应，继续复用既有的业务消息与 HTTP 状态映射。
+ * 不读取大体积或非 JSON 的文件内容，避免把 HTML/二进制错误页当作业务提示。
+ */
+export async function getRequestErrorMessageAsync(error: unknown): Promise<string> {
+  const fallback = getRequestErrorMessage(error)
+  const response = axios.isAxiosError<unknown>(error) ? error.response : getGenericResponse(error)
+  const payload = response?.data
+  if (typeof Blob === 'undefined' || !(payload instanceof Blob) || payload.size > 64 * 1024) {
+    return fallback
+  }
+
+  const headers = response?.headers
+  const headerType = isRecord(headers) ? headers['content-type'] : undefined
+  const mediaType = (payload.type || String(headerType ?? '')).split(';')[0].trim().toLowerCase()
+  if (mediaType !== 'application/json' && !mediaType.endsWith('+json')) {
+    return fallback
+  }
+
+  try {
+    const parsed: unknown = JSON.parse((await payload.text()).replace(/^\uFEFF/, ''))
+    if (isChineseMessage(getRecordMessage(parsed))) {
+      return getRequestErrorMessage({ response: { status: response?.status, data: parsed } })
+    }
+  }
+  catch {
+    // 无效 JSON 返回原有的标准 HTTP 错误提示，不暴露原始响应。
+  }
+  return fallback
+}

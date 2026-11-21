@@ -42,10 +42,10 @@ class ImageAuditExportControllerSpreadsheetSafetyTest {
         ByteArrayOutputStream output = new ByteArrayOutputStream();
         response.getBody().writeTo(output);
         String csv = output.toString(StandardCharsets.UTF_8);
-        assertThat(csv).contains(""'=2+2"");
-        assertThat(csv).contains(""'000123"");
-        assertThat(csv).contains(""'@NOW()"");
-        assertThat(csv).contains(""'+malicious"");
-        assertThat(csv).contains(""192.0.2.1"");
+        assertThat(csv).contains("\"'=2+2\"");
+        assertThat(csv).contains("\"'000123\"");
+        assertThat(csv).contains("\"'@NOW()\"");
+        assertThat(csv).contains("\"'+malicious\"");
+        assertThat(csv).contains("\"192.0.2.1\"");
     }
 }

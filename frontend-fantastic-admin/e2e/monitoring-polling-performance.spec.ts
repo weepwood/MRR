@@ -31,14 +31,22 @@ test('监控仅在可见的活动路由轮询，返回后尊重手动暂停', as
   })
   await page.clock.install()
   await page.goto('/monitoring')
-  const status = page.locator('.subtitle').filter({ hasText: '上次刷新' })
-  await expect(status).toContainText(/上次刷新 \d/)
+  const status = page.locator('.subtitle').filter({ hasText: '上次完整刷新' })
+  await expect(status).toContainText(/上次完整刷新 \d/)
   await page.clock.pauseAt(new Date(await page.evaluate(() => Date.now()) + 1000))
   expect(reads).toBe(1)
   const frame = page.locator('iframe[title="MRR 服务可用性状态"]')
   await frame.evaluate(element => element.scrollIntoView())
-  await page.clock.runFor(100)
-  await expect.poll(() => statusReads).toBe(4)
+
+  // iframe 是 loading="lazy" 的公开状态页：滚动进视野后才开始加载，而此刻虚拟时钟
+  // 已经暂停。冷启动（并行跑满 6 个 worker）时 iframe 的模块图还没编译完，
+  // 里面新建的定时器不会自己走，直接 runFor(100) 会推进一个「空」时钟，轮询计数永远停在 0。
+  // 先等它真正挂载，再逐轮推进虚拟时间直到首轮轮询落地。
+  await expect(page.frameLocator('iframe[title="MRR 服务可用性状态"]').locator('body')).not.toBeEmpty({ timeout: 30_000 })
+  await expect.poll(async () => {
+    await page.clock.runFor(100)
+    return statusReads
+  }, { timeout: 30_000 }).toBe(4)
 
   await page.clock.runFor(15_000)
   await expect.poll(() => reads).toBe(2)

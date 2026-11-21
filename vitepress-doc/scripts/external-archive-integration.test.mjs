@@ -24,6 +24,8 @@ const expectedSourceImports = [
 
 const proxyGuidePaths = [
   documentPath,
+  // 单体 JAR 的 Nginx 示例也必须遵守正式单层代理的真实来源 IP 约束。
+  path.join(projectRoot, 'internal', 'standalone-jar.md'),
   path.resolve(
     projectRoot,
     '../backend-repo/docs/his-external-archive-integration-guide.md',
@@ -90,4 +92,17 @@ test('external integration guides overwrite untrusted forwarded IP headers', asy
       `${guidePath} must not append an untrusted client-supplied X-Forwarded-For`,
     )
   }
+})
+
+
+test('standalone proxy warning stays separate from deployment instructions', async () => {
+  const markdown = await readFile(path.join(projectRoot, 'internal', 'standalone-jar.md'), 'utf8')
+  assert.ok(
+    markdown.includes('尤其不能允许客户端直接向 JAR 的业务端口发送伪造转发头。\n\n页面和'),
+    'security warning must end with a real Markdown paragraph break',
+  )
+  assert.ok(
+    !markdown.includes(String.raw`\n\n`),
+    'the guide must not display literal backslash-n escapes',
+  )
 })

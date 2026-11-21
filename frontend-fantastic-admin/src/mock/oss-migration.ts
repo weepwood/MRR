@@ -181,6 +181,9 @@ function filteredRecords(records: typeof pendingRecords | typeof waitingRecords,
 export default defineFakeRoute([
   {
     url: '/api/v1/oss/browser/mock-content',
+    headers: { 'content-type': 'text/plain; charset=utf-8', 'cache-control': 'no-store' },
+    // 纯静态 Mock 产物只支持 response；开发服务器继续使用 rawResponse。
+    response: () => 'OSS 文件浏览演示数据\n<示例>用于检查目录说明的文本显示。</示例>\n',
     rawResponse: (_request, response) => {
       response.setHeader('Content-Type', 'text/plain; charset=utf-8')
       response.setHeader('Cache-Control', 'no-store')

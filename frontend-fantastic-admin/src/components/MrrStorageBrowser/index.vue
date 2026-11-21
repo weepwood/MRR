@@ -21,6 +21,7 @@ const props = defineProps<{
   canNextPage: boolean
   locationLabel: string
   error?: string
+  retryLabel?: string
   unavailableText: string
 }>()
 
@@ -402,7 +403,7 @@ onBeforeUnmount(() => {
       <div v-if="error" class="browser-notice" role="status">
         <span>{{ error }}</span>
         <el-button size="small" :disabled="loading" @click="emit('retry')">
-          重试
+          {{ retryLabel || '重试' }}
         </el-button>
       </div>
 

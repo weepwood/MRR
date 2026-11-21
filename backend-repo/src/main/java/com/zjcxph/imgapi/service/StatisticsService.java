@@ -9,6 +9,8 @@ import java.util.Map;
 
 public interface StatisticsService {
 
+    int MAX_EXPORT_ROWS = 100_000;
+
     // 查询所有统计数据
     List<Statistics> findAll();
 
@@ -27,7 +29,7 @@ public interface StatisticsService {
             String sortOrder
     );
 
-    // 按筛选条件查询导出数据，不受普通分页每页 1000 条限制
+    // 按筛选条件查询导出数据，允许多读一条用于检测超限
     List<Statistics> findWithConditionForExport(
             int limit,
             String keyword,

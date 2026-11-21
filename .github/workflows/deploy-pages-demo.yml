@@ -1,0 +1,86 @@
+name: deploy-pages-demo
+
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - '.github/workflows/deploy-pages-demo.yml'
+      - 'frontend-fantastic-admin/**'
+      - 'VERSION'
+      - 'release-baseline.json'
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/deploy-pages-demo.yml'
+      - 'frontend-fantastic-admin/**'
+      - 'VERSION'
+      - 'release-baseline.json'
+
+concurrency:
+  group: github-pages-mrr-demo-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: read
+    defaults:
+      run:
+        working-directory: frontend-fantastic-admin
+    steps:
+      - name: 检出代码
+        uses: actions/checkout@v7
+
+      - name: 配置 pnpm
+        uses: pnpm/action-setup@v6
+        with:
+          version: 10.33.0
+
+      - name: 配置 Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version-file: frontend-fantastic-admin/.node-version
+          cache: pnpm
+          cache-dependency-path: frontend-fantastic-admin/pnpm-lock.yaml
+
+      - name: 安装依赖
+        run: pnpm install --frozen-lockfile
+
+      - name: 生成演示环境文件
+        run: cp .env.pages.example .env.pages
+
+      - name: 构建静态演示版本
+        run: pnpm build:pages
+
+      - name: 安装 Chromium
+        run: pnpm exec playwright install --with-deps chromium
+
+      - name: Pages 静态演示冒烟
+        run: node e2e/smoke-pages-demo.mjs
+
+      - name: 上传 Pages 构建产物
+        if: github.event_name != 'pull_request'
+        uses: actions/upload-pages-artifact@v4
+        with:
+          path: frontend-fantastic-admin/dist-pages
+
+  deploy:
+    if: github.event_name != 'pull_request'
+    needs: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: 配置 GitHub Pages
+        uses: actions/configure-pages@v5
+
+      - name: 发布 Pages 演示站
+        id: deployment
+        uses: actions/deploy-pages@v4

@@ -8,6 +8,7 @@ import { browseOssObjects, getOssBrowserUrl } from '@/api/modules/oss'
 import MrrStorageBrowser from '@/components/MrrStorageBrowser/index.vue'
 import { readSignedPreviewText } from '@/components/MrrStorageBrowser/inline-preview'
 import MrrStorageInlinePreview from '@/components/MrrStorageBrowser/InlinePreview.vue'
+import { locateDirectoryEntry } from '@/components/MrrStorageBrowser/locate-entry'
 import { accessDenied, formatFileSize, isImage } from '@/components/MrrStorageBrowser/presentation'
 import MrrStoragePreview from '@/components/MrrStorageBrowser/Preview.vue'
 
@@ -18,6 +19,7 @@ const MAX_KEYS = 200
 
 const loading = ref(false)
 const directoryError = ref('')
+const canContinueLookup = ref(false)
 let directoryGeneration = 0
 let retryDirectory: (() => void) | undefined
 let previewGeneration = 0
@@ -85,7 +87,13 @@ function normalizeRequestedPrefix(value: string) {
 async function loadDirectory(
   prefix: string,
   continuationToken?: string,
-  options: { rememberFolder?: boolean, resetPageHistory?: boolean, navigation?: 'back' | 'next' | 'previous', selectKey?: string } = {},
+  options: {
+    rememberFolder?: boolean
+    resetPageHistory?: boolean
+    navigation?: 'back' | 'next' | 'previous'
+    selectKey?: string
+    fallbackDirectoryKey?: string
+  } = {},
 ) {
   if (disposed || suspended) {
     return
@@ -114,35 +122,67 @@ async function loadDirectory(
   previewVisible.value = false
   loading.value = true
   directoryError.value = ''
+  canContinueLookup.value = false
+  const { selectKey } = options
+  let fallbackDirectoryKey = options.fallbackDirectoryKey
   try {
-    const response = await browseOssObjects({
-      prefix: normalizedPrefix,
+    const result = await locateDirectoryEntry(
       continuationToken,
-      maxKeys: MAX_KEYS,
-    }, request.signal)
-    if (generation !== directoryGeneration) {
+      async (cursor) => {
+        const response = await browseOssObjects({
+          prefix: normalizedPrefix,
+          continuationToken: cursor,
+          maxKeys: MAX_KEYS,
+        }, request.signal)
+        if (!response.data) {
+          throw new Error('OSS 目录响应为空')
+        }
+        return response.data
+      },
+      (directory) => {
+        if (!selectKey) {
+          return
+        }
+        // OSS may list both an exact object and a same-name directory prefix.
+        fallbackDirectoryKey ??= directory.entries.find(entry => entry.directory && entry.key === `${selectKey}/`)?.key
+        return directory.entries.find(entry => entry.key === selectKey)
+      },
+      directory => selectKey && directory.truncated ? directory.nextContinuationToken || undefined : undefined,
+      request.signal,
+    )
+    if (!result || generation !== directoryGeneration) {
       return
     }
-    if (!response.data) {
-      throw new Error('OSS 目录响应为空')
-    }
-    page.value = response.data
-    currentPrefix.value = response.data.prefix
-    addressInput.value = response.data.prefix
-    currentContinuationToken.value = continuationToken
+    page.value = result.page
+    currentPrefix.value = result.page.prefix
+    addressInput.value = result.page.prefix
+    currentContinuationToken.value = result.cursor
     folderHistory.value = folders
-    pageTokenHistory.value = tokens
+    pageTokenHistory.value = [...tokens, ...result.previousCursors]
     selectedEntry.value = null
     localFilter.value = ''
-    if (options.selectKey) {
-      const match = response.data.entries.find(entry => entry.key === options.selectKey)
-      if (match?.directory) {
-        // 末段带点也可能是目录（如版本号 v1.2）：直接进入它，不再拿旧 key 去找文件。
-        await loadDirectory(match.key, undefined, { rememberFolder: true })
+    if (selectKey) {
+      const match = result.entry
+      const { nextCursor } = result
+      const directoryKey = match?.directory ? match.key : !match && nextCursor === undefined ? fallbackDirectoryKey : undefined
+      if (directoryKey) {
+        await loadDirectory(directoryKey, undefined, { rememberFolder: true })
         return
       }
       if (!match) {
-        ElMessage.warning('未在当前目录中找到该文件，已打开所在目录。')
+        if (nextCursor === undefined) {
+          ElMessage.warning('未在当前目录中找到该文件，已打开所在目录。')
+        }
+        else {
+          directoryError.value = '已检查一批目录页，还有后续页面可继续定位。'
+          canContinueLookup.value = true
+          retryDirectory = () => void loadDirectory(normalizedPrefix, nextCursor, {
+            selectKey,
+            fallbackDirectoryKey,
+            navigation: 'next',
+            resetPageHistory: false,
+          })
+        }
       }
       selectedEntry.value = match ?? null
     }
@@ -405,6 +445,7 @@ onMounted(() => {
     :can-previous-page="canPreviousPage"
     :can-next-page="canNextPage"
     :error="directoryError"
+    :retry-label="canContinueLookup ? '继续定位' : undefined"
     unavailable-text="OSS 未配置"
     location-label="对象路径"
     @back="goBack"

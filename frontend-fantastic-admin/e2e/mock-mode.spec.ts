@@ -89,7 +89,9 @@ test.describe('无后端 Mock 模式', () => {
     await expect(page.getByRole('heading', { name: '记录管理' })).toBeVisible({ timeout: 20_000 })
     await expect(page.locator('html')).toHaveAttribute('data-page-title-style', 'plain')
 
-    const header = page.locator('.page-header').first()
+    // 记录管理已迁到共享组件 MrrPageHeader（`.mrr-page-header`），
+    // page-header.css 对 `.page-header` 与 `.mrr-page-header` 是并行选择器，样式口径相同。
+    const header = page.locator('.mrr-page-header').first()
     await expect(header).toBeVisible()
     const plainStyle = await header.evaluate((node) => {
       const style = window.getComputedStyle(node)
@@ -110,7 +112,7 @@ test.describe('无后端 Mock 模式', () => {
 
     await expect(page.locator('html')).toHaveAttribute('data-page-title-style', 'card')
     await expect(page.getByRole('heading', { name: '记录管理' })).toBeVisible({ timeout: 20_000 })
-    const cardStyle = await page.locator('.page-header').first().evaluate((node) => {
+    const cardStyle = await page.locator('.mrr-page-header').first().evaluate((node) => {
       const style = window.getComputedStyle(node)
       return { backgroundImage: style.backgroundImage, backgroundColor: style.backgroundColor, borderRadius: Number.parseFloat(style.borderRadius), boxShadow: style.boxShadow, borderWidth: style.borderTopWidth, borderStyle: style.borderTopStyle }
     })

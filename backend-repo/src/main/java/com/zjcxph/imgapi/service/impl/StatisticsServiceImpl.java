@@ -15,7 +15,7 @@ import java.util.Map;
 @Service
 public class StatisticsServiceImpl implements StatisticsService {
 
-    private static final int MAX_EXPORT_LIMIT = 100000;
+    private static final int MAX_EXPORT_QUERY_LIMIT = MAX_EXPORT_ROWS + 1;
 
     private final StatisticsMapper statisticsMapper;
 
@@ -74,8 +74,8 @@ public class StatisticsServiceImpl implements StatisticsService {
             String startDate,
             String endDate
     ) {
-        if (limit < 1 || limit > MAX_EXPORT_LIMIT) {
-            throw new IllegalArgumentException("导出条数必须在1-100000之间");
+        if (limit < 1 || limit > MAX_EXPORT_QUERY_LIMIT) {
+            throw new IllegalArgumentException("导出读取条数必须在1-" + MAX_EXPORT_QUERY_LIMIT + "之间");
         }
         return statisticsMapper.findWithConditionAndPagination(
                 0,

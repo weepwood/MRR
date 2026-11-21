@@ -8,6 +8,7 @@ import com.zjcxph.imgapi.dto.resp.PageResult;
 import com.zjcxph.imgapi.entity.Statistics;
 import com.zjcxph.imgapi.exception.BusinessException;
 import com.zjcxph.imgapi.service.StatisticsService;
+import com.zjcxph.imgapi.service.importer.DataExchangeImportSupport;
 import com.zjcxph.imgapi.utils.PaginationUtils;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -348,10 +349,13 @@ public class StatisticsController {
         if (value == null || value.isEmpty()) {
             return "";
         }
-        if (value.contains(",") || value.contains("\"") || value.contains("\n")) {
-            return "\"" + value.replace("\"", "\"\"") + "\"";
+        // 复用数据交换模块的文本防护规则，避免 Excel/WPS 解释公式并保留编号精度。
+        String safeValue = DataExchangeImportSupport.protectSpreadsheetValue(value);
+        if (safeValue.contains(",") || safeValue.contains("\"")
+                || safeValue.contains("\r") || safeValue.contains("\n")) {
+            return "\"" + safeValue.replace("\"", "\"\"") + "\"";
         }
-        return value;
+        return safeValue;
     }
 
     private String normalize(String value) {

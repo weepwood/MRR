@@ -35,7 +35,7 @@ Service Worker 只在安全上下文中运行：
 
 ## Nginx HTTPS 反向代理示例
 
-以下示例把 HTTPS 请求转发到单体 JAR 的 `127.0.0.1:8002`：
+以下示例适用于终端直接连接本机 Nginx 的单层代理部署。Nginx 将 HTTPS 请求转发到单体 JAR 的 `127.0.0.1:8002`，并用直接连接的来源地址覆盖 `X-Real-IP` 和 `X-Forwarded-For`。
 
 ```nginx
 upstream mrr_standalone {
@@ -65,12 +65,14 @@ server {
         proxy_http_version 1.1;
         proxy_set_header Host $host;
         proxy_set_header X-Real-IP $remote_addr;
-        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-For $remote_addr;
         proxy_set_header X-Forwarded-Proto https;
         proxy_set_header Connection "";
     }
 }
 ```
+
+终端应通过 Nginx 访问 MRR，JAR 业务端口只供服务器本机使用。存在负载均衡或多层代理时，先按[独立 JAR 部署指南](./standalone-jar.md)明确每一跳的可信代理和请求头覆盖规则。
 
 证书私钥必须限制文件访问权限，不应提交到 Git 仓库或打入发布包。
 

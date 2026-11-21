@@ -109,6 +109,44 @@ describe('oSS只读浏览器恢复', () => {
     expect(vm.currentPrefix).toBe(root)
   })
 
+  it.each([false, true])('输入对象键时优先选中文件，即使同名前缀排在前面（跨页 %s）', async (onNextPage) => {
+    const { vm } = await setup()
+    const file = image('report.txt')
+    const folder = { ...file, key: `${file.key}/`, directory: true, size: 0 }
+    const first = directory(root, onNextPage ? 'next' : null)
+    first.data.entries = onNextPage ? [folder] : [folder, file]
+    const second = directory(root, null)
+    second.data.entries = [file]
+    vi.mocked(browseOssObjects).mockResolvedValueOnce(first as Awaited<ReturnType<typeof browseOssObjects>>)
+    if (onNextPage) {
+      vi.mocked(browseOssObjects).mockResolvedValueOnce(second as Awaited<ReturnType<typeof browseOssObjects>>)
+    }
+
+    vm.navigate(file.key)
+    await flushPromises()
+
+    expect(vm.currentPrefix).toBe(root)
+    expect(vm.selectedEntry).toEqual(file)
+    expect(vm.currentContinuationToken).toBe(onNextPage ? 'next' : undefined)
+  })
+
+  it('找不到精确对象键时仍可进入同名目录', async () => {
+    const { vm } = await setup()
+    const file = image('v1.2')
+    const prefix = `${file.key}/`
+    const first = directory(root, null)
+    first.data.entries = [{ ...file, key: prefix, directory: true, size: 0 }]
+    vi.mocked(browseOssObjects)
+      .mockResolvedValueOnce(first as Awaited<ReturnType<typeof browseOssObjects>>)
+      .mockResolvedValueOnce(directory(prefix, null) as Awaited<ReturnType<typeof browseOssObjects>>)
+
+    vm.navigate(file.key)
+    await flushPromises()
+
+    expect(vm.currentPrefix).toBe(prefix)
+    expect(vm.canGoBack).toBe(true)
+  })
+
   it('旧目录成功不覆盖新目录，也不提前结束新请求loading', async () => {
     const { vm } = await setup()
     const first = deferred<ReturnType<typeof directory>>()

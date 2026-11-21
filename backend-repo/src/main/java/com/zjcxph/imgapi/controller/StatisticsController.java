@@ -41,7 +41,7 @@ import java.util.Map;
 public class StatisticsController {
 
     private static final Logger logger = LoggerFactory.getLogger(StatisticsController.class);
-    private static final int EXPORT_LIMIT = 100000;
+    private static final int EXPORT_LIMIT = StatisticsService.MAX_EXPORT_ROWS;
 
     private final StatisticsService statisticsService;
 
@@ -282,7 +282,7 @@ public class StatisticsController {
             throw new BusinessException(413, "统计导出超过单次 100000 条上限，请缩小筛选范围");
         }
         List<Statistics> list = statisticsService.findWithConditionForExport(
-                EXPORT_LIMIT,
+                EXPORT_LIMIT + 1,
                 normalizedKeyword,
                 normalizedBah,
                 normalizedSjh,
@@ -290,6 +290,9 @@ public class StatisticsController {
                 normalizedStartDate,
                 normalizedEndDate
         );
+        if (list.size() > EXPORT_LIMIT) {
+            throw new BusinessException(413, "统计导出超过单次 100000 条上限，请缩小筛选范围");
+        }
         if (list.size() != expectedCount) {
             throw new BusinessException(409, "导出时记录数量发生变化，请重新查询后重试");
         }

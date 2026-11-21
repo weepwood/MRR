@@ -24,28 +24,28 @@ function isChineseMessage(value: unknown): value is string {
 }
 
 function getRecordMessage(value: unknown): unknown {
-  if (!isRecord(value)) return undefined
+  if (!isRecord(value)) { return undefined }
   return value.message ?? value.msg
 }
 
 function getGenericResponse(error: unknown): Record<string, unknown> | undefined {
-  if (!isRecord(error) || !isRecord(error.response)) return undefined
+  if (!isRecord(error) || !isRecord(error.response)) { return undefined }
   return error.response
 }
 
 function getResponseData(error: unknown): unknown {
-  if (axios.isAxiosError<unknown>(error)) return error.response?.data
+  if (axios.isAxiosError<unknown>(error)) { return error.response?.data }
   return getGenericResponse(error)?.data
 }
 
 function getResponseStatus(error: unknown): unknown {
-  if (axios.isAxiosError(error)) return error.response?.status
+  if (axios.isAxiosError(error)) { return error.response?.status }
   return getGenericResponse(error)?.status ?? (isRecord(error) ? error.status : undefined)
 }
 
 function getErrorCode(error: unknown): string | undefined {
-  if (axios.isAxiosError(error)) return error.code
-  if (!isRecord(error)) return undefined
+  if (axios.isAxiosError(error)) { return error.code }
+  if (!isRecord(error)) { return undefined }
   return typeof error.code === 'string' ? error.code : undefined
 }
 
@@ -55,11 +55,11 @@ export function getRequestErrorMessage(error: unknown): string {
     ?? getRecordMessage(error)
     ?? (error instanceof Error ? error.message : undefined)
 
-  if (isChineseMessage(serverMessage)) return serverMessage
+  if (isChineseMessage(serverMessage)) { return serverMessage }
 
   const status = Number(getResponseStatus(error))
-  if (HTTP_ERROR_MESSAGES[status]) return HTTP_ERROR_MESSAGES[status]
-  if (Number.isFinite(status) && status >= 500) return '服务器异常，请稍后重试'
+  if (HTTP_ERROR_MESSAGES[status]) { return HTTP_ERROR_MESSAGES[status] }
+  if (Number.isFinite(status) && status >= 500) { return '服务器异常，请稍后重试' }
 
   const code = getErrorCode(error)
   const message = error instanceof Error ? error.message : String(getRecordMessage(error) ?? '')
@@ -69,7 +69,7 @@ export function getRequestErrorMessage(error: unknown): string {
   if (message.includes('timeout') || code === 'ECONNABORTED' || code === 'ETIMEDOUT') {
     return '请求超时，请稍后重试'
   }
-  if (code === 'ERR_CANCELED') return '请求已取消'
+  if (code === 'ERR_CANCELED') { return '请求已取消' }
   return '请求失败，请稍后重试'
 }
 

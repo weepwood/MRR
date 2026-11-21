@@ -182,7 +182,10 @@ public class PatientController {
         if (expectedCount > exportLimit) {
             throw new BusinessException(413, "患者导出超过单次 100000 条上限，请缩小筛选范围");
         }
-        List<Patient> patients = searchMapper.findAllPaginated(0, exportLimit, normalizedKeyword);
+        List<Patient> patients = searchMapper.findAllPaginated(0, exportLimit + 1, normalizedKeyword);
+        if (patients.size() > exportLimit) {
+            throw new BusinessException(413, "患者导出超过单次 100000 条上限，请缩小筛选范围");
+        }
         if (patients.size() != expectedCount) {
             throw new BusinessException(409, "导出时记录数量发生变化，请重新查询后重试");
         }

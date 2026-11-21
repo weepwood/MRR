@@ -18,6 +18,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.mock.web.MockHttpServletResponse;
 
 import java.nio.charset.StandardCharsets;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
@@ -125,7 +126,7 @@ class StatisticsControllerTest {
                     eq("张三"), isNull(), isNull(), eq("01-病案首页"),
                     eq("2026-01-01"), eq("2026-12-31"))).thenReturn(1L);
             when(statisticsService.findWithConditionForExport(
-                    eq(100000), eq("张三"), isNull(), isNull(), eq("01-病案首页"),
+                    eq(100001), eq("张三"), isNull(), isNull(), eq("01-病案首页"),
                     eq("2026-01-01"), eq("2026-12-31")))
                     .thenReturn(List.of(item));
             MockHttpServletResponse response = new MockHttpServletResponse();
@@ -134,7 +135,7 @@ class StatisticsControllerTest {
                     "2026-01-01", "2026-12-31", response);
 
             verify(statisticsService).findWithConditionForExport(
-                    100000, "张三", null, null, "01-病案首页", "2026-01-01", "2026-12-31");
+                    100001, "张三", null, null, "01-病案首页", "2026-01-01", "2026-12-31");
             assertThat(response.getContentType()).startsWith("text/csv");
             assertThat(response.getHeader("Cache-Control")).isEqualTo("private, no-store");
             assertThat(response.getContentAsString(StandardCharsets.UTF_8))
@@ -209,4 +210,22 @@ class StatisticsControllerTest {
             assertThat(r.getData()).containsKeys("overview", "uniqueBAHCount", "recentTrend", "topBAH");
         }
     }
+
+    @Test
+    @DisplayName("导出预检等于上限时，读到额外一条应拒绝截断")
+    void exportCsvRejectsRowsAddedAfterCount() {
+        when(statisticsService.getTotalCountByCondition(null, null, null, null, null, null)).thenReturn(100_000L);
+        Statistics item = new Statistics();
+        when(statisticsService.findWithConditionForExport(
+                anyInt(), isNull(), isNull(), isNull(), isNull(), isNull(), isNull()))
+                .thenAnswer(invocation -> Collections.nCopies(invocation.getArgument(0), item));
+        MockHttpServletResponse response = new MockHttpServletResponse();
+
+        assertThatThrownBy(() -> controller.exportCsv(null, null, null, null, null, null, response))
+                .isInstanceOf(BusinessException.class)
+                .extracting(e -> ((BusinessException) e).getCode())
+                .isEqualTo(413);
+        assertThat(response.getContentAsByteArray()).isEmpty();
+    }
+
 }

@@ -19,6 +19,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.mock.web.MockHttpServletResponse;
 
+import java.util.Collections;
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -123,7 +124,7 @@ class PatientControllerTest {
     @DisplayName("患者 Excel 导出正常返回时禁用响应缓存")
     void exportExcelMustBePrivateAndNoStore() throws Exception {
         when(searchMapper.countAll(null)).thenReturn(1);
-        when(searchMapper.findAllPaginated(0, 100_000, null)).thenReturn(List.of(new Patient()));
+        when(searchMapper.findAllPaginated(0, 100_001, null)).thenReturn(List.of(new Patient()));
         MockHttpServletResponse response = new MockHttpServletResponse();
 
         patientController.exportExcel(null, response);
@@ -154,4 +155,21 @@ class PatientControllerTest {
         assertThat(result.getData().canImport()).isTrue();
         assertThat(result.getData().totalRows()).isEqualTo(1);
     }
+
+    @Test
+    @DisplayName("导出预检等于上限时，读到额外一条应拒绝截断")
+    void exportExcelRejectsRowsAddedAfterCount() {
+        when(searchMapper.countAll(null)).thenReturn(100_000);
+        Patient item = new Patient();
+        when(searchMapper.findAllPaginated(eq(0), anyInt(), eq(null)))
+                .thenAnswer(invocation -> Collections.nCopies(invocation.getArgument(1), item));
+        MockHttpServletResponse response = new MockHttpServletResponse();
+
+        assertThatThrownBy(() -> patientController.exportExcel(null, response))
+                .isInstanceOf(BusinessException.class)
+                .extracting(e -> ((BusinessException) e).getCode())
+                .isEqualTo(413);
+        assertThat(response.getContentAsByteArray()).isEmpty();
+    }
+
 }

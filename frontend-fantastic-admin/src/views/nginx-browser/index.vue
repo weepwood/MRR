@@ -10,6 +10,7 @@ import MrrPageShell from '@/components/MrrPageShell/index.vue'
 import MrrStorageBrowser from '@/components/MrrStorageBrowser/index.vue'
 import { decodePreviewText, inlinePreviewLimit } from '@/components/MrrStorageBrowser/inline-preview'
 import MrrStorageInlinePreview from '@/components/MrrStorageBrowser/InlinePreview.vue'
+import { locateDirectoryEntry } from '@/components/MrrStorageBrowser/locate-entry'
 import { accessDenied, formatFileSize, isImage } from '@/components/MrrStorageBrowser/presentation'
 import MrrStoragePreview from '@/components/MrrStorageBrowser/Preview.vue'
 import { availableFileTabBytes, FILE_LIMIT_MESSAGE, NGINX_BROWSER_MAX_FILE_BYTES, showFileInTab } from './opened-files'
@@ -28,6 +29,7 @@ const servers = ref<NginxBrowserServer[]>([])
 const page = ref<NginxBrowserPage>()
 const loading = ref(false)
 const error = ref('')
+const canContinueLookup = ref(false)
 const addressInput = ref('')
 const localFilter = ref('')
 const selectedEntry = ref<NginxBrowserEntry>()
@@ -78,6 +80,7 @@ function beginDirectoryRequest(retry: () => void) {
   retryDirectory = retry
   loading.value = true
   error.value = ''
+  canContinueLookup.value = false
   return request
 }
 
@@ -117,27 +120,55 @@ async function loadDirectory(target: DirectoryLocation, nextHistory: DirectoryLo
   previewVisible.value = false
   fileRequest?.abort()
   try {
-    const response = await browseNginxDirectory({ ...target, limit: PAGE_SIZE }, request.signal)
-    if (request.signal.aborted) {
+    const result = await locateDirectoryEntry(
+      target.offset,
+      async (offset) => {
+        const response = await browseNginxDirectory({ ...target, offset, limit: PAGE_SIZE }, request.signal)
+        if (!response.data) {
+          throw new Error('目录响应为空')
+        }
+        return response.data
+      },
+      directory => selectPath
+        ? directory.entries.find(entry =>
+            entry.path === selectPath || (entry.directory && entry.path === `${selectPath}/`),
+          )
+        : undefined,
+      (directory) => {
+        const nextOffset = directory.offset + directory.entries.length
+        return selectPath && directory.entries.length > 0 && nextOffset < directory.totalEntries ? nextOffset : undefined
+      },
+      request.signal,
+    )
+    if (!result || request.signal.aborted) {
       return
     }
-    if (!response.data) {
-      throw new Error('目录响应为空')
-    }
-    page.value = response.data
+    const previous = page.value
+    page.value = result.page
     history.value = nextHistory
-    addressInput.value = response.data.path
+    addressInput.value = result.page.path
     localFilter.value = ''
     selectedEntry.value = undefined
     if (selectPath) {
-      const match = response.data.entries.find(entry => entry.path === selectPath)
+      const match = result.entry
       if (match?.directory) {
         // 末段带点也可能是目录（如版本号 v1.2）：继续进入它，而不是当文件选中。
-        await loadDirectory({ server: target.server, path: match.path, offset: 0 }, nextHistory)
+        const folderHistory = previous && previous.server === target.server && previous.path === target.path
+          ? [...nextHistory, { server: previous.server, path: previous.path, offset: previous.offset }]
+          : nextHistory
+        await loadDirectory({ server: target.server, path: match.path, offset: 0 }, folderHistory)
         return
       }
       if (!match) {
-        ElMessage.warning('未在当前目录中找到该文件，已打开所在目录。')
+        const { nextCursor } = result
+        if (nextCursor === undefined) {
+          ElMessage.warning('未在当前目录中找到该文件，已打开所在目录。')
+        }
+        else {
+          error.value = '已检查一批目录页，还有后续页面可继续定位。'
+          canContinueLookup.value = true
+          retryDirectory = () => void loadDirectory({ ...target, offset: nextCursor }, nextHistory, selectPath)
+        }
       }
       selectedEntry.value = match
     }
@@ -415,6 +446,7 @@ onBeforeUnmount(cancelRequests)
       :can-previous-page="Boolean(page?.offset)"
       :can-next-page="canNextPage"
       :error="error"
+      :retry-label="canContinueLookup ? '继续定位' : undefined"
       unavailable-text="没有可用的 Nginx 节点"
       location-label="相对路径"
       @back="goBack"

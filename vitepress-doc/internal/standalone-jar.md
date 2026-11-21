@@ -172,7 +172,7 @@ Actuator 默认只允许本机访问。
 
 ## 9. 放到反向代理后
 
-单体 JAR可以直接被现有 Nginx、IIS ARR 或其他受控代理转发。以 Nginx 为例：
+单体 JAR 可以由现有 Nginx、IIS ARR 或其他受控代理转发。**下面的 Nginx 示例只适用于当前受控单层代理拓扑**（浏览器或 HIS → Nginx → 本机 JAR）。Nginx 必须覆盖客户端自行提交的 `X-Forwarded-For`，不得追加不可信的请求头：
 
 ```nginx
 upstream mrr_standalone {
@@ -189,12 +189,14 @@ server {
         proxy_http_version 1.1;
         proxy_set_header Host $host;
         proxy_set_header X-Real-IP $remote_addr;
-        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-For $remote_addr;
         proxy_set_header X-Forwarded-Proto $scheme;
         proxy_set_header Connection "";
     }
 }
 ```
+
+如果实际经过多层反向代理、负载均衡或 IIS ARR，必须先确定每一跳的可信代理与请求头覆盖规则，再审查后端客户端 IP 解析；不能将此单层示例原样用于多级代理。尤其不能允许客户端直接向 JAR 的业务端口发送伪造转发头。
 
 页面和 `/api/**` 都由同一个 JAR处理，不需要再把前端静态目录单独配置到 Nginx。VitePress 用户手册、开发文档和运维指南不在 JAR 中，帮助中心入口应在“系统设置 → 帮助与文档”中指向独立文档服务。
 

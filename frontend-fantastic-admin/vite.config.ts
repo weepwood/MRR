@@ -116,6 +116,8 @@ export default defineConfig(({ mode, command }) => {
     }
   })
   return {
+    // GitHub Pages 项目站点使用 /MRR/，不影响医院内网正式部署。
+    base: mode === 'pages' ? '/MRR/' : '/',
     // ElementPlusResolver adds style deep imports while transforming lazy pages.
     // Scan Vue templates to include those paths in the initial optimizer pass;
     // the existing app build remains tree-shaken.

@@ -156,27 +156,27 @@ class StatisticsServiceImplTest {
         }
 
         @Test
-        @DisplayName("findWithConditionForExport — 允许导出100000条且不走普通分页校验")
+        @DisplayName("findWithConditionForExport — 允许额外读取一条用于判断导出超限")
         void findWithConditionForExport() {
             when(statisticsMapper.findWithConditionAndPagination(
-                    0, 100000, "007", null, null, "CT", "2026-01-01", "2026-12-31", "date", "asc"))
+                    0, 100_001, "007", null, null, "CT", "2026-01-01", "2026-12-31", "date", "asc"))
                     .thenReturn(List.of(mockStat));
 
             var result = statisticsService.findWithConditionForExport(
-                    100000, "007", null, null, "CT", "2026-01-01", "2026-12-31");
+                    100_001, "007", null, null, "CT", "2026-01-01", "2026-12-31");
 
             assertThat(result).containsExactly(mockStat);
             verify(statisticsMapper).findWithConditionAndPagination(
-                    0, 100000, "007", null, null, "CT", "2026-01-01", "2026-12-31", "date", "asc");
+                    0, 100_001, "007", null, null, "CT", "2026-01-01", "2026-12-31", "date", "asc");
         }
 
         @Test
-        @DisplayName("findWithConditionForExport — 超过导出上限抛异常")
+        @DisplayName("findWithConditionForExport — 超过允许读取的行数时抛异常")
         void findWithConditionForExport_invalidLimit() {
             assertThatThrownBy(() -> statisticsService.findWithConditionForExport(
-                    100001, null, null, null, null, null, null))
+                    100_002, null, null, null, null, null, null))
                     .isInstanceOf(IllegalArgumentException.class)
-                    .hasMessage("导出条数必须在1-100000之间");
+                    .hasMessage("导出读取条数必须在1-100001之间");
         }
 
         @Test

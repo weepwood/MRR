@@ -17,7 +17,9 @@ import MrrFilterActionButton from '@/components/MrrFilterActionButton/index.vue'
 import MrrTableActions from '@/components/MrrTableActions/index.vue'
 import { useTableActionLayout } from '@/composables/useTableActionLayout'
 import { rangePickerPopperOptions } from '@/ui/provider/picker-options'
+import { downloadBlob } from '@/utils/file-download'
 import { formatMedicalRecordCode } from '@/utils/medical-record-code'
+import { getRequestErrorMessage } from '@/utils/request-error-message'
 import { ARCHIVE_DEFAULT_PAGE_SIZE, getArchivePageSize } from './archive-layout'
 
 defineOptions({ name: 'StatisticsDetailPage' })
@@ -393,18 +395,16 @@ async function handleExportCsv() {
     params.endDate = filters.dateRange[1]
   }
   try {
-    const res = await exportStatisticsCsv(params)
-    const blob = new Blob([res.data as BlobPart], { type: 'text/csv;charset=utf-8;' })
-    const url = URL.createObjectURL(blob)
-    const a = document.createElement('a')
-    a.href = url
-    a.download = `statistics-${Date.now()}.csv`
-    a.click()
-    URL.revokeObjectURL(url)
+    const response = await exportStatisticsCsv(params)
+    const blob = response instanceof Blob ? response : response.data
+    if (!(blob instanceof Blob)) {
+      throw new TypeError('导出接口未返回有效文件')
+    }
+    downloadBlob(blob, `statistics-${Date.now()}.csv`)
     ElMessage.success('导出成功')
   }
-  catch {
-    ElMessage.error('导出失败')
+  catch (error: unknown) {
+    ElMessage.error(`导出失败：${getRequestErrorMessage(error)}`)
   }
 }
 

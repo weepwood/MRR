@@ -39,6 +39,10 @@ const AUTHENTICATED_ROUTES = [
   '/archive-boxes',
   '/settings',
   '/settings?section=archive',
+  // 外观设置里的调色板卡片要按 section 惰性编译，只预热 /settings 不会命中它的模块图。
+  '/settings?section=appearance',
+  // 界面组件展示页是按钮视觉契约（button-parity）的取样式页面，模块图最大，冷编译最慢。
+  '/ui-components',
   '/login-settings',
   '/users',
   '/patients',
@@ -58,6 +62,9 @@ const AUTHENTICATED_ROUTES = [
 const ANONYMOUS_ROUTES = [
   '/login',
   '/login?mode=register',
+  // 运维监控页以 iframe 内嵌公开状态页（/status）。它是独立的模块图，
+  // 不预热时 iframe 首次加载会撞冷编译，轮询计数用例拿到 0 次请求而假失败。
+  '/status',
 ] as const
 
 /** 单次等待应用挂载的上限，需覆盖一次冷启动依赖预构建加模块编译。 */

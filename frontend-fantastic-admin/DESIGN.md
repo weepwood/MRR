@@ -195,7 +195,7 @@ Element Plus 按需 CSS 可能晚于全局样式注入；[圆角桥接](src/asse
 
 状态与普通标签职责不同：只读业务状态优先使用 `MrrStatusTag` 并显式保持业务文案和色调；`el-tag` 继续承载分类、计数、可关闭项及指定 round/effect/size 的标签。`el-tag__content` 是标签内部文字容器而非独立组件，不为它额外绘制圆角背景。扫描记录迁移状态及数据关系工作台的健康、检查级别和对比状态已使用共享状态组件，其他页面的状态标签应逐页核对语义、权限和交互后迁移，不按标签名称全站机械替换。组件目录展示两者的用途。
 
-单行输入、选择、日期范围和数字输入使用 `--mrr-input-height`（33px），普通/紧凑/大型按钮共用 `--mrr-control-height`，图标按钮保持同高同宽。登录注册区域沿用局部 `--auth-input-height`（38px）；多行输入和多选标签允许按内容增高。以 [form-controls.css](src/assets/styles/components/form-controls.css) 及组件实际尺寸为准。
+单行输入、选择、日期范围和数字输入使用 `--mrr-input-height`（33px），普通/紧凑/大型按钮共用 `--mrr-control-height`；按钮的字号与左右留白由 `--mrr-button-font-size*` / `--mrr-button-padding-x*` 统一供给（两套按钮同源，见下节）。图标按钮保持同高同宽。登录注册区域沿用局部 `--auth-input-height`（38px），提交按钮与同面板输入框同高；多行输入和多选标签允许按内容增高。以 [form-controls.css](src/assets/styles/components/form-controls.css) 及组件实际尺寸为准。
 
 ## Components
 
@@ -237,6 +237,32 @@ Element Plus 按需 CSS 可能晚于全局样式注入；[圆角桥接](src/asse
 操作区清楚区分查询/保存等主要任务与刷新/重置等辅助操作，不机械重排既有业务优先级。危险操作沿用现有权限、确认与失败处理，不为视觉统一改变业务授权。
 
 键盘焦点使用独立的 2px 轮廓，危险操作沿用危险色；不能因按钮阴影、变体或浏览器降级而失去焦点。验证 Tab 顺序、标签点击聚焦、下拉键盘操作及浮层关闭后焦点恢复。可访问名称测试通过不等于完成了屏幕阅读器人工验收。
+
+### 两套按钮：同一种控件，两种实现
+
+项目并存 Element Plus 的 `el-button` 与 reka-ui 封装的 `FaButton`（`.fa-button-control`）。二者承担同样的角色，**尺寸与状态必须同源**，不允许各写一套数值——曾经两侧分别是 13/14px 字号、11/14/16px 内边距、8/10px 圆角，并排时一眼能看出是两套控件。
+
+- [tokens.css](src/assets/styles/tokens.css) 的 `--mrr-button-font-size(-sm/-lg)`、`--mrr-button-padding-x(-sm/-lg/-text)` 是唯一数值来源；
+- [element-plus-overrides.css](src/assets/styles/element-plus-overrides.css) 与 [FaButton 的 cva](src/ui/components/FaButton/button/index.ts) 只引用令牌，不写死数值；
+- hover / active / focus-visible / disabled / loading 由 [form-controls.css](src/assets/styles/components/form-controls.css) 按 `[data-variant]` 统一定义，与 Element Plus 逐条对齐（同样的 accent 悬停、同样的禁用灰、同样的 1px 下沉/0.97 按压）；
+- 主题换密度只改令牌（[warm-flat.css](src/assets/styles/themes/warm-flat.css) 中的 `--mrr-button-*` 覆盖），不在主题层分别重写两族的 padding / font-size。
+
+| 语义 | FaButton | el-button |
+| --- | --- | --- |
+| 主要 | 默认（`variant="default"`） | `type="primary"` |
+| 次要 | `variant="outline"` | 无 `type` |
+| 辅助 | `variant="secondary"`（中性实心底，Element Plus 无等价变体） | — |
+| 轻量 | `variant="ghost"` | `text` |
+| 文字 | `variant="link"` | `link type="primary"` |
+| 危险 | `variant="destructive"` | `type="danger"` |
+| 紧凑 / 大型 | `size="sm"` / `size="lg"` | `size="small"` / `size="large"` |
+| 图标 | `size="icon"`（随控件圆角，控件高度见方） | `circle`（正圆，同高同宽） |
+| 加载 | `loading`（保留变体配色 + 半透明，并阻止点击） | `loading` |
+| 禁用 | `disabled`（有底色变体换中性灰，文字变体降透明度） | `disabled` |
+
+图标按钮是唯一保留的形态差异：正圆属于「图标入口」，方框属于「工具按钮」；同一组控件里不要混用两种形状。按钮组（`FaButtonGroup` / `el-button-group`）拼接方式一致——相邻按钮重叠 1px 共用描边，只保留外缘圆角。
+
+展示页把两族按钮按角色逐对并排（`/ui-components` → 按钮与操作）；浏览器侧一致性由 [button-parity.spec.ts](e2e/button-parity.spec.ts) 断言，源码侧「只引用令牌」由 [button-consistency.test.ts](src/assets/styles/button-consistency.test.ts) 守住。改任一侧后请同时跑这两条。
 
 ### 筛选、查询与结果归属
 

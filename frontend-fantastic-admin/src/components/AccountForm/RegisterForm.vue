@@ -247,7 +247,17 @@ async function handlePrevious() {
 .password-toggle { position: absolute; top: 50%; right: 12px; display: grid; padding: 4px; color: var(--mrr-muted-foreground); background: transparent; transform: translateY(-50%); place-items: center; }
 .form-actions { display: grid; flex-shrink: 0; grid-template-columns: minmax(0, 0.8fr) minmax(0, 1.2fr); gap: var(--mrr-space-3); margin-top: auto; }
 .form-actions--single { grid-template-columns: minmax(0, 1fr); }
-.form-actions :deep(button) { width: 100%; }
+
+/*
+ * 登录/注册是同一块面板的两个面，主按钮必须同高、同一条基线：
+ * 面板里的输入框用局部 --auth-input-height（38px），
+ * 若只让登录页的提交按钮跟随、注册页留给 size="lg"（33px），
+ * 切换时两个主按钮的顶边就会差 5px（login-switch-spacing 用例会直接抓到）。
+ */
+.form-actions :deep(button) {
+  width: 100%;
+  height: var(--auth-input-height, var(--mrr-control-height));
+}
 @media (max-width: 768px) {
   .review-flow__steps { grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr) auto minmax(0, 1fr); gap: var(--mrr-space-1); align-items: start; }
   .review-flow__steps span { min-width: 0; flex-direction: column; gap: var(--mrr-space-1); justify-content: flex-start; text-align: center; white-space: normal; }

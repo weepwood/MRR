@@ -24,8 +24,8 @@ const expectedSourceImports = [
 
 const proxyGuidePaths = [
   documentPath,
-  // 单体 JAR 的 Nginx 示例也必须遵守正式单层代理的真实来源 IP 约束。
   path.join(projectRoot, 'internal', 'standalone-jar.md'),
+  path.join(projectRoot, 'internal', 'pwa.md'),
   path.resolve(
     projectRoot,
     '../backend-repo/docs/his-external-archive-integration-guide.md',
@@ -77,7 +77,7 @@ test('external integration guide publishes a reproducible HMAC test vector', asy
   assert.ok(markdown.includes(signature), 'guide must contain the computed HMAC signature')
 })
 
-test('external integration guides overwrite untrusted forwarded IP headers', async () => {
+test('single-proxy guides overwrite untrusted forwarded IP headers', async () => {
   for (const guidePath of proxyGuidePaths) {
     const markdown = await readFile(guidePath, 'utf8')
 

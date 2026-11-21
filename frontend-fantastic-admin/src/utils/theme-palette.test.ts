@@ -67,15 +67,42 @@ describe('暖色扁平风格配色方案', () => {
     }
   })
 
+  it('导航选中态使用表面色描边药丸，而不是主色浅填充', () => {
+    // 扁平风格把颜色留给主按钮与状态色：导航一旦用主色填充，与主按钮抢注意力。
+    for (const scheme of ['light', 'dark'] as const) {
+      const variables = gr8rCssVariables(scheme)
+      expect(variables['--mrr-navigation-active']).not.toBe(GR8R_COLORS[scheme].accent)
+      expect(variables['--mrr-navigation-active-foreground']).toBe(GR8R_COLORS[scheme].ink)
+      expect(variables['--g-main-sidebar-menu-active-color']).toBe(GR8R_COLORS[scheme].ink)
+      // 焦点环必须是实色：Chrome 86 上 color-mix() 会让整条 box-shadow 失效。
+      expect(variables['--mrr-focus-ring']).toMatch(/^0 0 0 3px #[0-9A-F]{6}$/)
+    }
+    expect(gr8rCssVariables('light')['--mrr-navigation-active']).toBe(GR8R_COLORS.light.surface)
+    expect(gr8rCssVariables('dark')['--mrr-navigation-active']).toBe(GR8R_COLORS.dark.raisedSurface)
+  })
+
+  it('控件改为描边白底，避免在暖色卡片上出现灰填充块', () => {
+    const light = gr8rCssVariables('light')
+    const dark = gr8rCssVariables('dark')
+    expect(light['--mrr-control-bg']).toBe(GR8R_COLORS.light.surface)
+    expect(light['--mrr-control-bg-hover']).toBe(GR8R_COLORS.light.mutedSurface)
+    expect(light['--mrr-control-border']).toBe(GR8R_COLORS.light.controlLine)
+    expect(dark['--mrr-control-border']).toBe(GR8R_COLORS.dark.controlLine)
+    expect(light['--mrr-control-border-hover']).toBe(GR8R_COLORS.light.controlLine)
+    // 按钮保留暖灰描边，输入控件使用对比度更高的边线。
+    expect(light['--mrr-border-strong']).toBe(GR8R_COLORS.light.strongLine)
+    expect(dark['--mrr-border-strong']).toBe(GR8R_COLORS.dark.strongLine)
+  })
+
   it('切换方案后移除全部内联覆盖，并保留 MRR 原本的主色控制权', () => {
     const root = document.createElement('div')
     applyThemePalette(root, 'gr8r', 'light')
     expect(root.dataset.mrrPalette).toBe('gr8r')
-    expect(root.style.getPropertyValue('--mrr-control-bg')).toBe('#F7F6F3')
+    expect(root.style.getPropertyValue('--mrr-control-bg')).toBe('#FFFFFF')
     expect(root.style.getPropertyValue('--g-header-bg')).toBe('#FFFFFF')
 
     applyThemePalette(root, 'gr8r', 'dark')
-    expect(root.style.getPropertyValue('--mrr-control-bg')).toBe('#282826')
+    expect(root.style.getPropertyValue('--mrr-control-bg')).toBe('#222220')
     expect(root.style.getPropertyValue('--g-header-bg')).toBe('#222220')
 
     applyThemePalette(root, 'mrr', 'light')

@@ -155,31 +155,182 @@
   transition: color var(--mrr-motion-feedback) ease, transform var(--mrr-motion-move) var(--mrr-ease-out);
 }
 
-/* 与输入框共用节奏；颜色/明度反馈保留调用方定位和方向变换。 */
+/*
+ * FaButton 的交互状态层。
+ *
+ * 几何与静置配色由 `ui/components/FaButton/button/index.ts` 的 cva 产出
+ * （调用方仍可用工具类覆盖，cn 会做 tailwind-merge）；这里只补工具类表达不了的状态：
+ * hover / active / focus-visible / disabled / loading。
+ *
+ * 每条规则都与 element-plus-overrides.css 的「Buttons」段同值同令牌 ——
+ * 两套按钮在同一工具栏里必须读作同一种控件：同样的悬停底、同样的禁用灰、同样的焦点轮廓。
+ * 改任一侧请同时核对另一侧，button-consistency.test.ts 会比对两处引用的令牌。
+ */
 .fa-button-control {
+  /* el-button 的行高是 1（高度由 height 决定），这里显式写死同一值：
+   * 依赖 `leading-none` 工具类会随 UnoCSS 的生成/层叠顺序变成继承来的 1.5，
+   * 单行文字看不出，但图标与文字的垂直居中会差半个像素级基线。 */
+  line-height: 1;
   transition:
     color var(--mrr-motion-feedback) ease,
     background-color var(--mrr-motion-feedback) ease,
     border-color var(--mrr-motion-feedback) ease,
-    opacity var(--mrr-motion-feedback) ease;
+    box-shadow var(--mrr-motion-feedback) ease,
+    opacity var(--mrr-motion-feedback) ease,
+    transform var(--mrr-motion-press) ease;
 }
 
+/* 主要操作 —— el-button type="primary" */
+.fa-button-control[data-variant="default"]:not(:disabled):hover {
+  background: var(--color-primary-hover);
+  border-color: var(--color-primary-hover);
+}
+
+.fa-button-control[data-variant="default"]:not(:disabled):active {
+  background: var(--color-primary-active);
+  border-color: var(--color-primary-active);
+}
+
+/* 次要操作 —— el-button 默认外观 */
+.fa-button-control[data-variant="outline"]:not(:disabled):hover {
+  color: var(--mrr-accent-foreground);
+  background: var(--mrr-accent);
+  border-color: var(--mrr-input);
+}
+
+/* 辅助操作 —— Element Plus 没有中性实心底的按钮，这里保持页面自己的中性语义 */
+.fa-button-control[data-variant="secondary"]:not(:disabled):hover {
+  background: var(--mrr-muted);
+  border-color: var(--mrr-input);
+}
+
+/* 危险操作 —— el-button type="danger"：淡底不透明边，悬停只加深底色 */
+.fa-button-control[data-variant="destructive"]:not(:disabled):hover {
+  background: var(--mrr-tone-danger-soft);
+}
+
+@supports (color: color-mix(in srgb, #000 50%, #fff)) {
+  .fa-button-control[data-variant="destructive"]:not(:disabled):hover {
+    background: color-mix(in srgb, var(--mrr-destructive) 16%, var(--mrr-card));
+  }
+}
+
+/*
+ * 文字类按钮的描边宽度与 Element Plus 逐像素对齐：text 变体是 0，
+ * link 变体保留 1px 透明边框 —— 少了这 1px，两个变体的文字起点会差 1px，
+ * 并排放在同一行里能看出来。
+ */
+.fa-button-control[data-variant="ghost"] {
+  border-color: transparent;
+  border-width: 0;
+}
+
+.fa-button-control[data-variant="link"] {
+  border-color: transparent;
+  border-width: 1px;
+}
+
+/* 轻量操作 —— el-button text：悬停只加底色，不改文字颜色 */
+.fa-button-control[data-variant="ghost"]:not(:disabled):hover {
+  background: var(--mrr-accent);
+}
+
+/* 文字操作 —— el-button link */
+.fa-button-control[data-variant="link"]:not(:disabled):hover {
+  text-decoration: underline;
+  text-underline-offset: 4px;
+  background: var(--mrr-accent);
+}
+
+/* 键盘焦点：与 el-button 一样用独立轮廓，避免被各变体的底色吞掉。 */
 .fa-button-control:focus-visible {
-  outline: 2px solid var(--mrr-ring);
+  outline: 2px solid var(--mrr-primary);
   outline-offset: 2px;
+  border-color: var(--mrr-ring);
+  box-shadow: var(--mrr-focus-ring);
 }
 
-/* 使用与 Element Plus 一致的语义前景，避免暗色主题主按钮黑字压在蓝底上。 */
-.fa-button-control[data-variant="default"] {
-  color: var(--mrr-primary-foreground);
+.fa-button-control[data-variant="destructive"]:focus-visible {
+  outline-color: var(--mrr-destructive);
+  box-shadow: var(--mrr-danger-focus-ring);
 }
 
-.fa-button-control[data-variant="destructive"] {
-  color: var(--mrr-destructive-foreground);
+/* 按压：与 el-button 同一节奏（主题可把 --mrr-motion-decor 声明成别的写法）。 */
+.fa-button-control:not(:disabled):not([data-loading]):active {
+  transform: var(--mrr-motion-decor, translateY(1px));
 }
 
-.fa-button-control:not(:disabled):active {
-  opacity: 0.82;
+/*
+ * 禁用态：有底色的按钮改中性灰，让它彻底不像「可点击的主按钮」；
+ * 文字类按钮没有填充，降透明度即可（与 el-button 的处理一致）。
+ */
+.fa-button-control:disabled:not([data-loading]):not([data-variant="ghost"]):not([data-variant="link"]) {
+  color: var(--mrr-muted-foreground);
+  background: var(--mrr-muted);
+  border-color: var(--mrr-border);
+  box-shadow: none;
+}
+
+.fa-button-control:disabled,
+.fa-button-control[data-loading] {
+  cursor: not-allowed;
+  transform: none;
+}
+
+.fa-button-control:disabled[data-variant="ghost"],
+.fa-button-control:disabled[data-variant="link"],
+.fa-button-control[data-loading] {
+  opacity: 0.5;
+}
+
+.fa-button-control:disabled[data-variant="ghost"],
+.fa-button-control:disabled[data-variant="link"] {
+  color: var(--mrr-muted-foreground);
+}
+
+/*
+ * 按钮组：与 .el-button-group 同一种拼接方式 —— 相邻按钮重叠 1px 共用描边，
+ * 只保留外缘圆角。原先用 1px gap 拼，两个相邻描边并排会出现「双线」。
+ */
+.fa-button-group {
+  display: inline-flex;
+  align-items: stretch;
+}
+
+.fa-button-group:not(.fa-button-group--vertical) > * + * {
+  margin-left: -1px;
+}
+
+.fa-button-group > *:not(:first-child):not(:last-child) {
+  border-radius: 0;
+}
+
+.fa-button-group:not(.fa-button-group--vertical) > *:first-child:not(:last-child) {
+  border-start-end-radius: 0;
+  border-end-end-radius: 0;
+}
+
+.fa-button-group:not(.fa-button-group--vertical) > *:last-child:not(:first-child) {
+  border-start-start-radius: 0;
+  border-end-start-radius: 0;
+}
+
+.fa-button-group--vertical {
+  flex-direction: column;
+}
+
+.fa-button-group--vertical > * + * {
+  margin-top: -1px;
+}
+
+.fa-button-group--vertical > *:first-child:not(:last-child) {
+  border-bottom-right-radius: 0;
+  border-bottom-left-radius: 0;
+}
+
+.fa-button-group--vertical > *:last-child:not(:first-child) {
+  border-top-left-radius: 0;
+  border-top-right-radius: 0;
 }
 
 .fa-select-trigger[data-state="open"] .fa-select-chevron {

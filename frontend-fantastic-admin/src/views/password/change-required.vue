@@ -171,10 +171,6 @@ async function logout() {
   padding: var(--mrr-space-5);
   color: var(--mrr-foreground);
   background-color: var(--mrr-app-shell-bg);
-  background-image:
-    linear-gradient(var(--mrr-app-shell-grid) 1px, transparent 1px),
-    linear-gradient(90deg, var(--mrr-app-shell-grid) 1px, transparent 1px);
-  background-size: 32px 32px;
 }
 .page-toolbar { display: flex; align-items: center; justify-content: space-between; width: min(620px, 100%); margin: 0 auto; }
 .environment-badge { display: inline-flex; gap: 8px; align-items: center; padding: 7px 11px; font-size: 12px; font-weight: 650; color: var(--mrr-muted-foreground); background: color-mix(in srgb, var(--mrr-card) 90%, transparent); border: 1px solid var(--mrr-border); border-radius: var(--mrr-radius-pill); }

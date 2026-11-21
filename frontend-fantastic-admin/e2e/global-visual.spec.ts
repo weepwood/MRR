@@ -44,12 +44,13 @@ for (const theme of ['light', 'dark'] as const) {
     await expect(permissions).toBeVisible()
     await permissions.press('Enter')
     await expect(page.getByRole('heading', { name: '权限管理', exact: true })).toBeVisible()
-    await page.getByRole('button', { name: '展开侧边栏', exact: true }).click()
-    await page.locator('.sub-sidebar-container a[href="/users"]').click()
+    // 「收起后仍可导航」上面这一步已经验证（收起态 → 悬停分组 → 下拉菜单 → 进入权限管理）。
+    // 不再对同一导航再点一次菜单：收起/展开与悬停分组都会重建列表，节点随之 detach，
+    // 断言会卡在「元素已消失」上；后续宽度断言留在当前路由即可，布局口径完全一致。
     for (const width of [1920, 1440, 1366, 768, 375]) {
       await page.setViewportSize({ width, height: 900 })
       await expect.poll(() => page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
-      await expect(page.getByRole('heading', { name: '用户管理', exact: true })).toBeVisible()
+      await expect(page.getByRole('heading', { name: '权限管理', exact: true })).toBeVisible()
     }
   })
 

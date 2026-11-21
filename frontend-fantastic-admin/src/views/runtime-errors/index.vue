@@ -6,7 +6,7 @@ import type {
 /* eslint-disable vue/singleline-html-element-content-newline */
 import { ElMessage } from 'element-plus'
 import { RefreshCw as Refresh } from 'lucide-vue-next'
-import { computed, onMounted, onUnmounted, reactive, ref, watch } from 'vue'
+import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import {
   getSystemErrorDetail,
@@ -21,9 +21,10 @@ import MrrDataTablePanel from '@/components/MrrDataTablePanel/index.vue'
 import MrrFilterActionButton from '@/components/MrrFilterActionButton/index.vue'
 import MrrFilterBar from '@/components/MrrFilterBar/index.vue'
 import MrrMetricCard from '@/components/MrrMetricCard/index.vue'
+import { useCrudList } from '@/composables/useCrudList'
 import { useUserStore } from '@/store/modules/user'
 import { formatDateTime, isRedactedLogText } from '@/utils/display-format'
-import { checkPermission } from '@/utils/permission'
+import { checkSessionPermission } from '@/utils/permission'
 
 defineOptions({ name: 'RuntimeErrorsPage' })
 
@@ -31,13 +32,12 @@ const userStore = useUserStore()
 const router = useRouter()
 const route = useRoute()
 /** 访问日志只要求 log:read。没有权限就不显示入口，避免落到 403 页面。 */
-const canReadAccessLogs = computed(() => checkPermission(userStore.permissions, 'log:read'))
-const loading = ref(false)
+const canReadAccessLogs = computed(() => checkSessionPermission(
+  userStore.profile.roleCode,
+  userStore.permissions,
+  'log:read',
+))
 const error = ref('')
-const list = ref<SystemErrorEvent[]>([])
-const total = ref(0)
-const page = ref(1)
-const size = ref(20)
 const detailVisible = ref(false)
 const detailLoading = ref(false)
 const current = ref<SystemErrorEvent | null>(null)
@@ -54,12 +54,14 @@ const overview = ref<SystemErrorOverview>({
   recentOccurrences: 0,
 })
 
-const query = reactive({
+const defaultQuery = {
   keyword: '',
   level: '',
   module: '',
   range: '',
-})
+}
+const routeRequestId = computed(() => typeof route.query.requestId === 'string' ? route.query.requestId.trim() : '')
+const linkedRequestId = ref(routeRequestId.value)
 
 /** 模块筛选项：去重后的已有模块名；拉取失败不阻断筛选（下拉仍可手输）。 */
 const moduleOptions = ref<string[]>([])
@@ -89,89 +91,78 @@ function rangeStart(range: string) {
   return undefined
 }
 
-const since = computed(() => rangeStart(query.range))
-
-async function fetchData(silent = false) {
-  if (!silent) { loading.value = true }
-  try {
-    const params = {
-      page: page.value,
-      size: size.value,
-      keyword: query.keyword.trim() || undefined,
-      level: query.level || undefined,
-      module: query.module.trim() || undefined,
-      since: since.value,
+const { query, list, total, loading, pageNum: page, pageSize: size, loadData, handleSearch } = useCrudList<SystemErrorEvent, typeof defaultQuery>({
+  defaultQuery: { ...defaultQuery, keyword: linkedRequestId.value },
+  fetchApi: async ({ page, size, keyword, level, module, range }, { isCurrent, silent }) => {
+    try {
+      const [pageResult, overviewResult] = await Promise.all([
+        searchSystemErrors({
+          page,
+          size,
+          keyword: keyword.trim() || undefined,
+          level: level || undefined,
+          module: module.trim() || undefined,
+          since: rangeStart(range),
+        }),
+        getSystemErrorOverview(),
+      ])
+      if (isCurrent()) {
+        error.value = ''
+        if (overviewResult.data) {
+          overview.value = overviewResult.data
+        }
+        lastRefreshedAt.value = new Date()
+      }
+      return pageResult
     }
-    const [pageResult, overviewResult] = await Promise.all([
-      searchSystemErrors(params),
-      getSystemErrorOverview(),
-    ])
-    list.value = pageResult.data?.list ?? []
-    total.value = pageResult.data?.total ?? 0
-    if (overviewResult.data) {
-      overview.value = overviewResult.data
+    catch (exception: unknown) {
+      if (isCurrent() && !silent) {
+        error.value = exception instanceof Error ? exception.message : '加载运行错误失败'
+      }
+      return undefined
     }
-    lastRefreshedAt.value = new Date()
-  }
-  catch (exception: unknown) {
-    // 静默刷新失败时保留已展示的数据，不打断浏览。
-    if (!silent) { error.value = exception instanceof Error ? exception.message : '加载运行错误失败' }
-  }
-  finally {
-    if (!silent) { loading.value = false }
-  }
-}
+  },
+})
 
-function loadData() {
-  return fetchData(false)
-}
-
-function handleSearch() {
-  page.value = 1
-  void loadData()
+function searchFromStart(keyword = '') {
+  Object.assign(query, defaultQuery, { keyword })
+  return handleSearch()
 }
 
 function resetFilters() {
-  query.keyword = ''
-  query.level = ''
-  query.module = ''
-  query.range = ''
-  page.value = 1
-  void loadData()
+  if (linkedRequestId.value) {
+    return router.replace({ query: { ...route.query, requestId: undefined } })
+  }
+  return searchFromStart()
 }
 
-/**
- * 承接日志管理页「查看相关运行错误」的跳转：/runtime-errors?requestId=xxx
- * 关键字检索覆盖 request_id 模糊匹配。页面被缓存时跳转不重新 mount，
- * 与日志管理页同款：跟随 query 变化重新检索。
- */
-watch(() => route.query.requestId, (value) => {
-  if (route.path !== '/runtime-errors') { return }
-  if (typeof value !== 'string' || !value) { return }
-  query.keyword = value
-  handleSearch()
+// 监听路径以覆盖两页之间携带同一个 Request ID 的跳转。
+watch([() => route.path, routeRequestId], ([path, requestId]) => {
+  if (path !== '/runtime-errors' || (!requestId && !linkedRequestId.value)) { return }
+  linkedRequestId.value = requestId
+  detailVisible.value = false
+  void searchFromStart(requestId)
 })
 
 /** 30 秒静默轮询：页面隐藏时暂停，重新可见立即补一次。 */
 const REFRESH_INTERVAL_MS = 30_000
 let refreshTimer: ReturnType<typeof setInterval> | undefined
 
-function handleVisibilityChange() {
-  if (!document.hidden) { void fetchData(true) }
+function silentRefresh() {
+  if (route.path === '/runtime-errors' && !document.hidden && !loading.value) {
+    void loadData({ silent: true })
+  }
 }
 
 onMounted(() => {
-  void loadData()
   void loadModules()
-  refreshTimer = setInterval(() => {
-    if (!document.hidden) { void fetchData(true) }
-  }, REFRESH_INTERVAL_MS)
-  document.addEventListener('visibilitychange', handleVisibilityChange)
+  refreshTimer = setInterval(silentRefresh, REFRESH_INTERVAL_MS)
+  document.addEventListener('visibilitychange', silentRefresh)
 })
 
 onUnmounted(() => {
   if (refreshTimer !== undefined) { clearInterval(refreshTimer) }
-  document.removeEventListener('visibilitychange', handleVisibilityChange)
+  document.removeEventListener('visibilitychange', silentRefresh)
 })
 
 async function openDetail(row: SystemErrorEvent) {
@@ -245,7 +236,7 @@ function levelTagType(level: string) {
       </div>
       <div class="header-actions">
         <span class="auto-refresh-note">每 30 秒自动刷新<template v-if="lastRefreshedAt"> · 上次 {{ formatDateTime(lastRefreshedAt) }}</template></span>
-        <el-button :loading="loading" @click="loadData">
+        <el-button :loading="loading" @click="loadData()">
           <el-icon><Refresh /></el-icon>
           刷新
         </el-button>
@@ -317,8 +308,11 @@ function levelTagType(level: string) {
       </template>
 
       <AppLoading v-if="loading" type="table" :rows="8" />
-      <AppError v-else-if="error" :message="error" @retry="loadData" />
-      <AppEmpty v-else-if="!list.length" description="暂无运行错误事件" />
+      <AppError v-else-if="error" :message="error" @retry="loadData()" />
+      <AppEmpty
+        v-else-if="!list.length"
+        :description="linkedRequestId && query.keyword === linkedRequestId ? '未找到相关运行错误。错误组仅保留最近一次关联的 Request ID。' : '暂无运行错误事件'"
+      />
       <el-table v-else :data="list" stripe class="runtime-errors-table">
         <el-table-column prop="lastSeenAt" label="最后发生" min-width="175">
           <template #default="{ row }">{{ formatDateTime(row.lastSeenAt) }}</template>
@@ -367,7 +361,7 @@ function levelTagType(level: string) {
           :total="total"
           layout="total, sizes, prev, pager, next, jumper"
           @size-change="handleSearch"
-          @current-change="loadData"
+          @current-change="loadData()"
         />
       </template>
     </MrrDataTablePanel>

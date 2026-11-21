@@ -4,6 +4,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import RuntimeErrorsPage from '../index.vue'
 
 const pushMock = vi.hoisted(() => vi.fn())
+const replaceMock = vi.hoisted(() => vi.fn())
 /** mock 的路由对象（reactive），供测试修改 query 模拟日志管理页跳转。 */
 const routeState = vi.hoisted(() => ({ route: null as { path: string, query: Record<string, unknown> } | null }))
 const api = vi.hoisted(() => ({
@@ -17,10 +18,10 @@ vi.mock('vue-router', async () => {
   const { reactive } = await import('vue')
   const route = reactive({ path: '/runtime-errors', query: {} as Record<string, unknown> })
   routeState.route = route
-  return { useRouter: () => ({ push: pushMock }), useRoute: () => route }
+  return { useRouter: () => ({ push: pushMock, replace: replaceMock }), useRoute: () => route }
 })
 vi.mock('@/store/modules/user', () => ({
-  useUserStore: () => ({ permissions: ['system:error:read', 'log:read'] }),
+  useUserStore: () => ({ profile: { roleCode: 'OPERATOR' }, permissions: ['system:error:read', 'log:read'] }),
 }))
 vi.mock('element-plus', () => ({ ElMessage: { success: vi.fn(), error: vi.fn(), info: vi.fn() } }))
 
@@ -91,6 +92,12 @@ function button(wrapper: ReturnType<typeof mount>, label: string) {
 
 beforeEach(() => {
   vi.resetAllMocks()
+  routeState.route!.path = '/runtime-errors'
+  routeState.route!.query = {}
+  replaceMock.mockImplementation(({ query }) => {
+    routeState.route!.query = query
+    return Promise.resolve()
+  })
   api.searchSystemErrors.mockResolvedValue({ data: { list: [rowFixture], total: 1 } })
   api.getSystemErrorOverview.mockResolvedValue({ data: overviewFixture })
   api.getSystemErrorDetail.mockResolvedValue({ data: rowFixture })
@@ -102,6 +109,53 @@ afterEach(() => {
 })
 
 describe('运行错误中心', () => {
+  it('首次进入追踪链接时直接检索 Request ID', async () => {
+    routeState.route!.query = { requestId: 'req-from-logs-001' }
+    const wrapper = openPage()
+    await flushPromises()
+    expect(api.searchSystemErrors).toHaveBeenCalledExactlyOnceWith(expect.objectContaining({
+      page: 1,
+      keyword: 'req-from-logs-001',
+    }))
+
+    await wrapper.get('[data-action="reset"]').trigger('click')
+    await flushPromises()
+    expect(routeState.route!.query.requestId).toBeUndefined()
+    expect(api.searchSystemErrors).toHaveBeenLastCalledWith(expect.objectContaining({ page: 1, keyword: undefined }))
+  })
+
+  it('新的追踪检索清除缓存筛选，旧请求晚返回时保留当前结果', async () => {
+    let finishOld!: (value: unknown) => void
+    api.searchSystemErrors.mockReturnValueOnce(new Promise((resolve) => { finishOld = resolve }))
+    const wrapper = openPage()
+    Object.assign(setupState(wrapper).query as object, { level: 'WARN', module: 'storage', range: 'today' })
+    routeState.route!.query = { requestId: 'req-from-logs-001' }
+    await flushPromises()
+    expect(api.searchSystemErrors).toHaveBeenLastCalledWith({
+      page: 1,
+      size: 20,
+      keyword: 'req-from-logs-001',
+      level: undefined,
+      module: undefined,
+      since: undefined,
+    })
+    finishOld({ data: { list: [{ ...rowFixture, errorId: 'ERR-SYNTHETIC-OLD' }], total: 50 } })
+    await flushPromises()
+    expect(wrapper.get('.rows').text()).toBe(rowFixture.errorId)
+  })
+
+  it('失败后重试成功可以恢复当前追踪结果', async () => {
+    routeState.route!.query = { requestId: 'req-synthetic-001' }
+    api.searchSystemErrors.mockRejectedValueOnce(new Error('temporary synthetic failure'))
+    const wrapper = openPage()
+    await flushPromises()
+    expect(wrapper.get('.query-error').text()).toContain('temporary synthetic failure')
+    await button(wrapper, '刷新').trigger('click')
+    await flushPromises()
+    expect(api.searchSystemErrors).toHaveBeenLastCalledWith(expect.objectContaining({ keyword: 'req-synthetic-001' }))
+    expect(wrapper.get('.rows').text()).toBe(rowFixture.errorId)
+  })
+
   it('页面只读：不出现处理状态操作与状态筛选', () => {
     const wrapper = openPage()
     expect(wrapper.text()).not.toContain('标记处理中')

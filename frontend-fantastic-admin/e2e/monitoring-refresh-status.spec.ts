@@ -1,6 +1,8 @@
 import type { Page } from '@playwright/test'
 import { expect, test } from '@playwright/test'
 
+test.use({ timezoneId: 'Asia/Shanghai' })
+
 const ok = (data: unknown) => ({ json: { code: 200, data } })
 async function monitoringRepro(page: Page) {
   await page.clock.setFixedTime(new Date('2026-11-21T12:00:00+08:00'))

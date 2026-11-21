@@ -11,6 +11,12 @@ async function smokePagesDemo() {
     mode: 'pages',
     preview: { host: '127.0.0.1', port: 4177, strictPort: true },
   })
+  const outboundApiRequests = []
+  server.httpServer.prependListener('request', (request) => {
+    if (request.url?.startsWith('/proxy/')) {
+      outboundApiRequests.push(request.url)
+    }
+  })
   let browser
 
   try {
@@ -39,6 +45,22 @@ async function smokePagesDemo() {
     assert.equal(mockResponses.user?.data?.username, 'admin', '用户信息必须来自浏览器 Mock')
     assert.equal(mockResponses.scans?.data?.list?.length, 3, '扫描记录必须由浏览器 Mock 返回')
 
+    const blocked = await page.evaluate(async () => {
+      const path = '/proxy/api/v1/pages-smoke-unmocked'
+      const fetchBlocked = await fetch(path, { method: 'POST', body: 'synthetic-demo-only' }).then(() => false, () => true)
+      const xhrBlocked = await new Promise((resolve) => {
+        const request = new XMLHttpRequest()
+        request.open('POST', path)
+        request.timeout = 5_000
+        request.onerror = () => resolve(true)
+        request.onload = () => resolve(false)
+        request.ontimeout = () => resolve(false)
+        request.send('synthetic-demo-only')
+      })
+      return { fetchBlocked, xhrBlocked }
+    })
+    assert.deepEqual(blocked, { fetchBlocked: true, xhrBlocked: true }, '未模拟的 API 请求必须由浏览器拦截')
+
     await page.reload({ waitUntil: 'domcontentloaded' })
     await page.waitForFunction(() => Boolean(document.querySelector('#app')?.children.length), null, { timeout: 45_000 })
     assert.match(page.url(), /\/MRR\/#\/records/, '刷新必须保留 hash 路由')
@@ -58,6 +80,7 @@ async function smokePagesDemo() {
     assert.equal(download.suggestedFilename(), '存储说明.txt')
     assert.match(await readFile(await download.path(), 'utf8'), /MRR 文件浏览演示数据/)
 
+    assert.deepEqual(outboundApiRequests, [], 'API 请求不能到达 Pages 静态服务器')
     assert.deepEqual(pageErrors, [], '浏览器运行不应出现未处理异常')
     process.stdout.write('Pages 静态演示冒烟通过：子路径、hash 刷新、浏览器 Mock API 及文件预览下载\n')
   }

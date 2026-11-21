@@ -93,6 +93,21 @@ export default function createVitePlugins(mode: string, isBuild = false) {
       svgoOptions: isBuild,
     }),
 
+    // 浏览器 Mock 未命中时禁止回落到真实网络，保留普通构建的连接行为。
+    mode === 'pages' && {
+      name: 'mrr-pages-content-security-policy',
+      transformIndexHtml() {
+        return [{
+          tag: 'meta',
+          attrs: {
+            'http-equiv': 'Content-Security-Policy',
+            'content': 'connect-src \'none\'',
+          },
+          injectTo: 'head-prepend',
+        }]
+      },
+    },
+
     // https://github.com/condorheroblog/vite-plugin-fake-server
     viteEnv.VITE_BUILD_MOCK && vitePluginFakeServer({
       logger: !isBuild,

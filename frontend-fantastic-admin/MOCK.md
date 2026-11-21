@@ -73,4 +73,8 @@ node e2e/smoke-pages-demo.mjs
 
 部署工作流见 `.github/workflows/deploy-pages-demo.yml`。合并到 `main` 后，在仓库 **Settings → Pages → Build and deployment → Source** 选择 **GitHub Actions**，由工作流自动发布；如仓库已有其它 Pages 站点，请先确认覆盖策略。GitHub Pages 为公网静态站，**不要上传真实病历、患者影像、内网地址、口令或凭据**。
 
+Pages 产物用 CSP 阻止真实 API 连接。已模拟的请求在浏览器内完成，缺少 Mock 的请求会直接失败。
+
+如需撤下已发布的站点，在 **Settings → Pages** 执行 **Unpublish site**，并撤销自动发布变更以避免重新发布。
+
 Nginx 文件浏览器在静态演示中提供样例目录，可预览并下载样例文本。真实存储与文件流请在内网联调环境验证。

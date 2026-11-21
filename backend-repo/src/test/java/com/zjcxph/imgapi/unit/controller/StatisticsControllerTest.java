@@ -133,10 +133,36 @@ class StatisticsControllerTest {
             assertThat(response.getContentType()).startsWith("text/csv");
             assertThat(response.getContentAsString(StandardCharsets.UTF_8))
                     .startsWith("\uFEFF病案号,")
-                    .contains("00001234,张三")
+                    .contains("'00001234,张三")
                     .contains("2026-01-02")
                     .contains(",3,");
         }
+    }
+
+    @Test
+    @DisplayName("统计 CSV 危险公式与文本标识符应安全输出")
+    void exportCsvProtectsSpreadsheetValues() throws Exception {
+        Statistics item = new Statistics();
+        item.setBah("00001234");
+        item.setPatientName("=1+1");
+        item.setPatientId("1234567890123456");
+        item.setInpatientDepartment("+2");
+        item.setCid("-1+2");
+        item.setOpenerNo("@SUM(1,2)");
+        when(statisticsService.findWithConditionForExport(
+                eq(100000), isNull(), isNull(), isNull(), isNull(), isNull(), isNull()))
+                .thenReturn(List.of(item));
+        MockHttpServletResponse response = new MockHttpServletResponse();
+
+        controller.exportCsv(null, null, null, null, null, null, response);
+
+        String csv = response.getContentAsString(StandardCharsets.UTF_8);
+        assertThat(csv).contains("'00001234");
+        assertThat(csv).contains("'=1+1");
+        assertThat(csv).contains("'1234567890123456");
+        assertThat(csv).contains("'+2");
+        assertThat(csv).contains("'-1+2");
+        assertThat(csv).contains(""'@SUM(1,2)"");
     }
 
     @Nested

@@ -6,6 +6,7 @@ import com.zjcxph.imgapi.dto.resp.PageResult;
 import com.zjcxph.imgapi.dto.resp.PatientAnalyticsSummary;
 import com.zjcxph.imgapi.dto.resp.PatientImportResult;
 import com.zjcxph.imgapi.entity.Patient;
+import com.zjcxph.imgapi.exception.BusinessException;
 import com.zjcxph.imgapi.mapper.SearchMapper;
 import com.zjcxph.imgapi.service.PatientAnalyticsService;
 import com.zjcxph.imgapi.service.PatientImportService;
@@ -16,13 +17,18 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.mock.web.MockMultipartFile;
+import org.springframework.mock.web.MockHttpServletResponse;
 
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.anyInt;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -97,6 +103,34 @@ class PatientControllerTest {
         assertThat(result.getCode()).isEqualTo(200);
         assertThat(result.getData().yearArchives()).isEqualTo(35);
         assertThat(result.getData().missingIdCardRecords()).isEqualTo(8);
+    }
+
+    @Test
+    @DisplayName("患者 Excel 导出超过条数上限时拒绝生成文件")
+    void exportExcelRejectsExcessRows() {
+        when(searchMapper.countAll("ward")).thenReturn(100_001);
+        MockHttpServletResponse response = new MockHttpServletResponse();
+
+        assertThatThrownBy(() -> patientController.exportExcel("ward", response))
+                .isInstanceOf(BusinessException.class)
+                .extracting(e -> ((BusinessException) e).getCode())
+                .isEqualTo(413);
+        verify(searchMapper, never()).findAllPaginated(eq(0), anyInt(), any());
+        assertThat(response.getContentAsByteArray()).isEmpty();
+    }
+
+    @Test
+    @DisplayName("患者 Excel 导出正常返回时禁用响应缓存")
+    void exportExcelMustBePrivateAndNoStore() throws Exception {
+        when(searchMapper.countAll(null)).thenReturn(1);
+        when(searchMapper.findAllPaginated(0, 100_000, null)).thenReturn(List.of(new Patient()));
+        MockHttpServletResponse response = new MockHttpServletResponse();
+
+        patientController.exportExcel(null, response);
+
+        assertThat(response.getHeader("Cache-Control")).isEqualTo("private, no-store");
+        assertThat(response.getContentType()).startsWith("application/vnd.openxmlformats");
+        assertThat(response.getContentAsByteArray()).isNotEmpty();
     }
 
     @Test

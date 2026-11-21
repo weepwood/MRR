@@ -34,6 +34,14 @@ export const AUTH_STORAGE_KEYS = {
   rememberedAccount: 'mrr:login:remembered-account',
 } as const
 
+/*
+ * 演示模式（VITE_APP_DEMO_MODE）的「已退出登录」标记：守卫默认会给匿名访客
+ * 自动注入 Dev User 会话，导致演示站点「退出登录」后立刻被重新登录、永远
+ * 停留在登录页之外。退出时写入该标记，守卫见到标记就不再自动登录；显式
+ * 登录成功后清除。放 sessionStorage——关闭标签页后下次访问恢复自动演示。
+ */
+export const DEMO_LOGGED_OUT_KEY = 'mrr:demo:logged-out'
+
 const LEGACY_AUTH_STORAGE_KEYS = {
   token: 'token',
   account: 'account',
@@ -60,9 +68,19 @@ const LEGACY_SESSION_KEYS = [
 ] as const
 
 function resolveStorage(storage?: Storage): Storage | undefined {
-  if (storage) return storage
+  if (storage) { return storage }
   try {
     return window.localStorage
+  }
+  catch {
+    return undefined
+  }
+}
+
+function resolveSessionStorage(storage?: Storage): Storage | undefined {
+  if (storage) { return storage }
+  try {
+    return window.sessionStorage
   }
   catch {
     return undefined
@@ -102,17 +120,19 @@ function isPlainObject(value: unknown): value is Record<string, unknown> {
 }
 
 function normalizePermissions(value: unknown): string[] | undefined {
-  if (!Array.isArray(value)) return undefined
+  if (!Array.isArray(value)) { return undefined }
   return [...new Set(value.filter((item): item is string => typeof item === 'string' && item.trim().length > 0).map(item => item.trim()))]
 }
 
 function normalizeProfile(value: unknown): AuthProfile | undefined {
-  if (!isPlainObject(value)) return undefined
+  if (!isPlainObject(value)) { return undefined }
   const profile = { ...value } as AuthProfile
   if ('permissions' in profile) {
     const normalizedPermissions = normalizePermissions(profile.permissions)
-    if (normalizedPermissions) profile.permissions = normalizedPermissions
-    else delete profile.permissions
+    if (normalizedPermissions) {
+      profile.permissions = normalizedPermissions
+    }
+    else { delete profile.permissions }
   }
   return profile
 }
@@ -124,10 +144,10 @@ function readJson<T>(
   fallback: T,
 ): T {
   const raw = safeGet(storage, key)
-  if (!raw) return fallback
+  if (!raw) { return fallback }
   try {
     const normalized = normalize(JSON.parse(raw))
-    if (normalized !== undefined) return normalized
+    if (normalized !== undefined) { return normalized }
   }
   catch {
     // 无效 JSON 与类型不匹配采用同一自愈策略。
@@ -140,7 +160,7 @@ function migrateKey(storage: Storage, legacyKey: string, currentKey: string): vo
   const currentValue = safeGet(storage, currentKey)
   const legacyValue = safeGet(storage, legacyKey)
   if (currentValue === null && legacyValue !== null) {
-    if (!safeSet(storage, currentKey, legacyValue)) return
+    if (!safeSet(storage, currentKey, legacyValue)) { return }
   }
   safeRemove(storage, legacyKey)
 }
@@ -151,14 +171,15 @@ function migrateRememberAccount(storage: Storage): void {
 
 export function clearAuthSessionStorage(storage?: Storage): void {
   const target = resolveStorage(storage)
-  if (!target) return
-  ;[...CURRENT_SESSION_KEYS, ...LEGACY_SESSION_KEYS].forEach(key => safeRemove(target, key))
+  if (!target) {
+    return
+  }[...CURRENT_SESSION_KEYS, ...LEGACY_SESSION_KEYS].forEach(key => safeRemove(target, key))
   safeSet(target, AUTH_STORAGE_KEYS.schemaVersion, AUTH_STORAGE_SCHEMA_VERSION)
 }
 
 export function migrateAuthStorage(storage?: Storage): void {
   const target = resolveStorage(storage)
-  if (!target) return
+  if (!target) { return }
 
   migrateRememberAccount(target)
   const storedVersion = safeGet(target, AUTH_STORAGE_KEYS.schemaVersion)
@@ -179,7 +200,7 @@ export function migrateAuthStorage(storage?: Storage): void {
 
 export function readAuthStorage(storage?: Storage): AuthStorageSnapshot {
   const target = resolveStorage(storage)
-  if (!target) return { token: '', account: '', avatar: '', profile: {}, permissions: [] }
+  if (!target) { return { token: '', account: '', avatar: '', profile: {}, permissions: [] } }
 
   migrateAuthStorage(target)
   return {
@@ -196,7 +217,7 @@ export function writeAuthSession(
   storage?: Storage,
 ): void {
   const target = resolveStorage(storage)
-  if (!target) return
+  if (!target) { return }
 
   safeSet(target, AUTH_STORAGE_KEYS.schemaVersion, AUTH_STORAGE_SCHEMA_VERSION)
   safeSet(target, AUTH_STORAGE_KEYS.token, session.token)
@@ -214,7 +235,7 @@ export function writeAuthProfile(
   storage?: Storage,
 ): void {
   const target = resolveStorage(storage)
-  if (!target) return
+  if (!target) { return }
 
   const avatar = typeof profile.avatar === 'string'
     ? profile.avatar
@@ -232,16 +253,32 @@ export function writeAuthProfile(
 
 export function readRememberedAccount(storage?: Storage): string {
   const target = resolveStorage(storage)
-  if (!target) return ''
+  if (!target) { return '' }
   migrateRememberAccount(target)
   return safeGet(target, AUTH_STORAGE_KEYS.rememberedAccount) ?? ''
 }
 
 export function writeRememberedAccount(account: string, storage?: Storage): void {
   const target = resolveStorage(storage)
-  if (!target) return
+  if (!target) { return }
   const normalized = account.trim()
-  if (normalized) safeSet(target, AUTH_STORAGE_KEYS.rememberedAccount, normalized)
-  else safeRemove(target, AUTH_STORAGE_KEYS.rememberedAccount)
+  if (normalized) {
+    safeSet(target, AUTH_STORAGE_KEYS.rememberedAccount, normalized)
+  }
+  else { safeRemove(target, AUTH_STORAGE_KEYS.rememberedAccount) }
   safeRemove(target, LEGACY_AUTH_STORAGE_KEYS.rememberedAccount)
+}
+
+export function readDemoLoggedOut(storage?: Storage): boolean {
+  const target = resolveSessionStorage(storage)
+  return target ? safeGet(target, DEMO_LOGGED_OUT_KEY) === '1' : false
+}
+
+export function writeDemoLoggedOut(loggedOut: boolean, storage?: Storage): void {
+  const target = resolveSessionStorage(storage)
+  if (!target) { return }
+  if (loggedOut) {
+    safeSet(target, DEMO_LOGGED_OUT_KEY, '1')
+  }
+  else { safeRemove(target, DEMO_LOGGED_OUT_KEY) }
 }

@@ -62,6 +62,11 @@ jobs:
           python scripts/check_main_branch_references.py
           python scripts/check_engineering_docs.py
           python -c "from pathlib import Path; from scripts.engineering_preflight import configuration_problems; p=configuration_problems(Path('.')); print('\n'.join(p)); raise SystemExit(bool(p))"
+      - name: Validate external archive integration and proxy documentation
+        # Security-sensitive proxy examples must be checked even for documentation-only PRs.
+        # Uses Node's built-in test runner; no package install is required.
+        run: node --test vitepress-doc/scripts/external-archive-integration.test.mjs
+
       - name: Test CI and repository tooling when affected
         if: steps.scope.outputs.tooling == 'true'
         run: python -m unittest discover -s scripts/tests -p 'test_*.py' -v

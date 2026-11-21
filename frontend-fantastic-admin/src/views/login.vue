@@ -611,10 +611,12 @@ onBeforeUnmount(() => {
 .brand-footer { position: relative; z-index: 1; display: flex; gap: var(--mrr-space-2); align-items: center; margin-top: auto; padding-top: var(--mrr-space-6); font-size: 11px; color: var(--mrr-muted-foreground); }
 .form-panel { --auth-input-height: 38px; --auth-switch-duration: 360ms; --auth-switch-ease: cubic-bezier(0.4, 0, 0.2, 1); display: flex; flex-direction: column; gap: var(--mrr-space-4); min-width: 0; padding: 44px 48px; background: var(--mrr-card); }
 .form-panel__content { display: flex; flex-direction: column; justify-content: flex-start; gap: var(--mrr-space-4); min-width: 0; }
-.auth-mode-switch { position: relative; display: grid; grid-template-columns: 1fr 1fr; gap: 4px; padding: 4px; margin: 0; background: var(--mrr-muted); border: 1px solid var(--mrr-border); border-radius: var(--mrr-radius-md); }
-.auth-mode-switch::before { position: absolute; top: 4px; bottom: 4px; left: 4px; width: calc(50% - 6px); pointer-events: none; content: ''; background: var(--mrr-card); border-radius: calc(var(--mrr-radius-md) - 3px); box-shadow: var(--mrr-shadow-xs); transform: translateX(0); transition: transform var(--auth-switch-duration) var(--auth-switch-ease); }
+
+/* 切换器与下方表单卡同处一列，圆角必须同源，否则两层外框对不齐。 */
+.auth-mode-switch { position: relative; display: grid; grid-template-columns: 1fr 1fr; gap: 4px; padding: 4px; margin: 0; background: var(--mrr-muted); border: 1px solid var(--mrr-border); border-radius: var(--mrr-radius-lg); }
+.auth-mode-switch::before { position: absolute; top: 4px; bottom: 4px; left: 4px; width: calc(50% - 6px); pointer-events: none; content: ''; background: var(--mrr-card); border-radius: calc(var(--mrr-radius-lg) - 4px); box-shadow: var(--mrr-shadow-xs); transform: translateX(0); transition: transform var(--auth-switch-duration) var(--auth-switch-ease); }
 .auth-mode-switch.is-register::before { transform: translateX(calc(100% + 4px)); }
-.auth-mode-switch button { position: relative; z-index: 1; height: var(--mrr-control-height); min-height: var(--mrr-control-height); padding: 0 14px; font-size: 13px; font-weight: 650; color: var(--mrr-muted-foreground); background: transparent; border-radius: calc(var(--mrr-radius-md) - 3px); transition: color 160ms ease; }
+.auth-mode-switch button { position: relative; z-index: 1; height: var(--mrr-control-height); min-height: var(--mrr-control-height); padding: 0 14px; font-size: 13px; font-weight: 650; color: var(--mrr-muted-foreground); background: transparent; border-radius: calc(var(--mrr-radius-lg) - 4px); transition: color 160ms ease; }
 .auth-mode-switch button.active { color: var(--mrr-foreground); }
 .session-notice { margin-top: 0; }
 .login-admin-contact { display: flex; justify-content: flex-end; margin-top: 0; }

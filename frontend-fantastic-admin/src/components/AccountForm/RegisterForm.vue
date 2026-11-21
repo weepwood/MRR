@@ -214,9 +214,11 @@ async function handlePrevious() {
 .register-form { display: flex; flex-direction: column; gap: var(--mrr-space-4); min-height: var(--auth-form-height, 0); margin-top: 0; }
 .review-flow { display: grid; gap: var(--mrr-space-3); padding: var(--mrr-space-4); color: var(--mrr-foreground); background: color-mix(in srgb, var(--color-info) 7%, var(--mrr-card)); border: 1px solid color-mix(in srgb, var(--color-info) 22%, var(--mrr-border)); border-radius: var(--mrr-radius-lg); }
 .review-flow__summary { display: flex; gap: var(--mrr-space-3); align-items: flex-start; }
-.review-flow__summary strong { display: block; font-size: 13px; }
-.review-flow__summary p { margin: 3px 0 0; font-size: 11px; line-height: 1.6; color: var(--mrr-muted-foreground); }
-.review-flow__icon { display: grid; flex: 0 0 auto; width: 34px; height: 34px; font-size: 17px; color: var(--color-info); background: color-mix(in srgb, var(--color-info) 11%, var(--mrr-card)); border: 1px solid color-mix(in srgb, var(--color-info) 20%, var(--mrr-border)); border-radius: var(--mrr-radius-md); place-items: center; }
+
+/* 与登录卡同一套刻度：图标 40px 对齐「20 + 2 + 18」的两行文案。 */
+.review-flow__summary strong { display: block; font-size: 14px; line-height: 20px; }
+.review-flow__summary p { margin: 2px 0 0; font-size: 12px; line-height: 18px; color: var(--mrr-muted-foreground); }
+.review-flow__icon { display: grid; flex: 0 0 auto; width: 40px; height: 40px; font-size: 18px; color: var(--color-info); background: color-mix(in srgb, var(--color-info) 11%, var(--mrr-card)); border: 1px solid color-mix(in srgb, var(--color-info) 20%, var(--mrr-border)); border-radius: var(--mrr-radius-md); place-items: center; }
 .review-flow__steps { display: grid; grid-template-columns: 1fr auto 1fr auto 1fr; gap: var(--mrr-space-2); align-items: center; padding-top: var(--mrr-space-3); font-size: 11px; color: var(--mrr-muted-foreground); border-top: 1px solid color-mix(in srgb, var(--color-info) 16%, var(--mrr-border)); }
 .review-flow__steps span { display: inline-flex; gap: 6px; align-items: center; justify-content: center; white-space: nowrap; }
 .review-flow__steps b { display: grid; width: 20px; height: 20px; font-size: 10px; color: var(--mrr-muted-foreground); background: var(--mrr-card); border: 1px solid var(--mrr-border); border-radius: 50%; place-items: center; }

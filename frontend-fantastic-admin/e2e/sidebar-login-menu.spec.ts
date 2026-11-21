@@ -10,7 +10,6 @@ test('首次登录及刷新后，关闭手风琴时侧栏目录分别展开', as
   await page.goto('/login')
   await page.locator('#login-account').fill('admin')
   await page.locator('#login-password').fill('demo-password')
-  await page.getByRole('slider', { name: '滑动验证' }).press('End')
   await page.getByRole('button', { name: '登录系统' }).click()
   const sidebar = page.locator('.sub-sidebar-container')
   const group = (name: string) => sidebar.locator(`.menu-item-container[title="${name}"]`)

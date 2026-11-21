@@ -9,7 +9,6 @@ import * as z from 'zod'
 import apiUser from '@/api/modules/user'
 import { FormControl, FormField, FormItem, FormMessage } from '@/ui/shadcn/ui/form'
 import { readRememberedAccount, writeRememberedAccount } from '@/utils/auth-storage'
-import LoginSlideCheck from './LoginSlideCheck.vue'
 
 defineOptions({ name: 'LoginForm' })
 
@@ -26,8 +25,6 @@ const emits = defineEmits<{
 const userStore = useUserStore()
 const loading = ref(false)
 const showPassword = ref(false)
-const slideComplete = ref(false)
-const slideRequired = ref(false)
 const buttonText = computed(() => loading.value ? '正在验证...' : '登录系统')
 const rememberedAccount = readRememberedAccount()
 
@@ -49,10 +46,6 @@ const form = useForm({
 })
 
 const onSubmit = form.handleSubmit(async (values) => {
-  if (!slideComplete.value) {
-    slideRequired.value = true
-    return
-  }
   loading.value = true
   try {
     const res = await apiUser.login({ account: values.account.trim(), password: values.password })
@@ -84,16 +77,23 @@ const onSubmit = form.handleSubmit(async (values) => {
   }
   finally {
     loading.value = false
-    slideComplete.value = false
   }
 })
 </script>
 
 <template>
   <form class="login-form" @submit="onSubmit">
+    <aside class="login-notice" aria-label="登录须知">
+      <span class="login-notice__icon"><FaIcon aria-hidden="true" name="i-lucide:lock-keyhole" /></span>
+      <div>
+        <strong>内网专用系统</strong>
+        <p>请勿外借账号，所有操作将被记录用于安全审计。</p>
+      </div>
+    </aside>
+
     <section class="login-fields-card" aria-labelledby="login-fields-title">
       <header class="login-fields-card__heading">
-        <span class="login-fields-card__icon"><FaIcon aria-hidden="true" name="i-lucide:key-round" /></span>
+        <span class="login-fields-card__icon"><FaIcon aria-hidden="true" name="i-lucide:shield-check" /></span>
         <div>
           <h2 id="login-fields-title">
             账号信息
@@ -159,12 +159,6 @@ const onSubmit = form.handleSubmit(async (values) => {
             </FormControl>
           </FormItem>
         </FormField>
-        <LoginSlideCheck
-          v-model="slideComplete"
-          :disabled="loading"
-          :invalid="slideRequired"
-          @update:model-value="slideRequired = false"
-        />
 
         <div class="form-options">
           <div class="remember-control">
@@ -204,6 +198,49 @@ const onSubmit = form.handleSubmit(async (values) => {
   margin-top: 0;
 }
 
+/*
+ * 登录须知卡：与注册表单的审核流程卡（review-flow）同一套配方——info 色浅底、
+ * 40px 图标对齐「20 + 2 + 18」两行文案。它吸收登录表单富余的垂直空间，
+ * 消除切换器与账号信息卡之间的大片空白。
+ */
+.login-notice {
+  display: flex;
+  flex-shrink: 0;
+  gap: var(--mrr-space-3);
+  align-items: flex-start;
+  padding: var(--mrr-space-4);
+  color: var(--mrr-foreground);
+  background: color-mix(in srgb, var(--color-info) 7%, var(--mrr-card));
+  border: 1px solid color-mix(in srgb, var(--color-info) 22%, var(--mrr-border));
+  border-radius: var(--mrr-radius-lg);
+}
+
+.login-notice strong {
+  display: block;
+  font-size: 14px;
+  line-height: 20px;
+}
+
+.login-notice p {
+  margin: 2px 0 0;
+  font-size: 12px;
+  line-height: 18px;
+  color: var(--mrr-muted-foreground);
+}
+
+.login-notice__icon {
+  display: grid;
+  flex: 0 0 auto;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  font-size: 18px;
+  color: var(--color-info);
+  background: color-mix(in srgb, var(--color-info) 11%, var(--mrr-card));
+  border: 1px solid color-mix(in srgb, var(--color-info) 20%, var(--mrr-border));
+  border-radius: var(--mrr-radius-md);
+}
+
 .login-fields-card {
   display: flex;
   flex-direction: column;
@@ -222,12 +259,19 @@ const onSubmit = form.handleSubmit(async (values) => {
   border-bottom: 1px solid var(--mrr-border);
 }
 
+/*
+ * 图标盒子与右侧「标题 + 副标题」两行文案同高（20 + 2 + 18 = 40），
+ * 因此两行文案必须写死行高，否则字号一动图标就不再对齐。
+ */
 .login-fields-card__icon {
   display: grid;
   flex: 0 0 auto;
   place-items: center;
-  width: 30px;
-  height: 30px;
+  width: 40px;
+  height: 40px;
+
+  /* FaIcon 走 UnoCSS 分支时外层是 size-[1em]，图标实际大小由 font-size 决定（写 svg 选择器无效）。 */
+  font-size: 20px;
   color: var(--mrr-primary);
   background: color-mix(in srgb, var(--mrr-primary) 9%, var(--mrr-card));
   border: 1px solid var(--el-color-primary-light-7);
@@ -235,22 +279,18 @@ const onSubmit = form.handleSubmit(async (values) => {
   border-radius: var(--mrr-radius-md);
 }
 
-.login-fields-card__icon :deep(svg) {
-  width: 16px;
-  height: 16px;
-}
-
 .login-fields-card__heading h2 {
   margin: 0;
-  font-size: 13px;
+  font-size: 14px;
   font-weight: 700;
+  line-height: 20px;
   color: var(--mrr-foreground);
 }
 
 .login-fields-card__heading p {
-  margin: var(--mrr-space-1) 0 0;
-  font-size: 11px;
-  line-height: 1.5;
+  margin: 2px 0 0;
+  font-size: 12px;
+  line-height: 18px;
   color: var(--mrr-muted-foreground);
 }
 
@@ -269,6 +309,7 @@ const onSubmit = form.handleSubmit(async (values) => {
 .field-item label {
   font-size: 13px;
   font-weight: 650;
+  line-height: 18px;
   color: var(--mrr-foreground);
 }
 
@@ -389,32 +430,49 @@ const onSubmit = form.handleSubmit(async (values) => {
   border-radius: var(--mrr-control-radius);
 }
 
-@media (min-width: 901px) {
+/*
+ * 窄屏没有「平分留白」的等高空间，间距必须显式成节奏：
+ * 标签贴控件 8px，字段组之间 16px，卡片与主按钮之间同为 16px。
+ */
+@media (max-width: 900px) {
   .login-form {
     gap: var(--mrr-space-4);
   }
 
   .login-fields-card {
-    display: grid;
-    flex-grow: 1;
-    grid-template-columns: minmax(0, 1fr);
-    grid-auto-rows: max-content;
+    gap: var(--mrr-space-4);
+  }
+
+  .login-fields-card__body {
+    gap: var(--mrr-space-4);
+  }
+
+  .field-item {
     gap: var(--mrr-space-2);
-    align-content: space-between;
+  }
+}
+
+@media (min-width: 901px) {
+  /*
+   * 外壳高度由内容更高的注册表单决定（login.vue 固定 628px），登录表单内容更矮，
+   * 富余的垂直空间由顶部的「登录须知」卡吸收，卡内间隙保持固定节奏（标签贴控件
+   * 8px、字段组之间 16px），元素之间统一 16px；少量残余交给提交按钮的
+   * margin-top: auto（按钮仍贴底，与注册按钮基线对齐，见切换动画 e2e）。
+   */
+  .login-form {
+    gap: var(--mrr-space-4);
   }
 
-  .login-fields-card__body,
-  .field-item,
-  .login-fields-card__body > :deep(.slide-check) {
-    display: contents;
+  .login-fields-card {
+    gap: var(--mrr-space-4);
   }
 
-  .form-options {
-    margin-top: 0;
+  .login-fields-card__body {
+    gap: var(--mrr-space-4);
   }
 
-  .login-submit-btn {
-    margin-top: 0;
+  .field-item {
+    gap: var(--mrr-space-2);
   }
 }
 
@@ -426,7 +484,7 @@ const onSubmit = form.handleSubmit(async (values) => {
   }
 }
 
-/* Chrome 86 回退：登录字段分组卡是卡中卡，底色失效后与父级表单糊成一片。 */
+/* Chrome 86 回退：登录字段分组卡与登录须知卡都是实色分层底，失效后与页面底色融为一体。 */
 @supports not (color: color-mix(in srgb, #000 50%, #fff)) {
   .login-fields-card {
     background: var(--mrr-card);
@@ -435,6 +493,16 @@ const onSubmit = form.handleSubmit(async (values) => {
   .login-fields-card__icon {
     background: var(--el-color-primary-light-9);
     border-color: var(--el-color-primary-light-7);
+  }
+
+  .login-notice {
+    background: var(--mrr-tone-info-soft);
+    border-color: var(--mrr-tone-info-border);
+  }
+
+  .login-notice__icon {
+    background: var(--mrr-tone-info-soft);
+    border-color: var(--mrr-tone-info-border);
   }
 }
 </style>

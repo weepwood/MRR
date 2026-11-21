@@ -3,7 +3,7 @@ import { sampleAuthModeSwitch } from './helpers/auth-mode-motion'
 
 test.use({ storageState: 'e2e/.auth/anonymous.json' })
 
-test('宽屏登录标签间距一致，卡片上下留白一致且切换后保持', async ({ page }) => {
+test('宽屏登录字段保持固定节奏，登录须知卡吸收富余且切换后保持', async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 1000 })
   await page.goto('/login')
   await expect(page.locator('#login-account')).toBeVisible()
@@ -16,8 +16,7 @@ test('宽屏登录标签间距一致，卡片上下留白一致且切换后保�
       const username = document.querySelector('#login-account')!.getBoundingClientRect()
       const password = document.querySelector('#login-password')!.getBoundingClientRect()
       const labels = document.querySelectorAll('.login-form .field-label-row')
-      const slideHeading = document.querySelector('.slide-check__heading')!.getBoundingClientRect()
-      const track = document.querySelector('.slide-check__track')!.getBoundingClientRect()
+      const notice = document.querySelector('.login-notice')!.getBoundingClientRect()
       const card = document.querySelector('.login-fields-card')!.getBoundingClientRect()
       const tabs = document.querySelector('.auth-mode-switch')!.getBoundingClientRect()
       const submit = document.querySelector('.login-submit-btn')!.getBoundingClientRect()
@@ -26,31 +25,28 @@ test('宽屏登录标签间距一致，卡片上下留白一致且切换后保�
       return {
         usernameHeight: username.height,
         passwordHeight: password.height,
-        sliderHeight: track.height,
         afterDivider: labels[0].getBoundingClientRect().top - document.querySelector('.login-fields-card__heading')!.getBoundingClientRect().bottom,
         username: username.top - labels[0].getBoundingClientRect().bottom,
         password: password.top - labels[1].getBoundingClientRect().bottom,
-        slider: track.top - slideHeading.bottom,
         nextPassword: labels[1].getBoundingClientRect().top - username.bottom,
-        nextSlider: slideHeading.top - password.bottom,
-        remember: options.top - track.bottom,
-        aboveCard: card.top - tabs.bottom,
+        remember: options.top - password.bottom,
+        noticeHeight: notice.height,
+        afterNotice: card.top - notice.bottom,
         belowCard: submit.top - card.bottom,
         panelTop: tabs.top - panel.top,
         panelBottom: panel.bottom - submit.bottom,
       }
     })
-    expect(gaps.username).toBeCloseTo(gaps.slider, 1)
-    expect(gaps.usernameHeight).toBe(38)
-    expect(gaps.passwordHeight).toBe(38)
-    expect(gaps.sliderHeight).toBe(38)
-    expect(gaps.afterDivider).toBeCloseTo(gaps.slider, 1)
-    expect(gaps.password).toBeCloseTo(gaps.slider, 1)
-    expect(gaps.nextPassword).toBeCloseTo(gaps.slider, 1)
-    expect(gaps.nextSlider).toBeCloseTo(gaps.slider, 1)
-    expect(gaps.remember).toBeCloseTo(gaps.slider, 1)
-    expect(gaps.slider, '七处红箭头间距应平分可用留白，并至少有 8px 间距').toBeGreaterThanOrEqual(8)
-    expect(gaps.aboveCard).toBeCloseTo(gaps.belowCard, 1)
+    expect(gaps.usernameHeight).toBeCloseTo(38, 1)
+    expect(gaps.passwordHeight).toBeCloseTo(38, 1)
+    expect(gaps.username, '标签贴控件 8px').toBeCloseTo(8, 1)
+    expect(gaps.password, '标签贴控件 8px').toBeCloseTo(8, 1)
+    expect(gaps.nextPassword, '字段组之间 16px').toBeCloseTo(16, 1)
+    expect(gaps.remember, '字段组与选项行之间 16px').toBeCloseTo(16, 1)
+    expect(gaps.afterDivider, '分割线到首个字段也是固定 16px').toBeCloseTo(16, 1)
+    expect(gaps.noticeHeight, '登录须知卡按内容自然高度渲染').toBeGreaterThanOrEqual(60)
+    expect(gaps.afterNotice, '须知卡与账号信息卡之间固定 16px').toBeCloseTo(16, 1)
+    expect(gaps.belowCard, '残余留白集中到提交按钮上方，不再出现大空洞').toBeGreaterThanOrEqual(16)
     expect(gaps.panelTop).toBeCloseTo(gaps.panelBottom, 1)
     expect(gaps.panelTop).toBeCloseTo(60, 1)
     await page.getByRole('tab', { name: '注册申请' }).click()

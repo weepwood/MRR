@@ -229,7 +229,7 @@ export function gr8rCssVariables(scheme: ThemePaletteScheme): Record<string, str
     '--mrr-control-bg': c.surface,
     '--mrr-control-bg-hover': c.mutedSurface,
     '--mrr-control-bg-disabled': c.mutedSurface,
-    '--mrr-control-border': c.strongLine,
+    '--mrr-control-border': c.controlLine,
     '--mrr-control-border-hover': c.controlLine,
     // 按钮/指标卡 hover 的描边：比控件描边再柔和一档，避免在暖白卡面上读成「墨色框」。
     '--mrr-border-strong': c.strongLine,

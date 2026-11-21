@@ -115,13 +115,10 @@ html[data-mrr-palette="gr8r"] .el-button:not(.is-disabled):not(.is-loading):acti
 /* ===== 4.1 shadcn 原语（FaButton / FaTextarea / FaPinInput）===== */
 
 /*
- * 这批组件用 UnoCSS 的 `border-input`，取的是 --input 令牌（暖色 #918B83），
- * 比 el-button 的发丝描边（#D9D6CE）重一档：同一条工具栏里两种描边深浅并存，
- * 视觉上图省事的那批按钮反而更「抢眼」。
- * 这里把「输入类描边」统一收到 --mrr-border-strong，只改描边不改尺寸/布局。
+ * 输入类控件的边线使用较深的令牌，确保白底输入区的边界可辨认。
  */
 html[data-mrr-palette="gr8r"] .border-input {
-  border-color: var(--mrr-border-strong);
+  border-color: var(--mrr-control-border);
 }
 
 /* 文本域仍是画布色底，坐在白卡片上会显脏；换成卡片白与输入框对齐。 */

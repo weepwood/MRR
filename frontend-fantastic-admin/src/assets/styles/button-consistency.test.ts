@@ -131,10 +131,12 @@ describe('两套按钮的同口径契约', () => {
     expect(outline).toContain(':not(.is-disabled)')
   })
 
-  it('按钮组按 Element Plus 的方式拼接：相邻共用一条描边', () => {
-    expect(formControlsCss).toContain('.fa-button-group > * + *')
-    expect(formControlsCss).toContain('margin-left: -1px')
-    expect(formControlsCss).toContain('.fa-button-group > *:first-child:not(:last-child)')
-    expect(formControlsCss).toContain('.fa-button-group > *:last-child:not(:first-child)')
+  it('按钮组按排列方向共用描边，只清除相邻的圆角', () => {
+    const horizontal = '.fa-button-group:not(.fa-button-group--vertical)'
+    const vertical = '.fa-button-group--vertical'
+    expect(blockOf(formControlsCss, `${horizontal} > * + *`)).toContain('margin-left: -1px')
+    expect(blockOf(formControlsCss, `${vertical} > * + *`)).toContain('margin-top: -1px')
+    expect(blockOf(formControlsCss, `${vertical} > *:first-child:not(:last-child)`)).toContain('border-bottom-left-radius: 0')
+    expect(blockOf(formControlsCss, `${vertical} > *:last-child:not(:first-child)`)).toContain('border-top-right-radius: 0')
   })
 })

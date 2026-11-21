@@ -6,6 +6,7 @@ import com.zjcxph.imgapi.dto.resp.BAHStatisticsDTO;
 import com.zjcxph.imgapi.dto.resp.DateStatisticsDTO;
 import com.zjcxph.imgapi.dto.resp.PageResult;
 import com.zjcxph.imgapi.entity.Statistics;
+import com.zjcxph.imgapi.exception.BusinessException;
 import com.zjcxph.imgapi.service.StatisticsService;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
@@ -17,12 +18,14 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.mock.web.MockHttpServletResponse;
 
 import java.nio.charset.StandardCharsets;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.*;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -119,8 +122,11 @@ class StatisticsControllerTest {
             item.setPatientName("张三");
             item.setDate("2026-01-02");
             item.setPages(3);
+            when(statisticsService.getTotalCountByCondition(
+                    eq("张三"), isNull(), isNull(), eq("01-病案首页"),
+                    eq("2026-01-01"), eq("2026-12-31"))).thenReturn(1L);
             when(statisticsService.findWithConditionForExport(
-                    eq(100000), eq("张三"), isNull(), isNull(), eq("01-病案首页"),
+                    eq(100001), eq("张三"), isNull(), isNull(), eq("01-病案首页"),
                     eq("2026-01-01"), eq("2026-12-31")))
                     .thenReturn(List.of(item));
             MockHttpServletResponse response = new MockHttpServletResponse();
@@ -129,14 +135,31 @@ class StatisticsControllerTest {
                     "2026-01-01", "2026-12-31", response);
 
             verify(statisticsService).findWithConditionForExport(
-                    100000, "张三", null, null, "01-病案首页", "2026-01-01", "2026-12-31");
+                    100001, "张三", null, null, "01-病案首页", "2026-01-01", "2026-12-31");
             assertThat(response.getContentType()).startsWith("text/csv");
+            assertThat(response.getHeader("Cache-Control")).isEqualTo("private, no-store");
             assertThat(response.getContentAsString(StandardCharsets.UTF_8))
                     .startsWith("\uFEFF病案号,")
                     .contains("00001234,张三")
                     .contains("2026-01-02")
                     .contains(",3,");
         }
+    }
+
+    @Test
+    @DisplayName("统计导出超过上限时拒绝生成截断文件")
+    void exportCsvRejectsMoreThanLimit() {
+        when(statisticsService.getTotalCountByCondition(null, null, null, null, null, null))
+                .thenReturn(100_001L);
+        MockHttpServletResponse response = new MockHttpServletResponse();
+
+        assertThatThrownBy(() -> controller.exportCsv(null, null, null, null, null, null, response))
+                .isInstanceOf(BusinessException.class)
+                .extracting(e -> ((BusinessException) e).getCode())
+                .isEqualTo(413);
+        verify(statisticsService, never()).findWithConditionForExport(
+                anyInt(), any(), any(), any(), any(), any(), any());
+        assertThat(response.getContentAsByteArray()).isEmpty();
     }
 
     @Nested
@@ -187,4 +210,22 @@ class StatisticsControllerTest {
             assertThat(r.getData()).containsKeys("overview", "uniqueBAHCount", "recentTrend", "topBAH");
         }
     }
+
+    @Test
+    @DisplayName("导出预检等于上限时，读到额外一条应拒绝截断")
+    void exportCsvRejectsRowsAddedAfterCount() {
+        when(statisticsService.getTotalCountByCondition(null, null, null, null, null, null)).thenReturn(100_000L);
+        Statistics item = new Statistics();
+        when(statisticsService.findWithConditionForExport(
+                anyInt(), isNull(), isNull(), isNull(), isNull(), isNull(), isNull()))
+                .thenAnswer(invocation -> Collections.nCopies(invocation.getArgument(0), item));
+        MockHttpServletResponse response = new MockHttpServletResponse();
+
+        assertThatThrownBy(() -> controller.exportCsv(null, null, null, null, null, null, response))
+                .isInstanceOf(BusinessException.class)
+                .extracting(e -> ((BusinessException) e).getCode())
+                .isEqualTo(413);
+        assertThat(response.getContentAsByteArray()).isEmpty();
+    }
+
 }

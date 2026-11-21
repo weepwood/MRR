@@ -7,6 +7,7 @@ import com.zjcxph.imgapi.dto.resp.PatientAnalyticsSummary;
 import com.zjcxph.imgapi.dto.resp.PatientImportResult;
 import com.zjcxph.imgapi.dto.resp.PatientMultiRecordGroup;
 import com.zjcxph.imgapi.entity.Patient;
+import com.zjcxph.imgapi.exception.BusinessException;
 import com.zjcxph.imgapi.mapper.SearchMapper;
 import com.zjcxph.imgapi.service.PatientAnalyticsService;
 import com.zjcxph.imgapi.service.PatientImportService;
@@ -177,9 +178,16 @@ public class PatientController {
         }
 
         int exportLimit = 100000;
-        List<Patient> patients = searchMapper.findAllPaginated(0, exportLimit, normalizedKeyword);
-        if (patients.size() >= exportLimit) {
-            logger.warn("患者导出达到上限 {} 条，数据可能不完整", exportLimit);
+        int expectedCount = searchMapper.countAll(normalizedKeyword);
+        if (expectedCount > exportLimit) {
+            throw new BusinessException(413, "患者导出超过单次 100000 条上限，请缩小筛选范围");
+        }
+        List<Patient> patients = searchMapper.findAllPaginated(0, exportLimit + 1, normalizedKeyword);
+        if (patients.size() > exportLimit) {
+            throw new BusinessException(413, "患者导出超过单次 100000 条上限，请缩小筛选范围");
+        }
+        if (patients.size() != expectedCount) {
+            throw new BusinessException(409, "导出时记录数量发生变化，请重新查询后重试");
         }
 
         SXSSFWorkbook workbook = new SXSSFWorkbook(200);
@@ -217,6 +225,7 @@ public class PatientController {
             }
 
             response.setContentType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
+            response.setHeader("Cache-Control", "private, no-store");
             response.setHeader("Content-Disposition", "attachment; filename=patients.xlsx");
             workbook.write(response.getOutputStream());
         } finally {

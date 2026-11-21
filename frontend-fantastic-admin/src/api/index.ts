@@ -3,7 +3,7 @@ import type { QueuedResponseMetric, RetryOutcome } from '@/utils/response-metric
 import axios from 'axios'
 import { ElMessage } from 'element-plus'
 import { createErrorDedupeCache } from '@/utils/request-error-dedupe'
-import { getRequestErrorMessage } from '@/utils/request-error-message'
+import { getRequestErrorMessage, getRequestErrorMessageAsync } from '@/utils/request-error-message'
 import { registerRequestErrorFallback } from '@/utils/request-error-notification'
 import {
   getRequestRetryDecision,
@@ -293,6 +293,10 @@ async function handleError(error: unknown) {
   enqueueResponseMetric(config, axiosError?.response, axiosError?.response?.data)
 
   const normalizedError = normalizeRequestError(error)
+  if (typeof Blob !== 'undefined' && response?.data instanceof Blob) {
+    // Blob 下载的 HTTP 错误仍可能携带 JSON 业务提示；统一解码后再交给现有页面 catch。
+    normalizedError.message = await getRequestErrorMessageAsync(error)
+  }
   if (!config?.skipGlobalError) { showGlobalError(normalizedError) }
   return Promise.reject(normalizedError)
 }

@@ -24,6 +24,8 @@ const expectedSourceImports = [
 
 const proxyGuidePaths = [
   documentPath,
+  // 单体 JAR 的 Nginx 示例也必须遵守正式单层代理的真实来源 IP 约束。
+  path.join(projectRoot, 'internal', 'standalone-jar.md'),
   path.resolve(
     projectRoot,
     '../backend-repo/docs/his-external-archive-integration-guide.md',

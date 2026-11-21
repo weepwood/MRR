@@ -85,7 +85,8 @@ async function registerPwa(): Promise<void> {
 }
 
 export function installPwa(): void {
-  if (!import.meta.env.PROD || !('serviceWorker' in navigator)) {
+  // Pages Mock 站点没有根目录 /sw.js，禁止注册生产站点的根作用域 PWA。
+  if (import.meta.env.MODE === 'pages' || !import.meta.env.PROD || !('serviceWorker' in navigator)) {
     return
   }
 

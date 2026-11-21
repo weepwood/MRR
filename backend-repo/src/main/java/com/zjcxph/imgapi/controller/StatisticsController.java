@@ -6,6 +6,7 @@ import com.zjcxph.imgapi.dto.resp.DateStatisticsDTO;
 import com.zjcxph.imgapi.common.Result;
 import com.zjcxph.imgapi.dto.resp.PageResult;
 import com.zjcxph.imgapi.entity.Statistics;
+import com.zjcxph.imgapi.exception.BusinessException;
 import com.zjcxph.imgapi.service.StatisticsService;
 import com.zjcxph.imgapi.utils.PaginationUtils;
 import io.swagger.v3.oas.annotations.Operation;
@@ -40,7 +41,7 @@ import java.util.Map;
 public class StatisticsController {
 
     private static final Logger logger = LoggerFactory.getLogger(StatisticsController.class);
-    private static final int EXPORT_LIMIT = 100000;
+    private static final int EXPORT_LIMIT = StatisticsService.MAX_EXPORT_ROWS;
 
     private final StatisticsService statisticsService;
 
@@ -271,8 +272,17 @@ public class StatisticsController {
         String normalizedStartDate = normalize(startDate);
         String normalizedEndDate = normalize(endDate);
 
+        Long expectedCount = statisticsService.getTotalCountByCondition(
+                normalizedKeyword, normalizedBah, normalizedSjh,
+                normalizedType, normalizedStartDate, normalizedEndDate);
+        if (expectedCount == null) {
+            throw new BusinessException(503, "暂时无法确认统计导出总量，请稍后重试");
+        }
+        if (expectedCount > EXPORT_LIMIT) {
+            throw new BusinessException(413, "统计导出超过单次 100000 条上限，请缩小筛选范围");
+        }
         List<Statistics> list = statisticsService.findWithConditionForExport(
-                EXPORT_LIMIT,
+                EXPORT_LIMIT + 1,
                 normalizedKeyword,
                 normalizedBah,
                 normalizedSjh,
@@ -280,11 +290,15 @@ public class StatisticsController {
                 normalizedStartDate,
                 normalizedEndDate
         );
-        if (list.size() >= EXPORT_LIMIT) {
-            logger.warn("统计数据导出达到上限 {} 条，数据可能不完整", EXPORT_LIMIT);
+        if (list.size() > EXPORT_LIMIT) {
+            throw new BusinessException(413, "统计导出超过单次 100000 条上限，请缩小筛选范围");
+        }
+        if (list.size() != expectedCount) {
+            throw new BusinessException(409, "导出时记录数量发生变化，请重新查询后重试");
         }
 
         response.setContentType("text/csv; charset=UTF-8");
+        response.setHeader("Cache-Control", "private, no-store");
         response.setHeader("Content-Disposition", "attachment; filename=\"statistics.csv\"");
         response.setCharacterEncoding("UTF-8");
 

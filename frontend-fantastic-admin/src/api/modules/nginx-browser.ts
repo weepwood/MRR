@@ -56,6 +56,8 @@ export async function fetchNginxBrowserFile(server: string, path: string, signal
   try {
     const blob = await api.get<Blob, Blob>('/api/v1/nginx-browser/file', {
       params: { server, path },
+      // Pages 的浏览器 Mock 使用 Fetch Response 将文本转换为 Blob。
+      adapter: import.meta.env.MODE === 'pages' ? 'fetch' : undefined,
       responseType: 'blob',
       signal: budget?.signal ?? signal,
       skipGlobalError: true,

@@ -8,6 +8,7 @@ import {
   readAuthStorage,
   writeAuthProfile,
   writeAuthSession,
+  writeDemoLoggedOut,
 } from '@/utils/auth-storage'
 import { useMenuStore } from './menu'
 import { useRouteStore } from './route'
@@ -57,6 +58,11 @@ export const useUserStore = defineStore('user', () => {
     profile.value = user
     permissions.value = Array.isArray(user.permissions) ? user.permissions : []
     sessionStatus.value = 'verified'
+    if (isDemoMode) {
+      // 任何显式写入的会话（含登录表单直调 setSession 的路径）都视为重新登录，
+      // 解除「已退出登录」标记。守卫的自动注入发生在标记检查之后，不会走到这里。
+      writeDemoLoggedOut(false)
+    }
     writeAuthSession({
       token: token.value,
       account: account.value,
@@ -90,6 +96,11 @@ export const useUserStore = defineStore('user', () => {
       }
     }
     clearSession()
+    if (isDemoMode) {
+      // 演示模式的守卫会给匿名访客自动注入 Dev User 会话；不打标记的话
+      // 「退出登录」跳到 /login 的瞬间就会被重新登录，永远退不出去。
+      writeDemoLoggedOut(true)
+    }
     await router.push({
       name: 'login',
       query: {
@@ -100,6 +111,9 @@ export const useUserStore = defineStore('user', () => {
 
   async function requestLogout() {
     clearSession()
+    if (isDemoMode) {
+      writeDemoLoggedOut(true)
+    }
     await router.push({ name: 'login' }).catch(() => {})
   }
 

@@ -64,6 +64,28 @@ async function smokePagesDemo() {
     await page.reload({ waitUntil: 'domcontentloaded' })
     await page.waitForFunction(() => Boolean(document.querySelector('#app')?.children.length), null, { timeout: 45_000 })
     assert.match(page.url(), /\/MRR\/#\/records/, '刷新必须保留 hash 路由')
+
+    // 演示模式退出登录：守卫不得用 Dev User 自动重新登录，登录页必须可以驻留。
+    await page.getByRole('button', { name: '账号菜单：Dev User' }).click({ timeout: 15_000 })
+    await page.getByRole('menuitem', { name: '退出登录' }).click({ timeout: 15_000 })
+    await page.waitForURL(/#\/login/, { timeout: 15_000 })
+    await page.waitForSelector('#login-account', { timeout: 15_000 })
+    await page.waitForTimeout(1200)
+    assert.match(page.url(), /#\/login/, '退出登录后必须停留在登录页，不能被自动重新登录')
+    assert.equal(
+      await page.evaluate(() => window.sessionStorage.getItem('mrr:demo:logged-out')),
+      '1',
+      '退出登录必须写入演示模式已退出标记',
+    )
+
+    // 重新登录后清除标记并回到工作台。
+    await page.fill('#login-account', 'admin')
+    await page.fill('#login-password', 'demo-password')
+    await page.getByRole('button', { name: '登录系统' }).click()
+    await page.waitForFunction(() => window.sessionStorage.getItem('mrr:demo:logged-out') === null, null, { timeout: 15_000 })
+    await page.waitForFunction(() => Boolean(window.location.hash) && window.location.hash !== '#/login', null, { timeout: 20_000 })
+    assert.doesNotMatch(page.url(), /#\/login/, '重新登录后必须离开登录页')
+
     const filePage = await browser.newPage()
     filePage.on('pageerror', error => pageErrors.push(error.message))
     await filePage.goto(`${appUrl}#/nginx-browser`)

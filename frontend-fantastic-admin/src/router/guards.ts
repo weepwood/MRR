@@ -5,6 +5,7 @@ import {
   getExternalArchiveContext,
   setExternalArchiveSession,
 } from '@/api/modules/external-archive'
+import { readDemoLoggedOut } from '@/utils/auth-storage'
 import { setArchiveAccessMode } from '@/views/statistics/archive/access-mode'
 import setupProgress from './progress'
 import { asyncRoutes, asyncRoutesByFilesystem } from './routes'
@@ -175,6 +176,14 @@ function setupRoutes(router: Router) {
     }
     else if (isDemoMode) {
       setArchiveAccessMode('internal')
+      // 访客显式退出过登录：不再自动注入演示会话，让登录页可以驻留
+      // （详见 auth-storage 的 DEMO_LOGGED_OUT_KEY 注释）。
+      if (readDemoLoggedOut()) {
+        if (to.name === 'login') {
+          return true
+        }
+        return loginRedirect()
+      }
       userStore.setSession({
         token: 'dev-token',
         user: {

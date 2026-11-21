@@ -500,7 +500,7 @@ onBeforeUnmount(() => {
   cursor: pointer;
   background: var(--mrr-card);
   border: 1px solid var(--mrr-border);
-  border-radius: var(--mrr-radius-pill);
+  border-radius: var(--mrr-control-radius);
   box-shadow: var(--mrr-shadow-xs);
   transition: color 160ms ease, background-color 160ms ease, border-color 160ms ease, box-shadow 160ms ease, transform 160ms ease;
 }
@@ -555,7 +555,7 @@ onBeforeUnmount(() => {
 .environment-footer { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: var(--mrr-space-3); align-items: center; margin-top: var(--mrr-space-2); }
 .environment-warning { display: flex; flex: 1 1 100%; gap: var(--mrr-space-2); align-items: center; margin: 0; font-size: 11px; color: var(--color-warning); }
 .environment-actions { grid-column: 1 / -1; display: flex; gap: var(--mrr-space-2); justify-content: flex-end; }
-.environment-actions button { height: var(--mrr-control-height); padding: 0 12px; font-family: inherit; font-size: 11px; font-weight: 650; color: var(--mrr-muted-foreground); cursor: pointer; background: var(--mrr-card); border: 1px solid var(--mrr-border); border-radius: var(--mrr-radius-pill); transition: color 140ms ease, background-color 140ms ease, border-color 140ms ease; }
+.environment-actions button { height: var(--mrr-control-height); padding: 0 12px; font-family: inherit; font-size: 11px; font-weight: 650; color: var(--mrr-muted-foreground); cursor: pointer; background: var(--mrr-card); border: 1px solid var(--mrr-border); border-radius: var(--mrr-control-radius); transition: color 140ms ease, background-color 140ms ease, border-color 140ms ease; }
 .environment-actions button:hover:not(:disabled):not([aria-disabled="true"]) { color: var(--mrr-primary); background-color: var(--el-color-primary-light-9); border-color: var(--el-color-primary-light-5); }
 .environment-actions button[aria-disabled="true"] { cursor: default; opacity: 0.6; }
 .environment-actions button.is-primary { color: var(--mrr-primary); background: color-mix(in srgb, var(--mrr-primary) 8%, var(--mrr-card)); border-color: color-mix(in srgb, var(--mrr-primary) 32%, var(--mrr-border)); }
@@ -605,9 +605,15 @@ onBeforeUnmount(() => {
 .brand-heading p { max-width: 440px; margin: var(--mrr-space-4) 0 0; font-size: 14px; line-height: 1.75; color: var(--mrr-muted-foreground); }
 .feature-list { position: relative; z-index: 1; display: grid; gap: var(--mrr-space-3); margin-top: var(--mrr-space-8); }
 .feature-list article { display: flex; gap: var(--mrr-space-3); align-items: flex-start; padding: var(--mrr-space-4); background: color-mix(in srgb, var(--mrr-card) 72%, transparent); border: 1px solid var(--mrr-border); border-radius: var(--mrr-radius-lg); }
-.feature-icon { display: grid; flex: 0 0 auto; width: 34px; height: 34px; color: var(--mrr-primary); background: color-mix(in srgb, var(--mrr-primary) 10%, var(--mrr-card)); border: 1px solid color-mix(in srgb, var(--mrr-primary) 18%, var(--mrr-border)); border-radius: var(--mrr-radius-md); place-items: center; }
-.feature-list strong { display: block; font-size: 13px; }
-.feature-list p { margin: 4px 0 0; font-size: 11px; line-height: 1.5; color: var(--mrr-muted-foreground); }
+
+/*
+ * 图标盒与右侧「标题 + 说明」两行文案同高（20 + 2 + 18 = 40），刻度与
+ * 账号信息卡 / 登录须知卡完全一致（LoginForm.vue 同名注释），两行文案
+ * 必须写死行高，否则字号一动图标就不再对齐。
+ */
+.feature-icon { display: grid; flex: 0 0 auto; width: 40px; height: 40px; font-size: 20px; color: var(--mrr-primary); background: color-mix(in srgb, var(--mrr-primary) 9%, var(--mrr-card)); border: 1px solid color-mix(in srgb, var(--mrr-primary) 18%, var(--mrr-border)); border-radius: var(--mrr-radius-md); place-items: center; }
+.feature-list strong { display: block; font-size: 14px; line-height: 20px; }
+.feature-list p { margin: 2px 0 0; font-size: 12px; line-height: 18px; color: var(--mrr-muted-foreground); }
 .brand-footer { position: relative; z-index: 1; display: flex; gap: var(--mrr-space-2); align-items: center; margin-top: auto; padding-top: var(--mrr-space-6); font-size: 11px; color: var(--mrr-muted-foreground); }
 .form-panel { --auth-input-height: 38px; --auth-switch-duration: 360ms; --auth-switch-ease: cubic-bezier(0.4, 0, 0.2, 1); display: flex; flex-direction: column; gap: var(--mrr-space-4); min-width: 0; padding: 44px 48px; background: var(--mrr-card); }
 .form-panel__content { display: flex; flex-direction: column; justify-content: flex-start; gap: var(--mrr-space-4); min-width: 0; }
@@ -665,11 +671,14 @@ onBeforeUnmount(() => {
 @media (min-width: 901px) {
   .login-shell { height: 628px; grid-template-rows: minmax(0, 1fr); }
   .brand-panel { min-height: 0; padding: 32px; overflow: hidden; }
+  .brand-heading { margin-top: 28px; }
   .brand-heading h1 { font-size: 36px; }
   .brand-heading p { margin-top: var(--mrr-space-3); }
-  .feature-list { gap: var(--mrr-space-2); margin-top: var(--mrr-space-5); }
-  .feature-list article { padding: var(--mrr-space-2) var(--mrr-space-3); }
-  .brand-footer { padding-top: var(--mrr-space-3); }
+  .feature-list { gap: var(--mrr-space-3); margin-top: var(--mrr-space-5); }
+  .feature-list article { padding: var(--mrr-space-3) var(--mrr-space-4); }
+
+  /* 徽章离底高度与右侧「登录系统」按钮对齐（按钮距壳底 60px，面板自身 padding 32px）。 */
+  .brand-footer { margin-bottom: 28px; padding-top: var(--mrr-space-3); }
   .form-panel { padding: 60px 40px; }
   .form-panel__content { flex: 1; min-height: 0; }
   .auth-mode-stage { flex: 1; min-height: 0; }

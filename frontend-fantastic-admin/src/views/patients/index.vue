@@ -190,6 +190,7 @@ onUnmounted(() => {
 <template>
   <MrrPageShell compact>
     <MrrPageHeader
+      size="compact"
       title="患者管理"
       description="查询和编辑患者基本信息，并查看身份证完整性与重复患者情况。"
     >
@@ -209,6 +210,8 @@ onUnmounted(() => {
           title="患者列表"
           description="支持按病案号、姓名、身份证号、科室、病区或床位查询。"
           :count="loading || error ? undefined : total"
+          :loading="loading"
+          :result-key="tableData"
         >
           <template #filters>
             <MrrFilterBar embedded labelled>
@@ -238,7 +241,7 @@ onUnmounted(() => {
             </MrrFilterBar>
           </template>
 
-          <AppLoading v-if="loading" type="table" :rows="8" />
+          <AppLoading v-if="loading && !tableData.length" type="table" :rows="8" />
           <AppError v-else-if="error" :message="error" @retry="loadData" />
           <AppEmpty v-else-if="!tableData.length" description="暂无患者记录" />
           <!--

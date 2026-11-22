@@ -190,6 +190,7 @@ function typeLabel(value: unknown) {
 <template>
   <MrrPageShell class="records-page">
     <MrrPageHeader
+      size="compact"
       title="记录管理"
       eyebrow="Scan Records"
       description="按完整编号检索扫描记录，采用游标读取；病案号、上架号兼容原始前导零。"

@@ -98,6 +98,35 @@ test('失败与空态可恢复，对话框和抽屉可确认与关闭', async ({
   await expect(page.getByText('抽屉示例已确认。')).toBeVisible()
 })
 
+test('页头尺寸示例：紧凑页头更矮，长说明折行后仍完整显示', async ({ page }) => {
+  await openGallery(page)
+  await page.getByRole('button', { name: /基础与导航/ }).click()
+  await expect(page.getByRole('heading', { name: '页头尺寸', exact: true })).toBeVisible()
+  const heights = () => page.locator('.pattern-sample .mrr-page-header').evaluateAll(nodes => nodes.map(node => node.getBoundingClientRect().height))
+  await expect.poll(async () => {
+    const [standard, compact] = await heights()
+    return compact < standard
+  }).toBe(true)
+  await page.getByLabel('使用长说明（检查折行）', { exact: true }).click()
+  await expect.poll(() => page.locator('.pattern-sample .mrr-page-header__description').evaluateAll(nodes => nodes.every(node => node.scrollWidth <= node.clientWidth + 1))).toBe(true)
+})
+
+test('动效示例：刷新期间保留结果并标记忙碌，结束后换成下一批', async ({ page }) => {
+  await openGallery(page)
+  await page.getByRole('button', { name: /反馈与浮层/ }).click()
+  const content = page.locator('.mrr-data-table-panel__content').filter({ has: page.locator('.el-table') }).first()
+  await expect(content).toContainText('BATCH-0101')
+  await page.getByRole('button', { name: '模拟慢查询', exact: true }).click()
+  await expect(content).toHaveAttribute('aria-busy', 'true')
+  await expect(content).toContainText('BATCH-0101')
+  await expect(content).not.toHaveAttribute('aria-busy', 'true')
+  await expect(content).toContainText('BATCH-0105')
+  await page.getByRole('button', { name: '清空后首次加载', exact: true }).click()
+  await expect(page.locator('.mrr-data-table-panel__content [aria-busy="true"]').first()).toBeVisible()
+  await expect(content).toContainText('BATCH-0101')
+  await expect(page.locator('.mrr-status-tag--live').first()).toBeVisible()
+})
+
 for (const theme of ['light', 'dark'] as const) {
   test(`${theme} 主题目录、字段与浮层在宽窄屏可用`, async ({ page }) => {
     await openGallery(page, theme)

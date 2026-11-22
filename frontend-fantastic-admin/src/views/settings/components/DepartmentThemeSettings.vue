@@ -369,7 +369,7 @@ onMounted(() => {
 }
 
 .department-theme-header p {
-  margin: 6px 0 0;
+  margin: var(--mrr-space-2) 0 0;
   font-size: 13px;
   color: var(--text-secondary);
 }
@@ -393,8 +393,8 @@ onMounted(() => {
 
 .theme-editor {
   display: grid;
-  gap: 10px;
-  margin-top: 18px;
+  gap: var(--mrr-space-3);
+  margin-top: var(--mrr-space-4);
 }
 
 .theme-editor-head,
@@ -406,7 +406,7 @@ onMounted(() => {
 }
 
 .theme-editor-head {
-  padding: 0 10px;
+  padding: 0 var(--mrr-space-3);
   font-size: 12px;
   font-weight: 700;
   color: var(--text-secondary);
@@ -437,9 +437,9 @@ onMounted(() => {
 
   position: relative;
   display: grid;
-  gap: 7px;
+  gap: var(--mrr-space-2);
   min-height: 58px;
-  padding: 13px 14px 10px;
+  padding: var(--mrr-space-3);
   overflow: hidden;
   color: var(--folder-accent);
   background: linear-gradient(155deg, var(--folder-tint), var(--surface) 68%);
@@ -475,18 +475,18 @@ onMounted(() => {
 .editor-footer {
   display: flex;
   justify-content: center;
-  margin-top: 18px;
+  margin-top: var(--mrr-space-4);
 }
 
 .theme-history-list {
   display: grid;
-  gap: 10px;
+  gap: var(--mrr-space-3);
 }
 
 .theme-history-item {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto auto;
-  gap: 14px;
+  gap: var(--mrr-space-3);
   align-items: center;
   padding: 12px;
   background: var(--surface-alt);

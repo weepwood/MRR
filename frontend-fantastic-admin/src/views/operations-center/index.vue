@@ -977,7 +977,7 @@ onMounted(async () => {
 
 .toolbar-actions,
 .check-title-line {
-  gap: 10px;
+  gap: var(--mrr-space-2);
 }
 
 .toolbar-row,
@@ -1015,7 +1015,7 @@ onMounted(async () => {
 
 .task-state-label {
   justify-content: space-between;
-  margin-block-end: 6px;
+  margin-block-end: var(--mrr-space-2);
 }
 
 .overview-hint {
@@ -1054,12 +1054,12 @@ onMounted(async () => {
 .issue-list,
 .diagnostic-list {
   display: grid;
-  gap: 10px;
+  gap: var(--mrr-space-3);
 }
 
 .issue-row {
   gap: 16px;
-  padding: 11px 0;
+  padding: var(--mrr-space-3) 0;
   border-bottom: 1px solid var(--el-border-color-lighter);
 }
 
@@ -1087,7 +1087,7 @@ onMounted(async () => {
 
 .toolbar-row {
   gap: 16px;
-  margin-bottom: 14px;
+  margin-bottom: var(--mrr-space-3);
 }
 
 .toolbar-actions {
@@ -1121,8 +1121,8 @@ onMounted(async () => {
 .suggestion-box {
   display: grid;
   gap: 4px;
-  margin-top: 10px;
-  padding: 10px 12px;
+  margin-top: var(--mrr-space-3);
+  padding: var(--mrr-space-2) var(--mrr-space-3);
   border-radius: var(--mrr-radius-md);
   background: var(--el-fill-color-light);
   font-size: 13px;
@@ -1141,8 +1141,8 @@ onMounted(async () => {
 .detail-json {
   max-height: 240px;
   overflow: auto;
-  margin: 10px 0 0;
-  padding: 10px;
+  margin: var(--mrr-space-2) 0 0;
+  padding: var(--mrr-space-3);
   border-radius: var(--mrr-radius-md);
   background: var(--el-fill-color-light);
   color: var(--el-text-color-regular);

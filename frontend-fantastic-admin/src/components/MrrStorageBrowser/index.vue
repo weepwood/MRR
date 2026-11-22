@@ -2,6 +2,7 @@
 import type { StorageEntry } from './presentation'
 import { ArrowLeft, ArrowUp, ChevronDown, ChevronRight, ChevronUp, Copy, File, FileArchive, FileImage, FileText, Folder, Info, LayoutGrid, List, Maximize, Minimize, RefreshCw, Search } from 'lucide-vue-next'
 import { computed, nextTick, onBeforeUnmount, onDeactivated, onMounted, ref, watch } from 'vue'
+import AppEmpty from '@/components/AppEmpty/index.vue'
 import { copyText as copyToClipboard } from '@/utils/copy-text'
 import { entryType, formatDate, formatFileSize, isImage } from './presentation'
 
@@ -404,11 +405,14 @@ onBeforeUnmount(() => {
       <div class="explorer-layout">
         <section ref="filePane" v-loading="loading" class="file-pane" tabindex="-1" aria-label="目录内容" :aria-busy="loading" @keydown="onNavigationKey">
           <div v-if="!visibleEntries.length" class="empty-pane">
-            <el-empty v-if="!loading && !error" :image-size="64" :description="!available ? unavailableText : keyword ? '当前页没有匹配的条目' : '此目录为空'">
-              <el-button v-if="available && keyword" @click="filter = ''">
-                清除筛选
-              </el-button>
-            </el-empty>
+            <AppEmpty
+              v-if="!loading && !error"
+              size="compact"
+              :icon="!available ? 'i-lucide:cloud-off' : keyword ? 'i-lucide:search-x' : 'i-lucide:folder-open'"
+              :description="!available ? unavailableText : keyword ? '当前页没有匹配的条目' : '此目录为空'"
+              :action-text="available && keyword ? '清除筛选' : undefined"
+              @action="filter = ''"
+            />
           </div>
           <div v-else-if="mode === 'icons'" class="file-grid">
             <button
@@ -943,7 +947,7 @@ onBeforeUnmount(() => {
  */
 .storage-browser--maximized {
   position: fixed;
-  z-index: 1000;
+  z-index: var(--mrr-z-sticky);
   display: flex;
   flex-direction: column;
   overflow: hidden;

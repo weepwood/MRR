@@ -306,13 +306,13 @@ const mouseGestures: { keys: string[], label: string }[] = [
 
 <style scoped>
 :global(.archive-more-settings-popper) {
-  z-index: 2020 !important;
+  z-index: calc(var(--mrr-z-header) + 20) !important;
 }
 
 :global(.archive-thumbnail-slider-tooltip),
 :global(.archive-preview-scale-tooltip),
 :global(.archive-wall-width-tooltip) {
-  z-index: 2021 !important;
+  z-index: calc(var(--mrr-z-header) + 21) !important;
 }
 
 .archive-more-settings {

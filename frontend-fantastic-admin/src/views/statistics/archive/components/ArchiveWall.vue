@@ -3,6 +3,7 @@ import type { ArchiveWallDensity } from '../composables/useArchiveLocalPreferenc
 import type { GalleryImage } from '../types'
 import { ElImageViewer } from 'element-plus'
 import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
+import AppEmpty from '@/components/AppEmpty/index.vue'
 import { isMotionEnabled } from '@/utils/motion-preference'
 import { getTypeLabel } from '../constants'
 import { isFocusSelectSuppressed, suppressFocusSelect } from '../utils/viewer-close-focus-guard'
@@ -349,7 +350,7 @@ onUnmounted(() => {
       </article>
     </div>
 
-    <el-empty v-else description="当前类型暂无影像" />
+    <AppEmpty v-else icon="i-lucide:image-off" description="当前类型暂无影像" />
 
     <div
       v-if="displayedImages.length < props.images.length"

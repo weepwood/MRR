@@ -2,6 +2,7 @@
 import type { ArchiveSearchHistoryItem } from '../composables/useArchiveSearchHistory'
 import { CircleCheck, CircleX, Clock3 as Clock, RefreshCw as Refresh } from 'lucide-vue-next'
 import { computed, nextTick, onUnmounted, ref, watch } from 'vue'
+import AppEmpty from '@/components/AppEmpty/index.vue'
 import { useUserStore } from '@/store/modules/user'
 import { AUTH_STORAGE_KEYS } from '@/utils/auth-storage'
 import { isMotionEnabled } from '@/utils/motion-preference'
@@ -282,7 +283,7 @@ onUnmounted(() => {
                   </div>
                 </section>
               </div>
-              <el-empty v-else :image-size="54" description="暂无成功查询记录" />
+              <AppEmpty v-else size="compact" icon="i-lucide:history" description="暂无成功查询记录" />
             </div>
           </el-popover>
 
@@ -352,10 +353,11 @@ onUnmounted(() => {
                   </button>
                 </div>
               </div>
-              <el-empty
+              <AppEmpty
                 v-else
                 :key="historyStatus"
-                :image-size="54"
+                size="compact"
+                :icon="historyStatus === 'favorite' ? 'i-lucide:bookmark' : 'i-lucide:history'"
                 :description="historyStatus === 'success' ? '暂无成功查询记录' : historyStatus === 'failure' ? '暂无失败查询记录' : '暂无收藏病案'"
               />
             </Transition>

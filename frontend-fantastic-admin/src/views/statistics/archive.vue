@@ -8,6 +8,7 @@ import { ElMessage } from 'element-plus'
 import { FileText as Document, Download, Printer } from 'lucide-vue-next'
 import { computed, nextTick, onMounted, onUnmounted, reactive, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
+import AppEmpty from '@/components/AppEmpty/index.vue'
 import { actionDialog } from '@/ui/components/ActionDialog'
 import { describeIdCardInput, ID_CARD_PATTERN, normalizeIdCardInput } from '@/utils/identifier-input'
 import { getArchiveLookupValidationMessage, requiresSjhForBah } from '@/utils/medical-record-code'
@@ -984,7 +985,7 @@ onUnmounted(() => {
           </template>
 
           <div v-else-if="!showViewer && !loading && !idCardLoading && !errorMsg" class="empty-state">
-            <el-empty description="输入身份证号、病案号或上架号查询影像" />
+            <AppEmpty icon="i-lucide:scan-search" description="输入身份证号、病案号或上架号查询影像" />
           </div>
 
           <div v-if="images.length > 0" class="archive-bottom-actions">
@@ -1137,7 +1138,9 @@ onUnmounted(() => {
   position: fixed;
   top: calc(var(--g-header-actual-height) + var(--g-tabbar-actual-height) + 16px);
   right: 16px;
-  z-index: 2010;
+
+  /* 档案袋局部叠放：高于顶栏，低于 Element Plus 弹层；见 DESIGN.md §2.8。 */
+  z-index: calc(var(--mrr-z-header) + 10);
 }
 
 .archive-workspace {

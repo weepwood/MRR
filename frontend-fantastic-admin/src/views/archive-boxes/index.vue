@@ -726,7 +726,11 @@ onMounted(refreshAll)
   flex-wrap: wrap;
   gap: var(--mrr-space-2) var(--mrr-space-3);
   align-items: center;
+  padding-bottom: var(--mrr-space-3);
   margin-bottom: var(--mrr-space-3);
+
+  /* 视图切换是筛选的上一级（决定下面显示哪组字段），用分隔线把两层分开。 */
+  border-bottom: 1px solid var(--mrr-shell-divider);
 }
 
 .view-switcher :deep(.el-radio-button) {
@@ -734,7 +738,7 @@ onMounted(refreshAll)
 }
 
 .view-hint {
-  font-size: 13px;
+  font-size: var(--mrr-font-size-sm);
   color: var(--mrr-muted-foreground);
 }
 
@@ -753,23 +757,27 @@ onMounted(refreshAll)
   letter-spacing: 0.04em;
 }
 
+/*
+ * 「未确认」原为危险红：它表示尚待确认存放位置，是待办而非错误，
+ * 与指标卡「尚未确认实际存放位置」同口径改为警示色；文字仍保留，不只靠颜色。
+ */
 .empty-value {
-  font-size: 13px;
-  color: var(--el-color-danger);
+  font-size: var(--mrr-font-size-sm);
+  color: var(--mrr-tone-warning);
 }
 
 .box-link {
   padding: 0;
-  font-weight: 700;
+  font-weight: 600;
 }
 
 .box-number-button {
   display: inline-flex;
-  gap: 8px;
+  gap: var(--mrr-space-2);
   align-items: center;
   padding: 0;
   font: inherit;
-  font-weight: 700;
+  font-weight: 600;
   cursor: pointer;
   background: transparent;
   border: 0;
@@ -785,7 +793,7 @@ onMounted(refreshAll)
 .box-number-button:focus-visible {
   outline: 2px solid var(--el-color-primary);
   outline-offset: 3px;
-  border-radius: 4px;
+  border-radius: max(0px, calc(var(--mrr-radius-sm) - 2px));
 }
 
 .form-grid {

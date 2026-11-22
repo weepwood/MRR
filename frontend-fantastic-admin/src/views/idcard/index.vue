@@ -105,10 +105,11 @@ function handleSearch() {
 .search-card {
   width: 100%;
   max-width: 480px;
-  padding: 48px 40px 40px;
+  padding: 48px var(--mrr-space-8) var(--mrr-space-8);
   background: var(--surface);
+  border: 1px solid var(--mrr-border);
   border-radius: var(--mrr-radius-card);
-  box-shadow: 0 8px 40px rgb(59 130 246 / 10%);
+  box-shadow: var(--mrr-shadow-md);
 }
 
 /* ===== 头部 ===== */
@@ -123,7 +124,7 @@ function handleSearch() {
   justify-content: center;
   width: 64px;
   height: 64px;
-  margin-bottom: 20px;
+  margin-bottom: var(--mrr-space-5);
   font-size: 32px;
   color: var(--surface);
   background: linear-gradient(135deg, var(--color-primary), var(--mrr-tone-violet));
@@ -131,11 +132,11 @@ function handleSearch() {
 }
 
 .search-title {
-  margin: 0 0 8px;
+  margin: 0 0 var(--mrr-space-2);
   font-size: 24px;
   font-weight: 700;
   color: var(--mrr-foreground);
-  letter-spacing: -0.3px;
+  letter-spacing: -0.02em;
 }
 
 .search-subtitle {
@@ -168,7 +169,7 @@ function handleSearch() {
 /* ===== 提示 ===== */
 .search-hint {
   margin: 8px 0 0;
-  font-size: 12px;
+  font-size: var(--mrr-font-size-xs);
   color: var(--el-color-warning);
 }
 

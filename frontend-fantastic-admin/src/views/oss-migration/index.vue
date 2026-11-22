@@ -1589,7 +1589,7 @@ onMounted(() => {
   padding: var(--mrr-space-3);
   background: var(--el-color-warning-light-9);
   border: 1px solid var(--el-color-warning-light-5);
-  border-radius: var(--el-border-radius-base);
+  border-radius: var(--mrr-radius-md);
 }
 
 .check-item.ok {
@@ -1659,8 +1659,9 @@ onMounted(() => {
 .log-filter {
   padding: var(--mrr-space-3);
   margin-bottom: var(--mrr-space-3);
-  background: var(--el-fill-color-lighter);
-  border-radius: var(--el-border-radius-base);
+  background: var(--mrr-muted);
+  border: 1px solid var(--mrr-border);
+  border-radius: var(--mrr-radius-md);
 }
 
 .log-filter :deep(.el-select) {

@@ -128,7 +128,7 @@ onBeforeUnmount(() => {
   gap: var(--mrr-space-2);
   justify-content: center;
   min-height: 78px;
-  padding: 12px var(--mrr-space-3);
+  padding: var(--mrr-space-3);
   transition: background-color var(--mrr-motion-feedback) var(--mrr-ease-out), border-color var(--mrr-motion-feedback) var(--mrr-ease-out), box-shadow var(--mrr-motion-feedback) var(--mrr-ease-out);
 }
 
@@ -138,7 +138,7 @@ onBeforeUnmount(() => {
   column-gap: var(--mrr-space-4);
   align-items: center;
   min-height: 86px;
-  padding: var(--mrr-space-4) 16px;
+  padding: var(--mrr-space-4);
 }
 
 .department-themed-archive :deep(.folder-code-label) {
@@ -147,7 +147,7 @@ onBeforeUnmount(() => {
   align-items: center;
   width: fit-content;
   margin-bottom: 0;
-  font-size: 11px;
+  font-size: var(--mrr-font-size-xs);
   line-height: 1;
   letter-spacing: 0.04em;
 }

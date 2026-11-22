@@ -193,16 +193,10 @@ function typeLabel(value: unknown) {
       title="记录管理"
       eyebrow="Scan Records"
       description="按完整编号检索扫描记录，采用游标读取；病案号、上架号兼容原始前导零。"
-    >
-      <template #actions>
-        <el-button type="primary" :loading="downloading" @click="handleBatchDownload">
-          <el-icon><Download /></el-icon>
-          批量下载
-        </el-button>
-      </template>
-    </MrrPageHeader>
+    />
 
-    <section class="mrr-metric-grid" aria-label="当前批次概况">
+    <!-- 三项都是当前批次的状态量，用紧凑摘要即可；原来三张 110px 高的指标卡把结果表推到首屏以下。 -->
+    <section class="mrr-metric-grid mrr-metric-grid--dense" aria-label="当前批次概况">
       <MrrMetricCard v-for="item in summaryCards" :key="item.label" v-bind="item" />
     </section>
 
@@ -248,6 +242,17 @@ function typeLabel(value: unknown) {
           <p v-if="unapplied" class="records-query-context__pending">
             筛选条件已修改，点击“查询”后生效；翻批仍使用已提交条件。
           </p>
+        </div>
+        <!--
+          批量下载作用于表格里勾选的行，放在表格工具条，紧挨着它操作的对象；
+          原来放在页头，与勾选框隔着指标卡和筛选栏，用户不容易把两者联系起来。
+        -->
+        <div class="records-batch-actions">
+          <span v-if="selectedRows.length" class="records-batch-actions__count">已选 {{ selectedRows.length }} 条</span>
+          <el-button type="primary" :loading="downloading" @click="handleBatchDownload">
+            <el-icon><Download /></el-icon>
+            批量下载
+          </el-button>
         </div>
       </template>
 
@@ -314,7 +319,7 @@ function typeLabel(value: unknown) {
             <el-button :disabled="pageNum <= 1 || loading" @click="previousPage">
               上一批
             </el-button>
-            <span>第 {{ pageNum }} 批</span>
+            <span class="pager__current">第 {{ pageNum }} 批</span>
             <el-button :disabled="!hasMore || loading" @click="nextPage">
               下一批
             </el-button>
@@ -388,9 +393,10 @@ function typeLabel(value: unknown) {
 
 .records-query-context {
   display: grid;
+  flex: 1 1 320px;
   gap: var(--mrr-space-1);
   min-width: 0;
-  font-size: 13px;
+  font-size: var(--mrr-font-size-sm);
   line-height: 1.6;
   color: var(--mrr-muted-foreground);
   overflow-wrap: anywhere;
@@ -398,6 +404,26 @@ function typeLabel(value: unknown) {
 
 .records-query-context p {
   margin: 0;
+}
+
+.records-batch-actions {
+  display: flex;
+  flex: 0 0 auto;
+  gap: var(--mrr-space-3);
+  align-items: center;
+}
+
+.records-batch-actions__count {
+  font-size: var(--mrr-font-size-sm);
+  font-variant-numeric: tabular-nums;
+  color: var(--mrr-muted-foreground);
+}
+
+.pager__current {
+  min-width: 4.5em;
+  font-variant-numeric: tabular-nums;
+  color: var(--mrr-muted-foreground);
+  text-align: center;
 }
 
 .records-query-context strong {
@@ -413,6 +439,11 @@ function typeLabel(value: unknown) {
 @media (max-width: 760px) {
   .records-filter__field {
     flex: 1 1 100%;
+    width: 100%;
+  }
+
+  .records-batch-actions {
+    justify-content: space-between;
     width: 100%;
   }
 }

@@ -186,8 +186,8 @@ function today() {
     </template>
 
     <div class="panel-content">
-      <div class="field-grid">
-        <div v-for="field in fields" :key="field.name" class="field-item">
+      <div class="mrr-field-grid">
+        <div v-for="field in fields" :key="field.name" class="mrr-field-item">
           <code>{{ field.name }}</code>
           <span>{{ field.description }}</span>
         </div>
@@ -240,34 +240,34 @@ function today() {
       </div>
 
       <section v-if="result" class="result-section">
-        <div class="result-summary">
-          <div class="summary-item">
-            <span>文件编码</span>
-            <strong>{{ result.encoding }}</strong>
+        <div class="result-summary mrr-stat-strip">
+          <div class="summary-item mrr-stat-tile">
+            <span class="mrr-stat-tile__label">文件编码</span>
+            <strong class="mrr-stat-tile__value">{{ result.encoding }}</strong>
           </div>
-          <div class="summary-item">
-            <span>数据行</span>
-            <strong>{{ result.totalRows }}</strong>
+          <div class="summary-item mrr-stat-tile">
+            <span class="mrr-stat-tile__label">数据行</span>
+            <strong class="mrr-stat-tile__value">{{ result.totalRows }}</strong>
           </div>
-          <div class="summary-item">
-            <span>有效唯一行</span>
-            <strong>{{ result.validRows }}</strong>
+          <div class="summary-item mrr-stat-tile">
+            <span class="mrr-stat-tile__label">有效唯一行</span>
+            <strong class="mrr-stat-tile__value">{{ result.validRows }}</strong>
           </div>
-          <div class="summary-item">
-            <span>{{ result.dryRun ? '预计新增' : '实际新增' }}</span>
-            <strong>{{ result.insertedRows }}</strong>
+          <div class="summary-item mrr-stat-tile">
+            <span class="mrr-stat-tile__label">{{ result.dryRun ? '预计新增' : '实际新增' }}</span>
+            <strong class="mrr-stat-tile__value">{{ result.insertedRows }}</strong>
           </div>
-          <div class="summary-item">
-            <span>{{ result.dryRun ? '预计更新' : '实际更新' }}</span>
-            <strong>{{ result.updatedRows }}</strong>
+          <div class="summary-item mrr-stat-tile">
+            <span class="mrr-stat-tile__label">{{ result.dryRun ? '预计更新' : '实际更新' }}</span>
+            <strong class="mrr-stat-tile__value">{{ result.updatedRows }}</strong>
           </div>
-          <div class="summary-item">
-            <span>重复跳过</span>
-            <strong>{{ result.duplicateRows }}</strong>
+          <div class="summary-item mrr-stat-tile">
+            <span class="mrr-stat-tile__label">重复跳过</span>
+            <strong class="mrr-stat-tile__value">{{ result.duplicateRows }}</strong>
           </div>
-          <div class="summary-item" :class="{ danger: result.errorRows > 0 }">
-            <span>错误行</span>
-            <strong>{{ result.errorRows }}</strong>
+          <div class="summary-item mrr-stat-tile">
+            <span class="mrr-stat-tile__label">错误行</span>
+            <strong class="mrr-stat-tile__value" :class="{ 'mrr-stat-tile__value--danger': result.errorRows > 0 }">{{ result.errorRows }}</strong>
           </div>
         </div>
 
@@ -334,35 +334,6 @@ function today() {
   margin: var(--mrr-space-1) 0 0;
 }
 
-.field-grid {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: var(--mrr-space-2) var(--mrr-space-3);
-}
-
-.field-item {
-  display: flex;
-  gap: var(--mrr-space-3);
-  align-items: center;
-  min-width: 0;
-  padding: var(--mrr-space-2) var(--mrr-space-3);
-  background: var(--el-fill-color-lighter);
-  border: 1px solid var(--el-border-color-lighter);
-  border-radius: var(--mrr-radius-md);
-}
-
-.field-item code {
-  flex: 0 0 128px;
-  font-weight: 700;
-  color: var(--el-color-primary);
-}
-
-.field-item span {
-  min-width: 0;
-  font-size: var(--mrr-font-size-xs);
-  color: var(--el-text-color-secondary);
-}
-
 .action-row,
 .result-actions {
   display: flex;
@@ -374,31 +345,6 @@ function today() {
   display: grid;
   grid-template-columns: repeat(7, minmax(0, 1fr));
   gap: var(--mrr-space-2);
-}
-
-.summary-item {
-  display: grid;
-  gap: var(--mrr-space-1);
-  min-width: 0;
-  padding: var(--mrr-space-3);
-  border: 1px solid var(--el-border-color-lighter);
-  border-radius: var(--mrr-radius-md);
-}
-
-.summary-item span {
-  font-size: var(--mrr-font-size-xs);
-  color: var(--el-text-color-secondary);
-}
-
-.summary-item strong {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  font-size: 18px;
-  white-space: nowrap;
-}
-
-.summary-item.danger strong {
-  color: var(--el-color-danger);
 }
 
 .truncated-tip {
@@ -414,10 +360,6 @@ function today() {
 }
 
 @media (max-width: 760px) {
-  .field-grid {
-    grid-template-columns: 1fr;
-  }
-
   .result-summary {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }

@@ -215,14 +215,15 @@ function statusTagType(status: string | number) {
 <template>
   <MrrPageShell>
     <MrrPageHeader title="日志管理" eyebrow="Operation Logs" description="按请求 ID、真实 URI、接口模板、业务参数、用户、IP、状态码和时间范围追溯接口访问。">
+      <!-- 自动刷新说明放 #meta（DESIGN.md §3.3），与运行错误中心一致；原来与刷新按钮挤在操作区，窄屏下把按钮推出页头。 -->
+      <template #meta>
+        <span class="auto-refresh-note" aria-live="polite">每 30 秒自动刷新<template v-if="lastRefreshedAt"> · 上次 {{ lastRefreshedAt }}</template></span>
+      </template>
       <template #actions>
-        <div class="header-actions">
-          <span class="auto-refresh-note">每 30 秒自动刷新<template v-if="lastRefreshedAt"> · 上次 {{ lastRefreshedAt }}</template></span>
-          <el-button :loading="loading" @click="loadData()">
-            <el-icon><Refresh /></el-icon>
-            刷新
-          </el-button>
-        </div>
+        <el-button :loading="loading" @click="loadData()">
+          <el-icon><Refresh /></el-icon>
+          刷新
+        </el-button>
       </template>
     </MrrPageHeader>
 
@@ -298,7 +299,7 @@ function statusTagType(status: string | number) {
         <el-table-column prop="requestId" label="Request ID" min-width="170" show-overflow-tooltip>
           <template #default="{ row }">
             <template v-if="row.requestId">
-              <span>{{ row.requestId }}</span>
+              <span class="log-mono">{{ row.requestId }}</span>
               <el-button
                 link type="primary" class="copy-link" aria-label="复制 Request ID"
                 @click="copyText(row.requestId, 'Request ID 已复制')"
@@ -312,19 +313,23 @@ function statusTagType(status: string | number) {
         <el-table-column prop="username" label="用户" min-width="120">
           <template #default="{ row }">{{ row.username || '-' }}</template>
         </el-table-column>
-        <el-table-column prop="clientIp" label="客户端 IP" min-width="140" />
+        <el-table-column prop="clientIp" label="客户端 IP" min-width="140">
+          <template #default="{ row }"><span class="log-mono">{{ row.clientIp || '-' }}</span></template>
+        </el-table-column>
         <el-table-column prop="method" label="方法" width="100">
           <template #default="{ row }">
             <el-tag :type="methodTagType(row.method)">{{ row.method || '-' }}</el-tag>
           </template>
         </el-table-column>
-        <el-table-column prop="requestUri" label="真实请求 URI" min-width="280" show-overflow-tooltip />
+        <el-table-column prop="requestUri" label="真实请求 URI" min-width="280" show-overflow-tooltip>
+          <template #default="{ row }"><span class="log-mono">{{ row.requestUri || '-' }}</span></template>
+        </el-table-column>
         <el-table-column prop="responseStatus" label="状态码" width="100">
           <template #default="{ row }">
             <el-tag :type="statusTagType(row.responseStatus)">{{ row.responseStatus || '-' }}</el-tag>
           </template>
         </el-table-column>
-        <el-table-column prop="executeTime" label="耗时" width="100">
+        <el-table-column prop="executeTime" label="耗时" width="100" align="right">
           <template #default="{ row }">{{ formatExecuteTime(row.executeTime) }}</template>
         </el-table-column>
         <el-table-column
@@ -417,20 +422,18 @@ function statusTagType(status: string | number) {
 </template>
 
 <style scoped>
-.header-actions {
-  display: flex;
-  gap: 12px;
-  align-items: center;
+.auto-refresh-note {
+  font-variant-numeric: tabular-nums;
 }
 
-.auto-refresh-note {
-  font-size: 12px;
-  color: var(--mrr-muted-foreground);
-  white-space: nowrap;
+/* Request ID、IP、URI 是要逐字比对或复制的标识符，用等宽字体。 */
+.log-mono {
+  font-family: var(--mrr-font-mono);
+  font-size: var(--mrr-font-size-xs);
 }
 
 .copy-link {
-  margin-left: 4px;
+  margin-left: var(--mrr-space-1);
   vertical-align: middle;
 }
 
@@ -448,14 +451,22 @@ function statusTagType(status: string | number) {
 }
 
 .detail-link {
-  margin-left: 8px;
+  margin-left: var(--mrr-space-2);
 }
 
+/* 与运行错误中心的详情代码块同一外观：浅底、等宽、小圆角，长参数一眼能与普通字段区分。 */
 .detail-pre {
+  box-sizing: border-box;
   max-height: 260px;
+  padding: var(--mrr-space-2) var(--mrr-space-3);
   margin: 0;
   overflow: auto;
+  font-family: var(--mrr-font-mono);
+  font-size: var(--mrr-font-size-xs);
+  line-height: 1.6;
   white-space: pre-wrap;
+  background: var(--mrr-muted);
+  border-radius: var(--mrr-radius-md);
 }
 
 .error-detail {

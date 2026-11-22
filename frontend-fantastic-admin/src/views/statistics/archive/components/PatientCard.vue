@@ -82,7 +82,7 @@ function toggleRecordNumber() {
 }
 
 .field-label {
-  font-size: 11px;
+  font-size: var(--mrr-font-size-xs);
   font-weight: 700;
   color: var(--text-tertiary);
   text-transform: uppercase;

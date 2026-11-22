@@ -10,6 +10,7 @@ import AppLoading from '@/components/AppLoading/index.vue'
 import MrrInfoTip from '@/components/MrrInfoTip/index.vue'
 import MrrPageHeader from '@/components/MrrPageHeader/index.vue'
 import MrrPageShell from '@/components/MrrPageShell/index.vue'
+import MrrSectionCard from '@/components/MrrSectionCard/index.vue'
 import { PERMISSION_DEFINITIONS, PERMISSION_HIERARCHY } from '@/utils/permission'
 
 defineOptions({ name: 'PermissionsPage' })
@@ -225,7 +226,14 @@ onMounted(loadPermissions)
     <AppLoading v-else-if="loading && !sortedRoles.length" type="card" :cols="3" />
 
     <div v-else v-loading="loading" class="permission-views">
-      <section class="permission-section">
+      <section class="permission-section" aria-labelledby="permission-roles-title">
+        <!-- 角色卡与权限矩阵此前都没有分区标题，两大块内容直接堆叠，读者要靠内容猜「这一块是什么」。 -->
+        <div class="permission-section__head">
+          <h2 id="permission-roles-title">
+            角色
+          </h2>
+          <span class="permission-section__count">{{ sortedRoles.length }} 个角色</span>
+        </div>
         <div class="roles-grid">
           <el-card
             v-for="role in sortedRoles"
@@ -243,7 +251,8 @@ onMounted(loadPermissions)
                     <el-tag size="small" effect="plain">
                       {{ role.code }}
                     </el-tag>
-                    <MrrInfoTip label="管理员权限说明" placement="top" content="管理员自动拥有全部权限，不可修改。" />
+                    <!-- 只有管理员角色需要解释「为什么没有编辑按钮」，其余角色卡上的同一提示是噪音。 -->
+                    <MrrInfoTip v-if="isAdminRole(role.code)" label="管理员权限说明" placement="top" content="管理员自动拥有全部权限，不可修改。" />
                   </div>
                 </div>
                 <el-button v-if="!isAdminRole(role.code)" type="primary" link @click="startEdit(role)">
@@ -341,7 +350,20 @@ onMounted(loadPermissions)
       </section>
 
       <section class="permission-section">
-        <el-card shadow="never" class="matrix-card">
+        <MrrSectionCard
+          class="matrix-card"
+          title="权限矩阵"
+          description="逐项对照各角色的直接授权与继承权限"
+          icon="i-lucide:grid-3x3"
+        >
+          <!-- 图例放进卡头：读表前先知道符号含义，不必滚到表格底部。 -->
+          <template #actions>
+            <div class="matrix-legend" aria-label="图例">
+              <span><i class="legend direct" />直接授权</span>
+              <span><i class="legend inherited" />继承获得</span>
+              <span><i class="legend none" />无权限</span>
+            </div>
+          </template>
           <el-table :data="permissionDefs" stripe border>
             <el-table-column label="权限" min-width="230" fixed>
               <template #default="{ row }">
@@ -370,12 +392,7 @@ onMounted(loadPermissions)
               </template>
             </el-table-column>
           </el-table>
-          <div class="matrix-legend">
-            <span><i class="legend direct" />直接授权</span>
-            <span><i class="legend inherited" />继承获得</span>
-            <span><i class="legend none" />无权限</span>
-          </div>
-        </el-card>
+        </MrrSectionCard>
       </section>
     </div>
   </MrrPageShell>
@@ -396,7 +413,13 @@ onMounted(loadPermissions)
 
 .permission-views { display: grid; gap: var(--mrr-space-6); min-width: 0; }
 
-.permission-section { min-width: 0; }
+.permission-section { display: grid; gap: var(--mrr-space-3); min-width: 0; }
+
+.permission-section__head { display: flex; gap: var(--mrr-space-2); align-items: baseline; }
+
+.permission-section__head h2 { margin: 0; font-size: var(--mrr-font-size-md); font-weight: 650; line-height: 1.4; color: var(--text-primary); }
+
+.permission-section__count { font-size: var(--mrr-font-size-xs); font-variant-numeric: tabular-nums; color: var(--text-secondary); }
 
 .roles-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 360px), 1fr)); gap: var(--mrr-space-4); align-items: start; }
 
@@ -410,7 +433,7 @@ onMounted(loadPermissions)
 
 .role-header { gap: var(--mrr-space-3); align-items: flex-start; justify-content: space-between; }
 
-.role-name-row strong { font-size: var(--mrr-font-size-lg); font-weight: 600; line-height: 1.4; color: var(--text-primary); }
+.role-name-row strong { font-size: var(--mrr-font-size-md); font-weight: 650; line-height: 1.4; color: var(--text-primary); }
 
 .role-name-row { flex-wrap: wrap; }
 
@@ -450,10 +473,12 @@ onMounted(loadPermissions)
 
 .permission-select { width: 100%; }
 
-.matrix-card { overflow-x: auto; --mrr-table-row-height: 34px; }
+.matrix-card { min-width: 0; --mrr-table-row-height: 34px; }
+
+.matrix-card :deep(.el-card__body) { overflow-x: auto; }
 
 .matrix-card :deep(.el-table),
-.matrix-card :deep(.el-table__inner-wrapper) { border-radius: var(--mrr-radius-card); }
+.matrix-card :deep(.el-table__inner-wrapper) { border-radius: var(--mrr-radius-md); }
 
 .matrix-card :deep(.el-table) {
   box-sizing: border-box;
@@ -474,7 +499,7 @@ onMounted(loadPermissions)
 
 .matrix-dot.inherited { color: var(--text-tertiary); background: var(--surface-alt); }
 
-.matrix-legend { padding-top: var(--mrr-space-3); margin-top: var(--mrr-space-3); border-top: 1px solid var(--divider); }
+.matrix-legend { flex-wrap: wrap; column-gap: var(--mrr-space-3); }
 
 .matrix-legend span { gap: 5px; font-size: var(--mrr-font-size-xs); color: var(--text-secondary); }
 

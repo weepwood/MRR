@@ -413,14 +413,3 @@ html[data-mrr-palette="gr8r"] body .mrr-vscode-search [data-index] > a.bg-accent
   background-color: var(--mrr-tone-primary-soft);
   border-color: var(--mrr-tone-primary-border);
 }
-
-/* ===== 14. 页面局部的冷色残留 ===== */
-
-/*
- * 数据交换中心的数据集切换器把悬停 / 按下底色写成 rgb(15 23 42 / 4%~7%)（冷色墨），
- * 在暖灰轨道上会泛出一层蓝灰。暖色主题下改指表面令牌：悬停抬高一档、按下再深一档。
- */
-html[data-mrr-palette="gr8r"] .dataset-switch {
-  --el-segmented-item-hover-bg-color: var(--mrr-secondary);
-  --el-segmented-item-active-bg-color: var(--mrr-border);
-}

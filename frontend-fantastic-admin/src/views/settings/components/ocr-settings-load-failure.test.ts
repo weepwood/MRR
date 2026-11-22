@@ -7,6 +7,13 @@ import OcrClassificationSettings from './OcrClassificationSettings.vue'
 const { success, error, warning } = vi.hoisted(() => ({ success: vi.fn(), error: vi.fn(), warning: vi.fn() }))
 vi.mock('element-plus', () => ({ ElMessage: { success, error, warning } }))
 vi.mock('@/api/modules/settings', () => ({ getSystemSettings: vi.fn(), saveSystemSettings: vi.fn() }))
+/*
+ * 分类规则子组件与本用例无关（shallowMount 本来也会把它替换成桩），但模块本身仍会被加载：
+ * ClassificationRules → useAuth / api/modules/classification → api/index → user store → @/router
+ * → routes.ts → virtual:generated-pages。该虚拟模块只由完整 Vite 配置里的页面插件提供，
+ * vitest.config.ts 没有注册，导入即失败。这里直接替换整个子组件模块，切断这条导入链。
+ */
+vi.mock('./ClassificationRules.vue', () => ({ default: { name: 'ClassificationRules', render: () => null } }))
 
 interface State {
   isDirty: boolean

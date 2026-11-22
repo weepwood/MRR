@@ -130,25 +130,34 @@ onMounted(loadData)
             stripe
             empty-text="暂无慢接口数据"
           >
-            <el-table-column prop="method" label="方法" width="90" />
-            <el-table-column prop="routePattern" label="接口模板" min-width="220" show-overflow-tooltip />
-            <el-table-column prop="requestCount" label="请求数" width="100" />
-            <el-table-column label="错误率" width="110">
+            <el-table-column prop="method" label="方法" width="90">
+              <template #default="{ row }">
+                <span class="endpoint-mono">{{ row.method }}</span>
+              </template>
+            </el-table-column>
+            <el-table-column prop="routePattern" label="接口模板" min-width="220" show-overflow-tooltip>
+              <template #default="{ row }">
+                <span class="endpoint-mono">{{ row.routePattern }}</span>
+              </template>
+            </el-table-column>
+            <!-- 数值列右对齐，按个位对齐便于比较；P95 是本表的排序依据，加粗突出。 -->
+            <el-table-column prop="requestCount" label="请求数" width="100" align="right" />
+            <el-table-column label="错误率" width="110" align="right">
               <template #default="{ row }">
                 {{ formatPercent(errorRate(row.errorCount, row.requestCount)) }}
               </template>
             </el-table-column>
-            <el-table-column label="客户端平均" width="130">
+            <el-table-column label="客户端平均" width="130" align="right">
               <template #default="{ row }">
                 {{ formatDuration(row.avgClientDurationMs) }}
               </template>
             </el-table-column>
-            <el-table-column label="客户端 P95" width="130">
+            <el-table-column label="客户端 P95" width="130" align="right">
               <template #default="{ row }">
-                {{ formatDuration(row.p95ClientDurationMs) }}
+                <strong class="endpoint-p95">{{ formatDuration(row.p95ClientDurationMs) }}</strong>
               </template>
             </el-table-column>
-            <el-table-column label="服务端平均" width="130">
+            <el-table-column label="服务端平均" width="130" align="right">
               <template #default="{ row }">
                 {{ formatDuration(row.avgServerDurationMs) }}
               </template>
@@ -167,6 +176,15 @@ onMounted(loadData)
   min-width: 0;
   border: 1px solid var(--mrr-border);
   border-radius: var(--mrr-radius-card);
+}
+
+.endpoint-mono {
+  font-family: var(--mrr-font-mono);
+  font-size: var(--mrr-font-size-xs);
+}
+
+.endpoint-p95 {
+  font-weight: 600;
 }
 
 .analysis-stack {

@@ -640,6 +640,10 @@ onMounted(loadData)
     </section>
 
     <MrrDataTablePanel class="users-table-panel" title="用户列表" :count="total">
+      <!-- 「创建用户」是对列表的写操作，放在卡头操作区；筛选栏只保留查询 / 重置，不再把增删与查询混在一组。 -->
+      <template v-if="canManage" #actions>
+        <el-button type="primary" @click="openCreate"><FaIcon name="i-lucide:user-round-plus" />创建用户</el-button>
+      </template>
       <template #filters>
         <MrrFilterBar class="users-filter-bar" embedded :focus-ring="false">
           <div class="users-filter__field users-filter__keyword">
@@ -658,7 +662,6 @@ onMounted(loadData)
           <template #actions>
             <el-button :aria-busy="dataLoadingAction === 'search'" :aria-disabled="dataLoadingAction === 'search'" @click="handleSearch"><FaIcon :name="dataLoadingAction === 'search' ? 'i-lucide:loader-circle' : 'i-lucide:search'" class="mr-1" :class="{ 'animate-spin': dataLoadingAction === 'search' }" />查询</el-button>
             <el-button :aria-busy="dataLoadingAction === 'reset'" :aria-disabled="dataLoadingAction === 'reset'" @click="resetFilters"><FaIcon :name="dataLoadingAction === 'reset' ? 'i-lucide:loader-circle' : 'i-lucide:rotate-ccw'" class="mr-1" :class="{ 'animate-spin': dataLoadingAction === 'reset' }" />重置</el-button>
-            <el-button v-if="canManage" type="primary" @click="openCreate"><FaIcon name="i-lucide:user-round-plus" />创建用户</el-button>
           </template>
         </MrrFilterBar>
       </template>
@@ -801,16 +804,16 @@ onMounted(loadData)
 .users-filter__field { display: grid; min-width: 0; }
 .users-filter__keyword { flex: 1 1 320px; min-width: 260px; }
 .users-filter__select { flex: 0 1 190px; width: 190px; }
-:global(.users-table-panel .users-filter-bar.mrr-filter-bar--embedded) { border-bottom: 0 !important; }
 .users-filter-bar :deep(.mrr-filter-bar__actions) { align-self: flex-end; }
-:global(.users-table-panel.el-card), .users-table-panel :deep(.el-card) { border-top: 0 !important; border-bottom: 0 !important; box-shadow: none; }
-.users-table-panel :deep(.el-pagination .el-pager li) { height: 30px; line-height: 30px; }
-.users-table-panel :deep(.el-card__header) { border-bottom: 0 !important; }
-.users-table-panel :deep(.mrr-data-table-panel__pagination) { border-top: 0 !important; }
-.users-filter-bar :deep(.el-input__wrapper.is-focus), .users-filter-bar :deep(.el-select__wrapper.is-focused) { box-shadow: 0 0 0 1px var(--mrr-ring) inset; }
+
+/*
+ * 已删除的局部覆盖：卡片上下边框、卡头与分页分隔线（!important 清零）、30px 页码、去掉焦点光晕。
+ * 这些让用户页成为唯一「没有分区线、页码矮一截」的列表页；现在回到共享面板的统一外观，
+ * 输入框聚焦也恢复全站一致的焦点环（DESIGN.md §5.2）。
+ */
 :global(.el-message.users-query-success-notice) { transition: opacity var(--mrr-motion-overlay) var(--mrr-ease-out), transform var(--mrr-motion-overlay) var(--mrr-ease-out), top var(--mrr-motion-overlay) var(--mrr-ease-out), bottom var(--mrr-motion-overlay) var(--mrr-ease-out), margin-top var(--mrr-motion-overlay) var(--mrr-ease-out); box-shadow: var(--mrr-shadow-md); }
 .users-state { display: grid; min-height: 280px; padding: var(--mrr-space-5); place-items: center; }
-.user-identity { display: flex; gap: 10px; align-items: center; min-width: 0; }
+.user-identity { display: flex; gap: var(--mrr-space-2); align-items: center; min-width: 0; }
 .user-avatar { display: grid; flex: 0 0 30px; width: 30px; height: 30px; font-size: var(--mrr-font-size-xs); font-weight: 700; color: var(--color-primary); background: color-mix(in srgb, var(--color-primary) 9%, var(--mrr-card)); border: 1px solid var(--mrr-border); border-radius: 50%; place-items: center; }
 
 /* Chrome 86 回退：头像块的浅色底失效后缩写文字会裸浮在表格底色上。 */
@@ -821,18 +824,18 @@ onMounted(loadData)
 }
 .application-info { display: grid; gap: 3px; min-width: 0; }
 .application-info span { font-size: var(--mrr-font-size-xs); color: var(--mrr-foreground); }
-.application-info small { overflow: hidden; font-size: 11px; line-height: 1.45; color: var(--mrr-muted-foreground); text-overflow: ellipsis; }
+.application-info small { overflow: hidden; font-size: var(--mrr-font-size-xs); line-height: 1.45; color: var(--mrr-muted-foreground); text-overflow: ellipsis; }
 .application-info .reject-reason { color: var(--mrr-destructive); }
 .no-perm, .unit { margin-left: var(--mrr-space-2); font-size: var(--mrr-font-size-xs); color: var(--mrr-muted-foreground); }
-.dialog-form { display: grid; gap: 2px; margin-top: 18px; }
-.readonly-field { width: 100%; min-height: var(--mrr-control-height); padding: 9px 12px; color: var(--mrr-muted-foreground); background: var(--mrr-muted); border: 1px solid var(--mrr-border); border-radius: var(--mrr-radius-md); }
+.dialog-form { display: grid; gap: 2px; margin-top: var(--mrr-space-4); }
+.readonly-field { display: flex; align-items: center; width: 100%; min-height: var(--mrr-control-height); padding: 0 var(--mrr-space-3); color: var(--mrr-muted-foreground); background: var(--mrr-muted); border: 1px solid var(--mrr-border); border-radius: var(--mrr-radius-md); }
 .full-width { width: 100%; }
-.review-summary, .credential-panel { display: grid; gap: 10px; padding: 18px; margin-top: 18px; background: var(--mrr-muted); border: 1px solid var(--mrr-border); border-radius: var(--mrr-radius-lg); }
+.review-summary, .credential-panel { display: grid; gap: var(--mrr-space-3); padding: var(--mrr-space-4); margin-top: var(--mrr-space-4); background: var(--mrr-muted); border: 1px solid var(--mrr-border); border-radius: var(--mrr-radius-lg); }
 .review-summary > div, .credential-panel > div { display: grid; grid-template-columns: 90px 1fr; gap: var(--mrr-space-3); align-items: start; }
 .review-summary span, .credential-panel span { font-size: var(--mrr-font-size-xs); color: var(--mrr-muted-foreground); }
 .review-summary p { margin: 0; line-height: 1.6; white-space: pre-wrap; }
-.credential-panel code { padding: 8px 10px; font-size: 15px; font-weight: 700; word-break: break-all; background: var(--mrr-card); border-radius: var(--mrr-radius-md); }
-.credential-actions { display: flex; gap: 10px; margin-top: 14px; }
+.credential-panel code { padding: var(--mrr-space-2) var(--mrr-space-3); font-family: var(--mrr-font-mono); font-size: var(--mrr-font-size-md); letter-spacing: 0.02em; font-weight: 700; word-break: break-all; background: var(--mrr-card); border-radius: var(--mrr-radius-md); }
+.credential-actions { display: flex; gap: var(--mrr-space-2); margin-top: var(--mrr-space-4); }
 .acknowledge { margin-top: var(--mrr-space-4); }
 @media (max-width: 760px) { .users-filter__keyword, .users-filter__select { flex: 1 1 100%; width: 100%; } .credential-actions { flex-direction: column; } }
 </style>

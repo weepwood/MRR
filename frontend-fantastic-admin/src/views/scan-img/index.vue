@@ -810,7 +810,7 @@ watch(idCardParam, async (newId) => {
   overflow: hidden;
   background: var(--color-bg);
   border-radius: var(--mrr-radius-card);
-  box-shadow: 0 1px 4px rgb(0 0 0 / 8%);
+  box-shadow: var(--mrr-shadow-xs);
 }
 
 .left-top {
@@ -909,7 +909,7 @@ watch(idCardParam, async (newId) => {
   cursor: pointer;
   background: var(--color-bg-warm);
   border: 1px solid var(--color-border);
-  border-radius: 6px;
+  border-radius: var(--mrr-radius-sm);
 }
 
 .thumbs-mode-btn.active,
@@ -994,7 +994,7 @@ watch(idCardParam, async (newId) => {
   overflow: hidden;
   background: var(--color-bg);
   border-radius: var(--mrr-radius-card);
-  box-shadow: 0 1px 4px rgb(0 0 0 / 8%);
+  box-shadow: var(--mrr-shadow-xs);
 }
 
 /* ==================== 缩略图区域 ==================== */
@@ -1040,7 +1040,7 @@ watch(idCardParam, async (newId) => {
   height: 100%;
   object-fit: contain;
   background: var(--color-bg-warm);
-  border-radius: 4px;
+  border-radius: max(0px, calc(var(--mrr-radius-sm) - 2px));
   opacity: 1;
   transition: opacity var(--mrr-motion-move) var(--mrr-ease-out);
 }
@@ -1149,6 +1149,8 @@ watch(idCardParam, async (newId) => {
   color: var(--mrr-primary-foreground);
   background: var(--color-bg-dark);
   border-radius: var(--mrr-radius-lg);
+
+  /* 浮在深色全屏看图区之上，保留更重的黑色投影：令牌投影在深底上几乎不可见。 */
   box-shadow: 0 8px 24px rgb(0 0 0 / 20%);
 }
 
@@ -1171,7 +1173,7 @@ watch(idCardParam, async (newId) => {
   font-size: 13px;
   cursor: pointer;
   background: rgb(255 255 255 / 6%);
-  border-radius: 6px;
+  border-radius: var(--mrr-radius-sm);
   transition: background-color var(--mrr-motion-feedback) var(--mrr-ease-out);
 }
 
@@ -1241,7 +1243,7 @@ watch(idCardParam, async (newId) => {
   cursor: pointer;
   background: var(--el-color-danger);
   border: none;
-  border-radius: 6px;
+  border-radius: var(--mrr-control-radius);
   transition: opacity var(--mrr-motion-feedback) var(--mrr-ease-out);
 }
 
@@ -1269,7 +1271,7 @@ watch(idCardParam, async (newId) => {
   text-align: center;
   background: var(--color-bg);
   border-radius: var(--mrr-radius-card);
-  box-shadow: 0 16px 48px rgb(0 0 0 / 20%);
+  box-shadow: var(--mrr-shadow-lg);
 }
 
 .download-spinner-large {

@@ -161,8 +161,8 @@ function downloadTemplate() {
             下载 CSV 模板
           </el-button>
         </div>
-        <div class="field-grid">
-          <div v-for="field in requiredFields" :key="field.name" class="field-item">
+        <div class="mrr-field-grid">
+          <div v-for="field in requiredFields" :key="field.name" class="mrr-field-item">
             <code>{{ field.name }}</code>
             <span>{{ field.description }}</span>
           </div>
@@ -196,26 +196,26 @@ function downloadTemplate() {
       </el-upload>
 
       <section v-if="validationResult" class="result-section">
-        <div class="result-summary">
-          <div class="summary-item">
-            <span>文件编码</span>
-            <strong>{{ validationResult.encoding }}</strong>
+        <div class="result-summary mrr-stat-strip">
+          <div class="summary-item mrr-stat-tile">
+            <span class="mrr-stat-tile__label">文件编码</span>
+            <strong class="mrr-stat-tile__value">{{ validationResult.encoding }}</strong>
           </div>
-          <div class="summary-item">
-            <span>数据行</span>
-            <strong>{{ validationResult.totalRows }}</strong>
+          <div class="summary-item mrr-stat-tile">
+            <span class="mrr-stat-tile__label">数据行</span>
+            <strong class="mrr-stat-tile__value">{{ validationResult.totalRows }}</strong>
           </div>
-          <div class="summary-item">
-            <span>有效唯一行</span>
-            <strong>{{ validationResult.validRows }}</strong>
+          <div class="summary-item mrr-stat-tile">
+            <span class="mrr-stat-tile__label">有效唯一行</span>
+            <strong class="mrr-stat-tile__value">{{ validationResult.validRows }}</strong>
           </div>
-          <div class="summary-item">
-            <span>重复行</span>
-            <strong>{{ validationResult.duplicateRows }}</strong>
+          <div class="summary-item mrr-stat-tile">
+            <span class="mrr-stat-tile__label">重复行</span>
+            <strong class="mrr-stat-tile__value">{{ validationResult.duplicateRows }}</strong>
           </div>
-          <div class="summary-item" :class="{ danger: validationResult.errorRows > 0 }">
-            <span>错误行</span>
-            <strong>{{ validationResult.errorRows }}</strong>
+          <div class="summary-item mrr-stat-tile">
+            <span class="mrr-stat-tile__label">错误行</span>
+            <strong class="mrr-stat-tile__value" :class="{ 'mrr-stat-tile__value--danger': validationResult.errorRows > 0 }">{{ validationResult.errorRows }}</strong>
           </div>
         </div>
 
@@ -304,59 +304,10 @@ function downloadTemplate() {
   color: var(--el-text-color-secondary);
 }
 
-.field-grid {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 8px 12px;
-}
-
-.field-item {
-  display: flex;
-  gap: var(--mrr-space-3);
-  align-items: center;
-  min-width: 0;
-  padding: 8px var(--mrr-space-3);
-  background: var(--el-fill-color-lighter);
-  border: 1px solid var(--el-border-color-lighter);
-  border-radius: var(--mrr-radius-md);
-}
-
-.field-item code {
-  flex: 0 0 112px;
-  font-weight: 700;
-  color: var(--el-color-primary);
-}
-
-.field-item span {
-  font-size: 12px;
-  color: var(--el-text-color-secondary);
-}
-
 .result-summary {
   display: grid;
   grid-template-columns: repeat(5, minmax(0, 1fr));
   gap: var(--mrr-space-3);
-}
-
-.summary-item {
-  display: grid;
-  gap: 4px;
-  padding: 12px;
-  border: 1px solid var(--el-border-color-lighter);
-  border-radius: var(--mrr-radius-md);
-}
-
-.summary-item span {
-  font-size: 12px;
-  color: var(--el-text-color-secondary);
-}
-
-.summary-item strong {
-  font-size: 20px;
-}
-
-.summary-item.danger strong {
-  color: var(--el-color-danger);
 }
 
 .truncated-tip {
@@ -368,10 +319,6 @@ function downloadTemplate() {
 @media (max-width: 760px) {
   .section-heading {
     flex-direction: column;
-  }
-
-  .field-grid {
-    grid-template-columns: 1fr;
   }
 
   .result-summary {

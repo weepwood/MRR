@@ -139,7 +139,7 @@ function formatBucket(bucket: string) {
 
   display: grid;
   grid-template-columns: auto auto;
-  gap: 2px 5px;
+  gap: 2px var(--mrr-space-1);
   align-content: center;
   min-width: 0;
   padding: 0 var(--mrr-space-4);
@@ -161,7 +161,7 @@ function formatBucket(bucket: string) {
   min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
-  font-size: 11px;
+  font-size: var(--mrr-font-size-xs);
   color: var(--el-text-color-secondary);
   white-space: nowrap;
 }
@@ -181,6 +181,7 @@ function formatBucket(bucket: string) {
   text-overflow: ellipsis;
   font-size: 18px;
   font-weight: 650;
+  font-variant-numeric: tabular-nums;
   line-height: 1.3;
   color: var(--el-text-color-primary);
   white-space: nowrap;
@@ -191,7 +192,7 @@ function formatBucket(bucket: string) {
   padding-bottom: 2px;
   overflow: hidden;
   text-overflow: ellipsis;
-  font-size: 10px;
+  font-size: var(--mrr-font-size-xs);
   font-style: normal;
   color: var(--el-text-color-placeholder);
   white-space: nowrap;
@@ -235,7 +236,7 @@ function formatBucket(bucket: string) {
 
 .section-heading span,
 .section-heading small {
-  font-size: 11px;
+  font-size: var(--mrr-font-size-xs);
   color: var(--el-text-color-secondary);
 }
 

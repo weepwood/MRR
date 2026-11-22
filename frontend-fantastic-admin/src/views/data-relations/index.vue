@@ -500,7 +500,7 @@ onMounted(loadDashboard)
               <el-card shadow="never" class="section-card archive-header-card">
                 <div class="archive-header">
                   <div>
-                    <span>病案主档 #{{ relationDetail.archive.id }}</span>
+                    <span class="archive-header__id">病案主档 #{{ relationDetail.archive.id }}</span>
                     <h3>{{ relationDetail.archive.patientName || '未记录患者姓名' }}</h3>
                     <p>
                       病案号（BAH）：{{ relationDetail.archive.bah || '—' }} ·
@@ -514,22 +514,28 @@ onMounted(loadDashboard)
                 </div>
               </el-card>
 
-              <section class="relation-count-grid">
-                <el-card shadow="never">
-                  <span>统计记录</span><strong>{{ relationDetail.statistics.length }}</strong>
-                </el-card>
-                <el-card shadow="never">
-                  <span>患者记录</span><strong>{{ relationDetail.patients.length }}</strong>
-                </el-card>
-                <el-card shadow="never">
-                  <span>装箱记录</span><strong>{{ relationDetail.boxes.length }}</strong>
-                </el-card>
-                <el-card shadow="never">
-                  <span>有效扫描</span><strong>{{ formatNumber(relationDetail.scanSummary.activeCount) }}</strong>
-                </el-card>
-                <el-card shadow="never">
-                  <span>未关联候选扫描</span><strong>{{ formatNumber(relationDetail.scanSummary.unlinkedCandidateCount) }}</strong>
-                </el-card>
+              <!-- 五个计数只是关系概况，用卡内摘要块；原来是五张带外框的 el-card，与下方真正的分区卡同一层级。 -->
+              <section class="relation-count-grid mrr-stat-strip" aria-label="关联记录数">
+                <div class="mrr-stat-tile">
+                  <span class="mrr-stat-tile__label">统计记录</span>
+                  <strong class="mrr-stat-tile__value">{{ relationDetail.statistics.length }}</strong>
+                </div>
+                <div class="mrr-stat-tile">
+                  <span class="mrr-stat-tile__label">患者记录</span>
+                  <strong class="mrr-stat-tile__value">{{ relationDetail.patients.length }}</strong>
+                </div>
+                <div class="mrr-stat-tile">
+                  <span class="mrr-stat-tile__label">装箱记录</span>
+                  <strong class="mrr-stat-tile__value">{{ relationDetail.boxes.length }}</strong>
+                </div>
+                <div class="mrr-stat-tile">
+                  <span class="mrr-stat-tile__label">有效扫描</span>
+                  <strong class="mrr-stat-tile__value">{{ formatNumber(relationDetail.scanSummary.activeCount) }}</strong>
+                </div>
+                <div class="mrr-stat-tile">
+                  <span class="mrr-stat-tile__label">未关联候选扫描</span>
+                  <strong class="mrr-stat-tile__value">{{ formatNumber(relationDetail.scanSummary.unlinkedCandidateCount) }}</strong>
+                </div>
               </section>
 
               <el-alert
@@ -771,10 +777,6 @@ p {
   gap: var(--mrr-space-4);
 }
 
-.relation-count-grid span {
-  color: var(--el-text-color-secondary);
-}
-
 .relation-card small {
   color: var(--el-text-color-secondary);
 }
@@ -822,6 +824,8 @@ p {
 
 .coverage-row strong {
   font-size: 24px;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.02em;
 }
 
 .relation-card dl {
@@ -892,13 +896,22 @@ p {
   color: var(--mrr-muted-foreground);
 }
 
+/* 当前对象的强调条与 OSS 迁移「当前任务」卡同宽（3px），两处语义相同：这张卡是当前焦点对象。 */
 .archive-header-card {
-  border-left: 4px solid var(--el-color-primary);
+  border-left: 3px solid var(--el-color-primary);
+}
+
+.archive-header__id {
+  font-family: var(--mrr-font-mono);
+  font-size: var(--mrr-font-size-xs);
+  color: var(--el-text-color-secondary);
 }
 
 .archive-header h3 {
   margin: var(--mrr-space-1) 0;
-  font-size: 22px;
+  font-size: var(--mrr-font-size-title-compact);
+  font-weight: 650;
+  line-height: 1.3;
 }
 
 .archive-header p {
@@ -908,15 +921,6 @@ p {
 
 .relation-count-grid {
   grid-template-columns: repeat(5, minmax(0, 1fr));
-}
-
-.relation-count-grid :deep(.el-card__body) {
-  display: grid;
-  gap: var(--mrr-space-2);
-}
-
-.relation-count-grid strong {
-  font-size: 22px;
 }
 
 .detail-tabs {

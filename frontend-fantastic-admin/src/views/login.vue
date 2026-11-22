@@ -528,14 +528,14 @@ onBeforeUnmount(() => {
 .product-version { font-family: inherit; font-size: 11px; color: var(--mrr-primary); }
 .environment-panel { max-height: min(68vh, 620px); padding: 0; margin: 0; overflow-y: auto; background: transparent; border: 0; box-shadow: none; scrollbar-color: var(--mrr-border-strong) transparent; scrollbar-width: thin; }
 .environment-panel__header { display: flex; gap: var(--mrr-space-4); align-items: center; justify-content: space-between; padding: 0; margin-bottom: var(--mrr-space-2); }
-.environment-panel__eyebrow { font-size: 10px; font-weight: 750; color: var(--mrr-primary); letter-spacing: 0.08em; }
+.environment-panel__eyebrow { font-size: var(--mrr-font-size-xs); font-weight: 750; color: var(--mrr-primary); letter-spacing: 0.08em; }
 .environment-panel__header h2 { margin: 3px 0 0; font-size: 16px; font-weight: 750; color: var(--mrr-foreground); }
 .environment-status { display: inline-flex; flex: 0 0 auto; gap: var(--mrr-space-2); align-items: center; padding: 6px 10px; font-size: 11px; font-weight: 700; background: var(--mrr-muted); border: 1px solid var(--mrr-border); border-radius: var(--mrr-radius-pill); }
 .environment-status .status-dot { width: 6px; height: 6px; }
 .environment-groups { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--mrr-space-3); }
 .environment-group { min-width: 0; padding: var(--mrr-space-3); background: color-mix(in srgb, var(--mrr-card) 68%, transparent); border: 1px solid var(--mrr-border); border-color: color-mix(in srgb, var(--mrr-border) 72%, transparent); border-radius: var(--mrr-radius-md); }
 .environment-group--client { grid-column: 1 / -1; }
-.environment-group h3 { margin: 0 0 var(--mrr-space-3); font-size: 10px; font-weight: 750; color: var(--mrr-primary); letter-spacing: 0.08em; }
+.environment-group h3 { margin: 0 0 var(--mrr-space-3); font-size: var(--mrr-font-size-xs); font-weight: 750; color: var(--mrr-primary); letter-spacing: 0.08em; }
 .environment-group dl { display: grid; gap: 7px; margin: 0; }
 .environment-group--client dl { grid-template-columns: repeat(2, minmax(0, 1fr)); column-gap: var(--mrr-space-5); }
 .environment-item { display: flex; gap: var(--mrr-space-3); align-items: baseline; justify-content: space-between; }

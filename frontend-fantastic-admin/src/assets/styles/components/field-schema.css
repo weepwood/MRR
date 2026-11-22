@@ -1,0 +1,53 @@
+/*
+ * 导入 / 导出字段说明表：`.mrr-field-grid` > `.mrr-field-item` > `code` + `span`
+ *
+ * 此前数据导入导出页、数据集导入面板、患者导入弹窗各写一份：字段名列宽 148 / 128 / 112px、
+ * 字段名 700 粗主色比例字体，三处外观相近但对不齐。统一后：
+ * - 字段名用等宽字体、600 字重：字段名是要照抄进表头的标识符，等宽更易核对拼写；
+ * - 字段名列宽由 --mrr-field-name-width 控制（默认 132px），个别页面需要时可覆盖；
+ * - 底色用实色 --mrr-muted，Chrome 86 无需回退。
+ */
+.mrr-field-grid {
+  --mrr-field-name-width: 132px;
+
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--mrr-space-2) var(--mrr-space-3);
+  min-width: 0;
+}
+
+.mrr-field-item {
+  display: flex;
+  gap: var(--mrr-space-3);
+  align-items: baseline;
+  min-width: 0;
+  padding: var(--mrr-space-2) var(--mrr-space-3);
+  background: var(--mrr-muted);
+  border: 1px solid var(--mrr-border);
+  border-radius: var(--mrr-radius-md);
+}
+
+.mrr-field-item > code {
+  flex: 0 0 var(--mrr-field-name-width);
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-family: var(--mrr-font-mono);
+  font-size: var(--mrr-font-size-xs);
+  font-weight: 600;
+  color: var(--mrr-primary);
+  white-space: nowrap;
+}
+
+.mrr-field-item > span {
+  min-width: 0;
+  font-size: var(--mrr-font-size-xs);
+  line-height: 1.5;
+  color: var(--mrr-muted-foreground);
+}
+
+@media (max-width: 760px) {
+  .mrr-field-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}

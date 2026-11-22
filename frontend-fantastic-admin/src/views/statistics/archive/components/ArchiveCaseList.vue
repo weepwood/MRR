@@ -144,7 +144,7 @@ onBeforeUnmount(() => window.removeEventListener(ARCHIVE_DEPARTMENT_THEME_UPDATE
 
 .case-header small {
   margin-top: 2px;
-  font-size: 11px;
+  font-size: var(--mrr-font-size-xs);
 }
 
 .case-list {
@@ -193,7 +193,7 @@ onBeforeUnmount(() => window.removeEventListener(ARCHIVE_DEPARTMENT_THEME_UPDATE
 
 .case-main small,
 .case-codes {
-  font-size: 11px;
+  font-size: var(--mrr-font-size-xs);
 }
 
 .case-codes {

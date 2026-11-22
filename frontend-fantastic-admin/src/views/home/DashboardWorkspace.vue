@@ -825,7 +825,8 @@ watch(storageKey, loadPreferences, { immediate: true })
   height: 18px;
   padding-inline: var(--mrr-space-1);
   margin-left: 2px;
-  font-size: 10px;
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
   color: var(--mrr-primary-foreground);
   background: var(--mrr-primary);
   border-radius: var(--mrr-radius-pill);
@@ -1060,7 +1061,7 @@ watch(storageKey, loadPreferences, { immediate: true })
   gap: 3px;
   align-items: center;
   padding: 2px var(--mrr-space-2);
-  font-size: 9px;
+  font-size: var(--mrr-font-size-xs);
   font-weight: 650;
   color: var(--widget-accent);
   background: color-mix(in srgb, var(--widget-accent) 10%, var(--mrr-card));
@@ -1122,7 +1123,7 @@ watch(storageKey, loadPreferences, { immediate: true })
   justify-content: flex-end;
   padding-top: var(--mrr-space-2);
   margin-top: auto;
-  font-size: 10px;
+  font-size: var(--mrr-font-size-xs);
   color: var(--mrr-muted-foreground);
 }
 
@@ -1227,7 +1228,7 @@ watch(storageKey, loadPreferences, { immediate: true })
 }
 
 .widget-manager-item__copy small {
-  font-size: 10px;
+  font-size: var(--mrr-font-size-xs);
   color: var(--mrr-muted-foreground);
 }
 

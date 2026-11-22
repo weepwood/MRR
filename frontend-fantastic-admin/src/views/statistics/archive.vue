@@ -1187,7 +1187,7 @@ onUnmounted(() => {
   background: var(--surface);
   border: 1px solid var(--divider);
   border-radius: var(--mrr-radius-xl);
-  box-shadow: 0 12px 32px rgb(0 0 0 / 14%);
+  box-shadow: var(--mrr-shadow-md);
   transform: translateX(-50%);
 }
 
@@ -1293,7 +1293,7 @@ onUnmounted(() => {
   background: var(--surface);
   border: 1px solid var(--divider);
   border-radius: var(--mrr-radius-2xl);
-  box-shadow: 0 12px 32px rgb(0 0 0 / 5%);
+  box-shadow: var(--mrr-shadow-sm);
 }
 
 .is-empty .search-card {

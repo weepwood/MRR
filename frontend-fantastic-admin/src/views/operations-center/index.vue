@@ -631,7 +631,13 @@ onMounted(async () => {
             <MrrMetricCard label="警告" value-tone="warning" :value="diagnosticRun.summary.warnings" />
           </section>
           <div class="diagnostic-list">
-            <el-card v-for="check in diagnosticRun.checks" :key="check.code" shadow="never" class="check-card">
+            <el-card
+              v-for="check in diagnosticRun.checks"
+              :key="check.code"
+              shadow="never"
+              class="check-card"
+              :class="check.passed ? 'check-card--passed' : check.severity === 'CRITICAL' ? 'check-card--critical' : 'check-card--warning'"
+            >
               <div class="check-row">
                 <div class="check-copy">
                   <div class="check-title-line">
@@ -663,7 +669,8 @@ onMounted(async () => {
       </el-tab-pane>
 
       <el-tab-pane label="图片来源诊断" name="image">
-        <el-card shadow="never">
+        <!-- 条件区补标题与说明，与本页其他分区卡同一层级；原来是一张无标题的 el-card，只有三个输入框。 -->
+        <MrrSectionCard title="诊断目标" description="填写病案号、上架号或图片 ID 中的任一项，查看该影像的来源解析与回退过程。">
           <el-form :model="imageForm" inline class="diagnosis-form">
             <el-form-item label="病案号">
               <el-input v-model="imageForm.bah" clearable placeholder="输入病案号" />
@@ -680,7 +687,7 @@ onMounted(async () => {
               </el-button>
             </el-form-item>
           </el-form>
-        </el-card>
+        </MrrSectionCard>
         <template v-if="imageDiagnosis">
           <section class="mrr-metric-grid mrr-metric-grid--three metric-row">
             <MrrMetricCard
@@ -1070,8 +1077,24 @@ onMounted(async () => {
   flex-wrap: wrap;
 }
 
+/*
+ * 左侧状态条按检查结果着色：原来所有检查都是同一条灰边，几十项检查里要逐张看标签才知道哪项失败。
+ * 状态仍由右侧文字标签表达，色条只是辅助扫读（DESIGN.md §1：状态不只靠颜色）。宽度与本页其他强调条一致取 3px。
+ */
 .check-card {
-  border-left: 4px solid var(--el-border-color);
+  border-left: 3px solid var(--mrr-border-strong);
+}
+
+.check-card--passed {
+  border-left-color: var(--mrr-tone-success);
+}
+
+.check-card--warning {
+  border-left-color: var(--mrr-tone-warning);
+}
+
+.check-card--critical {
+  border-left-color: var(--mrr-tone-danger);
 }
 
 .check-copy {
@@ -1131,6 +1154,13 @@ onMounted(async () => {
 .diagnosis-form {
   display: flex;
   flex-wrap: wrap;
+  gap: 0 var(--mrr-space-4);
+  align-items: flex-end;
+}
+
+.diagnosis-form :deep(.el-form-item) {
+  margin-right: 0;
+  margin-bottom: 0;
 }
 
 .timeline-title {

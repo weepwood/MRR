@@ -4,6 +4,7 @@ import { computed, onMounted, reactive, ref } from 'vue'
 import { describeBrowseError, getBrowseRows, getBrowseSchema, getBrowseTables } from '@/api/modules/database-browse'
 import MrrPageHeader from '@/components/MrrPageHeader/index.vue'
 import MrrPageShell from '@/components/MrrPageShell/index.vue'
+import MrrSectionCard from '@/components/MrrSectionCard/index.vue'
 
 defineOptions({ name: 'DatabaseBrowsePage' })
 
@@ -204,7 +205,8 @@ onMounted(loadTables)
       description="只读浏览已授权的数据表。含个人信息的字段已脱敏，大表限制单页行数；离开页面后结果即被丢弃，不做缓存。"
     />
 
-    <el-card shadow="never">
+    <!-- 两块原为无标题 el-card：补分区标题，与其他业务页的「条件卡 + 结果卡」结构一致（DESIGN.md §3.4）。 -->
+    <MrrSectionCard title="选择数据表" description="只列出当前账号已授权的表；部分大表必须带过滤条件才会返回数据。" icon="i-lucide:database">
       <div class="toolbar">
         <span class="toolbar-label">数据表</span>
         <el-select
@@ -287,9 +289,9 @@ onMounted(loadTables)
           </el-button>
         </div>
       </div>
-    </el-card>
+    </MrrSectionCard>
 
-    <el-card v-if="schema" shadow="never">
+    <MrrSectionCard v-if="schema" title="查询结果" :description="currentTable?.label" body-padding="normal">
       <el-table v-loading="loading" :data="rows" stripe border class="result-table">
         <el-table-column
           v-for="column in columns"
@@ -336,7 +338,7 @@ onMounted(loadTables)
         show-icon
         :title="`以下列内容过长已截断：${page.truncatedColumns.join('、')}`"
       />
-    </el-card>
+    </MrrSectionCard>
   </MrrPageShell>
 </template>
 
@@ -413,7 +415,8 @@ onMounted(loadTables)
 }
 
 .column-name {
-  font-size: 11px;
+  font-family: var(--mrr-font-mono);
+  font-size: var(--mrr-font-size-xs);
   font-weight: 400;
   color: var(--mrr-muted-foreground);
 }
@@ -443,17 +446,21 @@ onMounted(loadTables)
   gap: var(--mrr-space-2);
 }
 
+/* 与其他列表页的分页栏一致：上方一条分隔线，把「表格」和「翻页状态」分成两层。 */
 .pager {
   display: flex;
   flex-wrap: wrap;
   gap: var(--mrr-space-2);
   align-items: center;
   justify-content: space-between;
+  padding-top: var(--mrr-space-3);
   margin-top: var(--mrr-space-3);
+  border-top: 1px solid var(--mrr-shell-divider);
 }
 
 .pager-note {
   font-size: var(--mrr-font-size-xs);
+  font-variant-numeric: tabular-nums;
   color: var(--mrr-muted-foreground);
 }
 

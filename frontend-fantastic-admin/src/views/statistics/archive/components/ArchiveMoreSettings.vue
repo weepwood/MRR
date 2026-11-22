@@ -411,7 +411,7 @@ const mouseGestures: { keys: string[], label: string }[] = [
 
 .shortcut-group-title {
   margin-top: 2px;
-  font-size: 11px;
+  font-size: var(--mrr-font-size-xs);
   color: var(--text-tertiary);
 }
 </style>

@@ -482,7 +482,9 @@ onBeforeUnmount(() => {
     <section class="content-layout">
       <div ref="archiveShelfRef" class="archive-shelf">
         <div class="archive-toolbar">
-          <span class="archive-toolbar-title">档案列表</span>
+          <h2 class="archive-toolbar-title">
+档案列表
+</h2>
           <el-radio-group v-model="archiveDisplayMode" aria-label="档案展示方式">
             <el-radio-button value="folder">
               档案袋
@@ -677,26 +679,28 @@ onBeforeUnmount(() => {
 .filter-actions {
   display: flex;
   flex: 0 0 auto;
-  gap: 8px;
+  gap: var(--mrr-space-2);
   margin-left: auto;
 }
 
 .content-layout,
 .archive-shelf {
   display: grid;
-  gap: 16px;
+  gap: var(--mrr-space-4);
 }
 
 .archive-toolbar {
   display: flex;
-  gap: 12px;
+  gap: var(--mrr-space-3);
   align-items: center;
   justify-content: space-between;
 }
 
+/* 与分区卡标题同档（14px / 650）：它是「档案筛选」卡下方的同级分区，原 16px / 700 比卡标题还重。 */
 .archive-toolbar-title {
-  font-size: 16px;
-  font-weight: 700;
+  margin: 0;
+  font-size: var(--mrr-font-size-md);
+  font-weight: 650;
   color: var(--text-primary);
 }
 
@@ -801,7 +805,7 @@ onBeforeUnmount(() => {
   background: linear-gradient(155deg, color-mix(in srgb, var(--folder-tint) 35%, var(--surface)) 0%, var(--surface) 42%);
   border: 1px solid var(--divider);
   border-radius: var(--mrr-radius-xl);
-  box-shadow: 0 7px 20px rgb(15 23 42 / 6%);
+  box-shadow: var(--mrr-shadow-sm);
   transition: transform var(--mrr-motion-move) var(--mrr-ease-out), border-color var(--mrr-motion-feedback) var(--mrr-ease-out), box-shadow var(--mrr-motion-feedback) var(--mrr-ease-out), background-color var(--mrr-motion-feedback) var(--mrr-ease-out);
 }
 
@@ -840,7 +844,7 @@ onBeforeUnmount(() => {
 .archive-folder-card:hover .folder-card-body {
   background: linear-gradient(155deg, color-mix(in srgb, var(--folder-tint) 54%, var(--surface)) 0%, var(--surface) 48%);
   border-color: color-mix(in srgb, var(--folder-accent) 48%, var(--divider));
-  box-shadow: 0 14px 32px rgb(15 23 42 / 12%);
+  box-shadow: var(--mrr-shadow-md);
   transform: var(--mrr-motion-decor, translateY(-2px));
 }
 
@@ -856,7 +860,7 @@ onBeforeUnmount(() => {
   outline-offset: 3px;
   background: linear-gradient(155deg, color-mix(in srgb, var(--folder-tint) 54%, var(--surface)) 0%, var(--surface) 48%);
   border-color: color-mix(in srgb, var(--folder-accent) 72%, var(--divider));
-  box-shadow: 0 14px 32px rgb(15 23 42 / 12%);
+  box-shadow: var(--mrr-shadow-md);
   transform: var(--mrr-motion-decor, translateY(-2px));
 }
 
@@ -888,7 +892,7 @@ onBeforeUnmount(() => {
 
 .archive-folder-card.is-selected .folder-card-body {
   border-color: var(--folder-accent);
-  box-shadow: 0 12px 30px rgb(15 23 42 / 11%), 0 0 0 3px color-mix(in srgb, var(--folder-accent) 18%, transparent);
+  box-shadow: var(--mrr-shadow-md), 0 0 0 3px color-mix(in srgb, var(--folder-accent) 18%, transparent);
 }
 
 .archive-folder-card.is-selected .folder-layer-back {
@@ -1149,13 +1153,13 @@ onBeforeUnmount(() => {
   .archive-folder-card:focus-visible .folder-card-body {
     background: var(--mrr-card);
     border-color: var(--folder-accent);
-    box-shadow: 0 18px 42px rgb(15 23 42 / 14%);
+    box-shadow: var(--mrr-shadow-lg);
   }
 
   .archive-folder-card:hover .folder-layer-back,
   .archive-folder-card:focus-visible .folder-layer-back {
     border-color: var(--folder-accent);
-    box-shadow: 0 8px 18px rgb(15 23 42 / 10%);
+    box-shadow: var(--mrr-shadow-sm);
   }
 
   .archive-folder-card:hover .folder-layer-middle,
@@ -1167,7 +1171,7 @@ onBeforeUnmount(() => {
   .archive-folder-card.is-selected .folder-card-body {
     outline: 2px solid var(--folder-accent);
     outline-offset: 3px;
-    box-shadow: 0 12px 30px rgb(15 23 42 / 11%);
+    box-shadow: var(--mrr-shadow-md);
   }
 
   .folder-selected-label {

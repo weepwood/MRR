@@ -109,6 +109,29 @@ class CiGateTest(unittest.TestCase):
                 self.assertFalse(scope['integration'])
                 self.assertFalse(scope['e2e'])
 
+    def test_backend_only_identity_pr_does_not_rebuild_unchanged_frontend(self):
+        scope = classify_paths(['backend-repo/src/main/java/com/zjcxph/imgapi/controller/UserController.java'])
+        self.assertTrue(scope['integration'])
+        self.assertFalse(scope['integration_frontend'])
+
+    def test_identity_pr_with_frontend_changes_keeps_frontend_checks_in_integration(self):
+        scope = classify_paths(['backend-repo/src/main/java/com/zjcxph/imgapi/controller/UserController.java',
+                                'frontend-fantastic-admin/src/views/users/index.vue'])
+        self.assertTrue(scope['integration'])
+        # frontend job 被集成 job 取代，前端检查必须在集成 job 中继续执行
+        self.assertFalse(scope['frontend'])
+        self.assertTrue(scope['integration_frontend'])
+
+    def test_frontend_only_or_docs_pr_never_selects_integration_frontend(self):
+        for path in ('frontend-fantastic-admin/src/views/users/index.vue', 'README.md'):
+            with self.subTest(path=path):
+                self.assertFalse(classify_paths([path])['integration_frontend'])
+
+    def test_main_integration_always_builds_frontend_for_the_embedded_live_flow(self):
+        scope = classify_paths(['backend-repo/src/main/java/example/Example.java'], mode='integration')
+        self.assertTrue(scope['integration'])
+        self.assertTrue(scope['integration_frontend'])
+
     def test_main_integration_defers_mock_e2e_but_keeps_live_application_checks(self):
         scope = classify_paths(['frontend-fantastic-admin/src/views/login.vue'], mode='integration')
         self.assertTrue(all(scope[key] for key in ('integration', 'build', 'postgres', 'live')))

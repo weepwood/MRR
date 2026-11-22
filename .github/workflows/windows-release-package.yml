@@ -9,6 +9,9 @@ on:
       live_checks:
         type: boolean
         default: false
+      frontend_checks:
+        type: boolean
+        default: true
       retain_candidate:
         type: boolean
         default: false
@@ -20,6 +23,9 @@ on:
   workflow_dispatch:
     inputs:
       full:
+        type: boolean
+        default: true
+      frontend_checks:
         type: boolean
         default: true
       retain_candidate:
@@ -145,6 +151,7 @@ jobs:
           if-no-files-found: ignore
       - name: Test, build and embed frontend
         working-directory: frontend-fantastic-admin
+        if: inputs.full || inputs.live_checks || inputs.frontend_checks
         run: |
           pnpm install --frozen-lockfile
           pnpm lint:tsc

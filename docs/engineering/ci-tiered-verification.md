@@ -20,6 +20,10 @@
 | 数据库恢复、备份、恢复调度 | 增加隔离 Windows PostgreSQL 恢复与失败清理 |
 | CI 发布编排、候选文件校验 | 增加无发布权限的完整候选验收 |
 
+PR 的 frontend job 并行执行类型检查与全量单测，任一失败即失败；backend job 关闭 JaCoCo 插桩，覆盖率回退仅由完整发布验收阻断。
+
+PR 上的集成 job 只在前端确有改动时执行前端检查与构建（`integration_frontend`）；仅后端身份/导入类改动不再重复构建未改动的前端。main 集成与完整发布验收始终构建并嵌入前端。
+
 Service 保守进入 PostgreSQL 范围，因为仅凭路径无法证明没有事务或 SQL 影响。风险选择不读取作者的 P3 标签来减少检查。未运行的测试不能作为成功证据。
 
 复用 `frontend_test_scope.py`、`backend_test_scope.py`；`ci_gate.py` 统一编排两者和 Windows/真实链路范围。git diff 关闭重命名折叠，删除、重命名前后的路径均参与分类。`pr-gate` 使用 always() 检查每个实际选中的 job，失败、取消、输出缺失或意外跳过均拒绝。整个必需 workflow 不使用顶层 paths 过滤。

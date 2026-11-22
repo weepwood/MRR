@@ -51,6 +51,9 @@ def classify_paths(paths, mode='pr') -> dict[str, bool]:
         scope['e2e'] = False
     elif mode != 'pr':
         raise ValueError('Unsupported verification mode.')
+    # PR 集成 job 只有在前端确有改动时才需要重新检查和构建前端；
+    # main 集成要把前端嵌入 JAR 做真实浏览器联调，因此始终需要。
+    scope['integration_frontend'] = scope['integration'] and (mode == 'integration' or frontend.frontend_changed)
     if scope['integration']:
         # Production frontend/backend/live checks share one runner and no large intermediate artifacts.
         scope.update(frontend=False, backend=recovery)
@@ -58,7 +61,8 @@ def classify_paths(paths, mode='pr') -> dict[str, bool]:
         # Full candidate validation already covers all application and Windows checks.
         # Native development lifecycle checks are additional to the production candidate.
         native_windows = any(p in ('scripts/dev.py', 'scripts/dev.ps1', 'scripts/tests/test_dev.py') for p in paths)
-        scope.update(frontend=False, backend=False, integration=False, windows=native_windows, recovery=False)
+        scope.update(frontend=False, backend=False, integration=False, integration_frontend=False,
+                     windows=native_windows, recovery=False)
     return scope
 
 

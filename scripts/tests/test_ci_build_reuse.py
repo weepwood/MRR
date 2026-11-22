@@ -1,4 +1,5 @@
 from pathlib import Path
+import re
 import unittest
 
 from scripts.ci_build_scope import needs_release_build
@@ -44,6 +45,21 @@ class CiBuildReuseTest(unittest.TestCase):
         self.assertIn("pnpm test:e2e", mock_e2e)
         real_e2e = package.split("- name: Real login, import, query and refusal", 1)[1]
         self.assertIn("if: inputs.full || inputs.live_checks", real_e2e)
+
+    def test_pr_integration_skips_frontend_only_when_nothing_consumes_it(self):
+        quality = (ROOT / ".github/workflows/quality-gate.yml").read_text(encoding="utf-8")
+        self.assertIn("integration_frontend: ${{ steps.scope.outputs.integration_frontend }}", quality)
+        integration = quality.split("  integration:", 1)[1].split("\n  windows:", 1)[0]
+        self.assertIn("frontend_checks: ${{ github.event_name != 'pull_request' || needs.scope.outputs.integration_frontend == 'true' }}",
+                      integration)
+
+        package = (ROOT / ".github/workflows/windows-release-package.yml").read_text(encoding="utf-8")
+        triggers = package.split("permissions:", 1)[0]
+        # workflow_call 与 workflow_dispatch 两种入口都必须默认执行前端，未显式传入时不能跳过
+        self.assertEqual(2, triggers.count("frontend_checks:"))
+        self.assertEqual(2, len(re.findall(r"frontend_checks:\n\s+type: boolean\n\s+default: true\n", triggers)))
+        frontend = package.split("- name: Test, build and embed frontend", 1)[1].split("- name:", 1)[0]
+        self.assertIn("if: inputs.full || inputs.live_checks || inputs.frontend_checks", frontend)
 
     def test_windows_and_standalone_share_the_verified_jar(self):
         workflow = (ROOT / ".github/workflows/windows-release-package.yml").read_text(encoding="utf-8")

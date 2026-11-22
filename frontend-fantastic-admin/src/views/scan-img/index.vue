@@ -543,7 +543,13 @@ watch(idCardParam, async (newId) => {
               :key="rec.id"
               class="id-result-item"
               :class="{ active: selectedRecord && selectedRecord.bah === rec.bah, disabled: !isBahClickable(rec.bah) }"
+              role="button"
+              :tabindex="isBahClickable(rec.bah) ? 0 : -1"
+              :aria-disabled="!isBahClickable(rec.bah)"
+              :aria-current="selectedRecord && selectedRecord.bah === rec.bah ? 'true' : undefined"
               @click="isBahClickable(rec.bah) && selectRecord(rec)"
+              @keydown.enter.prevent="isBahClickable(rec.bah) && selectRecord(rec)"
+              @keydown.space.prevent="isBahClickable(rec.bah) && selectRecord(rec)"
             >
               <div class="rec-row">
                 <span class="rec-bah">{{ rec.bah }}</span>
@@ -573,30 +579,39 @@ watch(idCardParam, async (newId) => {
             </h3>
             <!-- 缩略图视图模式切换按钮 -->
             <div class="thumbs-toolbar">
-              <button class="thumbs-mode-btn" :class="{ active: thumbsViewMode === 'icons' }" @click="setThumbsViewMode('icons')">
+              <button type="button" class="thumbs-mode-btn" :class="{ active: thumbsViewMode === 'icons' }" :aria-pressed="thumbsViewMode === 'icons'" @click="setThumbsViewMode('icons')">
                 缩略图
               </button>
-              <button class="thumbs-mode-btn" :class="{ active: thumbsViewMode === 'details' }" @click="setThumbsViewMode('details')">
+              <button type="button" class="thumbs-mode-btn" :class="{ active: thumbsViewMode === 'details' }" :aria-pressed="thumbsViewMode === 'details'" @click="setThumbsViewMode('details')">
                 列表
               </button>
             </div>
           </div>
           <!-- 类型列表 -->
           <div class="type-list">
-            <div class="type-item" :class="{ active: selectedType === 'all' }" @click="onSelectType('all')">
+            <button
+              type="button"
+              class="type-item"
+              :class="{ active: selectedType === 'all' }"
+              :aria-pressed="selectedType === 'all'"
+              @click="onSelectType('all')"
+            >
               <span class="type-name">全部</span>
               <span class="type-count">{{ images.length }}</span>
-            </div>
-            <div
+            </button>
+            <button
               v-for="item in typeDisplayList"
               :key="item.type"
+              type="button"
               class="type-item"
               :class="{ active: selectedType === item.type, disabled: item.count === 0 }"
-              @click="item.count && onSelectType(item.type)"
+              :aria-pressed="selectedType === item.type"
+              :disabled="item.count === 0"
+              @click="onSelectType(item.type)"
             >
               <span class="type-name">{{ getTypeName(item.type) }}</span>
               <span class="type-count">{{ item.count }}</span>
-            </div>
+            </button>
             <div v-if="!typeDisplayList.length" class="type-empty">
               暂无类型
             </div>
@@ -619,7 +634,13 @@ watch(idCardParam, async (newId) => {
                 class="thumb-item"
                 :class="{ active: idx === selectedImageIndex }"
                 :data-index="idx"
+                role="button"
+                tabindex="0"
+                :aria-label="`第 ${img.pages} 页 ${getTypeName(img.btype)}`"
+                :aria-current="idx === selectedImageIndex ? 'true' : undefined"
                 @click="selectImage(idx, 'click')"
+                @keydown.enter.prevent="selectImage(idx, 'click')"
+                @keydown.space.prevent="selectImage(idx, 'click')"
               >
                 <el-image
                   :src="img.blobUrl || transparentPixel"
@@ -644,7 +665,13 @@ watch(idCardParam, async (newId) => {
                 class="thumb-row"
                 :class="{ active: idx === selectedImageIndex }"
                 :data-index="idx"
+                role="button"
+                tabindex="0"
+                :aria-label="`第 ${img.pages} 页 ${getTypeName(img.btype)}`"
+                :aria-current="idx === selectedImageIndex ? 'true' : undefined"
                 @click="selectImage(idx, 'click')"
+                @keydown.enter.prevent="selectImage(idx, 'click')"
+                @keydown.space.prevent="selectImage(idx, 'click')"
               >
                 <div class="thumb-row-info">
                   <div class="thumb-row-title">
@@ -900,8 +927,13 @@ watch(idCardParam, async (newId) => {
 .type-item {
   display: flex;
   justify-content: space-between;
+  width: 100%;
   padding: 8px 10px;
+  font: inherit;
+  color: inherit;
+  text-align: left;
   cursor: pointer;
+  background: transparent;
   border: 1px solid var(--color-border);
   border-radius: var(--mrr-radius-md);
   transition: background-color var(--mrr-motion-feedback) ease, border-color var(--mrr-motion-feedback) ease;
@@ -914,6 +946,14 @@ watch(idCardParam, async (newId) => {
 .type-item.active {
   background: var(--el-color-primary-light-9);
   border-color: var(--el-color-primary);
+}
+
+.type-item:focus-visible,
+.id-result-item:focus-visible,
+.thumb-item:focus-visible,
+.thumb-row:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
 }
 
 .type-item.disabled {

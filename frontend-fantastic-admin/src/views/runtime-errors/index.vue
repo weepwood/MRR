@@ -5,7 +5,7 @@ import type {
 } from '@/api/modules/system-errors'
 /* eslint-disable vue/singleline-html-element-content-newline */
 import { RefreshCw as Refresh } from 'lucide-vue-next'
-import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import {
   getSystemErrorDetail,
@@ -24,6 +24,7 @@ import MrrPageHeader from '@/components/MrrPageHeader/index.vue'
 import MrrPageShell from '@/components/MrrPageShell/index.vue'
 import { useCrudList } from '@/composables/useCrudList'
 import { useUserStore } from '@/store/modules/user'
+import useVisibleInterval from '@/utils/composables/useVisibleInterval'
 import { copyText as copyToClipboard } from '@/utils/copy-text'
 import { formatDateTime, isRedactedLogText } from '@/utils/display-format'
 import { checkSessionPermission } from '@/utils/permission'
@@ -148,8 +149,6 @@ watch([() => route.path, routeRequestId], ([path, requestId]) => {
 
 /** 30 秒静默轮询：页面隐藏时暂停，重新可见立即补一次。 */
 const REFRESH_INTERVAL_MS = 30_000
-let refreshTimer: ReturnType<typeof setInterval> | undefined
-
 function silentRefresh() {
   if (route.path === '/runtime-errors' && !document.hidden && !loading.value) {
     void loadData({ silent: true })
@@ -158,14 +157,10 @@ function silentRefresh() {
 
 onMounted(() => {
   void loadModules()
-  refreshTimer = setInterval(silentRefresh, REFRESH_INTERVAL_MS)
-  document.addEventListener('visibilitychange', silentRefresh)
 })
 
-onUnmounted(() => {
-  if (refreshTimer !== undefined) { clearInterval(refreshTimer) }
-  document.removeEventListener('visibilitychange', silentRefresh)
-})
+// 隐藏标签页、KeepAlive 失活时暂停，卸载自动清理；见 DESIGN.md §7。
+useVisibleInterval(silentRefresh, REFRESH_INTERVAL_MS)
 
 async function openDetail(row: SystemErrorEvent) {
   detailVisible.value = true

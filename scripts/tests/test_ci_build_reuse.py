@@ -61,6 +61,17 @@ class CiBuildReuseTest(unittest.TestCase):
         frontend = package.split("- name: Test, build and embed frontend", 1)[1].split("- name:", 1)[0]
         self.assertIn("if: inputs.full || inputs.live_checks || inputs.frontend_checks", frontend)
 
+    def test_main_integration_skips_jacoco_but_full_candidate_keeps_coverage(self):
+        package = (ROOT / ".github/workflows/windows-release-package.yml").read_text(encoding="utf-8")
+        backend = package.split("- name: Test and package backend once", 1)[1].split(
+            "- name: Verify backend build identity", 1
+        )[0]
+        self.assertIn('if [ "${FULL}" != true ]; then', backend)
+        self.assertIn("jacoco_args+=(-Djacoco.skip=true)", backend)
+        self.assertIn('"${jacoco_args[@]}"', backend)
+        self.assertIn('if [ "${FULL}" = true ]; then', backend)
+        self.assertIn("jacoco_coverage.py", backend)
+
     def test_windows_and_standalone_share_the_verified_jar(self):
         workflow = (ROOT / ".github/workflows/windows-release-package.yml").read_text(encoding="utf-8")
         self.assertIn('python scripts/build_standalone_jar.py build', workflow)

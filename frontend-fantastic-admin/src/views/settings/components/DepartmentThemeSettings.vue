@@ -56,6 +56,7 @@ function setRows(themes: ArchiveDepartmentTheme[]) {
 }
 
 function addDepartmentTheme() {
+  if (controlsDisabled.value) { return }
   const preset = ARCHIVE_DEPARTMENT_THEME_PRESETS[rows.value.length % ARCHIVE_DEPARTMENT_THEME_PRESETS.length]
   rows.value.push(toEditable({
     department: '',
@@ -315,7 +316,7 @@ onMounted(() => {
     <AppEmpty v-else icon="i-lucide:palette" description="当前使用按科室名称自动生成的稳定配色" />
 
     <div class="editor-footer">
-      <el-button plain @click="addDepartmentTheme">
+      <el-button plain :disabled="controlsDisabled" @click="addDepartmentTheme">
         添加科室配色
       </el-button>
     </div>

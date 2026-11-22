@@ -18,7 +18,7 @@ test('科室配色读取完成前禁用导入、导出、恢复和保存', async
     await route.fallback()
   })
 
-  const commands = ['导入配色', '导出配色', '恢复自动配色'].map(name => page.getByRole('button', { name }))
+  const commands = ['添加科室配色', '导入配色', '导出配色', '恢复自动配色'].map(name => page.getByRole('button', { name }))
   try {
     await page.goto('/settings?section=department', { waitUntil: 'domcontentloaded' })
     for (const command of commands) {

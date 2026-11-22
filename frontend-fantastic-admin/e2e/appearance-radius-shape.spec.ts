@@ -109,14 +109,17 @@ test.describe('界面外观 · 圆角曲线', () => {
 
     const switchEl = page.locator('.fa-switch').first()
     const sliderEl = page.locator('.fa-slider').first()
-    const sqSwitch = await switchEl.screenshot()
-    const sqSlider = await sliderEl.screenshot()
+    // Ancestor corners contribute background pixels to these crops. Keep their
+    // shape fixed while the controls and their descendants retain their styles.
+    const captureOptions = { style: '* :has(.fa-switch, .fa-slider) { corner-shape: round !important; }' }
+    const sqSwitch = await switchEl.screenshot(captureOptions)
+    const sqSlider = await sliderEl.screenshot(captureOptions)
 
     // 切回标准圆弧，同一元素的截图必须与 G2 模式下完全一致（无变形、无 1px 偏移）。
     await options.getByRole('button', { name: '标准圆弧' }).click()
     await expect(page.locator('html')).toHaveAttribute('data-radius-shape', 'round')
-    expect((await switchEl.screenshot()).equals(sqSwitch), 'reka-ui 开关在两种曲线下渲染应完全一致').toBe(true)
-    expect((await sliderEl.screenshot()).equals(sqSlider), 'reka-ui 滑块在两种曲线下渲染应完全一致').toBe(true)
+    expect((await switchEl.screenshot(captureOptions)).equals(sqSwitch), 'reka-ui 开关在两种曲线下渲染应完全一致').toBe(true)
+    expect((await sliderEl.screenshot(captureOptions)).equals(sqSlider), 'reka-ui 滑块在两种曲线下渲染应完全一致').toBe(true)
 
     // Element Plus 版开关与滑块：直接跳到该页会重新拉取设置（未保存的修改被丢弃），
     // 所以这里直接写根节点属性，只校验 CSS 的生效范围本身。

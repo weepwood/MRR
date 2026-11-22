@@ -82,7 +82,7 @@ onUnmounted(() => {
   color: var(--text-secondary);
   background: var(--mrr-navigation-rail-bg);
   border-right: 1px solid var(--mrr-navigation-border);
-  transition: background-color var(--mrr-motion-feedback) ease, color var(--mrr-motion-feedback) ease;
+  transition: background-color var(--mrr-motion-feedback) var(--mrr-ease-out), color var(--mrr-motion-feedback) var(--mrr-ease-out);
 
   .sidebar-logo {
     min-height: var(--g-sidebar-logo-height);

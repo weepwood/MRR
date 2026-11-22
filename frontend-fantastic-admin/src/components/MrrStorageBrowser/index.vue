@@ -3,6 +3,7 @@ import type { StorageEntry } from './presentation'
 import { ArrowLeft, ArrowUp, ChevronDown, ChevronRight, ChevronUp, Copy, File, FileArchive, FileImage, FileText, Folder, Info, LayoutGrid, List, Maximize, Minimize, RefreshCw, Search } from 'lucide-vue-next'
 import { computed, nextTick, onBeforeUnmount, onDeactivated, onMounted, ref, watch } from 'vue'
 import AppEmpty from '@/components/AppEmpty/index.vue'
+import { Z_INDEX } from '@/constants/z-index'
 import { copyText as copyToClipboard } from '@/utils/copy-text'
 import { entryType, formatDate, formatFileSize, isImage } from './presentation'
 
@@ -189,7 +190,7 @@ let scrollLock: { bodyOverflow: string, bodyPaddingRight: string, scrollY: numbe
 function measureOverlay() {
   const main = root.value?.closest<HTMLElement>('.main')
   if (!main) {
-    overlayStyle.value = { top: '0px', left: '0px', width: `${window.innerWidth}px`, height: `${window.innerHeight}px`, zIndex: '1000' }
+    overlayStyle.value = { top: '0px', left: '0px', width: `${window.innerWidth}px`, height: `${window.innerHeight}px`, zIndex: String(Z_INDEX.sticky) }
     return
   }
   const rect = main.getBoundingClientRect()
@@ -205,7 +206,8 @@ function measureOverlay() {
     // 用视口收口可以始终铺满，也不跟着这一次重排抖动。
     width: `${Math.max(window.innerWidth - left, 320)}px`,
     height: `${window.innerHeight}px`,
-    zIndex: takeover ? '1012' : '1000',
+    // 接管时盖住常驻侧栏（sidebar 1010）
+    zIndex: String(takeover ? Z_INDEX.sidebar + 2 : Z_INDEX.sticky),
   }
 }
 
@@ -582,7 +584,7 @@ onBeforeUnmount(() => {
 
 .source-bar {
   min-height: 56px;
-  padding: 10px 16px;
+  padding: var(--mrr-space-3) 16px;
   background: var(--el-fill-color-lighter);
   border-bottom: 1px solid var(--mrr-border);
   border-radius: var(--mrr-radius-xl) var(--mrr-radius-xl) 0 0;
@@ -640,7 +642,7 @@ onBeforeUnmount(() => {
 .breadcrumbs {
   display: flex;
   flex-wrap: wrap;
-  gap: 4px 6px;
+  gap: 4px var(--mrr-space-2);
   align-items: center;
   min-width: 0;
   font-size: 13px;
@@ -741,7 +743,7 @@ onBeforeUnmount(() => {
   justify-items: center;
   min-width: 0;
   min-height: 86px;
-  padding: 10px 8px;
+  padding: var(--mrr-space-3) 8px;
   text-align: center;
   border: 1px solid transparent;
   border-radius: var(--mrr-radius-md);
@@ -869,7 +871,7 @@ onBeforeUnmount(() => {
 
 .details-pane {
   min-width: 0;
-  padding: 14px;
+  padding: var(--mrr-space-3);
   background: var(--el-fill-color-lighter);
   border-left: 1px solid var(--mrr-border);
 }
@@ -1009,7 +1011,7 @@ onBeforeUnmount(() => {
 
 @media (max-width: 700px) {
   .browser-body {
-    padding: 10px;
+    padding: var(--mrr-space-3);
   }
 
   .listing-toolbar,

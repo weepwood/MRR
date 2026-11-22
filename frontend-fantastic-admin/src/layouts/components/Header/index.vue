@@ -21,10 +21,10 @@ const { switchTo } = useMenu()
         <component :is="useSlots('header-after-logo')" />
         <FaScrollArea :scrollbar="false" mask horizontal gradient-color="var(--mrr-navigation-bg-solid)" class="menu-container h-full flex-1 overscroll-contain">
           <!-- 顶部模式 -->
-          <nav aria-label="主导航" class="menu h-full flex of-hidden transition-all">
+          <nav aria-label="主导航" class="menu h-full flex of-hidden">
             <template v-for="(item, index) in menuStore.allMenus" :key="index">
               <div
-                class="menu-item relative transition-all" :class="{
+                class="menu-item relative transition-colors" :class="{
                   active: index === menuStore.actived,
                 }"
               >
@@ -69,16 +69,16 @@ header {
   color: var(--text-primary);
   background: var(--mrr-navigation-bg);
   border-bottom: 1px solid var(--mrr-navigation-border);
-  transition: background-color var(--mrr-motion-feedback) ease, border-color var(--mrr-motion-feedback) ease;
+  transition: background-color var(--mrr-motion-feedback) var(--mrr-ease-out), border-color var(--mrr-motion-feedback) var(--mrr-ease-out);
 
   .header-container {
     display: flex;
-    gap: 18px;
+    gap: var(--mrr-space-4);
     align-items: center;
     justify-content: space-between;
     width: 100%;
     height: 100%;
-    padding: 0 18px;
+    padding: 0 var(--mrr-space-4);
     margin: 0 auto;
 
     :deep(a.title) {

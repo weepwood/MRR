@@ -203,7 +203,7 @@ defineExpose({ availableActions, inlineActions, overflowActions })
 }
 
 :global(.mrr-table-actions__menu .el-dropdown-menu__item) {
-  gap: 10px;
+  gap: var(--mrr-space-2);
 }
 
 :global(.mrr-table-actions__menu-item--danger) {

@@ -240,7 +240,7 @@ onUnmounted(() => {
   display: flex;
   align-items: center;
   height: var(--g-tabbar-height);
-  padding: 0 10px;
+  padding: 0 var(--mrr-space-3);
   background: transparent;
 
   .tabbar-container {
@@ -288,7 +288,7 @@ onUnmounted(() => {
             background: transparent;
             border: 1px solid transparent;
             border-radius: var(--mrr-radius-md);
-            transition: background-color var(--mrr-motion-feedback) ease, border-color var(--mrr-motion-feedback) ease, box-shadow var(--mrr-motion-feedback) ease;
+            transition: background-color var(--mrr-motion-feedback) var(--mrr-ease-out), border-color var(--mrr-motion-feedback) var(--mrr-ease-out), box-shadow var(--mrr-motion-feedback) var(--mrr-ease-out);
           }
 
           .tab-content {
@@ -303,18 +303,18 @@ onUnmounted(() => {
             .title {
               display: flex;
               flex: 1;
-              gap: 6px;
+              gap: var(--mrr-space-2);
               align-items: center;
               min-width: 0;
               height: 100%;
-              padding: 0 10px;
-              margin-right: 8px;
+              padding: 0 var(--mrr-space-3);
+              margin-right: var(--mrr-space-2);
               overflow: hidden;
               text-overflow: ellipsis;
               font-weight: 500;
               color: var(--text-secondary);
               white-space: nowrap;
-              transition: color var(--mrr-motion-feedback) ease;
+              transition: color var(--mrr-motion-feedback) var(--mrr-ease-out);
 
               /* 存在关闭按钮时为其预留间距。原实现用 `:has(+ .action-icon)` 探测，
                  需要 Chrome 105+；改为由模板显式声明状态类，基线浏览器行为一致。 */
@@ -349,7 +349,7 @@ onUnmounted(() => {
               border-radius: var(--mrr-radius-sm);
               opacity: 0;
               transform: translateY(-50%);
-              transition: color var(--mrr-motion-feedback) ease, background-color var(--mrr-motion-feedback) ease, opacity var(--mrr-motion-feedback) ease;
+              transition: color var(--mrr-motion-feedback) var(--mrr-ease-out), background-color var(--mrr-motion-feedback) var(--mrr-ease-out), opacity var(--mrr-motion-feedback) var(--mrr-ease-out);
             }
 
             .action-icon:hover {
@@ -397,7 +397,7 @@ onUnmounted(() => {
             transition:
               width var(--mrr-motion-move) var(--mrr-ease-out),
               margin-right var(--mrr-motion-move) var(--mrr-ease-out),
-              opacity var(--mrr-motion-feedback) ease;
+              opacity var(--mrr-motion-feedback) var(--mrr-ease-out);
           }
 
           &.tabbar-enter-from,

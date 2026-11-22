@@ -1,22 +1,24 @@
 import type { Pinia } from 'pinia'
 import type { Router } from 'vue-router'
+import type { EffectiveSystemSettings } from './system-settings'
+import { Z_INDEX } from '@/constants/z-index'
 import { useUserStore } from '@/store/modules/user'
-import {
-  loadEffectiveSystemSettings,
-  readLocalSystemSettings,
-  SYSTEM_SETTINGS_STORAGE_KEY,
-  SYSTEM_SETTINGS_UPDATED_EVENT,
-  type EffectiveSystemSettings,
-} from './system-settings'
 import {
   ARCHIVE_WATERMARK_BACKGROUND_SIZE,
   createArchiveWatermarkDataUrl,
   formatArchiveWatermarkTime,
   resolveArchiveWatermarkUserId,
 } from './archive-watermark'
+import {
+
+  loadEffectiveSystemSettings,
+  readLocalSystemSettings,
+  SYSTEM_SETTINGS_STORAGE_KEY,
+  SYSTEM_SETTINGS_UPDATED_EVENT,
+} from './system-settings'
 
 const WATERMARK_REFRESH_INTERVAL = 60_000
-const WATERMARK_Z_INDEX = '4000'
+const WATERMARK_Z_INDEX = String(Z_INDEX.watermark)
 
 function isArchiveRoute(path: string): boolean {
   return path === '/archive' || path.startsWith('/archive/')

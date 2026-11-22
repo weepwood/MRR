@@ -109,11 +109,11 @@ onDeactivated(() => { active.value = false })
 <style scoped>
 .inline-preview {
   min-width: 0;
-  margin-bottom: 14px;
+  margin-bottom: var(--mrr-space-3);
 }
 
 .inline-preview h4 {
-  margin: 0 0 6px;
+  margin: 0 0 var(--mrr-space-2);
   font-size: 12px;
   font-weight: 600;
   color: var(--mrr-muted-foreground);
@@ -181,7 +181,7 @@ onDeactivated(() => { active.value = false })
 .inline-text {
   height: 100%;
   max-height: 100%;
-  padding: 10px 12px;
+  padding: var(--mrr-space-3) 12px;
   margin: 0;
   overflow: auto;
   font-size: 12px;
@@ -202,7 +202,7 @@ onDeactivated(() => { active.value = false })
   align-items: center;
   justify-content: space-between;
   min-height: 44px;
-  padding: 6px 10px;
+  padding: var(--mrr-space-2) var(--mrr-space-3);
   font-size: 12px;
   color: var(--mrr-muted-foreground);
 }

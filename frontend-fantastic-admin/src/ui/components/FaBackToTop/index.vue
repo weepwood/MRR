@@ -7,10 +7,10 @@ defineOptions({
 })
 
 const transitionClass = {
-  enterActiveClass: 'ease-out duration-300',
+  enterActiveClass: 'ease-mrr-out duration-mrr-overlay',
   enterFromClass: 'opacity-0 translate-y-4 lg-translate-y-0 lg-scale-95',
   enterToClass: 'opacity-100 translate-y-0 lg-scale-100',
-  leaveActiveClass: 'ease-in duration-200',
+  leaveActiveClass: 'ease-mrr-in duration-mrr-move',
   leaveFromClass: 'opacity-100 translate-y-0 lg-scale-100',
   leaveToClass: 'opacity-0 translate-y-4 lg-translate-y-0 lg-scale-95',
 }
@@ -63,7 +63,7 @@ function handleBackToTop() {
 <template>
   <Teleport to="body">
     <Transition v-bind="transitionClass">
-      <FaButton v-if="scrollTop >= 200" variant="outline" size="icon" aria-label="回到顶部" class="fixed inset-b-4 z-1000 rounded-full transition-all -inset-e-9" :class="{ 'inset-e-3!': show }" @mouseenter="handleMouseenter" @mouseleave="handleMouseleave" @click="handleBackToTop">
+      <FaButton v-if="scrollTop >= 200" variant="outline" size="icon" aria-label="回到顶部" class="transition-[right,inset-inline-end,opacity,transform] fixed inset-b-4 z-1000 rounded-full -inset-e-9" :class="{ 'inset-e-3!': show }" @mouseenter="handleMouseenter" @mouseleave="handleMouseleave" @click="handleBackToTop">
         <FaIcon name="i-lucide:arrow-up-to-line" class="size-6" />
       </FaButton>
     </Transition>

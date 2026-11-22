@@ -60,7 +60,7 @@ const strengthColor = computed(() => {
       <div
         :class="strengthColor"
         :style="{ width: `${(strength / maxStrength) * 100}%` }"
-        class="h-full transition-all duration-300 ease-out"
+        class="h-full transition-[width,background-color] duration-mrr-move ease-mrr-out"
       />
     </div>
     <FaTooltip>

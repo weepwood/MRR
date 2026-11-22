@@ -119,7 +119,7 @@ const hasHeader = computed(() => Boolean(
 
 .mrr-section-card__title-row {
   display: flex;
-  gap: 6px;
+  gap: var(--mrr-space-2);
   align-items: center;
 }
 

@@ -29,6 +29,43 @@ test.describe('系统设置搜索', () => {
     await expect(page.getByRole('heading', { name: '访问安全' })).toBeFocused()
   })
 
+  test('搜索框短暂失焦后立即继续输入，仍显示新结果', async ({ page }) => {
+    await page.goto('/settings', { waitUntil: 'domcontentloaded' })
+    const search = page.getByRole('textbox', { name: '搜索设置' })
+    await search.fill('系统名称')
+    await expect(page.getByRole('option', { name: /系统标识.*系统信息/ })).toBeVisible()
+
+    await search.evaluate(async (input: HTMLInputElement) => {
+      const pending: Array<() => void> = []
+      const setTimeout = window.setTimeout
+      // 模拟输入已经恢复、上一次失焦回调仍在排队的情况。
+      window.setTimeout = (callback, delay, ...args) => {
+        if (!delay && typeof callback === 'function') {
+          pending.push(() => callback(...args))
+          return 0
+        }
+        return setTimeout(callback, delay, ...args)
+      }
+      try {
+        input.blur()
+      }
+      finally {
+        window.setTimeout = setTimeout
+      }
+      input.focus()
+      input.value = '访问安全'
+      input.dispatchEvent(new Event('input', { bubbles: true }))
+      await Promise.resolve()
+      for (const callback of pending) {
+        callback()
+      }
+    })
+
+    await expect(search).toBeFocused()
+    await page.getByRole('option', { name: '访问安全', exact: true }).click({ timeout: 3000 })
+    await expect(page.getByRole('heading', { name: '访问安全' })).toBeFocused()
+  })
+
   test('窄屏下提示无匹配结果，并打开界面外观的目标标签页', async ({ page }) => {
     await page.setViewportSize({ width: 375, height: 720 })
     await page.addInitScript(() => {

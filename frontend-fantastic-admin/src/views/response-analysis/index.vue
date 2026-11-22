@@ -3,6 +3,8 @@ import type { ResponseMetricAnalysis } from '@/api/types'
 import { RefreshCw as Refresh } from 'lucide-vue-next'
 import { computed, onMounted, ref } from 'vue'
 import { getResponseMetricAnalysis } from '@/api/modules/response-metrics'
+import AppEmpty from '@/components/AppEmpty/index.vue'
+import AppError from '@/components/AppError/index.vue'
 import MrrPageHeader from '@/components/MrrPageHeader/index.vue'
 import MrrPageShell from '@/components/MrrPageShell/index.vue'
 import ResponseTrendChart from './components/ResponseTrendChart.vue'
@@ -75,15 +77,9 @@ onMounted(loadData)
       </template>
     </MrrPageHeader>
 
-    <div v-if="error" class="state-panel error-panel" role="alert">
-      <strong>{{ error }}</strong>
-      <span>请稍后重试或检查后端服务状态。</span>
-      <el-button @click="loadData">
-        重新加载
-      </el-button>
-    </div>
+    <AppError v-if="error" :message="`${error}，请稍后重试或检查后端服务状态。`" retry-text="重新加载" @retry="loadData" />
 
-    <el-empty v-else-if="isEmpty" description="近一年暂无响应指标数据" />
+    <AppEmpty v-else-if="isEmpty" icon="i-lucide:activity" description="近一年暂无响应指标数据" />
 
     <template v-else>
       <section class="mrr-metric-grid" aria-label="近一年响应指标总览">
@@ -127,7 +123,7 @@ onMounted(loadData)
             </div>
           </template>
           <ResponseTrendChart v-if="analysis?.trend.length" :data="analysis.trend" />
-          <el-empty v-else description="近一年暂无趋势数据" :image-size="64" />
+          <AppEmpty v-else icon="i-lucide:chart-line" description="近一年暂无趋势数据" />
         </el-card>
 
         <el-card v-loading="loading" shadow="never" class="analysis-card slow-endpoint-card">
@@ -169,7 +165,7 @@ onMounted(loadData)
               </template>
             </el-table-column>
           </el-table>
-          <el-empty v-else description="暂无慢接口数据" :image-size="64" />
+          <AppEmpty v-else icon="i-lucide:gauge" description="暂无慢接口数据" />
         </el-card>
       </div>
     </template>
@@ -218,21 +214,6 @@ onMounted(loadData)
 .card-header span {
   font-size: 12px;
   color: var(--mrr-muted-foreground);
-}
-
-.state-panel {
-  display: grid;
-  gap: 10px;
-  justify-items: start;
-  padding: 24px;
-  color: var(--mrr-muted-foreground);
-  background: var(--mrr-muted);
-  border: 1px solid var(--mrr-border);
-  border-radius: var(--mrr-radius-card);
-}
-
-.error-panel strong {
-  color: var(--mrr-tone-warning);
 }
 
 @media (min-width: 1440px) {

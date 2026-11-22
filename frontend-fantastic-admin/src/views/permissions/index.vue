@@ -5,6 +5,8 @@ import { ElMessage } from 'element-plus'
 import { Info as InfoFilled } from 'lucide-vue-next'
 import { computed, onMounted, reactive, ref } from 'vue'
 import apiUser from '@/api/modules/user'
+import AppEmpty from '@/components/AppEmpty/index.vue'
+import AppError from '@/components/AppError/index.vue'
 import MrrPageHeader from '@/components/MrrPageHeader/index.vue'
 import MrrPageShell from '@/components/MrrPageShell/index.vue'
 import { PERMISSION_DEFINITIONS, PERMISSION_HIERARCHY } from '@/utils/permission'
@@ -14,6 +16,7 @@ defineOptions({ name: 'PermissionsPage' })
 const permissionDefs = PERMISSION_DEFINITIONS
 const loading = ref(false)
 const saving = ref(false)
+const loadError = ref('')
 const roles = ref<AuthRole[]>([])
 const editingCode = ref<string | null>(null)
 const defMap = new Map(permissionDefs.map(def => [def.value, def]))
@@ -179,6 +182,7 @@ async function saveEdit(code: string) {
 
 async function loadPermissions() {
   loading.value = true
+  loadError.value = ''
   try {
     const response = await apiUser.getRoles()
     roles.value = Array.isArray((response as { data?: AuthRole[] }).data)
@@ -186,7 +190,12 @@ async function loadPermissions() {
       : []
   }
   catch (error: unknown) {
-    ElMessage.error((error as { message?: string })?.message || '角色列表加载失败')
+    const message = (error as { message?: string })?.message || '角色列表加载失败'
+    loadError.value = message
+    // 已有角色时（如保存后刷新失败）保留旧列表，仍用轻提示告知。
+    if (roles.value.length) {
+      ElMessage.error(message)
+    }
   }
   finally {
     loading.value = false
@@ -216,7 +225,9 @@ onMounted(loadPermissions)
       </template>
     </MrrPageHeader>
 
-    <el-empty v-if="!loading && !sortedRoles.length" description="暂无角色数据" />
+    <!-- 加载失败与“确实没有角色”必须区分，见 DESIGN.md §5.1。 -->
+    <AppError v-if="!loading && loadError && !sortedRoles.length" :message="loadError" @retry="loadPermissions" />
+    <AppEmpty v-else-if="!loading && !sortedRoles.length" icon="i-lucide:shield" description="暂无角色数据" />
 
     <div v-else v-loading="loading" class="permission-views">
       <section class="permission-section">

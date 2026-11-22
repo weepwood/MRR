@@ -5,6 +5,7 @@ import { ElMessage } from 'element-plus'
 import { computed, onMounted, ref } from 'vue'
 import { getSystemSettings, setSetting } from '@/api/modules/settings'
 import { getDepartments } from '@/api/modules/statistics'
+import AppEmpty from '@/components/AppEmpty/index.vue'
 import { actionDialog } from '@/ui/components/ActionDialog'
 import {
   addArchiveDepartmentThemeHistoryToLocal,
@@ -303,7 +304,7 @@ onMounted(() => {
       </div>
     </div>
 
-    <el-empty v-else :image-size="72" description="当前使用按科室名称自动生成的稳定配色" />
+    <AppEmpty v-else icon="i-lucide:palette" description="当前使用按科室名称自动生成的稳定配色" />
 
     <div class="editor-footer">
       <el-button plain @click="addDepartmentTheme">
@@ -331,7 +332,7 @@ onMounted(() => {
         </el-button>
       </article>
     </div>
-    <el-empty v-else :image-size="72" description="暂无历史配色" />
+    <AppEmpty v-else icon="i-lucide:history" description="暂无历史配色" />
     <template #footer>
       <el-button @click="historyVisible = false">
         关闭

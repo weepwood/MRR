@@ -3,6 +3,7 @@ import type { QueryDiagnostic } from '@/api/modules/query-diagnostics'
 import axios from 'axios'
 import { computed, onBeforeUnmount, onDeactivated, ref, useTemplateRef, watch } from 'vue'
 import { diagnoseQuery } from '@/api/modules/query-diagnostics'
+import AppEmpty from '@/components/AppEmpty/index.vue'
 import { ACTION_DIALOG_Z_INDEX } from '@/ui/components/ActionDialog'
 import useAuth from '@/utils/composables/useAuth'
 
@@ -356,7 +357,7 @@ onBeforeUnmount(resetReport)
         </li>
       </ol>
 
-      <el-empty v-else-if="report" description="本次没有可展示的探测步骤" />
+      <AppEmpty v-else-if="report" description="本次没有可展示的探测步骤" />
     </div>
 
     <template #footer>

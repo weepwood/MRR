@@ -2,6 +2,7 @@
 import { ElMessage } from 'element-plus'
 import { computed, onMounted, reactive, ref } from 'vue'
 import { getSystemSettings, saveSystemSettings } from '@/api/modules/settings'
+import AppError from '@/components/AppError/index.vue'
 import ClassificationRules from './ClassificationRules.vue'
 
 interface OcrSettingsModel {
@@ -33,6 +34,12 @@ const defaults: OcrSettingsModel = {
 const settings = reactive<OcrSettingsModel>({ ...defaults })
 const savedSnapshot = ref('')
 const loading = ref(false)
+/**
+ * 是否已从服务器读到真实配置。读取成功前表单里只有前端默认值：
+ * 这时既不能算「有未保存修改」，也不能保存，否则会用默认值覆盖服务器上的 OCR 配置。
+ */
+const loaded = ref(false)
+const loadError = ref('')
 const saving = ref(false)
 
 function parseBoolean(value: unknown, fallback: boolean) {
@@ -65,7 +72,7 @@ function serialize() {
   }
 }
 
-const isDirty = computed(() => JSON.stringify(serialize()) !== savedSnapshot.value)
+const isDirty = computed(() => loaded.value && JSON.stringify(serialize()) !== savedSnapshot.value)
 const outputMegabytes = computed({
   get: () => Math.max(1, Math.round(settings.ocrMaxOutputBytes / 1024 / 1024)),
   set: value => settings.ocrMaxOutputBytes = Number(value || 1) * 1024 * 1024,
@@ -73,6 +80,7 @@ const outputMegabytes = computed({
 
 async function loadSettings() {
   loading.value = true
+  loadError.value = ''
   try {
     const response = await getSystemSettings()
     const values = response.data || {}
@@ -92,9 +100,15 @@ async function loadSettings() {
       1,
     )
     savedSnapshot.value = JSON.stringify(serialize())
+    loaded.value = true
   }
   catch (error: any) {
-    ElMessage.error(error?.message || 'OCR 设置加载失败')
+    const message = error?.message || 'OCR 设置加载失败'
+    loadError.value = message
+    // 已有服务器数据时保留表单，只用轻提示；首次失败由页面内的 AppError 说明并提供重试。
+    if (loaded.value) {
+      ElMessage.error(message)
+    }
   }
   finally {
     loading.value = false
@@ -118,6 +132,10 @@ function validate() {
 }
 
 async function saveSettings() {
+  if (!loaded.value) {
+    ElMessage.warning('OCR 设置尚未从服务器读取成功，请重新加载后再保存')
+    return false
+  }
   if (!validate()) {
     return false
   }
@@ -148,86 +166,90 @@ onMounted(loadSettings)
 
 <template>
   <section v-loading="loading" class="setting-section">
-    <el-alert
-      type="warning"
-      :closable="false"
-      show-icon
-      title="OCR 仅允许选择服务端预先配置的白名单名称，页面不会接受任意可执行程序路径或命令。"
-    />
+    <!-- 首次读取失败时不展示默认值表单，避免误以为是服务器配置（DESIGN.md §5.1）。 -->
+    <AppError v-if="!loaded && loadError" :message="`${loadError}，表单未显示以免把默认值当作当前配置。`" retry-text="重新加载" @retry="loadSettings" />
+    <template v-else>
+      <el-alert
+        type="warning"
+        :closable="false"
+        show-icon
+        title="OCR 仅允许选择服务端预先配置的白名单名称，页面不会接受任意可执行程序路径或命令。"
+      />
 
-    <div class="switch-list">
-      <div class="switch-row">
-        <div>
-          <strong>已验收类别自动归类总开关</strong>
-          <p>仅对已通过独立验收的类别生效，每个历史批次仍需单独授权。关闭后停止自动改类，文字识别可以继续。</p>
+      <div class="switch-list">
+        <div class="switch-row">
+          <div>
+            <strong>已验收类别自动归类总开关</strong>
+            <p>仅对已通过独立验收的类别生效，每个历史批次仍需单独授权。关闭后停止自动改类，文字识别可以继续。</p>
+          </div>
+          <el-switch v-model="settings.classificationAutoApplyEnabled" />
         </div>
-        <el-switch v-model="settings.classificationAutoApplyEnabled" />
-      </div>
-      <div class="switch-row">
-        <div>
-          <strong data-settings-search-target="ocr-switches" tabindex="-1">启用本地 OCR</strong>
-          <p>默认关闭。启用后才允许创建单病案 OCR 和智能分类任务。</p>
+        <div class="switch-row">
+          <div>
+            <strong data-settings-search-target="ocr-switches" tabindex="-1">启用本地 OCR</strong>
+            <p>默认关闭。启用后才允许创建单病案 OCR 和智能分类任务。</p>
+          </div>
+          <el-switch v-model="settings.ocrEnabled" />
         </div>
-        <el-switch v-model="settings.ocrEnabled" />
-      </div>
-      <div class="switch-row">
-        <div>
-          <strong>新扫描自动 OCR</strong>
-          <p>仅影响后续接入的新图片，不会启动历史图片全量识别。</p>
+        <div class="switch-row">
+          <div>
+            <strong>新扫描自动 OCR</strong>
+            <p>仅影响后续接入的新图片，不会启动历史图片全量识别。</p>
+          </div>
+          <el-switch v-model="settings.ocrAutoProcessNewScans" :disabled="!settings.ocrEnabled" />
         </div>
-        <el-switch v-model="settings.ocrAutoProcessNewScans" :disabled="!settings.ocrEnabled" />
       </div>
-    </div>
 
-    <div class="setting-group">
-      <div class="group-heading">
-        <strong data-settings-search-target="ocr-engine" tabindex="-1">OCR 引擎与资源限制</strong>
-        <p>服务端会再次校验全部范围，避免异常配置拖垮 JVM 或 Windows 服务器。</p>
+      <div class="setting-group">
+        <div class="group-heading">
+          <strong data-settings-search-target="ocr-engine" tabindex="-1">OCR 引擎与资源限制</strong>
+          <p>服务端会再次校验全部范围，避免异常配置拖垮 JVM 或 Windows 服务器。</p>
+        </div>
+        <el-form class="control-grid" label-position="top" @submit.prevent>
+          <el-form-item label="白名单配置名称">
+            <el-input v-model="settings.ocrProfile" placeholder="例如 tesseract-local" maxlength="64" />
+          </el-form-item>
+          <el-form-item label="识别语言">
+            <el-input v-model="settings.ocrLanguages" placeholder="chi_sim+eng" maxlength="64" />
+          </el-form-item>
+          <el-form-item label="最大并发">
+            <el-input-number v-model="settings.ocrMaxConcurrency" :min="1" :max="4" controls-position="right" />
+          </el-form-item>
+          <el-form-item label="单页超时">
+            <div class="number-control">
+              <el-input-number v-model="settings.ocrPageTimeoutSeconds" :min="5" :max="300" controls-position="right" />
+              <span>秒</span>
+            </div>
+          </el-form-item>
+          <el-form-item label="最大输出">
+            <div class="number-control">
+              <el-input-number v-model="outputMegabytes" :min="1" :max="16" controls-position="right" />
+              <span>MB</span>
+            </div>
+          </el-form-item>
+          <el-form-item label="OCR 低质量阈值">
+            <div class="number-control">
+              <el-input-number v-model="settings.ocrLowConfidenceThreshold" :min="0" :max="1" :step="0.05" :precision="2" controls-position="right" />
+              <span>{{ Math.round(settings.ocrLowConfidenceThreshold * 100) }}%</span>
+            </div>
+          </el-form-item>
+          <el-form-item label="批量确认最低阈值">
+            <div class="number-control">
+              <el-input-number v-model="settings.classificationBatchReviewThreshold" :min="0.9" :max="1" :step="0.01" :precision="2" controls-position="right" />
+              <span>{{ Math.round(settings.classificationBatchReviewThreshold * 100) }}%</span>
+            </div>
+          </el-form-item>
+        </el-form>
       </div>
-      <el-form class="control-grid" label-position="top" @submit.prevent>
-        <el-form-item label="白名单配置名称">
-          <el-input v-model="settings.ocrProfile" placeholder="例如 tesseract-local" maxlength="64" />
-        </el-form-item>
-        <el-form-item label="识别语言">
-          <el-input v-model="settings.ocrLanguages" placeholder="chi_sim+eng" maxlength="64" />
-        </el-form-item>
-        <el-form-item label="最大并发">
-          <el-input-number v-model="settings.ocrMaxConcurrency" :min="1" :max="4" controls-position="right" />
-        </el-form-item>
-        <el-form-item label="单页超时">
-          <div class="number-control">
-            <el-input-number v-model="settings.ocrPageTimeoutSeconds" :min="5" :max="300" controls-position="right" />
-            <span>秒</span>
-          </div>
-        </el-form-item>
-        <el-form-item label="最大输出">
-          <div class="number-control">
-            <el-input-number v-model="outputMegabytes" :min="1" :max="16" controls-position="right" />
-            <span>MB</span>
-          </div>
-        </el-form-item>
-        <el-form-item label="OCR 低质量阈值">
-          <div class="number-control">
-            <el-input-number v-model="settings.ocrLowConfidenceThreshold" :min="0" :max="1" :step="0.05" :precision="2" controls-position="right" />
-            <span>{{ Math.round(settings.ocrLowConfidenceThreshold * 100) }}%</span>
-          </div>
-        </el-form-item>
-        <el-form-item label="批量确认最低阈值">
-          <div class="number-control">
-            <el-input-number v-model="settings.classificationBatchReviewThreshold" :min="0.9" :max="1" :step="0.01" :precision="2" controls-position="right" />
-            <span>{{ Math.round(settings.classificationBatchReviewThreshold * 100) }}%</span>
-          </div>
-        </el-form-item>
-      </el-form>
-    </div>
 
-    <div class="setting-group">
-      <div class="group-heading">
-        <strong data-settings-search-target="ocr-rules" tabindex="-1">OCR 字典与分类规则</strong>
-        <p>字典采用草稿、发布、归档版本机制；运行中的任务固定使用启动时的发布版本。</p>
+      <div class="setting-group">
+        <div class="group-heading">
+          <strong data-settings-search-target="ocr-rules" tabindex="-1">OCR 字典与分类规则</strong>
+          <p>字典采用草稿、发布、归档版本机制；运行中的任务固定使用启动时的发布版本。</p>
+        </div>
+        <ClassificationRules />
       </div>
-      <ClassificationRules />
-    </div>
+    </template>
   </section>
 </template>
 

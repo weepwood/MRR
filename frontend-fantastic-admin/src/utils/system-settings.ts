@@ -241,28 +241,39 @@ export function writeLocalSystemSettings(settings: EffectiveSystemSettings): voi
   }))
 }
 
+/**
+ * 读取当前生效的系统设置。
+ *
+ * 只读消费者（档案袋、水印、患者页、页面标题）只取 `settings`：服务器不可用时降级到本地缓存或默认值。
+ * 可写配置页必须同时看 `serverReachable`：为 false 时 `settings` 只是回退值，不能作为可保存基线，
+ * 否则一次保存会把缓存或默认值整批写回服务器（见设置页 useUnifiedSettings）。
+ * `serverReachable` 为 true 而 `source` 不是 server，表示服务器可达但还没有任何设置（全新部署）。
+ */
 export async function loadEffectiveSystemSettings(): Promise<{
   settings: EffectiveSystemSettings
   source: SettingsSource
+  serverReachable: boolean
 }> {
   const localSettings = readLocalSystemSettings()
+  let serverReachable = false
 
   try {
     const { getSystemSettings } = await import('@/api/modules/settings')
     const response = await getSystemSettings()
+    serverReachable = true
     const serverSettings = response.data as Record<string, unknown> | undefined
     if (serverSettings && Object.keys(serverSettings).length > 0) {
       const settings = parseSystemSettings(serverSettings)
       writeLocalSystemSettings(settings)
-      return { settings, source: 'server' }
+      return { settings, source: 'server', serverReachable }
     }
   }
   catch {
-    // 服务端不可用时回退到本地配置。
+    // 服务端不可用时回退到本地配置；serverReachable 保持 false，由可写调用方决定是否允许保存。
   }
 
-  if (localSettings) { return { settings: localSettings, source: 'local' } }
-  return { settings: createDefaultSystemSettings(), source: 'default' }
+  if (localSettings) { return { settings: localSettings, source: 'local', serverReachable } }
+  return { settings: createDefaultSystemSettings(), source: 'default', serverReachable }
 }
 
 function applyRuntimeSettings(settings: EffectiveSystemSettings): void {

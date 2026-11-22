@@ -3,6 +3,7 @@ import type { SettingsSection } from '../composables/useUnifiedSettings'
 import type { SettingsSearchResult } from '../settings-search'
 import { computed, nextTick, onUnmounted, ref, useId, watch } from 'vue'
 import { onBeforeRouteLeave } from 'vue-router'
+import AppError from '@/components/AppError/index.vue'
 import { actionDialog } from '@/ui/components/ActionDialog'
 import { useUnifiedSettings } from '../composables/useUnifiedSettings'
 import AppConfigPanel from './AppConfigPanel.vue'
@@ -66,6 +67,8 @@ const {
   activeSection,
   activeMeta,
   loading,
+  loaded,
+  loadError,
   saving,
   settings,
   changedKeys,
@@ -383,7 +386,7 @@ onUnmounted(() => {
         <el-button :disabled="loading || saving" @click="handleReload">
           <FaIcon name="i-lucide:refresh-cw" class="mrr-icon-interactive" />重新加载
         </el-button>
-        <el-button :disabled="loading || saving" @click="handleReset">
+        <el-button :disabled="loading || saving || !loaded" @click="handleReset">
           <FaIcon name="i-lucide:rotate-cw" class="mrr-icon-interactive" />恢复默认
         </el-button>
         <el-button
@@ -459,7 +462,14 @@ onUnmounted(() => {
           :aria-labelledby="sectionHeadingId"
         >
           <div v-if="isServerSettingSection" v-loading="loading" class="system-panel">
-            <el-form :model="settings" label-position="top">
+            <!-- 首次读取失败时不展示回退值表单，避免把本地缓存或默认值当作服务器配置保存（DESIGN.md §5.1）。 -->
+            <AppError
+              v-if="!loaded && loadError"
+              :message="`${loadError}，表单暂不显示，以免把本地缓存或默认值当作服务器配置保存。`"
+              retry-text="重新加载"
+              @retry="handleReload"
+            />
+            <el-form v-else :model="settings" label-position="top">
               <SystemInfoSettings v-if="activeSection === 'system'" v-model="settings" />
               <LoginSupportSettings v-else-if="activeSection === 'login-support'" v-model="settings" />
               <DocumentationSettings v-else-if="activeSection === 'documentation'" v-model="settings" />

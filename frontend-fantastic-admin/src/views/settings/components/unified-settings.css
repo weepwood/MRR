@@ -60,7 +60,7 @@
 
 .settings-panel { display: grid; gap: var(--mrr-space-4); }
 .section-header { padding-bottom: var(--mrr-space-3); border-bottom: 1px solid var(--mrr-border); }
-.section-title { display: flex; gap: var(--mrr-space-3); align-items: center; }
+.section-title { display: flex; gap: var(--mrr-space-3); align-items: stretch; }
 
 /*
  * 分区标题层级：页面 h1（26px）→ 分区 h2（16px / 650）→ 分组卡（14px / 650）→ 设置项（13px / 600）→ 说明（12px）。
@@ -74,7 +74,6 @@
   flex: 0 0 auto;
   place-items: center;
   width: 32px;
-  height: 32px;
   font-size: 15px;
   color: var(--mrr-navigation-active-foreground, var(--mrr-primary));
   background: var(--mrr-card);

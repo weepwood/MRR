@@ -9,6 +9,19 @@ async function openSettings(page: Page, section: string) {
 }
 
 test.describe('系统设置分类布局', () => {
+  test('分区图标与两行标题说明等高', async ({ page }) => {
+    await page.setViewportSize({ width: 1440, height: 900 })
+    await openSettings(page, 'system')
+
+    const icon = page.locator('.section-icon')
+    const copy = page.locator('.section-title > div').last()
+    await expect.poll(async () => {
+      const iconBox = await icon.boundingBox()
+      const copyBox = await copy.boundingBox()
+      return Math.abs((iconBox?.height ?? 0) - (copyBox?.height ?? 0))
+    }).toBeLessThanOrEqual(1)
+  })
+
   test('按功能分类切换设置内容', async ({ page }) => {
     await page.setViewportSize({ width: 1440, height: 900 })
     await page.goto('/settings', { waitUntil: 'domcontentloaded' })

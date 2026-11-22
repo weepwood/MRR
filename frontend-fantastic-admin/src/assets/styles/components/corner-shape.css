@@ -98,8 +98,7 @@
     .environment-badge,
     .environment-status,
     .environment-actions button,
-    .field-info-trigger,
-    .info-trigger
+    .field-info-trigger
   ) {
     --mrr-corner: round;
   }

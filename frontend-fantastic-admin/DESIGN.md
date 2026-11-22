@@ -126,6 +126,13 @@ tokens.css（语义令牌，唯一数值源）
 - **块间距**：页面内纵向块之间用 `--mrr-page-gap`（24px），≤640px 时 16px。由 `MrrPageShell` 或全局 `.page-shell` 提供，页面不再各写 16/18/20px。
 - **卡片留白**：`--mrr-card-inset`（20px）/ `--mrr-card-inset-compact`（12px，≤760px）。页头卡、分区卡、表格面板（筛选区、工具条、表体、分页）、筛选栏、指标卡、旧页 `el-card` 共用这一条左右留白，纵向堆叠时标题、字段、表格外沿、分页落在**同一条竖线**上。
 - **工作区留白**：`clamp(16px, 2vw, 24px)`，≤760px 为 16px。
+- **允许保留的非网格值**（不要"顺手"改成令牌）：
+  - **描边补偿**：输入框、选择器、文本域、分页尺寸选择的 `11px` / `9px` 横向内边距加上 1px 描边，正好让文字落在 12 / 10px 竖线上。
+  - **由高度令牌决定的密度**：表格单元格 `padding-block: 6 / 7px`（行高由 `--mrr-table-header-height` 等决定）、次侧栏菜单项纵向 `6px`（配合 `min-height: 34px`；改成 8px 每项会高 4px）。
+  - **文字级微距**：标签到控件（`el-form-item__label`、筛选栏网格标签 6px）、标题到说明（页头说明 7px、指标卡说明 6px）、分组眉题、状态点与文字基线对齐。
+  - **按钮图标间距 6px**：`el-button` 与 `FaButton` 两族刻意取同一值，要改必须两边一起改。
+  - **功能性预留**：标签页关闭按钮的 `margin-right: 26px`（给绝对定位的关闭图标让位）。
+  - **主题与受测区域**：暖色调色板 `warm-flat.css` 的密度值；登录页与登录表单、档案袋搜索栏的号码输入区（有逐帧 / 截断 E2E 约束）。
 
 <a id="shapes"></a>
 
@@ -162,9 +169,17 @@ tokens.css（语义令牌，唯一数值源）
 | `--mrr-z-header` | 2000 | 顶部导航 |
 | （Element Plus / Fa 弹层） | 2000 起递增 | 对话框、抽屉、消息、下拉 |
 | `--mrr-z-progress` | 3000 | 路由进度条 |
-| `--mrr-z-overlay-top` | 4000 | 全屏看图说明条、跟随鼠标的图表提示 |
+| `--mrr-z-viewer` | 3000 | 全屏影像查看器；档案袋预览工具条 `+1`、工具条内下拉 `+2` |
+| `--mrr-z-ocr-drawer` | 3100 | 档案袋 OCR 抽屉基座 |
+| `--mrr-z-action-dialog` | 3200 | `ActionDialog` 确认 / 输入弹窗，须压住沉浸层 |
+| `--mrr-z-message` | 3300 | `ElMessage` 提示条，须压住确认弹窗与全屏影像 |
+| `--mrr-z-overlay-top` / `--mrr-z-watermark` | 4000 | 全屏看图说明条、跟随鼠标的图表提示 / 档案水印（`pointer-events: none`） |
 
-阻断遮罩必须**低于**弹层基准，否则遮罩期间弹出的失败消息或确认框会被盖住（曾经的 `z-index: 9999` 就是这个问题）。档案袋内部的 2010 / 2020 / 3001 层级属于该工作区的局部叠放，迁移时改为基于令牌的相对值（`calc(var(--mrr-z-header) + n)`）。
+阻断遮罩必须**低于**弹层基准，否则遮罩期间弹出的失败消息或确认框会被盖住（曾经的 `z-index: 9999` 就是这个问题）。
+
+- **CSS** 只写 `var(--mrr-z-*)` 或 `calc(var(--mrr-z-*) + n)`。档案袋局部叠放（2010 / 2020 / 3001 / 3002）已改为相对值，数值不变。
+- **必须传数字**的地方（Element Plus 的 `z-index` prop、`ElConfigProvider`、行内样式、命令式节点）用 [constants/z-index.ts](src/constants/z-index.ts) 的 `Z_INDEX`，不写裸数字；[z-index.test.ts](src/constants/__tests__/z-index.test.ts) 保证它与 `tokens.css` 逐项一致。
+- 组件内部、只在自身层叠上下文里生效的小值（0–20，如缩略图角标、工具条叠放）可以保留字面量。Fa* 弹层组件默认值 2000 即弹层基准，不另设令牌。
 
 <a id="动效边界"></a>
 
@@ -182,7 +197,15 @@ tokens.css（语义令牌，唯一数值源）
 | `--mrr-ease-out` | `cubic-bezier(0.22, 1, 0.36, 1)` | 入场、状态变化 |
 | `--mrr-ease-in` | `cubic-bezier(0.55, 0, 0.75, 0.2)` | 离场、收起 |
 
-**进出不对称**：入场用 overlay（或 move）+ ease-out，离场用 move + ease-in，比入场短一档。Element Plus 的 `--el-transition-duration` 已映射到 overlay，`-fast` 映射到 feedback，与自研抽屉同节奏。UnoCSS 动画类（如 FaDrawer 的 `animate-duration-220`）读不到变量，改令牌时需同步修改类名。
+**进出不对称**：入场用 overlay（或 move）+ ease-out，离场用 move + ease-in，比入场短一档。Element Plus 的 `--el-transition-duration` 已映射到 overlay，`-fast` 映射到 feedback，与自研抽屉同节奏。UnoCSS 过渡类用 [uno.config.ts](uno.config.ts) 里的令牌别名：`duration-mrr-press / -feedback / -move / -overlay`、`ease-mrr-out / -in`，直接读 `tokens.css`；`transition`、`transition-colors` 等工具类的默认时长与曲线也已指向 feedback + ease-out。`<Transition>` 的 `enterActiveClass` / `leaveActiveClass` 不写 `duration-300`、`ease-in-out` 这类字面量，也不用 `transition-all`。presetAnimations 的 `animate-duration-*` 仍读不到变量，用到时数值须与令牌一致。
+
+**字面量**：样式里的 `transition` / `animation` 只写 `var(--mrr-motion-*)` 与 `var(--mrr-ease-*)`；`linear`、无限循环的 `ease-in-out`、关闭信号（0 与 ≤1ms）放行，其余例外登记在 motion.test.ts 的白名单并写明理由。
+
+**布局属性过渡的唯一例外：应用壳层侧栏收起 / 展开。** 其余地方只过渡 `transform`、`opacity` 与颜色类属性；壳层侧栏允许对 `width`（侧栏容器、次侧栏、顶部固定块）、`margin-left`（主内容区）、`inset-inline-start`（次侧栏）、`top` / `padding-top`（顶栏显隐）做 move 档过渡。原因：
+- 主内容区的可用宽度确实改变，页面必须按新宽度重排，`transform` 只能移动画面，替代不了这次重排；
+- 标签栏 / 工具栏（`FaSmartFixedBlock`）与页面里的 `position: fixed` 浮层（档案袋设置与工具条、影像查询遮罩、热力图提示、存储浏览器最大化）都位于主内容区之内，给主内容区加 `transform` 会让它们在动画期间改为相对主内容区定位而跳位；
+- 代价有界：约 180ms、十来次布局；图表尺寸跟随有 80ms 防抖，不会逐帧重绘。
+关闭动效（`data-motion="off"`）与系统「减少动效」已由 motion.css 全局清零过渡，这里不另做处理。新增壳层元素若需随侧栏同步，沿用同一 move 档与 `--mrr-ease-out`，不要引入第二种节奏。
 
 **三条边界**（[motion.test.ts](src/assets/styles/motion.test.ts) 扫全仓）：
 
@@ -360,6 +383,8 @@ Element Plus `el-button` 与 reka-ui `FaButton`（`.fa-button-control`）**尺�
 | 禁用 / 处理中 | 为什么不可用 | 不只降透明度；原因可读，防重复提交 |
 | 导出完成但下载失败 | 任务完成与下载失败是两回事 | 保留重新下载入口；超限要求分批，不静默丢页 |
 
+**可写配置页的可保存基线只能来自服务器读取。** 读取失败时，本地缓存与默认值只供只读页面降级使用；配置页显示 `AppError` + 重新加载，读取成功前不算修改、不能保存，也不提供"保存并离开"。已读取成功后再次重新加载失败，保留当前表单与基线并提示。服务器可达但尚无任何设置（全新部署）时以默认值为基线。`loadEffectiveSystemSettings()` 用 `serverReachable` 区分这两种回退。
+
 ### 5.2 悬停、选中与焦点
 
 | 状态 | 视觉通道 | 示例 |
@@ -482,10 +507,14 @@ Element Plus `el-button` 与 reka-ui `FaButton`（`.fa-button-control`）**尺�
 
 仍待逐页处理的是**页面内部**的旧写法，而不是页头：
 
-- `el-card` 分区 → `MrrSectionCard`：监控、OSS 迁移、运维中心、数据交换、统计明细的卡头是各页自写的 `.card-header`。目前由 Element Plus 桥接层对齐留白和底色，语义未迁移。
-- `el-empty` → `AppEmpty`：业务页面与共享组件已全部迁移（含档案袋、存储浏览器）；弹层、下拉、图片错误插槽等受限空间用 `size="compact"`。存储浏览器的图片读取失败改为 `AppError`。`v-loading` → `AppLoading` 仍由桥接层兜底视觉。
-- 档案袋局部层级已改为 `calc(var(--mrr-z-header) + n)` / `calc(var(--mrr-z-progress) + n)`，数值不变。
-- `.info-trigger`（说明图标按钮）在权限管理、数据交换、认证测试台各复制一份，应抽成共享组件或 `#badge` 的公共样式。
+- `el-card` 分区 → `MrrSectionCard`：**已完成**。监控、OSS 迁移、运维中心、接口响应分析、数据关系、数据交换（含导入面板）、统计明细、认证测试台四个子面板共 39 个自写卡头（`.card-header` / `.panel-heading` / `.panel-header` / `.issue-header`）改为 `title` / `description` / `#actions` / `#title-suffix`，对应页面样式已删除。没有卡头的纯内容 `el-card`（指标格、关系卡、表格容器等）按 §8.2 第 3 步保留。
+- `el-empty` → `AppEmpty`：**已完成**（含档案袋、存储浏览器）；弹层、下拉、图片错误插槽等受限空间用 `size="compact"`。存储浏览器的图片读取失败改为 `AppError`。
+- `v-loading` → `AppLoading`：按 §5.1 区分首次加载与刷新。**首次加载时区域为空或只有默认值**的改为 `AppLoading` 骨架（权限管理、接口响应分析、数据关系总览、帮助中心）；**刷新**仍用 `v-loading` 叠加在已有结果上，不清空内容。表格、图表卡、影像预览、存储浏览器、档案袋面板属于后者，保留 `v-loading`。
+  - 第二批：运行参数、科室档案袋配色、OCR 分类规则、OSS 迁移管理（页头保持可见，内容区骨架）改为首次加载骨架，之后的刷新与操作只叠加遮罩。
+  - **保留遮罩的例外**：系统设置的服务器配置分区（系统信息、登录与支持、文档、档案浏览、访问安全、开发者）和 OCR 设置分区里有设置搜索的定位目标（`data-settings-search-target`），首次加载时 DOM 必须在，否则搜索结果会定位到分区标题；OCR 批次页的整页遮罩只在执行操作时出现，用于防重复提交。
+  - OCR 设置首次读取失败改为 `AppError` + 重新加载：此前失败后表单显示前端默认值并被判定为「待保存」，保存会用默认值覆盖服务器配置。现在读取成功前不算修改、不能保存。
+- 说明图标 → `MrrInfoTip`：**已完成**。权限管理、数据交换、认证测试台、数据导入面板的 6 处 `button.info-trigger` / `.import-safety-trigger` 统一为共享组件（原生按钮 + `aria-label` + 键盘可达 + `data-corner="round"`）。注册表单的 `RegisterFieldLabel` 仍用独立的 `.field-info-trigger`。
+- z-index：**已收口**，见 §2.8。
 - 页内网格间距 `gap: 12/14/16/18px` 仍是页面局部值，随各页改造时统一到 `--mrr-space-*`。
 
 ### 8.2 迁移步骤（每页一个 PR）
@@ -550,3 +579,25 @@ Element Plus `el-button` 与 reka-ui `FaButton`（`.fa-button-control`）**尺�
 - §8 迁移状态更新：系统与数据库监控（及聚合页）、运维诊断中心、OSS 迁移管理、数据导入导出、病案明细档案袋、认证测试台、数据表浏览已迁移到共享壳层与页头；删除不再有使用者的全局 `.page-shell` 样式。
 - 数据表浏览原本没有页头，补充了页头；说明文字只陈述页面已有行为（脱敏、大表限行、不缓存）。
 - 补充页头 `class="page-header"` 兼容说明，以及页面内部仍待迁移的旧写法清单。
+
+**2026-11-22（第三次修订）**
+
+- 页面内部旧写法迁移：自写卡头 → `MrrSectionCard`；首次加载的 `v-loading` → `AppLoading`；说明图标抽为 `MrrInfoTip`。
+- §2.8 新增 `--mrr-z-viewer` / `-ocr-drawer` / `-action-dialog` / `-message` / `-watermark` 令牌和 `constants/z-index.ts`，原先散在 prop 与 JS 里的 3000 / 3100 / 3200 / 3300 / 4000 / 1000 / 1012 全部改为引用，数值不变。
+
+**2026-11-22（第四次修订）**
+
+- §8.1 `v-loading` 迁移第二批与例外说明；OCR 设置读取失败不再显示默认值表单。
+
+**2026-11-22（第五次修订）**
+
+- §2.9：124 处关键字曲线（`ease` / `ease-out`）与 4 处写死时长改为令牌；Fa* 弹层、抽屉、回到顶部、菜单的过渡类改用 `duration-mrr-*` / `ease-mrr-*`（弹层 300ms → overlay 220ms 入场 / move 180ms 离场，菜单 150 / 160ms → move，离场 → feedback）；12 处 `transition-all` 改为具体属性；图片预览缩略图不再悬停放大，改为描边与阴影反馈（§2.9 交互语义「影像悬停」）。
+
+**2026-11-22（第六次修订）**
+
+- §2.5 间距收尾：页面内部 258 处网格外间距改为 `--mrr-space-*`；壳层（顶栏、标签栏、工具栏、次侧栏）与共享组件（分区卡标题行、图表卡摘要、表格行操作菜单、指标卡附加区、确认弹窗变更清单）共 22 处对齐网格。新增「允许保留的非网格值」清单。
+- §2.9：写明应用壳层侧栏收起是布局属性过渡的唯一例外及理由；评估过改用 `transform` 的方案，因会破坏主内容区内的 fixed 定位而不采用。
+
+**2026-11-22（第七次修订）**
+
+- §5.1：可写配置页的可保存基线只能来自服务器读取；系统设置读取失败不再静默回退并允许整批保存。

@@ -112,7 +112,7 @@
   border: 1px solid var(--mrr-control-border);
   border-radius: var(--mrr-control-radius);
   box-shadow: var(--mrr-shadow-xs);
-  transition: color var(--mrr-motion-feedback) ease, background-color var(--mrr-motion-feedback) ease, border-color var(--mrr-motion-feedback) ease, box-shadow var(--mrr-motion-feedback) ease;
+  transition: color var(--mrr-motion-feedback) var(--mrr-ease-out), background-color var(--mrr-motion-feedback) var(--mrr-ease-out), border-color var(--mrr-motion-feedback) var(--mrr-ease-out), box-shadow var(--mrr-motion-feedback) var(--mrr-ease-out);
 }
 
 .fa-input-control::placeholder,
@@ -152,7 +152,7 @@
   width: 16px;
   height: 16px;
   color: var(--mrr-muted-foreground);
-  transition: color var(--mrr-motion-feedback) ease, transform var(--mrr-motion-move) var(--mrr-ease-out);
+  transition: color var(--mrr-motion-feedback) var(--mrr-ease-out), transform var(--mrr-motion-move) var(--mrr-ease-out);
 }
 
 /*
@@ -172,12 +172,12 @@
    * 单行文字看不出，但图标与文字的垂直居中会差半个像素级基线。 */
   line-height: 1;
   transition:
-    color var(--mrr-motion-feedback) ease,
-    background-color var(--mrr-motion-feedback) ease,
-    border-color var(--mrr-motion-feedback) ease,
-    box-shadow var(--mrr-motion-feedback) ease,
-    opacity var(--mrr-motion-feedback) ease,
-    transform var(--mrr-motion-press) ease;
+    color var(--mrr-motion-feedback) var(--mrr-ease-out),
+    background-color var(--mrr-motion-feedback) var(--mrr-ease-out),
+    border-color var(--mrr-motion-feedback) var(--mrr-ease-out),
+    box-shadow var(--mrr-motion-feedback) var(--mrr-ease-out),
+    opacity var(--mrr-motion-feedback) var(--mrr-ease-out),
+    transform var(--mrr-motion-press) var(--mrr-ease-out);
 }
 
 /* 主要操作 —— el-button type="primary" */

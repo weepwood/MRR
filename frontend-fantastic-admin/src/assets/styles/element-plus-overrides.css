@@ -49,12 +49,12 @@ html:root {
   border-radius: var(--mrr-control-radius);
   box-shadow: var(--mrr-shadow-xs);
   transition:
-    color var(--mrr-motion-feedback) ease,
-    background-color var(--mrr-motion-feedback) ease,
-    border-color var(--mrr-motion-feedback) ease,
-    box-shadow var(--mrr-motion-feedback) ease,
-    opacity var(--mrr-motion-feedback) ease,
-    transform var(--mrr-motion-press) ease;
+    color var(--mrr-motion-feedback) var(--mrr-ease-out),
+    background-color var(--mrr-motion-feedback) var(--mrr-ease-out),
+    border-color var(--mrr-motion-feedback) var(--mrr-ease-out),
+    box-shadow var(--mrr-motion-feedback) var(--mrr-ease-out),
+    opacity var(--mrr-motion-feedback) var(--mrr-ease-out),
+    transform var(--mrr-motion-press) var(--mrr-ease-out);
 }
 
 .el-button > span {
@@ -351,10 +351,10 @@ body .el-button--info.is-plain:not(.is-disabled):hover {
   background: var(--mrr-control-bg);
   border-radius: var(--mrr-control-radius);
   transition:
-    color var(--mrr-motion-feedback) ease,
-    background-color var(--mrr-motion-feedback) ease,
-    border-color var(--mrr-motion-feedback) ease,
-    box-shadow var(--mrr-motion-feedback) ease;
+    color var(--mrr-motion-feedback) var(--mrr-ease-out),
+    background-color var(--mrr-motion-feedback) var(--mrr-ease-out),
+    border-color var(--mrr-motion-feedback) var(--mrr-ease-out),
+    box-shadow var(--mrr-motion-feedback) var(--mrr-ease-out);
 }
 
 .el-input__wrapper,
@@ -435,7 +435,7 @@ body .el-button--info.is-plain:not(.is-disabled):hover {
 .el-select__caret,
 .el-input__icon {
   color: var(--mrr-muted-foreground);
-  transition: color var(--mrr-motion-feedback) ease, transform var(--mrr-motion-move) var(--mrr-ease-out);
+  transition: color var(--mrr-motion-feedback) var(--mrr-ease-out), transform var(--mrr-motion-move) var(--mrr-ease-out);
 }
 
 .el-input__wrapper.is-focus .el-input__prefix,
@@ -575,7 +575,7 @@ body .el-message {
   /* 提示条必须压住页面级沉浸层：全屏影像 3000、预览工具栏 3001、确认弹窗 3200，
    * 否则在影像全屏预览里改完分类，成功提示整条被图片盖住，看着像没生效。
    * EP 把 z-index 写在行内 style 上，只能 !important 覆盖。 */
-  z-index: 3300 !important;
+  z-index: var(--mrr-z-message) !important;
   border-color: var(--mrr-border);
   border-radius: var(--mrr-radius-md);
   box-shadow: var(--mrr-shadow-md);
@@ -650,7 +650,7 @@ body .el-dropdown__popper .el-dropdown-menu__item {
   font-size: 13px;
   line-height: 34px;
   border-radius: var(--mrr-radius-sm);
-  transition: color var(--mrr-motion-feedback) ease, background-color var(--mrr-motion-feedback) ease;
+  transition: color var(--mrr-motion-feedback) var(--mrr-ease-out), background-color var(--mrr-motion-feedback) var(--mrr-ease-out);
 }
 
 body .el-select-dropdown .el-select-dropdown__item:hover,

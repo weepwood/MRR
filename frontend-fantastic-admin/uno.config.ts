@@ -119,6 +119,20 @@ body {
             foreground: 'hsl(var(--card-foreground))',
           },
         },
+        // 动效令牌别名：duration-mrr-move / ease-mrr-out 等直接读 tokens.css，
+        // DEFAULT 让 transition / transition-colors 等工具类默认走 feedback + ease-out（DESIGN.md §2.9）。
+        duration: {
+          'DEFAULT': 'var(--mrr-motion-feedback)',
+          'mrr-press': 'var(--mrr-motion-press)',
+          'mrr-feedback': 'var(--mrr-motion-feedback)',
+          'mrr-move': 'var(--mrr-motion-move)',
+          'mrr-overlay': 'var(--mrr-motion-overlay)',
+        },
+        easing: {
+          'DEFAULT': 'var(--mrr-ease-out)',
+          'mrr-out': 'var(--mrr-ease-out)',
+          'mrr-in': 'var(--mrr-ease-in)',
+        },
         borderRadius: {
           xl: 'calc(var(--radius) + 4px)',
           lg: 'var(--radius)',

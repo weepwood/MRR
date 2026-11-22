@@ -56,7 +56,7 @@
   border: 1px solid var(--mrr-border);
   border-radius: var(--mrr-radius-card);
   box-shadow: var(--mrr-shadow-xs);
-  transition: border-color var(--mrr-motion-feedback) ease, box-shadow var(--mrr-motion-feedback) ease;
+  transition: border-color var(--mrr-motion-feedback) var(--mrr-ease-out), box-shadow var(--mrr-motion-feedback) var(--mrr-ease-out);
 }
 
 .mrr-metric-card:focus-within {
@@ -102,7 +102,7 @@
 
 /* 值下方的附加内容（进度条、状态标签等），与 note 保持一致的节奏。 */
 .mrr-metric-card__extra {
-  margin-top: 10px;
+  margin-top: var(--mrr-space-3);
 }
 
 .mrr-metric-card__label {

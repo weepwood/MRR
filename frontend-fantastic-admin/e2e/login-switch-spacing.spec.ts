@@ -115,8 +115,9 @@ for (const width of [390, 637, 1440]) {
     expect(forward.some(frame => frame.indicatorX > 1 && frame.indicatorX < travel - 1)).toBe(true)
     expect(forward.some(frame => frame.enterX < -20 && frame.leaveX > 40)).toBe(true)
     for (const frame of forward) {
-      expect(frame.timings).toEqual(Array.from({ length: 3 }).fill('cubic-bezier(0.4, 0, 0.2, 1)'))
-      expect(frame.durations).toEqual(['0.36s', '0.36s', '0.36s'])
+      // 与 login.vue 的 --auth-switch-duration / --auth-switch-ease 对齐：overlay（220ms）+ --mrr-ease-out。
+      expect(frame.timings).toEqual(Array.from({ length: 3 }).fill('cubic-bezier(0.22, 1, 0.36, 1)'))
+      expect(frame.durations).toEqual(['0.22s', '0.22s', '0.22s'])
       expect(frame.pageOverflows).toBe(false)
       expect(Math.abs(frame.actionTopDelta), '进入注册时两个主按钮应沿同一水平线滑动').toBeLessThanOrEqual(1)
     }

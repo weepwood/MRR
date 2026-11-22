@@ -23,6 +23,7 @@ import {
   runDataQualityChecks,
   searchDataRelationArchives,
 } from '@/api/modules/data-relations'
+import AppEmpty from '@/components/AppEmpty/index.vue'
 import AppError from '@/components/AppError/index.vue'
 import MrrFilterActionButton from '@/components/MrrFilterActionButton/index.vue'
 import MrrSectionCard from '@/components/MrrSectionCard/index.vue'
@@ -502,7 +503,7 @@ onMounted(loadDashboard)
             </el-table>
           </el-card>
           <AppError v-else-if="searchError" message="病案查询失败，请重试" @retry="searchArchives" />
-          <el-empty v-else-if="searchCompleted && !searchLoading" description="当前条件未找到病案主档" />
+          <AppEmpty v-else-if="searchCompleted && !searchLoading" icon="i-lucide:search-x" description="当前条件未找到病案主档" />
 
           <div v-loading="detailLoading" class="archive-detail-stack">
             <p v-if="detailLoading && selectedArchive" class="archive-detail-status" role="status">
@@ -622,7 +623,7 @@ onMounted(loadDashboard)
                 </el-tab-pane>
               </el-tabs>
             </template>
-            <el-empty v-else-if="!searchLoading && !searchError && (!searchCompleted || searchResults.length)" description="查询并选择一份病案后查看跨表关系" />
+            <AppEmpty v-else-if="!searchLoading && !searchError && (!searchCompleted || searchResults.length)" icon="i-lucide:git-fork" description="查询并选择一份病案后查看跨表关系" />
           </div>
         </div>
       </el-tab-pane>

@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import AppEmpty from '@/components/AppEmpty/index.vue'
 import { actionDialog } from '@/ui/components/ActionDialog'
 import { createExternalLinkId, normalizeExternalLinkUrl } from '@/utils/external-links'
 import { notify } from '@/utils/notification'
@@ -165,7 +166,7 @@ function openExternalLink(url: string) {
         </el-tag>
       </header>
 
-      <el-empty v-if="externalLinks.length === 0" description="尚未添加外部网站" :image-size="72" />
+      <AppEmpty v-if="externalLinks.length === 0" description="尚未添加外部网站" icon="i-lucide:link" />
 
       <div v-else class="external-link-list">
         <article v-for="(link, index) in externalLinks" :key="link.id" class="external-link-item">

@@ -28,6 +28,7 @@ import {
   runOperationsDiagnostics,
   savePermissionMatrixSnapshot,
 } from '@/api/modules/operations'
+import AppEmpty from '@/components/AppEmpty/index.vue'
 import MrrPageHeader from '@/components/MrrPageHeader/index.vue'
 import MrrPageShell from '@/components/MrrPageShell/index.vue'
 import MrrSectionCard from '@/components/MrrSectionCard/index.vue'
@@ -520,10 +521,10 @@ onMounted(async () => {
 
             <div class="two-column-layout">
               <MrrSectionCard title="待处理问题" description="严重问题优先">
-                <el-empty
+                <AppEmpty
                   v-if="failedReadinessChecks.length === 0"
+                  :icon="overviewChecks.length ? 'i-lucide:circle-check' : 'i-lucide:hourglass'"
                   :description="overviewChecks.length ? '最近检查无未通过项目' : '等待首次依赖检查'"
-                  :image-size="60"
                 />
                 <div v-else class="issue-list">
                   <div v-for="check in failedReadinessChecks" :key="check.code" class="issue-row">
@@ -617,7 +618,11 @@ onMounted(async () => {
             {{ diagnosticRun ? '重新体检' : '开始全面体检' }}
           </el-button>
         </div>
-        <el-empty v-if="!diagnosticRun" :description="canManage ? '点击“开始全面体检”执行实时检查' : '执行体检需要运维管理权限'" :image-size="96" />
+        <AppEmpty
+          v-if="!diagnosticRun"
+          :icon="canManage ? 'i-lucide:stethoscope' : 'i-lucide:lock'"
+          :description="canManage ? '点击“开始全面体检”执行实时检查' : '执行体检需要运维管理权限'"
+        />
         <template v-else>
           <section class="mrr-metric-grid mrr-metric-grid--four metric-row">
             <MrrMetricCard label="检查总数" :value="diagnosticRun.summary.total" />

@@ -39,4 +39,9 @@ describe('appEmpty', () => {
       expect(wrapper.emitted('action')).toBeTruthy()
     }
   })
+
+  it('compact 尺寸只加修饰类，默认不加', () => {
+    expect(mount(AppEmpty).find('.app-empty').classes()).not.toContain('is-compact')
+    expect(mount(AppEmpty, { props: { size: 'compact' } }).find('.app-empty').classes()).toContain('is-compact')
+  })
 })

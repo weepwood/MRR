@@ -6,9 +6,12 @@ defineOptions({ name: 'AppError' })
 withDefaults(defineProps<{
   message?: string
   retryText?: string
+  /** compact：用于弹层、图片错误插槽等受限空间，缩小留白与图标，不改变语义。 */
+  size?: 'default' | 'compact'
 }>(), {
   message: '加载失败',
   retryText: '重试',
+  size: 'default',
 })
 
 const emit = defineEmits<{
@@ -21,12 +24,12 @@ function handleRetry() {
 </script>
 
 <template>
-  <div class="app-error mrr-content-enter" role="alert">
+  <div class="app-error mrr-content-enter" :class="{ 'is-compact': size === 'compact' }" role="alert">
     <div class="app-error-icon i-lucide:triangle-alert mrr-status-pop" />
     <p class="app-error-text">
       {{ message }}
     </p>
-    <el-button type="primary" :icon="Refresh" @click="handleRetry">
+    <el-button type="primary" :size="size === 'compact' ? 'small' : undefined" :icon="Refresh" @click="handleRetry">
       {{ retryText }}
     </el-button>
   </div>
@@ -55,5 +58,23 @@ function handleRetry() {
   margin: 0 0 20px;
   font-size: 14px;
   color: var(--el-text-color-regular);
+}
+
+.app-error.is-compact {
+  padding: var(--mrr-space-5) var(--mrr-space-3);
+}
+
+.app-error.is-compact .app-error-icon {
+  margin-bottom: var(--mrr-space-2);
+  font-size: 32px;
+}
+
+.app-error.is-compact .app-error-text {
+  margin-bottom: var(--mrr-space-3);
+  font-size: 13px;
+}
+
+.app-error.is-compact .app-error-text:last-child {
+  margin-bottom: 0;
 }
 </style>

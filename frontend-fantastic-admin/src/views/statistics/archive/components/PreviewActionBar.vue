@@ -89,7 +89,7 @@ watch(() => props.image, () => {
  * 全屏时下拉向上展开会被工具条盖住、下半截点不动。这里抬到工具条之上。
  * 层级梯度：影像查看器 3000 < 预览工具条 3001 < 下拉 3002 < 确认弹窗 3200（ActionDialog）< 提示条 3300 < 水印 4000。 */
 :global(.preview-type-popper) {
-  z-index: 3002 !important;
+  z-index: calc(var(--mrr-z-progress) + 2) !important;
 }
 
 /* 全屏影像之上留一层悬浮工具条：边看大图边改分类。层级梯度见上方说明。 */
@@ -97,7 +97,7 @@ watch(() => props.image, () => {
   position: fixed;
   right: 16px;
   bottom: 16px;
-  z-index: 3001;
+  z-index: calc(var(--mrr-z-progress) + 1);
   display: grid;
   gap: 6px;
   width: min(180px, calc(100vw - 32px));

@@ -1,8 +1,8 @@
-import { describe, expect, it } from 'vitest'
 import { mount } from '@vue/test-utils'
+import { describe, expect, it } from 'vitest'
 import AppError from '../AppError/index.vue'
 
-describe('AppError', () => {
+describe('appError', () => {
   it('renders default error message', () => {
     const wrapper = mount(AppError)
     expect(wrapper.find('.app-error-text').text()).toBe('加载失败')
@@ -20,5 +20,11 @@ describe('AppError', () => {
       await btn.trigger('click')
       expect(wrapper.emitted('retry')).toBeTruthy()
     }
+  })
+
+  it('compact 尺寸保留 alert 角色', () => {
+    const root = mount(AppError, { props: { size: 'compact' } }).find('.app-error')
+    expect(root.classes()).toContain('is-compact')
+    expect(root.attributes('role')).toBe('alert')
   })
 })

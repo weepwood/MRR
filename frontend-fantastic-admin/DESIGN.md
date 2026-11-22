@@ -483,7 +483,8 @@ Element Plus `el-button` 与 reka-ui `FaButton`（`.fa-button-control`）**尺�
 仍待逐页处理的是**页面内部**的旧写法，而不是页头：
 
 - `el-card` 分区 → `MrrSectionCard`：监控、OSS 迁移、运维中心、数据交换、统计明细的卡头是各页自写的 `.card-header`。目前由 Element Plus 桥接层对齐留白和底色，语义未迁移。
-- `el-empty` / `v-loading` → `AppEmpty` / `AppLoading`：同样由桥接层兜底视觉。
+- `el-empty` → `AppEmpty`：业务页面与共享组件已全部迁移（含档案袋、存储浏览器）；弹层、下拉、图片错误插槽等受限空间用 `size="compact"`。存储浏览器的图片读取失败改为 `AppError`。`v-loading` → `AppLoading` 仍由桥接层兜底视觉。
+- 档案袋局部层级已改为 `calc(var(--mrr-z-header) + n)` / `calc(var(--mrr-z-progress) + n)`，数值不变。
 - `.info-trigger`（说明图标按钮）在权限管理、数据交换、认证测试台各复制一份，应抽成共享组件或 `#badge` 的公共样式。
 - 页内网格间距 `gap: 12/14/16/18px` 仍是页面局部值，随各页改造时统一到 `--mrr-space-*`。
 

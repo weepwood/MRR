@@ -201,7 +201,7 @@ function openExternalLink(url: string) {
 }
 
 .settings-card {
-  padding: 18px;
+  padding: var(--mrr-card-inset);
   background: var(--el-bg-color);
   border: 1px solid var(--el-border-color-lighter);
   border-radius: var(--mrr-radius-card);
@@ -211,7 +211,7 @@ function openExternalLink(url: string) {
   display: flex;
   gap: 12px;
   align-items: center;
-  margin-bottom: 18px;
+  margin-bottom: var(--mrr-space-4);
 }
 
 .card-header--list {
@@ -268,7 +268,7 @@ function openExternalLink(url: string) {
 
 .field-group {
   display: grid;
-  gap: 7px;
+  gap: var(--mrr-space-2);
   min-width: 0;
 }
 
@@ -284,7 +284,7 @@ function openExternalLink(url: string) {
 }
 
 .form-hint {
-  margin: 10px 0 0;
+  margin: var(--mrr-space-2) 0 0;
   font-size: 11px;
   color: var(--el-text-color-secondary);
 }
@@ -299,7 +299,7 @@ function openExternalLink(url: string) {
   gap: 12px;
   align-items: center;
   min-width: 0;
-  padding: 11px 12px;
+  padding: var(--mrr-space-3);
   background: var(--el-fill-color-extra-light);
   border: 1px solid var(--el-border-color-extra-light);
   border-radius: var(--mrr-radius-lg);

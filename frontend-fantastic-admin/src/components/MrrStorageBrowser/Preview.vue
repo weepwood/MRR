@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed } from 'vue'
+import AppError from '@/components/AppError/index.vue'
 
 const props = defineProps<{
   name?: string
@@ -27,18 +28,10 @@ const title = computed(() => props.name ? `预览 · ${props.name}` : '图片预
         hide-on-click-modal
       >
         <template #error>
-          <el-empty description="无法显示此图片" :image-size="64">
-            <el-button @click="emit('retry')">
-              重新加载
-            </el-button>
-          </el-empty>
+          <AppError size="compact" message="无法显示此图片" retry-text="重新加载" @retry="emit('retry')" />
         </template>
       </el-image>
-      <el-empty v-else-if="failed" description="图片读取失败" :image-size="64">
-        <el-button @click="emit('retry')">
-          重新加载
-        </el-button>
-      </el-empty>
+      <AppError v-else-if="failed" size="compact" message="图片读取失败" retry-text="重新加载" @retry="emit('retry')" />
     </div>
   </el-dialog>
 </template>
@@ -75,7 +68,7 @@ const title = computed(() => props.name ? `预览 · ${props.name}` : '图片预
   object-fit: contain;
 }
 
-.preview-content :deep(.el-empty) {
+.preview-content :deep(.app-error) {
   align-self: center;
 }
 </style>

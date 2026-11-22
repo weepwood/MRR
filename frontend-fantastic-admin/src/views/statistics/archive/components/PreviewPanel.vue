@@ -4,6 +4,7 @@ import type { GalleryImage } from '../types'
 import type { ArchivePreviewMode } from '@/utils/system-settings'
 import { ElImageViewer } from 'element-plus'
 import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
+import AppEmpty from '@/components/AppEmpty/index.vue'
 import { isMotionEnabled } from '@/utils/motion-preference'
 import { suppressFocusSelect } from '../utils/viewer-close-focus-guard'
 import PreviewActionBar from './PreviewActionBar.vue'
@@ -282,7 +283,7 @@ onUnmounted(() => {
         </article>
       </div>
     </template>
-    <el-empty v-else :description="props.emptyDescription" />
+    <AppEmpty v-else icon="i-lucide:image-off" :description="props.emptyDescription" />
   </div>
 </template>
 

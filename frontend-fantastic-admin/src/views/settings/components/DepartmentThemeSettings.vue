@@ -42,7 +42,8 @@ let nextId = 1
 const colorPresets = ARCHIVE_DEPARTMENT_THEME_PRESETS.flatMap(item => [item.folderColor, item.stripColor])
 const hasRows = computed(() => rows.value.length > 0)
 const hasHistory = computed(() => history.value.length > 0)
-const isDirty = computed(() => JSON.stringify(normalizedRows()) !== JSON.stringify(persistedThemes.value))
+const controlsDisabled = computed(() => !loaded.value || loading.value || saving.value)
+const isDirty = computed(() => loaded.value && JSON.stringify(normalizedRows()) !== JSON.stringify(persistedThemes.value))
 const configuredDepartments = computed(() => new Set(rows.value.map(r => r.department.trim().toLocaleLowerCase('zh-CN'))))
 const availableDepartments = computed(() => departments.value.filter(d => !configuredDepartments.value.has(d.toLocaleLowerCase('zh-CN'))))
 
@@ -162,7 +163,7 @@ async function loadDepartments() {
 }
 
 async function saveThemes() {
-  if (!validateRows()) {
+  if (controlsDisabled.value || !validateRows()) {
     return
   }
 
@@ -187,6 +188,7 @@ async function saveThemes() {
 }
 
 function handleExport() {
+  if (controlsDisabled.value) { return }
   const themes = normalizedRows()
   const url = URL.createObjectURL(new Blob([JSON.stringify(themes, null, 2)], { type: 'application/json' }))
   const link = document.createElement('a')
@@ -198,13 +200,14 @@ function handleExport() {
 }
 
 function triggerImport() {
+  if (controlsDisabled.value) { return }
   importInput.value?.click()
 }
 
 async function handleImport(event: Event) {
   const input = event.target as HTMLInputElement
   const file = input.files?.[0]
-  if (!file) {
+  if (!file || controlsDisabled.value) {
     return
   }
 
@@ -241,17 +244,17 @@ onMounted(() => {
           <p>同一科室始终使用相同配色，可分别设置档案袋主色与顶部色条颜色。</p>
         </div>
         <div class="department-theme-actions">
-          <el-button :disabled="!hasHistory" @click="historyVisible = true">
+          <el-button :disabled="controlsDisabled || !hasHistory" @click="historyVisible = true">
             历史配色
           </el-button>
-          <el-button @click="resetToAutomaticThemes">
+          <el-button :disabled="controlsDisabled" @click="resetToAutomaticThemes">
             恢复自动配色
           </el-button>
-          <el-button @click="handleExport">
+          <el-button :disabled="controlsDisabled" @click="handleExport">
             <FaIcon name="i-lucide:download" />
             导出配色
           </el-button>
-          <el-button @click="triggerImport">
+          <el-button :disabled="controlsDisabled" @click="triggerImport">
             <FaIcon name="i-lucide:upload" />
             导入配色
           </el-button>

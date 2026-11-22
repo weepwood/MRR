@@ -1,8 +1,14 @@
 import { deleteRequest, getRequest, putRequest } from '../index'
 
 /** GET /api/v1/settings — 获取全部系统设置 */
-export function getSystemSettings() {
-  return getRequest<Record<string, string>>('/api/v1/settings')
+export async function getSystemSettings() {
+  const response = await getRequest<Record<string, string>>('/api/v1/settings')
+  const settings = response?.data
+  if (!settings || typeof settings !== 'object' || Array.isArray(settings)
+    || Object.values(settings).some(value => typeof value !== 'string')) {
+    throw new Error('系统设置响应格式无效')
+  }
+  return response
 }
 
 /** GET /api/v1/settings/{key} — 获取单个设置值 */

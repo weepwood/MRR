@@ -51,7 +51,7 @@ class CiBuildReuseTest(unittest.TestCase):
         self.assertIn("pages_demo_smoke: ${{ steps.select.outputs.pages_demo_smoke }}", workflow)
         self.assertIn("if: always() && (github.event_name != 'pull_request' || needs.scope.outputs.pages_demo_smoke != 'false')",
                       workflow)
-        self.assertIn("python3 scripts/ci_gate.py scope --mode pr", workflow)
+        self.assertIn("python3 -m scripts.ci_gate scope --mode pr", workflow)
         scope = workflow.split("  build:", 1)[0]
         self.assertIn("fetch-depth: 0", scope)
         self.assertNotIn("ref: ${{ github.event.pull_request.head.sha }}", scope)

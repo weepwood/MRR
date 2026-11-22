@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import type { AuthTestHistoryEvent, AuthTestHistoryItem } from './types'
-import { Info as InfoFilled } from 'lucide-vue-next'
 import { computed, ref } from 'vue'
+import MrrInfoTip from '@/components/MrrInfoTip/index.vue'
 import MrrPageHeader from '@/components/MrrPageHeader/index.vue'
 import MrrPageShell from '@/components/MrrPageShell/index.vue'
 import { useUserStore } from '@/store/modules/user'
@@ -38,15 +38,7 @@ function record(event: AuthTestHistoryEvent) {
       description="测试内部 JWT、受保护 API、外部影像票据及 OSS 只读接口。外部票据模块会先检查后端配置，再引导生成并部署 HMAC Secret。"
     >
       <template #badge>
-        <el-tooltip
-          content="生产 HMAC Secret 不应保存在前端。测试页中的 Secret 只存在于当前页面内存，正式 HIS/EMR 接入必须由外部系统后端签名。"
-          placement="right"
-          :show-after="200"
-        >
-          <button type="button" class="info-trigger" aria-label="生产 Secret 安全说明">
-            <el-icon><InfoFilled /></el-icon>
-          </button>
-        </el-tooltip>
+        <MrrInfoTip label="生产 Secret 安全说明" content="生产 HMAC Secret 不应保存在前端。测试页中的 Secret 只存在于当前页面内存，正式 HIS/EMR 接入必须由外部系统后端签名。" />
       </template>
       <template #actions>
         <el-tag type="warning" effect="plain">
@@ -144,28 +136,6 @@ function record(event: AuthTestHistoryEvent) {
   gap: 16px;
   align-items: flex-start;
   justify-content: space-between;
-}
-
-.info-trigger {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  padding: 4px;
-  color: var(--el-text-color-secondary);
-  cursor: help;
-  background: transparent;
-  border: 0;
-  border-radius: var(--mrr-radius-pill);
-}
-
-.info-trigger:hover,
-.info-trigger:focus-visible {
-  color: var(--el-color-primary);
-}
-
-.info-trigger:focus-visible {
-  outline: 2px solid var(--el-color-primary);
-  outline-offset: 2px;
 }
 
 .history-header span {

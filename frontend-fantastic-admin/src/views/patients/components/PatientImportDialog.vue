@@ -276,13 +276,13 @@ function downloadTemplate() {
 <style scoped>
 .import-dialog {
   display: grid;
-  gap: 18px;
+  gap: var(--mrr-space-4);
 }
 
 .field-section,
 .result-section {
   display: grid;
-  gap: 14px;
+  gap: var(--mrr-space-3);
 }
 
 .section-heading {
@@ -298,7 +298,7 @@ function downloadTemplate() {
 }
 
 .section-heading p {
-  margin: 6px 0 0;
+  margin: var(--mrr-space-2) 0 0;
   font-size: 13px;
   line-height: 1.6;
   color: var(--el-text-color-secondary);
@@ -312,10 +312,10 @@ function downloadTemplate() {
 
 .field-item {
   display: flex;
-  gap: 10px;
+  gap: var(--mrr-space-3);
   align-items: center;
   min-width: 0;
-  padding: 8px 10px;
+  padding: 8px var(--mrr-space-3);
   background: var(--el-fill-color-lighter);
   border: 1px solid var(--el-border-color-lighter);
   border-radius: var(--mrr-radius-md);
@@ -335,7 +335,7 @@ function downloadTemplate() {
 .result-summary {
   display: grid;
   grid-template-columns: repeat(5, minmax(0, 1fr));
-  gap: 10px;
+  gap: var(--mrr-space-3);
 }
 
 .summary-item {

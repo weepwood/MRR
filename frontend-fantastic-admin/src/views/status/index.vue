@@ -686,7 +686,7 @@ useVisibleInterval(refreshCurrentStatus, 60_000)
   background: currentcolor;
   border-radius: 50%;
   box-shadow: 0 0 0 8px var(--mrr-tone-primary-soft);
-  animation: pulse 1.2s ease-in-out infinite;
+  animation: pulse var(--mrr-motion-loop-soft) ease-in-out infinite;
 }
 
 .loading-panel p {
@@ -872,7 +872,7 @@ useVisibleInterval(refreshCurrentStatus, 60_000)
   cursor: pointer;
   border: 0;
   border-radius: 4px;
-  transition: opacity var(--mrr-motion-feedback) ease, transform var(--mrr-motion-press) var(--mrr-ease-out);
+  transition: opacity var(--mrr-motion-feedback) var(--mrr-ease-out), transform var(--mrr-motion-press) var(--mrr-ease-out);
 }
 
 .day-cell.is-selected {

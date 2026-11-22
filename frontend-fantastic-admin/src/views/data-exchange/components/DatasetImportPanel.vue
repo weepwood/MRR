@@ -2,12 +2,14 @@
 import type { UploadFile, UploadFiles, UploadInstance, UploadRawFile, UploadUserFile } from 'element-plus'
 import type { DataExchangeDataset, DataExchangeImportResult } from '@/api/modules/data-exchange'
 import { ElMessage, genFileId } from 'element-plus'
-import { Download, Info as InfoFilled, Upload as UploadFilled } from 'lucide-vue-next'
+import { Download, Upload as UploadFilled } from 'lucide-vue-next'
 import { computed, ref } from 'vue'
 import {
   downloadDataExchangeTemplate,
   importDataExchangeFile,
 } from '@/api/modules/data-exchange'
+import MrrInfoTip from '@/components/MrrInfoTip/index.vue'
+import MrrSectionCard from '@/components/MrrSectionCard/index.vue'
 import { actionDialog } from '@/ui/components/ActionDialog'
 import { createCsvBlob, downloadBlob, downloadResponseBlob } from '@/utils/file-download'
 
@@ -165,34 +167,22 @@ function today() {
 </script>
 
 <template>
-  <el-card shadow="never" class="dataset-card">
-    <template #header>
-      <div class="panel-heading">
-        <div>
-          <div class="panel-title-row">
-            <h3>{{ title }}</h3>
-            <el-tooltip placement="top" :show-after="200">
-              <template #content>
-                <div class="import-safety-tooltip">
-                  <strong>先校验，后写入</strong>
-                  <p>表头必须与模板一致。存在格式或关联错误时，本次文件不会写入数据库。</p>
-                </div>
-              </template>
-              <button
-                type="button"
-                class="import-safety-trigger"
-                aria-label="导入校验说明：先校验，后写入。表头必须与模板一致。存在格式或关联错误时，本次文件不会写入数据库。"
-              >
-                <el-icon><InfoFilled /></el-icon>
-              </button>
-            </el-tooltip>
-          </div>
-          <p>{{ description }}</p>
+  <MrrSectionCard class="dataset-card" :title="title" :description="description">
+    <template #title-suffix>
+      <MrrInfoTip
+        label="导入校验说明：先校验，后写入。表头必须与模板一致。存在格式或关联错误时，本次文件不会写入数据库。"
+        placement="top"
+      >
+        <div class="import-safety-tooltip">
+          <strong>先校验，后写入</strong>
+          <p>表头必须与模板一致。存在格式或关联错误时，本次文件不会写入数据库。</p>
         </div>
-        <el-button :icon="Download" :loading="downloadingTemplate" @click="downloadTemplate">
-          下载模板
-        </el-button>
-      </div>
+      </MrrInfoTip>
+    </template>
+    <template #actions>
+      <el-button :icon="Download" :loading="downloadingTemplate" @click="downloadTemplate">
+        下载模板
+      </el-button>
     </template>
 
     <div class="panel-content">
@@ -321,7 +311,7 @@ function today() {
         </p>
       </section>
     </div>
-  </el-card>
+  </MrrSectionCard>
 </template>
 
 <style scoped>
@@ -335,38 +325,6 @@ function today() {
   gap: 16px;
 }
 
-.panel-title-row {
-  display: flex;
-  gap: 8px;
-  align-items: center;
-  min-width: 0;
-}
-
-.import-safety-trigger {
-  display: inline-flex;
-  flex: 0 0 20px;
-  align-items: center;
-  justify-content: center;
-  width: 20px;
-  height: 20px;
-  padding: 0;
-  color: var(--el-text-color-secondary);
-  cursor: help;
-  background: transparent;
-  border: 0;
-  border-radius: var(--mrr-radius-pill);
-}
-
-.import-safety-trigger:hover,
-.import-safety-trigger:focus-visible {
-  color: var(--el-color-primary);
-}
-
-.import-safety-trigger:focus-visible {
-  outline: 2px solid var(--el-color-primary);
-  outline-offset: 2px;
-}
-
 .import-safety-tooltip {
   max-width: 300px;
   line-height: 1.5;
@@ -374,25 +332,6 @@ function today() {
 
 .import-safety-tooltip p {
   margin: 4px 0 0;
-}
-
-.panel-heading {
-  display: flex;
-  gap: 16px;
-  align-items: flex-start;
-  justify-content: space-between;
-}
-
-.panel-heading h3 {
-  margin: 0;
-  font-size: 18px;
-}
-
-.panel-heading p {
-  margin: 6px 0 0;
-  font-size: 13px;
-  line-height: 1.6;
-  color: var(--el-text-color-secondary);
 }
 
 .field-grid {
@@ -403,10 +342,10 @@ function today() {
 
 .field-item {
   display: flex;
-  gap: 10px;
+  gap: var(--mrr-space-3);
   align-items: center;
   min-width: 0;
-  padding: 8px 10px;
+  padding: 8px var(--mrr-space-3);
   background: var(--el-fill-color-lighter);
   border: 1px solid var(--el-border-color-lighter);
   border-radius: var(--mrr-radius-md);
@@ -427,7 +366,7 @@ function today() {
 .action-row,
 .result-actions {
   display: flex;
-  gap: 10px;
+  gap: var(--mrr-space-3);
   justify-content: flex-end;
 }
 
@@ -441,7 +380,7 @@ function today() {
   display: grid;
   gap: 4px;
   min-width: 0;
-  padding: 10px;
+  padding: var(--mrr-space-3);
   border: 1px solid var(--el-border-color-lighter);
   border-radius: var(--mrr-radius-md);
 }
@@ -475,10 +414,6 @@ function today() {
 }
 
 @media (max-width: 760px) {
-  .panel-heading {
-    flex-direction: column;
-  }
-
   .field-grid {
     grid-template-columns: 1fr;
   }

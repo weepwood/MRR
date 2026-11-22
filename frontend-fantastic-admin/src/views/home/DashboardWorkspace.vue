@@ -867,10 +867,10 @@ watch(storageKey, loadPreferences, { immediate: true })
   border-radius: var(--mrr-radius-xl);
   box-shadow: var(--mrr-shadow-xs);
   transition:
-    background-color var(--mrr-motion-feedback) ease,
-    border-color var(--mrr-motion-feedback) ease,
-    box-shadow var(--mrr-motion-feedback) ease,
-    opacity var(--mrr-motion-feedback) ease,
+    background-color var(--mrr-motion-feedback) var(--mrr-ease-out),
+    border-color var(--mrr-motion-feedback) var(--mrr-ease-out),
+    box-shadow var(--mrr-motion-feedback) var(--mrr-ease-out),
+    opacity var(--mrr-motion-feedback) var(--mrr-ease-out),
     transform var(--mrr-motion-press) var(--mrr-ease-out);
 }
 
@@ -1083,7 +1083,7 @@ watch(storageKey, loadPreferences, { immediate: true })
 
 .dashboard-widget__arrow {
   color: var(--mrr-muted-foreground);
-  transition: color var(--mrr-motion-feedback) ease, transform var(--mrr-motion-feedback) var(--mrr-ease-out);
+  transition: color var(--mrr-motion-feedback) var(--mrr-ease-out), transform var(--mrr-motion-feedback) var(--mrr-ease-out);
 }
 
 .dashboard-widget:hover .dashboard-widget__arrow {

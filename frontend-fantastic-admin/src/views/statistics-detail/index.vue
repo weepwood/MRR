@@ -115,35 +115,35 @@ onBeforeUnmount(() => {
 }
 
 .department-themed-archive :deep(.folder-card-body) {
-  gap: 14px;
+  gap: var(--mrr-space-3);
 }
 
 .department-themed-archive :deep(.folder-code-grid) {
-  gap: 10px;
+  gap: var(--mrr-space-3);
 }
 
 .department-themed-archive :deep(.folder-code-block) {
   display: flex;
   flex-direction: column;
-  gap: 7px;
+  gap: var(--mrr-space-2);
   justify-content: center;
   min-height: 78px;
-  padding: 12px 14px;
-  transition: background-color var(--mrr-motion-feedback) ease, border-color var(--mrr-motion-feedback) ease, box-shadow var(--mrr-motion-feedback) ease;
+  padding: 12px var(--mrr-space-3);
+  transition: background-color var(--mrr-motion-feedback) var(--mrr-ease-out), border-color var(--mrr-motion-feedback) var(--mrr-ease-out), box-shadow var(--mrr-motion-feedback) var(--mrr-ease-out);
 }
 
 .department-themed-archive :deep(.folder-code-block-full) {
   display: grid;
   grid-template-columns: auto minmax(0, 1fr);
-  column-gap: 18px;
+  column-gap: var(--mrr-space-4);
   align-items: center;
   min-height: 86px;
-  padding: 15px 16px;
+  padding: var(--mrr-space-4) 16px;
 }
 
 .department-themed-archive :deep(.folder-code-label) {
   display: inline-flex;
-  gap: 6px;
+  gap: var(--mrr-space-2);
   align-items: center;
   width: fit-content;
   margin-bottom: 0;
@@ -213,7 +213,7 @@ onBeforeUnmount(() => {
 @media (max-width: 480px) {
   .department-themed-archive :deep(.folder-code-block-full) {
     grid-template-columns: minmax(0, 1fr);
-    gap: 9px;
+    gap: var(--mrr-space-2);
   }
 
   .department-themed-archive :deep(.folder-code-block-full .folder-code-value) {

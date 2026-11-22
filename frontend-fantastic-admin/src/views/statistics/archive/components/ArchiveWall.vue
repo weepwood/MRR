@@ -4,6 +4,7 @@ import type { GalleryImage } from '../types'
 import { ElImageViewer } from 'element-plus'
 import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
 import AppEmpty from '@/components/AppEmpty/index.vue'
+import { Z_INDEX } from '@/constants/z-index'
 import { isMotionEnabled } from '@/utils/motion-preference'
 import { getTypeLabel } from '../constants'
 import { isFocusSelectSuppressed, suppressFocusSelect } from '../utils/viewer-close-focus-guard'
@@ -367,7 +368,7 @@ onUnmounted(() => {
       :initial-index="imageViewerIndex"
       :infinite="false"
       hide-on-click-modal
-      :z-index="3000"
+      :z-index="Z_INDEX.viewer"
       teleported
       @close="closeImageViewer"
       @switch="handleImageViewerSwitch"
@@ -406,7 +407,7 @@ onUnmounted(() => {
   width: 100%;
   height: 100%;
   min-height: 0;
-  padding: 10px 10px 92px;
+  padding: var(--mrr-space-3) var(--mrr-space-3) 92px;
   overflow: auto;
   background:
     radial-gradient(circle at top right, hsl(var(--primary) / 5%), transparent 32%),
@@ -431,7 +432,7 @@ onUnmounted(() => {
   background: var(--surface);
   border: 1px solid var(--divider);
   border-radius: var(--mrr-radius-card);
-  transition: border-color var(--mrr-motion-feedback) ease, box-shadow var(--mrr-motion-feedback) ease, transform var(--mrr-motion-press) var(--mrr-ease-out);
+  transition: border-color var(--mrr-motion-feedback) var(--mrr-ease-out), box-shadow var(--mrr-motion-feedback) var(--mrr-ease-out), transform var(--mrr-motion-press) var(--mrr-ease-out);
 }
 
 .archive-wall-card:hover {
@@ -473,7 +474,7 @@ onUnmounted(() => {
   background: transparent;
   border: 1.5px solid rgb(255 255 255 / 85%);
   border-radius: var(--mrr-radius-sm);
-  transition: color var(--mrr-motion-feedback) ease, background-color var(--mrr-motion-feedback) ease, border-color var(--mrr-motion-feedback) ease;
+  transition: color var(--mrr-motion-feedback) var(--mrr-ease-out), background-color var(--mrr-motion-feedback) var(--mrr-ease-out), border-color var(--mrr-motion-feedback) var(--mrr-ease-out);
 }
 
 /* 命中区比视觉块大一圈，但只在上下与左侧外扩，不盖住右侧页码的点击范围。 */
@@ -567,7 +568,7 @@ onUnmounted(() => {
   left: 11px;
   z-index: 2;
   display: flex;
-  gap: 6px;
+  gap: var(--mrr-space-2);
   align-items: center;
   min-width: 0;
   max-width: calc(100% - 22px);

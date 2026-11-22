@@ -113,7 +113,7 @@ function handleSearch() {
 
 /* ===== 头部 ===== */
 .search-header {
-  margin-bottom: 36px;
+  margin-bottom: var(--mrr-space-8);
   text-align: center;
 }
 
@@ -180,7 +180,7 @@ function handleSearch() {
 /* ===== 响应式 ===== */
 @media (max-width: 520px) {
   .search-card {
-    padding: 36px 24px 32px;
+    padding: var(--mrr-space-8) 24px 32px;
   }
 
   .search-title {

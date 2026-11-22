@@ -279,7 +279,7 @@ function openExternalLink(url: string) {
 }
 
 .add-button {
-  gap: 6px;
+  gap: var(--mrr-space-2);
   min-width: 108px;
 }
 

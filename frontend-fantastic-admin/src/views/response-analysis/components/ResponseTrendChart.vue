@@ -142,7 +142,7 @@ function formatBucket(bucket: string) {
   gap: 2px 5px;
   align-content: center;
   min-width: 0;
-  padding: 0 18px;
+  padding: 0 var(--mrr-space-4);
 }
 
 .overview-item:first-child {
@@ -156,7 +156,7 @@ function formatBucket(bucket: string) {
 .overview-item span {
   display: flex;
   grid-column: 1 / -1;
-  gap: 7px;
+  gap: var(--mrr-space-2);
   align-items: center;
   min-width: 0;
   overflow: hidden;
@@ -205,12 +205,12 @@ function formatBucket(bucket: string) {
 .trend-section,
 .duration-section {
   display: grid;
-  gap: 14px;
+  gap: var(--mrr-space-3);
   min-width: 0;
 }
 
 .duration-section {
-  padding-top: 18px;
+  padding-top: var(--mrr-space-4);
   border-top: 1px solid var(--el-border-color-lighter);
 }
 
@@ -259,7 +259,7 @@ function formatBucket(bucket: string) {
 @media (max-width: 900px) {
   .chart-overview {
     grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 14px 0;
+    gap: var(--mrr-space-3) 0;
   }
 
   .overview-item:nth-child(3) {
@@ -278,7 +278,7 @@ function formatBucket(bucket: string) {
   .overview-item:first-child,
   .overview-item:nth-child(3) {
     grid-template-columns: 1fr auto;
-    padding: 10px 0;
+    padding: var(--mrr-space-3) 0;
     border-top: 1px solid var(--el-border-color-lighter);
     border-left: 0;
   }

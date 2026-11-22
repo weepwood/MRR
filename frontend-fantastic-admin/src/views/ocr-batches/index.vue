@@ -283,7 +283,7 @@ async function skipRollbackPage() {
 
 .ocr-batches__auto-apply {
   display: grid;
-  gap: 6px;
+  gap: var(--mrr-space-2);
   margin-top: 16px;
 }
 
@@ -300,8 +300,8 @@ async function skipRollbackPage() {
 .batch-preview {
   display: grid;
   gap: 8px;
-  padding: 14px;
-  margin-top: 18px;
+  padding: var(--mrr-space-3);
+  margin-top: var(--mrr-space-4);
   background: var(--mrr-muted);
   border: 1px solid var(--mrr-border);
   border-radius: var(--mrr-radius-lg);

@@ -384,7 +384,7 @@ onMounted(loadTables)
 }
 
 .meta-key {
-  padding: 1px 6px;
+  padding: 1px var(--mrr-space-2);
   font-family: var(--mrr-font-mono);
   font-size: 12px;
   line-height: 18px;

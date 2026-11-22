@@ -125,7 +125,7 @@ function resetExamples() {
 
 .gallery-search-input {
   width: 100%;
-  padding-left: 30px;
+  padding-left: var(--mrr-space-8);
 }
 
 .gallery-categories {

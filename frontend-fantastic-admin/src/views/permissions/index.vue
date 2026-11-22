@@ -2,11 +2,12 @@
 import type { AuthRole } from '@/api/types'
 import type { PermissionDefinition } from '@/utils/permission'
 import { ElMessage } from 'element-plus'
-import { Info as InfoFilled } from 'lucide-vue-next'
 import { computed, onMounted, reactive, ref } from 'vue'
 import apiUser from '@/api/modules/user'
 import AppEmpty from '@/components/AppEmpty/index.vue'
 import AppError from '@/components/AppError/index.vue'
+import AppLoading from '@/components/AppLoading/index.vue'
+import MrrInfoTip from '@/components/MrrInfoTip/index.vue'
 import MrrPageHeader from '@/components/MrrPageHeader/index.vue'
 import MrrPageShell from '@/components/MrrPageShell/index.vue'
 import { PERMISSION_DEFINITIONS, PERMISSION_HIERARCHY } from '@/utils/permission'
@@ -213,21 +214,15 @@ onMounted(loadPermissions)
       description="按业务范围分配查看、编辑、输出和系统管理权限。修改保存后，用户重新登录生效。"
     >
       <template #badge>
-        <el-tooltip
-          content="上级权限会自动继承下级权限；系统查看只能读取设置和监控，不能修改设置或执行维护任务。"
-          placement="right"
-          :show-after="200"
-        >
-          <button type="button" class="info-trigger" aria-label="权限继承说明">
-            <el-icon><InfoFilled /></el-icon>
-          </button>
-        </el-tooltip>
+        <MrrInfoTip label="权限继承说明" content="上级权限会自动继承下级权限；系统查看只能读取设置和监控，不能修改设置或执行维护任务。" />
       </template>
     </MrrPageHeader>
 
     <!-- 加载失败与“确实没有角色”必须区分，见 DESIGN.md §5.1。 -->
     <AppError v-if="!loading && loadError && !sortedRoles.length" :message="loadError" @retry="loadPermissions" />
     <AppEmpty v-else-if="!loading && !sortedRoles.length" icon="i-lucide:shield" description="暂无角色数据" />
+    <!-- 首次加载用骨架屏；保存后刷新仍保留已有角色，只叠加 v-loading。 -->
+    <AppLoading v-else-if="loading && !sortedRoles.length" type="card" :cols="3" />
 
     <div v-else v-loading="loading" class="permission-views">
       <section class="permission-section">
@@ -248,16 +243,7 @@ onMounted(loadPermissions)
                     <el-tag size="small" effect="plain">
                       {{ role.code }}
                     </el-tag>
-                    <el-tooltip
-                      v-if="isAdminRole(role.code)"
-                      content="管理员自动拥有全部权限，不可修改。"
-                      placement="top"
-                      :show-after="200"
-                    >
-                      <button type="button" class="info-trigger" aria-label="管理员权限说明">
-                        <el-icon><InfoFilled /></el-icon>
-                      </button>
-                    </el-tooltip>
+                    <MrrInfoTip label="管理员权限说明" placement="top" content="管理员自动拥有全部权限，不可修改。" />
                   </div>
                 </div>
                 <el-button v-if="!isAdminRole(role.code)" type="primary" link @click="startEdit(role)">
@@ -396,23 +382,6 @@ onMounted(loadPermissions)
 </template>
 
 <style scoped>
-.info-trigger {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  padding: 4px;
-  color: var(--text-secondary);
-  cursor: help;
-  background: transparent;
-  border: 0;
-  border-radius: var(--mrr-radius-pill);
-}
-
-.info-trigger:hover,
-.info-trigger:focus-visible { color: hsl(var(--primary)); }
-
-.info-trigger:focus-visible { outline: 2px solid hsl(var(--primary)); outline-offset: 2px; }
-
 .role-header,
 .role-name-row,
 .permission-tags,

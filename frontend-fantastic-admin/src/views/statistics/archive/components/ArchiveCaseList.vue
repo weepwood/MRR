@@ -116,7 +116,7 @@ onBeforeUnmount(() => window.removeEventListener(ARCHIVE_DEPARTMENT_THEME_UPDATE
 <style scoped>
 .archive-case-card {
   display: grid;
-  gap: 10px;
+  gap: var(--mrr-space-3);
   padding: 12px;
   background: var(--surface);
   border: 1px solid var(--divider);
@@ -125,7 +125,7 @@ onBeforeUnmount(() => window.removeEventListener(ARCHIVE_DEPARTMENT_THEME_UPDATE
 
 .case-header {
   display: flex;
-  gap: 10px;
+  gap: var(--mrr-space-3);
   align-items: center;
   justify-content: space-between;
 }
@@ -157,16 +157,16 @@ onBeforeUnmount(() => window.removeEventListener(ARCHIVE_DEPARTMENT_THEME_UPDATE
 .case-item {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
-  gap: 10px;
+  gap: var(--mrr-space-3);
   width: 100%;
-  padding: 10px;
+  padding: var(--mrr-space-3);
   color: var(--text-primary);
   text-align: left;
   cursor: pointer;
   background: var(--folder-tint, var(--surface-muted));
   border: 1px solid transparent;
   border-radius: var(--mrr-radius-md);
-  transition: border-color var(--mrr-motion-feedback) ease, background-color var(--mrr-motion-feedback) ease;
+  transition: border-color var(--mrr-motion-feedback) var(--mrr-ease-out), background-color var(--mrr-motion-feedback) var(--mrr-ease-out);
 }
 
 .case-item:hover {
@@ -199,7 +199,7 @@ onBeforeUnmount(() => window.removeEventListener(ARCHIVE_DEPARTMENT_THEME_UPDATE
 .case-codes {
   display: grid;
   grid-template-columns: repeat(2, auto);
-  gap: 10px;
+  gap: var(--mrr-space-3);
   font-variant-numeric: tabular-nums;
 }
 

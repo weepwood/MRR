@@ -16,6 +16,7 @@ import AppLoading from '@/components/AppLoading/index.vue'
 import MrrFilterActionButton from '@/components/MrrFilterActionButton/index.vue'
 import MrrPageHeader from '@/components/MrrPageHeader/index.vue'
 import MrrPageShell from '@/components/MrrPageShell/index.vue'
+import MrrSectionCard from '@/components/MrrSectionCard/index.vue'
 import MrrTableActions from '@/components/MrrTableActions/index.vue'
 import { useTableActionLayout } from '@/composables/useTableActionLayout'
 import { rangePickerPopperOptions } from '@/ui/provider/picker-options'
@@ -447,17 +448,11 @@ onBeforeUnmount(() => {
       <MrrMetricCard v-for="item in summaryCards" :key="item.label" v-bind="item" />
     </section>
 
-    <el-card shadow="never">
-      <template #header>
-        <div class="panel-header">
-          <div>
-            <span class="panel-title">档案筛选</span>
-            <span class="panel-subtitle">可按患者姓名、病人 ID、住院科室、设备、负责人或日期定位档案袋</span>
-          </div>
-          <el-tag type="info">
-            {{ listData.total || 0 }} 条
-          </el-tag>
-        </div>
+    <MrrSectionCard title="档案筛选" description="可按患者姓名、病人 ID、住院科室、设备、负责人或日期定位档案袋">
+      <template #actions>
+        <el-tag type="info">
+          {{ listData.total || 0 }} 条
+        </el-tag>
       </template>
 
       <div class="filter-grid">
@@ -482,7 +477,7 @@ onBeforeUnmount(() => {
           </MrrFilterActionButton>
         </div>
       </div>
-    </el-card>
+    </MrrSectionCard>
 
     <section class="content-layout">
       <div ref="archiveShelfRef" class="archive-shelf">
@@ -652,27 +647,10 @@ onBeforeUnmount(() => {
 </template>
 
 <style scoped>
-.panel-header {
-  display: flex;
-  gap: 12px;
-  align-items: center;
-  justify-content: space-between;
-}
-
-.panel-title {
-  margin-right: 8px;
-  font-weight: 700;
-}
-
-.panel-subtitle {
-  font-size: 13px;
-  color: var(--text-secondary);
-}
-
 .filter-grid {
   display: flex;
   flex-wrap: wrap;
-  gap: 10px;
+  gap: var(--mrr-space-3);
   align-items: center;
 }
 
@@ -725,7 +703,7 @@ onBeforeUnmount(() => {
 .archive-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
-  gap: 18px;
+  gap: var(--mrr-space-4);
 }
 
 .archive-list-wrap {
@@ -796,7 +774,7 @@ onBeforeUnmount(() => {
   pointer-events: none;
   border: 1px solid color-mix(in srgb, var(--folder-accent) 22%, var(--divider));
   border-radius: var(--mrr-radius-xl);
-  transition: transform var(--mrr-motion-move) var(--mrr-ease-out), border-color var(--mrr-motion-feedback) ease, box-shadow var(--mrr-motion-feedback) ease;
+  transition: transform var(--mrr-motion-move) var(--mrr-ease-out), border-color var(--mrr-motion-feedback) var(--mrr-ease-out), box-shadow var(--mrr-motion-feedback) var(--mrr-ease-out);
 }
 
 .folder-layer-back {
@@ -816,7 +794,7 @@ onBeforeUnmount(() => {
 .folder-card-body {
   position: relative;
   display: grid;
-  gap: 13px;
+  gap: var(--mrr-space-3);
   min-height: 388px;
   padding: 21px 20px 17px;
   overflow: hidden;
@@ -824,7 +802,7 @@ onBeforeUnmount(() => {
   border: 1px solid var(--divider);
   border-radius: var(--mrr-radius-xl);
   box-shadow: 0 7px 20px rgb(15 23 42 / 6%);
-  transition: transform var(--mrr-motion-move) var(--mrr-ease-out), border-color var(--mrr-motion-feedback) ease, box-shadow var(--mrr-motion-feedback) ease, background-color var(--mrr-motion-feedback) ease;
+  transition: transform var(--mrr-motion-move) var(--mrr-ease-out), border-color var(--mrr-motion-feedback) var(--mrr-ease-out), box-shadow var(--mrr-motion-feedback) var(--mrr-ease-out), background-color var(--mrr-motion-feedback) var(--mrr-ease-out);
 }
 
 .folder-card-body::before {
@@ -975,7 +953,7 @@ onBeforeUnmount(() => {
   display: inline-flex;
   gap: 5px;
   align-items: center;
-  padding: 3px 7px;
+  padding: 3px var(--mrr-space-2);
   font-size: 10px;
   font-weight: 700;
   color: var(--folder-accent);
@@ -1002,7 +980,7 @@ onBeforeUnmount(() => {
 .folder-code-block {
   position: relative;
   min-width: 0;
-  padding: 11px 12px;
+  padding: var(--mrr-space-3) 12px;
   background: color-mix(in srgb, var(--folder-accent) 4%, var(--surface));
   border: 1px solid color-mix(in srgb, var(--folder-accent) 13%, var(--divider));
   border-radius: var(--mrr-radius-lg);
@@ -1065,13 +1043,13 @@ onBeforeUnmount(() => {
 }
 
 .folder-footer {
-  padding-top: 11px;
+  padding-top: var(--mrr-space-3);
   border-top: 1px dashed color-mix(in srgb, var(--folder-accent) 18%, var(--divider));
 }
 
 .folder-page-count {
   display: flex;
-  gap: 7px;
+  gap: var(--mrr-space-2);
   align-items: baseline;
   color: var(--folder-accent);
 }

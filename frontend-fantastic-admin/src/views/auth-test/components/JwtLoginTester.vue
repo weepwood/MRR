@@ -5,6 +5,7 @@ import { ElMessage } from 'element-plus'
 import { Copy as CopyDocument, KeyRound as Key, RefreshCw as Refresh, LogOut as SwitchButton, Eye as View } from 'lucide-vue-next'
 import { computed, reactive, ref } from 'vue'
 import { executeAuthTestRequest } from '@/api/modules/auth-test'
+import MrrSectionCard from '@/components/MrrSectionCard/index.vue'
 import { useUserStore } from '@/store/modules/user'
 import { actionDialog, ActionDialogCancelled } from '@/ui/components/ActionDialog'
 import { copyText } from '@/utils/copy-text'
@@ -236,17 +237,11 @@ async function copyToken() {
 
 <template>
   <div class="tester-grid">
-    <el-card shadow="never">
-      <template #header>
-        <div class="card-header">
-          <div>
-            <strong>用户名密码登录</strong>
-            <span>POST /api/v1/auth/login</span>
-          </div>
-          <el-tag :type="loginSucceeded ? 'success' : 'info'" effect="plain">
-            {{ loginSucceeded ? '已取得 Token' : '等待测试' }}
-          </el-tag>
-        </div>
+    <MrrSectionCard title="用户名密码登录" description="POST /api/v1/auth/login">
+      <template #actions>
+        <el-tag :type="loginSucceeded ? 'success' : 'info'" effect="plain">
+          {{ loginSucceeded ? '已取得 Token' : '等待测试' }}
+        </el-tag>
       </template>
 
       <el-form label-position="top">
@@ -282,19 +277,13 @@ async function copyToken() {
         <strong>{{ result ? `${result.durationMs} ms` : '—' }}</strong>
       </div>
       <pre class="code-panel">{{ formatJson(result?.data) || '登录响应将在这里显示' }}</pre>
-    </el-card>
+    </MrrSectionCard>
 
-    <el-card shadow="never">
-      <template #header>
-        <div class="card-header">
-          <div>
-            <strong>JWT 查看与验证</strong>
-            <span>本地解析不代表后端签名验证通过</span>
-          </div>
-          <el-button text :icon="Refresh" @click="useCurrentToken">
-            使用当前 Token
-          </el-button>
-        </div>
+    <MrrSectionCard title="JWT 查看与验证" description="本地解析不代表后端签名验证通过">
+      <template #actions>
+        <el-button text :icon="Refresh" @click="useCurrentToken">
+          使用当前 Token
+        </el-button>
       </template>
 
       <el-form label-position="top">
@@ -325,7 +314,7 @@ async function copyToken() {
           <pre class="code-panel compact">{{ formatJson(decodedJwt.payload) || '—' }}</pre>
         </div>
       </div>
-    </el-card>
+    </MrrSectionCard>
   </div>
 </template>
 
@@ -337,27 +326,16 @@ async function copyToken() {
   gap: 16px;
 }
 
-.card-header,
 .button-row,
 .response-summary {
   display: flex;
-  gap: 10px;
+  gap: var(--mrr-space-3);
   align-items: center;
 }
 
-.card-header {
-  justify-content: space-between;
-}
-
-.card-header span,
 .response-summary span {
   font-size: 13px;
   color: var(--el-text-color-secondary);
-}
-
-.card-header strong,
-.card-header span {
-  display: block;
 }
 
 .button-row,
@@ -366,12 +344,12 @@ async function copyToken() {
 }
 
 .response-summary {
-  margin: 14px 0;
+  margin: var(--mrr-space-3) 0;
 }
 
 .code-label {
   display: block;
-  margin: 14px 0 6px;
+  margin: var(--mrr-space-3) 0 var(--mrr-space-2);
   font-size: 12px;
   font-weight: 600;
   color: var(--el-text-color-secondary);
@@ -382,7 +360,7 @@ async function copyToken() {
   box-sizing: border-box;
   width: 100%;
   min-height: 120px;
-  padding: 14px;
+  padding: var(--mrr-space-3);
   margin: 0;
   overflow: auto;
   font-family: var(--mrr-font-mono);

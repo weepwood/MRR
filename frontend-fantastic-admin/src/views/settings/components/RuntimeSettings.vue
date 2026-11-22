@@ -3,6 +3,7 @@ import type { SettingSchema, SettingSchemaItem } from '@/api/modules/settings'
 import { ElMessage } from 'element-plus'
 import { computed, onActivated, onBeforeUnmount, onDeactivated, onMounted, reactive, ref } from 'vue'
 import { deleteSetting, getSettingsSchema, saveSystemSettings } from '@/api/modules/settings'
+import AppLoading from '@/components/AppLoading/index.vue'
 import { actionDialog } from '@/ui/components/ActionDialog'
 import { DIRECTORY_ROUTING_KEY } from './image-directory-routing'
 
@@ -251,7 +252,9 @@ onBeforeUnmount(() => { alive = false; active.value = false; generation++ })
 </script>
 
 <template>
-  <section v-loading="loading" class="setting-section">
+  <!-- 首次读取完成前没有服务器参数，用骨架屏代替默认值表单；之后的重新加载保留内容，只叠加遮罩。 -->
+  <AppLoading v-if="loading && !loaded" type="table" :rows="6" :cols="3" />
+  <section v-else v-loading="loading" class="setting-section">
     <el-alert
       type="info"
       :closable="false"

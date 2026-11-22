@@ -85,7 +85,7 @@ function onSelection(value: number | 'all') {
 
 <style scoped>
 .type-bar {
-  padding: 10px;
+  padding: var(--mrr-space-3);
   background: var(--surface);
   border: 1px solid var(--divider);
   border-radius: var(--mrr-radius-card);
@@ -118,7 +118,7 @@ function onSelection(value: number | 'all') {
   background: transparent;
   border: 1px solid transparent;
   border-radius: var(--mrr-radius-sm);
-  transition: color var(--mrr-motion-feedback) ease, background-color var(--mrr-motion-feedback) ease, border-color var(--mrr-motion-feedback) ease, box-shadow var(--mrr-motion-feedback) ease;
+  transition: color var(--mrr-motion-feedback) var(--mrr-ease-out), background-color var(--mrr-motion-feedback) var(--mrr-ease-out), border-color var(--mrr-motion-feedback) var(--mrr-ease-out), box-shadow var(--mrr-motion-feedback) var(--mrr-ease-out);
 }
 
 .type-tab-entry {

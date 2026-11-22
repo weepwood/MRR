@@ -109,7 +109,7 @@ function selectResult(result: SettingsSearchResult) {
   color: var(--mrr-popover-foreground);
   border: 1px solid transparent;
   border-radius: var(--mrr-radius-md);
-  transition: background-color var(--mrr-motion-feedback) ease, border-color var(--mrr-motion-feedback) ease;
+  transition: background-color var(--mrr-motion-feedback) var(--mrr-ease-out), border-color var(--mrr-motion-feedback) var(--mrr-ease-out);
 }
 
 :global(.settings-search-popper .el-autocomplete-suggestion__list > li:hover) {

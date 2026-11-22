@@ -7,6 +7,7 @@ import {
   DEFAULT_DOCUMENTATION_SETTINGS,
   getPublicDocumentationSettings,
 } from '@/api/modules/documentation-settings'
+import AppLoading from '@/components/AppLoading/index.vue'
 import { notify } from '@/utils/notification'
 
 defineOptions({ name: 'HelpCenter' })
@@ -120,7 +121,9 @@ onMounted(async () => {
       </div>
     </header>
 
-    <section v-loading="loading" class="documentation-grid" aria-label="文档入口">
+    <!-- 入口地址来自系统设置；加载完成前不展示可能被覆盖的默认链接。 -->
+    <AppLoading v-if="loading" type="card" :cols="3" />
+    <section v-else class="documentation-grid" aria-label="文档入口">
       <el-card
         v-for="entry in entries"
         :key="entry.key"
@@ -171,7 +174,7 @@ onMounted(async () => {
   gap: 24px;
   align-items: flex-start;
   justify-content: space-between;
-  padding: 28px;
+  padding: var(--mrr-space-6);
   background: var(--el-bg-color);
   border: 1px solid var(--el-border-color-light);
   border-radius: var(--mrr-radius-2xl);
@@ -233,7 +236,7 @@ onMounted(async () => {
   background: color-mix(in srgb, var(--card-accent, var(--el-color-primary)) 4%, var(--el-bg-color));
   border: 1px solid var(--el-border-color-light);
   border-radius: var(--mrr-radius-card);
-  transition: border-color var(--mrr-motion-feedback) ease, transform var(--mrr-motion-press) var(--mrr-ease-out), box-shadow var(--mrr-motion-feedback) ease;
+  transition: border-color var(--mrr-motion-feedback) var(--mrr-ease-out), transform var(--mrr-motion-press) var(--mrr-ease-out), box-shadow var(--mrr-motion-feedback) var(--mrr-ease-out);
 }
 
 .documentation-card:hover {
@@ -255,10 +258,10 @@ onMounted(async () => {
 .documentation-card :deep(.el-card__body) {
   display: grid;
   grid-template-columns: 52px minmax(0, 1fr);
-  gap: 18px;
+  gap: var(--mrr-space-4);
   align-content: start;
   min-height: 196px;
-  padding: 18px;
+  padding: var(--mrr-space-4);
 }
 
 .documentation-card--primary {
@@ -322,7 +325,7 @@ onMounted(async () => {
 }
 
 .card-content h2 {
-  margin: 2px 0 10px;
+  margin: 2px 0 var(--mrr-space-3);
   font-size: 19px;
   color: var(--el-text-color-primary);
 }
@@ -339,7 +342,7 @@ onMounted(async () => {
   gap: 16px;
   align-items: center;
   justify-content: flex-end;
-  padding-top: 14px;
+  padding-top: var(--mrr-space-3);
   margin-top: 16px;
   border-top: 1px solid var(--el-border-color-lighter);
 }
@@ -361,7 +364,7 @@ onMounted(async () => {
 @media (max-width: 520px) {
   .help-header,
   .documentation-card :deep(.el-card__body) {
-    padding: 18px;
+    padding: var(--mrr-space-4);
   }
 
   .documentation-card :deep(.el-card__body) {

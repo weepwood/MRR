@@ -566,7 +566,7 @@ onMounted(refreshAll)
 
 .section-header {
   display: flex;
-  gap: 10px;
+  gap: var(--mrr-space-3);
   align-items: center;
   font-size: 15px;
   font-weight: 600;
@@ -580,11 +580,11 @@ onMounted(refreshAll)
 .trend-summary {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 10px;
+  gap: var(--mrr-space-3);
 }
 
 .trend-summary > div {
-  padding: 12px 14px;
+  padding: 12px var(--mrr-space-3);
   background: color-mix(in srgb, var(--surface-alt) 60%, var(--surface));
   border: 1px solid var(--divider);
   border-radius: var(--mrr-radius-card);
@@ -608,7 +608,7 @@ onMounted(refreshAll)
 }
 
 .trend-summary strong {
-  margin-top: 6px;
+  margin-top: var(--mrr-space-2);
   font-size: 18px;
   font-variant-numeric: tabular-nums;
 }
@@ -616,7 +616,7 @@ onMounted(refreshAll)
 .list-search-bar {
   display: flex;
   flex-wrap: wrap;
-  gap: 10px;
+  gap: var(--mrr-space-3);
   align-items: center;
   padding: 16px;
   margin-bottom: 16px;
@@ -647,7 +647,7 @@ onMounted(refreshAll)
   display: flex;
   flex: 0 0 auto;
   flex-wrap: wrap;
-  gap: 10px;
+  gap: var(--mrr-space-3);
 }
 
 .search-actions :deep(.el-button + .el-button) {

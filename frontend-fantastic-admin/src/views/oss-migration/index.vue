@@ -34,9 +34,11 @@ import {
   uploadByBah,
   uploadToOss,
 } from '@/api/modules/oss'
+import AppLoading from '@/components/AppLoading/index.vue'
 import MrrFilterActionButton from '@/components/MrrFilterActionButton/index.vue'
 import MrrPageHeader from '@/components/MrrPageHeader/index.vue'
 import MrrPageShell from '@/components/MrrPageShell/index.vue'
+import MrrSectionCard from '@/components/MrrSectionCard/index.vue'
 import MrrTableActions from '@/components/MrrTableActions/index.vue'
 import { useTableActionLayout } from '@/composables/useTableActionLayout'
 import { actionDialog } from '@/ui/components/ActionDialog'
@@ -180,6 +182,9 @@ const loading = reactive({
   retry: false,
   detail: false,
 })
+
+/** 首次整页读取是否已结束。之后的整页刷新（操作完成后）保留内容，只叠加遮罩。 */
+const initialLoadDone = ref(false)
 
 const jobForm = reactive<JobFormState>({
   mode: 'pilot',
@@ -507,6 +512,7 @@ async function refreshAll() {
   }
   finally {
     loading.page = false
+    initialLoadDone.value = true
   }
 }
 
@@ -856,7 +862,7 @@ onMounted(() => {
 </script>
 
 <template>
-  <MrrPageShell v-loading="loading.page" class="oss-migration-page">
+  <MrrPageShell v-loading="loading.page && initialLoadDone" class="oss-migration-page">
     <MrrPageHeader
       eyebrow="OSS Migration Control"
       title="OSS 迁移管理"
@@ -882,34 +888,32 @@ onMounted(() => {
       </template>
     </MrrPageHeader>
 
-    <el-alert
-      v-if="!isMigrationStarted"
-      title="当前尚未开始正式 OSS 迁移"
-      description="建议先使用 100～500 张真实图片试迁移，核对影像档案袋访问、ZIP/PDF 导出、日志与 OSS 费用后，再逐步扩大批次。"
-      type="info"
-      :closable="false"
-      show-icon
-    />
-
-    <section class="mrr-metric-grid mrr-metric-grid--wide">
-      <MrrMetricCard
-        v-for="item in summaryCards"
-        :key="item.label"
-        :label="item.label"
-        :value="formatNumber(item.value)"
-        :note="item.note"
-        :tone="item.tone"
+    <!-- 首次读取：页头保持可见，内容区用骨架屏，避免先显示 0 与空表格。 -->
+    <AppLoading v-if="!initialLoadDone" type="stats" :cols="4" />
+    <template v-else>
+      <el-alert
+        v-if="!isMigrationStarted"
+        title="当前尚未开始正式 OSS 迁移"
+        description="建议先使用 100～500 张真实图片试迁移，核对影像档案袋访问、ZIP/PDF 导出、日志与 OSS 费用后，再逐步扩大批次。"
+        type="info"
+        :closable="false"
+        show-icon
       />
-    </section>
 
-    <div class="primary-grid">
-      <el-card shadow="never">
-        <template #header>
-          <div class="card-header">
-            <div>
-              <strong>迁移前检查</strong>
-              <p>只抽样检查配置和 Nginx 可读性，不上传文件、不更新迁移状态。</p>
-            </div>
+      <section class="mrr-metric-grid mrr-metric-grid--wide">
+        <MrrMetricCard
+          v-for="item in summaryCards"
+          :key="item.label"
+          :label="item.label"
+          :value="formatNumber(item.value)"
+          :note="item.note"
+          :tone="item.tone"
+        />
+      </section>
+
+      <div class="primary-grid">
+        <MrrSectionCard title="迁移前检查" description="只抽样检查配置和 Nginx 可读性，不上传文件、不更新迁移状态。">
+          <template #actions>
             <div class="header-actions">
               <el-tag :type="readiness?.ready ? 'success' : 'warning'">
                 {{ readiness?.ready ? '可开始迁移' : '需要处理' }}
@@ -922,137 +926,119 @@ onMounted(() => {
                 重新检查
               </el-button>
             </div>
-          </div>
-        </template>
-
-        <div class="check-grid">
-          <div class="check-item" :class="{ ok: readiness?.ossConfigured }">
-            <span>OSS 客户端</span>
-            <strong>{{ readiness?.ossConfigured ? '已配置' : '未通过' }}</strong>
-          </div>
-          <div class="check-item" :class="{ ok: readiness?.sourcePathReadable }">
-            <span>Nginx 图片源</span>
-            <strong>{{ readiness?.sourcePathReadable ? '可读取' : '不可读取' }}</strong>
-          </div>
-          <div class="check-item" :class="{ ok: readiness?.noActiveJob }">
-            <span>活动任务</span>
-            <strong>{{ readiness?.noActiveJob ? '无' : '已有任务' }}</strong>
-          </div>
-          <div class="check-item" :class="{ ok: (readiness?.sampleReadableCount ?? 0) > 0 }">
-            <span>抽样文件</span>
-            <strong>{{ readiness?.sampleReadableCount ?? 0 }} / {{ readiness?.sampleSize ?? 0 }} 可读</strong>
-          </div>
-        </div>
-
-        <div class="facts">
-          <span>抽样缺失 {{ readiness?.sampleMissingCount ?? 0 }}</span>
-          <span>路径异常 {{ readiness?.sampleInvalidCount ?? 0 }}</span>
-          <span>当前可领取 {{ formatNumber(readiness?.pendingCount) }}</span>
-          <span>等待上架号 {{ formatNumber(stats.waitingSjhCount) }}</span>
-        </div>
-
-        <el-alert
-          v-if="readiness?.recommendedAction"
-          :title="readiness.recommendedAction"
-          type="success"
-          :closable="false"
-          show-icon
-        >
-          <template #default>
-            <el-button link type="success" @click="applyRecommendedMode">
-              应用推荐阶段
-            </el-button>
           </template>
-        </el-alert>
 
-        <ul v-if="readiness?.warnings?.length" class="warning-list">
-          <li v-for="warning in readiness.warnings" :key="warning">
-            {{ warning }}
-          </li>
-        </ul>
-      </el-card>
-
-      <el-card shadow="never">
-        <template #header>
-          <div class="card-header">
-            <div>
-              <strong>创建迁移任务</strong>
-              <p>同一时刻只运行一个任务；创建时固定数据快照上界。</p>
+          <div class="check-grid">
+            <div class="check-item" :class="{ ok: readiness?.ossConfigured }">
+              <span>OSS 客户端</span>
+              <strong>{{ readiness?.ossConfigured ? '已配置' : '未通过' }}</strong>
+            </div>
+            <div class="check-item" :class="{ ok: readiness?.sourcePathReadable }">
+              <span>Nginx 图片源</span>
+              <strong>{{ readiness?.sourcePathReadable ? '可读取' : '不可读取' }}</strong>
+            </div>
+            <div class="check-item" :class="{ ok: readiness?.noActiveJob }">
+              <span>活动任务</span>
+              <strong>{{ readiness?.noActiveJob ? '无' : '已有任务' }}</strong>
+            </div>
+            <div class="check-item" :class="{ ok: (readiness?.sampleReadableCount ?? 0) > 0 }">
+              <span>抽样文件</span>
+              <strong>{{ readiness?.sampleReadableCount ?? 0 }} / {{ readiness?.sampleSize ?? 0 }} 可读</strong>
             </div>
           </div>
-        </template>
 
-        <el-form label-position="top">
-          <el-form-item label="迁移阶段">
-            <el-radio-group v-model="jobForm.mode">
-              <el-radio-button value="pilot">
-                试迁移
-              </el-radio-button>
-              <el-radio-button value="batch">
-                限定批次
-              </el-radio-button>
-              <el-radio-button value="full">
-                全量迁移
-              </el-radio-button>
-            </el-radio-group>
-          </el-form-item>
-
-          <el-form-item v-if="jobForm.mode !== 'full'" label="最大处理数量">
-            <el-input-number
-              v-model="jobForm.limit"
-              :min="1"
-              :max="jobForm.mode === 'pilot' ? 1000 : 100000"
-              :step="jobForm.mode === 'pilot' ? 100 : 1000"
-              controls-position="right"
-            />
-          </el-form-item>
-
-          <el-form-item label="目录范围（可选）">
-            <el-select
-              v-model="jobForm.folder"
-              clearable
-              filterable
-              placeholder="全部待迁移目录"
-            >
-              <el-option
-                v-for="item in folders"
-                :key="item.folder"
-                :label="`${item.folder}（${formatNumber(item.cnt)}）`"
-                :value="item.folder"
-              />
-            </el-select>
-          </el-form-item>
-
-          <el-form-item v-if="jobForm.mode === 'full'" label="全量迁移确认短语">
-            <el-input v-model="jobForm.confirmation" placeholder="请输入：确认全量迁移" />
-          </el-form-item>
-
-          <el-button
-            type="primary"
-            :icon="VideoPlay"
-            :loading="loading.start"
-            :disabled="!canStartJob"
-            @click="handleStartJob"
-          >
-            创建{{ modeLabel(jobForm.mode) }}任务
-          </el-button>
-          <p v-if="startDisabledReason" class="disabled-reason">
-            {{ startDisabledReason }}
-          </p>
-        </el-form>
-      </el-card>
-    </div>
-
-    <el-card v-if="currentJob" shadow="never" class="current-job-card">
-      <template #header>
-        <div class="card-header">
-          <div>
-            <strong>当前任务 #{{ currentJob.id }}</strong>
-            <p>
-              {{ modeLabel(currentJob.mode) }} · {{ currentJob.scopeValue || '全部目录' }} ·
-              创建者 {{ currentJob.createdBy || '-' }}
-            </p>
+          <div class="facts">
+            <span>抽样缺失 {{ readiness?.sampleMissingCount ?? 0 }}</span>
+            <span>路径异常 {{ readiness?.sampleInvalidCount ?? 0 }}</span>
+            <span>当前可领取 {{ formatNumber(readiness?.pendingCount) }}</span>
+            <span>等待上架号 {{ formatNumber(stats.waitingSjhCount) }}</span>
           </div>
+
+          <el-alert
+            v-if="readiness?.recommendedAction"
+            :title="readiness.recommendedAction"
+            type="success"
+            :closable="false"
+            show-icon
+          >
+            <template #default>
+              <el-button link type="success" @click="applyRecommendedMode">
+                应用推荐阶段
+              </el-button>
+            </template>
+          </el-alert>
+
+          <ul v-if="readiness?.warnings?.length" class="warning-list">
+            <li v-for="warning in readiness.warnings" :key="warning">
+              {{ warning }}
+            </li>
+          </ul>
+        </MrrSectionCard>
+
+        <MrrSectionCard title="创建迁移任务" description="同一时刻只运行一个任务；创建时固定数据快照上界。">
+          <el-form label-position="top">
+            <el-form-item label="迁移阶段">
+              <el-radio-group v-model="jobForm.mode">
+                <el-radio-button value="pilot">
+                  试迁移
+                </el-radio-button>
+                <el-radio-button value="batch">
+                  限定批次
+                </el-radio-button>
+                <el-radio-button value="full">
+                  全量迁移
+                </el-radio-button>
+              </el-radio-group>
+            </el-form-item>
+
+            <el-form-item v-if="jobForm.mode !== 'full'" label="最大处理数量">
+              <el-input-number
+                v-model="jobForm.limit"
+                :min="1"
+                :max="jobForm.mode === 'pilot' ? 1000 : 100000"
+                :step="jobForm.mode === 'pilot' ? 100 : 1000"
+                controls-position="right"
+              />
+            </el-form-item>
+
+            <el-form-item label="目录范围（可选）">
+              <el-select
+                v-model="jobForm.folder"
+                clearable
+                filterable
+                placeholder="全部待迁移目录"
+              >
+                <el-option
+                  v-for="item in folders"
+                  :key="item.folder"
+                  :label="`${item.folder}（${formatNumber(item.cnt)}）`"
+                  :value="item.folder"
+                />
+              </el-select>
+            </el-form-item>
+
+            <el-form-item v-if="jobForm.mode === 'full'" label="全量迁移确认短语">
+              <el-input v-model="jobForm.confirmation" placeholder="请输入：确认全量迁移" />
+            </el-form-item>
+
+            <el-button
+              type="primary"
+              :icon="VideoPlay"
+              :loading="loading.start"
+              :disabled="!canStartJob"
+              @click="handleStartJob"
+            >
+              创建{{ modeLabel(jobForm.mode) }}任务
+            </el-button>
+            <p v-if="startDisabledReason" class="disabled-reason">
+              {{ startDisabledReason }}
+            </p>
+          </el-form>
+        </MrrSectionCard>
+      </div>
+
+      <MrrSectionCard v-if="currentJob" class="current-job-card" :title="`当前任务 #${currentJob.id}`" :description="`${modeLabel(currentJob.mode)} · ${currentJob.scopeValue || '全部目录'} · 创建者 ${currentJob.createdBy || '-'}`">
+        <template #actions>
           <div class="header-actions">
             <el-tag :type="statusMeta(currentJob.status).type">
               {{ statusMeta(currentJob.status).label }}
@@ -1071,279 +1057,267 @@ onMounted(() => {
               安全取消
             </el-button>
           </div>
+        </template>
+
+        <el-progress
+          :percentage="jobPercentage"
+          :status="currentJob.status === 'failed' ? 'exception' : undefined"
+          :stroke-width="18"
+          text-inside
+        />
+        <div class="facts">
+          <span>计划 {{ formatNumber(currentJob.totalCount) }}</span>
+          <span>已处理 {{ formatNumber(currentJob.processedCount) }}</span>
+          <span>失败 {{ formatNumber(currentJob.failedCount) }}</span>
+          <span>快照上界 ID {{ currentJob.maxScanId ?? '-' }}</span>
+          <span>开始 {{ formatDate(currentJob.startedAt) }}</span>
         </div>
-      </template>
+        <el-alert
+          v-if="currentJob.errorMessage"
+          :title="currentJob.errorMessage"
+          type="warning"
+          :closable="false"
+        />
+      </MrrSectionCard>
 
-      <el-progress
-        :percentage="jobPercentage"
-        :status="currentJob.status === 'failed' ? 'exception' : undefined"
-        :stroke-width="18"
-        text-inside
-      />
-      <div class="facts">
-        <span>计划 {{ formatNumber(currentJob.totalCount) }}</span>
-        <span>已处理 {{ formatNumber(currentJob.processedCount) }}</span>
-        <span>失败 {{ formatNumber(currentJob.failedCount) }}</span>
-        <span>快照上界 ID {{ currentJob.maxScanId ?? '-' }}</span>
-        <span>开始 {{ formatDate(currentJob.startedAt) }}</span>
-      </div>
-      <el-alert
-        v-if="currentJob.errorMessage"
-        :title="currentJob.errorMessage"
-        type="warning"
-        :closable="false"
-      />
-    </el-card>
+      <el-card shadow="never" class="workspace-card">
+        <el-tabs v-model="recordTab" class="workspace-tabs">
+          <el-tab-pane label="迁移记录" name="pending">
+            <template #label>
+              <span>当前可领取（{{ formatNumber(stats.pendingCount) }}）</span>
+            </template>
+          </el-tab-pane>
+          <el-tab-pane name="waiting">
+            <template #label>
+              <span>等待上架号（{{ formatNumber(stats.waitingSjhCount) }}）</span>
+            </template>
+          </el-tab-pane>
+        </el-tabs>
 
-    <el-card shadow="never" class="workspace-card">
-      <el-tabs v-model="recordTab" class="workspace-tabs">
-        <el-tab-pane label="迁移记录" name="pending">
-          <template #label>
-            <span>当前可领取（{{ formatNumber(stats.pendingCount) }}）</span>
-          </template>
-        </el-tab-pane>
-        <el-tab-pane name="waiting">
-          <template #label>
-            <span>等待上架号（{{ formatNumber(stats.waitingSjhCount) }}）</span>
-          </template>
-        </el-tab-pane>
-      </el-tabs>
-
-      <div class="section-header">
-        <div>
-          <strong>{{ currentRecordTitle }}</strong>
-          <p>{{ currentRecordDescription }}</p>
-        </div>
-        <div class="result-meta">
-          <el-tag type="info">
-            当前返回 {{ recordReturned }} 条
-          </el-tag>
-          <el-tag v-if="recordHasMore" type="warning">
-            仍有更多，请缩小条件
-          </el-tag>
-        </div>
-      </div>
-
-      <el-form class="filter-grid" label-position="top">
-        <el-form-item label="目录">
-          <el-select
-            v-model="recordFilters.folder"
-            clearable
-            filterable
-            placeholder="全部目录"
-          >
-            <el-option
-              v-for="item in folders"
-              :key="item.folder"
-              :label="item.folder"
-              :value="item.folder"
-            />
-          </el-select>
-        </el-form-item>
-        <el-form-item label="病案号">
-          <el-input
-            v-model="recordFilters.bah"
-            clearable
-            placeholder="精确病案号"
-            @keyup.enter="loadRecords"
-          />
-        </el-form-item>
-        <el-form-item label="上架号">
-          <el-input
-            v-model="recordFilters.sjh"
-            clearable
-            placeholder="精确上架号"
-            @keyup.enter="loadRecords"
-          />
-        </el-form-item>
-        <el-form-item label="返回数量">
-          <el-input-number
-            v-model="recordFilters.limit"
-            :min="20"
-            :max="500"
-            :step="20"
-            controls-position="right"
-          />
-        </el-form-item>
-        <el-form-item class="filter-actions" label="操作">
-          <MrrFilterActionButton action="search" :pending="loading.records" :busy="loading.records" @click="loadRecords">
-            查询
-          </MrrFilterActionButton>
-          <MrrFilterActionButton action="reset" :pending="loading.records" :busy="loading.records" @click="resetRecordFilters">
-            重置
-          </MrrFilterActionButton>
-        </el-form-item>
-      </el-form>
-
-      <el-alert
-        v-if="recordTab === 'waiting'"
-        title="等待上架号记录不会进入失败或重试"
-        description="补齐上架号后无需修改迁移状态，下一次查询和迁移任务会自动把它识别为可领取记录。"
-        type="info"
-        :closable="false"
-        show-icon
-      />
-
-      <el-table
-        v-loading="loading.records"
-        :data="records"
-        stripe
-        row-key="id"
-        empty-text="当前条件下没有记录"
-        @selection-change="handleRecordSelection"
-      >
-        <el-table-column v-if="recordTab === 'pending'" type="selection" width="48" />
-        <el-table-column prop="id" label="Scan ID" width="100" />
-        <el-table-column prop="bah" label="病案号" width="140" />
-        <el-table-column prop="sjh" label="上架号" width="140">
-          <template #default="{ row }">
-            {{ row.sjh || '未填写' }}
-          </template>
-        </el-table-column>
-        <el-table-column prop="folder" label="原目录" width="130" />
-        <el-table-column prop="filename" label="文件名" min-width="180" show-overflow-tooltip />
-        <el-table-column prop="migrationAttempts" label="尝试" width="80">
-          <template #default="{ row }">
-            {{ row.migrationAttempts ?? 0 }}
-          </template>
-        </el-table-column>
-        <el-table-column prop="migrationStatus" label="状态" width="120">
-          <template #default="{ row }">
-            <el-tag :type="statusMeta(row.migrationStatus).type" size="small">
-              {{ statusMeta(row.migrationStatus).label }}
+        <div class="section-header">
+          <div>
+            <strong>{{ currentRecordTitle }}</strong>
+            <p>{{ currentRecordDescription }}</p>
+          </div>
+          <div class="result-meta">
+            <el-tag type="info">
+              当前返回 {{ recordReturned }} 条
             </el-tag>
-          </template>
-        </el-table-column>
-        <el-table-column prop="migrationNextRetryAt" label="下次可重试" width="180">
-          <template #default="{ row }">
-            {{ formatDate(row.migrationNextRetryAt) }}
-          </template>
-        </el-table-column>
-        <el-table-column prop="migrationErrorCode" label="错误码" width="160">
-          <template #default="{ row }">
-            {{ row.migrationErrorCode || '-' }}
-          </template>
-        </el-table-column>
-      </el-table>
+            <el-tag v-if="recordHasMore" type="warning">
+              仍有更多，请缩小条件
+            </el-tag>
+          </div>
+        </div>
 
-      <div v-if="recordTab === 'pending'" class="record-actions">
-        <div class="manual-bah">
-          <span>按病案号验证</span>
-          <el-input
-            v-model="bahInput"
-            placeholder="输入病案号"
-            clearable
-            @keyup.enter="handleBahUpload"
-          />
+        <el-form class="filter-grid" label-position="top">
+          <el-form-item label="目录">
+            <el-select
+              v-model="recordFilters.folder"
+              clearable
+              filterable
+              placeholder="全部目录"
+            >
+              <el-option
+                v-for="item in folders"
+                :key="item.folder"
+                :label="item.folder"
+                :value="item.folder"
+              />
+            </el-select>
+          </el-form-item>
+          <el-form-item label="病案号">
+            <el-input
+              v-model="recordFilters.bah"
+              clearable
+              placeholder="精确病案号"
+              @keyup.enter="loadRecords"
+            />
+          </el-form-item>
+          <el-form-item label="上架号">
+            <el-input
+              v-model="recordFilters.sjh"
+              clearable
+              placeholder="精确上架号"
+              @keyup.enter="loadRecords"
+            />
+          </el-form-item>
+          <el-form-item label="返回数量">
+            <el-input-number
+              v-model="recordFilters.limit"
+              :min="20"
+              :max="500"
+              :step="20"
+              controls-position="right"
+            />
+          </el-form-item>
+          <el-form-item class="filter-actions" label="操作">
+            <MrrFilterActionButton action="search" :pending="loading.records" :busy="loading.records" @click="loadRecords">
+              查询
+            </MrrFilterActionButton>
+            <MrrFilterActionButton action="reset" :pending="loading.records" :busy="loading.records" @click="resetRecordFilters">
+              重置
+            </MrrFilterActionButton>
+          </el-form-item>
+        </el-form>
+
+        <el-alert
+          v-if="recordTab === 'waiting'"
+          title="等待上架号记录不会进入失败或重试"
+          description="补齐上架号后无需修改迁移状态，下一次查询和迁移任务会自动把它识别为可领取记录。"
+          type="info"
+          :closable="false"
+          show-icon
+        />
+
+        <el-table
+          v-loading="loading.records"
+          :data="records"
+          stripe
+          row-key="id"
+          empty-text="当前条件下没有记录"
+          @selection-change="handleRecordSelection"
+        >
+          <el-table-column v-if="recordTab === 'pending'" type="selection" width="48" />
+          <el-table-column prop="id" label="Scan ID" width="100" />
+          <el-table-column prop="bah" label="病案号" width="140" />
+          <el-table-column prop="sjh" label="上架号" width="140">
+            <template #default="{ row }">
+              {{ row.sjh || '未填写' }}
+            </template>
+          </el-table-column>
+          <el-table-column prop="folder" label="原目录" width="130" />
+          <el-table-column prop="filename" label="文件名" min-width="180" show-overflow-tooltip />
+          <el-table-column prop="migrationAttempts" label="尝试" width="80">
+            <template #default="{ row }">
+              {{ row.migrationAttempts ?? 0 }}
+            </template>
+          </el-table-column>
+          <el-table-column prop="migrationStatus" label="状态" width="120">
+            <template #default="{ row }">
+              <el-tag :type="statusMeta(row.migrationStatus).type" size="small">
+                {{ statusMeta(row.migrationStatus).label }}
+              </el-tag>
+            </template>
+          </el-table-column>
+          <el-table-column prop="migrationNextRetryAt" label="下次可重试" width="180">
+            <template #default="{ row }">
+              {{ formatDate(row.migrationNextRetryAt) }}
+            </template>
+          </el-table-column>
+          <el-table-column prop="migrationErrorCode" label="错误码" width="160">
+            <template #default="{ row }">
+              {{ row.migrationErrorCode || '-' }}
+            </template>
+          </el-table-column>
+        </el-table>
+
+        <div v-if="recordTab === 'pending'" class="record-actions">
+          <div class="manual-bah">
+            <span>按病案号验证</span>
+            <el-input
+              v-model="bahInput"
+              placeholder="输入病案号"
+              clearable
+              @keyup.enter="handleBahUpload"
+            />
+            <el-button
+              :loading="loading.bah"
+              :disabled="hasActiveJob"
+              @click="handleBahUpload"
+            >
+              上传整份病案
+            </el-button>
+          </div>
           <el-button
-            :loading="loading.bah"
-            :disabled="hasActiveJob"
-            @click="handleBahUpload"
+            type="primary"
+            :icon="UploadFilled"
+            :disabled="!selectedPendingIds.length || hasActiveJob"
+            :loading="loading.manual"
+            @click="handleManualUpload"
           >
-            上传整份病案
+            手工上传 {{ selectedPendingIds.length }} 条
           </el-button>
         </div>
-        <el-button
-          type="primary"
-          :icon="UploadFilled"
-          :disabled="!selectedPendingIds.length || hasActiveJob"
-          :loading="loading.manual"
-          @click="handleManualUpload"
-        >
-          手工上传 {{ selectedPendingIds.length }} 条
-        </el-button>
-      </div>
-    </el-card>
+      </el-card>
 
-    <el-card shadow="never">
-      <template #header>
-        <div class="card-header">
-          <div>
-            <strong>迁移任务历史</strong>
-            <p>分页查看试迁移、批次迁移和全量迁移的执行结果。</p>
-          </div>
+      <MrrSectionCard title="迁移任务历史" description="分页查看试迁移、批次迁移和全量迁移的执行结果。">
+        <template #actions>
           <el-button :icon="Refresh" :loading="loading.jobs" @click="loadJobs">
             刷新任务
           </el-button>
-        </div>
-      </template>
+        </template>
 
-      <el-alert
-        v-if="jobHistoryError"
-        type="warning"
-        :closable="false"
-        show-icon
-        :title="jobHistoryPage == null ? '尚未取得任务历史，请点击刷新任务重试。' : `任务历史读取失败，当前仍显示上次成功读取的第 ${jobHistoryPage} 页。可点击刷新任务重试。`"
-      />
-      <el-table v-loading="loading.jobs" :data="jobs" stripe empty-text="暂无迁移任务">
-        <el-table-column prop="id" label="任务" width="80" />
-        <el-table-column label="阶段" width="110">
-          <template #default="{ row }">
-            {{ modeLabel(row.mode) }}
-          </template>
-        </el-table-column>
-        <el-table-column prop="scopeValue" label="目录范围" min-width="140">
-          <template #default="{ row }">
-            {{ row.scopeValue || '全部目录' }}
-          </template>
-        </el-table-column>
-        <el-table-column prop="totalCount" label="计划" width="100" />
-        <el-table-column prop="processedCount" label="已处理" width="100" />
-        <el-table-column prop="failedCount" label="失败" width="90" />
-        <el-table-column label="完成率" width="150">
-          <template #default="{ row }">
-            <el-progress :percentage="Math.min(100, Number(row.rate || 0))" :stroke-width="8" />
-          </template>
-        </el-table-column>
-        <el-table-column label="状态" width="130">
-          <template #default="{ row }">
-            <el-tag :type="statusMeta(row.status).type" size="small">
-              {{ statusMeta(row.status).label }}
-            </el-tag>
-          </template>
-        </el-table-column>
-        <el-table-column label="创建时间" width="180">
-          <template #default="{ row }">
-            {{ formatDate(row.createdAt) }}
-          </template>
-        </el-table-column>
-        <el-table-column
-          label="操作"
-          :width="jobActionColumnWidth"
-          fixed="right"
-          align="center"
-        >
-          <template #default="{ row }">
-            <MrrTableActions
-              :actions="jobActions"
-              :max-inline="jobMaxInlineActions"
-              @select="handleJobAction($event, row)"
-            />
-          </template>
-        </el-table-column>
-      </el-table>
-
-      <div class="pager">
-        <el-pagination
-          v-model:current-page="jobPage"
-          v-model:page-size="jobSize"
-          :disabled="loading.jobs"
-          :page-sizes="[10, 20, 50]"
-          :total="jobTotal"
-          layout="total, sizes, prev, pager, next"
-          @size-change="loadJobs"
-          @current-change="loadJobs"
+        <el-alert
+          v-if="jobHistoryError"
+          type="warning"
+          :closable="false"
+          show-icon
+          :title="jobHistoryPage == null ? '尚未取得任务历史，请点击刷新任务重试。' : `任务历史读取失败，当前仍显示上次成功读取的第 ${jobHistoryPage} 页。可点击刷新任务重试。`"
         />
-      </div>
-    </el-card>
+        <el-table v-loading="loading.jobs" :data="jobs" stripe empty-text="暂无迁移任务">
+          <el-table-column prop="id" label="任务" width="80" />
+          <el-table-column label="阶段" width="110">
+            <template #default="{ row }">
+              {{ modeLabel(row.mode) }}
+            </template>
+          </el-table-column>
+          <el-table-column prop="scopeValue" label="目录范围" min-width="140">
+            <template #default="{ row }">
+              {{ row.scopeValue || '全部目录' }}
+            </template>
+          </el-table-column>
+          <el-table-column prop="totalCount" label="计划" width="100" />
+          <el-table-column prop="processedCount" label="已处理" width="100" />
+          <el-table-column prop="failedCount" label="失败" width="90" />
+          <el-table-column label="完成率" width="150">
+            <template #default="{ row }">
+              <el-progress :percentage="Math.min(100, Number(row.rate || 0))" :stroke-width="8" />
+            </template>
+          </el-table-column>
+          <el-table-column label="状态" width="130">
+            <template #default="{ row }">
+              <el-tag :type="statusMeta(row.status).type" size="small">
+                {{ statusMeta(row.status).label }}
+              </el-tag>
+            </template>
+          </el-table-column>
+          <el-table-column label="创建时间" width="180">
+            <template #default="{ row }">
+              {{ formatDate(row.createdAt) }}
+            </template>
+          </el-table-column>
+          <el-table-column
+            label="操作"
+            :width="jobActionColumnWidth"
+            fixed="right"
+            align="center"
+          >
+            <template #default="{ row }">
+              <MrrTableActions
+                :actions="jobActions"
+                :max-inline="jobMaxInlineActions"
+                @select="handleJobAction($event, row)"
+              />
+            </template>
+          </el-table-column>
+        </el-table>
 
-    <el-card shadow="never">
-      <template #header>
-        <div class="card-header">
-          <div>
-            <strong>迁移日志与失败处理</strong>
-            <p>按结果或 Scan ID 定位记录；核对问题后才能重置永久失败。</p>
-          </div>
+        <div class="pager">
+          <el-pagination
+            v-model:current-page="jobPage"
+            v-model:page-size="jobSize"
+            :disabled="loading.jobs"
+            :page-sizes="[10, 20, 50]"
+            :total="jobTotal"
+            layout="total, sizes, prev, pager, next"
+            @size-change="loadJobs"
+            @current-change="loadJobs"
+          />
+        </div>
+      </MrrSectionCard>
+
+      <MrrSectionCard title="迁移日志与失败处理" description="按结果或 Scan ID 定位记录；核对问题后才能重置永久失败。">
+        <template #actions>
           <el-button
             :icon="RotateCcw"
             :disabled="!failedLogScanIds.length || hasActiveJob || loading.logs"
@@ -1352,106 +1326,106 @@ onMounted(() => {
           >
             重置失败记录 {{ failedLogScanIds.length }} 条
           </el-button>
-        </div>
-      </template>
+        </template>
 
-      <el-alert
-        v-if="retryFeedback"
-        :title="retryFeedback.message"
-        :type="retryFeedback.type"
-        :closable="false"
-        show-icon
-      />
-
-      <el-form class="log-filter" inline>
-        <el-form-item label="结果">
-          <el-select v-model="logStatus" clearable placeholder="全部状态">
-            <el-option label="成功" value="success" />
-            <el-option label="永久失败" value="failed" />
-            <el-option label="等待重试" value="retry_wait" />
-            <el-option label="等待上架号" value="waiting_sjh" />
-            <el-option label="已跳过" value="skipped" />
-          </el-select>
-        </el-form-item>
-        <el-form-item label="Scan ID">
-          <el-input-number
-            v-model="logScanId"
-            :min="1"
-            controls-position="right"
-            placeholder="精确 ID"
-          />
-        </el-form-item>
-        <el-form-item>
-          <MrrFilterActionButton action="search" :pending="loading.logs" :busy="loading.logs" @click="loadLogs">
-            查询
-          </MrrFilterActionButton>
-          <MrrFilterActionButton action="reset" :pending="loading.logs" :busy="loading.logs" @click="resetLogFilters">
-            重置
-          </MrrFilterActionButton>
-        </el-form-item>
-      </el-form>
-
-      <el-table
-        v-loading="loading.logs"
-        :data="logs"
-        stripe
-        empty-text="暂无迁移日志"
-        @selection-change="handleLogSelection"
-      >
-        <el-table-column type="selection" width="48" :selectable="logSelectable" />
-        <el-table-column prop="scanId" label="Scan ID" width="100" />
-        <el-table-column prop="localPath" label="迁移来源" min-width="160" show-overflow-tooltip />
-        <el-table-column prop="migrationStatus" label="结果" width="120">
-          <template #default="{ row }">
-            <el-tag :type="statusMeta(row.migrationStatus).type" size="small">
-              {{ statusMeta(row.migrationStatus).label }}
-            </el-tag>
-          </template>
-        </el-table-column>
-        <el-table-column prop="fileSize" label="文件大小" width="110">
-          <template #default="{ row }">
-            {{ formatFileSize(row.fileSize) }}
-          </template>
-        </el-table-column>
-        <el-table-column prop="checksumMd5" label="MD5" min-width="190" show-overflow-tooltip />
-        <el-table-column prop="errorMessage" label="错误信息" min-width="240" show-overflow-tooltip>
-          <template #default="{ row }">
-            {{ row.errorMessage || '-' }}
-          </template>
-        </el-table-column>
-        <el-table-column label="时间" width="180">
-          <template #default="{ row }">
-            {{ formatDate(row.migratedAt || row.createdAt) }}
-          </template>
-        </el-table-column>
-        <el-table-column
-          label="操作"
-          :width="logActionColumnWidth"
-          fixed="right"
-          align="center"
-        >
-          <template #default="{ row }">
-            <MrrTableActions
-              :actions="logActions(row)"
-              :max-inline="logMaxInlineActions"
-              @select="handleLogAction($event, row)"
-            />
-          </template>
-        </el-table-column>
-      </el-table>
-
-      <div class="pager">
-        <el-pagination
-          v-model:current-page="logPage"
-          v-model:page-size="logSize"
-          :page-sizes="[10, 20, 50, 100]"
-          :total="logTotal"
-          layout="total, sizes, prev, pager, next"
-          @size-change="loadLogs"
-          @current-change="loadLogs"
+        <el-alert
+          v-if="retryFeedback"
+          :title="retryFeedback.message"
+          :type="retryFeedback.type"
+          :closable="false"
+          show-icon
         />
-      </div>
-    </el-card>
+
+        <el-form class="log-filter" inline>
+          <el-form-item label="结果">
+            <el-select v-model="logStatus" clearable placeholder="全部状态">
+              <el-option label="成功" value="success" />
+              <el-option label="永久失败" value="failed" />
+              <el-option label="等待重试" value="retry_wait" />
+              <el-option label="等待上架号" value="waiting_sjh" />
+              <el-option label="已跳过" value="skipped" />
+            </el-select>
+          </el-form-item>
+          <el-form-item label="Scan ID">
+            <el-input-number
+              v-model="logScanId"
+              :min="1"
+              controls-position="right"
+              placeholder="精确 ID"
+            />
+          </el-form-item>
+          <el-form-item>
+            <MrrFilterActionButton action="search" :pending="loading.logs" :busy="loading.logs" @click="loadLogs">
+              查询
+            </MrrFilterActionButton>
+            <MrrFilterActionButton action="reset" :pending="loading.logs" :busy="loading.logs" @click="resetLogFilters">
+              重置
+            </MrrFilterActionButton>
+          </el-form-item>
+        </el-form>
+
+        <el-table
+          v-loading="loading.logs"
+          :data="logs"
+          stripe
+          empty-text="暂无迁移日志"
+          @selection-change="handleLogSelection"
+        >
+          <el-table-column type="selection" width="48" :selectable="logSelectable" />
+          <el-table-column prop="scanId" label="Scan ID" width="100" />
+          <el-table-column prop="localPath" label="迁移来源" min-width="160" show-overflow-tooltip />
+          <el-table-column prop="migrationStatus" label="结果" width="120">
+            <template #default="{ row }">
+              <el-tag :type="statusMeta(row.migrationStatus).type" size="small">
+                {{ statusMeta(row.migrationStatus).label }}
+              </el-tag>
+            </template>
+          </el-table-column>
+          <el-table-column prop="fileSize" label="文件大小" width="110">
+            <template #default="{ row }">
+              {{ formatFileSize(row.fileSize) }}
+            </template>
+          </el-table-column>
+          <el-table-column prop="checksumMd5" label="MD5" min-width="190" show-overflow-tooltip />
+          <el-table-column prop="errorMessage" label="错误信息" min-width="240" show-overflow-tooltip>
+            <template #default="{ row }">
+              {{ row.errorMessage || '-' }}
+            </template>
+          </el-table-column>
+          <el-table-column label="时间" width="180">
+            <template #default="{ row }">
+              {{ formatDate(row.migratedAt || row.createdAt) }}
+            </template>
+          </el-table-column>
+          <el-table-column
+            label="操作"
+            :width="logActionColumnWidth"
+            fixed="right"
+            align="center"
+          >
+            <template #default="{ row }">
+              <MrrTableActions
+                :actions="logActions(row)"
+                :max-inline="logMaxInlineActions"
+                @select="handleLogAction($event, row)"
+              />
+            </template>
+          </el-table-column>
+        </el-table>
+
+        <div class="pager">
+          <el-pagination
+            v-model:current-page="logPage"
+            v-model:page-size="logSize"
+            :page-sizes="[10, 20, 50, 100]"
+            :total="logTotal"
+            layout="total, sizes, prev, pager, next"
+            @size-change="loadLogs"
+            @current-change="loadLogs"
+          />
+        </div>
+      </MrrSectionCard>
+    </template>
 
     <el-dialog v-model="uploadResultVisible" title="手工上传结果" width="min(900px, 92vw)">
       <div v-if="uploadResult" class="upload-summary">
@@ -1548,7 +1522,6 @@ onMounted(() => {
 </template>
 
 <style scoped>
-.card-header,
 .section-header,
 .header-actions,
 .result-meta,
@@ -1561,23 +1534,20 @@ onMounted(() => {
   align-items: center;
 }
 
-.card-header,
 .section-header,
 .record-actions {
   gap: 16px;
   justify-content: space-between;
 }
 
-.card-header p,
 .section-header p,
 .disabled-reason {
   margin: 0;
 }
 
-.card-header p,
 .section-header p,
 .disabled-reason {
-  margin-top: 6px;
+  margin-top: var(--mrr-space-2);
   color: var(--el-text-color-secondary);
 }
 
@@ -1608,7 +1578,7 @@ onMounted(() => {
 .check-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 10px;
+  gap: var(--mrr-space-3);
 }
 
 .check-item {
@@ -1616,7 +1586,7 @@ onMounted(() => {
   gap: 12px;
   align-items: center;
   justify-content: space-between;
-  padding: 14px;
+  padding: var(--mrr-space-3);
   background: var(--el-color-warning-light-9);
   border: 1px solid var(--el-color-warning-light-5);
   border-radius: var(--el-border-radius-base);
@@ -1628,15 +1598,15 @@ onMounted(() => {
 }
 
 .facts {
-  margin: 14px 0;
+  margin: var(--mrr-space-3) 0;
   color: var(--el-text-color-secondary);
 }
 
 .warning-list {
   display: grid;
-  gap: 6px;
+  gap: var(--mrr-space-2);
   padding-left: 20px;
-  margin: 14px 0 0;
+  margin: var(--mrr-space-3) 0 0;
   color: var(--el-color-warning-dark-2);
 }
 
@@ -1657,7 +1627,7 @@ onMounted(() => {
 }
 
 .section-header {
-  margin-bottom: 14px;
+  margin-bottom: var(--mrr-space-3);
 }
 
 .filter-grid {
@@ -1665,7 +1635,7 @@ onMounted(() => {
   grid-template-columns: repeat(4, minmax(150px, 1fr)) minmax(180px, auto);
   gap: 12px;
   align-items: end;
-  margin-bottom: 14px;
+  margin-bottom: var(--mrr-space-3);
 }
 
 .filter-grid :deep(.el-form-item) {
@@ -1677,8 +1647,8 @@ onMounted(() => {
 }
 
 .record-actions {
-  padding-top: 14px;
-  margin-top: 14px;
+  padding-top: var(--mrr-space-3);
+  margin-top: var(--mrr-space-3);
   border-top: 1px solid var(--el-border-color-lighter);
 }
 
@@ -1687,8 +1657,8 @@ onMounted(() => {
 }
 
 .log-filter {
-  padding: 14px;
-  margin-bottom: 14px;
+  padding: var(--mrr-space-3);
+  margin-bottom: var(--mrr-space-3);
   background: var(--el-fill-color-lighter);
   border-radius: var(--el-border-radius-base);
 }
@@ -1700,11 +1670,11 @@ onMounted(() => {
 .pager {
   display: flex;
   justify-content: flex-end;
-  margin-top: 14px;
+  margin-top: var(--mrr-space-3);
 }
 
 .upload-summary {
-  margin-bottom: 14px;
+  margin-bottom: var(--mrr-space-3);
 }
 
 :deep(.el-input-number),
@@ -1728,7 +1698,6 @@ onMounted(() => {
     grid-template-columns: 1fr;
   }
 
-  .card-header,
   .section-header,
   .record-actions {
     flex-direction: column;

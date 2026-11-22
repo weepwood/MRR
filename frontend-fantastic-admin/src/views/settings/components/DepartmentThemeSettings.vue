@@ -6,6 +6,7 @@ import { computed, onMounted, ref } from 'vue'
 import { getSystemSettings, setSetting } from '@/api/modules/settings'
 import { getDepartments } from '@/api/modules/statistics'
 import AppEmpty from '@/components/AppEmpty/index.vue'
+import AppLoading from '@/components/AppLoading/index.vue'
 import { actionDialog } from '@/ui/components/ActionDialog'
 import {
   addArchiveDepartmentThemeHistoryToLocal,
@@ -27,6 +28,8 @@ interface EditableDepartmentTheme extends ArchiveDepartmentTheme {
 }
 
 const loading = ref(false)
+/** 首次读取（服务器或本地回退）完成前，编辑区不展示「自动配色」空态。 */
+const loaded = ref(false)
 const saving = ref(false)
 const rows = ref<EditableDepartmentTheme[]>([])
 const departments = ref<string[]>([])
@@ -143,6 +146,7 @@ async function loadThemes() {
     setRows(themes)
     persistedThemes.value = themes
     refreshHistory()
+    loaded.value = true
     loading.value = false
   }
 }
@@ -229,7 +233,7 @@ onMounted(() => {
 </script>
 
 <template>
-  <el-card v-loading="loading" shadow="never" class="department-theme-card">
+  <el-card v-loading="loading && loaded" shadow="never" class="department-theme-card">
     <template #header>
       <div class="department-theme-header">
         <div>
@@ -263,7 +267,8 @@ onMounted(() => {
       title="没有单独配置的科室会根据科室名称稳定生成颜色；分页、排序或刷新后颜色不会改变。"
     />
 
-    <div v-if="hasRows" class="theme-editor">
+    <AppLoading v-if="!loaded" type="table" :rows="4" :cols="5" />
+    <div v-else-if="hasRows" class="theme-editor">
       <div class="theme-editor-head" aria-hidden="true">
         <span>科室名称</span>
         <span>档案袋主色</span>
@@ -383,7 +388,7 @@ onMounted(() => {
 }
 
 .department-theme-actions :deep(.el-button) {
-  gap: 6px;
+  gap: var(--mrr-space-2);
   margin-left: 0;
 }
 

@@ -371,7 +371,7 @@ onUnmounted(() => {
 <style scoped>
 .archive-header {
   display: grid;
-  gap: 10px;
+  gap: var(--mrr-space-3);
   padding: 2px;
 }
 
@@ -455,7 +455,7 @@ onUnmounted(() => {
 
 .history-groups {
   display: grid;
-  gap: 6px;
+  gap: var(--mrr-space-2);
   max-height: min(420px, calc(100vh - 180px));
   padding-right: 3px;
   overflow: hidden auto;
@@ -466,7 +466,7 @@ onUnmounted(() => {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 2px 6px;
+  padding: 2px var(--mrr-space-2);
   font-size: 11px;
   font-weight: 600;
   color: var(--text-secondary);
@@ -491,7 +491,7 @@ onUnmounted(() => {
 
 .history-dialog-header {
   display: grid;
-  gap: 10px;
+  gap: var(--mrr-space-3);
   width: 100%;
   padding-right: 16px;
 }
@@ -522,8 +522,8 @@ onUnmounted(() => {
 .history-tab-enter-active,
 .history-tab-leave-active {
   transition:
-    opacity 180ms var(--mrr-ease-out),
-    transform 180ms var(--mrr-ease-out);
+    opacity var(--mrr-motion-move) var(--mrr-ease-out),
+    transform var(--mrr-motion-move) var(--mrr-ease-out);
 }
 
 .history-tab-enter-from {
@@ -569,7 +569,7 @@ onUnmounted(() => {
 
 .history-status {
   flex: none;
-  padding: 2px 6px;
+  padding: 2px var(--mrr-space-2);
   font-size: 10px;
   font-weight: 600;
   color: var(--el-color-danger);
@@ -578,10 +578,10 @@ onUnmounted(() => {
 }
 
 .history-item {
-  gap: 6px;
+  gap: var(--mrr-space-2);
   padding: 5px 4px;
   border-radius: var(--mrr-radius-md);
-  transition: background-color var(--mrr-motion-feedback) ease;
+  transition: background-color var(--mrr-motion-feedback) var(--mrr-ease-out);
 }
 
 .history-item:hover {
@@ -629,7 +629,7 @@ onUnmounted(() => {
   height: var(--icon-size);
   fill: var(--icon-secondary-color);
   transform-origin: top;
-  transition: fill var(--mrr-motion-feedback) ease, transform var(--mrr-motion-move) var(--mrr-ease-out);
+  transition: fill var(--mrr-motion-feedback) var(--mrr-ease-out), transform var(--mrr-motion-move) var(--mrr-ease-out);
 }
 
 .bookmark::after {
@@ -693,7 +693,7 @@ onUnmounted(() => {
   gap: 4px 12px;
   align-items: center;
   min-width: 0;
-  padding: 5px 6px;
+  padding: 5px var(--mrr-space-2);
   font: inherit;
   color: inherit;
   text-align: left;
@@ -711,7 +711,7 @@ onUnmounted(() => {
 
 .history-main-trailing {
   display: flex;
-  gap: 6px;
+  gap: var(--mrr-space-2);
   align-items: center;
   align-self: center;
   justify-content: flex-end;
@@ -765,7 +765,7 @@ onUnmounted(() => {
 }
 
 .access-mode-label {
-  padding: 2px 7px;
+  padding: 2px var(--mrr-space-2);
   font-size: 12px;
   line-height: 1.4;
   color: var(--el-color-primary-dark-2);

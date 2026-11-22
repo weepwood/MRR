@@ -6,6 +6,7 @@ import { ElMessage } from 'element-plus'
 import { Copy as CopyDocument, WandSparkles as MagicStick, Send as Promotion, RefreshCw as Refresh, Settings as Setting } from 'lucide-vue-next'
 import { computed, onMounted, reactive, ref } from 'vue'
 import { executeAuthTestRequest } from '@/api/modules/auth-test'
+import MrrSectionCard from '@/components/MrrSectionCard/index.vue'
 import MrrStatusTag from '@/components/MrrStatusTag/index.vue'
 import { useUserStore } from '@/store/modules/user'
 import { copyText as copyToClipboard } from '@/utils/copy-text'
@@ -503,17 +504,11 @@ onMounted(() => {
       </template>
     </el-alert>
 
-    <el-card shadow="never">
-      <template #header>
-        <div class="card-header">
-          <div>
-            <strong>第一步：检查后端集成状态</strong>
-            <span>诊断接口受 JWT 与 user:manage 权限保护，不返回 Secret 明文</span>
-          </div>
-          <el-button :icon="Setting" :loading="statusLoading" @click="checkStatus()">
-            检查后端配置
-          </el-button>
-        </div>
+    <MrrSectionCard title="第一步：检查后端集成状态" description="诊断接口受 JWT 与 user:manage 权限保护，不返回 Secret 明文">
+      <template #actions>
+        <el-button :icon="Setting" :loading="statusLoading" @click="checkStatus()">
+          检查后端配置
+        </el-button>
       </template>
 
       <el-alert
@@ -578,19 +573,13 @@ onMounted(() => {
           </template>
         </el-table-column>
       </el-table>
-    </el-card>
+    </MrrSectionCard>
 
-    <el-card shadow="never">
-      <template #header>
-        <div class="card-header">
-          <div>
-            <strong>第二步：生成或填写相同的 HMAC Secret</strong>
-            <span>生成后必须复制到后端 secrets 文件并重启</span>
-          </div>
-          <el-button :icon="MagicStick" @click="generateSecret">
-            生成 256 位 Secret
-          </el-button>
-        </div>
+    <MrrSectionCard title="第二步：生成或填写相同的 HMAC Secret" description="生成后必须复制到后端 secrets 文件并重启">
+      <template #actions>
+        <el-button :icon="MagicStick" @click="generateSecret">
+          生成 256 位 Secret
+        </el-button>
       </template>
 
       <div class="two-column-grid">
@@ -651,17 +640,11 @@ onMounted(() => {
           </ol>
         </div>
       </div>
-    </el-card>
+    </MrrSectionCard>
 
-    <el-card shadow="never">
-      <template #header>
-        <div class="card-header">
-          <div>
-            <strong>第三步：填写票据授权范围</strong>
-            <span>所有条件按并集解析；精确病案使用 archives</span>
-          </div>
-          <el-switch v-model="form.allowDownload" active-text="允许下载" inactive-text="只读" />
-        </div>
+    <MrrSectionCard title="第三步：填写票据授权范围" description="所有条件按并集解析；精确病案使用 archives">
+      <template #actions>
+        <el-switch v-model="form.allowDownload" active-text="允许下载" inactive-text="只读" />
       </template>
 
       <el-form label-position="top">
@@ -692,20 +675,14 @@ onMounted(() => {
           从表单生成实际 JSON
         </el-button>
       </el-form>
-    </el-card>
+    </MrrSectionCard>
 
     <div class="two-column-grid">
-      <el-card shadow="never">
-        <template #header>
-          <div class="card-header">
-            <div>
-              <strong>第四步：签名与模拟场景</strong>
-              <span>正常流程和安全失败场景分开准备</span>
-            </div>
-            <el-button text :icon="Refresh" @click="refreshTimestampAndNonce">
-              更新时间与 nonce
-            </el-button>
-          </div>
+      <MrrSectionCard title="第四步：签名与模拟场景" description="正常流程和安全失败场景分开准备">
+        <template #actions>
+          <el-button text :icon="Refresh" @click="refreshTimestampAndNonce">
+            更新时间与 nonce
+          </el-button>
         </template>
 
         <div class="scenario-buttons">
@@ -751,17 +728,9 @@ onMounted(() => {
             </el-button>
           </div>
         </el-form>
-      </el-card>
+      </MrrSectionCard>
 
-      <el-card shadow="never">
-        <template #header>
-          <div class="card-header">
-            <div>
-              <strong>签名计算结果</strong>
-              <span>Canonical Text 与原始请求体必须逐字节一致</span>
-            </div>
-          </div>
-        </template>
+      <MrrSectionCard title="签名计算结果" description="Canonical Text 与原始请求体必须逐字节一致">
         <span class="code-label">SHA-256(rawBody)</span>
         <div class="copy-line">
           <code>{{ bodyHash || '尚未计算' }}</code>
@@ -771,20 +740,14 @@ onMounted(() => {
         <pre class="code-panel compact">{{ canonicalText || '尚未计算' }}</pre>
         <span class="code-label">X-MRR-Signature</span>
         <el-input v-model="signature" type="textarea" :rows="4" />
-      </el-card>
+      </MrrSectionCard>
     </div>
 
-    <el-card shadow="never">
-      <template #header>
-        <div class="card-header">
-          <div>
-            <strong>票据响应与处理建议</strong>
-            <span>成功后打开 launchUrl；失败时显示可执行的下一步</span>
-          </div>
-          <el-tag :type="responseType(result)" effect="plain">
-            {{ result?.status ?? '未发送' }}
-          </el-tag>
-        </div>
+    <MrrSectionCard title="票据响应与处理建议" description="成功后打开 launchUrl；失败时显示可执行的下一步">
+      <template #actions>
+        <el-tag :type="responseType(result)" effect="plain">
+          {{ result?.status ?? '未发送' }}
+        </el-tag>
       </template>
 
       <el-alert
@@ -806,7 +769,7 @@ onMounted(() => {
         </el-button>
       </div>
       <pre class="code-panel response-body">{{ formatJson(result?.data) || '票据响应将在这里显示' }}</pre>
-    </el-card>
+    </MrrSectionCard>
   </div>
 </template>
 
@@ -826,7 +789,7 @@ onMounted(() => {
 
 .form-grid {
   display: grid;
-  gap: 14px;
+  gap: var(--mrr-space-3);
 }
 
 .form-grid.two {
@@ -837,7 +800,6 @@ onMounted(() => {
   grid-template-columns: repeat(3, minmax(0, 1fr));
 }
 
-.card-header,
 .config-header,
 .button-row,
 .scenario-buttons,
@@ -845,17 +807,14 @@ onMounted(() => {
 .copy-line,
 .status-meta {
   display: flex;
-  gap: 10px;
+  gap: var(--mrr-space-3);
   align-items: center;
 }
 
-.card-header,
 .config-header {
   justify-content: space-between;
 }
 
-.card-header strong,
-.card-header span,
 .config-header strong,
 .config-header span,
 .check-item strong,
@@ -863,7 +822,6 @@ onMounted(() => {
   display: block;
 }
 
-.card-header span,
 .config-header span,
 .check-item > div > span,
 .response-summary span,
@@ -875,7 +833,7 @@ onMounted(() => {
 .check-grid {
   display: grid;
   grid-template-columns: repeat(5, minmax(0, 1fr));
-  gap: 10px;
+  gap: var(--mrr-space-3);
   margin-top: 16px;
 }
 
@@ -898,12 +856,12 @@ onMounted(() => {
 }
 
 .status-meta {
-  gap: 8px 18px;
-  margin-top: 14px;
+  gap: 8px var(--mrr-space-4);
+  margin-top: var(--mrr-space-3);
 }
 
 .client-table {
-  margin-top: 14px;
+  margin-top: var(--mrr-space-3);
 }
 
 .inline-error {
@@ -913,8 +871,8 @@ onMounted(() => {
 
 .setup-steps {
   display: grid;
-  gap: 6px;
-  padding-left: 22px;
+  gap: var(--mrr-space-2);
+  padding-left: var(--mrr-space-5);
   margin: 0;
   font-size: 13px;
   color: var(--el-text-color-secondary);
@@ -925,7 +883,7 @@ onMounted(() => {
 }
 
 .response-summary {
-  margin: 14px 0;
+  margin: var(--mrr-space-3) 0;
 }
 
 .launch-url {
@@ -938,7 +896,7 @@ onMounted(() => {
 
 .code-label {
   display: block;
-  margin: 14px 0 6px;
+  margin: var(--mrr-space-3) 0 var(--mrr-space-2);
   font-size: 12px;
   font-weight: 600;
   color: var(--el-text-color-secondary);
@@ -949,7 +907,7 @@ onMounted(() => {
   box-sizing: border-box;
   width: 100%;
   min-height: 120px;
-  padding: 14px;
+  padding: var(--mrr-space-3);
   margin: 0;
   overflow: auto;
   font-family: var(--mrr-font-mono);
@@ -994,7 +952,6 @@ onMounted(() => {
     grid-template-columns: 1fr;
   }
 
-  .card-header,
   .config-header {
     flex-direction: column;
     align-items: flex-start;

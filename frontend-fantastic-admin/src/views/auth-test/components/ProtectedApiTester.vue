@@ -6,6 +6,7 @@ import { ElMessage } from 'element-plus'
 import { Network as Connection } from 'lucide-vue-next'
 import { reactive, ref } from 'vue'
 import { executeAuthTestRequest } from '@/api/modules/auth-test'
+import MrrSectionCard from '@/components/MrrSectionCard/index.vue'
 import { useUserStore } from '@/store/modules/user'
 
 const emit = defineEmits<{
@@ -115,17 +116,11 @@ function useCurrentToken() {
 
 <template>
   <div class="tester-grid">
-    <el-card shadow="never">
-      <template #header>
-        <div class="card-header">
-          <div>
-            <strong>自定义当前后端请求</strong>
-            <span>故意测试 401/403 不会触发后台全局退出</span>
-          </div>
-          <el-button text @click="useCurrentToken">
-            使用当前 Token
-          </el-button>
-        </div>
+    <MrrSectionCard title="自定义当前后端请求" description="故意测试 401/403 不会触发后台全局退出">
+      <template #actions>
+        <el-button text @click="useCurrentToken">
+          使用当前 Token
+        </el-button>
       </template>
 
       <el-form label-position="top">
@@ -157,19 +152,13 @@ function useCurrentToken() {
           发送请求
         </el-button>
       </el-form>
-    </el-card>
+    </MrrSectionCard>
 
-    <el-card shadow="never">
-      <template #header>
-        <div class="card-header">
-          <div>
-            <strong>接口响应</strong>
-            <span>保留 HTTP 状态、响应头和业务响应体</span>
-          </div>
-          <el-tag :type="responseType(result)" effect="plain">
-            {{ result?.status ?? '未发送' }}
-          </el-tag>
-        </div>
+    <MrrSectionCard title="接口响应" description="保留 HTTP 状态、响应头和业务响应体">
+      <template #actions>
+        <el-tag :type="responseType(result)" effect="plain">
+          {{ result?.status ?? '未发送' }}
+        </el-tag>
       </template>
       <div class="response-summary">
         <span>状态文本</span>
@@ -181,7 +170,7 @@ function useCurrentToken() {
       <pre class="code-panel compact">{{ formatJson(result?.headers) || '—' }}</pre>
       <span class="code-label">Response Body</span>
       <pre class="code-panel response-body">{{ formatJson(result?.data) || '响应将在这里显示' }}</pre>
-    </el-card>
+    </MrrSectionCard>
   </div>
 </template>
 
@@ -195,26 +184,15 @@ function useCurrentToken() {
 .method-grid {
   display: grid;
   grid-template-columns: 130px minmax(0, 1fr);
-  gap: 14px;
+  gap: var(--mrr-space-3);
 }
 
-.card-header,
 .response-summary {
   display: flex;
-  gap: 10px;
+  gap: var(--mrr-space-3);
   align-items: center;
 }
 
-.card-header {
-  justify-content: space-between;
-}
-
-.card-header strong,
-.card-header span {
-  display: block;
-}
-
-.card-header span,
 .response-summary span {
   font-size: 13px;
   color: var(--el-text-color-secondary);
@@ -222,12 +200,12 @@ function useCurrentToken() {
 
 .response-summary {
   flex-wrap: wrap;
-  margin-bottom: 14px;
+  margin-bottom: var(--mrr-space-3);
 }
 
 .code-label {
   display: block;
-  margin: 14px 0 6px;
+  margin: var(--mrr-space-3) 0 var(--mrr-space-2);
   font-size: 12px;
   font-weight: 600;
   color: var(--el-text-color-secondary);
@@ -238,7 +216,7 @@ function useCurrentToken() {
   box-sizing: border-box;
   width: 100%;
   min-height: 120px;
-  padding: 14px;
+  padding: var(--mrr-space-3);
   margin: 0;
   overflow: auto;
   font-family: var(--mrr-font-mono);

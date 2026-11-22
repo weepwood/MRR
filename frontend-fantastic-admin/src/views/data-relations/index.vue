@@ -749,7 +749,7 @@ onMounted(loadDashboard)
 .relation-card__header,
 .coverage-row {
   display: flex;
-  gap: 12px;
+  gap: var(--mrr-space-3);
   align-items: center;
 }
 
@@ -768,7 +768,7 @@ p {
 .relation-grid,
 .relation-count-grid {
   display: grid;
-  gap: 16px;
+  gap: var(--mrr-space-4);
 }
 
 .relation-count-grid span {
@@ -790,7 +790,7 @@ p {
 .preview-content {
   display: grid;
   grid-template-columns: minmax(0, 1fr);
-  gap: 16px;
+  gap: var(--mrr-space-4);
   min-width: 0;
 }
 
@@ -805,18 +805,18 @@ p {
 
 .relation-card__header > div {
   display: grid;
-  gap: 4px;
+  gap: var(--mrr-space-1);
 }
 
 .relation-card code,
 .muted-code {
-  font-size: 12px;
+  font-size: var(--mrr-font-size-xs);
   color: var(--el-text-color-secondary);
 }
 
 .relation-card p {
   min-height: 42px;
-  margin: 16px 0;
+  margin: var(--mrr-space-4) 0;
   color: var(--el-text-color-secondary);
 }
 
@@ -827,17 +827,17 @@ p {
 .relation-card dl {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(96px, 1fr));
-  gap: 12px;
-  margin: 16px 0;
+  gap: var(--mrr-space-3);
+  margin: var(--mrr-space-4) 0;
 }
 
 .relation-card dl div {
   display: grid;
-  gap: 4px;
+  gap: var(--mrr-space-1);
 }
 
 .relation-card dt {
-  font-size: 12px;
+  font-size: var(--mrr-font-size-xs);
   color: var(--el-text-color-secondary);
 }
 
@@ -866,7 +866,7 @@ p {
 }
 
 .search-field label {
-  font-size: 12px;
+  font-size: var(--mrr-font-size-xs);
   font-weight: 600;
   color: var(--mrr-foreground);
 }
@@ -897,7 +897,7 @@ p {
 }
 
 .archive-header h3 {
-  margin: 4px 0;
+  margin: var(--mrr-space-1) 0;
   font-size: 22px;
 }
 
@@ -936,9 +936,9 @@ p {
 }
 
 .preview-content pre {
-  padding: 12px;
+  padding: var(--mrr-space-3);
   overflow: auto;
-  font-size: 12px;
+  font-size: var(--mrr-font-size-xs);
   line-height: 1.6;
   background: var(--el-fill-color-light);
   border-radius: var(--mrr-radius-md);

@@ -95,17 +95,17 @@ const settings = defineModel<EffectiveSystemSettings>({ required: true })
 <style scoped>
 .setting-section { display: grid; gap: var(--mrr-space-5); }
 
-.setting-row { display: flex; gap: var(--mrr-space-4); align-items: center; justify-content: space-between; padding: var(--mrr-space-5); background: var(--mrr-card); border: 1px solid color-mix(in srgb, var(--color-warning) 25%, var(--mrr-border)); border-radius: var(--mrr-radius-xl); }
+.setting-row { display: flex; gap: var(--mrr-space-4); align-items: center; justify-content: space-between; padding: var(--mrr-space-5); background: var(--mrr-card); border: 1px solid color-mix(in srgb, var(--color-warning) 25%, var(--mrr-border)); border-radius: var(--mrr-radius-card); }
 
 .danger-row { border-color: color-mix(in srgb, var(--el-color-danger) 35%, var(--mrr-border)); }
 
 .setting-row strong,
-.trusted-sources-card strong { font-size: 13px; }
+.trusted-sources-card strong { font-size: var(--mrr-font-size-sm); font-weight: 600; }
 
 .setting-row p,
-.trusted-sources-card p { margin: 3px 0 0; font-size: 10px; line-height: 1.6; color: var(--mrr-muted-foreground); }
+.trusted-sources-card p { margin: 3px 0 0; font-size: var(--mrr-font-size-xs); line-height: 1.6; color: var(--mrr-muted-foreground); }
 
-.trusted-sources-card { display: grid; gap: var(--mrr-space-4); padding: var(--mrr-space-5); background: var(--mrr-card); border: 1px solid var(--mrr-border); border-radius: var(--mrr-radius-xl); }
+.trusted-sources-card { display: grid; gap: var(--mrr-space-4); padding: var(--mrr-space-5); background: var(--mrr-card); border: 1px solid var(--mrr-border); border-radius: var(--mrr-radius-card); }
 
 /* Chrome 86 回退：警示区与危险区的边界色是「这里的设置有风险」的唯一提示。 */
 @supports not (color: color-mix(in srgb, #000 50%, #fff)) {
@@ -122,11 +122,11 @@ const settings = defineModel<EffectiveSystemSettings>({ required: true })
 
 .trusted-sources-card :deep(.el-textarea__inner) { font-family: var(--mrr-font-mono); line-height: 1.6; }
 
-.source-examples { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px 16px; font-size: 11px; color: var(--mrr-muted-foreground); }
+.source-examples { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px 16px; font-size: var(--mrr-font-size-xs); line-height: 1.6; color: var(--mrr-muted-foreground); }
 
 .source-examples span { min-width: 0; }
 
-.source-examples code { padding: 2px 5px; margin-right: 4px; font-size: 10px; color: var(--el-color-primary); background: var(--mrr-muted); border-radius: 4px; }
+.source-examples code { padding: 2px 5px; margin-right: 4px; font-size: var(--mrr-font-size-xs); color: var(--el-color-primary); background: var(--mrr-muted); border-radius: max(0px, calc(var(--mrr-radius-sm) - 2px)); }
 
 .developer-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--mrr-space-4); }
 
@@ -134,7 +134,7 @@ const settings = defineModel<EffectiveSystemSettings>({ required: true })
 
 .developer-grid article > span { color: var(--color-warning); }
 
-.developer-grid p { margin: 4px 0 0; font-size: 10px; color: var(--mrr-muted-foreground); }
+.developer-grid p { margin: 4px 0 0; font-size: var(--mrr-font-size-xs); line-height: 1.6; color: var(--mrr-muted-foreground); }
 
 @media (max-width: 680px) {
   .developer-grid,

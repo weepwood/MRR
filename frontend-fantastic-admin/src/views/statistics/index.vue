@@ -4,7 +4,6 @@ import type { MrrBarSeries, MrrLineSeries } from '@/types/chart'
 import { ElMessage } from 'element-plus'
 import {
   CalendarDays as Calendar,
-  FileText as Document,
   Download,
   RefreshCw as Refresh,
 } from 'lucide-vue-next'
@@ -16,7 +15,9 @@ import {
   getStatisticsSummary,
 } from '@/api/modules/statistics'
 import { MrrChartCard, MrrDualAxisChart } from '@/components/charts'
+import MrrDataTablePanel from '@/components/MrrDataTablePanel/index.vue'
 import MrrFilterActionButton from '@/components/MrrFilterActionButton/index.vue'
+import MrrFilterBar from '@/components/MrrFilterBar/index.vue'
 import MrrPageHeader from '@/components/MrrPageHeader/index.vue'
 import MrrPageShell from '@/components/MrrPageShell/index.vue'
 import { rangePickerPopperOptions } from '@/ui/provider/picker-options'
@@ -416,18 +417,18 @@ onMounted(refreshAll)
         </el-tag>
       </template>
       <template #summary>
-        <div class="trend-summary" aria-label="扫描趋势摘要">
-          <div>
-            <span>区间记录</span>
-            <strong>{{ formatNumber(trendRecordTotal) }}</strong>
+        <div class="mrr-stat-strip mrr-stat-strip--3" aria-label="扫描趋势摘要">
+          <div class="mrr-stat-tile">
+            <span class="mrr-stat-tile__label">区间记录</span>
+            <strong class="mrr-stat-tile__value">{{ formatNumber(trendRecordTotal) }}</strong>
           </div>
-          <div>
-            <span>区间页数</span>
-            <strong>{{ formatNumber(trendPageTotal) }}</strong>
+          <div class="mrr-stat-tile">
+            <span class="mrr-stat-tile__label">区间页数</span>
+            <strong class="mrr-stat-tile__value">{{ formatNumber(trendPageTotal) }}</strong>
           </div>
-          <div>
-            <span>日均页数</span>
-            <strong>{{ formatNumber(averageDailyPages) }}</strong>
+          <div class="mrr-stat-tile">
+            <span class="mrr-stat-tile__label">日均页数</span>
+            <strong class="mrr-stat-tile__value">{{ formatNumber(averageDailyPages) }}</strong>
           </div>
         </div>
       </template>
@@ -445,88 +446,88 @@ onMounted(refreshAll)
       />
     </MrrChartCard>
 
-    <el-card shadow="never" class="list-card">
-      <template #header>
-        <div class="section-header">
-          <el-icon><Document /></el-icon>
-          <span>病案明细列表</span>
-          <el-tag size="small" type="info">
-            共 {{ statisticsListData.total ?? 0 }} 条
-          </el-tag>
-        </div>
+    <MrrDataTablePanel
+      class="list-card"
+      title="病案明细列表"
+      icon="i-lucide:file-text"
+      :count="statisticsListData.total ?? 0"
+    >
+      <template #actions>
+        <el-button
+          type="success"
+          plain
+          :icon="Download"
+          :loading="exportLoading"
+          :disabled="!canExportList"
+          :title="canExportList ? '导出当前筛选结果，单次最多 100,000 条' : '查询当前筛选条件后可导出'"
+          @click="handleExportTable"
+        >
+          导出表格
+        </el-button>
       </template>
 
-      <div class="list-search-bar">
-        <el-input
-          v-model="listSearchKeyword"
-          placeholder="搜索病案号 / 上架号 / 操作员"
-          clearable
-          class="search-keyword"
-          @keyup.enter="handleListSearch"
-        />
-        <el-select
-          v-model="listSearchType"
-          placeholder="全部类型"
-          clearable
-          class="search-type"
-          @change="handleListSearch"
-        >
-          <el-option label="全部" value="" />
-          <el-option
-            v-for="item in typeOptions"
-            :key="item"
-            :label="item"
-            :value="item"
+      <template #filters>
+        <MrrFilterBar class="list-search-bar" embedded :focus-ring="false">
+          <el-input
+            v-model="listSearchKeyword"
+            placeholder="搜索病案号 / 上架号 / 操作员"
+            clearable
+            class="search-keyword"
+            @keyup.enter="handleListSearch"
           />
-        </el-select>
-        <el-select
-          v-model="listSearchYear"
-          placeholder="全部年份"
-          clearable
-          class="search-year"
-          @change="handleYearChange"
-        >
-          <template #prefix>
-            <el-icon><Calendar /></el-icon>
-          </template>
-          <el-option
-            v-for="year in yearOptions"
-            :key="year"
-            :label="`${year} 年`"
-            :value="year"
-          />
-        </el-select>
-        <el-date-picker
-          v-model="listSearchDateRange"
-          type="daterange"
-          :popper-options="rangePickerPopperOptions"
-          range-separator="至"
-          start-placeholder="开始日期"
-          end-placeholder="结束日期"
-          value-format="YYYY-MM-DD"
-          class="search-date"
-          @change="handleDateRangeChange"
-        />
-        <div class="search-actions">
-          <MrrFilterActionButton action="search" :pending="listLoading" :busy="listLoading" @click="handleListSearch">
-            查询
-          </MrrFilterActionButton>
-          <MrrFilterActionButton action="reset" :pending="listLoading" :busy="listLoading" @click="resetListSearch">
-            重置
-          </MrrFilterActionButton>
-          <el-button
-            type="success"
-            plain
-            :icon="Download"
-            :loading="exportLoading"
-            :disabled="!canExportList"
-            :title="canExportList ? '导出当前筛选结果，单次最多 100,000 条' : '查询当前筛选条件后可导出'"
-            @click="handleExportTable"
+          <el-select
+            v-model="listSearchType"
+            placeholder="全部类型"
+            clearable
+            class="search-type"
+            @change="handleListSearch"
           >
-            导出表格
-          </el-button>
-        </div>
-      </div>
+            <el-option label="全部" value="" />
+            <el-option
+              v-for="item in typeOptions"
+              :key="item"
+              :label="item"
+              :value="item"
+            />
+          </el-select>
+          <el-select
+            v-model="listSearchYear"
+            placeholder="全部年份"
+            clearable
+            class="search-year"
+            @change="handleYearChange"
+          >
+            <template #prefix>
+              <el-icon><Calendar /></el-icon>
+            </template>
+            <el-option
+              v-for="year in yearOptions"
+              :key="year"
+              :label="`${year} 年`"
+              :value="year"
+            />
+          </el-select>
+          <el-date-picker
+            v-model="listSearchDateRange"
+            type="daterange"
+            :popper-options="rangePickerPopperOptions"
+            range-separator="至"
+            start-placeholder="开始日期"
+            end-placeholder="结束日期"
+            value-format="YYYY-MM-DD"
+            class="search-date"
+            @change="handleDateRangeChange"
+          />
+          <template #actions>
+            <MrrFilterActionButton action="search" :pending="listLoading" :busy="listLoading" @click="handleListSearch">
+              查询
+            </MrrFilterActionButton>
+            <MrrFilterActionButton action="reset" :pending="listLoading" :busy="listLoading" @click="resetListSearch">
+              重置
+            </MrrFilterActionButton>
+          </template>
+        </MrrFilterBar>
+      </template>
 
       <AppError v-if="listError" :message="listError" @retry="loadStatisticsList" />
       <el-table
@@ -546,7 +547,7 @@ onMounted(refreshAll)
         <el-table-column prop="cid" label="CID" min-width="120" show-overflow-tooltip />
       </el-table>
 
-      <div v-show="!listError" class="pagination-wrapper">
+      <template v-if="!listError" #pagination>
         <el-pagination
           v-model:current-page="currentPage"
           v-model:page-size="pageSize"
@@ -556,128 +557,43 @@ onMounted(refreshAll)
           @current-change="loadStatisticsList"
           @size-change="handleListSizeChange"
         />
-      </div>
-    </el-card>
+      </template>
+    </MrrDataTablePanel>
   </MrrPageShell>
 </template>
 
 <style scoped>
-/* 页面壳层与页头由 MrrPageShell / MrrPageHeader 统一提供；底部留白交给布局工作区。 */
+/*
+ * 页面壳层与页头由 MrrPageShell / MrrPageHeader 统一提供；底部留白交给布局工作区。
+ * 明细列表使用 MrrDataTablePanel + MrrFilterBar（与用户、记录等列表页同一结构）：
+ * 此前自写的灰底搜索条、居中分页与 15px 卡头，与其他列表页的留白、对齐和分页位置都不一致。
+ */
 
-.section-header {
-  display: flex;
-  gap: var(--mrr-space-3);
-  align-items: center;
-  font-size: 15px;
-  font-weight: 600;
-}
-
-.section-header .el-icon {
-  font-size: 18px;
-  color: var(--el-color-primary);
-}
-
-.trend-summary {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: var(--mrr-space-3);
-}
-
-.trend-summary > div {
-  padding: 12px var(--mrr-space-3);
-  background: color-mix(in srgb, var(--surface-alt) 60%, var(--surface));
-  border: 1px solid var(--divider);
-  border-radius: var(--mrr-radius-card);
-}
-
-/* Chrome 86 回退：趋势摘要块的分层底失效后会与卡面融为一体。 */
-@supports not (color: color-mix(in srgb, #000 50%, #fff)) {
-  .trend-summary > div {
-    background: var(--mrr-muted);
-  }
-}
-
-.trend-summary span,
-.trend-summary strong {
-  display: block;
-}
-
-.trend-summary span {
-  font-size: 11px;
-  color: var(--text-secondary);
-}
-
-.trend-summary strong {
-  margin-top: var(--mrr-space-2);
-  font-size: 18px;
-  font-variant-numeric: tabular-nums;
-}
-
-.list-search-bar {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--mrr-space-3);
-  align-items: center;
-  padding: 16px;
-  margin-bottom: 16px;
-  background: var(--surface-muted);
-  border: 1px solid rgb(0 0 0 / 4%);
-  border-radius: var(--mrr-radius-card);
-}
-
+/* 字段宽度：关键词与日期可伸展，类型 / 年份固定宽，与筛选栏 embedded 的拉伸上限配合。 */
 .search-keyword {
-  flex: 1 1 200px;
-  min-width: 160px;
+  flex: 1 1 220px;
+  min-width: 180px;
 }
 
-.search-type {
-  flex: 0 0 190px;
-}
-
+.search-type,
 .search-year {
-  flex: 0 0 190px;
+  flex: 0 1 180px;
+  width: 180px;
 }
 
 .search-date {
-  flex: 1 1 260px;
-  min-width: 220px;
+  flex: 1 1 280px;
+  min-width: 240px;
 }
 
-.search-actions {
-  display: flex;
-  flex: 0 0 auto;
-  flex-wrap: wrap;
-  gap: var(--mrr-space-3);
-}
-
-.search-actions :deep(.el-button + .el-button) {
-  margin-left: 0;
-}
-
-.pagination-wrapper {
-  display: flex;
-  justify-content: center;
-  padding-top: 20px;
-  margin-top: 12px;
-  overflow-x: auto;
-  border-top: 1px solid rgb(0 0 0 / 5%);
-}
-
-@media (max-width: 600px) {
-  .trend-summary {
-    grid-template-columns: 1fr;
-  }
-
+@media (max-width: 760px) {
   .search-keyword,
   .search-type,
   .search-year,
-  .search-date,
-  .search-actions {
+  .search-date {
     flex: 1 1 100%;
-  }
-
-  .search-actions :deep(.el-button) {
-    flex: 1 1 auto;
+    width: 100%;
+    min-width: 0;
   }
 }
 </style>

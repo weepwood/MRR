@@ -322,7 +322,7 @@ function today() {
 .panel-content,
 .result-section {
   display: grid;
-  gap: 16px;
+  gap: var(--mrr-space-4);
 }
 
 .import-safety-tooltip {
@@ -331,13 +331,13 @@ function today() {
 }
 
 .import-safety-tooltip p {
-  margin: 4px 0 0;
+  margin: var(--mrr-space-1) 0 0;
 }
 
 .field-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 8px 12px;
+  gap: var(--mrr-space-2) var(--mrr-space-3);
 }
 
 .field-item {
@@ -345,7 +345,7 @@ function today() {
   gap: var(--mrr-space-3);
   align-items: center;
   min-width: 0;
-  padding: 8px var(--mrr-space-3);
+  padding: var(--mrr-space-2) var(--mrr-space-3);
   background: var(--el-fill-color-lighter);
   border: 1px solid var(--el-border-color-lighter);
   border-radius: var(--mrr-radius-md);
@@ -359,7 +359,7 @@ function today() {
 
 .field-item span {
   min-width: 0;
-  font-size: 12px;
+  font-size: var(--mrr-font-size-xs);
   color: var(--el-text-color-secondary);
 }
 
@@ -373,12 +373,12 @@ function today() {
 .result-summary {
   display: grid;
   grid-template-columns: repeat(7, minmax(0, 1fr));
-  gap: 8px;
+  gap: var(--mrr-space-2);
 }
 
 .summary-item {
   display: grid;
-  gap: 4px;
+  gap: var(--mrr-space-1);
   min-width: 0;
   padding: var(--mrr-space-3);
   border: 1px solid var(--el-border-color-lighter);
@@ -386,7 +386,7 @@ function today() {
 }
 
 .summary-item span {
-  font-size: 12px;
+  font-size: var(--mrr-font-size-xs);
   color: var(--el-text-color-secondary);
 }
 
@@ -403,7 +403,7 @@ function today() {
 
 .truncated-tip {
   margin: -4px 0 0;
-  font-size: 12px;
+  font-size: var(--mrr-font-size-xs);
   color: var(--el-color-warning);
 }
 

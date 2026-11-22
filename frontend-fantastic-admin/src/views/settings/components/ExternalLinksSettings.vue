@@ -248,7 +248,8 @@ function openExternalLink(url: string) {
 }
 
 .card-header h4 {
-  font-size: 15px;
+  font-size: var(--mrr-font-size-md);
+  font-weight: 650;
   color: var(--el-text-color-primary);
 }
 
@@ -285,7 +286,8 @@ function openExternalLink(url: string) {
 
 .form-hint {
   margin: var(--mrr-space-2) 0 0;
-  font-size: 11px;
+  font-size: var(--mrr-font-size-xs);
+  line-height: 1.6;
   color: var(--el-text-color-secondary);
 }
 
@@ -339,7 +341,8 @@ function openExternalLink(url: string) {
   margin-top: 3px;
   overflow: hidden;
   text-overflow: ellipsis;
-  font-size: 11px;
+  font-size: var(--mrr-font-size-xs);
+  line-height: 1.6;
   color: var(--el-text-color-secondary);
   white-space: nowrap;
 }

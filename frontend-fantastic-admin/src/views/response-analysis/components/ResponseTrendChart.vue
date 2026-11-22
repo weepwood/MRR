@@ -123,14 +123,14 @@ function formatBucket(bucket: string) {
 <style scoped>
 .chart-shell {
   display: grid;
-  gap: 20px;
+  gap: var(--mrr-space-5);
 }
 
 .chart-overview {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 0;
-  padding-bottom: 16px;
+  padding-bottom: var(--mrr-space-4);
   border-bottom: 1px solid var(--el-border-color-lighter);
 }
 
@@ -216,19 +216,19 @@ function formatBucket(bucket: string) {
 
 .section-heading {
   display: flex;
-  gap: 16px;
+  gap: var(--mrr-space-4);
   align-items: flex-start;
   justify-content: space-between;
 }
 
 .section-heading > div {
   display: grid;
-  gap: 4px;
+  gap: var(--mrr-space-1);
   min-width: 0;
 }
 
 .section-heading strong {
-  font-size: 14px;
+  font-size: var(--mrr-font-size-md);
   font-weight: 650;
   color: var(--el-text-color-primary);
 }
@@ -241,7 +241,7 @@ function formatBucket(bucket: string) {
 
 .section-heading small {
   flex: none;
-  padding: 4px 8px;
+  padding: var(--mrr-space-1) var(--mrr-space-2);
   color: var(--color-primary);
   background: color-mix(in srgb, var(--color-primary) 8%, var(--el-bg-color));
   border: 1px solid color-mix(in srgb, var(--color-primary) 14%, transparent);

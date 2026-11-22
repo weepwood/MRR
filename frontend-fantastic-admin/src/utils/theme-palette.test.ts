@@ -113,6 +113,39 @@ describe('暖色扁平风格配色方案', () => {
     expect(root.dataset.mrrPalette).toBe('mrr')
   })
 
+  it('暗色浮层比卡面亮一档，亮色浮层与卡面同为白色', () => {
+    // 暗色投影几乎不可见，浮层与卡面同色时下拉、日期面板、对话框会和身后的卡片糊成一片。
+    const lum = (hex: string) => contrastRatio(hex, '#000000')
+    const dark = gr8rCssVariables('dark')
+    expect(dark['--popover']).not.toBe(dark['--card'])
+    expect(lum(GR8R_COLORS.dark.mutedSurface)).toBeGreaterThan(lum(GR8R_COLORS.dark.surface))
+    expect(gr8rCssVariables('light')['--popover']).toBe(gr8rCssVariables('light')['--card'])
+    // 浮层上的文字与状态色仍保持 4.5:1。
+    for (const name of ['ink', 'secondaryInk', 'mutedInk', 'accent', 'success', 'warning', 'danger', 'info'] as const) {
+      expect(contrastRatio(GR8R_COLORS.dark[name], GR8R_COLORS.dark.mutedSurface), `${name} on dark popover`).toBeGreaterThanOrEqual(4.5)
+    }
+  })
+
+  it('状态浅底在两种明暗下都可辨认，且文字仍达 4.5:1', () => {
+    for (const scheme of ['light', 'dark'] as const) {
+      const c = GR8R_COLORS[scheme]
+      const variables = gr8rCssVariables(scheme)
+      for (const name of ['success', 'warning', 'danger', 'info'] as const) {
+        const soft = variables[`--mrr-tone-${name}-soft`]
+        expect(contrastRatio(c[name], soft), `${scheme} ${name} 文字 / 浅底`).toBeGreaterThanOrEqual(4.5)
+        // 暗色下浅底至少要和卡面拉开 1.25:1，否则标签读成「只有文字」。
+        if (scheme === 'dark') {
+          expect(contrastRatio(soft, c.surface), `${name} 浅底 / 卡面`).toBeGreaterThanOrEqual(1.25)
+        }
+      }
+    }
+  })
+
+  it('滚动条使用暖色描边，而不是默认冷灰', () => {
+    expect(gr8rCssVariables('light')['--scrollbar-color']).toMatch(/^\d+ \d+% \d+%$/)
+    expect(gr8rCssVariables('light')['--scrollbar-color']).not.toBe('240 5.9% 90%')
+  })
+
   it('未知方案向后兼容回退为 MRR 原配色', () => {
     expect(normalizeThemePalette(undefined)).toBe('mrr')
     expect(normalizeThemePalette('unexpected')).toBe('mrr')

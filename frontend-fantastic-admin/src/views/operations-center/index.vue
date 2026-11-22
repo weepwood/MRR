@@ -974,7 +974,7 @@ onMounted(async () => {
 
 .issue-row p,
 .check-copy > p {
-  margin: 4px 0 0;
+  margin: var(--mrr-space-1) 0 0;
 }
 
 .diagnostics-tabs {
@@ -987,14 +987,14 @@ onMounted(async () => {
 .overview-dashboard,
 .overview-task-states {
   display: grid;
-  gap: 16px;
+  gap: var(--mrr-space-4);
 }
 
 .snapshot-times,
 .task-state-label {
   display: flex;
   flex-wrap: wrap;
-  gap: 4px 16px;
+  gap: var(--mrr-space-1) var(--mrr-space-4);
 }
 
 .task-state-label {
@@ -1003,28 +1003,28 @@ onMounted(async () => {
 }
 
 .overview-hint {
-  margin-block-start: 12px;
+  margin-block-start: var(--mrr-space-3);
 }
 
 .overview-metrics {
-  margin-top: 16px;
+  margin-top: var(--mrr-space-4);
 }
 
 /* 指标组统一使用 MrrMetricCard，只保留与页面节奏相关的间距。 */
 .metric-row {
-  margin-top: 16px;
+  margin-top: var(--mrr-space-4);
 }
 
 .two-column-layout {
   display: grid;
   grid-template-columns: minmax(0, 1.25fr) minmax(320px, 0.75fr);
-  gap: 16px;
+  gap: var(--mrr-space-4);
 }
 
 .section-card,
 .diagnostic-list,
 .task-summary {
-  margin-top: 16px;
+  margin-top: var(--mrr-space-4);
 }
 
 .issue-list,
@@ -1034,7 +1034,7 @@ onMounted(async () => {
 }
 
 .issue-row {
-  gap: 16px;
+  gap: var(--mrr-space-4);
   padding: var(--mrr-space-3) 0;
   border-bottom: 1px solid var(--el-border-color-lighter);
 }
@@ -1046,7 +1046,7 @@ onMounted(async () => {
 .overview-links {
   display: flex;
   flex-wrap: wrap;
-  gap: 8px;
+  gap: var(--mrr-space-2);
 }
 
 .overview-links .el-button {
@@ -1062,7 +1062,7 @@ onMounted(async () => {
 }
 
 .toolbar-row {
-  gap: 16px;
+  gap: var(--mrr-space-4);
   margin-bottom: var(--mrr-space-3);
 }
 
@@ -1081,37 +1081,38 @@ onMounted(async () => {
 
 .check-title-line code {
   padding: 2px var(--mrr-space-2);
-  border-radius: 5px;
+  border-radius: max(0px, calc(var(--mrr-radius-sm) - 2px));
   background: var(--el-fill-color-light);
   color: var(--el-text-color-secondary);
-  font-size: 11px;
+  font-family: var(--mrr-font-mono);
+  font-size: var(--mrr-font-size-xs);
 }
 
 .check-actions {
   display: grid;
   flex: 0 0 auto;
-  gap: 8px;
+  gap: var(--mrr-space-2);
   justify-items: end;
 }
 
 .suggestion-box {
   display: grid;
-  gap: 4px;
+  gap: var(--mrr-space-1);
   margin-top: var(--mrr-space-3);
   padding: var(--mrr-space-2) var(--mrr-space-3);
   border-radius: var(--mrr-radius-md);
   background: var(--el-fill-color-light);
-  font-size: 13px;
+  font-size: var(--mrr-font-size-sm);
 }
 
 .details-panel {
-  margin-top: 12px;
+  margin-top: var(--mrr-space-3);
 }
 
 .details-panel summary {
   cursor: pointer;
   color: var(--el-color-primary);
-  font-size: 13px;
+  font-size: var(--mrr-font-size-sm);
 }
 
 .detail-json {
@@ -1122,7 +1123,7 @@ onMounted(async () => {
   border-radius: var(--mrr-radius-md);
   background: var(--el-fill-color-light);
   color: var(--el-text-color-regular);
-  font-size: 12px;
+  font-size: var(--mrr-font-size-xs);
   white-space: pre-wrap;
   word-break: break-all;
 }
@@ -1135,11 +1136,11 @@ onMounted(async () => {
 .timeline-title {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: var(--mrr-space-1);
 }
 
 .maintenance-checks {
-  margin-top: 12px;
+  margin-top: var(--mrr-space-3);
 }
 
 @media (max-width: 1100px) {

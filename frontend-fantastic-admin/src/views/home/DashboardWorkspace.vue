@@ -802,7 +802,7 @@ watch(storageKey, loadPreferences, { immediate: true })
   align-items: center;
   min-height: 25px;
   padding: 3px var(--mrr-space-2);
-  font-size: 12px;
+  font-size: var(--mrr-font-size-xs);
   font-weight: 550;
   color: var(--mrr-secondary-foreground);
   background: var(--mrr-secondary);
@@ -823,7 +823,7 @@ watch(storageKey, loadPreferences, { immediate: true })
   place-items: center;
   min-width: 18px;
   height: 18px;
-  padding-inline: 4px;
+  padding-inline: var(--mrr-space-1);
   margin-left: 2px;
   font-size: 10px;
   color: var(--mrr-primary-foreground);
@@ -1049,7 +1049,7 @@ watch(storageKey, loadPreferences, { immediate: true })
 .dashboard-widget__title-row strong {
   overflow: hidden;
   text-overflow: ellipsis;
-  font-size: 14px;
+  font-size: var(--mrr-font-size-md);
   font-weight: 650;
   white-space: nowrap;
 }
@@ -1104,7 +1104,7 @@ watch(storageKey, loadPreferences, { immediate: true })
   margin: 0;
   overflow: hidden;
   -webkit-line-clamp: 2;
-  font-size: 12px;
+  font-size: var(--mrr-font-size-xs);
   line-height: 1.6;
   color: var(--mrr-muted-foreground);
   -webkit-box-orient: vertical;
@@ -1112,7 +1112,7 @@ watch(storageKey, loadPreferences, { immediate: true })
 
 .dashboard-widget--large .dashboard-widget__body p {
   -webkit-line-clamp: 7;
-  font-size: 13px;
+  font-size: var(--mrr-font-size-sm);
 }
 
 .dashboard-widget__footer {
@@ -1145,24 +1145,24 @@ watch(storageKey, loadPreferences, { immediate: true })
 }
 
 .dashboard-empty > :first-child {
-  margin-bottom: 12px;
+  margin-bottom: var(--mrr-space-3);
   font-size: 42px;
   color: var(--mrr-muted-foreground);
 }
 
 .dashboard-empty strong {
-  font-size: 14px;
+  font-size: var(--mrr-font-size-md);
 }
 
 .dashboard-empty p {
-  margin: var(--mrr-space-2) 0 16px;
-  font-size: 12px;
+  margin: var(--mrr-space-2) 0 var(--mrr-space-4);
+  font-size: var(--mrr-font-size-xs);
   color: var(--mrr-muted-foreground);
 }
 
 .dialog-description {
   margin: 0 0 var(--mrr-space-3);
-  font-size: 12px;
+  font-size: var(--mrr-font-size-xs);
   line-height: 1.6;
   color: var(--mrr-muted-foreground);
 }
@@ -1181,7 +1181,7 @@ watch(storageKey, loadPreferences, { immediate: true })
   gap: var(--mrr-space-3);
   align-items: center;
   min-width: 0;
-  padding: var(--mrr-space-3) 12px;
+  padding: var(--mrr-space-3) var(--mrr-space-3);
   border-bottom: 1px solid var(--mrr-shell-divider);
 }
 
@@ -1223,7 +1223,7 @@ watch(storageKey, loadPreferences, { immediate: true })
 }
 
 .widget-manager-item__copy strong {
-  font-size: 13px;
+  font-size: var(--mrr-font-size-sm);
 }
 
 .widget-manager-item__copy small {
@@ -1241,7 +1241,7 @@ watch(storageKey, loadPreferences, { immediate: true })
 
 .color-option {
   display: inline-flex;
-  gap: 8px;
+  gap: var(--mrr-space-2);
   align-items: center;
 }
 
@@ -1282,18 +1282,18 @@ watch(storageKey, loadPreferences, { immediate: true })
 .color-picker-options {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 8px;
+  gap: var(--mrr-space-2);
   width: 100%;
 }
 
 .color-picker-option {
   display: flex;
-  gap: 8px;
+  gap: var(--mrr-space-2);
   align-items: center;
   height: var(--mrr-control-height);
   min-height: var(--mrr-control-height);
   padding: 0 var(--mrr-space-3);
-  font-size: 12px;
+  font-size: var(--mrr-font-size-xs);
   color: var(--mrr-foreground);
   cursor: pointer;
   background: var(--mrr-card);

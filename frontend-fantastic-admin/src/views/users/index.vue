@@ -811,7 +811,7 @@ onMounted(loadData)
 :global(.el-message.users-query-success-notice) { transition: opacity var(--mrr-motion-overlay) var(--mrr-ease-out), transform var(--mrr-motion-overlay) var(--mrr-ease-out), top var(--mrr-motion-overlay) var(--mrr-ease-out), bottom var(--mrr-motion-overlay) var(--mrr-ease-out), margin-top var(--mrr-motion-overlay) var(--mrr-ease-out); box-shadow: var(--mrr-shadow-md); }
 .users-state { display: grid; min-height: 280px; padding: var(--mrr-space-5); place-items: center; }
 .user-identity { display: flex; gap: 10px; align-items: center; min-width: 0; }
-.user-avatar { display: grid; flex: 0 0 30px; width: 30px; height: 30px; font-size: 12px; font-weight: 700; color: var(--color-primary); background: color-mix(in srgb, var(--color-primary) 9%, var(--mrr-card)); border: 1px solid var(--mrr-border); border-radius: 50%; place-items: center; }
+.user-avatar { display: grid; flex: 0 0 30px; width: 30px; height: 30px; font-size: var(--mrr-font-size-xs); font-weight: 700; color: var(--color-primary); background: color-mix(in srgb, var(--color-primary) 9%, var(--mrr-card)); border: 1px solid var(--mrr-border); border-radius: 50%; place-items: center; }
 
 /* Chrome 86 回退：头像块的浅色底失效后缩写文字会裸浮在表格底色上。 */
 @supports not (color: color-mix(in srgb, #000 50%, #fff)) {
@@ -820,19 +820,19 @@ onMounted(loadData)
   }
 }
 .application-info { display: grid; gap: 3px; min-width: 0; }
-.application-info span { font-size: 12px; color: var(--mrr-foreground); }
+.application-info span { font-size: var(--mrr-font-size-xs); color: var(--mrr-foreground); }
 .application-info small { overflow: hidden; font-size: 11px; line-height: 1.45; color: var(--mrr-muted-foreground); text-overflow: ellipsis; }
 .application-info .reject-reason { color: var(--mrr-destructive); }
-.no-perm, .unit { margin-left: 8px; font-size: 12px; color: var(--mrr-muted-foreground); }
+.no-perm, .unit { margin-left: var(--mrr-space-2); font-size: var(--mrr-font-size-xs); color: var(--mrr-muted-foreground); }
 .dialog-form { display: grid; gap: 2px; margin-top: 18px; }
 .readonly-field { width: 100%; min-height: var(--mrr-control-height); padding: 9px 12px; color: var(--mrr-muted-foreground); background: var(--mrr-muted); border: 1px solid var(--mrr-border); border-radius: var(--mrr-radius-md); }
 .full-width { width: 100%; }
 .review-summary, .credential-panel { display: grid; gap: 10px; padding: 18px; margin-top: 18px; background: var(--mrr-muted); border: 1px solid var(--mrr-border); border-radius: var(--mrr-radius-lg); }
-.review-summary > div, .credential-panel > div { display: grid; grid-template-columns: 90px 1fr; gap: 12px; align-items: start; }
-.review-summary span, .credential-panel span { font-size: 12px; color: var(--mrr-muted-foreground); }
+.review-summary > div, .credential-panel > div { display: grid; grid-template-columns: 90px 1fr; gap: var(--mrr-space-3); align-items: start; }
+.review-summary span, .credential-panel span { font-size: var(--mrr-font-size-xs); color: var(--mrr-muted-foreground); }
 .review-summary p { margin: 0; line-height: 1.6; white-space: pre-wrap; }
 .credential-panel code { padding: 8px 10px; font-size: 15px; font-weight: 700; word-break: break-all; background: var(--mrr-card); border-radius: var(--mrr-radius-md); }
 .credential-actions { display: flex; gap: 10px; margin-top: 14px; }
-.acknowledge { margin-top: 16px; }
+.acknowledge { margin-top: var(--mrr-space-4); }
 @media (max-width: 760px) { .users-filter__keyword, .users-filter__select { flex: 1 1 100%; width: 100%; } .credential-actions { flex-direction: column; } }
 </style>

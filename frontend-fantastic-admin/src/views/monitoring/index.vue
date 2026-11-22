@@ -422,11 +422,19 @@ onUnmounted(pause)
         </div>
       </template>
 
-      <div class="quality-summary">
-        <div><span>严重异常</span><strong class="danger-text">{{ formatNumber(criticalIssues) }}</strong></div>
-        <div><span>警告</span><strong class="warning-text">{{ formatNumber(warningIssues) }}</strong></div>
-        <div><span>检查项</span><strong>{{ latestRun?.check_count ?? 0 }}</strong></div>
-        <div><span>完成时间</span><strong>{{ formatDate(latestRun?.completed_at) }}</strong></div>
+      <div class="quality-summary mrr-stat-strip mrr-stat-strip--4">
+        <div class="mrr-stat-tile">
+          <span class="mrr-stat-tile__label">严重异常</span><strong class="mrr-stat-tile__value mrr-stat-tile__value--danger">{{ formatNumber(criticalIssues) }}</strong>
+        </div>
+        <div class="mrr-stat-tile">
+          <span class="mrr-stat-tile__label">警告</span><strong class="mrr-stat-tile__value mrr-stat-tile__value--warning">{{ formatNumber(warningIssues) }}</strong>
+        </div>
+        <div class="mrr-stat-tile">
+          <span class="mrr-stat-tile__label">检查项</span><strong class="mrr-stat-tile__value">{{ latestRun?.check_count ?? 0 }}</strong>
+        </div>
+        <div class="mrr-stat-tile">
+          <span class="mrr-stat-tile__label">完成时间</span><strong class="mrr-stat-tile__value mrr-stat-tile__value--text">{{ formatDate(latestRun?.completed_at) }}</strong>
+        </div>
       </div>
 
       <el-table :data="qualitySummary.checks" stripe border empty-text="尚未执行数据质量检查">
@@ -485,14 +493,14 @@ onUnmounted(pause)
 .quality-actions,
 .progress-label {
   display: flex;
-  gap: 12px;
+  gap: var(--mrr-space-3);
   align-items: center;
   justify-content: space-between;
 }
 
 .monitor-grid {
   display: grid;
-  gap: 16px;
+  gap: var(--mrr-space-4);
 }
 
 .monitor-grid--availability,
@@ -514,47 +522,13 @@ onUnmounted(pause)
 }
 
 .progress-label {
-  margin-bottom: 8px;
-  font-size: 13px;
+  margin-bottom: var(--mrr-space-2);
+  font-size: var(--mrr-font-size-sm);
 }
 
+/* 摘要块外观由共享 .mrr-stat-tile 提供，这里只保留与下方表格的距离。 */
 .quality-summary {
-  display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 12px;
   margin-bottom: var(--mrr-space-4);
-}
-
-.quality-summary > div {
-  display: grid;
-  gap: var(--mrr-space-2);
-  padding: var(--mrr-space-3) 16px;
-  background: var(--el-fill-color-lighter);
-  border: 1px solid var(--el-border-color-lighter);
-  border-radius: var(--mrr-radius-lg);
-}
-
-.quality-summary span {
-  font-size: 13px;
-  color: var(--el-text-color-secondary);
-}
-
-.quality-summary strong {
-  font-size: 20px;
-}
-
-.danger-text {
-  color: var(--el-color-danger);
-}
-
-.warning-text {
-  color: var(--el-color-warning);
-}
-
-@media (max-width: 900px) {
-  .quality-summary {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
 }
 
 @media (min-width: 1200px) {

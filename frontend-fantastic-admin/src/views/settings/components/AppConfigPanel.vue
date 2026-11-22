@@ -827,7 +827,7 @@ function handleReset() {
 
 .label-copy small {
   margin-top: 4px;
-  font-size: 11px;
+  font-size: var(--mrr-font-size-xs);
   line-height: 1.5;
   color: var(--el-text-color-secondary);
 }
@@ -1130,13 +1130,15 @@ function handleReset() {
 }
 
 .subsection-heading strong {
-  font-size: 13px;
+  font-size: var(--mrr-font-size-sm);
+  font-weight: 600;
   color: var(--el-text-color-primary);
 }
 
 .subsection-heading small {
   margin-top: 3px;
-  font-size: 11px;
+  font-size: var(--mrr-font-size-xs);
+  line-height: 1.6;
   color: var(--el-text-color-secondary);
 }
 

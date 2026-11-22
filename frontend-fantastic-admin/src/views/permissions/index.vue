@@ -392,51 +392,45 @@ onMounted(loadPermissions)
 .role-name-row,
 .permission-tags,
 .matrix-legend,
-.edit-fields { gap: 8px; }
+.edit-fields { gap: var(--mrr-space-2); }
 
-h2 { margin: 0; font-size: 28px; }
-
-.role-description { margin: 8px 0 0; color: var(--text-secondary); }
-
-.permission-views { display: grid; gap: 24px; min-width: 0; }
+.permission-views { display: grid; gap: var(--mrr-space-6); min-width: 0; }
 
 .permission-section { min-width: 0; }
 
-.roles-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 360px), 1fr)); gap: 16px; align-items: start; }
+.roles-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 360px), 1fr)); gap: var(--mrr-space-4); align-items: start; }
 
 .role-card { align-self: start; border-radius: var(--mrr-radius-card); }
 
-.role-card :deep(.el-card__body) { display: grid; gap: 12px; align-content: start; }
+.role-card :deep(.el-card__body) { display: grid; gap: var(--mrr-space-3); align-content: start; }
 
 .role-card.admin { border-color: hsl(var(--primary) / 30%); }
 
-.role-edit-form { display: grid; gap: 16px; }
+.role-edit-form { display: grid; gap: var(--mrr-space-4); }
 
-.role-header { gap: 12px; align-items: flex-start; justify-content: space-between; }
+.role-header { gap: var(--mrr-space-3); align-items: flex-start; justify-content: space-between; }
 
-.role-name-row strong { font-size: 16px; font-weight: 600; line-height: 1.4; color: var(--text-primary); }
+.role-name-row strong { font-size: var(--mrr-font-size-lg); font-weight: 600; line-height: 1.4; color: var(--text-primary); }
 
 .role-name-row { flex-wrap: wrap; }
 
 .permission-count,
 .category-label,
 .empty-text,
-.matrix-permission span { font-size: 12px; color: var(--text-tertiary); }
+.matrix-permission span { font-size: var(--mrr-font-size-xs); color: var(--text-tertiary); }
 
 .permission-count { display: inline-flex; padding: 2px 8px; line-height: 1.4; background: var(--surface-alt); border-radius: var(--mrr-radius-pill); }
 
-.role-description { margin: 0; font-size: 13px; line-height: 1.6; }
+.role-description { margin: 0; font-size: var(--mrr-font-size-sm); line-height: 1.6; color: var(--text-secondary); }
 
-.permission-groups { display: grid; gap: 10px; }
+.permission-groups { display: grid; gap: var(--mrr-space-3); }
 
 .permission-groups section,
 .edit-section { display: grid; gap: 6px; }
 
-.matrix-permission { display: flex; gap: 8px; align-items: baseline; white-space: nowrap; }
+.matrix-permission { display: flex; gap: var(--mrr-space-2); align-items: baseline; white-space: nowrap; }
 
-.permission-groups section { padding-top: 10px; border-top: 1px solid var(--divider); }
-
-.permission-groups section { padding-top: 10px; border-top: 1px solid var(--divider); }
+.permission-groups section { padding-top: var(--mrr-space-3); border-top: 1px solid var(--divider); }
 
 .permission-tags { flex-wrap: wrap; }
 
@@ -446,9 +440,9 @@ h2 { margin: 0; font-size: 28px; }
 
 .edit-actions {
   display: flex;
-  gap: 8px;
+  gap: var(--mrr-space-2);
   justify-content: flex-end;
-  padding-top: 12px;
+  padding-top: var(--mrr-space-3);
   border-top: 1px solid var(--divider);
 }
 
@@ -472,7 +466,7 @@ h2 { margin: 0; font-size: 28px; }
 .matrix-card :deep(.el-table__body-wrapper tr:last-child > td.el-table__cell),
 .matrix-card :deep(.el-table__fixed-body-wrapper tr:last-child > td.el-table__cell) { border-bottom: 0; }
 
-.matrix-card :deep(.el-table td.el-table__cell) { padding-block: 4px; }
+.matrix-card :deep(.el-table td.el-table__cell) { padding-block: var(--mrr-space-1); }
 
 .matrix-dot { display: inline-flex; align-items: center; justify-content: center; width: 22px; height: 22px; border-radius: var(--mrr-radius-md); }
 
@@ -480,11 +474,11 @@ h2 { margin: 0; font-size: 28px; }
 
 .matrix-dot.inherited { color: var(--text-tertiary); background: var(--surface-alt); }
 
-.matrix-legend { padding-top: 12px; margin-top: 14px; border-top: 1px solid var(--divider); }
+.matrix-legend { padding-top: var(--mrr-space-3); margin-top: var(--mrr-space-3); border-top: 1px solid var(--divider); }
 
-.matrix-legend span { gap: 5px; font-size: 12px; color: var(--text-secondary); }
+.matrix-legend span { gap: 5px; font-size: var(--mrr-font-size-xs); color: var(--text-secondary); }
 
-.legend { width: 13px; height: 13px; border: 1px solid var(--divider); border-radius: 4px; }
+.legend { width: 13px; height: 13px; border: 1px solid var(--divider); border-radius: max(0px, calc(var(--mrr-radius-sm) - 2px)); }
 
 .legend.direct { background: hsl(var(--primary) / 15%); border-color: hsl(var(--primary) / 30%); }
 

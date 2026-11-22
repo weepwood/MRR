@@ -344,49 +344,50 @@ onMounted(loadTables)
 .toolbar {
   display: flex;
   flex-wrap: wrap;
-  gap: 12px;
+  gap: var(--mrr-space-3);
   align-items: center;
 }
 
 .toolbar-label {
-  font-size: 13px;
+  font-size: var(--mrr-font-size-sm);
   font-weight: 500;
   color: var(--mrr-foreground);
 }
 
+/* 窄屏下不撑破工具条：最多 420px，容器更窄时跟随收缩。 */
 .table-select {
-  width: 420px;
+  width: min(100%, 420px);
 }
 
 .option-name {
-  margin-right: 8px;
+  margin-right: var(--mrr-space-2);
   color: var(--mrr-foreground);
 }
 
 .option-meta {
-  font-size: 12px;
+  font-size: var(--mrr-font-size-xs);
   color: var(--mrr-muted-foreground);
 }
 
 .table-meta {
-  margin-top: 12px;
+  margin-top: var(--mrr-space-3);
 }
 
 .state-alert {
-  margin-top: 12px;
+  margin-top: var(--mrr-space-3);
 }
 
 .meta-line {
   display: flex;
   flex-wrap: wrap;
-  gap: 8px;
+  gap: var(--mrr-space-2);
   align-items: baseline;
 }
 
 .meta-key {
   padding: 1px var(--mrr-space-2);
   font-family: var(--mrr-font-mono);
-  font-size: 12px;
+  font-size: var(--mrr-font-size-xs);
   line-height: 18px;
   color: var(--mrr-foreground);
   background: var(--mrr-muted);
@@ -394,12 +395,12 @@ onMounted(loadTables)
 }
 
 .meta-desc {
-  font-size: 13px;
+  font-size: var(--mrr-font-size-sm);
   color: var(--mrr-muted-foreground);
 }
 
 .require-filter-alert {
-  margin-top: 12px;
+  margin-top: var(--mrr-space-3);
 }
 
 .column-header {
@@ -420,53 +421,53 @@ onMounted(loadTables)
 .filters {
   display: flex;
   flex-wrap: wrap;
-  gap: 12px;
+  gap: var(--mrr-space-3);
   align-items: flex-end;
-  margin-top: 16px;
+  margin-top: var(--mrr-space-4);
 }
 
 .filter-item {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: var(--mrr-space-1);
   min-width: 180px;
 }
 
 .filter-label {
-  font-size: 12px;
+  font-size: var(--mrr-font-size-xs);
   color: var(--mrr-muted-foreground);
 }
 
 .filter-actions {
   display: flex;
-  gap: 8px;
+  gap: var(--mrr-space-2);
 }
 
 .pager {
   display: flex;
   flex-wrap: wrap;
-  gap: 8px;
+  gap: var(--mrr-space-2);
   align-items: center;
   justify-content: space-between;
-  margin-top: 12px;
+  margin-top: var(--mrr-space-3);
 }
 
 .pager-note {
-  font-size: 12px;
+  font-size: var(--mrr-font-size-xs);
   color: var(--mrr-muted-foreground);
 }
 
 .pager-actions {
   display: flex;
-  gap: 8px;
+  gap: var(--mrr-space-2);
 }
 
 .empty-hint {
-  font-size: 13px;
+  font-size: var(--mrr-font-size-sm);
   color: var(--mrr-muted-foreground);
 }
 
 .truncate-alert {
-  margin-top: 12px;
+  margin-top: var(--mrr-space-3);
 }
 </style>

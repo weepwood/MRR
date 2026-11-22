@@ -23,6 +23,7 @@
 @import "./components/form-controls.css";
 @import "./components/page-header.css";
 @import "./components/metric-card.css";
+@import "./components/stat-tile.css";
 @import "./components/archive-workspace.css";
 @import "./components/glass-surface.css";
 @import "./themes/warm-flat.css";

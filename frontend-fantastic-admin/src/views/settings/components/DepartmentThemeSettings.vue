@@ -369,13 +369,15 @@ onMounted(() => {
 }
 
 .department-theme-header strong {
-  font-size: 16px;
+  font-size: var(--mrr-font-size-md);
+  font-weight: 650;
   color: var(--text-primary);
 }
 
 .department-theme-header p {
   margin: var(--mrr-space-2) 0 0;
-  font-size: 13px;
+  font-size: var(--mrr-font-size-xs);
+  line-height: 1.6;
   color: var(--text-secondary);
 }
 

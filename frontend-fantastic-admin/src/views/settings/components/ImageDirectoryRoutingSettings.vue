@@ -189,12 +189,12 @@ onBeforeUnmount(() => { alive = false; active.value = false; generation++ })
 </template>
 
 <style scoped>
-.routing-settings { display: grid; gap: var(--mrr-space-4); padding: var(--mrr-space-5); background: var(--mrr-card); border: 1px solid var(--mrr-border); border-radius: var(--mrr-radius-xl); }
+.routing-settings { display: grid; gap: var(--mrr-space-4); padding: var(--mrr-space-5); background: var(--mrr-card); border: 1px solid var(--mrr-border); border-radius: var(--mrr-radius-card); }
 
 .routing-heading,
 .routing-toolbar,
 .routing-actions { display: flex; flex-wrap: wrap; gap: var(--mrr-space-3); align-items: center; justify-content: space-between; }
-.routing-heading h4 { margin: 0; font-size: 15px; }
+.routing-heading h4 { margin: 0; font-size: var(--mrr-font-size-md); font-weight: 650; }
 
 .routing-heading p,
 .routing-note,

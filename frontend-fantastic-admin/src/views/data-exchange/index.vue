@@ -542,7 +542,7 @@ function today() {
 .readonly-fields {
   display: grid;
   grid-template-columns: minmax(0, 1fr);
-  gap: 16px;
+  gap: var(--mrr-space-4);
   min-width: 0;
 }
 
@@ -568,7 +568,7 @@ h3 {
   width: 100%;
   min-height: 40px;
   overflow: hidden;
-  font-size: 13px;
+  font-size: var(--mrr-font-size-sm);
   border-radius: var(--mrr-radius-lg);
 }
 
@@ -588,18 +588,18 @@ h3 {
 
 @media (max-width: 720px) {
   .dataset-switch {
-    font-size: 12px;
+    font-size: var(--mrr-font-size-xs);
   }
 
   .dataset-switch :deep(.el-segmented__item) {
-    padding: 0 4px;
+    padding: 0 var(--mrr-space-1);
   }
 }
 
 .filter-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-  gap: 12px;
+  gap: var(--mrr-space-3);
   align-items: center;
 }
 
@@ -619,7 +619,7 @@ h3 {
 .filter-actions {
   display: flex;
   flex-wrap: wrap;
-  gap: 8px;
+  gap: var(--mrr-space-2);
   justify-content: flex-end;
 }
 
@@ -630,7 +630,7 @@ h3 {
 .field-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 8px 12px;
+  gap: var(--mrr-space-2) var(--mrr-space-3);
 }
 
 .field-item {
@@ -638,7 +638,7 @@ h3 {
   gap: var(--mrr-space-3);
   align-items: center;
   min-width: 0;
-  padding: 8px var(--mrr-space-3);
+  padding: var(--mrr-space-2) var(--mrr-space-3);
   background: var(--el-fill-color-lighter);
   border: 1px solid var(--el-border-color-lighter);
   border-radius: var(--mrr-radius-md);
@@ -652,7 +652,7 @@ h3 {
 
 .field-item span {
   min-width: 0;
-  font-size: 12px;
+  font-size: var(--mrr-font-size-xs);
   color: var(--el-text-color-secondary);
 }
 

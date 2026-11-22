@@ -365,22 +365,20 @@ onBeforeUnmount(() => { alive = false; active.value = false; generation++ })
   padding: var(--mrr-space-4) var(--mrr-space-5);
   background: var(--mrr-card);
   border: 1px solid var(--mrr-border);
-  border-radius: var(--mrr-radius-xl);
+  border-radius: var(--mrr-radius-card);
 }
 
-.actions-copy strong { font-size: 13px; }
-.actions-copy p { margin: 3px 0 0; font-size: 10px; color: var(--mrr-muted-foreground); }
+.actions-copy strong { font-size: var(--mrr-font-size-sm); font-weight: 600; }
+.actions-copy p { margin: 3px 0 0; font-size: var(--mrr-font-size-xs); line-height: 1.6; color: var(--mrr-muted-foreground); }
 .actions-buttons { display: flex; flex-shrink: 0; gap: var(--mrr-space-2); }
 
-.setting-group { padding: var(--mrr-space-5); background: var(--mrr-card); border: 1px solid var(--mrr-border); border-radius: var(--mrr-radius-xl); }
+.setting-group { padding: var(--mrr-space-5); background: var(--mrr-card); border: 1px solid var(--mrr-border); border-radius: var(--mrr-radius-card); }
 .group-heading { margin-bottom: var(--mrr-space-4); }
-.group-heading strong { font-size: 15px; }
-.group-heading p { margin: 4px 0 0; font-size: 11px; color: var(--mrr-muted-foreground); }
 
 .control-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--mrr-space-4); }
 .field-label { display: inline-flex; flex-wrap: wrap; gap: 6px; align-items: center; }
-.field-hint { margin: 6px 0 0; font-size: 10px; line-height: 1.6; color: var(--mrr-muted-foreground); }
-.field-meta { display: flex; flex-wrap: wrap; gap: var(--mrr-space-3); margin: 4px 0 0; font-size: 10px; color: var(--mrr-muted-foreground); }
+.field-hint { margin: 6px 0 0; font-size: var(--mrr-font-size-xs); line-height: 1.6; color: var(--mrr-muted-foreground); }
+.field-meta { display: flex; flex-wrap: wrap; gap: var(--mrr-space-3); margin: 4px 0 0; font-size: var(--mrr-font-size-xs); line-height: 1.6; color: var(--mrr-muted-foreground); }
 .number-control { display: flex; gap: var(--mrr-space-2); align-items: center; }
 .full-width { width: 100%; }
 .reset-link { padding: 0; margin-top: 4px; }

@@ -1536,7 +1536,7 @@ onMounted(() => {
 
 .section-header,
 .record-actions {
-  gap: 16px;
+  gap: var(--mrr-space-4);
   justify-content: space-between;
 }
 
@@ -1559,13 +1559,13 @@ onMounted(() => {
 .upload-summary,
 .refresh-state {
   flex-wrap: wrap;
-  gap: 12px;
+  gap: var(--mrr-space-3);
 }
 
 /* 位于页头操作区内：与相邻按钮垂直居中，不再带 6px 上边距。 */
 .refresh-state {
   justify-content: flex-end;
-  font-size: 12px;
+  font-size: var(--mrr-font-size-xs);
   color: var(--mrr-muted-foreground);
 }
 
@@ -1583,7 +1583,7 @@ onMounted(() => {
 
 .check-item {
   display: flex;
-  gap: 12px;
+  gap: var(--mrr-space-3);
   align-items: center;
   justify-content: space-between;
   padding: var(--mrr-space-3);
@@ -1605,13 +1605,13 @@ onMounted(() => {
 .warning-list {
   display: grid;
   gap: var(--mrr-space-2);
-  padding-left: 20px;
+  padding-left: var(--mrr-space-5);
   margin: var(--mrr-space-3) 0 0;
   color: var(--el-color-warning-dark-2);
 }
 
 .disabled-reason {
-  font-size: 12px;
+  font-size: var(--mrr-font-size-xs);
 }
 
 .current-job-card {
@@ -1619,11 +1619,11 @@ onMounted(() => {
 }
 
 .workspace-card :deep(.el-card__body) {
-  padding-top: 8px;
+  padding-top: var(--mrr-space-2);
 }
 
 .workspace-tabs {
-  margin-bottom: 16px;
+  margin-bottom: var(--mrr-space-4);
 }
 
 .section-header {
@@ -1633,7 +1633,7 @@ onMounted(() => {
 .filter-grid {
   display: grid;
   grid-template-columns: repeat(4, minmax(150px, 1fr)) minmax(180px, auto);
-  gap: 12px;
+  gap: var(--mrr-space-3);
   align-items: end;
   margin-bottom: var(--mrr-space-3);
 }

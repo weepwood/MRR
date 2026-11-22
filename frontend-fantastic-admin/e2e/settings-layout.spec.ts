@@ -20,6 +20,10 @@ test.describe('系统设置分类布局', () => {
       const copyBox = await copy.boundingBox()
       return Math.abs((iconBox?.height ?? 0) - (copyBox?.height ?? 0))
     }).toBeLessThanOrEqual(1)
+    await expect.poll(async () => {
+      const iconBox = await icon.boundingBox()
+      return Math.abs((iconBox?.width ?? 0) - (iconBox?.height ?? 0))
+    }).toBeLessThanOrEqual(1)
   })
 
   test('按功能分类切换设置内容', async ({ page }) => {

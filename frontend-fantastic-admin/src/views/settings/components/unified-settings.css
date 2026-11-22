@@ -71,9 +71,9 @@
 
 .section-icon {
   display: grid;
-  flex: 0 0 auto;
+  flex: 0 0 48px;
   place-items: center;
-  width: 32px;
+  width: 48px;
   font-size: 15px;
   color: var(--mrr-navigation-active-foreground, var(--mrr-primary));
   background: var(--mrr-card);

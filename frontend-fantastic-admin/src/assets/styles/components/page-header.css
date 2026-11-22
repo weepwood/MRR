@@ -208,8 +208,8 @@ html[data-page-title-style="card"] .mrr-page-header__aside {
  * - 只在 card 模式生效：plain 模式本身没有卡片外壳和最小高度，已经是紧凑形态，
  *   标题字号保持 26px（page-header-style.spec 依赖两种模式下标题字号一致的口径）。
  * - 去掉与指标卡对齐的 110px 最小高度；标题降到 title-compact（22px，与 ≤760px 档同值）。
- * - 说明跟在标题右侧、按基线对齐；空间不够时自然换到下一行，不截断、不隐藏。
- * - 单行说明时约 64px（原 110px），说明折行时约 88px。
+ * - 说明始终位于标题下方，与 default 保持相同的信息顺序；长说明自然折行，不截断、不隐藏。
+ * - compact 只调整容器留白、标题字号和图标尺寸，不改变标题与说明的排版方向。
  * 选择器比第 4 节多一个类名，因此不依赖书写顺序覆盖。
  */
 html[data-page-title-style="card"] .mrr-page-header.mrr-page-header--compact {
@@ -217,31 +217,11 @@ html[data-page-title-style="card"] .mrr-page-header.mrr-page-header--compact {
   padding: var(--mrr-space-4) var(--mrr-card-inset);
 }
 
-html[data-page-title-style="card"] .mrr-page-header--compact .mrr-page-header__copy {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--mrr-space-1) var(--mrr-space-3);
-  align-items: baseline;
-}
-
-html[data-page-title-style="card"] .mrr-page-header--compact .mrr-page-header__title-row {
-  flex: 0 1 auto;
-  min-width: 0;
-}
-
 html[data-page-title-style="card"] .mrr-page-header--compact h1 {
   font-size: var(--mrr-font-size-title-compact);
 }
 
-html[data-page-title-style="card"] .mrr-page-header--compact .mrr-page-header__description {
-  flex: 1 1 320px;
-  min-width: 0;
-  margin: 0;
-  line-height: 1.6;
-}
-
 html[data-page-title-style="card"] .mrr-page-header--compact .mrr-page-header__meta {
-  flex: 1 0 100%;
   margin-top: var(--mrr-space-1);
 }
 

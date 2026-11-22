@@ -100,8 +100,18 @@ test('失败与空态可恢复，对话框和抽屉可确认与关闭', async ({
 
 test('页头尺寸示例：紧凑页头更矮，长说明折行后仍完整显示', async ({ page }) => {
   await openGallery(page)
+  await page.setViewportSize({ width: 1920, height: 900 })
   await page.getByRole('button', { name: /基础与导航/ }).click()
   await expect(page.getByRole('heading', { name: '页头尺寸', exact: true })).toBeVisible()
+  const copiesUseStackedFlow = () => page.locator('.pattern-sample .mrr-page-header').evaluateAll((headers) => {
+    return headers.every((header) => {
+      const copy = header.querySelector('.mrr-page-header__copy')
+      const title = header.querySelector('h1')?.getBoundingClientRect()
+      const description = header.querySelector('.mrr-page-header__description')?.getBoundingClientRect()
+      return Boolean(copy && getComputedStyle(copy).display === 'block' && title && description && description.top >= title.bottom)
+    })
+  })
+  await expect.poll(copiesUseStackedFlow).toBe(true)
   const heights = () => page.locator('.pattern-sample .mrr-page-header').evaluateAll(nodes => nodes.map(node => node.getBoundingClientRect().height))
   await expect.poll(async () => {
     const [standard, compact] = await heights()

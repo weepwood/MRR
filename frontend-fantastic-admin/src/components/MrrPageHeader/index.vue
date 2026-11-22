@@ -8,7 +8,7 @@ const props = withDefaults(defineProps<{
   icon?: string
   /**
    * compact：查询 / 列表 / 浏览页使用。card 模式下去掉 110px 最小高度、标题 22px、
-   * 说明与标题同行（放不下时换行）。plain 模式不受影响。样式见 page-header.css 第 5 节。
+   * 说明仍固定在标题下方。plain 模式不受影响。样式见 page-header.css 第 5 节。
    */
   size?: 'default' | 'compact'
 }>(), {

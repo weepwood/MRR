@@ -463,7 +463,7 @@ useVisibleInterval(refreshCurrentStatus, 60_000)
 <style scoped>
 .status-page {
   min-height: 100vh;
-  padding: 36px 20px 28px;
+  padding: var(--mrr-space-8) 20px var(--mrr-space-6);
   color: var(--mrr-foreground);
   background:
     radial-gradient(circle at 12% 0%, var(--mrr-tone-primary-soft), transparent 30%),
@@ -488,7 +488,7 @@ useVisibleInterval(refreshCurrentStatus, 60_000)
 
 .status-header {
   gap: 24px;
-  margin-bottom: 28px;
+  margin-bottom: var(--mrr-space-6);
 }
 
 .brand {
@@ -535,7 +535,7 @@ useVisibleInterval(refreshCurrentStatus, 60_000)
   gap: 8px;
   align-items: center;
   height: var(--mrr-control-height);
-  padding: 0 14px;
+  padding: 0 var(--mrr-space-3);
   font: inherit;
   font-size: 13px;
   color: var(--el-text-color-primary);
@@ -571,7 +571,7 @@ useVisibleInterval(refreshCurrentStatus, 60_000)
   position: relative;
   gap: 20px;
   min-height: 150px;
-  padding: 26px 28px;
+  padding: var(--mrr-space-6) var(--mrr-space-6);
   overflow: hidden;
 }
 
@@ -624,7 +624,7 @@ useVisibleInterval(refreshCurrentStatus, 60_000)
 
 .eyebrow {
   display: block;
-  margin-bottom: 7px;
+  margin-bottom: var(--mrr-space-2);
   font-size: 10px;
   font-weight: 800;
   color: var(--color-primary);
@@ -646,7 +646,7 @@ useVisibleInterval(refreshCurrentStatus, 60_000)
 .state-copy p,
 .section-heading p,
 .empty-incidents p {
-  margin: 7px 0 0;
+  margin: var(--mrr-space-2) 0 0;
   font-size: 13px;
   line-height: 1.65;
   color: var(--mrr-muted-foreground);
@@ -654,14 +654,14 @@ useVisibleInterval(refreshCurrentStatus, 60_000)
 
 .state-copy small {
   display: block;
-  margin-top: 9px;
+  margin-top: var(--mrr-space-2);
 }
 
 .state-meta {
   display: grid;
   gap: 5px;
   min-width: 184px;
-  padding-left: 22px;
+  padding-left: var(--mrr-space-5);
   border-left: 1px solid var(--mrr-border);
 }
 
@@ -696,7 +696,7 @@ useVisibleInterval(refreshCurrentStatus, 60_000)
 }
 
 .inline-warning {
-  padding: 10px 13px;
+  padding: var(--mrr-space-3) var(--mrr-space-3);
   margin: 12px 0 0;
   font-size: 12px;
   color: var(--mrr-tone-warning);
@@ -708,13 +708,13 @@ useVisibleInterval(refreshCurrentStatus, 60_000)
 .summary-grid {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 14px;
+  gap: var(--mrr-space-3);
   margin-top: 16px;
 }
 
 .summary-card {
   display: grid;
-  gap: 7px;
+  gap: var(--mrr-space-2);
   padding: 20px;
 }
 
@@ -757,7 +757,7 @@ useVisibleInterval(refreshCurrentStatus, 60_000)
 
 .legend span {
   display: inline-flex;
-  gap: 6px;
+  gap: var(--mrr-space-2);
   align-items: center;
 }
 
@@ -801,7 +801,7 @@ useVisibleInterval(refreshCurrentStatus, 60_000)
   grid-template-columns: 34px minmax(0, 1fr);
   gap: 8px;
   padding-right: 16px;
-  margin-top: 22px;
+  margin-top: var(--mrr-space-5);
   overflow: hidden;
 }
 
@@ -895,7 +895,7 @@ useVisibleInterval(refreshCurrentStatus, 60_000)
 .clear-date-filter {
   flex: none;
   height: var(--mrr-control-height);
-  padding: 0 10px;
+  padding: 0 var(--mrr-space-3);
   font: inherit;
   font-size: 12px;
   color: var(--color-primary);
@@ -911,7 +911,7 @@ useVisibleInterval(refreshCurrentStatus, 60_000)
 }
 
 .incident-row {
-  gap: 14px;
+  gap: var(--mrr-space-3);
   padding: 17px 2px;
   border-bottom: 1px solid var(--mrr-border);
 }
@@ -953,7 +953,7 @@ useVisibleInterval(refreshCurrentStatus, 60_000)
 }
 
 .ongoing-tag {
-  padding: 2px 7px;
+  padding: 2px var(--mrr-space-2);
   font-size: 10px;
   color: var(--mrr-tone-danger);
   background: var(--mrr-tone-danger-soft);
@@ -966,7 +966,7 @@ useVisibleInterval(refreshCurrentStatus, 60_000)
 
 .empty-incidents {
   display: grid;
-  gap: 6px;
+  gap: var(--mrr-space-2);
   justify-items: center;
   padding: 38px 20px 20px;
   color: var(--mrr-tone-success);
@@ -984,7 +984,7 @@ useVisibleInterval(refreshCurrentStatus, 60_000)
 
 .status-footer {
   gap: 20px;
-  padding: 22px 4px 0;
+  padding: var(--mrr-space-5) 4px 0;
 }
 
 @keyframes spin {
@@ -997,7 +997,7 @@ useVisibleInterval(refreshCurrentStatus, 60_000)
 
 @media (max-width: 760px) {
   .status-page {
-    padding: 24px 14px;
+    padding: 24px var(--mrr-space-3);
   }
 
   .state-panel,
@@ -1007,12 +1007,12 @@ useVisibleInterval(refreshCurrentStatus, 60_000)
 
   .state-panel {
     flex-wrap: wrap;
-    padding: 22px;
+    padding: var(--mrr-space-5);
   }
 
   .state-meta {
     width: 100%;
-    padding: 15px 0 0;
+    padding: var(--mrr-space-4) 0 0;
     margin-left: 78px;
     border-top: 1px solid var(--mrr-border);
     border-left: 0;
@@ -1047,7 +1047,7 @@ useVisibleInterval(refreshCurrentStatus, 60_000)
   }
 
   .refresh-button {
-    padding-inline: 11px;
+    padding-inline: var(--mrr-space-3);
   }
 
   .state-icon {

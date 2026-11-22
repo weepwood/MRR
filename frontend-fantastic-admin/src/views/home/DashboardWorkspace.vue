@@ -798,10 +798,10 @@ watch(storageKey, loadPreferences, { immediate: true })
 .overview-count,
 .dashboard-workspace__notice {
   display: inline-flex;
-  gap: 6px;
+  gap: var(--mrr-space-2);
   align-items: center;
   min-height: 25px;
-  padding: 3px 9px;
+  padding: 3px var(--mrr-space-2);
   font-size: 12px;
   font-weight: 550;
   color: var(--mrr-secondary-foreground);
@@ -1015,10 +1015,10 @@ watch(storageKey, loadPreferences, { immediate: true })
 .dashboard-widget__header {
   display: grid;
   grid-template-columns: 32px minmax(0, 1fr) auto;
-  gap: 10px;
+  gap: var(--mrr-space-3);
   align-items: center;
   min-width: 0;
-  padding: 14px 14px 10px;
+  padding: var(--mrr-space-3) var(--mrr-space-3) var(--mrr-space-3);
 }
 
 .dashboard-widget__icon,
@@ -1041,7 +1041,7 @@ watch(storageKey, loadPreferences, { immediate: true })
 
 .dashboard-widget__title-row {
   display: flex;
-  gap: 7px;
+  gap: var(--mrr-space-2);
   align-items: center;
   min-width: 0;
 }
@@ -1059,7 +1059,7 @@ watch(storageKey, loadPreferences, { immediate: true })
   flex: 0 0 auto;
   gap: 3px;
   align-items: center;
-  padding: 2px 6px;
+  padding: 2px var(--mrr-space-2);
   font-size: 9px;
   font-weight: 650;
   color: var(--widget-accent);
@@ -1096,7 +1096,7 @@ watch(storageKey, loadPreferences, { immediate: true })
   flex: 1;
   flex-direction: column;
   min-height: 0;
-  padding: 0 14px 13px;
+  padding: 0 var(--mrr-space-3) var(--mrr-space-3);
 }
 
 .dashboard-widget__body p {
@@ -1117,10 +1117,10 @@ watch(storageKey, loadPreferences, { immediate: true })
 
 .dashboard-widget__footer {
   display: flex;
-  gap: 6px;
+  gap: var(--mrr-space-2);
   align-items: center;
   justify-content: flex-end;
-  padding-top: 9px;
+  padding-top: var(--mrr-space-2);
   margin-top: auto;
   font-size: 10px;
   color: var(--mrr-muted-foreground);
@@ -1155,13 +1155,13 @@ watch(storageKey, loadPreferences, { immediate: true })
 }
 
 .dashboard-empty p {
-  margin: 6px 0 16px;
+  margin: var(--mrr-space-2) 0 16px;
   font-size: 12px;
   color: var(--mrr-muted-foreground);
 }
 
 .dialog-description {
-  margin: 0 0 14px;
+  margin: 0 0 var(--mrr-space-3);
   font-size: 12px;
   line-height: 1.6;
   color: var(--mrr-muted-foreground);
@@ -1178,10 +1178,10 @@ watch(storageKey, loadPreferences, { immediate: true })
 .widget-manager-item {
   display: grid;
   grid-template-columns: 32px minmax(0, 1fr) 96px 110px auto auto auto;
-  gap: 10px;
+  gap: var(--mrr-space-3);
   align-items: center;
   min-width: 0;
-  padding: 11px 12px;
+  padding: var(--mrr-space-3) 12px;
   border-bottom: 1px solid var(--mrr-shell-divider);
 }
 
@@ -1292,7 +1292,7 @@ watch(storageKey, loadPreferences, { immediate: true })
   align-items: center;
   height: var(--mrr-control-height);
   min-height: var(--mrr-control-height);
-  padding: 0 10px;
+  padding: 0 var(--mrr-space-3);
   font-size: 12px;
   color: var(--mrr-foreground);
   cursor: pointer;
@@ -1312,7 +1312,7 @@ watch(storageKey, loadPreferences, { immediate: true })
 }
 
 .widget-editor-form {
-  margin-top: 6px;
+  margin-top: var(--mrr-space-2);
 }
 
 @media (max-width: 1180px) {

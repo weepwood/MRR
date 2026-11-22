@@ -731,7 +731,7 @@ function handleReset() {
 }
 
 .config-summary-actions :deep(.el-button) {
-  gap: 6px;
+  gap: var(--mrr-space-2);
   margin-left: 0;
 }
 
@@ -770,7 +770,7 @@ function handleReset() {
 
 .appearance-tab-label {
   display: flex;
-  gap: 6px;
+  gap: var(--mrr-space-2);
   align-items: center;
   justify-content: center;
   font-size: 13px;
@@ -798,7 +798,7 @@ function handleReset() {
   align-items: center;
   justify-content: space-between;
   min-height: 66px;
-  padding: 12px 14px;
+  padding: 12px var(--mrr-space-3);
 }
 
 .setting-item + .setting-item {
@@ -888,9 +888,9 @@ function handleReset() {
 .theme-palette-preview__sidebar {
   display: grid;
   flex: 0 0 24%;
-  gap: 7px;
+  gap: var(--mrr-space-2);
   align-content: start;
-  padding: 7px;
+  padding: var(--mrr-space-2);
   border-right: 1px solid;
   border-radius: 4px;
 }
@@ -905,10 +905,10 @@ function handleReset() {
 .theme-palette-preview__panel {
   display: grid;
   flex: 1;
-  gap: 7px;
+  gap: var(--mrr-space-2);
   align-content: start;
   min-width: 0;
-  padding: 9px;
+  padding: var(--mrr-space-2);
   border: 1px solid;
   border-radius: 4px;
 }
@@ -990,7 +990,7 @@ function handleReset() {
 }
 
 .theme-palette-accent__reset {
-  padding: 7px 9px;
+  padding: var(--mrr-space-2) var(--mrr-space-2);
   margin-inline-start: auto;
   font-size: 12px;
   color: var(--mrr-navigation-active-foreground);
@@ -1112,16 +1112,16 @@ function handleReset() {
 .button-options {
   display: flex;
   flex-wrap: wrap;
-  gap: 6px;
+  gap: var(--mrr-space-2);
   justify-content: flex-end;
 }
 
 .config-subsection + .config-subsection {
-  margin-top: 18px;
+  margin-top: var(--mrr-space-4);
 }
 
 .subsection-heading {
-  margin-bottom: 9px;
+  margin-bottom: var(--mrr-space-2);
 }
 
 .subsection-heading strong,

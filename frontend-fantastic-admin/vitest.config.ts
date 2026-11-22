@@ -21,6 +21,8 @@ export default defineConfig({
     environment: 'jsdom',
     globals: true,
     restoreMocks: true,
+    // Node 25+ 内置的 Web Storage 会遮住 jsdom 的 localStorage，见 vitest.setup.ts
+    setupFiles: ['./vitest.setup.ts'],
     include: ['src/**/*.test.ts', 'src/**/*.test.tsx'],
     coverage: {
       provider: 'v8',

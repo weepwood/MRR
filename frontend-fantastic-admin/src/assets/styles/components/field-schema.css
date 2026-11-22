@@ -30,13 +30,11 @@
 .mrr-field-item > code {
   flex: 0 0 var(--mrr-field-name-width);
   min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
   font-family: var(--mrr-font-mono);
   font-size: var(--mrr-font-size-xs);
   font-weight: 600;
   color: var(--mrr-primary);
-  white-space: nowrap;
+  overflow-wrap: anywhere;
 }
 
 .mrr-field-item > span {

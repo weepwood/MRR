@@ -553,14 +553,21 @@ function today() {
   --el-segmented-item-selected-color: var(--mrr-foreground);
 
   /* 悬停 / 按下用前景色叠加，跟随明暗主题；原写死的冷色墨在暗色下不可见、在暖色主题下偏蓝。 */
-  --el-segmented-item-hover-bg-color: color-mix(in srgb, var(--mrr-foreground) 5%, transparent);
-  --el-segmented-item-active-bg-color: color-mix(in srgb, var(--mrr-foreground) 9%, transparent);
+  --el-segmented-item-hover-bg-color: var(--mrr-secondary);
+  --el-segmented-item-active-bg-color: var(--mrr-border);
 
   width: 100%;
   min-height: 40px;
   overflow: hidden;
   font-size: var(--mrr-font-size-sm);
   border-radius: var(--mrr-radius-lg);
+}
+
+@supports (color: color-mix(in srgb, #000 5%, transparent)) {
+  .dataset-switch {
+    --el-segmented-item-hover-bg-color: color-mix(in srgb, var(--mrr-foreground) 5%, transparent);
+    --el-segmented-item-active-bg-color: color-mix(in srgb, var(--mrr-foreground) 9%, transparent);
+  }
 }
 
 .dataset-switch :deep(.el-segmented__item) {

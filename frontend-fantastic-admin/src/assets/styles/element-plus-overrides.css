@@ -49,12 +49,12 @@ html:root {
   border-radius: var(--mrr-control-radius);
   box-shadow: var(--mrr-shadow-xs);
   transition:
-    color var(--mrr-motion-feedback) ease,
-    background-color var(--mrr-motion-feedback) ease,
-    border-color var(--mrr-motion-feedback) ease,
-    box-shadow var(--mrr-motion-feedback) ease,
-    opacity var(--mrr-motion-feedback) ease,
-    transform var(--mrr-motion-press) ease;
+    color var(--mrr-motion-feedback) var(--mrr-ease-out),
+    background-color var(--mrr-motion-feedback) var(--mrr-ease-out),
+    border-color var(--mrr-motion-feedback) var(--mrr-ease-out),
+    box-shadow var(--mrr-motion-feedback) var(--mrr-ease-out),
+    opacity var(--mrr-motion-feedback) var(--mrr-ease-out),
+    transform var(--mrr-motion-press) var(--mrr-ease-out);
 }
 
 .el-button > span {
@@ -351,10 +351,10 @@ body .el-button--info.is-plain:not(.is-disabled):hover {
   background: var(--mrr-control-bg);
   border-radius: var(--mrr-control-radius);
   transition:
-    color var(--mrr-motion-feedback) ease,
-    background-color var(--mrr-motion-feedback) ease,
-    border-color var(--mrr-motion-feedback) ease,
-    box-shadow var(--mrr-motion-feedback) ease;
+    color var(--mrr-motion-feedback) var(--mrr-ease-out),
+    background-color var(--mrr-motion-feedback) var(--mrr-ease-out),
+    border-color var(--mrr-motion-feedback) var(--mrr-ease-out),
+    box-shadow var(--mrr-motion-feedback) var(--mrr-ease-out);
 }
 
 .el-input__wrapper,
@@ -435,7 +435,7 @@ body .el-button--info.is-plain:not(.is-disabled):hover {
 .el-select__caret,
 .el-input__icon {
   color: var(--mrr-muted-foreground);
-  transition: color var(--mrr-motion-feedback) ease, transform var(--mrr-motion-move) var(--mrr-ease-out);
+  transition: color var(--mrr-motion-feedback) var(--mrr-ease-out), transform var(--mrr-motion-move) var(--mrr-ease-out);
 }
 
 .el-input__wrapper.is-focus .el-input__prefix,
@@ -575,7 +575,7 @@ body .el-message {
   /* 提示条必须压住页面级沉浸层：全屏影像 3000、预览工具栏 3001、确认弹窗 3200，
    * 否则在影像全屏预览里改完分类，成功提示整条被图片盖住，看着像没生效。
    * EP 把 z-index 写在行内 style 上，只能 !important 覆盖。 */
-  z-index: 3300 !important;
+  z-index: var(--mrr-z-message) !important;
   border-color: var(--mrr-border);
   border-radius: var(--mrr-radius-md);
   box-shadow: var(--mrr-shadow-md);
@@ -650,7 +650,7 @@ body .el-dropdown__popper .el-dropdown-menu__item {
   font-size: 13px;
   line-height: 34px;
   border-radius: var(--mrr-radius-sm);
-  transition: color var(--mrr-motion-feedback) ease, background-color var(--mrr-motion-feedback) ease;
+  transition: color var(--mrr-motion-feedback) var(--mrr-ease-out), background-color var(--mrr-motion-feedback) var(--mrr-ease-out);
 }
 
 body .el-select-dropdown .el-select-dropdown__item:hover,
@@ -704,7 +704,7 @@ body .el-empty {
 }
 
 body .el-empty__description p {
-  font-size: 14px;
+  font-size: var(--mrr-font-size-sm);
   color: var(--mrr-muted-foreground);
 }
 
@@ -716,7 +716,10 @@ body .el-table {
   --el-table-row-hover-bg-color: color-mix(in srgb, var(--mrr-muted) 72%, var(--mrr-card));
   --el-table-border-color: var(--mrr-border);
 
-  font-size: 13px;
+  font-size: var(--mrr-font-size-sm);
+
+  /* 等宽数字：页数、条数、耗时逐行上下对齐，扫读一列数字时不再左右跳动。 */
+  font-variant-numeric: tabular-nums;
   color: var(--mrr-card-foreground);
   background: var(--mrr-card);
 }
@@ -787,9 +790,12 @@ body .el-table--border .el-table__fixed-right .el-table__fixed-footer-wrapper tr
 .el-table th.el-table__cell {
   height: var(--mrr-table-header-height);
   padding-block: 7px;
-  font-size: 12px;
-  font-weight: 500;
+  font-size: var(--mrr-font-size-xs);
+
+  /* 表头与数据的区分原本只靠底色；加一档字重，浅底失效（Chrome 86 / 投屏）时仍能分清表头。 */
+  font-weight: 600;
   color: var(--mrr-muted-foreground);
+  letter-spacing: 0.01em;
   background: var(--el-table-header-bg-color);
 }
 
@@ -878,9 +884,17 @@ body .el-pagination {
   background: var(--mrr-accent);
 }
 
+/*
+ * 当前页：主色浅底 + 主色深字 + 1px 内描边，不再用实心主色块。
+ * 实心色块在列表底部与「查询」「保存」等主按钮抢注意力；
+ * 当前页只是位置指示，与导航选中态（浅底 + 深字）同一语汇。
+ * 三个令牌均有 Chrome 86 静态回退（browser-compatibility.css）。
+ */
 .el-pagination .el-pager li.is-active {
-  color: var(--mrr-primary-foreground);
-  background: var(--mrr-primary);
+  font-weight: 600;
+  color: var(--mrr-navigation-active-foreground);
+  background: var(--mrr-tone-primary-soft);
+  box-shadow: inset 0 0 0 1px var(--mrr-tone-primary-border);
 }
 
 .el-tag {
@@ -898,8 +912,9 @@ body .el-pagination {
   box-shadow: none;
 }
 
+/* 跟随全局圆角：默认档仍是 4px，滑块拉到 0 时与其他控件一起变成直角。 */
 .el-checkbox__inner {
-  border-radius: 4px;
+  border-radius: max(0px, calc(var(--mrr-radius-sm) - 2px));
 }
 
 .el-checkbox__input.is-checked .el-checkbox__inner,
@@ -941,9 +956,10 @@ body .el-dialog {
   border-bottom: 1px solid var(--mrr-border);
 }
 
+/* 17px 不在字号阶梯上；对话框标题与分区标题同档，正文 13–14px 之上只高一级。 */
 .el-dialog__title {
-  font-size: 17px;
-  font-weight: 600;
+  font-size: var(--mrr-font-size-lg);
+  font-weight: 650;
   color: var(--mrr-card-foreground);
   letter-spacing: -0.01em;
 }

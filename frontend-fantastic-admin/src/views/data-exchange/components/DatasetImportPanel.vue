@@ -2,12 +2,14 @@
 import type { UploadFile, UploadFiles, UploadInstance, UploadRawFile, UploadUserFile } from 'element-plus'
 import type { DataExchangeDataset, DataExchangeImportResult } from '@/api/modules/data-exchange'
 import { ElMessage, genFileId } from 'element-plus'
-import { Download, Info as InfoFilled, Upload as UploadFilled } from 'lucide-vue-next'
+import { Download, Upload as UploadFilled } from 'lucide-vue-next'
 import { computed, ref } from 'vue'
 import {
   downloadDataExchangeTemplate,
   importDataExchangeFile,
 } from '@/api/modules/data-exchange'
+import MrrInfoTip from '@/components/MrrInfoTip/index.vue'
+import MrrSectionCard from '@/components/MrrSectionCard/index.vue'
 import { actionDialog } from '@/ui/components/ActionDialog'
 import { createCsvBlob, downloadBlob, downloadResponseBlob } from '@/utils/file-download'
 
@@ -165,39 +167,27 @@ function today() {
 </script>
 
 <template>
-  <el-card shadow="never" class="dataset-card">
-    <template #header>
-      <div class="panel-heading">
-        <div>
-          <div class="panel-title-row">
-            <h3>{{ title }}</h3>
-            <el-tooltip placement="top" :show-after="200">
-              <template #content>
-                <div class="import-safety-tooltip">
-                  <strong>先校验，后写入</strong>
-                  <p>表头必须与模板一致。存在格式或关联错误时，本次文件不会写入数据库。</p>
-                </div>
-              </template>
-              <button
-                type="button"
-                class="import-safety-trigger"
-                aria-label="导入校验说明：先校验，后写入。表头必须与模板一致。存在格式或关联错误时，本次文件不会写入数据库。"
-              >
-                <el-icon><InfoFilled /></el-icon>
-              </button>
-            </el-tooltip>
-          </div>
-          <p>{{ description }}</p>
+  <MrrSectionCard class="dataset-card" :title="title" :description="description">
+    <template #title-suffix>
+      <MrrInfoTip
+        label="导入校验说明：先校验，后写入。表头必须与模板一致。存在格式或关联错误时，本次文件不会写入数据库。"
+        placement="top"
+      >
+        <div class="import-safety-tooltip">
+          <strong>先校验，后写入</strong>
+          <p>表头必须与模板一致。存在格式或关联错误时，本次文件不会写入数据库。</p>
         </div>
-        <el-button :icon="Download" :loading="downloadingTemplate" @click="downloadTemplate">
-          下载模板
-        </el-button>
-      </div>
+      </MrrInfoTip>
+    </template>
+    <template #actions>
+      <el-button :icon="Download" :loading="downloadingTemplate" @click="downloadTemplate">
+        下载模板
+      </el-button>
     </template>
 
     <div class="panel-content">
-      <div class="field-grid">
-        <div v-for="field in fields" :key="field.name" class="field-item">
+      <div class="mrr-field-grid">
+        <div v-for="field in fields" :key="field.name" class="mrr-field-item">
           <code>{{ field.name }}</code>
           <span>{{ field.description }}</span>
         </div>
@@ -250,34 +240,34 @@ function today() {
       </div>
 
       <section v-if="result" class="result-section">
-        <div class="result-summary">
-          <div class="summary-item">
-            <span>文件编码</span>
-            <strong>{{ result.encoding }}</strong>
+        <div class="result-summary mrr-stat-strip">
+          <div class="summary-item mrr-stat-tile">
+            <span class="mrr-stat-tile__label">文件编码</span>
+            <strong class="mrr-stat-tile__value">{{ result.encoding }}</strong>
           </div>
-          <div class="summary-item">
-            <span>数据行</span>
-            <strong>{{ result.totalRows }}</strong>
+          <div class="summary-item mrr-stat-tile">
+            <span class="mrr-stat-tile__label">数据行</span>
+            <strong class="mrr-stat-tile__value">{{ result.totalRows }}</strong>
           </div>
-          <div class="summary-item">
-            <span>有效唯一行</span>
-            <strong>{{ result.validRows }}</strong>
+          <div class="summary-item mrr-stat-tile">
+            <span class="mrr-stat-tile__label">有效唯一行</span>
+            <strong class="mrr-stat-tile__value">{{ result.validRows }}</strong>
           </div>
-          <div class="summary-item">
-            <span>{{ result.dryRun ? '预计新增' : '实际新增' }}</span>
-            <strong>{{ result.insertedRows }}</strong>
+          <div class="summary-item mrr-stat-tile">
+            <span class="mrr-stat-tile__label">{{ result.dryRun ? '预计新增' : '实际新增' }}</span>
+            <strong class="mrr-stat-tile__value">{{ result.insertedRows }}</strong>
           </div>
-          <div class="summary-item">
-            <span>{{ result.dryRun ? '预计更新' : '实际更新' }}</span>
-            <strong>{{ result.updatedRows }}</strong>
+          <div class="summary-item mrr-stat-tile">
+            <span class="mrr-stat-tile__label">{{ result.dryRun ? '预计更新' : '实际更新' }}</span>
+            <strong class="mrr-stat-tile__value">{{ result.updatedRows }}</strong>
           </div>
-          <div class="summary-item">
-            <span>重复跳过</span>
-            <strong>{{ result.duplicateRows }}</strong>
+          <div class="summary-item mrr-stat-tile">
+            <span class="mrr-stat-tile__label">重复跳过</span>
+            <strong class="mrr-stat-tile__value">{{ result.duplicateRows }}</strong>
           </div>
-          <div class="summary-item" :class="{ danger: result.errorRows > 0 }">
-            <span>错误行</span>
-            <strong>{{ result.errorRows }}</strong>
+          <div class="summary-item mrr-stat-tile">
+            <span class="mrr-stat-tile__label">错误行</span>
+            <strong class="mrr-stat-tile__value" :class="{ 'mrr-stat-tile__value--danger': result.errorRows > 0 }">{{ result.errorRows }}</strong>
           </div>
         </div>
 
@@ -321,7 +311,7 @@ function today() {
         </p>
       </section>
     </div>
-  </el-card>
+  </MrrSectionCard>
 </template>
 
 <style scoped>
@@ -332,39 +322,7 @@ function today() {
 .panel-content,
 .result-section {
   display: grid;
-  gap: 16px;
-}
-
-.panel-title-row {
-  display: flex;
-  gap: 8px;
-  align-items: center;
-  min-width: 0;
-}
-
-.import-safety-trigger {
-  display: inline-flex;
-  flex: 0 0 20px;
-  align-items: center;
-  justify-content: center;
-  width: 20px;
-  height: 20px;
-  padding: 0;
-  color: var(--el-text-color-secondary);
-  cursor: help;
-  background: transparent;
-  border: 0;
-  border-radius: var(--mrr-radius-pill);
-}
-
-.import-safety-trigger:hover,
-.import-safety-trigger:focus-visible {
-  color: var(--el-color-primary);
-}
-
-.import-safety-trigger:focus-visible {
-  outline: 2px solid var(--el-color-primary);
-  outline-offset: 2px;
+  gap: var(--mrr-space-4);
 }
 
 .import-safety-tooltip {
@@ -373,98 +331,25 @@ function today() {
 }
 
 .import-safety-tooltip p {
-  margin: 4px 0 0;
-}
-
-.panel-heading {
-  display: flex;
-  gap: 16px;
-  align-items: flex-start;
-  justify-content: space-between;
-}
-
-.panel-heading h3 {
-  margin: 0;
-  font-size: 18px;
-}
-
-.panel-heading p {
-  margin: 6px 0 0;
-  font-size: 13px;
-  line-height: 1.6;
-  color: var(--el-text-color-secondary);
-}
-
-.field-grid {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 8px 12px;
-}
-
-.field-item {
-  display: flex;
-  gap: 10px;
-  align-items: center;
-  min-width: 0;
-  padding: 8px 10px;
-  background: var(--el-fill-color-lighter);
-  border: 1px solid var(--el-border-color-lighter);
-  border-radius: var(--mrr-radius-md);
-}
-
-.field-item code {
-  flex: 0 0 128px;
-  font-weight: 700;
-  color: var(--el-color-primary);
-}
-
-.field-item span {
-  min-width: 0;
-  font-size: 12px;
-  color: var(--el-text-color-secondary);
+  margin: var(--mrr-space-1) 0 0;
 }
 
 .action-row,
 .result-actions {
   display: flex;
-  gap: 10px;
+  gap: var(--mrr-space-3);
   justify-content: flex-end;
 }
 
 .result-summary {
   display: grid;
   grid-template-columns: repeat(7, minmax(0, 1fr));
-  gap: 8px;
-}
-
-.summary-item {
-  display: grid;
-  gap: 4px;
-  min-width: 0;
-  padding: 10px;
-  border: 1px solid var(--el-border-color-lighter);
-  border-radius: var(--mrr-radius-md);
-}
-
-.summary-item span {
-  font-size: 12px;
-  color: var(--el-text-color-secondary);
-}
-
-.summary-item strong {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  font-size: 18px;
-  white-space: nowrap;
-}
-
-.summary-item.danger strong {
-  color: var(--el-color-danger);
+  gap: var(--mrr-space-2);
 }
 
 .truncated-tip {
   margin: -4px 0 0;
-  font-size: 12px;
+  font-size: var(--mrr-font-size-xs);
   color: var(--el-color-warning);
 }
 
@@ -475,14 +360,6 @@ function today() {
 }
 
 @media (max-width: 760px) {
-  .panel-heading {
-    flex-direction: column;
-  }
-
-  .field-grid {
-    grid-template-columns: 1fr;
-  }
-
   .result-summary {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }

@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import type { AutocompleteInstance } from 'element-plus'
 import type { SettingsSearchResult } from '../settings-search'
 import { computed, ref } from 'vue'
 import { searchSettings } from '../settings-search'
@@ -8,6 +9,7 @@ const emit = defineEmits<{
 }>()
 
 const query = ref('')
+const autocomplete = ref<AutocompleteInstance>()
 const searchActive = ref(false)
 const showEmptyState = computed(() => searchActive.value
   && Boolean(query.value.trim()) && searchSettings(query.value).length === 0)
@@ -16,6 +18,15 @@ function dismissEmptyState(event: KeyboardEvent) {
   if (showEmptyState.value && !event.isComposing) {
     searchActive.value = false
   }
+}
+
+function handleBlur(event: FocusEvent) {
+  // Element Plus defers blur and may close the list after the input regains focus.
+  if (event.target === document.activeElement && autocomplete.value) {
+    autocomplete.value.activated = true
+    return
+  }
+  searchActive.value = false
 }
 
 function selectResult(result: SettingsSearchResult) {
@@ -27,6 +38,7 @@ function selectResult(result: SettingsSearchResult) {
 <template>
   <div class="settings-search" @keydown.esc="dismissEmptyState">
     <el-autocomplete
+      ref="autocomplete"
       v-model="query"
       class="settings-search-input"
       aria-label="搜索设置"
@@ -43,7 +55,7 @@ function selectResult(result: SettingsSearchResult) {
       hide-loading
       @focus="searchActive = true"
       @input="searchActive = true"
-      @blur="searchActive = false"
+      @blur="handleBlur"
       @select="selectResult($event as SettingsSearchResult)"
     >
       <template #prefix>
@@ -109,7 +121,7 @@ function selectResult(result: SettingsSearchResult) {
   color: var(--mrr-popover-foreground);
   border: 1px solid transparent;
   border-radius: var(--mrr-radius-md);
-  transition: background-color var(--mrr-motion-feedback) ease, border-color var(--mrr-motion-feedback) ease;
+  transition: background-color var(--mrr-motion-feedback) var(--mrr-ease-out), border-color var(--mrr-motion-feedback) var(--mrr-ease-out);
 }
 
 :global(.settings-search-popper .el-autocomplete-suggestion__list > li:hover) {

@@ -8,10 +8,27 @@ import MrrDataTablePanel from '@/components/MrrDataTablePanel/index.vue'
 import MrrPageHeader from '@/components/MrrPageHeader/index.vue'
 import MrrPageShell from '@/components/MrrPageShell/index.vue'
 import MrrSectionCard from '@/components/MrrSectionCard/index.vue'
+import MrrStatusTag from '@/components/MrrStatusTag/index.vue'
 import useAuth from '@/utils/composables/useAuth'
 import ClassificationReview from '../statistics/archive/components/ClassificationReview.vue'
 
 defineOptions({ name: 'OcrBatchesPage' })
+
+/*
+ * 批次状态的展示文案与色调。只影响显示：轮询、按钮可见性仍按原始状态码判断。
+ * 未登记的状态码原样显示为中性色，不猜测含义；原始码保留在 title 中便于对照日志。
+ */
+const batchStatusMeta: Record<string, { label: string, tone: 'success' | 'info' | 'warning' | 'danger' | 'neutral' }> = {
+  RUNNING: { label: '运行中', tone: 'info' },
+  PAUSED: { label: '已暂停', tone: 'warning' },
+  CANCEL_REQUESTED: { label: '取消中', tone: 'warning' },
+  CANCELLED: { label: '已取消', tone: 'neutral' },
+  COMPLETED: { label: '已完成', tone: 'success' },
+  FAILED: { label: '失败', tone: 'danger' },
+}
+function statusMeta(status: string) {
+  return batchStatusMeta[status] ?? { label: status || '-', tone: 'neutral' as const }
+}
 const { auth } = useAuth()
 const form = reactive<OcrBatchRequest>({ afterId: 0, upperId: 0, maxPages: 10000, idempotencyKey: '', autoApply: false })
 const batches = ref<OcrBatch[]>([])
@@ -175,9 +192,11 @@ async function skipRollbackPage() {
         <p v-if="form.autoApply">
           将自动归类的类型编号：{{ preview.autoTypes.join('、') }}。授权人由当前登录账号记录，已分类页面不会被自动覆盖。
         </p>
-        <el-button type="primary" :disabled="!preview.eligibleInLimit" @click="create">
-          创建此范围的识别批次
-        </el-button>
+        <div class="batch-preview__actions">
+          <el-button type="primary" :disabled="!preview.eligibleInLimit" @click="create">
+            创建此范围的识别批次
+          </el-button>
+        </div>
       </div>
     </MrrSectionCard>
 
@@ -189,36 +208,66 @@ async function skipRollbackPage() {
       </template>
 
       <el-table :data="batches">
-        <el-table-column prop="id" label="批次" min-width="200" show-overflow-tooltip />
-        <el-table-column prop="status" label="状态" min-width="120" />
-        <el-table-column label="进度" min-width="170">
+        <el-table-column prop="id" label="批次" min-width="200" show-overflow-tooltip>
           <template #default="{ row }">
-            {{ row.processedCount }} / {{ row.dispatchedCount }} 已登记页
+            <span class="ocr-batches__mono">{{ row.id }}</span>
           </template>
         </el-table-column>
-        <el-table-column prop="successCount" label="已识别" />
-        <el-table-column prop="failedCount" label="失败" />
-        <el-table-column prop="autoAppliedCount" label="自动归类" />
-        <el-table-column prop="reviewRequiredCount" label="待审核建议" />
-        <el-table-column prop="cursorId" label="续跑游标" />
-        <el-table-column prop="reasonCode" label="等待原因" />
-        <el-table-column label="操作" min-width="280" fixed="right">
+        <el-table-column prop="status" label="状态" min-width="110">
           <template #default="{ row }">
-            <el-button v-if="row.status === 'RUNNING'" @click="action(row.id, 'pause')">
-              暂停
-            </el-button>
-            <el-button v-if="row.status === 'PAUSED'" @click="action(row.id, 'resume')">
-              续跑
-            </el-button>
-            <el-button v-if="['RUNNING', 'PAUSED'].includes(row.status)" @click="action(row.id, 'cancel')">
-              取消
-            </el-button>
-            <el-button @click="children(row.id)">
-              查看明细与审核
-            </el-button>
-            <el-button v-if="row.autoApply && auth('classification:override')" @click="inspectRollback(row.id)">
-              回退预览
-            </el-button>
+            <MrrStatusTag :label="statusMeta(row.status).label" :tone="statusMeta(row.status).tone" :title="row.status" />
+          </template>
+        </el-table-column>
+        <el-table-column label="进度" min-width="170">
+          <template #default="{ row }">
+            <span class="ocr-batches__num">{{ row.processedCount }} / {{ row.dispatchedCount }}</span>
+            <span class="ocr-batches__unit">已登记页</span>
+          </template>
+        </el-table-column>
+        <!-- 计数列右对齐：数字按个位对齐，扫读一列时不必逐个比较位数。 -->
+        <el-table-column prop="successCount" label="已识别" min-width="84" align="right" />
+        <el-table-column prop="failedCount" label="失败" min-width="72" align="right">
+          <template #default="{ row }">
+            <span :class="{ 'ocr-batches__failed': row.failedCount > 0 }">{{ row.failedCount }}</span>
+          </template>
+        </el-table-column>
+        <el-table-column prop="autoAppliedCount" label="自动归类" min-width="90" align="right" />
+        <el-table-column prop="reviewRequiredCount" label="待审核建议" min-width="104" align="right" />
+        <el-table-column prop="cursorId" label="续跑游标" min-width="110">
+          <template #default="{ row }">
+            <span class="ocr-batches__mono">{{ row.cursorId }}</span>
+          </template>
+        </el-table-column>
+        <el-table-column prop="reasonCode" label="等待原因" min-width="130" show-overflow-tooltip>
+          <template #default="{ row }">
+            <span v-if="row.reasonCode" class="ocr-batches__mono">{{ row.reasonCode }}</span>
+            <span v-else class="ocr-batches__unit">—</span>
+          </template>
+        </el-table-column>
+        <el-table-column label="操作" min-width="300" fixed="right">
+          <template #default="{ row }">
+            <!--
+              原来最多 5 个默认按钮挤在 280px 列里，会折成两三行且行高不齐。
+              改为一组小号按钮：流程控制在前（暂停 / 续跑 / 取消），查看与回退在后；
+              取消与回退是不可逆或高影响操作，用危险色文字区分，按钮名称与行为不变。
+            -->
+            <div class="ocr-batches__row-actions">
+              <el-button v-if="row.status === 'RUNNING'" size="small" @click="action(row.id, 'pause')">
+                暂停
+              </el-button>
+              <el-button v-if="row.status === 'PAUSED'" size="small" @click="action(row.id, 'resume')">
+                续跑
+              </el-button>
+              <el-button v-if="['RUNNING', 'PAUSED'].includes(row.status)" size="small" type="danger" plain @click="action(row.id, 'cancel')">
+                取消
+              </el-button>
+              <el-button size="small" @click="children(row.id)">
+                查看明细与审核
+              </el-button>
+              <el-button v-if="row.autoApply && auth('classification:override')" size="small" type="danger" link @click="inspectRollback(row.id)">
+                回退预览
+              </el-button>
+            </div>
           </template>
         </el-table-column>
       </el-table>
@@ -230,18 +279,25 @@ async function skipRollbackPage() {
       description="选择批次内的任务，查看识别结果并处理人工审核建议。"
       body-padding="compact"
     >
-      <el-select v-model="selectedJob" placeholder="选择病案任务">
-        <el-option v-for="id in childJobs" :key="id" :value="id" :label="id" />
-      </el-select>
-      <el-button :disabled="childJobs.length < 50" @click="children(childBatch, true)">
-        更多病案任务
-      </el-button>
+      <div class="ocr-batches__job-toolbar">
+        <el-select v-model="selectedJob" class="ocr-batches__job-select" aria-label="病案任务" placeholder="选择病案任务">
+          <el-option v-for="id in childJobs" :key="id" :value="id" :label="id" />
+        </el-select>
+        <el-button :disabled="childJobs.length < 50" @click="children(childBatch, true)">
+          更多病案任务
+        </el-button>
+      </div>
       <ClassificationReview v-if="selectedJob" :job-id="selectedJob" />
     </MrrSectionCard>
 
     <el-dialog v-model="rollbackOpen" title="自动归类回退预览" width="min(900px, 95vw)">
-      <p>先关闭自动归类总开关并暂停或取消批次。只撤销该批次仍为最后一次变更的自动归类，后续人工操作会跳过。</p>
-      <p aria-live="polite">
+      <el-alert
+        type="warning"
+        :closable="false"
+        show-icon
+        title="先关闭自动归类总开关并暂停或取消批次。只撤销该批次仍为最后一次变更的自动归类，后续人工操作会跳过。"
+      />
+      <p v-if="rollbackMessage" class="ocr-batches__rollback-result" aria-live="polite">
         {{ rollbackMessage }}
       </p>
       <el-table :data="rollbackRows">
@@ -251,12 +307,15 @@ async function skipRollbackPage() {
           </template>
         </el-table-column>
       </el-table>
-      <el-button :disabled="!rollbackRows.some(row => row.eligible)" @click="rollbackPage">
-        回退本页可撤销项（最多 50 页）
-      </el-button>
-      <el-button :disabled="!rollbackRows.length" @click="skipRollbackPage">
-        跳过本页
-      </el-button>
+      <!-- 操作按钮放进对话框底栏：原来紧跟在表格下方，长表格时要滚到底才看得到。 -->
+      <template #footer>
+        <el-button :disabled="!rollbackRows.length" @click="skipRollbackPage">
+          跳过本页
+        </el-button>
+        <el-button type="danger" :disabled="!rollbackRows.some(row => row.eligible)" @click="rollbackPage">
+          回退本页可撤销项（最多 50 页）
+        </el-button>
+      </template>
     </el-dialog>
   </MrrPageShell>
 </template>
@@ -269,7 +328,7 @@ async function skipRollbackPage() {
 .ocr-batches__form {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(min(100%, 220px), 1fr));
-  gap: 12px 16px;
+  gap: var(--mrr-space-3) var(--mrr-space-4);
 }
 
 .ocr-batches__form :deep(.el-form-item) {
@@ -283,8 +342,8 @@ async function skipRollbackPage() {
 
 .ocr-batches__auto-apply {
   display: grid;
-  gap: 6px;
-  margin-top: 16px;
+  gap: var(--mrr-space-2);
+  margin-top: var(--mrr-space-4);
 }
 
 .ocr-batches__auto-apply :deep(.el-checkbox) {
@@ -292,16 +351,16 @@ async function skipRollbackPage() {
 }
 
 .ocr-batches__hint {
-  font-size: 12px;
+  font-size: var(--mrr-font-size-xs);
   line-height: 1.6;
   color: var(--mrr-muted-foreground);
 }
 
 .batch-preview {
   display: grid;
-  gap: 8px;
-  padding: 14px;
-  margin-top: 18px;
+  gap: var(--mrr-space-2);
+  padding: var(--mrr-space-3) var(--mrr-space-4);
+  margin-top: var(--mrr-space-4);
   background: var(--mrr-muted);
   border: 1px solid var(--mrr-border);
   border-radius: var(--mrr-radius-lg);
@@ -309,6 +368,70 @@ async function skipRollbackPage() {
 
 .batch-preview p {
   margin: 0;
+  font-size: var(--mrr-font-size-sm);
   line-height: 1.6;
+}
+
+/* 创建按钮靠右、与说明文字之间留一条分隔线：说明是「读」，按钮是「做」。 */
+.batch-preview__actions {
+  display: flex;
+  justify-content: flex-end;
+  padding-top: var(--mrr-space-3);
+  margin-top: var(--mrr-space-1);
+  border-top: 1px solid var(--mrr-border);
+}
+
+.ocr-batches__row-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--mrr-space-1) var(--mrr-space-2);
+  align-items: center;
+}
+
+.ocr-batches__row-actions :deep(.el-button + .el-button) {
+  margin-left: 0;
+}
+
+.ocr-batches__mono {
+  font-family: var(--mrr-font-mono);
+  font-size: var(--mrr-font-size-xs);
+}
+
+.ocr-batches__num {
+  font-variant-numeric: tabular-nums;
+}
+
+.ocr-batches__unit {
+  margin-left: var(--mrr-space-1);
+  font-size: var(--mrr-font-size-xs);
+  color: var(--mrr-muted-foreground);
+}
+
+.ocr-batches__failed {
+  font-weight: 600;
+  color: var(--mrr-tone-danger);
+}
+
+.ocr-batches__job-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--mrr-space-2);
+  align-items: center;
+  margin-bottom: var(--mrr-space-3);
+}
+
+.ocr-batches__job-select {
+  flex: 0 1 320px;
+  min-width: 200px;
+}
+
+.ocr-batches__rollback-result {
+  margin: var(--mrr-space-3) 0 0;
+  font-size: var(--mrr-font-size-sm);
+  color: var(--mrr-foreground);
+}
+
+.el-dialog .el-table {
+  margin-top: var(--mrr-space-3);
 }
 </style>

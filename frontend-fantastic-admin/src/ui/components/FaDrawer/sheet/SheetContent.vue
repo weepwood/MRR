@@ -55,10 +55,10 @@ watch(showOverlay, (val) => {
   <DialogPortal>
     <Transition
       v-bind="{
-        enterActiveClass: 'ease-in-out duration-300',
+        enterActiveClass: 'ease-mrr-out duration-mrr-overlay',
         enterFromClass: 'opacity-0',
         enterToClass: 'opacity-100',
-        leaveActiveClass: 'ease-in-out duration-300',
+        leaveActiveClass: 'ease-mrr-in duration-mrr-move',
         leaveFromClass: 'opacity-100',
         leaveToClass: 'opacity-0',
       }"

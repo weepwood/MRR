@@ -22,8 +22,8 @@
 .mrr-icon-interactive {
   transform-origin: center;
   transition:
-    color var(--mrr-motion-feedback) ease,
-    opacity var(--mrr-motion-feedback) ease,
+    color var(--mrr-motion-feedback) var(--mrr-ease-out),
+    opacity var(--mrr-motion-feedback) var(--mrr-ease-out),
     transform var(--mrr-motion-press) var(--mrr-ease-out);
 }
 
@@ -52,7 +52,7 @@ a:active .mrr-icon-interactive,
 }
 
 .mrr-fade-enter {
-  animation: mrr-fade-enter var(--mrr-motion-feedback) ease-out both;
+  animation: mrr-fade-enter var(--mrr-motion-feedback) var(--mrr-ease-out) both;
 }
 
 @keyframes mrr-icon-spin {

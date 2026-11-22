@@ -381,14 +381,14 @@ onBeforeUnmount(hideTooltip)
 <style scoped>
 .request-heatmap {
   display: grid;
-  gap: 14px;
+  gap: var(--mrr-space-3);
   min-width: 0;
 }
 
 .heatmap-header {
   display: flex;
   flex-wrap: wrap;
-  gap: 14px;
+  gap: var(--mrr-space-3);
   align-items: end;
   justify-content: space-between;
 }
@@ -396,7 +396,7 @@ onBeforeUnmount(hideTooltip)
 .heatmap-summary {
   display: flex;
   flex-wrap: wrap;
-  gap: 4px 10px;
+  gap: 4px var(--mrr-space-3);
   align-items: baseline;
   min-width: 0;
 }
@@ -464,7 +464,7 @@ onBeforeUnmount(hideTooltip)
 
 .heatmap-body {
   display: flex;
-  gap: 6px;
+  gap: var(--mrr-space-2);
   align-items: flex-start;
 }
 
@@ -499,7 +499,7 @@ onBeforeUnmount(hideTooltip)
   outline: none;
   border: 1px solid color-mix(in srgb, var(--el-border-color-lighter) 82%, transparent);
   border-radius: 2px;
-  transition: border-color var(--mrr-motion-feedback) ease, filter var(--mrr-motion-feedback) ease, transform var(--mrr-motion-press) var(--mrr-ease-out);
+  transition: border-color var(--mrr-motion-feedback) var(--mrr-ease-out), filter var(--mrr-motion-feedback) var(--mrr-ease-out), transform var(--mrr-motion-press) var(--mrr-ease-out);
 }
 
 .heatmap-cell:hover,
@@ -555,7 +555,7 @@ onBeforeUnmount(hideTooltip)
   z-index: var(--mrr-z-overlay-top);
   box-sizing: border-box;
   width: 236px;
-  padding: 13px 14px;
+  padding: var(--mrr-space-3) var(--mrr-space-3);
   color: var(--el-text-color-primary);
   pointer-events: none;
   background: color-mix(in srgb, var(--el-bg-color-overlay) 97%, transparent);
@@ -575,14 +575,14 @@ onBeforeUnmount(hideTooltip)
 
 .heatmap-tooltip > strong {
   display: block;
-  margin-bottom: 10px;
+  margin-bottom: var(--mrr-space-3);
   font-size: 18px;
   line-height: 1.25;
 }
 
 .heatmap-tooltip dl {
   display: grid;
-  gap: 7px;
+  gap: var(--mrr-space-2);
   margin: 0;
 }
 
@@ -608,7 +608,7 @@ onBeforeUnmount(hideTooltip)
 }
 
 .empty-hint {
-  padding: 9px 11px;
+  padding: var(--mrr-space-2) var(--mrr-space-3);
   font-size: 11px;
   color: var(--el-text-color-secondary);
   background: var(--el-fill-color-extra-light);

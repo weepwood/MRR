@@ -5,6 +5,7 @@ import type { ArchivePreviewMode } from '@/utils/system-settings'
 import { ElImageViewer } from 'element-plus'
 import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
 import AppEmpty from '@/components/AppEmpty/index.vue'
+import { Z_INDEX } from '@/constants/z-index'
 import { isMotionEnabled } from '@/utils/motion-preference'
 import { suppressFocusSelect } from '../utils/viewer-close-focus-guard'
 import PreviewActionBar from './PreviewActionBar.vue'
@@ -238,7 +239,7 @@ onUnmounted(() => {
         :initial-index="imageViewerIndex"
         :infinite="false"
         hide-on-click-modal
-        :z-index="3000"
+        :z-index="Z_INDEX.viewer"
         teleported
         @close="closeImageViewer"
         @switch="handleImageViewerSwitch"
@@ -391,7 +392,7 @@ onUnmounted(() => {
   box-sizing: border-box;
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: var(--mrr-space-3);
   align-items: center;
   justify-content: center;
   width: min(100%, 720px);

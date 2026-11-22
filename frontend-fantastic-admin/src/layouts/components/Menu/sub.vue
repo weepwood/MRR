@@ -92,19 +92,19 @@ const transitionEvent = computed(() => {
 const transitionClass = computed(() => {
   if (rootMenu.isMenuPopup) {
     return {
-      enterActiveClass: 'ease-out duration-150',
+      enterActiveClass: 'ease-mrr-out duration-mrr-move',
       enterFromClass: 'opacity-0 scale-98 translate-y-1',
       enterToClass: 'opacity-100 scale-100 translate-y-0',
-      leaveActiveClass: 'ease-in duration-120',
+      leaveActiveClass: 'ease-mrr-in duration-mrr-feedback',
       leaveFromClass: 'opacity-100 scale-100 translate-y-0',
       leaveToClass: 'opacity-0 scale-98 translate-y-1',
     }
   }
   return {
-    enterActiveClass: 'ease-out duration-160',
+    enterActiveClass: 'ease-mrr-out duration-mrr-move',
     enterFromClass: cn('opacity-0 translate-y-1', CSS.supports('height', 'calc-size(auto, size)') && 'h-0'),
     enterToClass: 'opacity-100 translate-y-0',
-    leaveActiveClass: 'ease-in duration-140',
+    leaveActiveClass: 'ease-mrr-in duration-mrr-feedback',
     leaveFromClass: 'opacity-100 translate-y-0',
     leaveToClass: cn('opacity-0 translate-y-1', CSS.supports('height', 'calc-size(auto, size)') && 'h-0'),
   }

@@ -95,7 +95,7 @@ describe('两套按钮的同口径契约', () => {
 
   it('主题层通过令牌换密度，不再单独重写按钮的 padding / font-size', () => {
     expect(themeCss).toContain('--mrr-button-padding-x: 11px')
-    expect(themeCss).toContain('--mrr-button-font-size: 12.5px')
+    expect(themeCss).toContain('--mrr-button-font-size: 13px')
 
     // 主题层若直接写 padding，会把调用方的工具类覆盖一起压掉（账户按钮、搜索框都靠它微调）。
     for (const selector of ['.el-button {', '.fa-button-control {']) {

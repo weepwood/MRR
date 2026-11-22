@@ -2,13 +2,15 @@
 import type { AuthRole } from '@/api/types'
 import type { PermissionDefinition } from '@/utils/permission'
 import { ElMessage } from 'element-plus'
-import { Info as InfoFilled } from 'lucide-vue-next'
 import { computed, onMounted, reactive, ref } from 'vue'
 import apiUser from '@/api/modules/user'
 import AppEmpty from '@/components/AppEmpty/index.vue'
 import AppError from '@/components/AppError/index.vue'
+import AppLoading from '@/components/AppLoading/index.vue'
+import MrrInfoTip from '@/components/MrrInfoTip/index.vue'
 import MrrPageHeader from '@/components/MrrPageHeader/index.vue'
 import MrrPageShell from '@/components/MrrPageShell/index.vue'
+import MrrSectionCard from '@/components/MrrSectionCard/index.vue'
 import { PERMISSION_DEFINITIONS, PERMISSION_HIERARCHY } from '@/utils/permission'
 
 defineOptions({ name: 'PermissionsPage' })
@@ -213,24 +215,25 @@ onMounted(loadPermissions)
       description="按业务范围分配查看、编辑、输出和系统管理权限。修改保存后，用户重新登录生效。"
     >
       <template #badge>
-        <el-tooltip
-          content="上级权限会自动继承下级权限；系统查看只能读取设置和监控，不能修改设置或执行维护任务。"
-          placement="right"
-          :show-after="200"
-        >
-          <button type="button" class="info-trigger" aria-label="权限继承说明">
-            <el-icon><InfoFilled /></el-icon>
-          </button>
-        </el-tooltip>
+        <MrrInfoTip label="权限继承说明" content="上级权限会自动继承下级权限；系统查看只能读取设置和监控，不能修改设置或执行维护任务。" />
       </template>
     </MrrPageHeader>
 
     <!-- 加载失败与“确实没有角色”必须区分，见 DESIGN.md §5.1。 -->
     <AppError v-if="!loading && loadError && !sortedRoles.length" :message="loadError" @retry="loadPermissions" />
     <AppEmpty v-else-if="!loading && !sortedRoles.length" icon="i-lucide:shield" description="暂无角色数据" />
+    <!-- 首次加载用骨架屏；保存后刷新仍保留已有角色，只叠加 v-loading。 -->
+    <AppLoading v-else-if="loading && !sortedRoles.length" type="card" :cols="3" />
 
     <div v-else v-loading="loading" class="permission-views">
-      <section class="permission-section">
+      <section class="permission-section" aria-labelledby="permission-roles-title">
+        <!-- 角色卡与权限矩阵此前都没有分区标题，两大块内容直接堆叠，读者要靠内容猜「这一块是什么」。 -->
+        <div class="permission-section__head">
+          <h2 id="permission-roles-title">
+            角色
+          </h2>
+          <span class="permission-section__count">{{ sortedRoles.length }} 个角色</span>
+        </div>
         <div class="roles-grid">
           <el-card
             v-for="role in sortedRoles"
@@ -248,16 +251,8 @@ onMounted(loadPermissions)
                     <el-tag size="small" effect="plain">
                       {{ role.code }}
                     </el-tag>
-                    <el-tooltip
-                      v-if="isAdminRole(role.code)"
-                      content="管理员自动拥有全部权限，不可修改。"
-                      placement="top"
-                      :show-after="200"
-                    >
-                      <button type="button" class="info-trigger" aria-label="管理员权限说明">
-                        <el-icon><InfoFilled /></el-icon>
-                      </button>
-                    </el-tooltip>
+                    <!-- 只有管理员角色需要解释「为什么没有编辑按钮」，其余角色卡上的同一提示是噪音。 -->
+                    <MrrInfoTip v-if="isAdminRole(role.code)" label="管理员权限说明" placement="top" content="管理员自动拥有全部权限，不可修改。" />
                   </div>
                 </div>
                 <el-button v-if="!isAdminRole(role.code)" type="primary" link @click="startEdit(role)">
@@ -355,7 +350,20 @@ onMounted(loadPermissions)
       </section>
 
       <section class="permission-section">
-        <el-card shadow="never" class="matrix-card">
+        <MrrSectionCard
+          class="matrix-card"
+          title="权限矩阵"
+          description="逐项对照各角色的直接授权与继承权限"
+          icon="i-lucide:grid-3x3"
+        >
+          <!-- 图例放进卡头：读表前先知道符号含义，不必滚到表格底部。 -->
+          <template #actions>
+            <div class="matrix-legend" aria-label="图例">
+              <span><i class="legend direct" />直接授权</span>
+              <span><i class="legend inherited" />继承获得</span>
+              <span><i class="legend none" />无权限</span>
+            </div>
+          </template>
           <el-table :data="permissionDefs" stripe border>
             <el-table-column label="权限" min-width="230" fixed>
               <template #default="{ row }">
@@ -384,35 +392,13 @@ onMounted(loadPermissions)
               </template>
             </el-table-column>
           </el-table>
-          <div class="matrix-legend">
-            <span><i class="legend direct" />直接授权</span>
-            <span><i class="legend inherited" />继承获得</span>
-            <span><i class="legend none" />无权限</span>
-          </div>
-        </el-card>
+        </MrrSectionCard>
       </section>
     </div>
   </MrrPageShell>
 </template>
 
 <style scoped>
-.info-trigger {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  padding: 4px;
-  color: var(--text-secondary);
-  cursor: help;
-  background: transparent;
-  border: 0;
-  border-radius: var(--mrr-radius-pill);
-}
-
-.info-trigger:hover,
-.info-trigger:focus-visible { color: hsl(var(--primary)); }
-
-.info-trigger:focus-visible { outline: 2px solid hsl(var(--primary)); outline-offset: 2px; }
-
 .role-header,
 .role-name-row,
 .permission-tags,
@@ -423,51 +409,51 @@ onMounted(loadPermissions)
 .role-name-row,
 .permission-tags,
 .matrix-legend,
-.edit-fields { gap: 8px; }
+.edit-fields { gap: var(--mrr-space-2); }
 
-h2 { margin: 0; font-size: 28px; }
+.permission-views { display: grid; gap: var(--mrr-space-6); min-width: 0; }
 
-.role-description { margin: 8px 0 0; color: var(--text-secondary); }
+.permission-section { display: grid; gap: var(--mrr-space-3); min-width: 0; }
 
-.permission-views { display: grid; gap: 24px; min-width: 0; }
+.permission-section__head { display: flex; gap: var(--mrr-space-2); align-items: baseline; }
 
-.permission-section { min-width: 0; }
+.permission-section__head h2 { margin: 0; font-size: var(--mrr-font-size-md); font-weight: 650; line-height: 1.4; color: var(--text-primary); }
 
-.roles-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 360px), 1fr)); gap: 16px; align-items: start; }
+.permission-section__count { font-size: var(--mrr-font-size-xs); font-variant-numeric: tabular-nums; color: var(--text-secondary); }
+
+.roles-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 360px), 1fr)); gap: var(--mrr-space-4); align-items: start; }
 
 .role-card { align-self: start; border-radius: var(--mrr-radius-card); }
 
-.role-card :deep(.el-card__body) { display: grid; gap: 12px; align-content: start; }
+.role-card :deep(.el-card__body) { display: grid; gap: var(--mrr-space-3); align-content: start; }
 
 .role-card.admin { border-color: hsl(var(--primary) / 30%); }
 
-.role-edit-form { display: grid; gap: 16px; }
+.role-edit-form { display: grid; gap: var(--mrr-space-4); }
 
-.role-header { gap: 12px; align-items: flex-start; justify-content: space-between; }
+.role-header { gap: var(--mrr-space-3); align-items: flex-start; justify-content: space-between; }
 
-.role-name-row strong { font-size: 16px; font-weight: 600; line-height: 1.4; color: var(--text-primary); }
+.role-name-row strong { font-size: var(--mrr-font-size-md); font-weight: 650; line-height: 1.4; color: var(--text-primary); }
 
 .role-name-row { flex-wrap: wrap; }
 
 .permission-count,
 .category-label,
 .empty-text,
-.matrix-permission span { font-size: 12px; color: var(--text-tertiary); }
+.matrix-permission span { font-size: var(--mrr-font-size-xs); color: var(--text-tertiary); }
 
 .permission-count { display: inline-flex; padding: 2px 8px; line-height: 1.4; background: var(--surface-alt); border-radius: var(--mrr-radius-pill); }
 
-.role-description { margin: 0; font-size: 13px; line-height: 1.6; }
+.role-description { margin: 0; font-size: var(--mrr-font-size-sm); line-height: 1.6; color: var(--text-secondary); }
 
-.permission-groups { display: grid; gap: 10px; }
+.permission-groups { display: grid; gap: var(--mrr-space-3); }
 
 .permission-groups section,
 .edit-section { display: grid; gap: 6px; }
 
-.matrix-permission { display: flex; gap: 8px; align-items: baseline; white-space: nowrap; }
+.matrix-permission { display: flex; gap: var(--mrr-space-2); align-items: baseline; white-space: nowrap; }
 
-.permission-groups section { padding-top: 10px; border-top: 1px solid var(--divider); }
-
-.permission-groups section { padding-top: 10px; border-top: 1px solid var(--divider); }
+.permission-groups section { padding-top: var(--mrr-space-3); border-top: 1px solid var(--divider); }
 
 .permission-tags { flex-wrap: wrap; }
 
@@ -477,9 +463,9 @@ h2 { margin: 0; font-size: 28px; }
 
 .edit-actions {
   display: flex;
-  gap: 8px;
+  gap: var(--mrr-space-2);
   justify-content: flex-end;
-  padding-top: 12px;
+  padding-top: var(--mrr-space-3);
   border-top: 1px solid var(--divider);
 }
 
@@ -487,10 +473,12 @@ h2 { margin: 0; font-size: 28px; }
 
 .permission-select { width: 100%; }
 
-.matrix-card { overflow-x: auto; --mrr-table-row-height: 34px; }
+.matrix-card { min-width: 0; --mrr-table-row-height: 34px; }
+
+.matrix-card :deep(.el-card__body) { overflow-x: auto; }
 
 .matrix-card :deep(.el-table),
-.matrix-card :deep(.el-table__inner-wrapper) { border-radius: var(--mrr-radius-card); }
+.matrix-card :deep(.el-table__inner-wrapper) { border-radius: var(--mrr-radius-md); }
 
 .matrix-card :deep(.el-table) {
   box-sizing: border-box;
@@ -503,7 +491,7 @@ h2 { margin: 0; font-size: 28px; }
 .matrix-card :deep(.el-table__body-wrapper tr:last-child > td.el-table__cell),
 .matrix-card :deep(.el-table__fixed-body-wrapper tr:last-child > td.el-table__cell) { border-bottom: 0; }
 
-.matrix-card :deep(.el-table td.el-table__cell) { padding-block: 4px; }
+.matrix-card :deep(.el-table td.el-table__cell) { padding-block: var(--mrr-space-1); }
 
 .matrix-dot { display: inline-flex; align-items: center; justify-content: center; width: 22px; height: 22px; border-radius: var(--mrr-radius-md); }
 
@@ -511,11 +499,11 @@ h2 { margin: 0; font-size: 28px; }
 
 .matrix-dot.inherited { color: var(--text-tertiary); background: var(--surface-alt); }
 
-.matrix-legend { padding-top: 12px; margin-top: 14px; border-top: 1px solid var(--divider); }
+.matrix-legend { flex-wrap: wrap; column-gap: var(--mrr-space-3); }
 
-.matrix-legend span { gap: 5px; font-size: 12px; color: var(--text-secondary); }
+.matrix-legend span { gap: 5px; font-size: var(--mrr-font-size-xs); color: var(--text-secondary); }
 
-.legend { width: 13px; height: 13px; border: 1px solid var(--divider); border-radius: 4px; }
+.legend { width: 13px; height: 13px; border: 1px solid var(--divider); border-radius: max(0px, calc(var(--mrr-radius-sm) - 2px)); }
 
 .legend.direct { background: hsl(var(--primary) / 15%); border-color: hsl(var(--primary) / 30%); }
 

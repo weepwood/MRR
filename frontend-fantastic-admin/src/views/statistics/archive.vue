@@ -1183,18 +1183,18 @@ onUnmounted(() => {
   justify-content: space-between;
   width: min(calc(100% - 32px), 1280px);
   min-height: 56px;
-  padding: 9px 12px;
+  padding: var(--mrr-space-2) 12px;
   background: var(--surface);
   border: 1px solid var(--divider);
   border-radius: var(--mrr-radius-xl);
-  box-shadow: 0 12px 32px rgb(0 0 0 / 14%);
+  box-shadow: var(--mrr-shadow-md);
   transform: translateX(-50%);
 }
 
 .archive-wall-summary {
   display: flex;
   flex: none;
-  gap: 9px;
+  gap: var(--mrr-space-2);
   align-items: center;
   min-width: 0;
   font-size: 12px;
@@ -1206,7 +1206,7 @@ onUnmounted(() => {
 }
 
 .archive-wall-summary span + span::before {
-  margin-right: 9px;
+  margin-right: var(--mrr-space-2);
   color: var(--divider);
   content: "·";
 }
@@ -1240,7 +1240,7 @@ onUnmounted(() => {
 .archive-sidebar {
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: var(--mrr-space-3);
   min-width: 0;
 }
 
@@ -1253,7 +1253,7 @@ onUnmounted(() => {
   flex: none;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 8px;
-  padding-top: 10px;
+  padding-top: var(--mrr-space-3);
   margin-top: auto;
   border-top: 1px solid var(--divider);
 }
@@ -1293,7 +1293,7 @@ onUnmounted(() => {
   background: var(--surface);
   border: 1px solid var(--divider);
   border-radius: var(--mrr-radius-2xl);
-  box-shadow: 0 12px 32px rgb(0 0 0 / 5%);
+  box-shadow: var(--mrr-shadow-sm);
 }
 
 .is-empty .search-card {
@@ -1371,7 +1371,7 @@ onUnmounted(() => {
   .archive-wall-toolbar {
     bottom: 10px;
     flex-direction: column;
-    gap: 7px;
+    gap: var(--mrr-space-2);
     align-items: stretch;
     width: calc(100% - 20px);
   }

@@ -163,6 +163,18 @@ export function gr8rCssVariables(scheme: ThemePaletteScheme): Record<string, str
   const navActive = dark ? c.raisedSurface : c.surface
   const navActiveBorder = dark ? c.strongLine : c.line
   const focusRing = mixHex(c.accent, c.surface, dark ? 0.42 : 0.3)
+  /*
+   * 浮层表面：亮色与卡面同为白色，靠阴影 + 描边分层；暗色下阴影几乎不可见，
+   * 若浮层仍与卡面同色（#222220），下拉、日期面板、对话框会与身后的卡片糊成一片。
+   * 暗色改用 mutedSurface，与 MRR 经典暗色「浮层比卡面亮一档」的层级规则一致。
+   */
+  const popover = dark ? c.mutedSurface : c.surface
+  /*
+   * 状态浅底与描边的混合强度：暗色表面吸收了大部分低饱和色，10% 的浅底
+   * 在 #222220 上与卡面几乎无差（标签读成「只有文字」），因此暗色加深一档。
+   */
+  const softStrength = dark ? 0.16 : 0.1
+  const toneBorderStrength = dark ? 0.34 : 0.22
 
   const css: Record<string, string> = {
     'color-scheme': scheme,
@@ -172,7 +184,7 @@ export function gr8rCssVariables(scheme: ThemePaletteScheme): Record<string, str
     '--foreground': hslTuple(c.ink),
     '--card': hslTuple(c.surface),
     '--card-foreground': hslTuple(c.ink),
-    '--popover': hslTuple(c.surface),
+    '--popover': hslTuple(popover),
     '--popover-foreground': hslTuple(c.ink),
     '--primary-foreground': hslTuple(c.accentContrast),
     '--secondary': hslTuple(c.raisedSurface),
@@ -185,6 +197,8 @@ export function gr8rCssVariables(scheme: ThemePaletteScheme): Record<string, str
     '--destructive-foreground': hslTuple(onDanger),
     '--border': hslTuple(c.line),
     '--input': hslTuple(c.controlLine),
+    // 滚动条拇指：默认值是冷灰（240° 色相），在暖白画布上是唯一的蓝灰色块。
+    '--scrollbar-color': hslTuple(c.strongLine),
 
     // 真实布局容器
     '--g-main-area-bg': c.canvas,
@@ -286,10 +300,10 @@ export function gr8rCssVariables(scheme: ThemePaletteScheme): Record<string, str
     rose: c.rose,
   }
   for (const [name, color] of Object.entries(tones)) {
-    css[`--mrr-tone-${name}-soft`] = mixHex(color, c.surface, 0.1)
+    css[`--mrr-tone-${name}-soft`] = mixHex(color, c.surface, softStrength)
   }
   for (const name of ['success', 'danger', 'warning', 'info', 'neutral', 'primary']) {
-    css[`--mrr-tone-${name}-border`] = mixHex(tones[name], c.line, 0.22)
+    css[`--mrr-tone-${name}-border`] = mixHex(tones[name], c.line, toneBorderStrength)
   }
   for (const name of ['success', 'danger', 'warning', 'info']) {
     const color = tones[name]

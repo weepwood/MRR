@@ -20,13 +20,15 @@ import type {
   StatisticsExchangeFilters,
 } from '@/api/modules/data-exchange'
 import { ElMessage } from 'element-plus'
-import { Download, Info as InfoFilled } from 'lucide-vue-next'
+import { Download } from 'lucide-vue-next'
 import { computed, reactive, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { exportDataExchangeCsv } from '@/api/modules/data-exchange'
 import MrrFilterActionButton from '@/components/MrrFilterActionButton/index.vue'
+import MrrInfoTip from '@/components/MrrInfoTip/index.vue'
 import MrrPageHeader from '@/components/MrrPageHeader/index.vue'
 import MrrPageShell from '@/components/MrrPageShell/index.vue'
+import MrrSectionCard from '@/components/MrrSectionCard/index.vue'
 import { rangePickerPopperOptions } from '@/ui/provider/picker-options'
 import useAuth from '@/utils/composables/useAuth'
 import { downloadBlob, getResponseHeader } from '@/utils/file-download'
@@ -299,15 +301,10 @@ function today() {
       description="患者、统计、病案主档、档案装箱和扫描记录统一在此导入导出。系统只开放预定义数据集，不接受任意表名、SQL 或服务器路径。"
     >
       <template #badge>
-        <el-tooltip placement="right" :show-after="200">
-          <template #content>
-            <span v-if="!canImport">当前账号只有读取权限。可以按权限导出数据；正式导入患者、统计、装箱和扫描记录需要 record:edit 权限。<br></span>
-            导出采用受控行数上限：所有条件导出单次最多返回 100,000 行。结果可能超过上限时，请缩小筛选范围；扫描记录可使用 afterId 按主键游标分卷导出。
-          </template>
-          <button type="button" class="info-trigger" aria-label="数据交换说明">
-            <el-icon><InfoFilled /></el-icon>
-          </button>
-        </el-tooltip>
+        <MrrInfoTip label="数据交换说明">
+          <span v-if="!canImport">当前账号只有读取权限。可以按权限导出数据；正式导入患者、统计、装箱和扫描记录需要 record:edit 权限。<br></span>
+          导出采用受控行数上限：所有条件导出单次最多返回 100,000 行。结果可能超过上限时，请缩小筛选范围；扫描记录可使用 afterId 按主键游标分卷导出。
+        </MrrInfoTip>
       </template>
     </MrrPageHeader>
 
@@ -320,17 +317,9 @@ function today() {
     />
 
     <div v-show="activeTab === 'patients'" class="tab-content">
-      <el-card shadow="never">
-        <template #header>
-          <div class="panel-heading">
-            <div>
-              <h3>患者数据条件导出</h3>
-              <p>导出字段与患者导入模板保持一致，可在本页面重新校验和导入。</p>
-            </div>
-          </div>
-        </template>
+      <MrrSectionCard title="患者数据条件导出" description="导出字段与患者导入模板保持一致，可在本页面重新校验和导入。">
         <div class="filter-grid filter-grid--patient">
-          <el-input v-model="patientFilters.keyword" clearable placeholder="病案号 / 姓名 / 身份证号 / 科室" />
+          <el-input v-model="patientFilters.keyword" clearable aria-label="病案号 / 姓名 / 身份证号 / 科室" placeholder="病案号 / 姓名 / 身份证号 / 科室" />
           <div class="filter-actions">
             <MrrFilterActionButton action="reset" @click="resetPatientFilters">
               重置
@@ -346,7 +335,7 @@ function today() {
             </el-button>
           </div>
         </div>
-      </el-card>
+      </MrrSectionCard>
 
       <DatasetImportPanel
         v-if="canImport"
@@ -356,33 +345,22 @@ function today() {
         :fields="patientFields"
         max-file-size="单文件不超过 20 MB"
       />
-      <el-card v-else shadow="never">
-        <div class="readonly-fields">
-          <h3>患者数据字段</h3>
-          <div class="field-grid">
-            <div v-for="field in patientFields" :key="field.name" class="field-item">
-              <code>{{ field.name }}</code><span>{{ field.description }}</span>
-            </div>
+      <MrrSectionCard v-else title="患者数据字段" description="当前账号只能导出；以下为导出文件包含的字段。">
+        <div class="mrr-field-grid">
+          <div v-for="field in patientFields" :key="field.name" class="mrr-field-item">
+            <code>{{ field.name }}</code><span>{{ field.description }}</span>
           </div>
         </div>
-      </el-card>
+      </MrrSectionCard>
     </div>
 
     <div v-show="activeTab === 'statistics'" class="tab-content">
-      <el-card shadow="never">
-        <template #header>
-          <div class="panel-heading">
-            <div>
-              <h3>统计数据条件导出</h3>
-              <p>按病案号、上架号、档案类型、日期和综合关键字筛选。</p>
-            </div>
-          </div>
-        </template>
+      <MrrSectionCard title="统计数据条件导出" description="按病案号、上架号、档案类型、日期和综合关键字筛选。">
         <div class="filter-grid">
-          <el-input v-model="statisticsFilters.bah" clearable placeholder="病案号" />
-          <el-input v-model="statisticsFilters.sjh" clearable placeholder="上架号" />
-          <el-input v-model="statisticsFilters.type" clearable placeholder="档案类型" />
-          <el-input v-model="statisticsFilters.keyword" clearable placeholder="患者、科室、设备或负责人" />
+          <el-input v-model="statisticsFilters.bah" clearable aria-label="病案号" placeholder="病案号" />
+          <el-input v-model="statisticsFilters.sjh" clearable aria-label="上架号" placeholder="上架号" />
+          <el-input v-model="statisticsFilters.type" clearable aria-label="档案类型" placeholder="档案类型" />
+          <el-input v-model="statisticsFilters.keyword" clearable aria-label="患者、科室、设备或负责人" placeholder="患者、科室、设备或负责人" />
           <el-date-picker
             v-model="statisticsDateRange"
             type="daterange"
@@ -407,7 +385,7 @@ function today() {
             </el-button>
           </div>
         </div>
-      </el-card>
+      </MrrSectionCard>
 
       <DatasetImportPanel
         v-if="canImport"
@@ -420,31 +398,18 @@ function today() {
     </div>
 
     <div v-show="activeTab === 'archives'" class="tab-content">
-      <el-card shadow="never">
-        <template #header>
-          <div class="panel-heading">
-            <div>
-              <div class="page-title-row">
-                <h3>病案主档条件导出</h3>
-                <el-tooltip placement="right" :show-after="200">
-                  <template #content>
-                    病案主档只允许导出。mr_archive 是由统计数据和稳定关联规则维护的主数据。禁止直接导入，以免绕过触发器、破坏 archive_id 关联或制造重复上架号。
-                  </template>
-                  <button type="button" class="info-trigger" aria-label="病案主档导出说明">
-                    <el-icon><InfoFilled /></el-icon>
-                  </button>
-                </el-tooltip>
-              </div>
-              <p>用于审计、核对和迁移前检查，不作为直接回写模板。</p>
-            </div>
-          </div>
+      <MrrSectionCard title="病案主档条件导出" description="用于审计、核对和迁移前检查，不作为直接回写模板。">
+        <template #title-suffix>
+          <MrrInfoTip label="病案主档导出说明">
+            病案主档只允许导出。mr_archive 是由统计数据和稳定关联规则维护的主数据。禁止直接导入，以免绕过触发器、破坏 archive_id 关联或制造重复上架号。
+          </MrrInfoTip>
         </template>
         <div class="filter-grid">
-          <el-input v-model="archiveFilters.bah" clearable placeholder="病案号" />
-          <el-input v-model="archiveFilters.sjh" clearable placeholder="上架号" />
-          <el-input v-model="archiveFilters.patientId" clearable placeholder="患者 ID" />
-          <el-input v-model="archiveFilters.type" clearable placeholder="档案类型" />
-          <el-input v-model="archiveFilters.keyword" clearable placeholder="患者姓名 / 科室 / 设备 / 操作人" />
+          <el-input v-model="archiveFilters.bah" clearable aria-label="病案号" placeholder="病案号" />
+          <el-input v-model="archiveFilters.sjh" clearable aria-label="上架号" placeholder="上架号" />
+          <el-input v-model="archiveFilters.patientId" clearable aria-label="患者 ID" placeholder="患者 ID" />
+          <el-input v-model="archiveFilters.type" clearable aria-label="档案类型" placeholder="档案类型" />
+          <el-input v-model="archiveFilters.keyword" clearable aria-label="患者姓名 / 科室 / 设备 / 操作人" placeholder="患者姓名 / 科室 / 设备 / 操作人" />
           <el-date-picker
             v-model="archiveDateRange"
             type="daterange"
@@ -469,42 +434,31 @@ function today() {
             </el-button>
           </div>
         </div>
-      </el-card>
+      </MrrSectionCard>
 
-      <el-card shadow="never">
-        <div class="readonly-fields">
-          <h3>病案主档导出字段</h3>
-          <div class="field-grid">
-            <div v-for="field in archiveFields" :key="field.name" class="field-item">
-              <code>{{ field.name }}</code><span>{{ field.description }}</span>
-            </div>
+      <MrrSectionCard title="病案主档导出字段" description="导出文件包含以下字段，仅用于核对，不作为导入模板。">
+        <div class="mrr-field-grid">
+          <div v-for="field in archiveFields" :key="field.name" class="mrr-field-item">
+            <code>{{ field.name }}</code><span>{{ field.description }}</span>
           </div>
         </div>
-      </el-card>
+      </MrrSectionCard>
     </div>
 
     <div v-show="activeTab === 'archive-boxes'" class="tab-content">
-      <el-card shadow="never">
-        <template #header>
-          <div class="panel-heading">
-            <div>
-              <h3>档案装箱条件导出</h3>
-              <p>按病案号、上架号、箱号、状态或备注筛选装箱记录。</p>
-            </div>
-          </div>
-        </template>
+      <MrrSectionCard title="档案装箱条件导出" description="按病案号、上架号、箱号、状态或备注筛选装箱记录。">
         <div class="filter-grid">
-          <el-input v-model="archiveBoxFilters.bah" clearable placeholder="病案号" />
-          <el-input v-model="archiveBoxFilters.sjh" clearable placeholder="上架号" />
-          <el-input v-model="archiveBoxFilters.boxNo" clearable placeholder="箱号" />
-          <el-select v-model="archiveBoxFilters.status" clearable placeholder="全部状态">
+          <el-input v-model="archiveBoxFilters.bah" clearable aria-label="病案号" placeholder="病案号" />
+          <el-input v-model="archiveBoxFilters.sjh" clearable aria-label="上架号" placeholder="上架号" />
+          <el-input v-model="archiveBoxFilters.boxNo" clearable aria-label="箱号" placeholder="箱号" />
+          <el-select v-model="archiveBoxFilters.status" clearable aria-label="全部状态" placeholder="全部状态">
             <el-option label="正常" value="NORMAL" />
             <el-option label="缺失" value="MISSING" />
             <el-option label="位置不一致" value="MISPLACED" />
             <el-option label="冲突" value="CONFLICT" />
             <el-option label="其他" value="OTHER" />
           </el-select>
-          <el-input v-model="archiveBoxFilters.keyword" clearable placeholder="综合关键字" />
+          <el-input v-model="archiveBoxFilters.keyword" clearable aria-label="综合关键字" placeholder="综合关键字" />
           <div class="filter-actions">
             <MrrFilterActionButton action="reset" @click="resetArchiveBoxFilters">
               重置
@@ -520,7 +474,7 @@ function today() {
             </el-button>
           </div>
         </div>
-      </el-card>
+      </MrrSectionCard>
 
       <DatasetImportPanel
         v-if="canImport"
@@ -533,33 +487,20 @@ function today() {
     </div>
 
     <div v-show="activeTab === 'scan'" class="tab-content">
-      <el-card shadow="never">
-        <template #header>
-          <div class="panel-heading">
-            <div>
-              <div class="page-title-row">
-                <h3>扫描记录条件导出</h3>
-                <el-tooltip placement="right" :show-after="200">
-                  <template #content>
-                    浏览器只处理小批量扫描记录。单次最多 100,000 行。三千万级全量迁移仍应使用分卷 CSV、后端流式 COPY、任务暂停恢复、失败重试和主键游标导出，不应通过浏览器上传。
-                  </template>
-                  <button type="button" class="info-trigger" aria-label="扫描记录导入说明">
-                    <el-icon><InfoFilled /></el-icon>
-                  </button>
-                </el-tooltip>
-              </div>
-              <p>导出按 ID 升序，afterId 可用于手工分卷；单次最多返回 100,000 行。</p>
-            </div>
-          </div>
+      <MrrSectionCard title="扫描记录条件导出" description="导出按 ID 升序，afterId 可用于手工分卷；单次最多返回 100,000 行。">
+        <template #title-suffix>
+          <MrrInfoTip label="扫描记录导入说明">
+            浏览器只处理小批量扫描记录。单次最多 100,000 行。三千万级全量迁移仍应使用分卷 CSV、后端流式 COPY、任务暂停恢复、失败重试和主键游标导出，不应通过浏览器上传。
+          </MrrInfoTip>
         </template>
         <div class="filter-grid filter-grid--scan">
-          <el-input-number v-model="scanFilters.afterId" :min="0" controls-position="right" placeholder="起始 ID（不含）" />
-          <el-input v-model="scanFilters.bah" clearable placeholder="病案号" />
-          <el-input v-model="scanFilters.sjh" clearable placeholder="上架号" />
-          <el-input v-model="scanFilters.brxh" clearable placeholder="病人序号" />
-          <el-input v-model="scanFilters.folder" clearable placeholder="目录" />
-          <el-input v-model="scanFilters.filename" clearable placeholder="文件名" />
-          <el-input-number v-model="scanFilters.btype" :min="0" :max="15" controls-position="right" placeholder="图片类型" />
+          <el-input-number v-model="scanFilters.afterId" :min="0" controls-position="right" aria-label="起始 ID（不含）" placeholder="起始 ID（不含）" />
+          <el-input v-model="scanFilters.bah" clearable aria-label="病案号" placeholder="病案号" />
+          <el-input v-model="scanFilters.sjh" clearable aria-label="上架号" placeholder="上架号" />
+          <el-input v-model="scanFilters.brxh" clearable aria-label="病人序号" placeholder="病人序号" />
+          <el-input v-model="scanFilters.folder" clearable aria-label="目录" placeholder="目录" />
+          <el-input v-model="scanFilters.filename" clearable aria-label="文件名" placeholder="文件名" />
+          <el-input-number v-model="scanFilters.btype" :min="0" :max="15" controls-position="right" aria-label="图片类型" placeholder="图片类型" />
           <div class="filter-actions">
             <MrrFilterActionButton action="reset" @click="resetScanFilters">
               重置
@@ -575,7 +516,7 @@ function today() {
             </el-button>
           </div>
         </div>
-      </el-card>
+      </MrrSectionCard>
 
       <DatasetImportPanel
         v-if="canImport"
@@ -591,61 +532,11 @@ function today() {
 
 <style scoped>
 /* 页面级间距、宽度与页头由 MrrPageShell / MrrPageHeader 统一提供，这里只保留页内分组的 16px。 */
-.tab-content,
-.readonly-fields {
+.tab-content {
   display: grid;
   grid-template-columns: minmax(0, 1fr);
-  gap: 16px;
+  gap: var(--mrr-space-4);
   min-width: 0;
-}
-
-.panel-heading {
-  display: flex;
-  gap: 16px;
-  align-items: flex-start;
-  justify-content: space-between;
-}
-
-.page-title-row {
-  display: flex;
-  gap: 8px;
-  align-items: center;
-}
-
-.info-trigger {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  padding: 4px;
-  color: var(--el-text-color-secondary);
-  cursor: help;
-  background: transparent;
-  border: 0;
-  border-radius: var(--mrr-radius-pill);
-}
-
-.info-trigger:hover,
-.info-trigger:focus-visible {
-  color: var(--el-color-primary);
-}
-
-.info-trigger:focus-visible {
-  outline: 2px solid var(--el-color-primary);
-  outline-offset: 2px;
-}
-
-h3 {
-  margin: 0;
-}
-
-.panel-heading h3 {
-  font-size: 18px;
-}
-
-.panel-heading p {
-  margin: 8px 0 0;
-  line-height: 1.6;
-  color: var(--el-text-color-secondary);
 }
 
 /*
@@ -660,14 +551,23 @@ h3 {
   --el-segmented-padding: 4px;
   --el-segmented-item-selected-bg-color: var(--mrr-card);
   --el-segmented-item-selected-color: var(--mrr-foreground);
-  --el-segmented-item-hover-bg-color: rgb(15 23 42 / 4%);
-  --el-segmented-item-active-bg-color: rgb(15 23 42 / 7%);
+
+  /* 悬停 / 按下用前景色叠加，跟随明暗主题；原写死的冷色墨在暗色下不可见、在暖色主题下偏蓝。 */
+  --el-segmented-item-hover-bg-color: var(--mrr-secondary);
+  --el-segmented-item-active-bg-color: var(--mrr-border);
 
   width: 100%;
   min-height: 40px;
   overflow: hidden;
-  font-size: 13px;
+  font-size: var(--mrr-font-size-sm);
   border-radius: var(--mrr-radius-lg);
+}
+
+@supports (color: color-mix(in srgb, #000 5%, transparent)) {
+  .dataset-switch {
+    --el-segmented-item-hover-bg-color: color-mix(in srgb, var(--mrr-foreground) 5%, transparent);
+    --el-segmented-item-active-bg-color: color-mix(in srgb, var(--mrr-foreground) 9%, transparent);
+  }
 }
 
 .dataset-switch :deep(.el-segmented__item) {
@@ -681,23 +581,23 @@ h3 {
 
 .dataset-switch :deep(.el-segmented__item-selected) {
   border-radius: clamp(0px, calc(var(--mrr-radius-lg) - 2px), 20px);
-  box-shadow: 0 1px 2px rgb(15 23 42 / 10%), 0 2px 6px rgb(15 23 42 / 5%);
+  box-shadow: var(--mrr-shadow-xs), 0 0 0 1px var(--mrr-border);
 }
 
 @media (max-width: 720px) {
   .dataset-switch {
-    font-size: 12px;
+    font-size: var(--mrr-font-size-xs);
   }
 
   .dataset-switch :deep(.el-segmented__item) {
-    padding: 0 4px;
+    padding: 0 var(--mrr-space-1);
   }
 }
 
 .filter-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-  gap: 12px;
+  gap: var(--mrr-space-3);
   align-items: center;
 }
 
@@ -717,41 +617,12 @@ h3 {
 .filter-actions {
   display: flex;
   flex-wrap: wrap;
-  gap: 8px;
+  gap: var(--mrr-space-2);
   justify-content: flex-end;
 }
 
 .filter-actions :deep(.el-button + .el-button) {
   margin-left: 0;
-}
-
-.field-grid {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 8px 12px;
-}
-
-.field-item {
-  display: flex;
-  gap: 10px;
-  align-items: center;
-  min-width: 0;
-  padding: 8px 10px;
-  background: var(--el-fill-color-lighter);
-  border: 1px solid var(--el-border-color-lighter);
-  border-radius: var(--mrr-radius-md);
-}
-
-.field-item code {
-  flex: 0 0 148px;
-  font-weight: 700;
-  color: var(--el-color-primary);
-}
-
-.field-item span {
-  min-width: 0;
-  font-size: 12px;
-  color: var(--el-text-color-secondary);
 }
 
 @media (max-width: 1100px) {
@@ -765,15 +636,7 @@ h3 {
 }
 
 @media (max-width: 760px) {
-  .panel-heading {
-    flex-direction: column;
-  }
-
   .filter-grid,
-  .field-grid {
-    grid-template-columns: 1fr;
-  }
-
   .filter-grid--patient {
     grid-template-columns: 1fr;
   }

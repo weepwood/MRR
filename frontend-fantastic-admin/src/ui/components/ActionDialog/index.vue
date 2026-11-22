@@ -171,7 +171,7 @@ onBeforeUnmount(cancelActionDialogs)
 .action-dialog-detail {
   display: grid;
   gap: 4px;
-  padding: 9px 12px;
+  padding: var(--mrr-space-2) var(--mrr-space-3);
   border-bottom: 1px solid var(--el-border-color-lighter);
 }
 
@@ -187,7 +187,7 @@ onBeforeUnmount(cancelActionDialogs)
 .action-dialog-detail-values {
   display: flex;
   flex-wrap: wrap;
-  gap: 6px;
+  gap: var(--mrr-space-2);
   align-items: baseline;
   font-size: 13px;
   line-height: 1.5;

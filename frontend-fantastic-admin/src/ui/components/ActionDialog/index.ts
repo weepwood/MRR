@@ -1,4 +1,5 @@
 import { computed, shallowReactive } from 'vue'
+import { Z_INDEX } from '@/constants/z-index'
 
 /**
  * 确认/输入类弹窗的层级。
@@ -8,7 +9,7 @@ import { computed, shallowReactive } from 'vue'
  * 弹窗若用默认基数，会整块压在影像下面——看得见遮罩、看不见弹窗，按钮点不到。
  * 这里显式抬到页面浮层之上，但仍低于档案水印（4000，`pointer-events: none`）。
  */
-export const ACTION_DIALOG_Z_INDEX = 3200
+export const ACTION_DIALOG_Z_INDEX = Z_INDEX.actionDialog
 
 /** 提交前需要复核的单项变更，`before` 缺省时只显示结果值。 */
 export interface DialogDetail {

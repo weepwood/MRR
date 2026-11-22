@@ -110,21 +110,11 @@ function openPreview(value: string) {
   padding: var(--mrr-space-5);
   background: var(--mrr-card);
   border: 1px solid var(--mrr-border);
-  border-radius: var(--mrr-radius-xl);
+  border-radius: var(--mrr-radius-card);
 }
 
 .group-heading {
-  margin-bottom: var(--mrr-space-5);
-}
-
-.group-heading strong {
-  font-size: 15px;
-}
-
-.group-heading p {
-  margin: 4px 0 0;
-  font-size: 11px;
-  color: var(--mrr-muted-foreground);
+  margin-bottom: var(--mrr-space-4);
 }
 
 .documentation-list {
@@ -149,12 +139,14 @@ function openPreview(value: string) {
 }
 
 .item-heading strong {
-  font-size: 13px;
+  font-size: var(--mrr-font-size-sm);
+  font-weight: 600;
 }
 
 .item-heading p {
   margin: 4px 0 0;
-  font-size: 10px;
+  font-size: var(--mrr-font-size-xs);
+  line-height: 1.6;
   color: var(--mrr-muted-foreground);
 }
 
@@ -182,7 +174,8 @@ function openPreview(value: string) {
 }
 
 .route-example span {
-  font-size: 11px;
+  font-size: var(--mrr-font-size-xs);
+  line-height: 1.6;
   color: var(--mrr-muted-foreground);
 }
 

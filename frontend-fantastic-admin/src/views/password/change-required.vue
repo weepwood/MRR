@@ -186,12 +186,12 @@ async function logout() {
   }
 }
 .card-heading { margin: var(--mrr-space-5) 0; }
-.card-heading > span { font-size: 11px; font-weight: 750; color: var(--color-warning); text-transform: uppercase; letter-spacing: 0.1em; }
+.card-heading > span { font-size: var(--mrr-font-size-xs); font-weight: 750; color: var(--color-warning); text-transform: uppercase; letter-spacing: 0.1em; }
 .card-heading h1 { margin: var(--mrr-space-2) 0 0; font-size: clamp(25px, 4vw, 32px); letter-spacing: -0.03em; }
 .card-heading p { margin: var(--mrr-space-3) 0 0; font-size: 13px; line-height: 1.7; color: var(--mrr-muted-foreground); }
 .password-form { margin-top: var(--mrr-space-5); }
 .visibility-button { display: grid; padding: 4px; color: var(--mrr-muted-foreground); cursor: pointer; background: transparent; border: 0; place-items: center; }
-.strength-row { display: grid; grid-template-columns: 1fr auto; gap: 12px; align-items: center; width: 100%; margin-top: 8px; font-size: 11px; color: var(--mrr-muted-foreground); }
+.strength-row { display: grid; grid-template-columns: 1fr auto; gap: var(--mrr-space-3); align-items: center; width: 100%; margin-top: var(--mrr-space-2); font-size: var(--mrr-font-size-xs); color: var(--mrr-muted-foreground); }
 .password-rules { display: grid; gap: 4px; padding: var(--mrr-space-4); font-size: 12px; line-height: 1.6; color: var(--mrr-muted-foreground); background: var(--mrr-muted); border: 1px solid var(--mrr-border); border-radius: var(--mrr-radius-md); }
 .password-rules strong { color: var(--mrr-foreground); }
 .card-actions { display: flex; gap: var(--mrr-space-3); justify-content: flex-end; margin-top: var(--mrr-space-5); }

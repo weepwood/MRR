@@ -24,7 +24,7 @@ defineOptions({
   align-items: center;
   justify-content: space-between;
   height: var(--g-toolbar-height);
-  padding: 0 14px 0 16px;
+  padding: 0 var(--mrr-space-4);
   background: transparent;
   border-top: 1px solid var(--mrr-shell-divider);
 }

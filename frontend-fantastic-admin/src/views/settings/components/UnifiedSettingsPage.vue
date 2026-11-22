@@ -3,6 +3,7 @@ import type { SettingsSection } from '../composables/useUnifiedSettings'
 import type { SettingsSearchResult } from '../settings-search'
 import { computed, nextTick, onUnmounted, ref, useId, watch } from 'vue'
 import { onBeforeRouteLeave } from 'vue-router'
+import AppError from '@/components/AppError/index.vue'
 import { actionDialog } from '@/ui/components/ActionDialog'
 import { useUnifiedSettings } from '../composables/useUnifiedSettings'
 import AppConfigPanel from './AppConfigPanel.vue'
@@ -66,6 +67,8 @@ const {
   activeSection,
   activeMeta,
   loading,
+  loaded,
+  loadError,
   saving,
   settings,
   changedKeys,
@@ -369,7 +372,7 @@ onUnmounted(() => {
             System Settings
           </p>
           <div class="title-line">
-            <h2>系统设置</h2>
+            <h1>系统设置</h1>
             <el-tag v-if="settings.developerModeEnabled" type="danger" effect="dark" round>
               开发者模式已启用
             </el-tag>
@@ -383,7 +386,7 @@ onUnmounted(() => {
         <el-button :disabled="loading || saving" @click="handleReload">
           <FaIcon name="i-lucide:refresh-cw" class="mrr-icon-interactive" />重新加载
         </el-button>
-        <el-button :disabled="loading || saving" @click="handleReset">
+        <el-button :disabled="loading || saving || !loaded" @click="handleReset">
           <FaIcon name="i-lucide:rotate-cw" class="mrr-icon-interactive" />恢复默认
         </el-button>
         <el-button
@@ -442,9 +445,9 @@ onUnmounted(() => {
               <FaIcon :name="activeMeta.icon" aria-hidden="true" />
             </span>
             <div>
-              <h3 :id="sectionHeadingId" ref="sectionHeadingRef" tabindex="-1">
+              <h2 :id="sectionHeadingId" ref="sectionHeadingRef" tabindex="-1">
                 {{ activeMeta.title }}
-              </h3>
+              </h2>
               <p>{{ activeMeta.description }}</p>
             </div>
           </div>
@@ -459,7 +462,14 @@ onUnmounted(() => {
           :aria-labelledby="sectionHeadingId"
         >
           <div v-if="isServerSettingSection" v-loading="loading" class="system-panel">
-            <el-form :model="settings" label-position="top">
+            <!-- 首次读取失败时不展示回退值表单，避免把本地缓存或默认值当作服务器配置保存（DESIGN.md §5.1）。 -->
+            <AppError
+              v-if="!loaded && loadError"
+              :message="`${loadError}，表单暂不显示，以免把本地缓存或默认值当作服务器配置保存。`"
+              retry-text="重新加载"
+              @retry="handleReload"
+            />
+            <el-form v-else :model="settings" label-position="top">
               <SystemInfoSettings v-if="activeSection === 'system'" v-model="settings" />
               <LoginSupportSettings v-else-if="activeSection === 'login-support'" v-model="settings" />
               <DocumentationSettings v-else-if="activeSection === 'documentation'" v-model="settings" />
@@ -570,14 +580,35 @@ onUnmounted(() => {
   min-width: 0;
 }
 
-.section-header h3:focus,
+.section-header h2:focus,
 .settings-content :deep([data-settings-search-target]:focus) {
   outline: 2px solid var(--mrr-primary);
   outline-offset: 3px;
 }
 
-.section-header h3,
+.section-header h2,
 .settings-content :deep([data-settings-search-target]) {
   scroll-margin-top: calc(var(--g-header-actual-height, 0px) + var(--g-toolbar-actual-height, 0px) + var(--g-tabbar-actual-height, 0px) + var(--mrr-space-4));
+}
+
+/*
+ * 分组卡标题（系统标识、登录页展示、OCR 引擎…）：此前 7 个设置分区各写一份
+ * 15px 标题 + 11px 说明。统一为业务页分区卡（MrrSectionCard）同一档：14px / 650，
+ * 说明 12px —— 设置页的分组卡与业务页的分区卡是同一层级，读起来应当一样。
+ * 间距（margin-bottom）仍由各分区决定，部分分区有局部变体。
+ */
+.settings-content :deep(.group-heading strong) {
+  display: block;
+  font-size: var(--mrr-font-size-md);
+  font-weight: 650;
+  line-height: 1.4;
+  color: var(--mrr-card-foreground);
+}
+
+.settings-content :deep(.group-heading p) {
+  margin: var(--mrr-space-1) 0 0;
+  font-size: var(--mrr-font-size-xs);
+  line-height: 1.6;
+  color: var(--mrr-muted-foreground);
 }
 </style>

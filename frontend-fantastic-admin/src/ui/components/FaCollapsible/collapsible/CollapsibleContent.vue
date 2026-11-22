@@ -17,11 +17,11 @@ const props = defineProps<CollapsibleContentProps>()
 }
 
 .CollapsibleContent[data-state="open"] {
-  animation: collapsible-down 300ms ease-out;
+  animation: collapsible-down var(--mrr-motion-move) var(--mrr-ease-out);
 }
 
 .CollapsibleContent[data-state="closed"] {
-  animation: collapsible-up 300ms ease-out;
+  animation: collapsible-up var(--mrr-motion-move) var(--mrr-ease-in);
 }
 
 @keyframes collapsible-down {

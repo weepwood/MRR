@@ -53,6 +53,45 @@ html[data-mrr-palette="gr8r"] {
   --mrr-shadow-dialog: var(--mrr-shadow-md);
 }
 
+/* ===== 3.1 Element Plus 未桥接的中性令牌 ===== */
+
+/*
+ * element-plus-overrides.css 只桥接了常用的 bg / text / border / fill-light，
+ * 其余中性令牌仍是 Element Plus 自带的冷灰（#F0F2F5、#A8ABB2、#DCDFE6 …）。
+ * MRR 经典本身就是冷灰，看不出来；暖色主题下它们会在暖白卡片上露出蓝灰色块：
+ * AppLoading 骨架的 shimmer 高光、AppEmpty / 图表空态图标、开关关闭态轨道、
+ * 进度条底轨、禁用文字等。这里全部改指既有 --mrr-* 令牌，跟随明暗自动切换。
+ *
+ * 选择器追加 :root 提高到 (0,2,1)：Element Plus 暗色变量挂在 html.dark (0,1,1)，
+ * 按需样式又晚于本文件注入，同权重时会反盖这里。
+ */
+html[data-mrr-palette="gr8r"]:root {
+  --el-fill-color: var(--mrr-secondary);
+  --el-fill-color-dark: var(--mrr-border);
+  --el-fill-color-darker: var(--mrr-border-strong);
+  --el-fill-color-extra-light: var(--mrr-muted);
+  --el-border-color-dark: var(--mrr-border-strong);
+  --el-border-color-darker: var(--mrr-border-strong);
+  --el-border-color-extra-light: var(--mrr-border);
+  --el-border-color-hover: var(--mrr-control-border-hover);
+  --el-text-color-placeholder: var(--color-text-placeholder);
+  --el-text-color-disabled: var(--color-text-placeholder);
+
+  /* 气泡提示、下拉等 Element Plus 内部投影改用暖色投影令牌，与卡片/对话框同一套层级。 */
+  --el-box-shadow: var(--mrr-shadow-md);
+  --el-box-shadow-light: var(--mrr-shadow-sm);
+  --el-box-shadow-lighter: var(--mrr-shadow-xs);
+  --el-box-shadow-dark: var(--mrr-shadow-lg);
+}
+
+/*
+ * 顶栏吸顶后的投影原为写死的冷色 rgb(15 23 42 / 6%)（组件内 scoped 样式），
+ * 暖色主题下换成调色板写入的暖色投影；暗色沿用组件自身的中性黑投影，不在此覆盖。
+ */
+html[data-mrr-palette="gr8r"] .topbar-container.mask {
+  box-shadow: var(--mrr-shadow-sm);
+}
+
 /* ===== 4. 按钮 ===== */
 
 /*
@@ -61,11 +100,16 @@ html[data-mrr-palette="gr8r"] {
  * 之前两族各写一套（el 12.5px / Fa 14px），同一条工具栏里立刻能看出两种字号。
  */
 html[data-mrr-palette="gr8r"] {
-  --mrr-button-font-size: 12.5px;
+  /*
+   * 字号回到 13px 整数档：12.5px 在 Windows 100% 缩放（医院终端的常见配置）下
+   * 中文字形会落在半像素上，ClearType 渲染发虚、笔画粗细不一。
+   * 密度由 30px 控件高与 11px 内边距承担，字号不再参与压缩。
+   */
+  --mrr-button-font-size: 13px;
   --mrr-button-padding-x: 11px;
   --mrr-button-font-size-sm: 12px;
   --mrr-button-padding-x-sm: 9px;
-  --mrr-button-font-size-lg: 13.5px;
+  --mrr-button-font-size-lg: 14px;
   --mrr-button-padding-x-lg: 16px;
 
   /* text / link 的左右留白两族都收在 8px，扁平风格里文字按钮不该有横向余量。 */
@@ -199,12 +243,17 @@ html[data-mrr-palette="gr8r"] .el-textarea__inner:focus {
 /*
  * 表头从「灰底块」改为同色底 + 加粗字与下边框，这是扁平表格的典型处理：
  * 表头与数据不再被一块深灰切开，扫读时视线连续。
+ *
+ * 行悬停改用 --mrr-secondary（抬高表面）：此前与表头同用 --mrr-muted，
+ * 亮色下对白底只有 1.08:1、暗色 1.08:1，逐行核对病案时悬停行几乎看不出来；
+ * 抬高表面为 1.15:1 / 1.23:1，仍属「安静」的底色差，但视线能跟住当前行。
+ * 正文字号回到 13px 整数档（原因同按钮）。
  */
 html[data-mrr-palette="gr8r"] body .el-table {
   --el-table-header-bg-color: var(--mrr-muted);
-  --el-table-row-hover-bg-color: var(--mrr-muted);
+  --el-table-row-hover-bg-color: var(--mrr-secondary);
 
-  font-size: 12.5px;
+  font-size: var(--mrr-font-size-sm);
 }
 
 html[data-mrr-palette="gr8r"] .el-table th.el-table__cell {
@@ -223,20 +272,22 @@ html[data-mrr-palette="gr8r"] .el-table td.el-table__cell {
 
 /* 行悬停只换底色、不叠加描边，避免逐行核对时出现网格噪点。 */
 html[data-mrr-palette="gr8r"] .el-table--enable-row-hover .el-table__body tr:hover > td.el-table__cell {
-  background: var(--mrr-muted);
+  background: var(--mrr-secondary);
 }
 
 /* ===== 7. 标签与状态胶囊 ===== */
 
 /*
- * 柔和底 + 无描边 + 5px 圆角：状态是「色块」，不是「按钮」。
+ * 柔和底 + 无描边 + 小圆角：状态是「色块」，不是「按钮」。
  * 语义色仍来自 tones.css / Element Plus 的 light-9，切主题不会丢失语义。
+ * 圆角原为写死的 5px，「全局圆角」滑块对标签失效；改为 radius-sm 再收 2px，
+ * 默认档仍是 5px，滑块拉到 0 时与其他控件一起变成直角。
  */
 html[data-mrr-palette="gr8r"] .el-tag {
   min-height: 20px;
   padding-inline: 7px;
   font-size: 12px;
-  border-radius: 5px;
+  border-radius: max(0px, calc(var(--mrr-radius-sm) - 2px));
 }
 
 html[data-mrr-palette="gr8r"] .el-tag.el-tag--light,
@@ -256,8 +307,21 @@ html[data-mrr-palette="gr8r"] .mrr-section-card {
 }
 
 html[data-mrr-palette="gr8r"] .mrr-section-card .el-card__header {
-  padding: 13px 16px;
+  /*
+   * 纵向收紧到 12px，左右仍走 --mrr-card-inset：此前写死 16px，卡头标题比
+   * 表格面板的筛选区、表体、分页（20px）缩进少 4px，堆叠后左缘出现锯齿，
+   * 违反「标题、字段、表格外沿落在同一条竖线」的留白规则。
+   * 本规则权重高于组件 scoped 样式，窄屏档必须在这里一起声明，否则 ≤760px 时不会收窄。
+   */
+  padding: var(--mrr-space-3) var(--mrr-card-inset);
   background: var(--mrr-card);
+}
+
+@media (max-width: 760px) {
+  html[data-mrr-palette="gr8r"] .mrr-section-card .el-card__header {
+    padding-right: var(--mrr-card-inset-compact);
+    padding-left: var(--mrr-card-inset-compact);
+  }
 }
 
 html[data-mrr-palette="gr8r"] .mrr-metric-card {
@@ -287,7 +351,9 @@ html[data-mrr-palette="gr8r"] .el-dialog__body {
 
 html[data-mrr-palette="gr8r"] .el-dialog__footer {
   padding: 12px 20px;
-  background: var(--mrr-card);
+
+  /* 跟随对话框自身的浮层表面：暗色浮层比卡面亮一档，用卡面色会在底部切出一条深色带。 */
+  background: var(--mrr-popover);
 }
 
 /* ===== 10. 分段控件与选项卡 ===== */

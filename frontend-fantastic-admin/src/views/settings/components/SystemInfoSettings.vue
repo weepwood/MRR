@@ -35,10 +35,8 @@ const settings = defineModel<EffectiveSystemSettings>({ required: true })
 
 <style scoped>
 .setting-section { display: grid; gap: var(--mrr-space-5); }
-.setting-group { padding: var(--mrr-space-5); background: var(--mrr-card); border: 1px solid var(--mrr-border); border-radius: var(--mrr-radius-xl); }
-.group-heading { margin-bottom: var(--mrr-space-5); }
-.group-heading strong { font-size: 15px; }
-.group-heading p { margin: 4px 0 0; font-size: 11px; color: var(--mrr-muted-foreground); }
+.setting-group { padding: var(--mrr-space-5); background: var(--mrr-card); border: 1px solid var(--mrr-border); border-radius: var(--mrr-radius-card); }
+.group-heading { margin-bottom: var(--mrr-space-4); }
 .control-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--mrr-space-4); }
 
 @media (max-width: 680px) { .control-grid { grid-template-columns: 1fr; } }

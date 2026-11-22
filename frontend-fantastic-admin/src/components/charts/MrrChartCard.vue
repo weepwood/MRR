@@ -39,7 +39,7 @@ withDefaults(defineProps<{
 
 <style scoped>
 .mrr-chart-card__summary {
-  margin-bottom: 14px;
+  margin-bottom: var(--mrr-space-3);
 }
 
 .mrr-chart-card__body {

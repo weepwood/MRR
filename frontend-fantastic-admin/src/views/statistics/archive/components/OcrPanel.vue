@@ -3,6 +3,7 @@ import type { OcrFact } from '@/api/modules/ocr'
 import { ElMessage } from 'element-plus'
 import { computed, ref, watch } from 'vue'
 import { cancelOcrJob, createOcrJob, getOcrFact, getOcrJobs } from '@/api/modules/ocr'
+import { Z_INDEX } from '@/constants/z-index'
 import useAuth from '@/utils/composables/useAuth'
 import { useOcrJob } from '../composables/useOcrJob'
 import ClassificationReview from './ClassificationReview.vue'
@@ -83,7 +84,7 @@ watch(() => job.value?.status, (status) => {
 </script>
 
 <template>
-  <el-config-provider :z-index="3100">
+  <el-config-provider :z-index="Z_INDEX.ocrDrawer">
     <el-button v-if="auth('ocr:read')" size="small" @click="open = true">
       识别文字
     </el-button>

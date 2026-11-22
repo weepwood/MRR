@@ -56,7 +56,7 @@
   border: 1px solid var(--mrr-border);
   border-radius: var(--mrr-radius-card);
   box-shadow: var(--mrr-shadow-xs);
-  transition: border-color var(--mrr-motion-feedback) ease, box-shadow var(--mrr-motion-feedback) ease;
+  transition: border-color var(--mrr-motion-feedback) var(--mrr-ease-out), box-shadow var(--mrr-motion-feedback) var(--mrr-ease-out);
 }
 
 .mrr-metric-card:focus-within {
@@ -68,7 +68,7 @@
   position: relative;
   z-index: 1;
   display: grid;
-  grid-template-columns: 52px minmax(0, 1fr);
+  grid-template-columns: 44px minmax(0, 1fr);
   gap: var(--mrr-space-4);
   align-items: center;
   min-height: calc(var(--mrr-summary-min-height) - 2px);
@@ -78,13 +78,18 @@
 .mrr-metric-card__icon {
   display: grid;
   place-items: center;
-  width: 52px;
-  height: 52px;
-  font-size: 26px;
+
+  /*
+   * 图标块 52 → 44px、字形 26 → 22px：原尺寸与 26px 主值同高，图标与数字抢第一眼；
+   * 收小后视线先落在数值上，图标只做类别提示。圆角同步降一档，与 44px 尺寸成比例。
+   */
+  width: 44px;
+  height: 44px;
+  font-size: 22px;
   color: var(--mrr-metric-accent);
   background: color-mix(in srgb, var(--mrr-metric-accent) 9%, var(--mrr-card));
   border: 1px solid color-mix(in srgb, var(--mrr-metric-accent) 18%, transparent);
-  border-radius: var(--mrr-radius-xl);
+  border-radius: var(--mrr-radius-lg);
 }
 
 .mrr-metric-card__icon .el-icon {
@@ -102,7 +107,7 @@
 
 /* 值下方的附加内容（进度条、状态标签等），与 note 保持一致的节奏。 */
 .mrr-metric-card__extra {
-  margin-top: 10px;
+  margin-top: var(--mrr-space-3);
 }
 
 .mrr-metric-card__label {
@@ -214,14 +219,14 @@
   }
 
   .mrr-metric-card:not(.mrr-metric-card--no-icon) .el-card__body {
-    grid-template-columns: 46px minmax(0, 1fr);
+    grid-template-columns: 40px minmax(0, 1fr);
   }
 
   .mrr-metric-card__icon {
-    width: 46px;
-    height: 46px;
-    font-size: 23px;
-    border-radius: var(--mrr-radius-card);
+    width: 40px;
+    height: 40px;
+    font-size: 20px;
+    border-radius: var(--mrr-radius-lg);
   }
 }
 

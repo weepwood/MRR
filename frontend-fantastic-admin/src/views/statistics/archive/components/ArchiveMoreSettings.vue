@@ -317,7 +317,7 @@ const mouseGestures: { keys: string[], label: string }[] = [
 
 .archive-more-settings {
   display: grid;
-  gap: 14px;
+  gap: var(--mrr-space-3);
 }
 
 .settings-heading,
@@ -378,7 +378,7 @@ const mouseGestures: { keys: string[], label: string }[] = [
 
 .shortcut-row {
   display: flex;
-  gap: 10px;
+  gap: var(--mrr-space-3);
   align-items: center;
   justify-content: space-between;
 }
@@ -391,7 +391,7 @@ const mouseGestures: { keys: string[], label: string }[] = [
 
 .shortcut-keys kbd {
   min-width: 22px;
-  padding: 2px 7px;
+  padding: 2px var(--mrr-space-2);
   font-family: inherit;
   font-size: 11px;
   color: var(--text-primary);
@@ -411,7 +411,7 @@ const mouseGestures: { keys: string[], label: string }[] = [
 
 .shortcut-group-title {
   margin-top: 2px;
-  font-size: 11px;
+  font-size: var(--mrr-font-size-xs);
   color: var(--text-tertiary);
 }
 </style>

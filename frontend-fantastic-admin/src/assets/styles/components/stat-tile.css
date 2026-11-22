@@ -1,0 +1,94 @@
+/*
+ * 卡片内摘要数字条：`.mrr-stat-strip` > `.mrr-stat-tile`
+ *
+ * 与 `MrrMetricCard` 的分工：指标卡是页面级、带图标的独立卡片；摘要块坐在某张卡片
+ * 内部（图表卡的 #summary、分区卡正文顶部），只给「标签 + 数值」两行。
+ *
+ * 此前扫描统计（.trend-summary）与数据质量（.quality-summary）各写一套：
+ * 标签 11px / 13px、数值 18px / 20px、圆角 card / lg、底色 color-mix / fill-lighter，
+ * 同一类信息在两个页面看起来像两套系统。现在统一成一份，页面只选列数。
+ *
+ * 底色用实色令牌 --mrr-muted，不依赖 color-mix()，Chrome 86 无需回退分支。
+ */
+.mrr-stat-strip {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: var(--mrr-space-3);
+  min-width: 0;
+}
+
+/* 列数固定的变体：与上方表格或图表列宽对齐时使用，避免 auto-fit 在中等宽度掉成 3+1。 */
+.mrr-stat-strip--3 {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.mrr-stat-strip--4 {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.mrr-stat-tile {
+  display: grid;
+  gap: var(--mrr-space-1);
+  align-content: start;
+  min-width: 0;
+  padding: var(--mrr-space-3) var(--mrr-space-4);
+  background: var(--mrr-muted);
+  border: 1px solid var(--mrr-border);
+  border-radius: var(--mrr-radius-lg);
+}
+
+.mrr-stat-tile__label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-size: var(--mrr-font-size-xs);
+  font-weight: 550;
+  line-height: 1.4;
+  color: var(--mrr-muted-foreground);
+  white-space: nowrap;
+}
+
+.mrr-stat-tile__value {
+  font-size: 20px;
+  font-weight: 650;
+  font-variant-numeric: tabular-nums;
+  line-height: 1.25;
+  color: var(--mrr-foreground);
+  letter-spacing: -0.02em;
+  overflow-wrap: anywhere;
+}
+
+/* 文本类数值（时间、状态）不需要大字号，避免长日期把卡片撑成两行。 */
+.mrr-stat-tile__value--text {
+  font-size: var(--mrr-font-size-md);
+  font-weight: 550;
+  letter-spacing: 0;
+}
+
+/* 语义色只作用于数值本身，与指标卡 `__value--*` 同一规则。 */
+.mrr-stat-tile__value--danger {
+  color: var(--mrr-tone-danger);
+}
+
+.mrr-stat-tile__value--warning {
+  color: var(--mrr-tone-warning);
+}
+
+.mrr-stat-tile__value--success {
+  color: var(--mrr-tone-success);
+}
+
+@media (max-width: 1100px) {
+  .mrr-stat-strip--4 {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 600px) {
+  .mrr-stat-strip--3 {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .mrr-stat-tile {
+    padding: var(--mrr-space-2) var(--mrr-space-3);
+  }
+}

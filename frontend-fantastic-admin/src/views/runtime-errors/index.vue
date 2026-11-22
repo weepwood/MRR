@@ -308,7 +308,9 @@ function levelTagType(level: string) {
         <el-table-column prop="lastSeenAt" label="最后发生" min-width="175">
           <template #default="{ row }">{{ formatDateTime(row.lastSeenAt) }}</template>
         </el-table-column>
-        <el-table-column prop="errorId" label="错误编号" min-width="190" show-overflow-tooltip />
+        <el-table-column prop="errorId" label="错误编号" min-width="190" show-overflow-tooltip>
+          <template #default="{ row }"><span class="detail-code runtime-errors__id">{{ row.errorId || '-' }}</span></template>
+        </el-table-column>
         <el-table-column prop="level" label="级别" width="90">
           <template #default="{ row }">
             <el-tag :type="levelTagType(row.level)">{{ row.level }}</el-tag>
@@ -327,7 +329,7 @@ function levelTagType(level: string) {
           </template>
         </el-table-column>
         <el-table-column prop="requestId" label="Request ID" min-width="155" show-overflow-tooltip>
-          <template #default="{ row }">{{ row.requestId || '-' }}</template>
+          <template #default="{ row }"><span class="detail-code runtime-errors__id">{{ row.requestId || '-' }}</span></template>
         </el-table-column>
         <el-table-column prop="occurrenceCount" label="次数" width="90" align="right" />
         <el-table-column prop="recent24hCount" label="近24h" width="90" align="right">
@@ -403,8 +405,8 @@ function levelTagType(level: string) {
 .detail-links {
   display: flex;
   flex-wrap: wrap;
-  gap: 8px;
-  margin-bottom: 12px;
+  gap: var(--mrr-space-2);
+  margin-bottom: var(--mrr-space-3);
 }
 
 /* 指标卡与模块名都承担「点击筛选」交互，外观退成卡片但语义是按钮。 */
@@ -415,12 +417,27 @@ function levelTagType(level: string) {
   cursor: pointer;
   background: transparent;
   border: 0;
-  border-radius: var(--mrr-radius-md, 8px);
+
+  /* 与内部指标卡同半径，焦点轮廓才会贴合卡片外形（原用 md，比卡片小一档，四角露出缝）。 */
+  border-radius: var(--mrr-radius-card);
 }
 
 .metric-action:focus-visible {
   outline: 2px solid var(--el-color-primary);
   outline-offset: 2px;
+}
+
+/*
+ * 可点击的指标卡要有悬停反馈（DESIGN.md §2.7：可点击卡片悬停升一档阴影并加深描边，不靠位移）；
+ * 原来三张能点、一张不能点，外观完全相同，用户无从分辨。
+ */
+.metric-action :deep(.mrr-metric-card) {
+  transition: border-color var(--mrr-motion-feedback) var(--mrr-ease-out), box-shadow var(--mrr-motion-feedback) var(--mrr-ease-out);
+}
+
+.metric-action:hover :deep(.mrr-metric-card) {
+  border-color: var(--mrr-border-strong);
+  box-shadow: var(--mrr-shadow-sm);
 }
 
 .module-filter {
@@ -437,6 +454,17 @@ function levelTagType(level: string) {
   text-decoration: underline;
 }
 
+/* 原来只有悬停态，键盘聚焦时没有任何可见变化（DESIGN.md §5.2）。 */
+.module-filter:focus-visible {
+  outline: 2px solid var(--el-color-primary);
+  outline-offset: 2px;
+  border-radius: max(0px, calc(var(--mrr-radius-sm) - 2px));
+}
+
+.runtime-errors__id {
+  font-size: var(--mrr-font-size-xs);
+}
+
 .detail-code {
   /* 统一走等宽令牌：Windows 上 Consolas 无汉字，令牌里排了中文回退，避免落到宋体。 */
   font-family: var(--mrr-font-mono);
@@ -451,13 +479,13 @@ function levelTagType(level: string) {
   box-sizing: border-box;
   max-height: 420px;
   margin: 0;
-  padding: 12px;
+  padding: var(--mrr-space-3);
   overflow: auto;
   border-radius: var(--mrr-radius-md);
   background: var(--el-fill-color-light);
   color: var(--el-text-color-primary);
   font-family: var(--mrr-font-mono);
-  font-size: 12px;
+  font-size: var(--mrr-font-size-xs);
   line-height: 1.6;
   white-space: pre-wrap;
   word-break: break-word;

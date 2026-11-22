@@ -75,6 +75,120 @@ function scanInteractionTransforms() {
   return violations
 }
 
+function walkSources(extensions: RegExp, visit: (rel: string, text: string) => void) {
+  const walk = (dir: string) => {
+    for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+      if (entry.name === 'node_modules' || entry.name.startsWith('.') || entry.name === '__tests__') {
+        continue
+      }
+      const full = path.join(dir, entry.name)
+      if (entry.isDirectory()) {
+        walk(full)
+        continue
+      }
+      if (!extensions.test(entry.name) || /\.(?:test|d)\.ts$/.test(entry.name)) {
+        continue
+      }
+      visit(path.relative(srcRoot, full).replace(/\\/g, '/'), fs.readFileSync(full, 'utf8'))
+    }
+  }
+  walk(srcRoot)
+}
+
+/** 只取样式：.css 全文，.vue 取 <style> 之后；去掉注释，避免注释里的示例被当成违规。 */
+function styleText(rel: string, text: string) {
+  const source = rel.endsWith('.vue') ? text.slice(Math.max(0, text.indexOf('<style'))) : text
+  return rel.endsWith('.vue') && !text.includes('<style') ? '' : source.replace(/\/\*[\s\S]*?\*\//g, '')
+}
+
+const MOTION_DECLARATION = /(?<![\w-])(transition|animation)(-timing-function|-duration)?\s*:([^;{}]+);/g
+/** 去掉 var(...)（含一层嵌套括号），剩下的才是写死的字面量。 */
+const stripVars = (value: string) => value.replace(/var\([^()]*(?:\([^()]*\)[^()]*)*\)/g, '')
+
+/**
+ * 允许写死时长的条目，必须写明理由。
+ * 关闭信号（0s / 0ms / ≤1ms）不在此列，由规则直接放行。
+ */
+const LITERAL_DURATION_ALLOWLIST = new Set([
+  // 刷新图标的一次性整圈旋转：按 loop（1s）显得拖沓，按 overlay（220ms）看不清旋转方向。
+  'assets/styles/motion.css · animation: mrr-icon-spin 700ms both;',
+])
+
+function scanMotionLiterals() {
+  const easing: string[] = []
+  const durations: string[] = []
+  walkSources(/\.(?:vue|css)$/, (rel, text) => {
+    if (rel === 'assets/styles/tokens.css') {
+      return
+    }
+    for (const match of styleText(rel, text).matchAll(MOTION_DECLARATION)) {
+      const [declaration, property] = match
+      const literal = stripVars(match[3])
+      const normalized = declaration.replace(/\s+/g, ' ').trim()
+      // 无限循环（呼吸灯、加载点）允许对称的 ease-in-out；linear 永远允许。
+      const loop = property === 'animation' && /\binfinite\b/.test(literal)
+      if (!loop && /(?<![\w-])(?:ease|ease-in|ease-out|ease-in-out)(?![\w-])|cubic-bezier\(/.test(literal)) {
+        easing.push(`${rel} · ${normalized}`)
+      }
+      for (const [, amount, unit] of literal.matchAll(/(?<![\w.(-])(\d+(?:\.\d+)?|\.\d+)(ms|s)(?![\w-])/g)) {
+        const ms = Number(amount) * (unit === 's' ? 1000 : 1)
+        const key = `${rel} · ${stripVars(normalized).replace(/\s+/g, ' ').replace(/ ;/, ';')}`
+        if (ms > 1 && !LITERAL_DURATION_ALLOWLIST.has(key)) {
+          durations.push(key)
+        }
+      }
+    }
+  })
+  return { easing, durations }
+}
+
+/** Vue <Transition> 的类名对象（enterActiveClass 等）与模板 class 里的 UnoCSS 过渡类。 */
+function scanUnoTransitionClasses() {
+  const violations: string[] = []
+  walkSources(/\.(?:vue|ts)$/, (rel, text) => {
+    const script = rel.endsWith('.vue') ? text.slice(0, Math.max(0, text.indexOf('<style')) || text.length) : text
+    for (const match of script.matchAll(/(?:enter|leave)ActiveClass:\s*'([^']*)'/g)) {
+      for (const cls of match[1].split(/\s+/).filter(Boolean)) {
+        if (/^duration-\d+$/.test(cls) || /^ease-(?:in|out|in-out|linear)$/.test(cls)) {
+          violations.push(`${rel} · ${cls}`)
+        }
+      }
+    }
+    for (const match of script.matchAll(/(?<![\w-])transition-all(?![\w-])/g)) {
+      violations.push(`${rel} · ${match[0]}`)
+    }
+  })
+  return violations
+}
+
+describe('动效字面量只引用令牌', () => {
+  it('过渡与动画的曲线只用 --mrr-ease-*（linear 与无限循环除外）', () => {
+    expect(scanMotionLiterals().easing).toEqual([])
+  })
+
+  it('过渡与动画的时长只用 --mrr-motion-*（0 与 ≤1ms 的关闭信号除外）', () => {
+    expect(scanMotionLiterals().durations).toEqual([])
+  })
+
+  it('uno 过渡类用 duration-mrr-* / ease-mrr-* 令牌别名，不用 transition-all', () => {
+    expect(scanUnoTransitionClasses()).toEqual([])
+  })
+
+  it('uno 令牌别名指向 tokens.css 的变量', () => {
+    const uno = fs.readFileSync(path.resolve(srcRoot, '../uno.config.ts'), 'utf8')
+    for (const [alias, token] of [
+      ['mrr-press', '--mrr-motion-press'],
+      ['mrr-feedback', '--mrr-motion-feedback'],
+      ['mrr-move', '--mrr-motion-move'],
+      ['mrr-overlay', '--mrr-motion-overlay'],
+      ['mrr-out', '--mrr-ease-out'],
+      ['mrr-in', '--mrr-ease-in'],
+    ]) {
+      expect(uno).toContain(`'${alias}': 'var(${token})'`)
+    }
+  })
+})
+
 describe('动效令牌与关闭策略', () => {
   it('令牌只在 tokens.css 定义一份', () => {
     for (const token of [

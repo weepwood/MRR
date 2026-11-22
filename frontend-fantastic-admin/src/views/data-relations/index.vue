@@ -25,6 +25,7 @@ import {
 } from '@/api/modules/data-relations'
 import AppEmpty from '@/components/AppEmpty/index.vue'
 import AppError from '@/components/AppError/index.vue'
+import AppLoading from '@/components/AppLoading/index.vue'
 import MrrFilterActionButton from '@/components/MrrFilterActionButton/index.vue'
 import MrrSectionCard from '@/components/MrrSectionCard/index.vue'
 import MrrStatusTag from '@/components/MrrStatusTag/index.vue'
@@ -350,7 +351,8 @@ onMounted(loadDashboard)
 
     <el-tabs v-model="activeTab" class="workbench-tabs">
       <el-tab-pane label="关系总览" name="overview">
-        <div v-loading="overviewLoading" class="overview-stack">
+        <AppLoading v-if="overviewLoading && !overview" type="card" :cols="3" />
+        <div v-else v-loading="overviewLoading" class="overview-stack">
           <section class="relation-grid">
             <el-card
               v-for="relation in overview?.relations ?? []"
@@ -394,15 +396,7 @@ onMounted(loadDashboard)
             </el-card>
           </section>
 
-          <el-card shadow="never" class="section-card">
-            <template #header>
-              <div class="card-header">
-                <div>
-                  <strong>关联检查结果</strong>
-                  <span>最近一次运行中与 archive_id、孤立数据和编号冲突相关的检查</span>
-                </div>
-              </div>
-            </template>
+          <MrrSectionCard class="section-card" title="关联检查结果" description="最近一次运行中与 archive_id、孤立数据和编号冲突相关的检查">
             <el-table :data="overview?.relationChecks ?? []" stripe empty-text="尚无关联检查结果">
               <el-table-column label="检查项" min-width="260">
                 <template #default="{ row }">
@@ -428,7 +422,7 @@ onMounted(loadDashboard)
                 </template>
               </el-table-column>
             </el-table>
-          </el-card>
+          </MrrSectionCard>
 
           <el-alert
             v-for="note in overview?.notes ?? []"
@@ -470,15 +464,7 @@ onMounted(loadDashboard)
             </div>
           </MrrSectionCard>
 
-          <el-card v-if="searchResults.length" shadow="never" class="section-card">
-            <template #header>
-              <div class="card-header">
-                <div>
-                  <strong>病案主档候选</strong>
-                  <span>精确匹配优先；仅前导零差异标记为格式差异（FORMAT_ONLY）</span>
-                </div>
-              </div>
-            </template>
+          <MrrSectionCard v-if="searchResults.length" class="section-card" title="病案主档候选" description="精确匹配优先；仅前导零差异标记为格式差异（FORMAT_ONLY）">
             <el-table :data="searchResults" highlight-current-row @row-click="openArchive">
               <el-table-column prop="id" label="主档 ID" width="120" />
               <el-table-column prop="bah" label="病案号（BAH）" min-width="150" />
@@ -501,7 +487,7 @@ onMounted(loadDashboard)
                 </template>
               </el-table-column>
             </el-table>
-          </el-card>
+          </MrrSectionCard>
           <AppError v-else-if="searchError" message="病案查询失败，请重试" @retry="searchArchives" />
           <AppEmpty v-else-if="searchCompleted && !searchLoading" icon="i-lucide:search-x" description="当前条件未找到病案主档" />
 
@@ -514,7 +500,7 @@ onMounted(loadDashboard)
               <el-card shadow="never" class="section-card archive-header-card">
                 <div class="archive-header">
                   <div>
-                    <span>病案主档 #{{ relationDetail.archive.id }}</span>
+                    <span class="archive-header__id">病案主档 #{{ relationDetail.archive.id }}</span>
                     <h3>{{ relationDetail.archive.patientName || '未记录患者姓名' }}</h3>
                     <p>
                       病案号（BAH）：{{ relationDetail.archive.bah || '—' }} ·
@@ -528,22 +514,28 @@ onMounted(loadDashboard)
                 </div>
               </el-card>
 
-              <section class="relation-count-grid">
-                <el-card shadow="never">
-                  <span>统计记录</span><strong>{{ relationDetail.statistics.length }}</strong>
-                </el-card>
-                <el-card shadow="never">
-                  <span>患者记录</span><strong>{{ relationDetail.patients.length }}</strong>
-                </el-card>
-                <el-card shadow="never">
-                  <span>装箱记录</span><strong>{{ relationDetail.boxes.length }}</strong>
-                </el-card>
-                <el-card shadow="never">
-                  <span>有效扫描</span><strong>{{ formatNumber(relationDetail.scanSummary.activeCount) }}</strong>
-                </el-card>
-                <el-card shadow="never">
-                  <span>未关联候选扫描</span><strong>{{ formatNumber(relationDetail.scanSummary.unlinkedCandidateCount) }}</strong>
-                </el-card>
+              <!-- 五个计数只是关系概况，用卡内摘要块；原来是五张带外框的 el-card，与下方真正的分区卡同一层级。 -->
+              <section class="relation-count-grid mrr-stat-strip" aria-label="关联记录数">
+                <div class="mrr-stat-tile">
+                  <span class="mrr-stat-tile__label">统计记录</span>
+                  <strong class="mrr-stat-tile__value">{{ relationDetail.statistics.length }}</strong>
+                </div>
+                <div class="mrr-stat-tile">
+                  <span class="mrr-stat-tile__label">患者记录</span>
+                  <strong class="mrr-stat-tile__value">{{ relationDetail.patients.length }}</strong>
+                </div>
+                <div class="mrr-stat-tile">
+                  <span class="mrr-stat-tile__label">装箱记录</span>
+                  <strong class="mrr-stat-tile__value">{{ relationDetail.boxes.length }}</strong>
+                </div>
+                <div class="mrr-stat-tile">
+                  <span class="mrr-stat-tile__label">有效扫描</span>
+                  <strong class="mrr-stat-tile__value">{{ formatNumber(relationDetail.scanSummary.activeCount) }}</strong>
+                </div>
+                <div class="mrr-stat-tile">
+                  <span class="mrr-stat-tile__label">未关联候选扫描</span>
+                  <strong class="mrr-stat-tile__value">{{ formatNumber(relationDetail.scanSummary.unlinkedCandidateCount) }}</strong>
+                </div>
               </section>
 
               <el-alert
@@ -555,15 +547,7 @@ onMounted(loadDashboard)
                 show-icon
               />
 
-              <el-card shadow="never" class="section-card">
-                <template #header>
-                  <div class="card-header">
-                    <div>
-                      <strong>跨表字段对比</strong>
-                      <span>区分完全一致、仅前导零差异、字段缺失和真实冲突</span>
-                    </div>
-                  </div>
-                </template>
+              <MrrSectionCard class="section-card" title="跨表字段对比" description="区分完全一致、仅前导零差异、字段缺失和真实冲突">
                 <el-table :data="relationDetail.comparisons" stripe>
                   <el-table-column prop="field" label="字段" width="120" />
                   <el-table-column prop="canonicalValue" label="mr_archive" min-width="150" />
@@ -575,7 +559,7 @@ onMounted(loadDashboard)
                     </template>
                   </el-table-column>
                 </el-table>
-              </el-card>
+              </MrrSectionCard>
 
               <el-tabs class="detail-tabs" type="border-card">
                 <el-tab-pane :label="`统计记录 (${relationDetail.statistics.length})`">
@@ -630,15 +614,9 @@ onMounted(loadDashboard)
 
       <el-tab-pane label="检查与异常" name="quality">
         <div class="quality-stack">
-          <el-card shadow="never" class="section-card">
-            <template #header>
-              <div class="card-header">
-                <div>
-                  <strong>检查规则结果</strong>
-                  <span>关联、编号、文件元数据、重复扫描和迁移一致性</span>
-                </div>
-                <MrrStatusTag v-if="qualitySummary?.running" label="检查运行中" tone="warning" />
-              </div>
+          <MrrSectionCard class="section-card" title="检查规则结果" description="关联、编号、文件元数据、重复扫描和迁移一致性">
+            <template #actions>
+              <MrrStatusTag v-if="qualitySummary?.running" label="检查运行中" tone="warning" />
             </template>
             <el-table :data="checks" stripe empty-text="尚未执行数据质量检查">
               <el-table-column label="规则" min-width="280">
@@ -670,23 +648,17 @@ onMounted(loadDashboard)
                 </template>
               </el-table-column>
             </el-table>
-          </el-card>
+          </MrrSectionCard>
 
-          <el-card shadow="never" class="section-card">
-            <template #header>
-              <div class="issue-header">
-                <div>
-                  <strong>异常样本</strong>
-                  <span>当前显示最近一次检查保存的有界样本，不直接返回全量异常</span>
-                </div>
-                <div class="issue-filters">
-                  <el-select v-model="issueSeverity" aria-label="异常级别筛选" class="severity-select">
-                    <el-option label="全部级别" value="ALL" />
-                    <el-option label="严重" value="CRITICAL" />
-                    <el-option label="警告" value="WARNING" />
-                  </el-select>
-                  <el-input v-model="issueKeyword" aria-label="异常关键字筛选" clearable placeholder="筛选规则、表、BAH 或 SJH" />
-                </div>
+          <MrrSectionCard class="section-card" title="异常样本" description="当前显示最近一次检查保存的有界样本，不直接返回全量异常">
+            <template #actions>
+              <div class="issue-filters">
+                <el-select v-model="issueSeverity" aria-label="异常级别筛选" class="severity-select">
+                  <el-option label="全部级别" value="ALL" />
+                  <el-option label="严重" value="CRITICAL" />
+                  <el-option label="警告" value="WARNING" />
+                </el-select>
+                <el-input v-model="issueKeyword" aria-label="异常关键字筛选" clearable placeholder="筛选规则、表、BAH 或 SJH" />
               </div>
             </template>
             <el-table :data="filteredIssues" stripe empty-text="当前没有异常样本">
@@ -726,7 +698,7 @@ onMounted(loadDashboard)
                 </template>
               </el-table-column>
             </el-table>
-          </el-card>
+          </MrrSectionCard>
         </div>
       </el-tab-pane>
     </el-tabs>
@@ -777,20 +749,16 @@ onMounted(loadDashboard)
   min-width: 0;
 }
 
-.card-header,
-.issue-header,
 .issue-filters,
 .search-row,
 .archive-header,
 .relation-card__header,
 .coverage-row {
   display: flex;
-  gap: 12px;
+  gap: var(--mrr-space-3);
   align-items: center;
 }
 
-.card-header,
-.issue-header,
 .archive-header,
 .relation-card__header,
 .coverage-row {
@@ -806,11 +774,7 @@ p {
 .relation-grid,
 .relation-count-grid {
   display: grid;
-  gap: 16px;
-}
-
-.relation-count-grid span {
-  color: var(--el-text-color-secondary);
+  gap: var(--mrr-space-4);
 }
 
 .relation-card small {
@@ -828,7 +792,7 @@ p {
 .preview-content {
   display: grid;
   grid-template-columns: minmax(0, 1fr);
-  gap: 16px;
+  gap: var(--mrr-space-4);
   min-width: 0;
 }
 
@@ -841,43 +805,43 @@ p {
   border-radius: var(--mrr-radius-card);
 }
 
-.relation-card__header > div,
-.card-header > div,
-.issue-header > div:first-child {
+.relation-card__header > div {
   display: grid;
-  gap: 4px;
+  gap: var(--mrr-space-1);
 }
 
 .relation-card code,
 .muted-code {
-  font-size: 12px;
+  font-size: var(--mrr-font-size-xs);
   color: var(--el-text-color-secondary);
 }
 
 .relation-card p {
   min-height: 42px;
-  margin: 16px 0;
+  margin: var(--mrr-space-4) 0;
   color: var(--el-text-color-secondary);
 }
 
 .coverage-row strong {
   font-size: 24px;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.02em;
 }
 
 .relation-card dl {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(96px, 1fr));
-  gap: 12px;
-  margin: 16px 0;
+  gap: var(--mrr-space-3);
+  margin: var(--mrr-space-4) 0;
 }
 
 .relation-card dl div {
   display: grid;
-  gap: 4px;
+  gap: var(--mrr-space-1);
 }
 
 .relation-card dt {
-  font-size: 12px;
+  font-size: var(--mrr-font-size-xs);
   color: var(--el-text-color-secondary);
 }
 
@@ -906,7 +870,7 @@ p {
 }
 
 .search-field label {
-  font-size: 12px;
+  font-size: var(--mrr-font-size-xs);
   font-weight: 600;
   color: var(--mrr-foreground);
 }
@@ -932,13 +896,22 @@ p {
   color: var(--mrr-muted-foreground);
 }
 
+/* 当前对象的强调条与 OSS 迁移「当前任务」卡同宽（3px），两处语义相同：这张卡是当前焦点对象。 */
 .archive-header-card {
-  border-left: 4px solid var(--el-color-primary);
+  border-left: 3px solid var(--el-color-primary);
+}
+
+.archive-header__id {
+  font-family: var(--mrr-font-mono);
+  font-size: var(--mrr-font-size-xs);
+  color: var(--el-text-color-secondary);
 }
 
 .archive-header h3 {
-  margin: 4px 0;
-  font-size: 22px;
+  margin: var(--mrr-space-1) 0;
+  font-size: var(--mrr-font-size-title-compact);
+  font-weight: 650;
+  line-height: 1.3;
 }
 
 .archive-header p {
@@ -950,27 +923,8 @@ p {
   grid-template-columns: repeat(5, minmax(0, 1fr));
 }
 
-.relation-count-grid :deep(.el-card__body) {
-  display: grid;
-  gap: 6px;
-}
-
-.relation-count-grid strong {
-  font-size: 22px;
-}
-
 .detail-tabs {
   border-radius: var(--mrr-radius-card);
-}
-
-.issue-header {
-  flex-wrap: wrap;
-  align-items: flex-start;
-}
-
-.issue-header > div:first-child {
-  flex: 1 1 240px;
-  min-width: 0;
 }
 
 .issue-filters {
@@ -986,9 +940,9 @@ p {
 }
 
 .preview-content pre {
-  padding: 12px;
+  padding: var(--mrr-space-3);
   overflow: auto;
-  font-size: 12px;
+  font-size: var(--mrr-font-size-xs);
   line-height: 1.6;
   background: var(--el-fill-color-light);
   border-radius: var(--mrr-radius-md);
@@ -1005,7 +959,6 @@ p {
 }
 
 @media (max-width: 760px) {
-  .issue-header,
   .issue-filters,
   .search-row {
     flex-direction: column;
@@ -1022,7 +975,6 @@ p {
     width: 100%;
   }
 
-  .issue-header > div:first-child,
   .issue-filters,
   .issue-filters .el-input {
     flex: 0 1 auto;

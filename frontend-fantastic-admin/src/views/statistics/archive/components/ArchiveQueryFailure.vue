@@ -133,7 +133,7 @@ async function copyTrace() {
 <style scoped>
 .query-failure {
   display: grid;
-  gap: 10px;
+  gap: var(--mrr-space-3);
   padding: 12px;
   background: var(--surface);
   border: 1px solid var(--divider);
@@ -150,7 +150,7 @@ async function copyTrace() {
 
 .query-failure-head {
   display: flex;
-  gap: 10px;
+  gap: var(--mrr-space-3);
   align-items: flex-start;
 }
 
@@ -256,7 +256,7 @@ async function copyTrace() {
   background: transparent;
   border: 0;
   border-radius: var(--mrr-radius-sm);
-  transition: color var(--mrr-motion-feedback) ease, background-color var(--mrr-motion-feedback) ease;
+  transition: color var(--mrr-motion-feedback) var(--mrr-ease-out), background-color var(--mrr-motion-feedback) var(--mrr-ease-out);
 }
 
 .trace-copy:hover {

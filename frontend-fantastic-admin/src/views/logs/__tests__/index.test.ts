@@ -56,7 +56,7 @@ const stubs = {
   'AppError': { props: ['message'], template: '<div class="query-error">{{ message }}</div>' },
   'AppLoading': { props: ['type'], template: '<div class="loading" />' },
   'MrrPageShell': { template: '<div><slot /></div>' },
-  'MrrPageHeader': { template: '<div class="page-header"><slot name="actions" /></div>' },
+  'MrrPageHeader': { template: '<div class="page-header"><slot name="meta" /><slot name="actions" /></div>' },
   'MrrDataTablePanel': { template: '<section class="panel"><slot name="filters" /><slot /><slot name="pagination" /></section>' },
   'MrrFilterBar': { template: '<div class="filter-bar"><slot /><slot name="actions" /></div>' },
   'MrrFilterActionButton': { props: ['action'], template: '<button :data-action="action" @click="$emit(\'click\')"><slot /></button>' },

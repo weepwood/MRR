@@ -12,6 +12,8 @@ from scripts.ci_build_scope import needs_release_build
 from scripts.frontend_test_scope import classify_paths as frontend_scope
 
 JOBS = ('frontend', 'backend', 'integration', 'windows', 'recovery', 'release', 'development')
+PAGES_DEMO_SMOKE_WORKFLOW = '.github/workflows/deploy-pages-demo.yml'
+PAGES_DEMO_STYLE_SUFFIXES = ('.css', '.scss', '.sass', '.less', '.pcss')
 DEVELOPMENT_INPUTS = {
     'docker-compose.yml', '.dockerignore', 'backend-repo/Dockerfile', 'frontend-fantastic-admin/Dockerfile',
     'backend-repo/pom.xml', 'backend-repo/mvnw', 'backend-repo/mvnw.cmd',
@@ -29,6 +31,13 @@ DEVELOPMENT_INPUTS = {
 def classify_paths(paths, mode='pr') -> dict[str, bool]:
     paths = [p.strip().replace('\\', '/').removeprefix('./') for p in paths if p.strip()]
     frontend, backend = frontend_scope(paths), backend_scope(paths)
+    pages_demo_smoke = any(
+        path in (PAGES_DEMO_SMOKE_WORKFLOW, 'VERSION', 'release-baseline.json')
+        or (path.startswith('frontend-fantastic-admin/')
+            and not path.lower().endswith('.md')
+            and not path.lower().endswith(PAGES_DEMO_STYLE_SUFFIXES))
+        for path in paths
+    )
     database_tools = any(p.startswith('mrr-db/') and not p.lower().endswith('.md') for p in paths)
     recovery = any(p.startswith('deploy/windows/') and any(word in p.lower() for word in ('backup', 'restore', 'database'))
                    or p.startswith('scripts/test_windows_') and 'recovery' in p
@@ -40,6 +49,7 @@ def classify_paths(paths, mode='pr') -> dict[str, bool]:
     scope = dict(development=development, frontend=frontend.frontend_changed, backend=backend.backend_changed or live or recovery or database_tools,
                  build=frontend.build_changed, postgres=backend.integration_changed or database_tools or live,
                  e2e=False,
+                 pages_demo_smoke=pages_demo_smoke,
                  integration=live,
                  live=live, windows=any(p.startswith('deploy/windows/') or p in ('scripts/dev.ps1', 'scripts/dev.py') for p in paths),
                  recovery=recovery, release=needs_release_build(paths),

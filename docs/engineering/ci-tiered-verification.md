@@ -24,6 +24,8 @@ PR 的 frontend job 并行执行类型检查与全量单测，任一失败即失
 
 PR 上的集成 job 只在前端确有改动时执行前端检查与构建（`integration_frontend`）；仅后端身份/导入类改动不再重复构建未改动的前端。main 集成与完整发布验收始终构建并嵌入前端。
 
+Pages 演示工作流在 PR 上按改动范围选择：仅修改前端样式文件（CSS/SCSS/Sass/Less/PCSS）或 Markdown 时跳过 Pages 构建与 Chromium 冒烟；混有任何前端行为、组件、配置或测试代码时保留完整演示冒烟。`VERSION`、`release-baseline.json` 和 Pages workflow 本身也保留冒烟，因为它们会影响演示构建或验证流程。范围输出缺失或非法时继续运行冒烟；范围 job 自身失败仍会使 workflow 失败。main push 与手动调度仍始终构建、冒烟并按原条件部署。
+
 Service 保守进入 PostgreSQL 范围，因为仅凭路径无法证明没有事务或 SQL 影响。风险选择不读取作者的 P3 标签来减少检查。未运行的测试不能作为成功证据。
 
 复用 `frontend_test_scope.py`、`backend_test_scope.py`；`ci_gate.py` 统一编排两者和 Windows/真实链路范围。git diff 关闭重命名折叠，删除、重命名前后的路径均参与分类。`pr-gate` 使用 always() 检查每个实际选中的 job，失败、取消、输出缺失或意外跳过均拒绝。整个必需 workflow 不使用顶层 paths 过滤。

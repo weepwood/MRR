@@ -46,6 +46,16 @@ class CiBuildReuseTest(unittest.TestCase):
         real_e2e = package.split("- name: Real login, import, query and refusal", 1)[1]
         self.assertIn("if: inputs.full || inputs.live_checks", real_e2e)
 
+    def test_pages_demo_pr_job_is_skipped_for_style_only_changes(self):
+        workflow = (ROOT / ".github/workflows/deploy-pages-demo.yml").read_text(encoding="utf-8")
+        self.assertIn("pages_demo_smoke: ${{ steps.select.outputs.pages_demo_smoke }}", workflow)
+        self.assertIn("if: always() && (github.event_name != 'pull_request' || needs.scope.outputs.pages_demo_smoke != 'false')",
+                      workflow)
+        self.assertIn("python3 scripts/ci_gate.py scope --mode pr", workflow)
+        scope = workflow.split("  build:", 1)[0]
+        self.assertIn("fetch-depth: 0", scope)
+        self.assertNotIn("ref: ${{ github.event.pull_request.head.sha }}", scope)
+
     def test_pr_integration_skips_frontend_only_when_nothing_consumes_it(self):
         quality = (ROOT / ".github/workflows/quality-gate.yml").read_text(encoding="utf-8")
         self.assertIn("integration_frontend: ${{ steps.scope.outputs.integration_frontend }}", quality)

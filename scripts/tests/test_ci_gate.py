@@ -66,6 +66,35 @@ class CiGateTest(unittest.TestCase):
             self.assertTrue(scope['frontend'])
             self.assertFalse(any(scope[key] for key in ('build', 'backend', 'live', 'postgres', 'windows', 'recovery', 'release')))
 
+    def test_pages_demo_smoke_skips_only_pure_styles_and_docs(self):
+        scope = classify_paths([
+            'frontend-fantastic-admin/src/assets/styles/tokens.css',
+            'frontend-fantastic-admin/src/assets/styles/components/forms.scss',
+            'frontend-fantastic-admin/DESIGN.md',
+        ])
+        self.assertTrue(scope['frontend'])
+        self.assertFalse(scope['pages_demo_smoke'])
+
+    def test_pages_demo_smoke_runs_for_behavior_and_configuration_changes(self):
+        for path in (
+            'frontend-fantastic-admin/src/router/guards.ts',
+            'frontend-fantastic-admin/src/views/users/index.vue',
+            'frontend-fantastic-admin/.env.pages.example',
+            'frontend-fantastic-admin/e2e/smoke-pages-demo.mjs',
+            '.github/workflows/deploy-pages-demo.yml',
+            'VERSION',
+            'release-baseline.json',
+        ):
+            with self.subTest(path=path):
+                self.assertTrue(classify_paths([path])['pages_demo_smoke'])
+
+    def test_pages_demo_smoke_fails_closed_when_behavior_and_styles_are_mixed(self):
+        scope = classify_paths([
+            'frontend-fantastic-admin/src/assets/styles/tokens.css',
+            'frontend-fantastic-admin/src/router/guards.ts',
+        ])
+        self.assertTrue(scope['pages_demo_smoke'])
+
     def test_build_dependencies_require_production_build(self):
         scope = classify_paths(['frontend-fantastic-admin/pnpm-lock.yaml'])
         self.assertTrue(scope['frontend'])

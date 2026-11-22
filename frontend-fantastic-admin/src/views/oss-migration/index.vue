@@ -35,6 +35,8 @@ import {
   uploadToOss,
 } from '@/api/modules/oss'
 import MrrFilterActionButton from '@/components/MrrFilterActionButton/index.vue'
+import MrrPageHeader from '@/components/MrrPageHeader/index.vue'
+import MrrPageShell from '@/components/MrrPageShell/index.vue'
 import MrrTableActions from '@/components/MrrTableActions/index.vue'
 import { useTableActionLayout } from '@/composables/useTableActionLayout'
 import { actionDialog } from '@/ui/components/ActionDialog'
@@ -854,18 +856,13 @@ onMounted(() => {
 </script>
 
 <template>
-  <div v-loading="loading.page" class="page-shell">
-    <header class="page-header">
-      <div>
-        <p class="eyebrow">
-          OSS Migration Control
-        </p>
-        <h2>OSS 迁移管理</h2>
-        <p class="subtitle">
-          统一通过 Nginx 获取原图，按上架号分组上传；缺少上架号的记录保留等待补齐。
-        </p>
-      </div>
-      <div class="page-actions">
+  <MrrPageShell v-loading="loading.page" class="oss-migration-page">
+    <MrrPageHeader
+      eyebrow="OSS Migration Control"
+      title="OSS 迁移管理"
+      description="统一通过 Nginx 获取原图，按上架号分组上传；缺少上架号的记录保留等待补齐。"
+    >
+      <template #actions>
         <div class="refresh-state">
           <span>最后刷新：{{ formatDate(lastUpdatedAt) }}</span>
           <el-switch
@@ -882,8 +879,8 @@ onMounted(() => {
         >
           刷新全部
         </el-button>
-      </div>
-    </header>
+      </template>
+    </MrrPageHeader>
 
     <el-alert
       v-if="!isMigrationStarted"
@@ -1547,19 +1544,12 @@ onMounted(() => {
         </el-descriptions>
       </div>
     </el-drawer>
-  </div>
+  </MrrPageShell>
 </template>
 
 <style scoped>
-.page-shell {
-  display: grid;
-  gap: 18px;
-}
-
-.page-header,
 .card-header,
 .section-header,
-.page-actions,
 .header-actions,
 .result-meta,
 .facts,
@@ -1571,7 +1561,6 @@ onMounted(() => {
   align-items: center;
 }
 
-.page-header,
 .card-header,
 .section-header,
 .record-actions {
@@ -1579,38 +1568,19 @@ onMounted(() => {
   justify-content: space-between;
 }
 
-.page-header h2,
 .card-header p,
 .section-header p,
-.subtitle,
-.eyebrow,
 .disabled-reason {
   margin: 0;
 }
 
-.page-header h2 {
-  margin-top: 4px;
-  font-size: 26px;
-}
-
-.eyebrow {
-  font-size: 12px;
-  font-weight: 700;
-  color: var(--el-color-primary);
-  text-transform: uppercase;
-  letter-spacing: 0.12em;
-}
-
-.subtitle,
 .card-header p,
 .section-header p,
-.refresh-state,
 .disabled-reason {
   margin-top: 6px;
   color: var(--el-text-color-secondary);
 }
 
-.page-actions,
 .header-actions,
 .result-meta,
 .facts,
@@ -1622,19 +1592,17 @@ onMounted(() => {
   gap: 12px;
 }
 
-.page-actions {
-  justify-content: flex-end;
-}
-
+/* 位于页头操作区内：与相邻按钮垂直居中，不再带 6px 上边距。 */
 .refresh-state {
   justify-content: flex-end;
   font-size: 12px;
+  color: var(--mrr-muted-foreground);
 }
 
 .primary-grid {
   display: grid;
   grid-template-columns: minmax(0, 1.3fr) minmax(340px, 0.7fr);
-  gap: 18px;
+  gap: var(--mrr-page-gap);
 }
 
 .check-grid {
@@ -1760,7 +1728,6 @@ onMounted(() => {
     grid-template-columns: 1fr;
   }
 
-  .page-header,
   .card-header,
   .section-header,
   .record-actions {
@@ -1768,7 +1735,6 @@ onMounted(() => {
     align-items: flex-start;
   }
 
-  .page-actions,
   .manual-bah {
     width: 100%;
   }

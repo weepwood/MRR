@@ -95,6 +95,12 @@ function selectHistory(item: ArchiveSearchHistoryItem) {
   emit('search')
 }
 
+// 与 --mrr-motion-move / overlay 档位对齐（WAAPI 读不到 CSS 变量，这里写同值常量）。
+const FAVORITE_PRESS_MS = 180
+const FAVORITE_BURST_MS = 220
+const FAVORITE_BURST_DELAY_MS = 90
+const FAVORITE_EASING = 'cubic-bezier(0.22, 1, 0.36, 1)'
+
 function animateFavorite(button: HTMLButtonElement) {
   if (!isMotionEnabled()) {
     return
@@ -103,13 +109,15 @@ function animateFavorite(button: HTMLButtonElement) {
   const icon = button.querySelector<SVGSVGElement>('.bookmark-icon')
   const bookmark = button.querySelector<HTMLElement>('.bookmark')
 
+  // 收藏反馈：书签先压缩再回弹（不越过原尺寸），光圈紧接着扩散。
+  // 原实现光圈要等 300ms 才出现，总长 600ms，点击后有明显的「慢半拍」。
   icon?.animate([
     { transform: 'scaleY(1)' },
-    { transform: 'scaleY(0.6)', offset: 0.5 },
+    { transform: 'scaleY(0.7)', offset: 0.5 },
     { transform: 'scaleY(1)' },
   ], {
-    duration: 300,
-    easing: 'cubic-bezier(0.16, 1, 0.3, 1)',
+    duration: FAVORITE_PRESS_MS,
+    easing: FAVORITE_EASING,
   })
 
   const circleSize = getComputedStyle(button).getPropertyValue('--icon-circle-size').trim() || '35px'
@@ -118,9 +126,9 @@ function animateFavorite(button: HTMLButtonElement) {
     { width: circleSize, height: circleSize, opacity: 1, transform: 'translate(-50%, -50%)', offset: 0.9 },
     { opacity: 0, transform: 'translate(-50%, -50%)' },
   ], {
-    duration: 300,
-    delay: 300,
-    easing: 'cubic-bezier(0.16, 1, 0.3, 1)',
+    duration: FAVORITE_BURST_MS,
+    delay: FAVORITE_BURST_DELAY_MS,
+    easing: FAVORITE_EASING,
     fill: 'forwards',
     pseudoElement: '::before',
   })
@@ -129,9 +137,9 @@ function animateFavorite(button: HTMLButtonElement) {
     { transform: 'translate(-50%, -50%) scale(0.8)', opacity: 1, offset: 0.4 },
     { transform: 'translate(-50%, -50%) scale(0.8)', opacity: 0 },
   ], {
-    duration: 300,
-    delay: 300,
-    easing: 'cubic-bezier(0.16, 1, 0.3, 1)',
+    duration: FAVORITE_BURST_MS,
+    delay: FAVORITE_BURST_DELAY_MS,
+    easing: FAVORITE_EASING,
     fill: 'forwards',
     pseudoElement: '::after',
   })
@@ -619,7 +627,7 @@ onUnmounted(() => {
   height: var(--icon-size);
   fill: var(--icon-secondary-color);
   transform-origin: top;
-  transition: fill 0.2s, transform 0.2s;
+  transition: fill var(--mrr-motion-feedback) ease, transform var(--mrr-motion-move) var(--mrr-ease-out);
 }
 
 .bookmark::after {

@@ -968,7 +968,7 @@ onMounted(() => {
   padding: 14px;
   margin: 0;
   overflow: auto;
-  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-family: var(--mrr-font-mono);
   font-size: 12px;
   line-height: 1.65;
   word-break: break-all;

@@ -7,19 +7,23 @@ export const lightTheme = {
   '--card-foreground': '222.2 84% 4.9%',
   '--popover': '0 0% 100%',
   '--popover-foreground': '222.2 84% 4.9%',
-  '--primary': '201 96% 32%',
-  '--primary-foreground': '210 40% 98%',
+  // 首帧默认值：与 tokens.css 的 --color-primary（#2563EB）一致。运行时 theme-color.ts 会按
+  // 用户主色覆盖；此前这里是 201 96% 32%（青蓝），JS 接管前的首帧按钮、链接与焦点环会闪一下色相。
+  '--primary': '221.2 83.2% 53.3%',
+  '--primary-foreground': '0 0% 100%',
   '--secondary': '210 40% 96.1%',
   '--secondary-foreground': '222.2 47.4% 11.2%',
   '--muted': '210 40% 96.1%',
-  '--muted-foreground': '215.4 16.3% 46.9%',
+  // 次要文字在工作区底（#F1F5F9）上原为 4.34:1，低于 WCAG AA 4.5:1；加深到 4.87:1（卡面 5.34:1）。
+  '--muted-foreground': '215.4 19% 44%',
   '--accent': '210 40% 96.1%',
   '--accent-foreground': '222.2 47.4% 11.2%',
-  '--destructive': '0 84.2% 60.2%',
-  '--destructive-foreground': '210 40% 98%',
+  // 与 --color-danger（#D13C3C）一致。原 #EF4444 作为表单错误文字在白底上只有 3.76:1。
+  '--destructive': '0 61.8% 52.7%',
+  '--destructive-foreground': '0 0% 100%',
   '--border': '214.3 31.8% 91.4%',
   '--input': '214.3 31.8% 91.4%',
-  '--ring': '201 96% 32%',
+  '--ring': '221.2 83.2% 53.3%',
   // 主要区域
   '--g-main-area-bg': 'hsl(210 40% 96%)',
   // 头部
@@ -65,19 +69,22 @@ export const darkTheme = {
   '--card-foreground': '216 28% 95%',
   '--popover': '222 22% 14%',
   '--popover-foreground': '0 0% 98%',
-  '--primary': '0 0% 98%',
-  '--primary-foreground': '240 5.9% 10%',
+  // 暗色首帧同样使用品牌蓝。原值是 shadcn 默认的近白色：JS 接管前 FaButton 主按钮是白底黑字，
+  // 而 Element Plus 主按钮是蓝底，两套按钮在暗色下首帧颜色完全不同。
+  '--primary': '221.2 83.2% 53.3%',
+  '--primary-foreground': '0 0% 100%',
   '--secondary': '220 20% 18%',
   '--secondary-foreground': '0 0% 98%',
   '--muted': '220 20% 18%',
   '--muted-foreground': '215 16% 70%',
   '--accent': '220 20% 18%',
   '--accent-foreground': '0 0% 98%',
-  '--destructive': '0 62.8% 30.6%',
-  '--destructive-foreground': '0 0% 98%',
+  // 原 #7F1D1D 在暗色卡面上只有 1.7:1，注册/改密表单的错误提示几乎看不见；提亮到 5.7:1。
+  '--destructive': '0 80% 68%',
+  '--destructive-foreground': '222 28% 9%',
   '--border': '218 18% 25%',
   '--input': '218 18% 25%',
-  '--ring': '240 4.9% 83.9%',
+  '--ring': '221.2 83.2% 53.3%',
   // 主要区域
   '--g-main-area-bg': 'hsl(var(--background))',
   // 头部

@@ -65,7 +65,7 @@ const hasHeader = computed(() => Boolean(
 }
 
 .mrr-section-card :deep(.el-card__header) {
-  padding: 15px 18px;
+  padding: var(--mrr-space-4) var(--mrr-card-inset);
   background: color-mix(in srgb, var(--mrr-muted) 18%, var(--mrr-card));
   border-bottom-color: var(--mrr-border);
 }
@@ -79,7 +79,7 @@ const hasHeader = computed(() => Boolean(
 }
 
 .mrr-section-card--padding-normal :deep(.el-card__body) {
-  padding: 18px;
+  padding: var(--mrr-card-inset);
 }
 
 .mrr-section-card__header {
@@ -94,7 +94,7 @@ const hasHeader = computed(() => Boolean(
 .mrr-section-card__heading {
   display: flex;
   flex: 1 1 260px;
-  gap: 10px;
+  gap: var(--mrr-space-3);
   align-items: center;
   min-width: 0;
 }
@@ -152,6 +152,17 @@ const hasHeader = computed(() => Boolean(
 
 .mrr-section-card__actions :deep(.el-button + .el-button) {
   margin-left: 0;
+}
+
+/* 与 MrrDataTablePanel 同一断点收窄留白，避免 641–760px 区间卡头与表体错位。 */
+@media (max-width: 760px) {
+  .mrr-section-card :deep(.el-card__header) {
+    padding: var(--mrr-space-3) var(--mrr-card-inset-compact);
+  }
+
+  .mrr-section-card--padding-normal :deep(.el-card__body) {
+    padding: var(--mrr-card-inset-compact);
+  }
 }
 
 @media (max-width: 640px) {

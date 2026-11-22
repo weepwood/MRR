@@ -129,7 +129,7 @@ onBeforeUnmount(() => {
   justify-content: center;
   min-height: 78px;
   padding: 12px 14px;
-  transition: background-color 180ms ease, border-color 180ms ease, box-shadow 180ms ease;
+  transition: background-color var(--mrr-motion-feedback) ease, border-color var(--mrr-motion-feedback) ease, box-shadow var(--mrr-motion-feedback) ease;
 }
 
 .department-themed-archive :deep(.folder-code-block-full) {

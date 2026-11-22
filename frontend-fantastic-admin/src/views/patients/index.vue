@@ -2,7 +2,6 @@
 import type { PatientRecord } from '@/api/modules/patients'
 import type { MrrTableAction } from '@/components/MrrTableActions/types'
 import type { EffectiveSystemSettings } from '@/utils/system-settings'
-import { ElMessage } from 'element-plus'
 import { RefreshCw as Refresh, Search, Upload } from 'lucide-vue-next'
 import { computed, onMounted, onUnmounted, reactive, ref } from 'vue'
 import { useRouter } from 'vue-router'
@@ -18,6 +17,7 @@ import MrrPageShell from '@/components/MrrPageShell/index.vue'
 import MrrTableActions from '@/components/MrrTableActions/index.vue'
 import { useTableActionLayout } from '@/composables/useTableActionLayout'
 import useAuth from '@/utils/composables/useAuth'
+import { copyText as copyToClipboard } from '@/utils/copy-text'
 import { loadEffectiveSystemSettings, SYSTEM_SETTINGS_UPDATED_EVENT } from '@/utils/system-settings'
 import PatientAnalyticsPanel from './components/PatientAnalyticsPanel.vue'
 import PatientEditDialog from './components/PatientEditDialog.vue'
@@ -153,13 +153,7 @@ async function handleIdCardClick(value?: string) {
     return
   }
 
-  try {
-    await navigator.clipboard.writeText(value)
-    ElMessage.success('身份证号已复制')
-  }
-  catch {
-    ElMessage.error('身份证号复制失败')
-  }
+  await copyToClipboard(value, { success: '身份证号已复制' })
 }
 
 function applyIdCardSettings(settings: EffectiveSystemSettings) {
@@ -217,7 +211,7 @@ onUnmounted(() => {
           :count="loading || error ? undefined : total"
         >
           <template #filters>
-            <MrrFilterBar embedded class="mrr-filter-bar--labelled">
+            <MrrFilterBar embedded labelled>
               <div class="mrr-filter-field patient-keyword">
                 <label for="patients-keyword">关键词</label>
                 <el-input

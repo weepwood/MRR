@@ -1,7 +1,7 @@
 <script setup lang="ts">
-import { ElMessage } from 'element-plus'
 import ScanQueryDiagnostics from '@/components/ScanQueryDiagnostics/index.vue'
 import useAuth from '@/utils/composables/useAuth'
+import { copyText as copyToClipboard } from '@/utils/copy-text'
 
 defineOptions({ name: 'ArchiveQueryFailure' })
 
@@ -69,13 +69,7 @@ async function copyTrace() {
   if (!props.requestId) {
     return
   }
-  try {
-    await navigator.clipboard.writeText(props.requestId)
-    ElMessage.success('追踪编号已复制')
-  }
-  catch {
-    ElMessage.info('复制失败，请选中追踪编号后按 Ctrl+C')
-  }
+  await copyToClipboard(props.requestId, { success: '追踪编号已复制' })
 }
 </script>
 

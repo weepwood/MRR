@@ -14,9 +14,12 @@ import AppEmpty from '@/components/AppEmpty/index.vue'
 import AppError from '@/components/AppError/index.vue'
 import AppLoading from '@/components/AppLoading/index.vue'
 import MrrFilterActionButton from '@/components/MrrFilterActionButton/index.vue'
+import MrrPageHeader from '@/components/MrrPageHeader/index.vue'
+import MrrPageShell from '@/components/MrrPageShell/index.vue'
 import MrrTableActions from '@/components/MrrTableActions/index.vue'
 import { useTableActionLayout } from '@/composables/useTableActionLayout'
 import { rangePickerPopperOptions } from '@/ui/provider/picker-options'
+import { copyText as copyToClipboard } from '@/utils/copy-text'
 import { downloadBlob } from '@/utils/file-download'
 import { formatMedicalRecordCode } from '@/utils/medical-record-code'
 import { getRequestErrorMessage } from '@/utils/request-error-message'
@@ -152,13 +155,7 @@ function formatDate(value: unknown) {
 }
 
 async function copyCode(text: string, label: string, originalText?: string) {
-  try {
-    await navigator.clipboard.writeText(text)
-    ElMessage.success(`${label} ${originalText || text} 已复制`)
-  }
-  catch {
-    ElMessage.error('复制失败')
-  }
+  await copyToClipboard(text, { success: `${label} ${originalText || text} 已复制` })
 }
 
 function archiveKey(item: ArchiveItem, index = 0) {
@@ -427,18 +424,13 @@ onBeforeUnmount(() => {
 </script>
 
 <template>
-  <div class="page-shell">
-    <div class="page-header">
-      <div>
-        <p class="eyebrow">
-          Archive Detail
-        </p>
-        <h2>病案明细档案袋</h2>
-        <p class="subtitle">
-          统一查看患者、住院、归档与扫描信息，支持筛选、排序、影像查看和整袋下载。
-        </p>
-      </div>
-      <div class="header-actions">
+  <MrrPageShell class="statistics-detail-page">
+    <MrrPageHeader
+      eyebrow="Archive Detail"
+      title="病案明细档案袋"
+      description="统一查看患者、住院、归档与扫描信息，支持筛选、排序、影像查看和整袋下载。"
+    >
+      <template #actions>
         <el-button :icon="Download" @click="handleExportCsv">
           导出 CSV
         </el-button>
@@ -448,8 +440,8 @@ onBeforeUnmount(() => {
         <el-button :icon="DataBoard" @click="goBackToStatistics">
           返回统计
         </el-button>
-      </div>
-    </div>
+      </template>
+    </MrrPageHeader>
 
     <section class="mrr-metric-grid">
       <MrrMetricCard v-for="item in summaryCards" :key="item.label" v-bind="item" />
@@ -656,49 +648,10 @@ onBeforeUnmount(() => {
         </div>
       </div>
     </section>
-  </div>
+  </MrrPageShell>
 </template>
 
 <style scoped>
-.page-shell {
-  display: grid;
-  gap: 20px;
-}
-
-.page-header {
-  display: flex;
-  gap: 16px;
-  align-items: flex-start;
-  justify-content: space-between;
-}
-
-.header-actions {
-  display: flex;
-  flex-shrink: 0;
-  flex-wrap: wrap;
-  gap: 10px;
-  justify-content: flex-end;
-}
-
-.eyebrow {
-  margin: 0 0 6px;
-  font-size: 12px;
-  font-weight: 700;
-  color: var(--text-secondary);
-  text-transform: uppercase;
-  letter-spacing: 0.12em;
-}
-
-h2 {
-  margin: 0;
-  font-size: 28px;
-}
-
-.subtitle {
-  margin: 8px 0 0;
-  color: var(--text-secondary);
-}
-
 .panel-header {
   display: flex;
   gap: 12px;
@@ -829,7 +782,7 @@ h2 {
   cursor: pointer;
   outline: none;
   isolation: isolate;
-  transition: z-index 0s linear 0.24s;
+  transition: z-index 0s linear var(--mrr-motion-move);
 }
 
 .archive-folder-card:hover,
@@ -843,7 +796,7 @@ h2 {
   pointer-events: none;
   border: 1px solid color-mix(in srgb, var(--folder-accent) 22%, var(--divider));
   border-radius: var(--mrr-radius-xl);
-  transition: transform 0.24s ease, border-color 0.24s ease, box-shadow 0.24s ease;
+  transition: transform var(--mrr-motion-move) var(--mrr-ease-out), border-color var(--mrr-motion-feedback) ease, box-shadow var(--mrr-motion-feedback) ease;
 }
 
 .folder-layer-back {
@@ -871,7 +824,7 @@ h2 {
   border: 1px solid var(--divider);
   border-radius: var(--mrr-radius-xl);
   box-shadow: 0 7px 20px rgb(15 23 42 / 6%);
-  transition: transform 0.24s ease, border-color 0.24s ease, box-shadow 0.24s ease, background-color 0.24s ease;
+  transition: transform var(--mrr-motion-move) var(--mrr-ease-out), border-color var(--mrr-motion-feedback) ease, box-shadow var(--mrr-motion-feedback) ease, background-color var(--mrr-motion-feedback) ease;
 }
 
 .folder-card-body::before {
@@ -886,7 +839,7 @@ h2 {
   opacity: 0.34;
   transform: scaleX(0.42);
   transform-origin: center;
-  transition: opacity 0.24s ease, transform 0.24s ease;
+  transition: opacity var(--mrr-motion-move) var(--mrr-ease-out), transform var(--mrr-motion-move) var(--mrr-ease-out);
 }
 
 .folder-card-body::after {
@@ -898,14 +851,19 @@ h2 {
   pointer-events: none;
   content: "";
   background: radial-gradient(circle, color-mix(in srgb, var(--folder-accent) 9%, transparent), transparent 68%);
-  transition: opacity 0.24s ease, transform 0.24s ease;
+  transition: opacity var(--mrr-motion-move) var(--mrr-ease-out), transform var(--mrr-motion-move) var(--mrr-ease-out);
 }
 
+/*
+ * 悬停 ≠ 选中：悬停只做「抬起 + 描边加深」，不再叠加 3px 主色外环。
+ * 原实现悬停（72% 描边 + 11% 外环）与选中（100% 描边 + 13% 外环）几乎无法区分，
+ * 鼠标停在未选卡片上时，用户会误以为它已被选中。外环现在只属于选中态。
+ */
 .archive-folder-card:hover .folder-card-body {
   background: linear-gradient(155deg, color-mix(in srgb, var(--folder-tint) 54%, var(--surface)) 0%, var(--surface) 48%);
-  border-color: color-mix(in srgb, var(--folder-accent) 72%, var(--divider));
-  box-shadow: 0 18px 42px rgb(15 23 42 / 14%), 0 0 0 3px color-mix(in srgb, var(--folder-accent) 11%, transparent);
-  transform: var(--mrr-motion-decor, translateY(-4px));
+  border-color: color-mix(in srgb, var(--folder-accent) 48%, var(--divider));
+  box-shadow: 0 14px 32px rgb(15 23 42 / 12%);
+  transform: var(--mrr-motion-decor, translateY(-2px));
 }
 
 /*
@@ -920,8 +878,8 @@ h2 {
   outline-offset: 3px;
   background: linear-gradient(155deg, color-mix(in srgb, var(--folder-tint) 54%, var(--surface)) 0%, var(--surface) 48%);
   border-color: color-mix(in srgb, var(--folder-accent) 72%, var(--divider));
-  box-shadow: 0 18px 42px rgb(15 23 42 / 14%);
-  transform: var(--mrr-motion-decor, translateY(-4px));
+  box-shadow: 0 14px 32px rgb(15 23 42 / 12%);
+  transform: var(--mrr-motion-decor, translateY(-2px));
 }
 
 .archive-folder-card:hover .folder-card-body::before,
@@ -952,7 +910,7 @@ h2 {
 
 .archive-folder-card.is-selected .folder-card-body {
   border-color: var(--folder-accent);
-  box-shadow: 0 12px 30px rgb(15 23 42 / 11%), 0 0 0 3px color-mix(in srgb, var(--folder-accent) 13%, transparent);
+  box-shadow: 0 12px 30px rgb(15 23 42 / 11%), 0 0 0 3px color-mix(in srgb, var(--folder-accent) 18%, transparent);
 }
 
 .archive-folder-card.is-selected .folder-layer-back {
@@ -1137,7 +1095,7 @@ h2 {
 .folder-action span {
   margin-left: 5px;
   font-size: 15px;
-  transition: transform 0.2s ease;
+  transition: transform var(--mrr-motion-move) var(--mrr-ease-out);
 }
 
 .archive-folder-card:hover .folder-action span,
@@ -1151,14 +1109,6 @@ h2 {
 }
 
 @media (max-width: 720px) {
-  .page-header {
-    flex-direction: column;
-  }
-
-  .header-actions {
-    justify-content: flex-start;
-  }
-
   .filter-bah,
   .filter-sjh,
   .filter-keyword,

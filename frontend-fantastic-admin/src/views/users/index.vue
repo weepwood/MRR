@@ -19,6 +19,7 @@ import MrrStatusTag from '@/components/MrrStatusTag/index.vue'
 import MrrTableActions from '@/components/MrrTableActions/index.vue'
 import { useTableActionLayout } from '@/composables/useTableActionLayout'
 import { actionDialog, ActionDialogCancelled } from '@/ui/components/ActionDialog'
+import { copyText as copyToClipboard } from '@/utils/copy-text'
 
 defineOptions({ name: 'UsersPage' })
 
@@ -555,13 +556,7 @@ function showCredentialResult(title: string, result?: UserCredentialResult) {
 }
 
 async function copyText(value: string, successMessage: string) {
-  try {
-    await navigator.clipboard.writeText(value)
-    ElMessage.success(successMessage)
-  }
-  catch {
-    ElMessage.error('复制失败，请手动选择复制')
-  }
+  await copyToClipboard(value, { success: successMessage })
 }
 
 function copyCredentialSummary() {
@@ -813,7 +808,7 @@ onMounted(loadData)
 .users-table-panel :deep(.el-card__header) { border-bottom: 0 !important; }
 .users-table-panel :deep(.mrr-data-table-panel__pagination) { border-top: 0 !important; }
 .users-filter-bar :deep(.el-input__wrapper.is-focus), .users-filter-bar :deep(.el-select__wrapper.is-focused) { box-shadow: 0 0 0 1px var(--mrr-ring) inset; }
-:global(.el-message.users-query-success-notice) { transition: opacity var(--el-transition-duration), transform 0.4s, top 0.4s, bottom 0.4s, margin-top 0.4s; box-shadow: 0 8px 24px rgb(15 23 42 / 14%); }
+:global(.el-message.users-query-success-notice) { transition: opacity var(--mrr-motion-overlay) ease, transform var(--mrr-motion-overlay) var(--mrr-ease-out), top var(--mrr-motion-overlay) var(--mrr-ease-out), bottom var(--mrr-motion-overlay) var(--mrr-ease-out), margin-top var(--mrr-motion-overlay) var(--mrr-ease-out); box-shadow: var(--mrr-shadow-md); }
 .users-state { display: grid; min-height: 280px; padding: var(--mrr-space-5); place-items: center; }
 .user-identity { display: flex; gap: 10px; align-items: center; min-width: 0; }
 .user-avatar { display: grid; flex: 0 0 30px; width: 30px; height: 30px; font-size: 12px; font-weight: 700; color: var(--color-primary); background: color-mix(in srgb, var(--color-primary) 9%, var(--mrr-card)); border: 1px solid var(--mrr-border); border-radius: 50%; place-items: center; }

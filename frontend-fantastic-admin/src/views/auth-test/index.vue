@@ -2,6 +2,8 @@
 import type { AuthTestHistoryEvent, AuthTestHistoryItem } from './types'
 import { Info as InfoFilled } from 'lucide-vue-next'
 import { computed, ref } from 'vue'
+import MrrPageHeader from '@/components/MrrPageHeader/index.vue'
+import MrrPageShell from '@/components/MrrPageShell/index.vue'
 import { useUserStore } from '@/store/modules/user'
 import ExternalArchiveTicketTester from './components/ExternalArchiveTicketTester.vue'
 import JwtLoginTester from './components/JwtLoginTester.vue'
@@ -29,32 +31,29 @@ function record(event: AuthTestHistoryEvent) {
 </script>
 
 <template>
-  <div class="auth-test-page">
-    <header class="page-header">
-      <div>
-        <p class="eyebrow">
-          Authentication Playground
-        </p>
-        <div class="page-title-row">
-          <h2>认证与外部访问测试台</h2>
-          <el-tooltip
-            content="生产 HMAC Secret 不应保存在前端。测试页中的 Secret 只存在于当前页面内存，正式 HIS/EMR 接入必须由外部系统后端签名。"
-            placement="right"
-            :show-after="200"
-          >
-            <button type="button" class="info-trigger" aria-label="生产 Secret 安全说明">
-              <el-icon><InfoFilled /></el-icon>
-            </button>
-          </el-tooltip>
-        </div>
-        <p class="subtitle">
-          测试内部 JWT、受保护 API、外部影像票据及 OSS 只读接口。外部票据模块会先检查后端配置，再引导生成并部署 HMAC Secret。
-        </p>
-      </div>
-      <el-tag type="warning" effect="plain">
-        仅 user:manage 权限可见
-      </el-tag>
-    </header>
+  <MrrPageShell class="auth-test-page">
+    <MrrPageHeader
+      eyebrow="Authentication Playground"
+      title="认证与外部访问测试台"
+      description="测试内部 JWT、受保护 API、外部影像票据及 OSS 只读接口。外部票据模块会先检查后端配置，再引导生成并部署 HMAC Secret。"
+    >
+      <template #badge>
+        <el-tooltip
+          content="生产 HMAC Secret 不应保存在前端。测试页中的 Secret 只存在于当前页面内存，正式 HIS/EMR 接入必须由外部系统后端签名。"
+          placement="right"
+          :show-after="200"
+        >
+          <button type="button" class="info-trigger" aria-label="生产 Secret 安全说明">
+            <el-icon><InfoFilled /></el-icon>
+          </button>
+        </el-tooltip>
+      </template>
+      <template #actions>
+        <el-tag type="warning" effect="plain">
+          仅 user:manage 权限可见
+        </el-tag>
+      </template>
+    </MrrPageHeader>
 
     <section class="mrr-metric-grid" aria-label="认证测试环境概览">
       <MrrMetricCard
@@ -136,43 +135,15 @@ function record(event: AuthTestHistoryEvent) {
         </el-card>
       </el-tab-pane>
     </el-tabs>
-  </div>
+  </MrrPageShell>
 </template>
 
 <style scoped>
-.auth-test-page {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr);
-  gap: 18px;
-  min-width: 0;
-}
-
-.page-header,
 .history-header {
   display: flex;
   gap: 16px;
   align-items: flex-start;
   justify-content: space-between;
-}
-
-.eyebrow {
-  margin: 0 0 4px;
-  font-size: 12px;
-  font-weight: 600;
-  color: var(--el-color-primary);
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
-}
-
-h2 {
-  margin: 0;
-  font-size: 24px;
-}
-
-.page-title-row {
-  display: flex;
-  gap: 8px;
-  align-items: center;
 }
 
 .info-trigger {
@@ -197,12 +168,6 @@ h2 {
   outline-offset: 2px;
 }
 
-.subtitle {
-  max-width: 860px;
-  margin: 8px 0 0;
-  color: var(--el-text-color-secondary);
-}
-
 .history-header span {
   font-size: 13px;
   color: var(--el-text-color-secondary);
@@ -218,7 +183,6 @@ h2 {
 }
 
 @media (max-width: 720px) {
-  .page-header,
   .history-header {
     flex-direction: column;
   }

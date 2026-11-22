@@ -827,7 +827,7 @@ watch(idCardParam, async (newId) => {
   cursor: pointer;
   border: 1px solid var(--color-border);
   border-radius: var(--mrr-radius-md);
-  transition: background 0.2s ease, border-color 0.2s ease;
+  transition: background-color var(--mrr-motion-feedback) ease, border-color var(--mrr-motion-feedback) ease;
 }
 
 .id-result-item:hover {
@@ -904,7 +904,7 @@ watch(idCardParam, async (newId) => {
   cursor: pointer;
   border: 1px solid var(--color-border);
   border-radius: var(--mrr-radius-md);
-  transition: background 0.2s ease, border-color 0.2s ease;
+  transition: background-color var(--mrr-motion-feedback) ease, border-color var(--mrr-motion-feedback) ease;
 }
 
 .type-item:hover {
@@ -982,7 +982,7 @@ watch(idCardParam, async (newId) => {
   cursor: pointer;
   border: 1px solid var(--color-border);
   border-radius: var(--mrr-radius-md);
-  transition: background 0.2s ease, border-color 0.2s ease;
+  transition: background-color var(--mrr-motion-feedback) ease, border-color var(--mrr-motion-feedback) ease;
 }
 
 .thumb-item:hover {
@@ -1001,7 +1001,7 @@ watch(idCardParam, async (newId) => {
   background: var(--color-bg-warm);
   border-radius: 4px;
   opacity: 1;
-  transition: opacity 0.3s ease;
+  transition: opacity var(--mrr-motion-move) ease;
 }
 
 .thumb-meta {
@@ -1025,7 +1025,7 @@ watch(idCardParam, async (newId) => {
   cursor: pointer;
   border: 1px solid var(--color-border);
   border-radius: var(--mrr-radius-md);
-  transition: background 0.2s ease, border-color 0.2s ease;
+  transition: background-color var(--mrr-motion-feedback) ease, border-color var(--mrr-motion-feedback) ease;
 }
 
 .thumb-row:hover {
@@ -1131,7 +1131,7 @@ watch(idCardParam, async (newId) => {
   cursor: pointer;
   background: rgb(255 255 255 / 6%);
   border-radius: 6px;
-  transition: background 0.2s ease;
+  transition: background-color var(--mrr-motion-feedback) ease;
 }
 
 .type-option:hover {
@@ -1147,7 +1147,7 @@ watch(idCardParam, async (newId) => {
   position: fixed;
   right: 20px;
   bottom: 30px;
-  z-index: 4000;
+  z-index: var(--mrr-z-overlay-top);
   padding: 8px 14px;
   font-size: 12px;
   color: var(--mrr-primary-foreground);
@@ -1201,7 +1201,7 @@ watch(idCardParam, async (newId) => {
   background: var(--el-color-danger);
   border: none;
   border-radius: 6px;
-  transition: opacity 0.2s ease;
+  transition: opacity var(--mrr-motion-feedback) ease;
 }
 
 .retry-btn:hover {
@@ -1212,7 +1212,9 @@ watch(idCardParam, async (newId) => {
 .download-status {
   position: fixed;
   inset: 0;
-  z-index: 9999;
+
+  /* 阻断遮罩低于 Element Plus 弹层，下载失败时的消息提示不会被盖住。 */
+  z-index: var(--mrr-z-blocking);
   display: flex;
   align-items: center;
   justify-content: center;

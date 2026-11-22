@@ -65,7 +65,7 @@ body .mrr-vscode-search [data-index] > a {
   min-height: 48px;
   border-color: transparent;
   border-radius: var(--mrr-radius-md);
-  transition: background-color 140ms ease, border-color 140ms ease;
+  transition: background-color var(--mrr-motion-feedback) ease, border-color var(--mrr-motion-feedback) ease;
 }
 
 body .mrr-vscode-search [data-index]:hover > a {

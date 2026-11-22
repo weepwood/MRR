@@ -1,380 +1,551 @@
 # MRR 前端设计规范
 
-本文是 MRR 管理端的视觉与交互规范，配合 [工程规范](ENGINEERING.md) 和 [项目设计导航](../docs/design/README.md) 使用。旧 [Console 设计文档](CONSOLE-DESIGN.md) 仅保留为兼容入口，不再独立定义数值。
+本文是 MRR 管理端的视觉、交互、兼容与性能规范，配合 [工程规范](ENGINEERING.md) 和 [项目设计导航](../docs/design/README.md) 使用。旧 [Console 设计文档](CONSOLE-DESIGN.md) 只保留为兼容入口，不再定义数值。
 
-核对日期：2026-11-11；事实基线：`bbaf95c4`。本文整理现有设计并规定新增或改动页面的验收要求，不表示所有历史页面已完成迁移。页面蓝图和交互细则用于指导设计与验收，不代表存量页面已经全部满足。实施状态与未核验差异见 Components 中的状态表。
+- **事实来源**：数值以 [tokens.css](src/assets/styles/tokens.css)、主题文件和组件源码为准；本文写"用途、约束和原因"，不复制第二套数值。两者冲突时先核对源码与实际渲染，再修正本文或单独提变更。
+- **状态说明**：本文同时包含"已实施规则"和"新增/改动页面的验收要求"。标注为"目标"或列在 [§8 迁移状态](#8-新旧页面统一) 中未完成的内容，不表示存量页面已经满足。
+- **核对日期**：2026-11-22。本次修订的变更见文末[修订记录](#修订记录)。旧版英文章节锚点（`#layout`、`#components` 等）保留为兼容入口。
 
-## Overview
+---
 
-MRR 服务于医院内网的病案查询、影像调阅、数据管理和运维。界面优先让操作者辨认当前病案、筛选条件、数据状态与可执行操作；设计密度、稳定性和错误表达应服务实际任务。
+## 0. 速查：新增或改动页面必须满足的 12 条
 
-保持现有管理端外观：中性工作区、主色操作、细边框表面、紧凑控件和明确层级。指标、表格和档案袋按职责组织，不套用营销落地页的巨型标题、宣传卡片或 CTA 布局。本文不要求重新设计现有页面。
+1. 页面用 `MrrPageShell` + `MrrPageHeader` 组合，不再手写 `.page-shell` / `.page-header`（[§3](#3-布局)；业务页面已全部迁移）。
+2. 列表用 `MrrDataTablePanel` + `MrrFilterBar embedded`，有可见标签时加 `labelled`（[§4.3](#43-筛选栏)）。
+3. 卡片左右留白统一走 `--mrr-card-inset`，块间距走 `--mrr-page-gap`，不写 15/18/26px 这类网格外数值（[§2.5](#25-间距与卡片留白)）。
+4. 颜色、阴影、圆角、层级、字号只引用令牌；页面里不出现裸十六进制色与 `z-index: 9999`（[§2](#2-设计令牌)）。
+5. 过渡与动画只引用 `--mrr-motion-*` 与 `--mrr-ease-*`，只过渡 transform / opacity / 颜色类属性，不写 `transition: all`（[§2.9](#29-动效)）。
+6. 装饰性位移、缩放写成 `transform: var(--mrr-motion-decor, <原值>)`；承载状态的变换不套变量（[§2.9](#29-动效)）。
+7. 悬停、选中、焦点三种状态视觉上可区分；外环（3px 光晕）只属于选中态，焦点只用 `outline`（[§5.2](#52-悬停选中与焦点)）。
+8. 空态、加载、失败用 `AppEmpty` / `AppLoading` / `AppError`，失败不伪装成空结果（[§5.1](#51-交互状态契约)）。
+9. 复制用 `copyText()`，轮询用 `useVisibleInterval()`，不在页面再写一份（[§7](#7-性能)）。
+10. Chrome 86 下核心表面、焦点、状态信号必须仍可辨认；不使用 `:has()`、`:is()`、容器查询作为唯一实现（[§6.1](#61-浏览器基线chrome-86)）。
+11. 所有可点击元素可用键盘到达并有可访问名称；`div @click` 改为 `button` 或补 `role` + `tabindex` + 键盘事件（[§5.3](#53-键盘与可访问性)）。
+12. 在明暗主题、暖色调色板、动效关闭、1440 / 1100 / 760 / 390px 四档宽度下自查一遍（[§10](#10-验证与维护)）。
 
-规则与源码冲突时，先确认分支、设置和实际渲染，再修正事实记录或提出独立变更；不能把文档当作已实施证明。架构、权限和数据边界服从 [ARCHITECTURE.md](../ARCHITECTURE.md)，执行流程服从 [AGENTS.md](../AGENTS.md)。
+---
 
-## Colors
+<a id="overview"></a>
 
-### 令牌来源与依赖
+## 1. 设计原则
 
-设计数值的运行事实源是 [tokens.css](src/assets/styles/tokens.css)、[tones.css](src/assets/styles/tones.css)、主题配置和组件样式。本文列出用途及核对值，不建立第二套主题配置或静态调色板。
+MRR 服务于医院内网的病案查询、影像调阅、数据管理和运维。界面首先让操作者辨认**当前对象、筛选条件、数据状态与可执行操作**。
 
-[globals.css](src/assets/styles/globals.css) 组织令牌、兼容层、基础样式、Element Plus 桥接与共享组件样式；不要在页面重新创建同类覆盖层。主色由应用设置与 [主题应用逻辑](src/store/modules/settings.ts) 配合运行，默认设置见 [settings.default.ts](src/settings.default.ts)。
+- **工具而非展示**：中性工作区、主色操作、细边框实色表面、紧凑控件。不套用营销页的巨型标题、宣传卡片、渐变光斑或 CTA 布局。
+- **状态由静态通道承载**：形状、文字、颜色、图标、位置。动效只表达"状态在变化"；关闭动效后截图仍能判断状态。
+- **一致优先于局部最优**：同一角色只有一种实现。新页面复用共享组件；旧页面按 [§8](#8-新旧页面统一) 逐页迁移，不做全站机械替换。
+- **降级可用**：Chrome 86、内网 HTTP、强制颜色模式下可以少装饰，不能少功能、少状态。
+- **不泄露**：病案号、姓名、身份证、Token、内部路径不进入截图、日志、Issue、PR 或 Artifact；验证只用合成数据。
 
-| 语义 | 优先令牌 | 使用约束 |
+---
+
+<a id="colors"></a>
+
+## 2. 设计令牌
+
+### 2.1 令牌来源与依赖
+
+```
+tokens.css（语义令牌，唯一数值源）
+ ├─ themes/index.ts          shadcn HSL 首帧默认值（亮 / 暗）
+ ├─ utils/theme-color.ts     运行时按用户主色推导 --color-primary / --primary / --el-color-primary-*
+ ├─ utils/theme-palette.ts   暖色调色板（gr8r）整套覆盖，挂在 html[data-mrr-palette]
+ ├─ browser-compatibility.css  Chrome 86 的 @supports not 变量级回退
+ └─ element-plus-overrides.css  Element Plus 桥接（按需样式晚注入，选择器前置 body 提权）
+```
+
+- `tokens.css` 到 shadcn 变量是 1:1 桥接，不在桥接层二次取色，否则改主题不生效。
+- 主色色阶只从一个十六进制输入推导（[theme-color.ts](src/utils/theme-color.ts)），在 OKLab/OKLCH 中混合。亮色下 `hover/active/deep` 依次压暗、`light-3..9` 向白混合；暗色下反过来，`light-3..9` 向 `#141414` 混合。**切换明暗必须重新推导**。
+- 预设主色同时满足：白字对比度 ≥ 4.5，OKLCH 亮度 0.52–0.60，两两 OKLab 色差 ≥ 0.12。
+- `themes/index.ts` 的 `--primary` / `--ring` 是 JS 接管前的首帧值，必须与默认主色 `#2563EB` 一致（亮暗相同），否则首帧会闪色相。
+- 新增令牌时：若可能被 Chrome 86 回退分支引用（如 `--mrr-border-strong`、导航色），必须写静态色值，不能写 `color-mix()`。`token-references.test.ts` 会拦截未定义的 `var(--mrr-*)`。
+
+### 2.2 颜色与语义
+
+| 语义 | 令牌 | 约束 |
 | --- | --- | --- |
-| 主操作与链接 | `--mrr-primary` / `--color-primary` | 默认主色 `#2563eb`；允许既有设置调整，不在页面固定品牌色 |
-| 页面与内容表面 | `--mrr-background`、`--mrr-workspace-bg`、`--mrr-card` | 区分工作区和内容，不用同一背景抹平层级 |
-| 浮层 | `--mrr-popover`、`--mrr-popover-foreground` | 菜单、提示和浮层必须保留可读的实色底 |
-| 正文与说明 | `--mrr-foreground`、`--mrr-card-foreground`、`--mrr-muted-foreground` | 重要说明不使用低对比占位色，不只依赖颜色表达状态 |
-| 边界与焦点 | `--mrr-border`、`--mrr-shell-divider`、`--mrr-ring` | 边框表达分区，焦点表达可操作位置 |
-| 危险与语义状态 | `--mrr-destructive`、现有 tone / Element Plus 语义色 | 状态同时给出文字或图标；不任意改变既有业务配色含义 |
+| 主操作与链接 | `--mrr-primary` / `--color-primary` | 默认 `#2563EB`，允许用户设置；页面不写死品牌色 |
+| 工作区 / 卡面 / 浮层 | `--mrr-workspace-bg` / `--mrr-card` / `--mrr-popover` | 见 [§2.3](#23-表面层级) 的亮度递增约束 |
+| 正文 / 次要文字 | `--mrr-foreground` / `--mrr-muted-foreground` | 次要文字在卡面和工作区上都需 ≥ 4.5:1 |
+| 边界与分隔 | `--mrr-border` / `--mrr-border-strong` / `--mrr-shell-divider` | 强描边为静态色值，供回退分支引用 |
+| 焦点 | `--mrr-ring` | 只用于 `outline`，见 [§5.2](#52-悬停选中与焦点) |
+| 危险与语义状态 | `--mrr-destructive`、`--mrr-tone-*`、Element Plus 语义色 | 状态同时给出文字或图标；不改变既有业务配色含义 |
+| 导航 | `--mrr-navigation-*`、`--mrr-navigation-rail-*` | 主导航窄栏自带灰底，悬停用 `rail-hover`（比底色深一档） |
 
-主色色阶只从一个十六进制输入推导，实现集中在 [theme-color.ts](src/utils/theme-color.ts)，不要在页面或组件里另写混色逻辑。混合与明暗调整在 OKLab/OKLCH 中完成，避免 sRGB 直接混白混黑导致的褪色与色相漂移。明亮模式下 `hover/active/deep` 依次压暗、`light-3..9` 向白混合；暗黑模式下反过来——`hover` 更亮、`light-3..9` 向底色 `#141414` 混合、`dark-2` 取更亮档。**配色方案切换必须重新推导**，否则暗色下会残留近白色块。预设颜色需同时满足三条：白字对比度 ≥ 4.5、OKLCH 亮度落在 0.52–0.60、两两 OKLab 色差 ≥ 0.12（暖色因此取橙色与玫红，而不是橙加正红）。色块上的对勾按底色亮度自动取黑或白，自定义成亮黄或近白时仍可见。
+**对比度基线（默认主题，实测）**
 
-业务配色复用现有语义色和配置，不将随机色当作科室、分类或状态映射。明暗主题均需核对正文、说明、禁用、焦点和浮层；单个页面的对比度测量不能证明全站符合可访问性标准。
-
-### Chrome 86 降级
-
-最低浏览器基线为 Chrome 86。新布局使用前缀形式媒体查询，不依赖 `:has()`、列表形态的 `:not()`、容器查询、`dvh` 或新选择器才能工作。构建与 [兼容检查脚本](scripts/verify-chrome86-build.mjs) 是静态证据，不能代替真机检查。
-
-`color-mix()` 不受 Chrome 86 支持。装饰性色调或渐变可以降级；以下情况必须保留独立实色或相邻的静态回退：
-
-- 数据编码：图表色阶、热力图、进度填充等不能变为不可见。
-- 浮层背景：不能让文字直接压在底层页面上。
-- 承载分层的背景：含混色渐变的 `background` 简写不得连带丢失实色底，必要时单独声明 `background-color`。
-- 唯一状态信号：不能因降级而失去选中、错误或禁用的识别方式。
-
-回退优先用已有语义色或 Element Plus 同步色阶。不要为纯装饰逐处复制一套混色值。背景模糊和视图过渡只能作为增强；关闭增强后仍能完成任务。
-
-回退只认两种写法：**变量级重设**（在 [browser-compatibility.css](src/assets/styles/browser-compatibility.css) 的 `@supports not` 块里重设自定义属性）或**把增强值收进 `@supports (color: color-mix(...))`**。同一规则里「先写静态值、再写含 `var()` 的 `color-mix`」不是回退：含 `var()` 的声明不在解析阶段校验，86 会在计算值阶段把属性置为 `unset`，前一条静态声明不会回来。`border`、`box-shadow` 这类简写尤其危险——整条失效会连带丢掉 `border-style` 或投影，回退时必须重写完整简写而不是只改 `*-color`。
-
-组件内的表面色回退就近写在同文件的 `@supports not` 块里，选择器与上方规则保持一致，便于逐条对照；跨组件的通用表面仍集中在兼容层。焦点一律用 `outline`、投影一律用 `box-shadow`，两者不互相兼任。
-
-## Typography
-
-### 字体与实际字号
-
-[base.css](src/assets/styles/base.css) 的正文字体栈为 `Inter, "HarmonyOS Sans SC", -apple-system, BlinkMacSystemFont, "Segoe UI", "Microsoft YaHei", sans-serif`。中文字体由 [fonts.css](src/assets/styles/fonts.css) 从本地 `/fonts/` 加载 400/500/700 字重；Inter 是否可用取决于运行环境，不能把字体栈名称当作该字体已随包交付的证明。不得为管理端引入外部字体 CDN。
-
-字体加载按 `unicode-range` 分区：常用界面字符使用同一原字体生成的三个小型子集，其余字符按需回退到原完整字库，字形、度量与字体家族保持。原完整文件不删除，新增界面字符即使未重新生成子集也仍可显示，只可能增加完整字库请求。更新与验证见[前端字体加载记录](../docs/engineering/frontend-font-loading.md)。
-
-| 层级 | 当前共享实现 | 事实来源 |
+| 组合 | 亮色 | 暗色 |
 | --- | --- | --- |
-| 页面标题 | 26px；760px 以下 22px；字重 700；plain/card 共用 | [page-header.css](src/assets/styles/components/page-header.css) |
-| 页头说明 | 全局页头规则为 14px，按模式设置间距和行高 | 同上；全局选择器优先于组件内的结构样式 |
-| 分区标题 | 14px，请求字重 650 | [MrrSectionCard](src/components/MrrSectionCard/index.vue) |
-| 正文 | 14px，行高 1.5 | [base.css](src/assets/styles/base.css) |
-| 指标主值 | 26px，请求字重 680；文本型值使用 compact 变体 | [metric-card.css](src/assets/styles/components/metric-card.css) |
-| 指标标签与说明 | 12px；说明按内容换行 | 同上 |
+| 次要文字 / 卡面 | 5.34:1（`215.4 19% 44%`） | 7.8:1 |
+| 次要文字 / 工作区 | 4.87:1 | — |
+| 表单错误文字 `--destructive` / 卡面 | 4.75:1（`#D13C3C`） | 5.7:1（`0 80% 68%`） |
+| 白字 / 主色按钮 | 5.17:1 | 5.17:1 |
 
-CSS 请求字重与字体文件字重不是一回事，按浏览器字体匹配规则呈现。不要为了复刻旧文档中的字重新增字体资源。
+单页测量不能证明全站达标；新增配色需按同样方法复核明暗两套。业务配色复用语义色，不用随机色映射科室、分类或状态。
 
-页面使用清晰的主标题和分区标题；已有英文标签保留为页头可选信息，不单独扩大视觉重量。说明应围绕数据口径、时间范围或操作方法。关键提示不可只通过省略号提供；如确需截断，必须有可访问的完整读取方式。
-
-## Layout
-
-### 页面壳层和有效宽度
-
-[MrrPageShell](src/components/MrrPageShell/index.vue) 负责可收缩的单列网格，组件内不重复添加页面外层 padding。
-
-| 宽度模式 | 默认最大宽度 | 常用场景 |
-| --- | --- | --- |
-| `fluid` | 1720px | 列表、统计、监控 |
-| `standard` | 1440px | 详情、双栏内容 |
-| `narrow` | 1120px | 设置、表单 |
-
-上述值来自令牌，不是所有窗口中的实际内容宽度。布局必须扣除侧栏、工作区留白和滚动条；设置网格优先按实际内容区域自适应，不按整个窗口假设可用列数。
-
-主侧栏默认 72px，次侧栏 232px，次侧栏收起为 64px；顶部、页签、工具栏分别使用现有 `--g-*` 布局变量。不同导航模式可以隐藏或组合侧栏，不固定要求所有页面同时出现两层侧栏。见 [tokens.css](src/assets/styles/tokens.css) 与 [应用壳层](src/layouts/index.vue)。
-
-启用移动适配时，[settings store](src/store/modules/settings.ts) 在窗口宽度小于 1024px 时进入 mobile 模式；页面另有 1100/760/640/600px 等局部断点，不能把其中一个当成全站唯一断点。
-
-### 间距、换行与滚动
-
-间距令牌按 4px 递进：`--mrr-space-1/2/3/4/5/6/8` 分别为 4/8/12/16/20/24/32px；页面默认间距 `--mrr-page-gap` 为 24px。业务特有布局可使用已有局部间距，不为常规卡片复制整套样式。
-
-- 页头文案、操作组、分区标题允许换行。使用 `min-width: 0` 和 `minmax(0, 1fr)` 让内容可收缩，不能靠裁切隐藏不可达的操作。
-- 表格在自身区域横向滚动，页面主体不因表格固有宽度撑开。
-- 分页在窄屏分别安排总数/条数、页码导航和跳页，前后翻页与页码保持同组。
-- 筛选栏按可用宽度换行，显式 `gap` 操作组不叠加相邻按钮左边距。
-- 同一数据面板内，表格外沿与整行筛选区（含操作按钮）对齐，使用共享面板的左右留白。
-- 窄屏日期范围、数字输入和抽屉按实际容器约束；日期弹层复用 [picker-options.ts](src/ui/provider/picker-options.ts)。
-- 设置中的配色行隐藏列头后，应显示各字段标签，按钮也允许换行。
-- 历史 `.page-shell` 与新增共享壳层遵守相同的可收缩约束。档案袋可以有业务特有布局，但不能无界加载整案原图。
-
-### 页面蓝图与信息顺序
-
-先按操作者任务选择组合，再决定页面布局。下列是组合建议，参考页面用于核对现有行为，不要求照搬整页样式、一次迁移所有旧页或改变业务流程。核心指标只有在确实帮助当前任务时才展示，不为填满首屏增加一排数字。
-
-| 页面类型 | 信息顺序与复用组合 | 设计时必须确认 |
-| --- | --- | --- |
-| 查询列表 | 页头 → 可选摘要 → `MrrDataTablePanel` 的 filters/toolbar → 结果 → pagination；参考[用户管理](src/views/users/index.vue) | 条件何时提交，当前结果对应哪次条件，选择和分页何时失效，操作是否符合当前授权 |
-| 游标大表 | 保留领域查询入口、当前批次和前后翻批；参考[扫描记录](src/views/records/index.vue) | 不为统一外观改成依赖全量总数的页码分页，不把本批数量显示成全库总数 |
-| 分析与监控 | 页头/时间范围 → 有口径的摘要 → 图表 → 可核对明细；参考[扫描统计](src/views/statistics/index.vue) | 每个指标的范围、单位、分母、更新状态及失败语义；数据和图表不能来自不相容的筛选条件 |
-| 关系工作台/详情 | 查询上下文 → 摘要与关联列表 → 当前对象的详情或预览；参考[数据关系工作台](src/views/data-relations/index.vue) | 切换对象时哪部分更新、旧预览怎样失效；窄屏按阅读顺序重排，不能丢失对象身份或操作入口 |
-| 配置表单 | 分组导航 → 当前值与说明 → 编辑/校验 → 提交结果；参考[系统设置](src/views/settings/index.vue) | 生效范围、配置来源、未保存状态及失败后的值；只改展示不能暗示配置已保存 |
-| 影像档案袋 | 病案确认 → 分类与选页 → 缩略/主预览 → 按权限操作；参考[档案袋](src/views/statistics/archive.vue) | 当前病案和页序、来源失败、选择范围、生成/下载状态及资源预算；独立阅读区不强套普通列表布局 |
-
-详情与预览的对象身份应持续可辨认，不能只靠已被滚出视口的列表选中行。涉及病案号、上架号等标识符时按原字符串呈现，保留前导零，不将其作为普通数值加千分位或自行改写。
-
-在双栏或窄屏重排时，先定义“识别对象 → 判断状态 → 执行操作”的阅读顺序。布局收缩可以改变位置，不应改变字段含义、选中对象和操作范围。
-
-系统设置沿用共享页头，下方参考「UI 组件」页面的目录与内容布局。当前分类的设置组以独立卡片排在页面中，随页面自然滚动。左侧分类目录只显示图标与分类名，分类说明只在右侧内容区标题下展示，不在目录里重复；侧栏不展示配置来源、同步时间或待保存计数，未保存状态由页头「保存设置」按钮的可用性与离开提示表达。窄屏用分类下拉收起目录。选中搜索结果后聚焦相应设置，仅在目标位于可视区外时滚动一次。提交入口固定在页头操作区，顺序为「重新加载 → 恢复默认 → 保存设置」，页面底部不再重复放保存行；点击「保存设置」先在弹窗中列出本次修改的字段与「旧值 → 新值」，确认后才写入系统数据库，选择「返回修改」则保留改动留在页面；离开设置页（或丢弃由面板自管保存的分类）时若有未保存修改，先提示「保存并离开／放弃修改／取消」，取消即留在原处。参见[设置页滚动回归](e2e/settings-workspace-focus.spec.ts)和[窄屏设置搜索回归](e2e/settings-search.spec.ts)。
-
-「界面外观」和顶部外观抽屉共用分组标签页，窄屏和抽屉采用两列。主题主色预设可直接选择，导航模式同时显示图示和名称。自动保存进度与生效范围集中在操作区。参见[外观设置交互回归](e2e/settings-layout.spec.ts)。
-
-## Elevation & Depth
-
-表面通过细边框、中性色与轻阴影区分；阴影复用 `--mrr-shadow-xs/sm/md/lg`，不在页面叠加新的阴影系统。常规内容卡使用既有组件默认值，弹窗、菜单与抽屉保留明确的前后层级。
-
-全局视觉优化沿用上述令牌：亮色内容卡和浮层使用白色，与浅灰工作区分层；暗色内容和浮层使用蓝灰表面。导航、顶栏使用实色底，工作区不叠加网格或主色光斑；card 页头使用细边框实色表面，不叠加渐变和阴影。表格在现有 Element Plus 桥接中使用 `body .el-table`，避免按需加载样式覆盖卡面与行底色。此规则适用于共享外观，不要求重写业务页面。
-
-表面分四层，实测值与硬约束锁在 [surfaces.test.ts](src/assets/styles/surfaces.test.ts)：
+### 2.3 表面层级
 
 | 表面 | 亮色 | 暗色 | 用途 |
 | --- | --- | --- | --- |
-| 工作区 | `hsl(210 40% 96%)` `#f1f5f9` | `hsl(222 28% 9%)` `#11141d` | 主内容区底，卡片坐在它上面 |
-| 页面底 | `hsl(210 40% 98%)` `#f8fafc` | 同工作区 | 导航、顶栏、标签栏的底 |
-| 卡面 | `hsl(0 0% 100%)` `#ffffff` | `hsl(222 23% 12%)` `#181c26` | 指标卡、分区卡、表格容器、页头 |
-| 浮层 | 同卡面 `#ffffff` | `hsl(222 22% 14%)` `#1c212c` | 菜单、下拉、抽屉、对话框 |
+| 工作区 | `#F1F5F9` | `#11141D` | 主内容区底，卡片坐在它上面 |
+| 页面底 | `#F8FAFC` | 同工作区 | 导航、顶栏、标签栏 |
+| 卡面 | `#FFFFFF` | `#181C26` | 页头、分区卡、指标卡、表格容器 |
+| 浮层 | 同卡面 | `#1C212C` | 菜单、下拉、抽屉、对话框 |
 
-三条约束：**亮度只能递增**（页面底 ≤ 卡面 ≤ 浮层，倒挂会让卡片看起来陷进底里）；**卡面比工作区至少高 2 个亮度百分点**（现为亮色 4 点 / 1.10:1，暗色 3 点 / 1.08:1，低于这个步差卡片边界只能靠 1px 描边撑）；**`tokens.css` 到 shadcn 变量是 1:1 桥接**，不在桥接层二次取色，否则改主题不生效。亮色浮层与卡面同色，靠 `--mrr-shadow-*` 与描边分层，属既定做法，不要求拆成两个色阶。比较表面亮度时要跟随 `--g-main-area-bg` 的间接引用，不能一律拿 `--background` 当基准。
+三条约束（[surfaces.test.ts](src/assets/styles/surfaces.test.ts) 锁定）：**亮度只能递增**（页面底 ≤ 卡面 ≤ 浮层）；**卡面比工作区至少高 2 个亮度百分点**；**桥接 1:1**。亮色浮层与卡面同色，靠阴影与描边分层。
 
-[glass-surface.css](src/assets/styles/components/glass-surface.css) 的增强效果按现有入口使用，不把玻璃和模糊扩展为所有业务表面的要求。Chrome 86 或不支持增强的环境中，应有实色底和可识别边界。
+表面使用**实色**：页头、页头图标、指标卡、卡头不叠加渐变或网格底纹。低色深显示器和投屏上，3% 的渐变会出现色带，而且语义已经由图标与数值色承担。[glass-surface.css](src/assets/styles/components/glass-surface.css) 的模糊效果仅限既有入口（全屏看图），不扩展到业务表面。
 
-普通只读指标卡保持稳定，不通过悬浮位移暗示可点击。链接和真正的操作控件保留悬停、选中与焦点反馈。
+<a id="typography"></a>
 
-### 动效边界
+### 2.4 字体与字号
 
-沿用 [tokens.css](src/assets/styles/tokens.css) 的动效令牌与现有设置开关。时长按**语义**分档，不按快慢分档：`--mrr-motion-press` 100ms（仅几何属性）、`--mrr-motion-feedback` 120ms（颜色/透明度/边框/阴影）、`--mrr-motion-move` 180ms（位移/展开/内容入场）、`--mrr-motion-overlay` 220ms（抽屉/对话框/弹出菜单，上限 220ms），另加循环组 `--mrr-motion-loop` 1s（spinner）与 `--mrr-motion-loop-soft` 1.5s（shimmer）。曲线统一 `--mrr-ease-out`。**新写的过渡必须引用令牌，不写裸时长**；颜色类不得低于 120ms，再低读起来像闪烁。UnoCSS 生成的动画类（如 `ui/components/FaDrawer/sheet/index.ts` 的 `animate-duration-*`）读不到 CSS 变量，改令牌时必须同步改类名字符串。
+正文字体栈：`Inter, "HarmonyOS Sans SC", -apple-system, BlinkMacSystemFont, "Segoe UI", "Microsoft YaHei", sans-serif`。等宽统一用 `--mrr-font-mono`。它显式点名 Consolas，并在其后排中文字体；Windows 上通用 `monospace` 会落到新宋体。**页面不再手写等宽字体栈。**
 
-当前全局动态效果默认开启，由应用设置写入 `data-motion`，并在 `index.html` 的首帧内联脚本里按本地缓存预置，避免关闭动效的用户每次进入仍播一遍入场动画。系统 `prefers-reduced-motion: reduce` 会缩短共享 CSS 动效，并由 `isMotionEnabled()` 停止登录、主题切换、设置滚动与平滑滚动的 JS 空间动效——**CSS 的 `scroll-behavior` 管不住 JS 的 `behavior: 'smooth'`，所有 `scrollTo` / `scrollIntoView` 都必须自己读一次开关**。共享关闭路径保留 1ms 的动画结束信号以完成浮层生命周期；不能使用 `animation: none` 让抽屉关闭或搜索聚焦失去回调。
+字体从本地 `/fonts/` 加载，按 `unicode-range` 分两层：
 
-三条必须遵守的边界：
+- **界面子集**（约 130KB/字重）：覆盖界面常用字。`index.html` 预加载常规与中粗两档，避免首屏字体到达后整体重排。
+- **完整字库**（约 4.3MB/字重）：只在出现子集外字符（如生僻姓名）时懒加载。后续可按 Google Fonts 方式切成约 100 个 unicode-range 分片，降低内网首次加载量（[§7](#7-性能) 待办）。
 
-1. **状态只能由静态通道承载**：形状、方向、文字、颜色、图标语义、位置。动效只表达"状态发生变化"的过程；任一通道在动效全关后必须仍然完整，且截屏可判。据此 `reduced` 与 `off` 的差别是"装饰先降级、状态最后保留"，不是"少多少动效"。
-2. **关闭动效只允许清 `transition` 与 `animation-duration`，禁止写全局 `transform: none`**。白名单式逐条列举一旦漏项，失败方向是"状态误判"（字段切换图标的 `rotate(180deg)` 就是状态本身），而不是"少一个位移"。装饰性位移与缩放在**声明处**写成 `transform: var(--mrr-motion-decor, <原值>)`，`[data-motion="off"]` 与 `prefers-reduced-motion: reduce` 只把这个变量置为 `none`：漏写一处最多多一次位移，永远不会连带状态。`src/assets/styles/motion.test.ts` 会扫全仓交互态，发现没套变量的 `transform` 直接失败。
-3. **焦点一律用 `outline`，投影一律用 `box-shadow`，两者不互兼**。`box-shadow` 画的焦点环会被 `overflow: hidden` 裁掉，也会覆盖元素原有投影；而 `outline` 在基线浏览器上最差只是变色，不会整条消失。
+不引入外部字体 CDN。
 
-**用来成形的 `transform` 既不套 `--mrr-motion-decor`，也不进任何清除清单。** 菜单展开指示器（`.menu-leading-control-arrow`）是用右边框 + 下边框加 `rotate(±45deg)` 拼出来的箭头，`transform` 就是它的形状；档案袋的叠层纸靠 `rotate(-1.4deg)/(0.8deg)` 才有前后关系；字段切换图标的 `rotate(180deg)` 是"已切换"这个状态本身。这类元素的 `transform` 一律原样保留，关闭动效只去掉过渡。判断口径：**把它清零之后，用户是否还能用截屏判断当前状态**——不能，就不能清零。
+| 层级 | 令牌 | 当前值 | 来源 |
+| --- | --- | --- | --- |
+| 页面标题 | `--mrr-font-size-title` / `-title-compact` | 26px / 22px（≤760px），700 | [page-header.css](src/assets/styles/components/page-header.css) |
+| 页头说明 | `--mrr-font-size-md` / `-sm` | plain 14px；card 13px | 同上 |
+| 分区标题 | `--mrr-font-size-md` | 14px，650 | [MrrSectionCard](src/components/MrrSectionCard/index.vue) |
+| 正文 / 表格 | `--mrr-font-size-md` / `-sm` | 14px / 13px | base.css、Element Plus 桥接 |
+| 标签、说明、表头 | `--mrr-font-size-xs` | 12px | metric-card.css 等 |
+| 指标主值 | — | 26px，680，等宽数字 | [metric-card.css](src/assets/styles/components/metric-card.css) |
 
-共享 FaButton 按压仅改变明度，保留调用方的旋转、居中与圆角；键盘焦点独立描边，加载时禁用并提供 `aria-busy`。输入框和下拉箭头沿用 `--mrr-motion-feedback` / `--mrr-motion-move` 两档。状态确认动效不使用超过最终尺寸的弹跳。
+新样式从字号令牌取值；存量页面随迁移逐步替换。说明文字围绕数据口径、时间范围或操作方法；关键提示不能只靠省略号截断。
 
-菜单展开、页签和页面切换应保留状态识别，不增加涟漪或不必要的离场叠加。主线侧栏子目录点击不播放涟漪。路由加载沿用顶部 2px 进度条，延迟 200ms 显示以避免快速请求闪现，不显示新的全局转圈反馈。改变全局动效策略应单独评估，不通过文档更新静默修改产品行为。
+### 2.5 间距与卡片留白
 
-## Shapes
+- 间距令牌按 4px 递进：`--mrr-space-1/2/3/4/5/6/8` = 4/8/12/16/20/24/32px。
+- **块间距**：页面内纵向块之间用 `--mrr-page-gap`（24px），≤640px 时 16px。由 `MrrPageShell` 或全局 `.page-shell` 提供，页面不再各写 16/18/20px。
+- **卡片留白**：`--mrr-card-inset`（20px）/ `--mrr-card-inset-compact`（12px，≤760px）。页头卡、分区卡、表格面板（筛选区、工具条、表体、分页）、筛选栏、指标卡、旧页 `el-card` 共用这一条左右留白，纵向堆叠时标题、字段、表格外沿、分页落在**同一条竖线**上。
+- **工作区留白**：`clamp(16px, 2vw, 24px)`，≤760px 为 16px。
 
-全局圆角只有一个设置来源：`--radius`。当前 [默认设置](src/settings.default.ts) 为 0.75rem（通常 12px）；`tokens.css` 中未应用设置时的 CSS 回退为 0.5rem，两者不能混作同一个默认值。
+<a id="shapes"></a>
 
-圆角曲线另有独立开关 `app.radiusShape`：`round`（默认，等半径圆弧，G1 相切连续）与 `squircle`（`corner-shape: squircle`，超椭圆，G2 曲率连续）。开启后由 `data-radius-shape="squircle"` 写在根节点上，`components/corner-shape.css` 用 `@supports (corner-shape: squircle)` 包裹全局声明，**圆角大小仍由 `border-radius` 决定**，曲线只改变圆角内侧的过渡。Chrome/Edge 139+ 之外（含 Safari、Firefox 与本项目 Chrome 86 基线）会忽略该属性并保留圆弧，属于装饰性降级，设置面板会就地提示，不得因此隐藏控件或阻断保存。
+### 2.6 圆角与曲线
 
-G2 只适用于「圆角矩形」。开关、滑块、正圆（头像、色块、圆点、圆形图标按钮）与胶囊标签的半径本来就等于半边尺寸，套超椭圆只会被削平或压成圆角方块，因此必须退出 G2 并保持标准圆弧。实现方式是开关变量加子树继承：`*` 统一读 `corner-shape: var(--mrr-corner, round)`，退出项把 `--mrr-corner` 重置为 `round` 后，其伪元素与子元素一起跟随。项目并存两套控件体系，**两套都得登记**：Element Plus 的 `.el-switch` / `.el-slider`，以及界面外观页复用的 reka-ui 封装 `.fa-switch` / `.fa-slider`（其类名原本由 UnoCSS 生成，为稳定锚点已在 Switch.vue / Slider.vue 补语义类名）。另按命名约定兜底 `[class~="rounded-full"]`、`[class*="dot"]`、`[class*="avatar"]`、`[class*="swatch"]`、`[class*="spinner"]`、`[class*="-marker"]`、`[class*="is-round"]`、`[class*="is-circle"]` 等，新增同类元素沿用命名即自动退出；单个元素也可加 `data-corner="round"` 连同子树退出。卡片、面板、对话框、输入框、按钮、标签页与表格容器仍保留 G2。
+全局圆角只有一个来源 `--radius`，默认 0.75rem（12px，[settings.default.ts](src/settings.default.ts)），`tokens.css` 的回退值与之相同。
 
-超椭圆描述的是「圆角矩形」，形状本身不是圆角矩形的元素套上去只会走形，因此以下三类始终保留标准圆弧（见 `components/corner-shape.css` 的分组）：
-
-- **开关与滑块**（`.el-switch`、`.el-slider`）：轨道端头是半圆、手柄是正圆，超椭圆会削平端头、把手柄压成圆角方块，部件与轨道的贴合也会出现缝。
-- **正圆与胶囊**：圆点、头像、色块、加载指示、`is-circle` / `is-round` 变体、pill 计数与徽标。半径已等于半边尺寸，四角各收一次会从圆变成圆角方形。
-- **由正圆零件组成的复合控件**：单选、复选、进度、步骤条、时间线、评分、弹出层箭头。
-
-退出方式是继承变量而非逐条覆盖：`corner-shape` 统一读 `--mrr-corner`，排除项把 `--mrr-corner` 重置为 `round`，其子元素与伪元素自动跟随。新增圆形类元素沿用 `*-dot` / `*avatar*` / `*swatch` / `*spinner` / `*-marker` 命名即可自动退出，或用 `data-corner="round"` 显式声明。不要让某个元素「自己圆、内部件超椭圆」——两者混排时角部曲率不平行，看起来像没对齐。
-
-| 令牌 | 应用设置为 12px 基准时 | 用途 |
+| 令牌 | 12px 基准时 | 用途 |
 | --- | --- | --- |
-| `--mrr-radius-sm` | 6px | 微型控件、标签 |
-| `--mrr-radius-md` | 8px | 常规控件、菜单项 |
-| `--mrr-radius-lg` | 10px | 小型内嵌容器 |
-| `--mrr-radius-card` | 12px | 页头、分区卡、指标卡等页面级表面 |
-| `--mrr-radius-xl` | 14px | 已有内层分组、指标图标等内嵌区域 |
-| `--mrr-radius-dialog` | 12px | 对话框 |
-| `--mrr-radius-2xl` | 18px | 既有全页或登录外壳 |
-| `--mrr-radius-pill` | 999px | 胶囊与圆头按钮；普通状态标签使用 `--mrr-radius-sm` |
+| `--mrr-radius-sm` | 6px | 微型控件、普通状态标签 |
+| `--mrr-radius-md` / `--mrr-control-radius` | 8px | 控件、菜单项、表格容器 |
+| `--mrr-radius-lg` | 10px | 小型内嵌容器、页头图标 |
+| `--mrr-radius-card` / `-dialog` | 12px | 页面级表面、对话框 |
+| `--mrr-radius-xl` / `-2xl` | 14px / 18px | 内层分组 / 全页外壳 |
+| `--mrr-radius-pill` | 999px | 胶囊与圆头按钮 |
 
-这些是指定设置下的派生值；实际公式及上下限见 [tokens.css](src/assets/styles/tokens.css)。不得把表格数值复制成新的 CSS 常量。圆形使用 50%，不以非等比例缩放改变方形图标或按钮的几何形状。
+实际公式与上下限见 tokens.css，不复制成新常量。
 
-Element Plus 按需 CSS 可能晚于全局样式注入；[圆角桥接](src/assets/styles/element-plus-overrides.css)对输入/下拉/日期范围、数字输入、分段单选、标签、分页、确认消息框和卡片式页签采用控件级变量或更高优先级。普通/小/大控件分别使用 control/sm/lg 令牌；拼接输入、数字步进器和按钮组仅外缘有圆角，内部接缝保持直角。复选框方形边角最大 4px，圆形按钮、`round` 胶囊、开关与单选圆点保持其几何形状。浏览器真实渲染、三档圆角和交互见 [圆角回归](e2e/radius-consistency.spec.ts)；这不等于所有历史页面或 Chrome 86 真机已核验。
+**G2 连续圆角**（`app.radiusShape = squircle`，`corner-shape: squircle`）只改圆角内侧曲率，不改大小，Chrome/Edge 139+ 之外自动降级为圆弧。它只适用于圆角矩形。开关、滑块、正圆、胶囊，以及由正圆零件组成的复合控件，通过 `--mrr-corner: round` 连同子树退出。新增同类元素沿用 `*-dot` / `*avatar*` / `*swatch` / `*spinner` / `*-marker` 命名，或加 `data-corner="round"`。两套控件（`.el-switch/.el-slider` 与 `.fa-switch/.fa-slider`）都需登记。详见 [corner-shape.css](src/assets/styles/components/corner-shape.css)。
 
-状态与普通标签职责不同：只读业务状态优先使用 `MrrStatusTag` 并显式保持业务文案和色调；`el-tag` 继续承载分类、计数、可关闭项及指定 round/effect/size 的标签。`el-tag__content` 是标签内部文字容器而非独立组件，不为它额外绘制圆角背景。扫描记录迁移状态及数据关系工作台的健康、检查级别和对比状态已使用共享状态组件，其他页面的状态标签应逐页核对语义、权限和交互后迁移，不按标签名称全站机械替换。组件目录展示两者的用途。
+<a id="elevation--depth"></a>
 
-单行输入、选择、日期范围和数字输入使用 `--mrr-input-height`（33px），普通/紧凑/大型按钮共用 `--mrr-control-height`；按钮的字号与左右留白由 `--mrr-button-font-size*` / `--mrr-button-padding-x*` 统一供给（两套按钮同源，见下节）。图标按钮保持同高同宽。登录注册区域沿用局部 `--auth-input-height`（38px），提交按钮与同面板输入框同高；多行输入和多选标签允许按内容增高。以 [form-controls.css](src/assets/styles/components/form-controls.css) 及组件实际尺寸为准。
+### 2.7 阴影
 
-## Components
+只用 `--mrr-shadow-xs/sm/md/lg` 与 `--mrr-shadow-dialog`，不在页面叠加新的阴影系统。只读卡片保持静止；可点击卡片悬停时可升一档阴影并描边加深，不靠位移暗示可点。
 
-### 组合与职责
+### 2.8 层级（z-index）
 
-| 组件/样式 | 职责与使用规则 |
+| 令牌 | 值 | 用途 |
+| --- | --- | --- |
+| `--mrr-z-sticky` | 1000 | 吸顶块、页内浮动工具条 |
+| `--mrr-z-sidebar-mask` / `--mrr-z-sidebar` | 1009 / 1010 | 移动端侧栏遮罩 / 侧栏 |
+| `--mrr-z-blocking` | 1900 | 页内阻断遮罩（下载、导出进度） |
+| `--mrr-z-header` | 2000 | 顶部导航 |
+| （Element Plus / Fa 弹层） | 2000 起递增 | 对话框、抽屉、消息、下拉 |
+| `--mrr-z-progress` | 3000 | 路由进度条 |
+| `--mrr-z-overlay-top` | 4000 | 全屏看图说明条、跟随鼠标的图表提示 |
+
+阻断遮罩必须**低于**弹层基准，否则遮罩期间弹出的失败消息或确认框会被盖住（曾经的 `z-index: 9999` 就是这个问题）。档案袋内部的 2010 / 2020 / 3001 层级属于该工作区的局部叠放，迁移时改为基于令牌的相对值（`calc(var(--mrr-z-header) + n)`）。
+
+<a id="动效边界"></a>
+
+### 2.9 动效
+
+时长按**语义**分档，曲线区分进出：
+
+| 令牌 | 值 | 用途 |
+| --- | --- | --- |
+| `--mrr-motion-press` | 100ms | 仅几何属性：按压、悬停位移 |
+| `--mrr-motion-feedback` | 120ms | 颜色、透明度、边框、阴影；颜色类不得更短 |
+| `--mrr-motion-move` | 180ms | 位移、展开收起、内容入场、重排、**离场** |
+| `--mrr-motion-overlay` | 220ms | 浮层入场（抽屉、对话框、菜单、移动端侧栏），上限 |
+| `--mrr-motion-loop` / `-loop-soft` | 1s / 1.5s | spinner / shimmer |
+| `--mrr-ease-out` | `cubic-bezier(0.22, 1, 0.36, 1)` | 入场、状态变化 |
+| `--mrr-ease-in` | `cubic-bezier(0.55, 0, 0.75, 0.2)` | 离场、收起 |
+
+**进出不对称**：入场用 overlay（或 move）+ ease-out，离场用 move + ease-in，比入场短一档。Element Plus 的 `--el-transition-duration` 已映射到 overlay，`-fast` 映射到 feedback，与自研抽屉同节奏。UnoCSS 动画类（如 FaDrawer 的 `animate-duration-220`）读不到变量，改令牌时需同步修改类名。
+
+**三条边界**（[motion.test.ts](src/assets/styles/motion.test.ts) 扫全仓）：
+
+1. **状态只由静态通道承载**。`reduced` 与 `off` 的区别是"先降级装饰、状态保留到最后"。
+2. **关闭动效只清 `transition` 与 `animation-duration`，禁止写全局 `transform: none`**。装饰性位移写成 `transform: var(--mrr-motion-decor, <原值>)`；成形或承载状态的变换（展开箭头的 `rotate(±45deg)`、"已切换"的 `rotate(180deg)`、叠层纸的错位）原样保留。判断口径：清零后截图还能不能读出当前状态。
+3. **焦点用 `outline`，投影用 `box-shadow`，两者不兼任**。
+
+**交互语义规则**
+
+| 场景 | 应该 | 不应该 |
+| --- | --- | --- |
+| 选中确认 | 颜色、描边、字重过渡 | 0.96→1.02→1 弹跳，或超过最终尺寸的缩放 |
+| 列表增删（标签页、小组件） | 宽度收拢 / FLIP 位移，方向与排列方向一致 | 离场设 `position: absolute` 跳位，或横向列表用纵向位移 |
+| 遮罩 + 抽屉 | 同节奏淡出，`visibility` 延迟到淡出结束 | 遮罩 `visibility` 立即切换导致瞬间消失 |
+| 层级导航（面包屑） | 只让新增层级轻量淡入 | key 带 index 导致整条重播 |
+| 影像悬停 | 卡片描边与阴影反馈 | 缩放影像本身（文字重采样会发虚） |
+| 吸顶隐藏 | 带方向阈值（≥6px） | 1–2px 惯性抖动也触发显隐 |
+| 反馈性动画 | 点击后 ≤100ms 开始，总长 ≤ 350ms | 先等 300ms 再出效果 |
+
+动效默认开启，由设置写入 `data-motion`，`index.html` 首帧按本地缓存预置。系统 `prefers-reduced-motion` 缩短 CSS 动效；JS 空间动效（登录、主题切换、`scrollTo` / `scrollIntoView` 平滑滚动、WAAPI）必须先调用 `isMotionEnabled()`。关闭路径保留 1ms 的动画结束信号，以完成浮层生命周期。路由加载沿用顶部 2px 进度条，延迟 200ms 显示；主内容不做离场过渡。
+
+---
+
+<a id="layout"></a>
+
+## 3. 布局
+
+### 3.1 应用壳层
+
+主侧栏 72px，次侧栏 232px（收起 64px），顶栏 / 标签栏 / 工具栏使用 `--g-*` 布局变量（[tokens.css](src/assets/styles/tokens.css)、[layouts/index.vue](src/layouts/index.vue)）。不同导航模式可以隐藏或组合侧栏。启用移动适配时，宽度 < 1024px 进入 mobile 模式。页面另有 1100 / 760 / 640 / 600px 局部断点，共享组件统一在 **760px** 收窄留白。
+
+### 3.2 页面壳层与有效宽度
+
+| 宽度模式 | 最大宽度 | 场景 |
+| --- | --- | --- |
+| `fluid`（默认） | 1720px | 列表、统计、监控 |
+| `standard` | 1440px | 详情、双栏 |
+| `narrow` | 1120px | 设置、表单 |
+
+`MrrPageShell` 负责单列可收缩网格与块间距，所有业务页面共用，切换页面时内容宽度与节奏不跳变。布局按扣除侧栏、留白、滚动条后的实际宽度自适应，不按窗口宽度假设列数。嵌套使用时（如监控聚合页的外层壳 + 内嵌监控页）两层宽度上限相同，不会产生双重收窄。
+
+### 3.3 页头
+
+`MrrPageHeader` 有 title / description / eyebrow / icon，以及 badge / meta / actions 插槽，有两种模式（`app.pageTitleStyle`，默认 card）：
+
+- **card**：实色细边框卡片，最小高度与指标卡一致（110px），隐藏英文 eyebrow，说明 13px。
+- **plain**：标题位于内容层级，显示 eyebrow，底部留白只有 4px，与下一块的距离交给壳层间距。
+
+页面标题使用 `<h1>`。辅助信息（自动刷新时间、数据范围）放 `#meta`，提示图标放 `#badge`，操作放 `#actions`。页头图标为实色浅底，不用渐变。
+
+### 3.4 页面蓝图
+
+| 页面类型 | 信息顺序与组合 | 设计时必须确认 |
+| --- | --- | --- |
+| 查询列表 | 页头 → 可选摘要 → `MrrDataTablePanel`（filters / toolbar / 结果 / pagination）；参考 [用户管理](src/views/users/index.vue) | 条件何时提交、结果对应哪次条件、选择和分页何时失效、操作是否符合授权 |
+| 游标大表 | 领域查询入口 + 当前批次 + 前后翻批；参考 [扫描记录](src/views/records/index.vue) | 不改成依赖全量总数的页码分页，不把本批数量当全库总数 |
+| 分析与监控 | 页头 / 时间范围 → 有口径的摘要 → 图表 → 明细；参考 [扫描统计](src/views/statistics/index.vue) | 指标的范围、单位、分母、更新状态与失败语义；图表与数据同一筛选条件 |
+| 关系工作台 / 详情 | 查询上下文 → 摘要与关联列表 → 当前对象详情；参考 [数据关系](src/views/data-relations/index.vue) | 切换对象时哪部分更新、旧预览如何失效；窄屏不丢失对象身份 |
+| 配置表单 | 分组导航 → 当前值与说明 → 编辑 / 校验 → 提交结果；参考 [系统设置](src/views/settings/index.vue) | 生效范围、配置来源、未保存状态、失败后的值 |
+| 影像档案袋 | 病案确认 → 分类与选页 → 缩略 / 主预览 → 按权限操作；参考 [档案袋](src/views/statistics/archive.vue) | 当前病案与页序、来源失败、选择范围、生成 / 下载状态与资源预算 |
+
+病案号、上架号按原字符串呈现，保留前导零，不加千分位。窄屏重排先定义"识别对象 → 判断状态 → 执行操作"的阅读顺序。
+
+**系统设置**沿用共享页头。左侧目录只显示图标和分类名；右侧逐组卡片自然滚动。保存入口固定在页头，顺序为"重新加载 → 恢复默认 → 保存设置"。保存前在弹窗中列出"旧值 → 新值"。离开时如有未保存修改，提示"保存并离开 / 放弃修改 / 取消"。界面外观与顶部抽屉共用分组标签页；全站外观同步只推送白名单键，内容未变化时不重复写服务端。
+
+### 3.5 换行、滚动与窄屏
+
+- 页头文案、操作组、分区标题允许换行；用 `min-width: 0` 与 `minmax(0, 1fr)` 让内容可收缩，不靠裁切隐藏操作。
+- 表格在自身区域横向滚动，页面主体不被表格撑开。
+- 分页在窄屏分别安排总数 / 条数、页码导航与跳页；前后翻页与页码同组。
+- 显式 `gap` 的操作组不叠加按钮左边距（`.el-button + .el-button { margin-left: 0 }`）。
+- 日期弹层复用 [picker-options.ts](src/ui/provider/picker-options.ts)；抽屉与日期范围按实际容器约束宽度。
+
+---
+
+<a id="components"></a>
+
+## 4. 组件
+
+### 4.1 组件职责
+
+| 组件 / 工具 | 职责 |
 | --- | --- |
-| [MrrPageHeader](src/components/MrrPageHeader/index.vue) | 主标题、说明、元信息与操作区；plain/card 模式的排版由全局 `page-header.css` 统一负责 |
-| [MrrMetricCard](src/components/MrrMetricCard/index.vue) | 核心指标统一使用 label/value/note/icon/tone/valueTone/compactValue 与 extra 插槽；语义色和数值色取自[公共类型](src/components/MrrMetricCard/types.ts)，不复制同类摘要卡 CSS |
-| [MrrSectionCard](src/components/MrrSectionCard/index.vue) | 分区标题、说明、操作区与 bodyPadding；计数不附加装饰状态点 |
-| [MrrDataTablePanel](src/components/MrrDataTablePanel/index.vue) | 组合 filters/toolbar/content/pagination，统一数量和分页区域 |
-| [MrrStorageBrowser](src/components/MrrStorageBrowser/index.vue) | OSS 和 Nginx 共用的只读浏览工作区。图标和列表共用文件类型图标与键盘选中交互，列表外框负责圆角裁切。选中文件后在详情区显示有大小限制的图片或文本，窄屏保留预览与操作 |
-| [MrrFilterBar](src/components/MrrFilterBar/index.vue) | 组合筛选条件与 actions；embedded 变体用于已有数据面板，不再套第二层卡片；多条件表单可选 `layout="grid"`，默认 inline 保持既有行为 |
-| [MrrTableActions](src/components/MrrTableActions/index.vue) | 行内/更多操作、禁用及可访问名称；`placement` 当前表示排序优先级，空间足够时低优先级操作也可直显，不能当作强制隐藏授权规则 |
-| [MrrStatusTag](src/components/MrrStatusTag/index.vue) | 复用状态文案和语义色，避免只有颜色没有含义 |
-| [charts](src/components/charts/index.ts) | 复用图表卡与图表适配层；页面不自行创建第二套实例、主题或尺寸轮询 |
-| [AppLoading](src/components/AppLoading/index.vue)、[AppEmpty](src/components/AppEmpty/index.vue)、[AppError](src/components/AppError/index.vue) | 复用加载、无结果和失败/重试状态；页面负责正确选择状态，不能用空态掩盖错误 |
+| [MrrPageShell](src/components/MrrPageShell/index.vue) / [MrrPageHeader](src/components/MrrPageHeader/index.vue) | 页面壳层与页头；见 [§3](#3-布局) |
+| [MrrSectionCard](src/components/MrrSectionCard/index.vue) | 分区标题、说明、操作区与 bodyPadding；卡头浅底分隔 |
+| [MrrDataTablePanel](src/components/MrrDataTablePanel/index.vue) | filters / toolbar / content / pagination；`count` 只在服务端给出可信总数时传 |
+| [MrrFilterBar](src/components/MrrFilterBar/index.vue) | 筛选字段与 actions；`embedded` / `labelled` / `layout="grid"` |
+| [MrrMetricCard](src/components/MrrMetricCard/index.vue) | label / value / note / icon / tone / valueTone / compactValue / extra |
+| [MrrTableActions](src/components/MrrTableActions/index.vue) | 行内 / 更多操作；规则见 [TABLE_ACTIONS.md](TABLE_ACTIONS.md) |
+| [MrrStatusTag](src/components/MrrStatusTag/index.vue) | 只读业务状态（文案 + 语义色）；`el-tag` 继续承载分类、计数、可关闭项 |
+| [MrrStorageBrowser](src/components/MrrStorageBrowser/index.vue) | OSS / Nginx 只读浏览工作区 |
+| [charts](src/components/charts/index.ts) / [useMrrChart](src/composables/useMrrChart.ts) | 图表卡与实例管理；页面不创建第二套实例、主题或尺寸轮询 |
+| `AppLoading` / `AppEmpty` / `AppError` | 区域加载、无结果、失败重试 |
+| [copyText](src/utils/copy-text.ts) | 复制 + 统一反馈；空串静默，失败给出 Ctrl+C 指引 |
+| [useVisibleInterval](src/utils/composables/useVisibleInterval.ts) | 可见性感知的轮询；见 [§7](#7-性能) |
+| `actionDialog` | 简短确认与单字段输入 |
 
-图表卡片复用 `MrrSectionCard` 的表面、标题和操作区；趋势说明完整换行，不能截掉时间范围或图表操作提示。图表区通过 `aria-busy` 表达加载状态。
+### 4.2 两套按钮：同一种控件，两种实现
 
-指标卡通过图标语义色和轻色调背景辅助辨认，默认数值使用主文本色，异常数值可使用既有 `valueTone`。当前实现没有旧规范中的顶部 3px 色条，不应仅根据历史文字重新添加。指标图标当前桌面为 52×52px，600px 以下为 46×46px；保持正方形。无图标卡在桌面和移动端都只保留正文列。页头卡片与指标卡使用 110px 的共享最小高度，长内容按需增高，不使用固定高度裁掉信息。指标网格的 compact/three/four/wide 等变体沿用 [metric-card.css](src/assets/styles/components/metric-card.css)，不单凭指标数量在页面复制布局。
-
-### 导航与品牌入口
-
-[Logo 组件](src/layouts/components/Logo/index.vue) 的品牌与侧栏控制图标为 17px；桌面单侧栏的控制按钮保持 33px 正方形。悬停或键盘聚焦时显示收起图标，收起后显示展开图标；标题链接继续返回首页，其他导航模式保留原品牌链接。子目录点击不播放涟漪，但保留悬停、选中、焦点、导航和展开行为。
-
-选中导航文字及焦点使用 `--mrr-navigation-active-foreground`，从现有可配置主色派生：亮色混入黑色，暗色混入白色，保留浅色选中底。Chrome 86 在既有兼容层的 `:root` 与 `:root.dark` 均回退为正文色。当前导航链接声明 `aria-current="page"`，键盘焦点为独立 2px 轮廓。验证覆盖默认主色、绿、黄、白、黑的明暗组合，不据此推断其他控件或全站已达到对比度标准。
-
-桌面双侧栏与顶栏以原生按钮切换主导航分组，以按下状态标明当前分组。次导航有子项的目录以原生按钮和展开状态表达，叶子使用链接。三种布局统一使用内侧焦点轮廓，避免被滚动区域裁切。
-
-使用 Tab 到达分组，用 Enter 或 Space 激活。收起的次侧栏仍可通过鼠标悬停显示浮层，键盘激活后进入首项，按 Escape 返回触发按钮。移动侧栏关闭时移出 Tab 顺序，键盘开启后焦点进入导航，按 Escape 将焦点交还工具栏。工具栏在 Chrome 86 使用基础定位与工作区对齐。验证覆盖现有手风琴设置、明暗主题和旧浏览器展开降级。[导航键盘回归](e2e/navigation-keyboard.spec.ts)
-
-顶部导航搜索仅显示当前账号可见的菜单，支持标题、URL、面包屑文字和标题拼音首字母前缀。输入 `yx` 可找到「影像档案袋」，按回车打开当前选中的结果。[导航搜索回归用例](e2e/nav-search.spec.ts)
-
-### 表单、按钮与可访问性
-
-新增或改动表单应使用可见标签和真实控件的关联；只用 placeholder 不能替代字段名称。选择后仍应能辨认字段用途。装饰图标隐藏于辅助技术，纯图标按钮提供明确名称；沿用本地 Lucide 图标，旧组件迁移按页面范围处理。
-
-操作区清楚区分查询/保存等主要任务与刷新/重置等辅助操作，不机械重排既有业务优先级。危险操作沿用现有权限、确认与失败处理，不为视觉统一改变业务授权。
-
-键盘焦点使用独立的 2px 轮廓，危险操作沿用危险色；不能因按钮阴影、变体或浏览器降级而失去焦点。验证 Tab 顺序、标签点击聚焦、下拉键盘操作及浮层关闭后焦点恢复。可访问名称测试通过不等于完成了屏幕阅读器人工验收。
-
-### 两套按钮：同一种控件，两种实现
-
-项目并存 Element Plus 的 `el-button` 与 reka-ui 封装的 `FaButton`（`.fa-button-control`）。二者承担同样的角色，**尺寸与状态必须同源**，不允许各写一套数值——曾经两侧分别是 13/14px 字号、11/14/16px 内边距、8/10px 圆角，并排时一眼能看出是两套控件。
-
-- [tokens.css](src/assets/styles/tokens.css) 的 `--mrr-button-font-size(-sm/-lg)`、`--mrr-button-padding-x(-sm/-lg/-text)` 是唯一数值来源；
-- [element-plus-overrides.css](src/assets/styles/element-plus-overrides.css) 与 [FaButton 的 cva](src/ui/components/FaButton/button/index.ts) 只引用令牌，不写死数值；
-- hover / active / focus-visible / disabled / loading 由 [form-controls.css](src/assets/styles/components/form-controls.css) 按 `[data-variant]` 统一定义，与 Element Plus 逐条对齐（同样的 accent 悬停、同样的禁用灰、同样的 1px 下沉/0.97 按压）；
-- 主题换密度只改令牌（[warm-flat.css](src/assets/styles/themes/warm-flat.css) 中的 `--mrr-button-*` 覆盖），不在主题层分别重写两族的 padding / font-size。
+Element Plus `el-button` 与 reka-ui `FaButton`（`.fa-button-control`）**尺寸与状态同源**：`--mrr-button-font-size(-sm/-lg)` 与 `--mrr-button-padding-x(-sm/-lg/-text)` 是唯一数值来源。两侧只引用令牌，交互状态由 [form-controls.css](src/assets/styles/components/form-controls.css) 按 `[data-variant]` 统一定义；主题换密度只改令牌。
 
 | 语义 | FaButton | el-button |
 | --- | --- | --- |
-| 主要 | 默认（`variant="default"`） | `type="primary"` |
-| 次要 | `variant="outline"` | 无 `type` |
-| 辅助 | `variant="secondary"`（中性实心底，Element Plus 无等价变体） | — |
-| 轻量 | `variant="ghost"` | `text` |
-| 文字 | `variant="link"` | `link type="primary"` |
-| 危险 | `variant="destructive"` | `type="danger"` |
-| 紧凑 / 大型 | `size="sm"` / `size="lg"` | `size="small"` / `size="large"` |
-| 图标 | `size="icon"`（随控件圆角，控件高度见方） | `circle`（正圆，同高同宽） |
-| 加载 | `loading`（保留变体配色 + 半透明，并阻止点击） | `loading` |
-| 禁用 | `disabled`（有底色变体换中性灰，文字变体降透明度） | `disabled` |
+| 主要 / 次要 | `default` / `outline` | `type="primary"` / 无 type |
+| 轻量 / 文字 | `ghost` / `link` | `text` / `link type="primary"` |
+| 危险 | `destructive` | `type="danger"` |
+| 紧凑 / 大型 | `size="sm"` / `"lg"` | `size="small"` / `"large"` |
+| 图标 | `size="icon"`（方形，工具按钮） | `circle`（正圆，图标入口） |
 
-图标按钮是唯一保留的形态差异：正圆属于「图标入口」，方框属于「工具按钮」；同一组控件里不要混用两种形状。按钮组（`FaButtonGroup` / `el-button-group`）拼接方式一致——相邻按钮重叠 1px 共用描边，只保留外缘圆角。
+同一组控件里不混用方、圆两种图标按钮。加载态保留变体配色并阻止点击、设置 `aria-busy`；禁用态不只降低透明度，需可读出原因。守护测试：[button-consistency.test.ts](src/assets/styles/button-consistency.test.ts)、[button-parity.spec.ts](e2e/button-parity.spec.ts)。
 
-展示页把两族按钮按角色逐对并排（`/ui-components` → 按钮与操作）；浏览器侧一致性由 [button-parity.spec.ts](e2e/button-parity.spec.ts) 断言，源码侧「只引用令牌」由 [button-consistency.test.ts](src/assets/styles/button-consistency.test.ts) 守住。改任一侧后请同时跑这两条。
+### 4.3 筛选栏
 
-### 筛选、查询与结果归属
+- 字段标签说明"这是什么条件"，placeholder 只补充格式或示例；标签关联到真实可聚焦的控件。
+- 有可见标签时使用 `<MrrFilterBar embedded labelled>`，字段包在 `.mrr-filter-field` 里。组件提供标签排版与"操作区与控件底边对齐"，页面只定义列宽（flex）。
+- 沿用页面既有的显式查询或即时筛选，不为视觉优化增加自动提交。字段清空 ≠ 已重新查询；查询失败 ≠ 没有记录。工具条应显示"已提交条件"，修改未提交时给出提示。
+- 窄屏字段整行、操作区移到下方并以分隔线隔开。
 
-患者管理把关键词放在「患者表格」内，切到统计明细后由当前视图显示自己的控件。档案装箱在同一面板内切换装箱明细和箱号列表，各自保留筛选与分页。搜索动作与筛选字段底部对齐，窄屏让综合搜索占整行、较短字段并排。表格面板已显示结果总数时，分页区只保留每页条数和翻页控件。
+### 4.4 表格与行操作
 
-这两个列表使用无图标的紧凑指标卡，窄屏以两列展示并允许标签、说明换行。患者统计失败时显示错误提示，患者列表继续可用。浏览器回归覆盖窄屏标签页、装箱表单、筛选与箱号联查。[列表工作区回归](e2e/list-workspace-ui.spec.ts)
-
-- 字段标签说明“这是什么条件”，placeholder 只补充格式或示例；选择后仍保留可辨认的字段名称。标签应关联实际可聚焦的输入，不只给外层容器加文案。
-- 沿用页面既有的显式查询或即时筛选方式，不为视觉优化私自增加自动提交、请求节流或第二套状态机制。查询按钮、Enter、重置和清空的具体范围应由页面契约说明并验证。
-- 筛选字段清空不等于已重新查询；查询失败也不等于没有记录。页面必须能解释当前显示结果所对应的条件。
-- 重置是否重查、是否回到首批、是否清除选页等，沿用领域行为。切换病案或查询上下文时，不能让旧选择套用到新对象。
-- 只有服务端提供可信总数时才展示总数；未知、未返回和确知为零应分别处理。`MrrDataTablePanel` 的 `count` 可省略，不能为显示徽标而伪造零值。
-- 查询中的重复操作、取消和失败恢复沿用实际支持能力；没有取消机制时不要提供看似可用的取消入口。
-
-### 表格、行操作与批量范围
-
-表格首先服务核对和定位。关键身份、业务状态与主要操作应容易找到；补充字段可以通过现有详情入口完整读取。列收缩或窄屏不能通过隐藏关键字段、截掉操作或无限缩小字号解决。
-
-| 信息类型 | 展示与交互要求 |
+| 信息类型 | 要求 |
 | --- | --- |
-| 编号/可展示资源标识 | 保留授权范围内的原始编号；长值按场景提供完整读取，不能猜测截断后的标识，也不能为完整展示泄露内部路径或受保护地址 |
-| 数量、比例、耗时 | 单位和精度按数据契约一致，适合比较的数值采用等宽数字；不在前端猜测分母或重新解释缺失值 |
-| 日期与时间 | 明确业务口径及使用的格式；有时区歧义时先确认契约，复用现有格式化逻辑 |
-| 状态 | 使用既有状态组件/映射，文案和语义色一致；未知状态保留可诊断含义，不默认写成成功 |
-| 行操作 | 复用 `MrrTableActions` 和原权限检查器，图标有名称，禁用原因可读；不能把布局优先级当作授权或强制隐藏规则 |
-| 批量选择 | 展示实际范围，区分本页、本批、已选与全量；确认范围必须与实际提交的对象一致 |
+| 编号 / 资源标识 | 保留原始编号；长值提供完整读取方式，不泄露内部路径 |
+| 数量、比例、耗时 | 单位与精度按契约；用等宽数字 |
+| 日期时间 | 复用现有格式化，时区歧义先确认 |
+| 状态 | `MrrStatusTag` / 既有映射；未知状态不默认写成成功 |
+| 行操作 | `MrrTableActions` + 原权限检查器；图标有名称，禁用原因可读 |
+| 批量选择 | 区分本页、本批、已选与全量；确认范围与提交对象一致 |
 
-行点击、复选、单行按钮和“更多操作”应有明确分工，避免点击按钮同时切换另一对象。删除、导出和正式类型变更等操作继续服从后端授权、审计及领域确认流程，不能为缩短操作路径省略现有保护。
+列宽优先用 `min-width`，让操作列在常见视口内不被挤出。行点击、复选、单行按钮、"更多操作"职责分离，点击按钮不会同时切换选中行。
 
-### 表单、确认、抽屉与浮层
+### 4.5 指标卡
 
-应用内的简短确认和单字段输入使用共享 `actionDialog`，由根组件挂载的 `el-dialog` 承载。需要表单、预览或提交进度的场景可以在页面内组合 `el-dialog`。
+实色卡面 + 图标语义色块 + 数值色（`valueTone`），没有顶部色条和斜向渐变。图标桌面 52px、≤600px 时 46px，保持正方形；无图标卡只保留正文列。最小高度 110px，与 card 页头一致。网格变体用 `mrr-metric-grid--compact/three/four/wide/dense`，不在页面复制布局。只读指标卡不做悬停位移；可点击的指标卡（如运行错误中心的"仅看 ERROR"）外层是 `<button>`，焦点用 outline。
 
-短、聚焦的编辑或确认可使用现有 Element Plus / [FaModal](src/ui/components/FaModal/index.vue)；保留列表上下文的补充详情可使用 [FaDrawer](src/ui/components/FaDrawer/index.vue)。长流程或持续阅读不因视觉偏好被强塞进小弹窗。先复用当前页面的浮层入口，不叠加另一套遮罩、滚动锁或焦点管理。
+### 4.6 对话框、抽屉与消息
 
-- 标题说明对象和操作，主操作使用具体动词；确认内容交代对象、范围与结果，不只写“是否确认”。纯查看不增加无意义的二次确认。
-- 编辑前保留初始值，校验错误邻近字段，失败后让用户能理解怎样恢复；是否保留草稿及何时清空必须按现有业务契约设计，不为保留草稿另加敏感信息的浏览器持久化。
-- 关闭按钮、取消、Esc、遮罩点击和提交中的关闭行为应明确且一致；有未保存内容时先确认丢弃策略，不直接套用默认关闭行为。
-- 浮层打开后焦点进入适当控件，关闭后回到合理入口；支持键盘操作，避免嵌套弹窗造成焦点陷阱。仅从截图不能证明焦点管理正确。
-- 窄屏保留可达的关闭与提交入口，正文在自身区域滚动；不要用固定高度或视口宽度简写裁切内容。
-- 成功反馈反映已完成的动作。表单保存失败、请求超时、权限撤销等状态不应先关闭表单再显示一个无法恢复的成功提示。
+- 简短确认用 `actionDialog`；表单、预览或进度用页面内的 `el-dialog` / [FaModal](src/ui/components/FaModal/index.vue)；保留列表上下文的详情用 [FaDrawer](src/ui/components/FaDrawer/index.vue)。不叠加第二套遮罩、滚动锁或焦点管理。
+- 标题说明对象和操作，主按钮用具体动词，确认内容交代对象、范围与结果。
+- 关闭按钮、取消、Esc、遮罩点击、提交中关闭的行为要一致；有未保存内容时先确认丢弃策略。
+- 打开后焦点进入合适控件，关闭后回到触发入口。窄屏保留关闭与提交入口，正文独立滚动。
+- 成功反馈只对应已完成的动作；失败不先关表单再提示成功。
 
-### 图表与影像阅读
+### 4.7 导航
 
-图表应同时提供标题、统计范围、单位或必要口径；图例颜色不承担唯一说明。关键结论应能从摘要或明细核对，不能只依赖悬浮提示。加载、空数据和失败沿用区域状态，不把尚未获得的数据画成真实零值。
+- **主导航**：原生按钮切换分组，用 `aria-pressed` 标明当前分组；悬停色比窄栏底色深一档。
+- **次导航**：有子项用按钮 + `aria-expanded`，叶子用链接 + `aria-current="page"`；三种布局统一使用内侧 2px 焦点轮廓。子目录点击不播放涟漪。收起后悬停显示浮层，键盘激活进入首项，Esc 返回触发按钮。
+- **移动侧栏**：关闭时移出 Tab 顺序；Esc 把焦点交还工具栏按钮；遮罩与抽屉同节奏。
+- **标签栏**：标签可聚焦（Enter 切换），关闭按钮是带名称的 `<button>`，聚焦时可见；关闭 / 新开使用宽度过渡。Alt+←/→、Alt+1..9、Alt+W 快捷键保持不变。
+- **面包屑**：稳定 key（路径 + 标题），跳转兄弟页时公共祖先不重播。
+- **导航搜索**：只显示当前账号可见菜单，支持标题、URL、面包屑和拼音首字母前缀（如 `yx` → 影像档案袋）。
 
-影像阅读复用已有 [档案袋组件](src/views/statistics/archive/components/PreviewPanel.vue)与任务机制：加载失败应能定位到当前页面或安全的来源类别，不向用户暴露内部存储地址，重试不切换到其他病案；选页、顺序和授权范围始终清楚。缩略图与主预览按已有并发/清理机制工作，不为截图效果同步加载整案原图。
+### 4.8 图表与影像
 
-档案袋的病案号和上架号只去除首尾空白。录入提示可以显示位数，查询、路由恢复、选页缓存和下载均保留原始短号与前导零。切到一张尚未就绪的影像时，单页预览重新显示加载提示。平铺关闭页码和分类时，仍可从卡片勾选影像。分类确认绑定发起时的影像与类型，确认时目标已切换则取消写入。[编号回归](e2e/archive-code-input.spec.ts) · [加载回归](e2e/image-slow-loading.spec.ts) · [平铺回归](e2e/archive-type-select-layer.spec.ts)
+- 图表提供标题、统计范围、单位与口径；图例颜色不是唯一说明。加载、空、失败用区域状态，不把未获取的数据画成 0。图表区通过 `aria-busy` 表达加载。
+- 影像阅读复用档案袋组件与任务机制：失败时定位到当前页或安全的来源类别，不暴露内部地址；重试不切换病案；缩略图与主预览按既有并发与清理机制加载，不同步拉取整案原图。
+- 档案袋的病案号、上架号只去首尾空白，保留前导零。分类确认绑定发起时的影像与类型；目标已切换则取消写入。
+- 每文件 128MiB 的导出预算与单次打印 50 张上限见 [预算模块](src/utils/archive-export-budget.ts)，属于待真实终端验收的限制，不是内存安全保证。
 
-图表缩放、预览翻页和下载等既有操作方式应在关键说明中完整可读。设计文档只定义应验证的结果，不由此新增全库预加载、下载授权或未实现的恢复能力。
+---
 
-病案查询诊断使用失败请求实际提交的查询键与追踪编号。关闭弹窗或离开页面时取消浏览器请求；探测进度、失败原因和报告各有明确状态。错误反馈提供当前条件可用的操作，诊断结果区分无匹配样本与探测失败。弹窗的标题和操作区保持在视口内，正文独立滚动。摘要优先显示可跳转的排查线索，窄屏样本逐条显示字段及完整值。[查询诊断回归](e2e/query-diagnostics.spec.ts)
+## 5. 交互与状态
 
-### 交互状态契约
+<a id="交互状态契约"></a>
 
-以下是新增和修改页面的设计与验收要求；历史页面是否满足需逐页核对，不能据此宣称已经全覆盖。
+### 5.1 交互状态契约
 
-| 状态 | 用户应能判断 | 必须保持的边界 |
+| 状态 | 用户应能判断 | 边界 |
 | --- | --- | --- |
-| 首次加载 | 哪个区域正在加载 | 区域稳定，适当表达 busy；复用现有加载组件，不新增全局反馈机制 |
-| 刷新/再次查询 | 当前提交的条件和结果归属 | 迟到响应不能覆盖新结果；现有代次隔离用于对应调用链，不能假定所有页面已迁移 |
-| 成功但为空 | 本次查询确实没有结果 | 区分未查询、无记录与错误，按当前权限边界展示 |
-| 失败/超时 | 安全原因、可重试操作或 Request ID | 不伪装为空结果，不显示底层路径、密钥或患者原文 |
-| 拒绝/会话失效 | 需要重新登录或缺少权限 | 后端仍是授权边界；退出或切换账号后不残留另一账号结果 |
-| 禁用/处理中 | 操作为何不可用 | 不只降低透明度；原因与状态可读，防止重复操作沿用原业务逻辑 |
-| 导出已生成但下载失败 | 任务完成和下载失败是不同结果 | 保留任务重下入口；超限要求分批，不静默丢页 |
+| 首次加载 | 哪个区域在加载 | 区域稳定，设置 `aria-busy`；用 `AppLoading` 或图表 loading |
+| 刷新 / 再次查询 | 当前提交的条件与结果归属 | 迟到响应不覆盖新结果（请求代次隔离） |
+| 成功但为空 | 本次查询确实没有结果 | 区分未查询、无记录、错误；`AppEmpty`（`role="status"`） |
+| 失败 / 超时 | 安全原因、重试入口或 Request ID | 不伪装为空；`AppError`（`role="alert"`）；不显示路径、密钥或患者原文 |
+| 拒绝 / 会话失效 | 需要重新登录或缺少权限 | 后端仍是授权边界；切换账号后不残留上一账号结果 |
+| 禁用 / 处理中 | 为什么不可用 | 不只降透明度；原因可读，防重复提交 |
+| 导出完成但下载失败 | 任务完成与下载失败是两回事 | 保留重新下载入口；超限要求分批，不静默丢页 |
 
-主线已合入每文件 128MiB 导出预算和一次 50 张打印限制，见 [预算模块](src/utils/archive-export-budget.ts) 与 [整合记录](../docs/engineering/export-browser-budget.md)。这些是待真实终端验收的限制，不能当作内存安全保证。完整多 GB 下载仍属后续专项；图片请求并发、离页取消、Blob URL 和旧响应隔离沿用已有档案袋机制。
+### 5.2 悬停、选中与焦点
 
-### 当前差异与后续迁移
-
-| 项目 | 本文基线的状态 | 文档使用方式 |
+| 状态 | 视觉通道 | 示例 |
 | --- | --- | --- |
-| 共享页头/工作台、无图标指标、侧栏无涟漪 | 已由 #534/#548 等合入主线 | 作为新增同类页面的复用基线 |
-| 图表卡片复用分区卡与完整说明 | [PR #551](https://github.com/weepwood/MRR/pull/551) 已合入主线 | 复用当前图表卡片实现；目标终端仍需适用场景验收 |
-| 用户筛选可见标签及关联 | [PR #553](https://github.com/weepwood/MRR/pull/553) 已合入主线 | 同类表单优先沿用标签关联方式，其他旧页仍需逐页核验 |
-| 其他旧页的重复容器、缺少标签或请求隔离 | 未逐页完成核验 | 有证据后按单一问题开任务，不做全站顺手替换 |
+| 悬停 | 背景加深一档 / 描边加深 / 阴影升一档 / ≤2px 上抬 | 菜单项、可点击卡片 |
+| 选中 | 主色描边 + 3px 主色外环，或主色浅底 + 字重 | 档案卡片、预览影像、当前标签 |
+| 勾选 | "面"：浅主色填充 | 档案墙批量勾选 |
+| 焦点 | `outline: 2px solid var(--mrr-ring)`，`outline-offset` 1–3px | 所有可聚焦元素 |
+| 不可放置（拖拽） | 中性描边 + 降低透明度 + `cursor: no-drop` | 首页置顶与普通组件之间 |
 
-## Do's and Don'ts
+悬停态不能使用选中态的外环；勾选（面）与预览选中（线）可以叠加。
 
-- 先核对原组件、调用链、设计令牌和已有测试，再决定最小修改范围；工程代码组织按 [ENGINEERING.md](ENGINEERING.md)。
-- 用中文、明暗主题、长说明和宽窄屏验证真实内容；不以隐藏内容、裁切操作或缩小字体代替布局修复。
-- 不为页面视觉引入第二套请求、认证、Store、主题、状态机或缓存；公共 UI 不依赖具体病案业务。
-- 不让病案号、姓名、身份证、Token、密码、密钥进入截图、日志、Issue、PR 或 Artifact；仅使用合成验证数据。
-- 不将本文列出的目标、候选 PR、Mock、静态构建或现代 Chromium 结果写成医院验收通过。
+### 5.3 键盘与可访问性
 
-### 验证与维护
+- 可点击元素必须可用键盘操作：优先用原生 `button` / `a`；确需用 `div` 时补 `role`、`tabindex="0"`、Enter / Space 处理与可访问名称。
+- 纯图标按钮提供 `aria-label`；装饰图标设置 `aria-hidden`。
+- 验证 Tab 顺序、标签点击聚焦、下拉键盘操作、浮层关闭后焦点恢复。可访问名称测试通过 ≠ 完成了屏幕阅读器人工验收。
 
-改动 UI 时记录风险、受影响页面、当前 SHA、验证场景、独立审查与撤销步骤。优先本地定向检查，完整业务套件依既有分层 CI 执行；不因纯 UI 启动全套后端环境。
+### 5.4 拖拽与排序
 
-在 `frontend-fantastic-admin` 中按改动执行 `pnpm lint:tsc`、定向 ESLint/Stylelint、对应 Vitest/Playwright；构建或兼容变化执行 `pnpm build` 与 `pnpm test:compat:chrome86`。浏览器测试使用仓库已有 Mock 和认证夹具，不另建绕过登录的展示链路。
+- 拖拽时实时区分可放置目标与不可放置目标；不可放置的目标不调用 `preventDefault`，浏览器自动显示禁止光标。
+- 位置变化使用 FLIP 位移（`TransitionGroup` 的 `*-move` 类，move 档）。
+- 必须提供键盘替代：编辑模式下 Alt + 方向键与相邻项交换，并阻止冒泡，避免触发全局快捷键。
+- 触屏设备没有 HTML5 拖拽，键盘 / 菜单式排序就是触屏的替代方案。
 
-共享布局参考 [shared-ui-layout.spec.ts](e2e/shared-ui-layout.spec.ts)、[control-layout.spec.ts](e2e/control-layout.spec.ts) 和 [workbench-ui-layout.spec.ts](e2e/workbench-ui-layout.spec.ts)。常用核对视口为 375/768/1024/1366/1440/1920px，按实际改动取必要组合，并同时核对 plain/card、明暗、动效开关和缩放后的可用空间；不是每次都运行全部矩阵。
+---
 
-### 设计交付矩阵
+## 6. 兼容与运行环境
 
-下表用于按改动选择适用验证项，不是每次启动或提交前运行全站测试的要求。填写证据时记录实际 SHA、页面、数据范围与条件；初始状态为“待核验”，不适用项应说明原因。截图、交互自动化、静态检查和现场演练分别记录，不相互替代。
+<a id="chrome-86-降级"></a>
 
-| 验证面 | 需要检查的结果 | 可采用的证据 |
+### 6.1 浏览器基线：Chrome 86
+
+最低支持 Chrome 86 / Edge 111 / Firefox 114 / Safari 16.4。JS 由 `@vitejs/plugin-legacy`（`modernPolyfills: true`）按实际用法补 polyfill；CSS 由 Lightning CSS 按 `cssTarget` 降级 `inset`、逻辑属性与媒体查询范围语法。[verify-chrome86-build.mjs](scripts/verify-chrome86-build.mjs) 校验产物。
+
+| 特性 | Chrome 86 | 写法 |
 | --- | --- | --- |
-| 任务主路径 | 查询、查看、保存或导出的对象/范围正确，成功反馈与实际结果一致 | 对应页面的定向交互与 API 结果；使用合成数据 |
-| 状态与恢复 | 首次加载、空、失败、拒绝、处理中及适用的重试/取消能区分 | 定向状态用例；注明不支持或未测能力 |
-| 键盘与字段 | 标签关联、Tab 顺序、焦点可见、浮层退出及选值后名称有效 | 实际键盘操作与可访问树；人工辅助技术检查单独记录 |
-| 长内容与缩放 | 长中文、原始编号、说明、提示和操作仍能完整读取 | 真实内容布局检查；记录窗口、缩放和有效内容宽度 |
-| 主题与布局 | 明暗、适用页头模式、侧栏与窄屏下层级和操作可达 | 对应主题/布局截图；不能仅测一个桌面宽度 |
-| 交互手势 | 点击、拖动或触摸按实际使用场景工作，中断后不残留错误状态 | 说明是鼠标、合成触摸还是实际设备；模拟窄视口不等于触摸验证 |
-| 兼容与资源 | Chrome 86 降级可用，图表/影像离页后依既有机制清理 | 静态构建与定向生命周期证据；真实浏览器/存储另行验收 |
-| 隐私与权限 | 拒绝状态不泄露敏感内容，账号切换及页面退出后的状态隔离符合契约 | 对应拒绝/会话用例；后端仍为授权边界 |
+| `:has()` / `:is()` / `:where()` / `:not(a, b)` | 不支持（整条规则被丢弃） | 禁止，或收进 `@supports selector(...)` |
+| `color-mix()` | 不支持 | 见 §6.2 |
+| `aspect-ratio` | 88+ | 先写固定高度或 `min-height`，再在 `@supports (aspect-ratio: …)` 中覆盖 |
+| `dvh` / 容器查询 | 108+ / 105+ | 先写 `100vh` / 媒体查询回退 |
+| `overflow: clip` | 90+ | 先写 `overflow: hidden` |
+| `forced-colors` 媒体查询 | 89+ | 渐进增强 |
+| `structuredClone` / `Array.at` / `findLast` | 由 polyfill 提供 | 新用到的 API 需加入校验清单 |
 
-提交设计或实现时，至少说明用户任务、页面组合、组件与令牌来源、状态转换、适用验证结果以及尚未确认事项。未实现的页面蓝图和目标交互必须标记为设计要求，不能因为写入本文件就视为完成。
+构建与静态检查是证据，不能代替医院终端真机验收。
 
-共享组件、令牌和核心交互变更时，同一 PR 更新本文件的对应规则与证据链接。纯文档刷新只做文档与源码一致性检查，不虚构新的渲染证据。医院 Chrome 86、Windows/Nginx/真实存储及人工验收继续复用 [医院副本验收包](../docs/engineering/hospital-replica-acceptance.md)。
+### 6.2 color-mix 回退
 
-2026-11-12 全局视觉增量的范围、独立审查和验证记录见[全局视觉验证](../docs/engineering/global-ui-polish-verification.md)。本文其余历史基线与已知差异不表示全站重新验收。
+装饰性色调可以降级；**数据编码、浮层背景、承载分层的背景、唯一状态信号**必须有实色。回退只认两种写法：
+
+1. **变量级重设**：在 [browser-compatibility.css](src/assets/styles/browser-compatibility.css) 或组件内的 `@supports not (color: color-mix(...))` 块里重设自定义属性或整条声明。
+2. 把增强值收进 `@supports (color: color-mix(...))`。
+
+同一规则里"先写静态值、再写含 `var()` 的 `color-mix`"**不是回退**：含 `var()` 的声明在计算值阶段失效为 `unset`，前一条静态值不会恢复。`border`、`box-shadow` 等简写失效时会连带丢掉样式或投影，回退时要重写完整简写。[chrome86-fallback.test.ts](src/assets/styles/chrome86-fallback.test.ts) 会拦截这种伪回退。
+
+### 6.3 国产双核浏览器
+
+360 安全 / 极速、QQ、搜狗、2345 等浏览器访问内网 IP 时，常默认切到 IE 兼容内核。`index.html` 声明 `<meta name="renderer" content="webkit">`、`force-rendering` 与 `X-UA-Compatible`，让它们优先使用 Chromium 内核。仍落在 IE 内核时，会显示"浏览器不受支持"的拦截提示。部署说明里应提示把系统地址加入浏览器的"极速模式"名单。
+
+### 6.4 内网 HTTP（非安全上下文）
+
+医院内网常用 HTTP 部署，以下能力在非安全上下文中不可用：
+
+| 能力 | 处理 |
+| --- | --- |
+| `navigator.clipboard` | `installClipboardFallback()` 安装 `execCommand('copy')` 降级；页面统一调用 `copyText()` |
+| `crypto.randomUUID` / `crypto.subtle` | 调用前做能力检测并提供降级（现有调用点均已检测）；新增调用沿用同一写法 |
+| Service Worker / PWA | 仅在生产且 `serviceWorker in navigator` 时注册；HTTP 下自动不注册，不影响主流程 |
+| `startViewTransition` | 能力检测，且受动效开关控制 |
+
+### 6.5 Windows 高对比度 / 强制颜色
+
+强制颜色模式会清掉 `background` 与 `box-shadow`，靠浅底或投影表达的选中态会消失。[base.css](src/assets/styles/base.css) 在 `@media (forced-colors: active)` 中用 `Highlight` 描边补回当前菜单、当前标签、选中影像与拖拽目标，并给按钮补 `ButtonText` 边框。新增"只靠背景表达"的选中态时，需加入这份清单。
+
+### 6.6 主题、调色板与设置组合
+
+每次改动共享样式，至少在以下组合下自查：亮 / 暗 × 默认调色板 / 暖色调色板（gr8r）× plain / card 页头 × 动效开 / 关。暖色调色板的规则全部挂在 `html[data-mrr-palette="gr8r"]` 下（[warm-flat.css](src/assets/styles/themes/warm-flat.css)），新增共享组件若有专门的暖色外观，在该文件补充，不在组件里判断调色板。
+
+### 6.7 构建环境
+
+| 模式 | 用途 | 注意 |
+| --- | --- | --- |
+| `development` | 联调真实后端（/proxy） | 显示应用配置面板 |
+| `mock` | 无后端开发与 E2E | `VITE_APP_DEMO_MODE=true` |
+| `test` | 测试构建（含 Mock 与 sourcemap） | 未声明 DEMO_MODE，按默认值处理；如需展示模式请显式声明 |
+| `production` | 医院正式部署 | 不含 Mock；polyfill 固定开启，不再由环境变量控制 |
+| `pages` | GitHub Pages 演示 | base 为 `/MRR/`，CSP 禁止外连，不注册 PWA |
+
+---
+
+## 7. 性能
+
+| 主题 | 规则 |
+| --- | --- |
+| 轮询 | 统一用 `useVisibleInterval(task, ms)`：页面隐藏时跳过、回到前台补一次、KeepAlive 失活时暂停、卸载时清理。Pinia store 中的轮询需提供 `stop()`，并在布局卸载（退出登录）时调用 |
+| 监听 | 不 `deep` 监听 `route`、store 整体或大数组；监听 `route.fullPath` 或具体字段。确需深度监听时，下游要做内容去重 |
+| 图表 | 主题变化以"明暗 + 调色板 + 主色 + 卡面色"签名去重，并按帧合并；`<html>` 上无关的 class / style 变化不触发重绘。KeepAlive 失活的图表不渲染 |
+| 网络写入 | 自动保存类写操作按内容去重（如全站外观同步），本机状态变化不触发服务端写入 |
+| 动画 | 只过渡 transform / opacity / 颜色；不写 `transition: all`，不过渡 `margin` / `width` 等布局属性（标签增删的宽度收拢是唯一例外，且只作用于离场元素） |
+| 滚动与尺寸 | 滚动监听加 `{ passive: true }`；尺寸用 `ResizeObserver` 或 `useResizeObserver` 并防抖 |
+| 字体 | 预加载界面子集；完整字库懒加载。待办：完整字库切片 |
+| 图片 | 缩略图 `loading="lazy"` + 既有并发上限；离页取消请求、回收 Blob URL；不为预览同步加载整案原图 |
+| 分包 | 页面与重依赖（ECharts、JSZip、pinyin-pro、导航搜索）保持懒加载；ECharts 只注册用到的图表、组件与 Canvas 渲染器 |
+
+---
+
+## 8. 新旧页面统一
+
+### 8.1 迁移状态
+
+| 状态 | 页面 |
+| --- | --- |
+| 已用 `MrrPageShell` + `MrrPageHeader` | 首页、用户、记录、患者、档案装箱、影像审计、日志、数据关系、OCR 批次、Nginx 浏览、OSS 浏览、UI 组件、接口响应分析、权限管理、运行错误中心、扫描统计、**系统与数据库监控（含监控聚合页）、运维诊断中心、OSS 迁移管理、数据导入导出、病案明细档案袋、认证测试台、数据表浏览** |
+| 独立外壳（不迁移） | 登录、强制改密、公共状态页、病案查询 / 影像查询、外部调阅、档案袋独立页、系统设置（`.settings-page`）、帮助中心（`.help-center`） |
+
+业务页面中已没有手写 `.page-shell` / `.page-header` 的使用者，全局 `.page-shell` 兜底样式已删除。
+
+两个页面给 `MrrPageHeader` 额外加了 `class="page-header"`（运维诊断中心、Nginx 浏览），这是为了保留 [page-header-style.spec.ts](e2e/page-header-style.spec.ts) 对 `.page-header h1` 与卡片样式的断言入口；新页面不需要这个类，E2E 优先使用 `getByRole('heading')` 或 `.mrr-page-header`。
+
+仍待逐页处理的是**页面内部**的旧写法，而不是页头：
+
+- `el-card` 分区 → `MrrSectionCard`：监控、OSS 迁移、运维中心、数据交换、统计明细的卡头是各页自写的 `.card-header`。目前由 Element Plus 桥接层对齐留白和底色，语义未迁移。
+- `el-empty` / `v-loading` → `AppEmpty` / `AppLoading`：同样由桥接层兜底视觉。
+- `.info-trigger`（说明图标按钮）在权限管理、数据交换、认证测试台各复制一份，应抽成共享组件或 `#badge` 的公共样式。
+- 页内网格间距 `gap: 12/14/16/18px` 仍是页面局部值，随各页改造时统一到 `--mrr-space-*`。
+
+### 8.2 迁移步骤（每页一个 PR）
+
+1. 外层 `div.page-shell` → `MrrPageShell`；`header.page-header` → `MrrPageHeader`，`h2` 升为组件内的 `h1`；显式导入组件（单测环境不自动注册）。
+2. 删除页面里重复的 `.page-header` / `.eyebrow` / `.subtitle` / `.page-shell` 样式。
+3. `el-card` 分区 → `MrrSectionCard`（或保持 `el-card`，删除自定义卡头留白）；`el-empty` → `AppEmpty`；失败面板 → `AppError`。
+4. 手写复制 / 轮询 / 等宽字体 → `copyText` / `useVisibleInterval` / `--mrr-font-mono`。
+5. 检查单测与 E2E 选择器：E2E 依赖 `.subtitle` 的页面（监控）应先改用 `getByRole` 或组件类名，再迁移模板。
+6. 在 [§10](#10-验证与维护) 的组合下截图对比，迁移前后布局不应有非预期变化。
+
+---
+
+<a id="dos-and-donts"></a>
+
+## 9. Do / Don't
+
+| Do | Don't |
+| --- | --- |
+| 先核对原组件、调用链、令牌与已有测试，再决定最小改动范围 | 不为页面视觉引入第二套请求、认证、Store、主题或状态机 |
+| 用真实中文、长说明、原始编号、明暗主题与宽窄屏验证 | 不用隐藏内容、裁切操作或缩小字号代替布局修复 |
+| 新样式引用令牌，新组件复用共享组件 | 不在页面写裸色值、裸时长、`z-index: 9999`、自定义等宽字体栈 |
+| 动效表达"状态在变化"，并尊重关闭开关 | 不用弹跳、超尺寸缩放、渐变光斑做装饰 |
+| 公共 UI 与病案业务解耦 | 不让病案号、姓名、身份证、Token 进入截图、日志、Issue 或 PR |
+| 把 Mock / 构建结果写成"静态证据" | 不把 Mock、构建或现代 Chromium 结果写成"医院验收通过" |
+
+---
+
+## 10. 验证与维护
+
+在 `frontend-fantastic-admin` 中按改动执行：`pnpm lint:tsc`、定向 ESLint / Stylelint、对应 Vitest / Playwright；涉及构建或兼容时执行 `pnpm build && pnpm test:compat:chrome86`。浏览器测试使用仓库已有的 Mock 与认证夹具。
+
+常用视口为 375 / 768 / 1024 / 1366 / 1440 / 1920px，按改动选取必要组合，并核对 plain/card、明暗、动效开关、暖色调色板与浏览器缩放。共享布局回归：[shared-ui-layout](e2e/shared-ui-layout.spec.ts)、[control-layout](e2e/control-layout.spec.ts)、[workbench-ui-layout](e2e/workbench-ui-layout.spec.ts)。
+
+| 验证面 | 需要检查的结果 | 证据 |
+| --- | --- | --- |
+| 任务主路径 | 查询、查看、保存、导出的对象与范围正确，反馈与结果一致 | 定向交互 + API 结果（合成数据） |
+| 状态与恢复 | 首次加载、空、失败、拒绝、处理中、重试 / 取消可区分 | 定向状态用例 |
+| 键盘与字段 | 标签关联、Tab 顺序、焦点可见、浮层退出 | 键盘操作 + 可访问树 |
+| 长内容与缩放 | 长中文、原始编号、说明与操作完整可读 | 记录窗口、缩放与有效宽度 |
+| 主题与布局 | 明暗、调色板、页头模式、侧栏与窄屏下层级与操作可达 | 对应截图 |
+| 动效 | 进出节奏、方向与语义符合 §2.9；关闭后状态仍可判断 | 动效开 / 关两组截图或录屏 |
+| 兼容与环境 | Chrome 86、内网 HTTP、强制颜色下可用 | 静态构建 + 定向用例；真机另行验收 |
+| 性能 | 隐藏标签页无轮询请求；主题切换时每张图只重绘一次 | Network / Performance 面板记录 |
+| 隐私与权限 | 拒绝状态不泄露，账号切换后状态隔离 | 拒绝 / 会话用例 |
+
+共享组件、令牌或核心交互变更时，在同一 PR 中更新本文件对应规则与证据链接。医院 Chrome 86、Windows / Nginx / 真实存储与人工验收使用 [医院副本验收包](../docs/engineering/hospital-replica-acceptance.md)。
+
+---
+
+## 修订记录
+
+**2026-11-22**
+
+- 结构：按"速查 → 原则 → 令牌 → 布局 → 组件 → 交互 → 兼容 → 性能 → 迁移 → 验证"重排；新增速查清单、对比度基线、z-index、字号阶梯、卡片留白、进出动效语义、兼容与运行环境、性能、新旧页面迁移状态各节；历史叙述与重复段落压缩。
+- 事实更正：card 模式页头说明为 13px（原文写 14px）；指标卡已改为实色卡面（原文写"轻色调背景"）；`tokens.css` 圆角回退值已与默认设置对齐为 0.75rem。
+- 新增令牌：`--mrr-card-inset(-compact)`、`--mrr-ease-in`、`--mrr-navigation-rail-bg/-hover`、`--mrr-z-*`、`--mrr-font-size-*`。
+- 新增工具：`copyText()`、`useVisibleInterval()`。
+
+**2026-11-22（第二次修订）**
+
+- §8 迁移状态更新：系统与数据库监控（及聚合页）、运维诊断中心、OSS 迁移管理、数据导入导出、病案明细档案袋、认证测试台、数据表浏览已迁移到共享壳层与页头；删除不再有使用者的全局 `.page-shell` 样式。
+- 数据表浏览原本没有页头，补充了页头；说明文字只陈述页面已有行为（脱敏、大表限行、不缓存）。
+- 补充页头 `class="page-header"` 兼容说明，以及页面内部仍待迁移的旧写法清单。

@@ -60,7 +60,7 @@ header {
   top: 0;
   right: var(--scrollbar-width, 0);
   left: 0;
-  z-index: 2000;
+  z-index: var(--mrr-z-header);
   display: flex;
   align-items: center;
   width: calc(100% - var(--scrollbar-width, 0px));
@@ -69,7 +69,7 @@ header {
   color: var(--text-primary);
   background: var(--mrr-navigation-bg);
   border-bottom: 1px solid var(--mrr-navigation-border);
-  transition: background-color 220ms ease, border-color 220ms ease;
+  transition: background-color var(--mrr-motion-feedback) ease, border-color var(--mrr-motion-feedback) ease;
 
   .header-container {
     display: flex;
@@ -147,9 +147,12 @@ header {
   }
 }
 
-.header-enter-active,
+.header-enter-active {
+  transition: transform var(--mrr-motion-move) var(--mrr-ease-out), opacity var(--mrr-motion-move) var(--mrr-ease-out);
+}
+
 .header-leave-active {
-  transition: transform 220ms ease, opacity 220ms ease;
+  transition: transform var(--mrr-motion-move) var(--mrr-ease-in), opacity var(--mrr-motion-move) var(--mrr-ease-in);
 }
 
 .header-enter-from,

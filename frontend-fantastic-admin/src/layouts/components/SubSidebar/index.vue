@@ -98,7 +98,7 @@ watch(() => menuStore.actived, (val, oldVal) => {
   width: var(--g-sub-sidebar-width);
   color: var(--text-primary);
   background: var(--mrr-navigation-bg-solid);
-  transition: background-color 220ms ease, inset-inline-start 220ms ease, width 220ms ease;
+  transition: background-color var(--mrr-motion-feedback) ease, inset-inline-start var(--mrr-motion-move) var(--mrr-ease-out), width var(--mrr-motion-move) var(--mrr-ease-out);
 
   &.is-collapse {
     width: var(--g-sub-sidebar-collapse-width);
@@ -151,7 +151,7 @@ watch(() => menuStore.actived, (val, oldVal) => {
         color: var(--text-secondary) !important;
         border: 1px solid transparent;
         border-radius: var(--mrr-radius-md);
-        transition: color 140ms ease, background-color 140ms ease, border-color 140ms ease;
+        transition: color var(--mrr-motion-feedback) ease, background-color var(--mrr-motion-feedback) ease, border-color var(--mrr-motion-feedback) ease;
 
         &:hover {
           color: var(--text-primary) !important;
@@ -267,7 +267,7 @@ watch(() => menuStore.actived, (val, oldVal) => {
 .sub-sidebar-x-end-enter-active,
 .sub-sidebar-y-start-enter-active,
 .sub-sidebar-y-end-enter-active {
-  transition: opacity 160ms ease, transform 160ms ease;
+  transition: opacity var(--mrr-motion-move) var(--mrr-ease-out), transform var(--mrr-motion-move) var(--mrr-ease-out);
 }
 
 .sub-sidebar-x-start-enter-from,
@@ -301,9 +301,12 @@ watch(() => menuStore.actived, (val, oldVal) => {
   position: absolute;
 }
 
-.sub-sidebar-enter-active,
+.sub-sidebar-enter-active {
+  transition: transform var(--mrr-motion-overlay) var(--mrr-ease-out), opacity var(--mrr-motion-overlay) var(--mrr-ease-out);
+}
+
 .sub-sidebar-leave-active {
-  transition: transform 220ms ease, opacity 220ms ease;
+  transition: transform var(--mrr-motion-move) var(--mrr-ease-in), opacity var(--mrr-motion-move) var(--mrr-ease-in);
 }
 
 .sub-sidebar-enter-from,

@@ -208,6 +208,22 @@ describe('settings store — 全站界面配置同步', () => {
       expect(mocks.saveSystemSettings).toHaveBeenCalledTimes(1)
     })
 
+    it('白名单内容未变化时不重复推送（例如只折叠了侧栏）', async () => {
+      const store = useSettingsStore()
+
+      await saveAndFlush(store)
+      expect(mocks.saveSystemSettings).toHaveBeenCalledTimes(1)
+
+      store.settings.menu.subMenuCollapse = !store.settings.menu.subMenuCollapse
+      await saveAndFlush(store)
+      expect(mocks.saveSystemSettings).toHaveBeenCalledTimes(1)
+      expect(store.uiSettingsSyncState).toBe('synced')
+
+      store.settings.app.themeColor = '#16803C'
+      await saveAndFlush(store)
+      expect(mocks.saveSystemSettings).toHaveBeenCalledTimes(2)
+    })
+
     it('推送同时把配置写入本机存储', async () => {
       const store = useSettingsStore()
       store.settings.menu.mode = 'head'

@@ -17,6 +17,8 @@ import {
   getSystemMemory,
   getSystemRuntime,
 } from '@/api/modules/system'
+import MrrPageHeader from '@/components/MrrPageHeader/index.vue'
+import MrrPageShell from '@/components/MrrPageShell/index.vue'
 
 defineOptions({ name: 'MonitoringPage' })
 
@@ -242,6 +244,8 @@ function openGrafana() {
 
 const active = ref(false)
 const visibility = useDocumentVisibility()
+// 页头说明：刷新状态文案。E2E 通过 .mrr-page-header__description 读取「上次完整刷新」时间。
+const refreshDescription = computed(() => `${autoRefresh.value ? '每 15 秒自动刷新' : '自动刷新已暂停'} · 上次完整刷新 ${lastRefresh.value || '--'}`)
 const shouldPoll = computed(() => active.value && autoRefresh.value && visibility.value === 'visible')
 const { pause, resume } = useIntervalFn(() => {
   if (shouldPoll.value) {
@@ -280,18 +284,13 @@ onUnmounted(pause)
 </script>
 
 <template>
-  <div class="page-shell">
-    <div class="page-header">
-      <div>
-        <p class="eyebrow">
-          System & Database Monitor
-        </p>
-        <h2>系统与数据库监控</h2>
-        <p class="subtitle">
-          {{ autoRefresh ? '每 15 秒自动刷新' : '自动刷新已暂停' }} · 上次完整刷新 {{ lastRefresh || '--' }}
-        </p>
-      </div>
-      <div class="header-actions">
+  <MrrPageShell class="monitoring-page">
+    <MrrPageHeader
+      eyebrow="System & Database Monitor"
+      title="系统与数据库监控"
+      :description="refreshDescription"
+    >
+      <template #actions>
         <el-button @click="openGrafana">
           Grafana 看板
         </el-button>
@@ -301,8 +300,8 @@ onUnmounted(pause)
         <el-button type="primary" :loading="loading" @click="loadAll()">
           立即刷新
         </el-button>
-      </div>
-    </div>
+      </template>
+    </MrrPageHeader>
 
     <el-alert
       v-if="failedSections.length"
@@ -506,18 +505,11 @@ onUnmounted(pause)
         </el-table>
       </el-card>
     </div>
-  </div>
+  </MrrPageShell>
 </template>
 
 <style scoped>
-.page-shell {
-  display: grid;
-  gap: 18px;
-}
-
-.page-header,
 .card-header,
-.header-actions,
 .quality-actions,
 .progress-label {
   display: flex;
@@ -526,24 +518,6 @@ onUnmounted(pause)
   justify-content: space-between;
 }
 
-.page-header {
-  margin: 0;
-}
-
-.page-header h2 {
-  margin: 4px 0;
-}
-
-.eyebrow {
-  margin: 0;
-  font-size: 12px;
-  font-weight: 700;
-  color: var(--el-color-primary);
-  text-transform: uppercase;
-  letter-spacing: 0.12em;
-}
-
-.subtitle,
 .card-header p,
 .card-header span {
   margin: 0;
@@ -618,15 +592,9 @@ onUnmounted(pause)
 }
 
 @media (max-width: 900px) {
-  .page-header,
   .card-header {
     flex-direction: column;
     align-items: flex-start;
-  }
-
-  .header-actions {
-    flex-wrap: wrap;
-    justify-content: flex-start;
   }
 
   .quality-summary {

@@ -240,7 +240,7 @@ defineExpose({ resetVisible, scrollToIndex })
   background: var(--surface);
   border: 1px solid var(--divider);
   border-radius: var(--mrr-radius-md);
-  transition: border-color 0.15s, box-shadow 0.15s;
+  transition: border-color var(--mrr-motion-feedback) ease, box-shadow var(--mrr-motion-feedback) ease;
 }
 
 /* 键盘焦点不再单独画圈：@focus → selectItem 让预览跟随焦点，active 圈即唯一指示；
@@ -292,7 +292,7 @@ defineExpose({ resetVisible, scrollToIndex })
   background: transparent;
   border: 1.5px solid rgb(255 255 255 / 85%);
   border-radius: var(--mrr-radius-sm);
-  transition: color 0.15s, background-color 0.15s, border-color 0.15s;
+  transition: color var(--mrr-motion-feedback) ease, background-color var(--mrr-motion-feedback) ease, border-color var(--mrr-motion-feedback) ease;
 }
 
 /* 命中区比视觉块大一圈，但只在上下与左侧外扩，不盖住右侧页码的点击范围。 */

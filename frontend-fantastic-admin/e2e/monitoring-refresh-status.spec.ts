@@ -26,7 +26,7 @@ async function monitoringRepro(page: Page) {
     return route.fulfill(ok(pathname.endsWith('/issues') ? [] : {}))
   })
   await page.goto('/monitoring')
-  const subtitle = page.locator('.subtitle').filter({ hasText: /上次(?:完整)?刷新/ })
+  const subtitle = page.locator('.mrr-page-header__description').filter({ hasText: /上次(?:完整)?刷新/ })
   await expect(subtitle).toContainText('12:00:00', { timeout: 30_000 })
   await expect(page.getByText('17/100', { exact: true })).toBeVisible()
   await page.getByRole('button', { name: '暂停刷新', exact: true }).click()

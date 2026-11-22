@@ -481,7 +481,7 @@ onMounted(refreshAll)
           </span>
         </div>
 
-        <MrrFilterBar embedded class="mrr-filter-bar--labelled archive-filter-bar">
+        <MrrFilterBar embedded labelled class="archive-filter-bar">
           <template v-if="activeView === 'records'">
             <div class="mrr-filter-field archive-filter__keyword">
               <label for="archive-keyword">综合搜索</label>

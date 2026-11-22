@@ -5,6 +5,8 @@ import { ElMessage } from 'element-plus'
 import { Info as InfoFilled } from 'lucide-vue-next'
 import { computed, onMounted, reactive, ref } from 'vue'
 import apiUser from '@/api/modules/user'
+import MrrPageHeader from '@/components/MrrPageHeader/index.vue'
+import MrrPageShell from '@/components/MrrPageShell/index.vue'
 import { PERMISSION_DEFINITIONS, PERMISSION_HIERARCHY } from '@/utils/permission'
 
 defineOptions({ name: 'PermissionsPage' })
@@ -195,29 +197,24 @@ onMounted(loadPermissions)
 </script>
 
 <template>
-  <div class="page-shell">
-    <header class="page-header">
-      <div>
-        <p class="eyebrow">
-          Permission Management
-        </p>
-        <div class="page-title-row">
-          <h2>权限管理</h2>
-          <el-tooltip
-            content="上级权限会自动继承下级权限；系统查看只能读取设置和监控，不能修改设置或执行维护任务。"
-            placement="right"
-            :show-after="200"
-          >
-            <button type="button" class="info-trigger" aria-label="权限继承说明">
-              <el-icon><InfoFilled /></el-icon>
-            </button>
-          </el-tooltip>
-        </div>
-        <p class="subtitle">
-          按业务范围分配查看、编辑、输出和系统管理权限。修改保存后，用户重新登录生效。
-        </p>
-      </div>
-    </header>
+  <MrrPageShell class="permissions-page">
+    <MrrPageHeader
+      eyebrow="Permission Management"
+      title="权限管理"
+      description="按业务范围分配查看、编辑、输出和系统管理权限。修改保存后，用户重新登录生效。"
+    >
+      <template #badge>
+        <el-tooltip
+          content="上级权限会自动继承下级权限；系统查看只能读取设置和监控，不能修改设置或执行维护任务。"
+          placement="right"
+          :show-after="200"
+        >
+          <button type="button" class="info-trigger" aria-label="权限继承说明">
+            <el-icon><InfoFilled /></el-icon>
+          </button>
+        </el-tooltip>
+      </template>
+    </MrrPageHeader>
 
     <el-empty v-if="!loading && !sortedRoles.length" description="暂无角色数据" />
 
@@ -384,16 +381,10 @@ onMounted(loadPermissions)
         </el-card>
       </section>
     </div>
-  </div>
+  </MrrPageShell>
 </template>
 
 <style scoped>
-.page-shell { display: grid; gap: 18px; }
-
-.page-header { display: flex; gap: 16px; align-items: flex-start; justify-content: space-between; }
-
-.page-title-row { display: flex; gap: 8px; align-items: center; }
-
 .info-trigger {
   display: inline-flex;
   align-items: center;
@@ -423,11 +414,8 @@ onMounted(loadPermissions)
 .matrix-legend,
 .edit-fields { gap: 8px; }
 
-.eyebrow { margin: 0 0 6px; font-size: 12px; font-weight: 700; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.12em; }
-
 h2 { margin: 0; font-size: 28px; }
 
-.subtitle,
 .role-description { margin: 8px 0 0; color: var(--text-secondary); }
 
 .permission-views { display: grid; gap: 24px; min-width: 0; }
@@ -525,8 +513,6 @@ h2 { margin: 0; font-size: 28px; }
 .legend.none { background: transparent; }
 
 @media (max-width: 760px) {
-  .page-header { flex-direction: column; }
-
   .roles-grid { grid-template-columns: 1fr; }
 }
 </style>

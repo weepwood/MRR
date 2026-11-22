@@ -28,6 +28,8 @@ import {
   runOperationsDiagnostics,
   savePermissionMatrixSnapshot,
 } from '@/api/modules/operations'
+import MrrPageHeader from '@/components/MrrPageHeader/index.vue'
+import MrrPageShell from '@/components/MrrPageShell/index.vue'
 import MrrSectionCard from '@/components/MrrSectionCard/index.vue'
 import { actionDialog } from '@/ui/components/ActionDialog'
 import { formatDateTime as formatTime } from '@/utils/display-format'
@@ -421,23 +423,20 @@ onMounted(async () => {
 </script>
 
 <template>
-  <div class="operations-center">
-    <header class="page-header">
-      <div>
-        <p class="eyebrow">
-          Operations & Diagnostics
-        </p>
-        <div class="title-line">
-          <h1>运维诊断中心</h1>
-          <el-tag v-if="activeTab !== 'overview' && readiness" :type="modeType(readiness.mode)" effect="dark" size="large">
-            {{ modeLabel(readiness.mode) }}
-          </el-tag>
-        </div>
-        <p class="subtitle">
-          集中发现问题、执行维护、跳转处理、重新验证并保留操作记录。
-        </p>
-      </div>
-      <div class="header-actions">
+  <MrrPageShell class="operations-center">
+    <!-- class="page-header"：保留 e2e/page-header-style.spec 对 .page-header h1 与卡片样式的断言入口（Nginx 浏览页同做法）。 -->
+    <MrrPageHeader
+      class="page-header"
+      eyebrow="Operations & Diagnostics"
+      title="运维诊断中心"
+      description="集中发现问题、执行维护、跳转处理、重新验证并保留操作记录。"
+    >
+      <template #badge>
+        <el-tag v-if="activeTab !== 'overview' && readiness" :type="modeType(readiness.mode)" effect="dark" size="large">
+          {{ modeLabel(readiness.mode) }}
+        </el-tag>
+      </template>
+      <template #actions>
         <el-button v-if="canManage" :loading="loading.report" @click="downloadDiagnosticReport">
           导出诊断报告
         </el-button>
@@ -447,8 +446,8 @@ onMounted(async () => {
         <el-button v-if="canManage" type="primary" :loading="loading.diagnostics" :disabled="loading.overview" @click="runFullDiagnostic">
           一键全面体检
         </el-button>
-      </div>
-    </header>
+      </template>
+    </MrrPageHeader>
 
     <el-tabs v-model="activeTab" class="diagnostics-tabs" @tab-change="handleTabChange">
       <el-tab-pane label="运维总览" name="overview">
@@ -945,7 +944,7 @@ onMounted(async () => {
         </el-table>
       </el-tab-pane>
     </el-tabs>
-  </div>
+  </MrrPageShell>
 </template>
 
 <style scoped>
@@ -954,9 +953,6 @@ onMounted(async () => {
   min-height: 100%;
 }
 
-.page-header,
-.title-line,
-.header-actions,
 .toolbar-row,
 .toolbar-actions,
 .card-header,
@@ -967,7 +963,6 @@ onMounted(async () => {
   align-items: center;
 }
 
-.page-header,
 .toolbar-row,
 .card-header,
 .check-row,
@@ -975,28 +970,11 @@ onMounted(async () => {
   justify-content: space-between;
 }
 
-.page-header {
-  gap: 20px;
-  margin-bottom: 16px;
-}
-
-.eyebrow {
-  margin: 0 0 5px;
-  color: var(--el-color-primary);
-  font-size: 12px;
-  font-weight: 700;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-}
-
-.title-line,
-.header-actions,
 .toolbar-actions,
 .check-title-line {
   gap: 10px;
 }
 
-.page-header > div > p:last-child,
 .toolbar-row,
 .card-header p,
 .issue-row p,
@@ -1004,7 +982,6 @@ onMounted(async () => {
   color: var(--el-text-color-secondary);
 }
 
-.page-header > div > p:last-child,
 .card-header p,
 .issue-row p,
 .check-copy > p {
@@ -1012,8 +989,8 @@ onMounted(async () => {
 }
 
 .diagnostics-tabs {
-  padding: 0 16px 16px;
-  border: 1px solid var(--el-border-color-lighter);
+  padding: 0 var(--mrr-card-inset) var(--mrr-card-inset);
+  border: 1px solid var(--mrr-border);
   border-radius: var(--mrr-radius-card);
   background: var(--el-bg-color);
 }
@@ -1108,8 +1085,7 @@ onMounted(async () => {
   margin-bottom: 14px;
 }
 
-.toolbar-actions,
-.header-actions {
+.toolbar-actions {
   flex-wrap: wrap;
 }
 
@@ -1192,16 +1168,10 @@ onMounted(async () => {
 }
 
 @media (max-width: 760px) {
-  .page-header,
   .toolbar-row,
   .check-row {
     align-items: flex-start;
     flex-direction: column;
-  }
-
-  .header-actions,
-  .header-actions .el-button {
-    width: 100%;
   }
 
   .overview-dashboard .issue-row {

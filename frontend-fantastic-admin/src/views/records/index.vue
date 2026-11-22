@@ -208,24 +208,24 @@ function typeLabel(value: unknown) {
 
     <MrrDataTablePanel title="扫描记录" description="按条件查询，结果按批次读取。">
       <template #filters>
-        <MrrFilterBar embedded class="records-filter-bar">
-          <div class="records-filter__field">
+        <MrrFilterBar embedded labelled class="records-filter-bar">
+          <div class="mrr-filter-field records-filter__field">
             <label for="records-bah">病案号</label>
             <el-input id="records-bah" v-model="query.bah" clearable aria-label="病案号" placeholder="病案号" @keyup.enter="handleSearch" />
           </div>
-          <div class="records-filter__field">
+          <div class="mrr-filter-field records-filter__field">
             <label for="records-brxh">病人序号</label>
             <el-input id="records-brxh" v-model="query.brxh" clearable aria-label="病人序号" placeholder="病人序号" @keyup.enter="handleSearch" />
           </div>
-          <div class="records-filter__field">
+          <div class="mrr-filter-field records-filter__field">
             <label for="records-sjh">上架号</label>
             <el-input id="records-sjh" v-model="query.sjh" clearable aria-label="上架号" placeholder="上架号" @keyup.enter="handleSearch" />
           </div>
-          <div class="records-filter__field">
+          <div class="mrr-filter-field records-filter__field">
             <label for="records-opener">扫描人员</label>
             <el-input id="records-opener" v-model="query.openerNo" clearable aria-label="扫描人员" placeholder="扫描人员工号" @keyup.enter="handleSearch" />
           </div>
-          <div class="records-filter__field">
+          <div class="mrr-filter-field records-filter__field">
             <label for="records-btype">类型</label>
             <el-select id="records-btype" v-model="query.btype" clearable aria-label="类型" placeholder="全部类型">
               <el-option v-for="item in typeOptions" :key="item.value" :label="item.label" :value="item.value" />
@@ -381,23 +381,9 @@ function typeLabel(value: unknown) {
   width: 100%;
 }
 
+/* 标签排版与操作区底边对齐由 MrrFilterBar 的 labelled 模式统一提供，这里只保留列宽。 */
 .records-filter__field {
-  display: grid;
   flex: 1 1 150px;
-  gap: var(--mrr-space-1);
-  min-width: 0;
-}
-
-.records-filter__field label {
-  font-size: 12px;
-  font-weight: 600;
-  color: var(--mrr-foreground);
-}
-
-.records-filter-bar :deep(.mrr-filter-bar__actions) {
-  flex: 0 0 auto;
-  flex-wrap: nowrap;
-  align-self: flex-end;
 }
 
 .records-query-context {

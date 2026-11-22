@@ -101,6 +101,7 @@ onMounted(() => {
 
 onBeforeUnmount(() => {
   eventBus.off('global-hotkeys-intro-toggle', toggleHotkeysIntro)
+  useRuntimeErrorsBadgeStore().stop()
 })
 </script>
 
@@ -121,7 +122,8 @@ onBeforeUnmount(() => {
           <MainSidebar />
           <SubSidebar />
         </div>
-        <button type="button" aria-label="关闭侧栏导航" tabindex="-1" class="invisible fixed inset-0 z-1009 bg-black/50 op-0 transition-opacity" :class="{ 'op-100! visible!': isMobileSidebarOpen }" @click="settingsStore.toggleSidebarCollapse()" />
+        <!-- 遮罩与抽屉同节奏进出：visibility 延迟到淡出结束再隐藏，关闭时不再「啪」地消失。 -->
+        <button type="button" aria-label="关闭侧栏导航" tabindex="-1" class="mobile-sidebar-mask" :class="{ 'is-visible': isMobileSidebarOpen }" @click="settingsStore.toggleSidebarCollapse()" />
         <div class="main-container pb-[var(--g-main-container-padding-bottom)]">
           <Topbar />
           <div class="main">
@@ -190,21 +192,29 @@ onBeforeUnmount(() => {
   width: 100%;
   min-height: 100%;
   padding-top: var(--g-header-actual-height);
-  transition: padding-top 220ms ease;
+  transition: padding-top var(--mrr-motion-move) var(--mrr-ease-out);
 
   .sidebar-container {
     position: fixed;
     top: var(--g-header-actual-height);
     bottom: 0;
-    z-index: 1010;
+    z-index: var(--mrr-z-sidebar);
     display: flex;
     width: calc(var(--g-main-sidebar-actual-width) + var(--g-sub-sidebar-actual-width));
     overflow: hidden;
     background: var(--mrr-navigation-bg);
     border-right: 1px solid var(--mrr-navigation-border);
 
-    /* visibility 参与过渡（0 时长 + 220ms 延迟），收起时元素先滑出再退出无障碍树，避免关闭动画被瞬间掐断。 */
-    transition: width 220ms ease, transform 220ms ease, top 220ms ease, box-shadow 220ms ease, visibility 0s linear 220ms;
+    /*
+     * 桌面端收起/展开属于「展开收起」，走 move 档；移动端抽屉属于浮层，走 overlay 档。
+     * visibility 参与过渡（0 时长 + overlay 延迟），收起时元素先滑出再退出无障碍树。
+     */
+    transition:
+      width var(--mrr-motion-move) var(--mrr-ease-out),
+      top var(--mrr-motion-move) var(--mrr-ease-out),
+      transform var(--mrr-motion-overlay) var(--mrr-ease-out),
+      box-shadow var(--mrr-motion-overlay) var(--mrr-ease-out),
+      visibility 0s linear var(--mrr-motion-overlay);
   }
 
   .main-sidebar-container:not(.main-sidebar-leave-active) + .sub-sidebar-container {
@@ -217,14 +227,16 @@ onBeforeUnmount(() => {
     min-height: 100%;
     margin-left: calc(var(--g-main-sidebar-actual-width) + var(--g-sub-sidebar-actual-width));
     background: transparent;
-    transition: margin-left 220ms ease;
+    transition: margin-left var(--mrr-motion-move) var(--mrr-ease-out);
 
     .main {
       position: relative;
       flex: auto;
       min-width: 0;
       min-height: calc(100vh - var(--g-header-actual-height));
-      padding: clamp(18px, 2vw, 28px);
+
+      /* 工作区留白与页面间距同一档（16–24px），不再出现 18/28 这类网格外数值。 */
+      padding: clamp(var(--mrr-space-4), 2vw, var(--mrr-page-gap));
       margin: calc(var(--g-tabbar-actual-height) + var(--g-toolbar-actual-height)) 0 0;
       overflow: hidden;
 
@@ -239,7 +251,27 @@ onBeforeUnmount(() => {
 
 @media (max-width: 760px) {
   .wrapper .main-container .main {
-    padding: 16px;
+    padding: var(--mrr-space-4);
+  }
+}
+
+.mobile-sidebar-mask {
+  position: fixed;
+  inset: 0;
+  z-index: var(--mrr-z-sidebar-mask);
+  visibility: hidden;
+  padding: 0;
+  background: rgb(0 0 0 / 50%);
+  border: 0;
+  opacity: 0;
+  transition:
+    opacity var(--mrr-motion-overlay) var(--mrr-ease-out),
+    visibility 0s linear var(--mrr-motion-overlay);
+
+  &.is-visible {
+    visibility: visible;
+    opacity: 1;
+    transition-delay: 0s;
   }
 }
 </style>

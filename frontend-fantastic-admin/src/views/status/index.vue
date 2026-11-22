@@ -7,7 +7,7 @@ import type {
 } from '@/api/modules/system-status'
 import type { ECOption } from '@/plugins/echarts'
 import dayjs from 'dayjs'
-import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import {
   getDailySystemAvailability,
   getMinuteSystemAvailability,
@@ -17,6 +17,7 @@ import {
 import serverLogo from '@/assets/images/server.svg'
 import MrrChart from '@/components/charts/MrrChart.vue'
 import { mrrChartColor } from '@/config/chart-theme'
+import useVisibleInterval from '@/utils/composables/useVisibleInterval'
 
 defineOptions({ name: 'PublicSystemStatusPage' })
 
@@ -29,7 +30,6 @@ const selectedDate = ref<string | null>(null)
 const loading = ref(true)
 const refreshing = ref(false)
 const loadError = ref(false)
-let refreshTimer: number | undefined
 let minuteRequestVersion = 0
 
 function currentDate() {
@@ -253,16 +253,10 @@ function clearDateFilter() {
 
 onMounted(() => {
   void loadAll()
-  refreshTimer = window.setInterval(() => {
-    void refreshCurrentStatus()
-  }, 60_000)
 })
 
-onBeforeUnmount(() => {
-  if (refreshTimer !== undefined) {
-    window.clearInterval(refreshTimer)
-  }
-})
+// 公共状态页常被投屏或挂在后台标签：隐藏时暂停刷新，回到前台立即补一次。
+useVisibleInterval(refreshCurrentStatus, 60_000)
 </script>
 
 <template>
@@ -558,7 +552,7 @@ onBeforeUnmount(() => {
 }
 
 .spinning {
-  animation: spin 0.8s linear infinite;
+  animation: spin var(--mrr-motion-loop) linear infinite;
 }
 
 .state-panel,
@@ -878,7 +872,7 @@ onBeforeUnmount(() => {
   cursor: pointer;
   border: 0;
   border-radius: 4px;
-  transition: opacity 120ms ease, transform 120ms ease;
+  transition: opacity var(--mrr-motion-feedback) ease, transform var(--mrr-motion-press) var(--mrr-ease-out);
 }
 
 .day-cell.is-selected {

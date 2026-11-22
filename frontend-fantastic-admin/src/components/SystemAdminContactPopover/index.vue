@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { ElMessage } from 'element-plus'
 import { computed, onBeforeUnmount, ref } from 'vue'
+import { copyText as copyToClipboard } from '@/utils/copy-text'
 
 const props = withDefaults(defineProps<{
   visible?: boolean
@@ -42,13 +42,7 @@ function hideLater() {
 }
 
 async function copy(value: string, label: string) {
-  try {
-    await navigator.clipboard.writeText(value)
-    ElMessage.success(`${label}已复制`)
-  }
-  catch {
-    ElMessage.error('复制失败，请手动选择复制')
-  }
+  await copyToClipboard(value, { success: `${label}已复制` })
 }
 
 onBeforeUnmount(() => {

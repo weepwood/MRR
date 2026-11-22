@@ -407,11 +407,11 @@ onBeforeUnmount(resetReport)
 .diagnostics-body {
   display: grid;
   flex: 1;
-  gap: 14px;
+  gap: var(--mrr-space-3);
   align-content: start;
   min-width: 0;
   min-height: 0;
-  padding: 2px 6px 12px 2px;
+  padding: 2px var(--mrr-space-2) 12px 2px;
   overflow: auto;
   scroll-behavior: auto;
   overscroll-behavior: contain;
@@ -425,12 +425,12 @@ onBeforeUnmount(resetReport)
 .diagnostics-meta {
   display: flex;
   flex-wrap: wrap;
-  gap: 6px 18px;
+  gap: var(--mrr-space-2) var(--mrr-space-4);
 }
 
 .diagnostics-query {
   display: flex;
-  gap: 6px;
+  gap: var(--mrr-space-2);
   align-items: baseline;
   min-width: 0;
 }
@@ -456,7 +456,7 @@ onBeforeUnmount(resetReport)
 }
 
 .meta-code {
-  padding: 1px 6px;
+  padding: 1px var(--mrr-space-2);
   font-family: var(--mrr-font-mono);
   font-size: 12px;
   color: var(--text-primary);
@@ -467,7 +467,7 @@ onBeforeUnmount(resetReport)
 .diagnostics-summary {
   display: flex;
   flex-wrap: wrap;
-  gap: 6px 8px;
+  gap: var(--mrr-space-2) 8px;
   align-items: center;
 }
 
@@ -541,8 +541,8 @@ onBeforeUnmount(resetReport)
 .diagnostics-step {
   display: grid;
   grid-template-columns: 24px minmax(0, 1fr);
-  gap: 10px;
-  padding: 10px 0;
+  gap: var(--mrr-space-3);
+  padding: var(--mrr-space-3) 0;
   border-top: 1px solid var(--divider);
 }
 
@@ -586,7 +586,7 @@ onBeforeUnmount(resetReport)
 .step-head {
   display: flex;
   flex-wrap: wrap;
-  gap: 6px;
+  gap: var(--mrr-space-2);
   align-items: center;
 }
 
@@ -605,7 +605,7 @@ onBeforeUnmount(resetReport)
 }
 
 .step-status {
-  padding: 0 6px;
+  padding: 0 var(--mrr-space-2);
   font-size: 11px;
   font-weight: 600;
   line-height: 18px;
@@ -737,7 +737,7 @@ onBeforeUnmount(resetReport)
 
   .step-sample-list {
     display: grid;
-    gap: 6px;
+    gap: var(--mrr-space-2);
     font-size: 12px;
   }
 
@@ -745,7 +745,7 @@ onBeforeUnmount(resetReport)
     display: grid;
     grid-template-columns: minmax(0, 2fr) minmax(0, 3fr);
     gap: 4px 8px;
-    padding: 6px;
+    padding: var(--mrr-space-2);
     margin: 0;
     border: 1px solid var(--divider);
     border-radius: var(--mrr-radius-sm);

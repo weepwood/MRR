@@ -822,7 +822,7 @@ watch(idCardParam, async (newId) => {
 
 .left-top h3,
 .left-bottom h3 {
-  margin: 0 0 10px;
+  margin: 0 0 var(--mrr-space-3);
 }
 
 /* ==================== 身份证提示 ==================== */
@@ -843,7 +843,7 @@ watch(idCardParam, async (newId) => {
 
 .id-results-empty {
   display: flex;
-  gap: 6px;
+  gap: var(--mrr-space-2);
   align-items: center;
   font-size: 14px;
   color: var(--color-text-muted);
@@ -892,17 +892,17 @@ watch(idCardParam, async (newId) => {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-bottom: 10px;
+  margin-bottom: var(--mrr-space-3);
 }
 
 .thumbs-toolbar {
   display: flex;
-  gap: 6px;
+  gap: var(--mrr-space-2);
 }
 
 .thumbs-mode-btn {
   height: var(--mrr-control-height);
-  padding: 0 10px;
+  padding: 0 var(--mrr-space-3);
   font-size: 12px;
   color: var(--color-text-muted);
   cursor: pointer;
@@ -920,7 +920,7 @@ watch(idCardParam, async (newId) => {
 .type-list {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 6px;
+  gap: var(--mrr-space-2);
   overflow: auto;
 }
 
@@ -928,7 +928,7 @@ watch(idCardParam, async (newId) => {
   display: flex;
   justify-content: space-between;
   width: 100%;
-  padding: 8px 10px;
+  padding: 8px var(--mrr-space-3);
   font: inherit;
   color: inherit;
   text-align: left;
@@ -1016,9 +1016,9 @@ watch(idCardParam, async (newId) => {
 .thumb-item {
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: var(--mrr-space-2);
   align-items: center;
-  padding: 6px;
+  padding: var(--mrr-space-2);
   cursor: pointer;
   border: 1px solid var(--color-border);
   border-radius: var(--mrr-radius-md);
@@ -1059,9 +1059,9 @@ watch(idCardParam, async (newId) => {
 
 .thumb-row {
   display: flex;
-  gap: 10px;
+  gap: var(--mrr-space-3);
   align-items: center;
-  padding: 6px;
+  padding: var(--mrr-space-2);
   cursor: pointer;
   border: 1px solid var(--color-border);
   border-radius: var(--mrr-radius-md);
@@ -1128,7 +1128,7 @@ watch(idCardParam, async (newId) => {
   right: 10px;
   bottom: 10px;
   z-index: 3;
-  padding: 8px 14px;
+  padding: 8px var(--mrr-space-3);
   font-size: 12px;
   color: var(--mrr-primary-foreground);
   pointer-events: none;
@@ -1152,7 +1152,7 @@ watch(idCardParam, async (newId) => {
 }
 
 .type-picker-title {
-  margin-bottom: 6px;
+  margin-bottom: var(--mrr-space-2);
   font-size: 12px;
   opacity: 0.8;
 }
@@ -1166,7 +1166,7 @@ watch(idCardParam, async (newId) => {
 }
 
 .type-option {
-  padding: 6px 8px;
+  padding: var(--mrr-space-2) 8px;
   font-size: 13px;
   cursor: pointer;
   background: rgb(255 255 255 / 6%);
@@ -1188,7 +1188,7 @@ watch(idCardParam, async (newId) => {
   right: 20px;
   bottom: 30px;
   z-index: var(--mrr-z-overlay-top);
-  padding: 8px 14px;
+  padding: 8px var(--mrr-space-3);
   font-size: 12px;
   color: var(--mrr-primary-foreground);
   pointer-events: none;
@@ -1235,7 +1235,7 @@ watch(idCardParam, async (newId) => {
 .retry-btn {
   height: var(--mrr-control-height);
   padding: 0 20px;
-  margin-top: 15px;
+  margin-top: var(--mrr-space-4);
   color: var(--mrr-primary-foreground);
   cursor: pointer;
   background: var(--el-color-danger);
@@ -1264,7 +1264,7 @@ watch(idCardParam, async (newId) => {
 .download-status-content {
   width: 90%;
   max-width: 400px;
-  padding: 30px;
+  padding: var(--mrr-space-8);
   text-align: center;
   background: var(--color-bg);
   border-radius: var(--mrr-radius-card);
@@ -1282,13 +1282,13 @@ watch(idCardParam, async (newId) => {
 }
 
 .download-status-content p {
-  margin: 10px 0;
+  margin: var(--mrr-space-3) 0;
   font-size: 16px;
   color: var(--color-text);
 }
 
 .download-tip {
-  margin-top: 15px;
+  margin-top: var(--mrr-space-4);
   font-size: 14px !important;
   color: var(--color-text-muted) !important;
 }

@@ -4,7 +4,7 @@ import type { LogRecord, PaginatedResult } from '@/api/types'
 import type { MrrTableAction } from '@/components/MrrTableActions/types'
 import { useMediaQuery } from '@vueuse/core'
 import { Copy as CopyIcon, RefreshCw as Refresh } from 'lucide-vue-next'
-import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
+import { computed, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { getLogById, searchSystemLogs } from '@/api/modules/logs'
 import AppEmpty from '@/components/AppEmpty/index.vue'
@@ -21,6 +21,7 @@ import { useCrudList } from '@/composables/useCrudList'
 import { useTableActionLayout } from '@/composables/useTableActionLayout'
 import { useUserStore } from '@/store/modules/user'
 import { rangePickerPopperOptions } from '@/ui/provider/picker-options'
+import useVisibleInterval from '@/utils/composables/useVisibleInterval'
 import { copyText as copyToClipboard } from '@/utils/copy-text'
 import { formatDateTime, isRedactedLogText } from '@/utils/display-format'
 import { checkSessionPermission } from '@/utils/permission'
@@ -153,38 +154,13 @@ function resetFilters() {
 
 /** 30 秒静默轮询：页面隐藏时跳过，重新可见立即补一次；失败保留旧数据。 */
 const REFRESH_INTERVAL_MS = 30_000
-let refreshTimer: ReturnType<typeof setInterval> | undefined
-
 async function silentRefresh() {
   if (route.path !== '/logs' || document.hidden || loading.value) { return }
   await loadData({ silent: true })
 }
 
-function startAutoRefresh() {
-  stopAutoRefresh()
-  refreshTimer = setInterval(() => { void silentRefresh() }, REFRESH_INTERVAL_MS)
-}
-
-function stopAutoRefresh() {
-  if (refreshTimer !== undefined) {
-    clearInterval(refreshTimer)
-    refreshTimer = undefined
-  }
-}
-
-function handleVisibilityChange() {
-  if (!document.hidden) { void silentRefresh() }
-}
-
-onMounted(() => {
-  document.addEventListener('visibilitychange', handleVisibilityChange)
-  startAutoRefresh()
-})
-
-onBeforeUnmount(() => {
-  document.removeEventListener('visibilitychange', handleVisibilityChange)
-  stopAutoRefresh()
-})
+// 隐藏标签页、KeepAlive 失活时暂停，卸载自动清理；见 DESIGN.md §7。
+useVisibleInterval(silentRefresh, REFRESH_INTERVAL_MS)
 
 /** 失败请求可用 Request ID 到运行错误中心查找相关记录。 */
 function openRelatedErrors(row: LogRecord) {

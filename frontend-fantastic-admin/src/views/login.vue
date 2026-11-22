@@ -32,10 +32,10 @@ import {
   parseUserAgent,
   subscribeNetworkChanges,
 } from '@/utils/client-environment'
+import { copyText } from '@/utils/copy-text'
 import { buildLoginEnvironmentView } from '@/utils/login-environment-report'
 import { getEnvironmentProbeRetryDelay } from '@/utils/login-environment-retry'
 import { isMotionEnabled } from '@/utils/motion-preference'
-import { notify } from '@/utils/notification'
 
 defineOptions({ name: 'Login' })
 
@@ -187,16 +187,10 @@ function handleNetworkChange() {
 }
 
 async function copyEnvironmentReport() {
-  try {
-    if (typeof navigator === 'undefined' || !navigator.clipboard?.writeText) {
-      throw new Error('clipboard unavailable')
-    }
-    await navigator.clipboard.writeText(environmentView.value.reportText)
-    notify.success('环境信息已复制，可粘贴给管理员排查')
-  }
-  catch {
-    notify.error('当前浏览器不支持自动复制，请手动选择面板内容')
-  }
+  await copyText(environmentView.value.reportText, {
+    success: '环境信息已复制，可粘贴给管理员排查',
+    failure: '当前浏览器不支持自动复制，请手动选择面板内容',
+  })
 }
 
 let unsubscribeNetworkChanges: (() => void) | undefined

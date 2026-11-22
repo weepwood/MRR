@@ -8,6 +8,7 @@ import { computed, onMounted, reactive, ref } from 'vue'
 import { executeAuthTestRequest } from '@/api/modules/auth-test'
 import MrrStatusTag from '@/components/MrrStatusTag/index.vue'
 import { useUserStore } from '@/store/modules/user'
+import { copyText as copyToClipboard } from '@/utils/copy-text'
 import {
   createExternalArchiveSignature,
   createRequestNonce,
@@ -479,30 +480,13 @@ function openLaunchUrl() {
   window.open(launchUrl.value, '_blank', 'noopener,noreferrer')
 }
 
+// 内网 HTTP 下的剪贴板兜底由 main.ts 安装的 clipboard-fallback 统一提供，这里不再手写 execCommand。
 async function copyText(value: string, label: string) {
   if (!value) {
     ElMessage.warning(`${label}为空`)
     return
   }
-  try {
-    if (navigator.clipboard?.writeText) {
-      await navigator.clipboard.writeText(value)
-    }
-    else {
-      const textarea = document.createElement('textarea')
-      textarea.value = value
-      textarea.style.position = 'fixed'
-      textarea.style.opacity = '0'
-      document.body.appendChild(textarea)
-      textarea.select()
-      document.execCommand('copy')
-      textarea.remove()
-    }
-    ElMessage.success(`${label}已复制`)
-  }
-  catch {
-    ElMessage.error('浏览器未允许写入剪贴板，请手工复制')
-  }
+  await copyToClipboard(value, { success: `${label}已复制` })
 }
 
 onMounted(() => {

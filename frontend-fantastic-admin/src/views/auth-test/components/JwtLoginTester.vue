@@ -7,6 +7,7 @@ import { computed, reactive, ref } from 'vue'
 import { executeAuthTestRequest } from '@/api/modules/auth-test'
 import { useUserStore } from '@/store/modules/user'
 import { actionDialog, ActionDialogCancelled } from '@/ui/components/ActionDialog'
+import { copyText } from '@/utils/copy-text'
 
 const emit = defineEmits<{
   record: [event: AuthTestHistoryEvent]
@@ -229,13 +230,7 @@ async function copyToken() {
     ElMessage.warning('Token 为空')
     return
   }
-  try {
-    await navigator.clipboard.writeText(testedToken.value)
-    ElMessage.success('JWT Token 已复制')
-  }
-  catch {
-    ElMessage.error('浏览器未允许写入剪贴板')
-  }
+  await copyText(testedToken.value, { success: 'JWT Token 已复制' })
 }
 </script>
 

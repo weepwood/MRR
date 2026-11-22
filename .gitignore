@@ -24,3 +24,10 @@ vitepress-doc/.cache/
 *.log
 *.tmp
 .mrr-dev/
+
+# Python 运行缓存
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/

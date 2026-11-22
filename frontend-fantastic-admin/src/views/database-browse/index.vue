@@ -2,6 +2,8 @@
 import type { DbBrowseColumnView, DbBrowsePage, DbBrowseTableSchema, DbBrowseTableSummary } from '@/api/modules/database-browse'
 import { computed, onMounted, reactive, ref } from 'vue'
 import { describeBrowseError, getBrowseRows, getBrowseSchema, getBrowseTables } from '@/api/modules/database-browse'
+import MrrPageHeader from '@/components/MrrPageHeader/index.vue'
+import MrrPageShell from '@/components/MrrPageShell/index.vue'
 
 defineOptions({ name: 'DatabaseBrowsePage' })
 
@@ -195,7 +197,13 @@ onMounted(loadTables)
 </script>
 
 <template>
-  <div class="db-browse-page">
+  <MrrPageShell class="db-browse-page">
+    <MrrPageHeader
+      eyebrow="Database Browser"
+      title="数据表浏览"
+      description="只读浏览已授权的数据表。含个人信息的字段已脱敏，大表限制单页行数；离开页面后结果即被丢弃，不做缓存。"
+    />
+
     <el-card shadow="never">
       <div class="toolbar">
         <span class="toolbar-label">数据表</span>
@@ -329,16 +337,10 @@ onMounted(loadTables)
         :title="`以下列内容过长已截断：${page.truncatedColumns.join('、')}`"
       />
     </el-card>
-  </div>
+  </MrrPageShell>
 </template>
 
 <style scoped>
-.db-browse-page {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-}
-
 .toolbar {
   display: flex;
   flex-wrap: wrap;
@@ -349,7 +351,7 @@ onMounted(loadTables)
 .toolbar-label {
   font-size: 13px;
   font-weight: 500;
-  color: var(--mrr-foreground, #18181b);
+  color: var(--mrr-foreground);
 }
 
 .table-select {
@@ -358,12 +360,12 @@ onMounted(loadTables)
 
 .option-name {
   margin-right: 8px;
-  color: var(--mrr-foreground, #18181b);
+  color: var(--mrr-foreground);
 }
 
 .option-meta {
   font-size: 12px;
-  color: var(--mrr-muted-foreground, #5f5e5a);
+  color: var(--mrr-muted-foreground);
 }
 
 .table-meta {
@@ -388,12 +390,12 @@ onMounted(loadTables)
   line-height: 18px;
   color: var(--mrr-foreground);
   background: var(--mrr-muted);
-  border-radius: 4px;
+  border-radius: var(--mrr-radius-sm);
 }
 
 .meta-desc {
   font-size: 13px;
-  color: var(--mrr-muted-foreground, #5f5e5a);
+  color: var(--mrr-muted-foreground);
 }
 
 .require-filter-alert {
@@ -412,7 +414,7 @@ onMounted(loadTables)
 .column-name {
   font-size: 11px;
   font-weight: 400;
-  color: var(--mrr-muted-foreground, #5f5e5a);
+  color: var(--mrr-muted-foreground);
 }
 
 .filters {
@@ -432,7 +434,7 @@ onMounted(loadTables)
 
 .filter-label {
   font-size: 12px;
-  color: var(--mrr-muted-foreground, #5f5e5a);
+  color: var(--mrr-muted-foreground);
 }
 
 .filter-actions {
@@ -451,7 +453,7 @@ onMounted(loadTables)
 
 .pager-note {
   font-size: 12px;
-  color: var(--mrr-muted-foreground, #5f5e5a);
+  color: var(--mrr-muted-foreground);
 }
 
 .pager-actions {
@@ -461,7 +463,7 @@ onMounted(loadTables)
 
 .empty-hint {
   font-size: 13px;
-  color: var(--mrr-muted-foreground, #5f5e5a);
+  color: var(--mrr-muted-foreground);
 }
 
 .truncate-alert {

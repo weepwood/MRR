@@ -118,7 +118,7 @@ function onSelection(value: number | 'all') {
   background: transparent;
   border: 1px solid transparent;
   border-radius: var(--mrr-radius-sm);
-  transition: color 0.15s, background 0.15s, border-color 0.15s, box-shadow 0.15s, transform 0.15s;
+  transition: color var(--mrr-motion-feedback) ease, background-color var(--mrr-motion-feedback) ease, border-color var(--mrr-motion-feedback) ease, box-shadow var(--mrr-motion-feedback) ease;
 }
 
 .type-tab-entry {
@@ -143,7 +143,12 @@ function onSelection(value: number | 'all') {
   background: var(--mrr-navigation-active);
   border-color: var(--mrr-navigation-active-border);
   box-shadow: 0 2px 8px color-mix(in srgb, var(--color-primary) 14%, transparent);
-  animation: type-tab-selected 0.2s ease-out;
+
+  /*
+   * 选中只靠颜色、描边与字重的过渡表达，不再播放 0.96→1.02→1 的弹跳：
+   * DESIGN.md 约定「状态确认动效不使用超过最终尺寸的弹跳」，且 keyframes 会在
+   * 每次重新挂载（切换病案、刷新分类计数）时对当前选中项重播一次，读起来像又被点了一下。
+   */
 }
 
 .type-tab:focus-visible {
@@ -172,19 +177,5 @@ function onSelection(value: number | 'all') {
   color: var(--text-tertiary);
   background: var(--surface-alt);
   border-radius: var(--mrr-radius-pill);
-}
-
-@keyframes type-tab-selected {
-  0% {
-    transform: scale(0.96);
-  }
-
-  70% {
-    transform: scale(1.02);
-  }
-
-  100% {
-    transform: scale(1);
-  }
 }
 </style>

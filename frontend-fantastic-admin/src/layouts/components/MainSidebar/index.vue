@@ -40,10 +40,10 @@ onUnmounted(() => {
       <component :is="useSlots('main-sidebar-after-logo')" />
       <FaScrollArea :scrollbar="false" mask gradient-color="var(--mrr-navigation-bg-solid)" class="menu flex-1 overscroll-contain">
         <!-- 侧边栏模式（含主导航） -->
-        <nav aria-label="主导航" class="w-full flex flex-col of-hidden py-1 transition-all">
+        <nav aria-label="主导航" class="w-full flex flex-col of-hidden py-1">
           <template v-for="(item, index) in menuStore.allMenus" :key="index">
             <div
-              class="menu-item relative px-2 py-1 transition-all" :class="{
+              class="menu-item relative px-2 py-1" :class="{
                 active: index === menuStore.actived,
               }"
             >
@@ -80,9 +80,9 @@ onUnmounted(() => {
   flex-direction: column;
   width: var(--g-main-sidebar-width);
   color: var(--text-secondary);
-  background: var(--mrr-navigation-hover);
+  background: var(--mrr-navigation-rail-bg);
   border-right: 1px solid var(--mrr-navigation-border);
-  transition: background-color 220ms ease, color 220ms ease;
+  transition: background-color var(--mrr-motion-feedback) ease, color var(--mrr-motion-feedback) ease;
 
   .sidebar-logo {
     min-height: var(--g-sidebar-logo-height);
@@ -111,9 +111,10 @@ onUnmounted(() => {
         border-radius: var(--mrr-radius-lg);
         transition: color var(--mrr-motion-feedback) var(--mrr-ease-out), background-color var(--mrr-motion-feedback) var(--mrr-ease-out), border-color var(--mrr-motion-feedback) var(--mrr-ease-out);
 
+        /* 窄栏自身是灰底，悬停必须比底色再深一档，否则悬停毫无可见变化。 */
         &:hover {
           color: var(--text-primary) !important;
-          background: var(--mrr-navigation-hover);
+          background: var(--mrr-navigation-rail-hover);
         }
 
         .menu-item-container-icon {
@@ -144,9 +145,12 @@ onUnmounted(() => {
 }
 
 /* 主侧边栏动画 */
-.main-sidebar-enter-active,
+.main-sidebar-enter-active {
+  transition: transform var(--mrr-motion-overlay) var(--mrr-ease-out), opacity var(--mrr-motion-overlay) var(--mrr-ease-out);
+}
+
 .main-sidebar-leave-active {
-  transition: transform 220ms ease, opacity 220ms ease;
+  transition: transform var(--mrr-motion-move) var(--mrr-ease-in), opacity var(--mrr-motion-move) var(--mrr-ease-in);
 }
 
 .main-sidebar-enter-from,

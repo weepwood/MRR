@@ -63,7 +63,12 @@ onMounted(() => {
   void refreshDeveloperModeStatus(true)
   window.addEventListener(SYSTEM_SETTINGS_UPDATED_EVENT, handleSettingsUpdated)
   document.addEventListener('visibilitychange', handleVisibilityChange)
-  refreshTimer = setInterval(() => void refreshDeveloperModeStatus(true), 30_000)
+  // 标签页隐藏时跳过；重新可见时 handleVisibilityChange 会立即补一次。
+  refreshTimer = setInterval(() => {
+    if (!document.hidden) {
+      void refreshDeveloperModeStatus(true)
+    }
+  }, 30_000)
 })
 
 onBeforeUnmount(() => {

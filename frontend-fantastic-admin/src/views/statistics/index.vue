@@ -17,6 +17,8 @@ import {
 } from '@/api/modules/statistics'
 import { MrrChartCard, MrrDualAxisChart } from '@/components/charts'
 import MrrFilterActionButton from '@/components/MrrFilterActionButton/index.vue'
+import MrrPageHeader from '@/components/MrrPageHeader/index.vue'
+import MrrPageShell from '@/components/MrrPageShell/index.vue'
 import { rangePickerPopperOptions } from '@/ui/provider/picker-options'
 
 defineOptions({ name: 'StatisticsPage' })
@@ -357,25 +359,22 @@ onMounted(refreshAll)
 </script>
 
 <template>
-  <div class="page-shell">
-    <div class="page-header">
-      <div>
-        <p class="eyebrow">
-          Records Statistics
-        </p>
-        <h2>病案扫描数据统计</h2>
-        <p class="subtitle">
-          汇总病案扫描规模、每日变化与病案明细，在一个页面完成统计查看和数据检索。
-        </p>
-      </div>
-      <el-button
-        :icon="Refresh"
-        :loading="overviewLoading || listLoading"
-        @click="refreshAll"
-      >
-        刷新数据
-      </el-button>
-    </div>
+  <MrrPageShell class="statistics-page">
+    <MrrPageHeader
+      eyebrow="Records Statistics"
+      title="病案扫描数据统计"
+      description="汇总病案扫描规模、每日变化与病案明细，在一个页面完成统计查看和数据检索。"
+    >
+      <template #actions>
+        <el-button
+          :icon="Refresh"
+          :loading="overviewLoading || listLoading"
+          @click="refreshAll"
+        >
+          刷新数据
+        </el-button>
+      </template>
+    </MrrPageHeader>
 
     <section v-if="hasMetricActivity" class="mrr-metric-grid" aria-label="核心统计指标">
       <MrrMetricCard
@@ -559,52 +558,11 @@ onMounted(refreshAll)
         />
       </div>
     </el-card>
-  </div>
+  </MrrPageShell>
 </template>
 
 <style scoped>
-.page-shell {
-  display: flex;
-  flex-direction: column;
-  gap: 20px;
-  padding-bottom: 20px;
-}
-
-.page-header {
-  display: flex;
-  gap: 20px;
-  align-items: flex-start;
-  justify-content: space-between;
-  padding-bottom: 4px;
-}
-
-.page-header > div {
-  min-width: 0;
-}
-
-.eyebrow {
-  margin: 0 0 4px;
-  font-size: 12px;
-  font-weight: 600;
-  color: var(--el-color-primary);
-  text-transform: uppercase;
-  letter-spacing: 0.1em;
-  opacity: 0.7;
-}
-
-.page-header h2 {
-  margin: 0 0 6px;
-  font-size: 22px;
-  font-weight: 800;
-  color: var(--text-primary);
-}
-
-.subtitle {
-  margin: 0;
-  font-size: 13px;
-  line-height: 1.7;
-  color: var(--text-secondary);
-}
+/* 页面壳层与页头由 MrrPageShell / MrrPageHeader 统一提供；底部留白交给布局工作区。 */
 
 .section-header {
   display: flex;
@@ -703,16 +661,6 @@ onMounted(refreshAll)
   margin-top: 12px;
   overflow-x: auto;
   border-top: 1px solid rgb(0 0 0 / 5%);
-}
-
-@media (max-width: 768px) {
-  .page-header {
-    flex-direction: column;
-  }
-
-  .page-header :deep(.el-button) {
-    align-self: flex-start;
-  }
 }
 
 @media (max-width: 600px) {

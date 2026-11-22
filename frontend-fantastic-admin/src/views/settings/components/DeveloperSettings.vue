@@ -120,7 +120,7 @@ const settings = defineModel<EffectiveSystemSettings>({ required: true })
 
 .trusted-sources-heading { display: flex; gap: var(--mrr-space-4); align-items: flex-start; justify-content: space-between; }
 
-.trusted-sources-card :deep(.el-textarea__inner) { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; line-height: 1.6; }
+.trusted-sources-card :deep(.el-textarea__inner) { font-family: var(--mrr-font-mono); line-height: 1.6; }
 
 .source-examples { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px 16px; font-size: 11px; color: var(--mrr-muted-foreground); }
 

@@ -25,7 +25,8 @@ const topbarRef = useTemplateRef('topbarRef')
 const { height: topbarHeight } = useElementSize(topbarRef)
 
 onMounted(() => {
-  window.addEventListener('scroll', onScroll)
+  // passive：滚动监听不调用 preventDefault，声明后浏览器无需等待回调即可滚动。
+  window.addEventListener('scroll', onScroll, { passive: true })
 })
 onUnmounted(() => {
   window.removeEventListener('scroll', onScroll)
@@ -33,8 +34,21 @@ onUnmounted(() => {
 function onScroll() {
   scrollTop.value = (document.documentElement || document.body).scrollTop
 }
-watch(scrollTop, (val, oldVal) => {
-  scrollOnHide.value = settingsStore.settings.topbar.mode === 'sticky' && val > oldVal && val > topbarHeight.value
+// 方向切换阈值：触控板惯性滚动会产生 1–2px 的来回抖动，没有阈值时顶栏会反复隐藏/出现。
+const SCROLL_DIRECTION_THRESHOLD = 6
+let lastDirectionAnchor = 0
+watch(scrollTop, (val) => {
+  if (settingsStore.settings.topbar.mode !== 'sticky' || val <= topbarHeight.value) {
+    scrollOnHide.value = false
+    lastDirectionAnchor = val
+    return
+  }
+  const delta = val - lastDirectionAnchor
+  if (Math.abs(delta) < SCROLL_DIRECTION_THRESHOLD) {
+    return
+  }
+  scrollOnHide.value = delta > 0
+  lastDirectionAnchor = val
 })
 </script>
 
@@ -61,7 +75,10 @@ watch(scrollTop, (val, oldVal) => {
   overflow: hidden;
   background: var(--mrr-topbar-bg);
   border-bottom: 1px solid var(--mrr-shell-divider);
-  transition: transform 220ms ease, box-shadow 220ms ease, background-color 220ms ease;
+  transition:
+    transform var(--mrr-motion-move) var(--mrr-ease-out),
+    box-shadow var(--mrr-motion-feedback) ease,
+    background-color var(--mrr-motion-feedback) ease;
 
   &.mask {
     box-shadow: 0 8px 24px rgb(15 23 42 / 6%);

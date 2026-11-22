@@ -118,7 +118,7 @@ describe('statistics detail responsive pagination', () => {
     const wrapper = mount(StatisticsDetailPage, { global: { stubs } })
     await flushPromises()
 
-    await wrapper.get('.header-actions button').trigger('click')
+    await wrapper.get('.mrr-page-header__aside button').trigger('click')
     await flushPromises()
 
     expect(showError).toHaveBeenCalledWith(`导出失败：${limitMessage}`)
@@ -131,7 +131,7 @@ describe('statistics detail responsive pagination', () => {
     const wrapper = mount(StatisticsDetailPage, { global: { stubs } })
     await flushPromises()
 
-    await wrapper.get('.header-actions button').trigger('click')
+    await wrapper.get('.mrr-page-header__aside button').trigger('click')
     await flushPromises()
 
     expect(downloadBlob).toHaveBeenCalledOnce()

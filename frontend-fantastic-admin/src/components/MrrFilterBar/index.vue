@@ -5,11 +5,18 @@ const props = withDefaults(defineProps<{
   compact?: boolean
   embedded?: boolean
   focusRing?: boolean
+  /**
+   * 字段上方显示可见标签（`.mrr-filter-field > label + 控件`），操作按钮与控件底边对齐。
+   * 此前只能靠页面手写 `class="mrr-filter-bar--labelled"` 开启，
+   * 记录、用户、运行错误等页面因此各自复制了一套 label 样式。
+   */
+  labelled?: boolean
   layout?: 'inline' | 'grid'
 }>(), {
   compact: false,
   embedded: false,
   focusRing: true,
+  labelled: false,
   layout: 'inline',
 })
 
@@ -17,7 +24,7 @@ const slots = useSlots()
 </script>
 
 <template>
-  <div class="mrr-filter-bar" :class="{ 'mrr-filter-bar--compact': props.compact, 'mrr-filter-bar--embedded': props.embedded, 'mrr-filter-bar--focus-ring': props.focusRing, 'mrr-filter-bar--grid': props.layout === 'grid' }">
+  <div class="mrr-filter-bar" :class="{ 'mrr-filter-bar--compact': props.compact, 'mrr-filter-bar--embedded': props.embedded, 'mrr-filter-bar--focus-ring': props.focusRing, 'mrr-filter-bar--labelled': props.labelled, 'mrr-filter-bar--grid': props.layout === 'grid' }">
     <div class="mrr-filter-bar__fields">
       <slot />
     </div>
@@ -34,13 +41,13 @@ const slots = useSlots()
   align-items: center;
   justify-content: space-between;
   min-width: 0;
-  padding: 11px 12px;
+  padding: var(--mrr-space-3) var(--mrr-card-inset);
   color: var(--mrr-card-foreground);
   background: var(--mrr-card);
   border: 1px solid var(--mrr-border);
   border-radius: var(--mrr-radius-card);
   box-shadow: var(--mrr-shadow-xs);
-  transition: border-color 140ms ease, box-shadow 140ms ease;
+  transition: border-color var(--mrr-motion-feedback) ease, box-shadow var(--mrr-motion-feedback) ease;
 }
 
 .mrr-filter-bar--focus-ring:focus-within {
@@ -49,7 +56,7 @@ const slots = useSlots()
 }
 
 .mrr-filter-bar--compact {
-  padding: 8px 9px;
+  padding: var(--mrr-space-2) var(--mrr-card-inset-compact);
   border-radius: var(--mrr-radius-md);
 }
 
@@ -103,6 +110,7 @@ const slots = useSlots()
   margin-left: 0;
 }
 
+/* 字段宽度（flex）交给页面决定：组件选择器优先级更高，写在这里会压掉页面的局部列宽。 */
 .mrr-filter-bar--labelled :deep(.mrr-filter-field) {
   display: grid;
   gap: var(--mrr-space-1);

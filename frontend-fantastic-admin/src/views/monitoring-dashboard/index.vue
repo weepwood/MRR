@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ref } from 'vue'
+import MrrPageShell from '@/components/MrrPageShell/index.vue'
 import MonitoringPage from '@/views/monitoring/index.vue'
 
 defineOptions({ name: 'MonitoringDashboardPage' })
@@ -16,7 +17,7 @@ function openStatusPage() {
 </script>
 
 <template>
-  <div class="monitoring-dashboard">
+  <MrrPageShell class="monitoring-dashboard">
     <MonitoringPage />
 
     <section class="embedded-status-section">
@@ -47,16 +48,11 @@ function openStatusPage() {
         />
       </el-card>
     </section>
-  </div>
+  </MrrPageShell>
 </template>
 
 <style scoped>
-.monitoring-dashboard {
-  display: grid;
-  gap: 18px;
-  min-width: 0;
-}
-
+/* 外层页面壳层统一提供块间距（24px）与宽度上限，内嵌的监控页自身也是壳层，宽度一致。 */
 .embedded-status-card {
   overflow: hidden;
   border-radius: var(--mrr-radius-card);

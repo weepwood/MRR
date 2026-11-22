@@ -499,7 +499,7 @@ onBeforeUnmount(hideTooltip)
   outline: none;
   border: 1px solid color-mix(in srgb, var(--el-border-color-lighter) 82%, transparent);
   border-radius: 2px;
-  transition: border-color 120ms ease, filter 120ms ease, transform 120ms ease;
+  transition: border-color var(--mrr-motion-feedback) ease, filter var(--mrr-motion-feedback) ease, transform var(--mrr-motion-press) var(--mrr-ease-out);
 }
 
 .heatmap-cell:hover,
@@ -552,7 +552,7 @@ onBeforeUnmount(hideTooltip)
   position: fixed;
   top: 0;
   left: 0;
-  z-index: 4000;
+  z-index: var(--mrr-z-overlay-top);
   box-sizing: border-box;
   width: 236px;
   padding: 13px 14px;
@@ -562,7 +562,7 @@ onBeforeUnmount(hideTooltip)
   border: 1px solid var(--el-border-color-lighter);
   border-radius: var(--mrr-radius-lg);
   box-shadow: 0 14px 34px rgb(15 23 42 / 18%);
-  transition: transform 90ms ease-out;
+  transition: transform var(--mrr-motion-press) var(--mrr-ease-out);
   will-change: transform;
 }
 

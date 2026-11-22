@@ -3,6 +3,8 @@ import type { ResponseMetricAnalysis } from '@/api/types'
 import { RefreshCw as Refresh } from 'lucide-vue-next'
 import { computed, onMounted, ref } from 'vue'
 import { getResponseMetricAnalysis } from '@/api/modules/response-metrics'
+import MrrPageHeader from '@/components/MrrPageHeader/index.vue'
+import MrrPageShell from '@/components/MrrPageShell/index.vue'
 import ResponseTrendChart from './components/ResponseTrendChart.vue'
 
 defineOptions({ name: 'ResponseAnalysisPage' })
@@ -59,24 +61,19 @@ onMounted(loadData)
 </script>
 
 <template>
-  <div class="response-analysis-page">
-    <header class="page-header">
-      <div>
-        <p class="eyebrow">
-          Response Insights
-        </p>
-        <h2>接口响应分析</h2>
-        <p class="subtitle">
-          默认汇总最近 365 天每日请求量、错误情况及前后端响应耗时，定位长期波动与异常日期。
-        </p>
-      </div>
-      <div class="page-actions">
+  <MrrPageShell class="response-analysis-page">
+    <MrrPageHeader
+      eyebrow="Response Insights"
+      title="接口响应分析"
+      description="默认汇总最近 365 天每日请求量、错误情况及前后端响应耗时，定位长期波动与异常日期。"
+    >
+      <template #actions>
         <el-button :loading="loading" @click="loadData">
           <el-icon><Refresh /></el-icon>
           刷新
         </el-button>
-      </div>
-    </header>
+      </template>
+    </MrrPageHeader>
 
     <div v-if="error" class="state-panel error-panel" role="alert">
       <strong>{{ error }}</strong>
@@ -176,57 +173,11 @@ onMounted(loadData)
         </el-card>
       </div>
     </template>
-  </div>
+  </MrrPageShell>
 </template>
 
 <style scoped>
-.response-analysis-page {
-  display: grid;
-  gap: 20px;
-}
-
-.page-header {
-  display: flex;
-  gap: 16px;
-  align-items: flex-start;
-  justify-content: space-between;
-}
-
-.page-header > div:first-child {
-  min-width: 0;
-}
-
-.eyebrow {
-  margin: 0 0 6px;
-  font-size: 12px;
-  font-weight: 600;
-  color: var(--mrr-primary);
-  text-transform: uppercase;
-  letter-spacing: 0.125px;
-}
-
-h2 {
-  margin: 0;
-  font-size: 26px;
-  font-weight: 700;
-  line-height: 1.23;
-  color: var(--mrr-foreground);
-  letter-spacing: -0.625px;
-}
-
-.subtitle {
-  max-width: 760px;
-  margin: 8px 0 0;
-  color: var(--mrr-muted-foreground);
-}
-
-.page-actions {
-  display: flex;
-  flex: none;
-  gap: 12px;
-  align-items: center;
-}
-
+/* 页面壳层、页头排版与窄屏折行由 MrrPageShell / MrrPageHeader 统一提供。 */
 .analysis-card {
   min-width: 0;
   border: 1px solid var(--mrr-border);
@@ -235,7 +186,7 @@ h2 {
 
 .analysis-stack {
   display: grid;
-  gap: 20px;
+  gap: var(--mrr-page-gap);
   min-width: 0;
 }
 
@@ -299,16 +250,6 @@ h2 {
   .response-trend-card :deep(.el-card__body) {
     width: max-content;
     max-width: calc(100vw - 620px);
-  }
-}
-
-@media (max-width: 600px) {
-  .page-header {
-    flex-direction: column;
-  }
-
-  .page-actions {
-    width: 100%;
   }
 }
 </style>

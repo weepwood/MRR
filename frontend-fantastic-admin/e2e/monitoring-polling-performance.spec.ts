@@ -31,7 +31,7 @@ test('监控仅在可见的活动路由轮询，返回后尊重手动暂停', as
   })
   await page.clock.install()
   await page.goto('/monitoring')
-  const status = page.locator('.subtitle').filter({ hasText: '上次完整刷新' })
+  const status = page.locator('.mrr-page-header__description').filter({ hasText: '上次完整刷新' })
   await expect(status).toContainText(/上次完整刷新 \d/)
   await page.clock.pauseAt(new Date(await page.evaluate(() => Date.now()) + 1000))
   expect(reads).toBe(1)

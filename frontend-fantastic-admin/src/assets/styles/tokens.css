@@ -37,6 +37,14 @@
   --mrr-space-8: 32px;
 
   /*
+   * 卡片内边距：页头卡、分区卡、表格面板、筛选栏、指标卡共用同一条左右留白，
+   * 纵向堆叠时标题、字段与表格外沿落在同一条竖线上。
+   * 此前五处分别写 26 / 18 / 16 / 12 / 16px，堆叠后左边缘呈锯齿状。
+   */
+  --mrr-card-inset: var(--mrr-space-5);
+  --mrr-card-inset-compact: var(--mrr-space-3);
+
+  /*
    * 动效时长按「语义」分档，不再按「快/慢」分档。
    * 语义缺失是历史上出现 15 种时长（140/160/200/220/240ms…）的直接原因：
    * 作者要表达的场景（按压、反馈、位移、浮层）在令牌里找不到对应项，就自己编一个数。
@@ -56,12 +64,17 @@
   --mrr-motion-loop-soft: 1.5s;
   --mrr-ease-out: cubic-bezier(0.22, 1, 0.36, 1);
 
+  /* 离场与收起：先慢后快，配合 ease-out 入场，避免「进出同速」显得拖沓。 */
+  --mrr-ease-in: cubic-bezier(0.55, 0, 0.75, 0.2);
+
   /*
    * 全局圆角体系。
    * --radius 由“系统设置 → 应用配置 → 全局界面圆角”实时写入，
    * MRR 页面、Element Plus 控件和影像档案袋共享同一圆角基准。
    */
-  --mrr-radius-base: var(--radius, 0.5rem);
+
+  /* 回退值与 settings.default.ts 的 radius: 0.75 对齐：设置写入前（独立页面、首帧）不再先按 8px 绘制再跳到 12px。 */
+  --mrr-radius-base: var(--radius, 0.75rem);
   --mrr-radius-sm: clamp(0px, calc(var(--mrr-radius-base) - 6px), 18px);
   --mrr-radius-md: clamp(0px, calc(var(--mrr-radius-base) - 4px), 20px);
   --mrr-radius-lg: clamp(0px, calc(var(--mrr-radius-base) - 2px), 22px);
@@ -71,6 +84,17 @@
   --mrr-radius-dialog: var(--mrr-radius-base);
   --mrr-radius-pill: 999px;
   --mrr-control-radius: var(--mrr-radius-md);
+
+  /*
+   * 字号阶梯。此前页面里散落 10/11/12/12.5/13/14/15/16/22/26px 等十余种写法，
+   * 新增或改动的样式从这里取值；存量页面随迁移逐步替换，不做全站机械替换。
+   */
+  --mrr-font-size-xs: 12px;
+  --mrr-font-size-sm: 13px;
+  --mrr-font-size-md: 14px;
+  --mrr-font-size-lg: 16px;
+  --mrr-font-size-title: 26px;
+  --mrr-font-size-title-compact: 22px;
 
   /* 控件尺寸 */
   --mrr-input-height: 33px;
@@ -145,6 +169,14 @@
   --mrr-navigation-bg-solid: #fff;
   --mrr-navigation-border: rgb(15 23 42 / 8%);
   --mrr-navigation-hover: #f1f4f8;
+
+  /*
+   * 主导航窄栏底色与其悬停色。窄栏自身就是灰底，此前直接借用 --mrr-navigation-hover
+   * 作底色，导致栏内按钮悬停色与底色完全相同、悬停没有任何可见反馈。
+   * 两个值都写静态色，Chrome 86 回退无需额外处理。
+   */
+  --mrr-navigation-rail-bg: #f1f4f8;
+  --mrr-navigation-rail-hover: #e4e9f0;
   --mrr-navigation-active: color-mix(in srgb, var(--color-primary) 8%, #fff);
   --mrr-navigation-active-foreground: color-mix(in srgb, var(--color-primary) 40%, #000);
   --mrr-navigation-active-border: color-mix(in srgb, var(--color-primary) 22%, transparent);
@@ -171,6 +203,25 @@
   --mrr-control-bg-disabled: color-mix(in srgb, var(--mrr-muted) 82%, var(--mrr-card));
   --mrr-control-border: var(--mrr-input);
   --mrr-control-border-hover: color-mix(in srgb, var(--mrr-foreground) 22%, var(--mrr-input));
+
+  /*
+   * 层级（z-index）。此前页面各自写 1000 / 2010 / 3002 / 4000 / 9999，
+   * 9999 的下载遮罩会盖住 Element Plus 的消息提示，失败原因用户看不到。
+   * Element Plus 与 Fa* 弹层从 2000 起按打开顺序递增，下面的分层围绕这一基准：
+   * - sticky     1000  吸顶块、页内浮动工具条
+   * - sidebar    1010  侧栏（移动端抽屉），遮罩比它低 1
+   * - blocking   1900  页内阻断遮罩（下载、导出进度）：低于弹层，保证消息与确认框可见
+   * - header     2000  顶部导航；与弹层基准相同，后打开的弹层自然在上
+   * - progress   3000  路由进度条
+   * - overlay-top 4000 全屏看图上的说明条、跟随鼠标的图表提示
+   */
+  --mrr-z-sticky: 1000;
+  --mrr-z-sidebar-mask: 1009;
+  --mrr-z-sidebar: 1010;
+  --mrr-z-blocking: 1900;
+  --mrr-z-header: 2000;
+  --mrr-z-progress: 3000;
+  --mrr-z-overlay-top: 4000;
 
   /* 阴影 */
   --mrr-shadow-xs: 0 1px 2px rgb(15 23 42 / 4%);
@@ -208,6 +259,8 @@
     --mrr-navigation-bg-solid: #131821;
     --mrr-navigation-border: rgb(255 255 255 / 8%);
     --mrr-navigation-hover: #1c2330;
+    --mrr-navigation-rail-bg: #1c2330;
+    --mrr-navigation-rail-hover: #262f3f;
     --mrr-navigation-active: color-mix(in srgb, var(--color-primary) 19%, #131821);
     --mrr-navigation-active-foreground: color-mix(in srgb, var(--color-primary) 40%, #fff);
     --mrr-navigation-active-border: color-mix(in srgb, var(--color-primary) 36%, transparent);

@@ -6,7 +6,7 @@ import type {
   DashboardWidgetSize,
 } from './dashboard-widgets'
 import { ElMessage } from 'element-plus'
-import { computed, reactive, ref, watch } from 'vue'
+import { computed, nextTick, reactive, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import MrrPageHeader from '@/components/MrrPageHeader/index.vue'
 import MrrPageShell from '@/components/MrrPageShell/index.vue'
@@ -229,6 +229,8 @@ const editorVisible = ref(false)
 const editingWidgetId = ref('')
 const draggedWidgetId = ref('')
 const dragOverWidgetId = ref('')
+// 拖到「置顶状态不同」的卡片上时单独标记为不可放置，避免先亮起可放置高亮、松手后才被提示拒绝。
+const dragInvalidWidgetId = ref('')
 const editorForm = reactive({
   title: '',
   description: '',
@@ -311,8 +313,50 @@ function openWidget(widget: DashboardWidgetView) {
   void router.push(widget.path)
 }
 
+const REORDER_KEYS: Record<string, -1 | 1> = {
+  ArrowLeft: -1,
+  ArrowUp: -1,
+  ArrowRight: 1,
+  ArrowDown: 1,
+}
+
+/**
+ * 调整布局时提供键盘排序：Alt + 方向键与相邻小组件交换位置。
+ * 原实现只支持鼠标拖拽，键盘与触屏用户无法调整顺序。
+ */
+function moveWidgetByKeyboard(widget: DashboardWidgetView, direction: -1 | 1) {
+  const list = visibleWidgets.value
+  const index = list.findIndex(item => item.id === widget.id)
+  const neighbor = list[index + direction]
+  if (index < 0 || !neighbor) {
+    return
+  }
+  if (neighbor.pinned !== widget.pinned) {
+    ElMessage.info('置顶组件与普通组件需要先设置为相同置顶状态后再排序')
+    return
+  }
+  // moveWidget 把 source 插到 target 之前：向前移动时自己插到前一个之前，向后移动时让后一个插到自己之前。
+  const next = direction < 0
+    ? moveWidget(preferences.value, widget.id, neighbor.id)
+    : moveWidget(preferences.value, neighbor.id, widget.id)
+  applyPreferences(next)
+  void nextTick(() => {
+    document.querySelector<HTMLElement>(`[data-widget-id="${widget.id}"]`)?.focus()
+  })
+}
+
 function handleWidgetKeydown(event: KeyboardEvent, widget: DashboardWidgetView) {
-  if (editMode.value || (event.key !== 'Enter' && event.key !== ' ')) {
+  if (editMode.value) {
+    const direction = REORDER_KEYS[event.key]
+    if (direction && event.altKey && event.target === event.currentTarget) {
+      // 阻止冒泡：标签栏在 document 上监听 Alt + ←/→ 切换标签页。
+      event.preventDefault()
+      event.stopPropagation()
+      moveWidgetByKeyboard(widget, direction)
+    }
+    return
+  }
+  if (event.key !== 'Enter' && event.key !== ' ') {
     return
   }
   event.preventDefault()
@@ -331,9 +375,36 @@ function handleDragStart(event: DragEvent, widgetId: string) {
   }
 }
 
+function isDropCompatible(targetWidgetId: string) {
+  const source = getWidgetPreference(draggedWidgetId.value)
+  const target = getWidgetPreference(targetWidgetId)
+  return Boolean(source && target && source.pinned === target.pinned)
+}
+
 function handleDragEnter(widgetId: string) {
-  if (editMode.value && draggedWidgetId.value && draggedWidgetId.value !== widgetId) {
+  if (!editMode.value || !draggedWidgetId.value || draggedWidgetId.value === widgetId) {
+    return
+  }
+  if (isDropCompatible(widgetId)) {
     dragOverWidgetId.value = widgetId
+    dragInvalidWidgetId.value = ''
+  }
+  else {
+    dragOverWidgetId.value = ''
+    dragInvalidWidgetId.value = widgetId
+  }
+}
+
+function handleDragOver(event: DragEvent, widgetId: string) {
+  if (!editMode.value || !draggedWidgetId.value) {
+    return
+  }
+  // 只有可放置目标才 preventDefault；不可放置时浏览器显示「禁止」光标。
+  if (draggedWidgetId.value === widgetId || isDropCompatible(widgetId)) {
+    event.preventDefault()
+    if (event.dataTransfer) {
+      event.dataTransfer.dropEffect = 'move'
+    }
   }
 }
 
@@ -345,6 +416,7 @@ function handleDrop(event: DragEvent, targetWidgetId: string) {
   const source = getWidgetPreference(sourceWidgetId)
   const target = getWidgetPreference(targetWidgetId)
   dragOverWidgetId.value = ''
+  dragInvalidWidgetId.value = ''
   draggedWidgetId.value = ''
   if (!source || !target || sourceWidgetId === targetWidgetId) {
     return
@@ -359,6 +431,7 @@ function handleDrop(event: DragEvent, targetWidgetId: string) {
 function handleDragEnd() {
   draggedWidgetId.value = ''
   dragOverWidgetId.value = ''
+  dragInvalidWidgetId.value = ''
 }
 
 function toggleWidgetPinned(widgetId: string) {
@@ -500,10 +573,11 @@ watch(storageKey, loadPreferences, { immediate: true })
     <section class="dashboard-workspace" aria-label="我的工作台">
       <div v-if="editMode" class="dashboard-workspace__notice">
         <FaIcon name="i-lucide:move" />
-        拖动卡片调整顺序；右上角菜单可修改大小、颜色、内容和置顶状态。
+        拖动卡片（或聚焦后按 Alt + 方向键）调整顺序；右上角菜单可修改大小、颜色、内容和置顶状态。
       </div>
 
-      <div v-if="visibleWidgets.length" class="dashboard-grid" :class="{ 'is-editing': editMode }">
+      <!-- TransitionGroup 只用于重排时的位移过渡（FLIP），卡片换位有连续轨迹而不是瞬移。 -->
+      <TransitionGroup v-if="visibleWidgets.length" tag="div" name="dashboard-widget" class="dashboard-grid" :class="{ 'is-editing': editMode }">
         <article
           v-for="widget in visibleWidgets"
           :key="widget.id"
@@ -516,18 +590,20 @@ watch(storageKey, loadPreferences, { immediate: true })
               'is-pinned': widget.pinned,
               'is-dragging': draggedWidgetId === widget.id,
               'is-drag-over': dragOverWidgetId === widget.id,
+              'is-drop-invalid': dragInvalidWidgetId === widget.id,
             },
           ]"
+          :data-widget-id="widget.id"
           :draggable="editMode"
           :role="editMode ? 'group' : 'link'"
-          :aria-label="`${widget.title}${widget.pinned ? '，已置顶' : ''}`"
+          :aria-label="`${widget.title}${widget.pinned ? '，已置顶' : ''}${editMode ? '，按 Alt 加方向键调整位置' : ''}`"
           :aria-grabbed="editMode ? draggedWidgetId === widget.id : undefined"
           tabindex="0"
           @click="openWidget(widget)"
           @keydown="handleWidgetKeydown($event, widget)"
           @dragstart="handleDragStart($event, widget.id)"
           @dragenter.prevent="handleDragEnter(widget.id)"
-          @dragover.prevent
+          @dragover="handleDragOver($event, widget.id)"
           @drop.prevent="handleDrop($event, widget.id)"
           @dragend="handleDragEnd"
         >
@@ -591,7 +667,7 @@ watch(storageKey, loadPreferences, { immediate: true })
             </div>
           </div>
         </article>
-      </div>
+      </TransitionGroup>
 
       <div v-else class="dashboard-empty">
         <FaIcon name="i-lucide:layout-grid" />
@@ -645,7 +721,7 @@ watch(storageKey, loadPreferences, { immediate: true })
             :disabled="!isWidgetVisible(definition.id)"
             @click="toggleWidgetPinned(definition.id)"
           >
-            <FaIcon :name="isWidgetPinned(definition.id) ? 'i-lucide:pin' : 'i-lucide:pin'" />
+            <FaIcon name="i-lucide:pin" />
             {{ isWidgetPinned(definition.id) ? '已置顶' : '置顶' }}
           </el-button>
           <el-button text :disabled="!isWidgetVisible(definition.id)" @click="openWidgetEditor(definition.id)">
@@ -795,7 +871,7 @@ watch(storageKey, loadPreferences, { immediate: true })
     border-color var(--mrr-motion-feedback) ease,
     box-shadow var(--mrr-motion-feedback) ease,
     opacity var(--mrr-motion-feedback) ease,
-    transform var(--mrr-motion-feedback) var(--mrr-ease-out);
+    transform var(--mrr-motion-press) var(--mrr-ease-out);
 }
 
 .dashboard-widget--color-blue {
@@ -922,6 +998,18 @@ watch(storageKey, loadPreferences, { immediate: true })
 .dashboard-widget.is-drag-over {
   border-color: var(--widget-accent);
   box-shadow: 0 0 0 2px color-mix(in srgb, var(--widget-accent) 18%, transparent);
+}
+
+/* 不可放置：中性虚线 + 禁止光标，与「可放置」的主色高亮明确区分。 */
+.dashboard-widget.is-drop-invalid {
+  cursor: no-drop;
+  border-color: var(--mrr-border-strong);
+  opacity: 0.72;
+}
+
+/* 重排位移：卡片换位走 move 档，覆盖卡片自身 transition（同优先级，后声明生效）。 */
+.dashboard-widget-move {
+  transition: transform var(--mrr-motion-move) var(--mrr-ease-out);
 }
 
 .dashboard-widget__header {

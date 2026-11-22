@@ -3,7 +3,6 @@ import type { LogRecord, PaginatedResult } from '@/api/types'
 /* eslint-disable antfu/if-newline, curly, vue/singleline-html-element-content-newline */
 import type { MrrTableAction } from '@/components/MrrTableActions/types'
 import { useMediaQuery } from '@vueuse/core'
-import { ElMessage } from 'element-plus'
 import { Copy as CopyIcon, RefreshCw as Refresh } from 'lucide-vue-next'
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
@@ -22,6 +21,7 @@ import { useCrudList } from '@/composables/useCrudList'
 import { useTableActionLayout } from '@/composables/useTableActionLayout'
 import { useUserStore } from '@/store/modules/user'
 import { rangePickerPopperOptions } from '@/ui/provider/picker-options'
+import { copyText as copyToClipboard } from '@/utils/copy-text'
 import { formatDateTime, isRedactedLogText } from '@/utils/display-format'
 import { checkSessionPermission } from '@/utils/permission'
 
@@ -43,14 +43,7 @@ const error = ref('')
 const lastRefreshedAt = ref('')
 
 async function copyText(text: string, message: string) {
-  if (!text.trim()) { return }
-  try {
-    await navigator.clipboard.writeText(text)
-    ElMessage.success(message)
-  }
-  catch {
-    ElMessage.error('复制失败，请手动选择文本')
-  }
+  await copyToClipboard(text, { success: message })
 }
 
 const methodOptions = ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS']

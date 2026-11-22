@@ -23,7 +23,9 @@ function handleRetry() {
 <template>
   <div class="app-error mrr-content-enter" role="alert">
     <div class="app-error-icon i-lucide:triangle-alert mrr-status-pop" />
-    <p class="app-error-text">{{ message }}</p>
+    <p class="app-error-text">
+      {{ message }}
+    </p>
     <el-button type="primary" :icon="Refresh" @click="handleRetry">
       {{ retryText }}
     </el-button>
@@ -36,7 +38,9 @@ function handleRetry() {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  padding: 64px 16px;
+
+  /* 空态/错误态常出现在表格面板内部，64px 上下留白会把分页条推出首屏；与骨架屏高度更接近。 */
+  padding: 48px var(--mrr-space-4);
   text-align: center;
 }
 

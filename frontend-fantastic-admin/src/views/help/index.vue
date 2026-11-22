@@ -233,7 +233,7 @@ onMounted(async () => {
   background: color-mix(in srgb, var(--card-accent, var(--el-color-primary)) 4%, var(--el-bg-color));
   border: 1px solid var(--el-border-color-light);
   border-radius: var(--mrr-radius-card);
-  transition: border-color 160ms ease, transform 160ms ease, box-shadow 160ms ease;
+  transition: border-color var(--mrr-motion-feedback) ease, transform var(--mrr-motion-press) var(--mrr-ease-out), box-shadow var(--mrr-motion-feedback) ease;
 }
 
 .documentation-card:hover {

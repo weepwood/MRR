@@ -1,8 +1,8 @@
 <script setup lang="ts" generic="Entry extends StorageEntry">
 import type { StorageEntry } from './presentation'
-import { ElMessage } from 'element-plus'
 import { ArrowLeft, ArrowUp, ChevronDown, ChevronRight, ChevronUp, Copy, File, FileArchive, FileImage, FileText, Folder, Info, LayoutGrid, List, Maximize, Minimize, RefreshCw, Search } from 'lucide-vue-next'
 import { computed, nextTick, onBeforeUnmount, onDeactivated, onMounted, ref, watch } from 'vue'
+import { copyText as copyToClipboard } from '@/utils/copy-text'
 import { entryType, formatDate, formatFileSize, isImage } from './presentation'
 
 const props = defineProps<{
@@ -166,13 +166,7 @@ watch(() => props.selected, async (entry) => {
 })
 
 async function copyLocation(entry: Entry) {
-  try {
-    await navigator.clipboard.writeText(props.location(entry))
-    ElMessage.success('路径已复制')
-  }
-  catch {
-    ElMessage.error('复制失败，请选中路径后手动复制')
-  }
+  await copyToClipboard(props.location(entry), { success: '路径已复制' })
 }
 
 /*

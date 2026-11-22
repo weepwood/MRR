@@ -67,4 +67,22 @@ describe('runtimeErrorsBadge store', () => {
     await vi.advanceTimersByTimeAsync(30_000)
     expect(api.getSystemErrorOverview).toHaveBeenCalledTimes(3)
   })
+
+  it('stop 清理计时器并允许重新 start', async () => {
+    api.getSystemErrorOverview.mockResolvedValue({ data: { recentErrorGroups: 4 } })
+    const store = useRuntimeErrorsBadgeStore()
+    store.start()
+    await vi.advanceTimersByTimeAsync(0)
+    expect(api.getSystemErrorOverview).toHaveBeenCalledTimes(1)
+
+    store.stop()
+    expect(store.recentErrorGroups).toBe(0)
+    await vi.advanceTimersByTimeAsync(90_000)
+    expect(api.getSystemErrorOverview).toHaveBeenCalledTimes(1)
+
+    store.start()
+    await vi.advanceTimersByTimeAsync(0)
+    expect(api.getSystemErrorOverview).toHaveBeenCalledTimes(2)
+    store.stop()
+  })
 })

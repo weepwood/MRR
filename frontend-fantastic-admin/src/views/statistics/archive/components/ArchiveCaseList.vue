@@ -166,7 +166,7 @@ onBeforeUnmount(() => window.removeEventListener(ARCHIVE_DEPARTMENT_THEME_UPDATE
   background: var(--folder-tint, var(--surface-muted));
   border: 1px solid transparent;
   border-radius: var(--mrr-radius-md);
-  transition: border-color 120ms ease, background-color 120ms ease;
+  transition: border-color var(--mrr-motion-feedback) ease, background-color var(--mrr-motion-feedback) ease;
 }
 
 .case-item:hover {

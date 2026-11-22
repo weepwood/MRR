@@ -25,6 +25,8 @@ import { computed, reactive, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { exportDataExchangeCsv } from '@/api/modules/data-exchange'
 import MrrFilterActionButton from '@/components/MrrFilterActionButton/index.vue'
+import MrrPageHeader from '@/components/MrrPageHeader/index.vue'
+import MrrPageShell from '@/components/MrrPageShell/index.vue'
 import { rangePickerPopperOptions } from '@/ui/provider/picker-options'
 import useAuth from '@/utils/composables/useAuth'
 import { downloadBlob, getResponseHeader } from '@/utils/file-download'
@@ -290,29 +292,24 @@ function today() {
 </script>
 
 <template>
-  <div class="page-shell">
-    <div class="page-header">
-      <div>
-        <p class="eyebrow">
-          Data Exchange
-        </p>
-        <div class="page-title-row">
-          <h2>数据导入导出</h2>
-          <el-tooltip placement="right" :show-after="200">
-            <template #content>
-              <span v-if="!canImport">当前账号只有读取权限。可以按权限导出数据；正式导入患者、统计、装箱和扫描记录需要 record:edit 权限。<br></span>
-              导出采用受控行数上限：所有条件导出单次最多返回 100,000 行。结果可能超过上限时，请缩小筛选范围；扫描记录可使用 afterId 按主键游标分卷导出。
-            </template>
-            <button type="button" class="info-trigger" aria-label="数据交换说明">
-              <el-icon><InfoFilled /></el-icon>
-            </button>
-          </el-tooltip>
-        </div>
-        <p class="subtitle">
-          患者、统计、病案主档、档案装箱和扫描记录统一在此导入导出。系统只开放预定义数据集，不接受任意表名、SQL 或服务器路径。
-        </p>
-      </div>
-    </div>
+  <MrrPageShell class="data-exchange-page">
+    <MrrPageHeader
+      eyebrow="Data Exchange"
+      title="数据导入导出"
+      description="患者、统计、病案主档、档案装箱和扫描记录统一在此导入导出。系统只开放预定义数据集，不接受任意表名、SQL 或服务器路径。"
+    >
+      <template #badge>
+        <el-tooltip placement="right" :show-after="200">
+          <template #content>
+            <span v-if="!canImport">当前账号只有读取权限。可以按权限导出数据；正式导入患者、统计、装箱和扫描记录需要 record:edit 权限。<br></span>
+            导出采用受控行数上限：所有条件导出单次最多返回 100,000 行。结果可能超过上限时，请缩小筛选范围；扫描记录可使用 afterId 按主键游标分卷导出。
+          </template>
+          <button type="button" class="info-trigger" aria-label="数据交换说明">
+            <el-icon><InfoFilled /></el-icon>
+          </button>
+        </el-tooltip>
+      </template>
+    </MrrPageHeader>
 
     <el-segmented
       v-model="activeTab"
@@ -589,11 +586,11 @@ function today() {
         max-file-size="单文件不超过 50 MB"
       />
     </div>
-  </div>
+  </MrrPageShell>
 </template>
 
 <style scoped>
-.page-shell,
+/* 页面级间距、宽度与页头由 MrrPageShell / MrrPageHeader 统一提供，这里只保留页内分组的 16px。 */
 .tab-content,
 .readonly-fields {
   display: grid;
@@ -602,7 +599,6 @@ function today() {
   min-width: 0;
 }
 
-.page-header,
 .panel-heading {
   display: flex;
   gap: 16px;
@@ -638,29 +634,14 @@ function today() {
   outline-offset: 2px;
 }
 
-.eyebrow {
-  margin: 0 0 6px;
-  font-size: 12px;
-  font-weight: 700;
-  color: var(--el-text-color-secondary);
-  text-transform: uppercase;
-  letter-spacing: 0.12em;
-}
-
-h2,
 h3 {
   margin: 0;
-}
-
-h2 {
-  font-size: 28px;
 }
 
 .panel-heading h3 {
   font-size: 18px;
 }
 
-.subtitle,
 .panel-heading p {
   margin: 8px 0 0;
   line-height: 1.6;
@@ -784,7 +765,6 @@ h2 {
 }
 
 @media (max-width: 760px) {
-  .page-header,
   .panel-heading {
     flex-direction: column;
   }

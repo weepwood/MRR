@@ -94,7 +94,7 @@ const iconName = computed(() => {
 }
 
 .mrr-filter-action-button__icon.is-spinning {
-  animation: mrr-filter-action-spin 900ms linear infinite;
+  animation: mrr-filter-action-spin var(--mrr-motion-loop) linear infinite;
 }
 
 @keyframes mrr-filter-action-spin {

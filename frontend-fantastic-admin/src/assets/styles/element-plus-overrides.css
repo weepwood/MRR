@@ -7,6 +7,13 @@
 
 /* 比按需注入的 :root 默认值更明确，保证明暗模式共用同一语义表面。 */
 html:root {
+  /*
+   * Element Plus 对话框、抽屉、消息、折叠等过渡默认 300ms / 200ms，
+   * 超出 DESIGN.md 约定的浮层上限 220ms，并与自研抽屉（220ms）节奏不一致。
+   * 统一映射到语义令牌；关闭动效时由 motion.css 的全局开关继续生效。
+   */
+  --el-transition-duration: var(--mrr-motion-overlay);
+  --el-transition-duration-fast: var(--mrr-motion-feedback);
   --el-bg-color: var(--mrr-card);
   --el-bg-color-page: var(--mrr-background);
   --el-bg-color-overlay: var(--mrr-popover);
@@ -344,10 +351,10 @@ body .el-button--info.is-plain:not(.is-disabled):hover {
   background: var(--mrr-control-bg);
   border-radius: var(--mrr-control-radius);
   transition:
-    color 120ms ease,
-    background-color 120ms ease,
-    border-color 120ms ease,
-    box-shadow 120ms ease;
+    color var(--mrr-motion-feedback) ease,
+    background-color var(--mrr-motion-feedback) ease,
+    border-color var(--mrr-motion-feedback) ease,
+    box-shadow var(--mrr-motion-feedback) ease;
 }
 
 .el-input__wrapper,
@@ -428,7 +435,7 @@ body .el-button--info.is-plain:not(.is-disabled):hover {
 .el-select__caret,
 .el-input__icon {
   color: var(--mrr-muted-foreground);
-  transition: color 120ms ease, transform 120ms ease;
+  transition: color var(--mrr-motion-feedback) ease, transform var(--mrr-motion-move) var(--mrr-ease-out);
 }
 
 .el-input__wrapper.is-focus .el-input__prefix,
@@ -643,7 +650,7 @@ body .el-dropdown__popper .el-dropdown-menu__item {
   font-size: 13px;
   line-height: 34px;
   border-radius: var(--mrr-radius-sm);
-  transition: color 120ms ease, background-color 120ms ease;
+  transition: color var(--mrr-motion-feedback) ease, background-color var(--mrr-motion-feedback) ease;
 }
 
 body .el-select-dropdown .el-select-dropdown__item:hover,
@@ -669,8 +676,36 @@ body .el-select-dropdown .el-select-dropdown__item.is-selected {
   box-shadow: none;
 }
 
-.el-card__header {
+/*
+ * 新旧卡片同口径：旧页面直接使用 el-card，新页面使用 MrrSectionCard。
+ * 卡头留白、底色与 MrrSectionCard 对齐（后者用更高优先级的作用域选择器，不受影响），
+ * 页面自己用 :deep(.el-card__header) 定制的卡头仍以页面为准。
+ */
+body .el-card {
+  --el-card-padding: var(--mrr-card-inset);
+}
+
+body .el-card__header {
+  padding: var(--mrr-space-4) var(--mrr-card-inset);
+  background: color-mix(in srgb, var(--mrr-muted) 18%, var(--mrr-card));
   border-bottom-color: var(--mrr-border);
+}
+
+/*
+ * 空态同口径：旧页面的 el-empty（默认 160px 插图、40px 上下留白）与 AppEmpty 的
+ * 48px 图标 + 48px 留白差距明显，同一张表格在两个页面上空态高度能差出近百像素。
+ * 显式传入 :image-size 的调用仍以调用方为准。
+ */
+body .el-empty {
+  --el-empty-padding: 48px var(--mrr-space-4);
+  --el-empty-image-width: 88px;
+  --el-empty-description-margin-top: var(--mrr-space-3);
+  --el-empty-bottom-margin-top: var(--mrr-space-4);
+}
+
+body .el-empty__description p {
+  font-size: 14px;
+  color: var(--mrr-muted-foreground);
 }
 
 /* 按需加载的 Element Plus 及暗色样式晚于全局入口，桥接需保持更高优先级。 */
@@ -1021,6 +1056,11 @@ body .el-descriptions__table {
  * plain 按钮的悬停填充同理——失效后既无底色也无边框变化，等于没有悬停反馈。
  */
 @supports not (color: color-mix(in srgb, #000 50%, #fff)) {
+  /* 卡头底色是标题与正文的分界，丢了会和内容连成一片。 */
+  body .el-card__header {
+    background: var(--mrr-card);
+  }
+
   body .el-table {
     --el-table-header-bg-color: var(--mrr-muted);
     --el-table-row-hover-bg-color: var(--mrr-muted);

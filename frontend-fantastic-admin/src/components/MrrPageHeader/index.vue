@@ -61,7 +61,7 @@ const hasAside = computed(() => Boolean(slots.actions))
 .mrr-page-header__main {
   display: flex;
   flex: 1 1 auto;
-  gap: 14px;
+  gap: var(--mrr-space-4);
   align-items: flex-start;
   min-width: 0;
 }
@@ -74,10 +74,11 @@ const hasAside = computed(() => Boolean(slots.actions))
   height: 42px;
   font-size: 19px;
   color: var(--mrr-primary);
-  background: linear-gradient(145deg, color-mix(in srgb, var(--mrr-primary) 12%, var(--mrr-card)), color-mix(in srgb, var(--mrr-primary) 5%, var(--mrr-card)));
+
+  /* 实色浅底 + 细描边，与分区卡图标同一做法；DESIGN.md 约定页头不叠加渐变与阴影。 */
+  background: color-mix(in srgb, var(--mrr-primary) 9%, var(--mrr-card));
   border: 1px solid color-mix(in srgb, var(--mrr-primary) 18%, var(--mrr-border));
   border-radius: var(--mrr-radius-lg);
-  box-shadow: var(--mrr-shadow-xs);
 }
 
 .mrr-page-header__copy {

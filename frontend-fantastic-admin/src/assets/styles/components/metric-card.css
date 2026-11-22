@@ -47,11 +47,16 @@
   min-height: var(--mrr-summary-min-height);
   overflow: hidden;
   color: var(--mrr-card-foreground);
-  background: linear-gradient(160deg, color-mix(in srgb, var(--mrr-metric-accent) 3%, var(--mrr-card)) 0%, var(--mrr-card) 56%);
+
+  /*
+   * 卡面使用实色：原 3% 斜向渐变在亮色下几乎不可见，在暗色和投屏/低色深显示器上
+   * 却会出现色带；语义色由图标块与数值色承担即可。
+   */
+  background: var(--mrr-card);
   border: 1px solid var(--mrr-border);
   border-radius: var(--mrr-radius-card);
   box-shadow: var(--mrr-shadow-xs);
-  transition: border-color 150ms ease, box-shadow 150ms ease;
+  transition: border-color var(--mrr-motion-feedback) ease, box-shadow var(--mrr-motion-feedback) ease;
 }
 
 .mrr-metric-card:focus-within {
@@ -64,10 +69,10 @@
   z-index: 1;
   display: grid;
   grid-template-columns: 52px minmax(0, 1fr);
-  gap: 18px;
+  gap: var(--mrr-space-4);
   align-items: center;
   min-height: calc(var(--mrr-summary-min-height) - 2px);
-  padding: 16px;
+  padding: var(--mrr-space-4) var(--mrr-card-inset);
 }
 
 .mrr-metric-card__icon {
@@ -204,6 +209,10 @@
     grid-template-columns: 1fr;
   }
 
+  .mrr-metric-card .el-card__body {
+    padding: var(--mrr-space-3) var(--mrr-card-inset-compact);
+  }
+
   .mrr-metric-card:not(.mrr-metric-card--no-icon) .el-card__body {
     grid-template-columns: 46px minmax(0, 1fr);
   }
@@ -224,7 +233,7 @@
 }
 
 .mrr-metric-grid--dense .mrr-metric-card .el-card__body {
-  padding: var(--mrr-space-3);
+  padding: var(--mrr-space-3) var(--mrr-card-inset-compact);
 }
 
 .mrr-metric-grid--dense .mrr-metric-card__label {

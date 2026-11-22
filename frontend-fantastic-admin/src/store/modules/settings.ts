@@ -135,6 +135,12 @@ export const useSettingsStore = defineStore(
 
     /** 全站界面配置推送的防抖句柄 */
     let uiSettingsPushTimer: number | undefined
+    /**
+     * 最近一次与服务端一致的全站界面配置（序列化后）。
+     * 设置面板对整个 settings 做深度监听：折叠侧栏、切换标签等本机状态变化也会触发保存，
+     * 而这些键并不在推送白名单里——原实现每次都会向服务端写一遍完全相同的内容。
+     */
+    let lastSyncedUiSettings = ''
 
     /** 当前登录会话是否具备把界面配置写入服务端的能力。 */
     function canSyncUiSettingsToServer(): boolean {
@@ -360,11 +366,17 @@ export const useSettingsStore = defineStore(
         uiSettingsSyncState.value = 'local-only'
         return false
       }
+      const payload = JSON.stringify(collectUiSettings(settings.value))
+      if (payload === lastSyncedUiSettings) {
+        uiSettingsSyncState.value = 'synced'
+        return true
+      }
       try {
         const { saveSystemSettings } = await import('@/api/modules/settings')
         await saveSystemSettings({
-          [UI_SETTINGS_SERVER_KEY]: JSON.stringify(collectUiSettings(settings.value)),
+          [UI_SETTINGS_SERVER_KEY]: payload,
         })
+        lastSyncedUiSettings = payload
         uiSettingsSyncState.value = 'synced'
         return true
       }
@@ -426,6 +438,7 @@ export const useSettingsStore = defineStore(
         }
         settings.value = merge(parsed as Partial<Settings.all>, settings.value)
         writeLocalAppSettings()
+        lastSyncedUiSettings = JSON.stringify(collectUiSettings(settings.value))
         return true
       }
       catch {

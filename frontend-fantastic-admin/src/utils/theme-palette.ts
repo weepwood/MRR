@@ -220,6 +220,9 @@ export function gr8rCssVariables(scheme: ThemePaletteScheme): Record<string, str
     '--mrr-navigation-bg-solid': c.sidebar,
     '--mrr-navigation-border': c.line,
     '--mrr-navigation-hover': c.raisedSurface,
+    // 主导航窄栏：底色沿用 raisedSurface，悬停再加深一档，保证栏内悬停可见。
+    '--mrr-navigation-rail-bg': c.raisedSurface,
+    '--mrr-navigation-rail-hover': mixHex(c.ink, c.raisedSurface, dark ? 0.08 : 0.06),
     '--mrr-navigation-active': navActive,
     '--mrr-navigation-active-foreground': c.ink,
     '--mrr-navigation-active-border': navActiveBorder,

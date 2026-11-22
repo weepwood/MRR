@@ -64,8 +64,9 @@ const countText = computed(() => Number(props.count ?? 0).toLocaleString('zh-CN'
   white-space: nowrap;
 }
 
+/* 所有分区共用 --mrr-card-inset，卡头标题、筛选字段、表格外沿、分页落在同一条竖线上。 */
 .mrr-data-table-panel__filters {
-  padding: 14px 16px 0;
+  padding: var(--mrr-space-4) var(--mrr-card-inset) 0;
 }
 
 .mrr-data-table-panel__toolbar {
@@ -74,7 +75,7 @@ const countText = computed(() => Number(props.count ?? 0).toLocaleString('zh-CN'
   gap: var(--mrr-space-3);
   align-items: center;
   justify-content: space-between;
-  padding: var(--mrr-space-3) var(--mrr-space-4);
+  padding: var(--mrr-space-3) var(--mrr-card-inset);
   border-bottom: 1px solid var(--mrr-shell-divider);
 }
 
@@ -82,14 +83,14 @@ const countText = computed(() => Number(props.count ?? 0).toLocaleString('zh-CN'
   min-width: 0;
 
   /* 表格自带圆角边框（元素自身 border 绘制），与卡片外框之间留出呼吸间隙。 */
-  padding: 12px 16px 16px;
+  padding: var(--mrr-space-3) var(--mrr-card-inset) var(--mrr-card-inset);
   overflow: hidden;
 }
 
 .mrr-data-table-panel__pagination {
   display: flex;
   justify-content: flex-end;
-  padding: 13px 16px;
+  padding: var(--mrr-space-3) var(--mrr-card-inset);
   background: color-mix(in srgb, var(--mrr-muted) 18%, var(--mrr-card));
   border-top: 1px solid var(--mrr-shell-divider);
 }
@@ -106,16 +107,21 @@ const countText = computed(() => Number(props.count ?? 0).toLocaleString('zh-CN'
 
 @media (max-width: 760px) {
   .mrr-data-table-panel__filters {
-    padding: var(--mrr-space-3) var(--mrr-space-3) 0;
+    padding: var(--mrr-space-3) var(--mrr-card-inset-compact) 0;
+  }
+
+  .mrr-data-table-panel__toolbar {
+    padding-right: var(--mrr-card-inset-compact);
+    padding-left: var(--mrr-card-inset-compact);
   }
 
   .mrr-data-table-panel__content {
-    padding: var(--mrr-space-3);
+    padding: var(--mrr-card-inset-compact);
   }
 
   .mrr-data-table-panel__pagination {
     justify-content: flex-start;
-    padding-inline: var(--mrr-space-3);
+    padding-inline: var(--mrr-card-inset-compact);
   }
 }
 

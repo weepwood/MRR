@@ -430,7 +430,7 @@ onUnmounted(() => {
   background: var(--surface);
   border: 1px solid var(--divider);
   border-radius: var(--mrr-radius-card);
-  transition: border-color 0.15s ease, box-shadow 0.15s ease, transform 0.15s ease;
+  transition: border-color var(--mrr-motion-feedback) ease, box-shadow var(--mrr-motion-feedback) ease, transform var(--mrr-motion-press) var(--mrr-ease-out);
 }
 
 .archive-wall-card:hover {
@@ -472,7 +472,7 @@ onUnmounted(() => {
   background: transparent;
   border: 1.5px solid rgb(255 255 255 / 85%);
   border-radius: var(--mrr-radius-sm);
-  transition: color 0.15s, background-color 0.15s, border-color 0.15s;
+  transition: color var(--mrr-motion-feedback) ease, background-color var(--mrr-motion-feedback) ease, border-color var(--mrr-motion-feedback) ease;
 }
 
 /* 命中区比视觉块大一圈，但只在上下与左侧外扩，不盖住右侧页码的点击范围。 */
@@ -517,7 +517,6 @@ onUnmounted(() => {
   width: 100%;
   height: 100%;
   object-fit: contain;
-  transition: transform 0.18s ease;
 }
 
 /* 未加载完成时显示低频微光占位，加载后由图像内容覆盖（关动效时为静态占位底色） */
@@ -533,9 +532,10 @@ onUnmounted(() => {
   to { background-position: -80% 0; }
 }
 
-.archive-wall-card:hover .archive-wall-image-stage img {
-  transform: var(--mrr-motion-decor, scale(1.01));
-}
+/*
+ * 悬停不再放大影像：1% 缩放会让扫描件文字发生亚像素重采样、短暂发虚，
+ * 对「看清病案内容」是负收益。悬停反馈由卡片描边与投影承担。
+ */
 
 .archive-wall-placeholder {
   display: flex;

@@ -1096,7 +1096,7 @@ function handleReset() {
   border: 2px solid var(--mrr-card);
   border-radius: 50%;
   box-shadow: 0 0 0 1px var(--mrr-border);
-  transition: box-shadow 160ms ease, transform 160ms ease;
+  transition: box-shadow var(--mrr-motion-feedback) ease, transform var(--mrr-motion-press) var(--mrr-ease-out);
 }
 
 .theme-swatch:hover { box-shadow: 0 0 0 1px var(--mrr-border), var(--mrr-shadow-xs, 0 2px 6px rgb(0 0 0 / 12%)); transform: var(--mrr-motion-decor, translateY(-1px)); }

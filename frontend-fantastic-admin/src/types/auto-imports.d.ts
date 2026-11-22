@@ -89,6 +89,7 @@ declare global {
   const useTabbarStore: typeof import('../store/modules/tabbar').useTabbarStore
   const useTemplateRef: typeof import('vue').useTemplateRef
   const useUserStore: typeof import('../store/modules/user').useUserStore
+  const useVisibleInterval: typeof import('../utils/composables/useVisibleInterval').default
   const watch: typeof import('vue').watch
   const watchEffect: typeof import('vue').watchEffect
   const watchPostEffect: typeof import('vue').watchPostEffect
@@ -105,4 +106,7 @@ declare global {
   // @ts-ignore
   export type { AuthSessionStatus } from '../store/modules/user'
   import('../store/modules/user')
+  // @ts-ignore
+  export type { VisibleIntervalOptions } from '../utils/composables/useVisibleInterval'
+  import('../utils/composables/useVisibleInterval')
 }

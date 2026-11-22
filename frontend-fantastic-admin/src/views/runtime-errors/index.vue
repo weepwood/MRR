@@ -4,7 +4,6 @@ import type {
   SystemErrorOverview,
 } from '@/api/modules/system-errors'
 /* eslint-disable vue/singleline-html-element-content-newline */
-import { ElMessage } from 'element-plus'
 import { RefreshCw as Refresh } from 'lucide-vue-next'
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
@@ -21,8 +20,11 @@ import MrrDataTablePanel from '@/components/MrrDataTablePanel/index.vue'
 import MrrFilterActionButton from '@/components/MrrFilterActionButton/index.vue'
 import MrrFilterBar from '@/components/MrrFilterBar/index.vue'
 import MrrMetricCard from '@/components/MrrMetricCard/index.vue'
+import MrrPageHeader from '@/components/MrrPageHeader/index.vue'
+import MrrPageShell from '@/components/MrrPageShell/index.vue'
 import { useCrudList } from '@/composables/useCrudList'
 import { useUserStore } from '@/store/modules/user'
+import { copyText as copyToClipboard } from '@/utils/copy-text'
 import { formatDateTime, isRedactedLogText } from '@/utils/display-format'
 import { checkSessionPermission } from '@/utils/permission'
 
@@ -200,14 +202,7 @@ function filterByModule(module?: string) {
 }
 
 async function copyText(text: string, message: string) {
-  if (!text.trim()) { return }
-  try {
-    await navigator.clipboard.writeText(text)
-    ElMessage.success(message)
-  }
-  catch {
-    ElMessage.error('复制失败，请手动选择文本')
-  }
+  await copyToClipboard(text, { success: message })
 }
 
 /**
@@ -227,21 +222,22 @@ function levelTagType(level: string) {
 </script>
 
 <template>
-  <div class="page-shell">
-    <div class="page-header">
-      <div>
-        <p class="eyebrow">Runtime Error Center</p>
-        <h2>运行错误中心</h2>
-        <p class="subtitle">集中查看后端 WARN / ERROR，按指纹合并重复事件，并通过错误编号、Request ID 关联接口访问日志。</p>
-      </div>
-      <div class="header-actions">
-        <span class="auto-refresh-note">每 30 秒自动刷新<template v-if="lastRefreshedAt"> · 上次 {{ formatDateTime(lastRefreshedAt) }}</template></span>
+  <MrrPageShell class="runtime-errors-page">
+    <MrrPageHeader
+      eyebrow="Runtime Error Center"
+      title="运行错误中心"
+      description="集中查看后端 WARN / ERROR，按指纹合并重复事件，并通过错误编号、Request ID 关联接口访问日志。"
+    >
+      <template #meta>
+        <span class="auto-refresh-note" aria-live="polite">每 30 秒自动刷新<template v-if="lastRefreshedAt"> · 上次 {{ formatDateTime(lastRefreshedAt) }}</template></span>
+      </template>
+      <template #actions>
         <el-button :loading="loading" @click="loadData()">
           <el-icon><Refresh /></el-icon>
           刷新
         </el-button>
-      </div>
-    </div>
+      </template>
+    </MrrPageHeader>
 
     <section class="mrr-metric-grid mrr-metric-grid--four">
       <button type="button" class="metric-action" title="点击仅看 ERROR 错误组" @click="applyLevelFilter('ERROR')">
@@ -404,17 +400,11 @@ function levelTagType(level: string) {
         </el-descriptions-item>
       </el-descriptions>
     </el-dialog>
-  </div>
+  </MrrPageShell>
 </template>
 
 <style scoped>
 /* stylelint-disable order/properties-order, declaration-property-value-keyword-no-deprecated, media-feature-range-notation */
-.page-shell {
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-}
-
 .detail-links {
   display: flex;
   flex-wrap: wrap;
@@ -453,46 +443,13 @@ function levelTagType(level: string) {
 }
 
 .detail-code {
-  font-family: Consolas, "Courier New", monospace;
+  /* 统一走等宽令牌：Windows 上 Consolas 无汉字，令牌里排了中文回退，避免落到宋体。 */
+  font-family: var(--mrr-font-mono);
   overflow-wrap: anywhere;
 }
 
-.header-actions {
-  display: flex;
-  flex-direction: column;
-  flex-shrink: 0;
-  align-items: flex-end;
-  gap: 4px;
-}
-
 .auto-refresh-note {
-  color: var(--el-text-color-secondary);
-  font-size: 12px;
-}
-
-.page-header {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 16px;
-}
-
-.page-header h2 {
-  margin: 4px 0 8px;
-}
-
-.eyebrow {
-  margin: 0;
-  color: var(--el-color-primary);
-  font-size: 12px;
-  font-weight: 700;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-}
-
-.subtitle {
-  margin: 0;
-  color: var(--el-text-color-secondary);
+  font-variant-numeric: tabular-nums;
 }
 
 .detail-pre {
@@ -501,10 +458,10 @@ function levelTagType(level: string) {
   margin: 0;
   padding: 12px;
   overflow: auto;
-  border-radius: 6px;
+  border-radius: var(--mrr-radius-md);
   background: var(--el-fill-color-light);
   color: var(--el-text-color-primary);
-  font-family: Consolas, "Courier New", monospace;
+  font-family: var(--mrr-font-mono);
   font-size: 12px;
   line-height: 1.6;
   white-space: pre-wrap;
@@ -544,14 +501,5 @@ function levelTagType(level: string) {
   font-weight: 600;
 }
 
-@media (max-width: 720px) {
-  .page-header {
-    flex-direction: column;
-  }
-
-  .header-actions {
-    align-items: flex-start;
-  }
-}
 /* stylelint-enable order/properties-order, declaration-property-value-keyword-no-deprecated, media-feature-range-notation */
 </style>

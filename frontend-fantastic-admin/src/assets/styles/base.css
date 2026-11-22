@@ -97,14 +97,38 @@ textarea {
   height: 100%;
 }
 
-/* 既有页面壳的单列网格必须允许收缩，表格和长表单在各自区域内布局。 */
-.page-shell {
-  grid-template-columns: minmax(0, 1fr);
-  min-width: 0;
-}
-
 textarea {
   font-family: inherit;
+}
+
+/*
+ * Windows 高对比度 / 强制颜色模式（医院终端的无障碍设置常见开启）。
+ * 该模式会清掉 background 与 box-shadow，项目里「选中」大多靠浅色底或投影表达，
+ * 开启后当前菜单、当前标签、选中影像与焦点环全部消失。这里改用系统色描边补回状态。
+ * Chrome 89+ 生效；Chrome 86 不识别该媒体查询，按原样渲染。
+ */
+@media (forced-colors: active) {
+  .menu-item-container.active,
+  .menu-item.active .menu-item-container,
+  .tab.actived .tab-background,
+  .type-tab.active,
+  .archive-wall-card.active,
+  .archive-folder-card.is-selected .folder-card-body,
+  .dashboard-widget.is-drag-over {
+    outline: 2px solid Highlight;
+    outline-offset: -2px;
+  }
+
+  .el-button,
+  .fa-button-control,
+  .mrr-table-actions__button {
+    border: 1px solid ButtonText;
+  }
+
+  :focus-visible {
+    outline: 2px solid Highlight !important;
+    outline-offset: 2px;
+  }
 }
 
 .mrr-tabular-number {

@@ -71,3 +71,5 @@ ADR 必须说明：
 ADR-0007 已落地，初始默认关闭；2026-11-19 起修订为默认开启（`app.operations.db-browse-enabled=true`，可用环境变量 `APP_OPERATIONS_DB_BROWSE_ENABLED=false` 关闭，详见 ADR-0007 修订记录）。其接口契约、注册表字段定义与失败路径测试清单见 `docs/engineering/database-browse-contract.md`。
 
 > 已知缺口（本应记录但尚未起草，后续视需要补充）：多来源影像解析与统一内容网关（OSS/Nginx/NAS/本地降级）、档案数据模型重构（`V20260715232228`）、用户凭证生命周期与强制改密（`V20260719053000` / `...19174500`）。
+
+- [ADR-0010：访问日志按月分区](0010-access-log-monthly-partitions.md)

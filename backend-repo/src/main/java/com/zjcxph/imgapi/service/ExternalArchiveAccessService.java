@@ -13,6 +13,7 @@ import com.zjcxph.imgapi.exception.BusinessException;
 import com.zjcxph.imgapi.mapper.ExternalArchiveAccessMapper;
 import com.zjcxph.imgapi.security.ExternalArchiveGrant;
 import com.zjcxph.imgapi.utils.MedicalRecordCodeUtils;
+import com.zjcxph.imgapi.utils.SecretPolicy;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.BeanUtils;
@@ -261,7 +262,8 @@ public class ExternalArchiveAccessService {
                 .filter(item -> clientId.trim().equals(item.getClientId()))
                 .findFirst()
                 .orElseThrow(() -> new BusinessException(401, "外部系统客户端无效"));
-        if (!StringUtils.hasText(client.getSecret())) {
+        if (!StringUtils.hasText(client.getSecret()) || SecretPolicy.isPlaceholder(client.getSecret())) {
+            // 模板占位值是公开的：按未配置处理，避免任何人用已知值签发调阅票据。
             throw new BusinessException(503, "外部系统客户端密钥未配置");
         }
         if (!isIpAllowed(client, clientIp)) {

@@ -1,13 +1,19 @@
 import { flushPromises, mount } from '@vue/test-utils'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { reactive } from 'vue'
+import { AUTH_STORAGE_KEYS } from '@/utils/auth-storage'
 import ArchiveRecentLookups from '../ArchiveRecentLookups.vue'
 
 const history = vi.hoisted(() => ({
+  ARCHIVE_SEARCH_HISTORY_STORAGE_KEY: 'legacy-test-history',
   ARCHIVE_SEARCH_HISTORY_UPDATED_EVENT: 'mrr:archive-search-history-updated',
   loadArchiveSearchHistory: vi.fn(),
   readArchiveSearchHistory: vi.fn(),
 }))
 vi.mock('@/views/statistics/archive/composables/useArchiveSearchHistory', () => history)
+
+const user = reactive({ token: 'current-test-session', isSessionVerified: true, profile: { id: 1 } })
+vi.mock('@/store/modules/user', () => ({ useUserStore: () => user }))
 
 const stubs = { FaIcon: true }
 
@@ -28,6 +34,9 @@ function item(overrides: Record<string, unknown>) {
 
 describe('archive recent lookups', () => {
   beforeEach(() => {
+    user.token = 'current-test-session'
+    user.isSessionVerified = true
+    user.profile.id = 1
     history.loadArchiveSearchHistory.mockReset().mockResolvedValue([])
     history.readArchiveSearchHistory.mockReset().mockReturnValue([])
   })
@@ -93,6 +102,36 @@ describe('archive recent lookups', () => {
 
     await wrapper.get('.recent-lookups__item').trigger('click')
     expect(wrapper.emitted('select')?.[0]).toEqual([next])
+    wrapper.unmount()
+  })
+
+  it('clears visible history when a different tab ends the session', async () => {
+    history.readArchiveSearchHistory.mockReturnValue([item({ bah: '00000417' })])
+    const wrapper = mount(ArchiveRecentLookups, { global: { stubs } })
+    await flushPromises()
+    expect(wrapper.find('.recent-lookups__item').exists()).toBe(true)
+
+    history.readArchiveSearchHistory.mockReturnValue([])
+    window.dispatchEvent(new StorageEvent('storage', { key: AUTH_STORAGE_KEYS.token, newValue: null }))
+    await flushPromises()
+
+    expect(wrapper.find('.recent-lookups__item').exists()).toBe(false)
+    wrapper.unmount()
+  })
+
+  it('discards an old server result after the local session changes', async () => {
+    let finish!: (value: ReturnType<typeof item>[]) => void
+    history.loadArchiveSearchHistory.mockReturnValueOnce(new Promise((resolve) => { finish = resolve }))
+    const wrapper = mount(ArchiveRecentLookups, { props: { load: true }, global: { stubs } })
+    await flushPromises()
+    expect(history.loadArchiveSearchHistory).toHaveBeenCalledOnce()
+
+    user.token = ''
+    user.isSessionVerified = false
+    finish([item({ bah: '00000417' })])
+    await flushPromises()
+
+    expect(wrapper.find('.recent-lookups__item').exists()).toBe(false)
     wrapper.unmount()
   })
 })

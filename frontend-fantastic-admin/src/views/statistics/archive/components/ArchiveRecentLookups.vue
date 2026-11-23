@@ -1,7 +1,10 @@
 <script setup lang="ts">
 import type { ArchiveSearchHistoryItem } from '@/views/statistics/archive/composables/useArchiveSearchHistory'
-import { computed, onBeforeUnmount, onMounted, ref, useId } from 'vue'
+import { computed, nextTick, onBeforeUnmount, onMounted, ref, useId, watch } from 'vue'
+import { useUserStore } from '@/store/modules/user'
+import { AUTH_STORAGE_KEYS } from '@/utils/auth-storage'
 import {
+  ARCHIVE_SEARCH_HISTORY_STORAGE_KEY,
   ARCHIVE_SEARCH_HISTORY_UPDATED_EVENT,
   loadArchiveSearchHistory,
   readArchiveSearchHistory,
@@ -33,6 +36,8 @@ const emit = defineEmits<{
   select: [item: ArchiveSearchHistoryItem]
 }>()
 
+const userStore = useUserStore()
+let historyGeneration = 0
 const history = ref<ArchiveSearchHistoryItem[]>([])
 const loading = ref(props.load)
 const headingId = `recent-lookups-${useId()}`
@@ -64,22 +69,53 @@ function refreshFromSession() {
   history.value = readArchiveSearchHistory()
 }
 
-onMounted(async () => {
-  window.addEventListener(ARCHIVE_SEARCH_HISTORY_UPDATED_EVENT, refreshFromSession)
-  if (!props.load) {
-    refreshFromSession()
+async function syncHistoryAccess() {
+  const generation = ++historyGeneration
+  history.value = []
+  loading.value = props.load && userStore.isSessionVerified
+  // Invalidates the previous memory session before the store persists the next token.
+  readArchiveSearchHistory()
+  await nextTick()
+  if (generation !== historyGeneration) {
+    return
+  }
+  refreshFromSession()
+  if (!loading.value) {
     return
   }
   try {
-    history.value = await loadArchiveSearchHistory()
+    const items = await loadArchiveSearchHistory()
+    if (generation === historyGeneration) {
+      history.value = items
+    }
   }
   finally {
-    loading.value = false
+    if (generation === historyGeneration) {
+      loading.value = false
+    }
   }
+}
+
+function handleStorage(event: StorageEvent) {
+  if (event.key === AUTH_STORAGE_KEYS.token || event.key === ARCHIVE_SEARCH_HISTORY_STORAGE_KEY || event.key === null) {
+    void syncHistoryAccess()
+  }
+}
+
+watch([() => userStore.token, () => userStore.isSessionVerified, () => userStore.profile.id], () => {
+  void syncHistoryAccess()
+}, { flush: 'sync' })
+
+onMounted(() => {
+  window.addEventListener(ARCHIVE_SEARCH_HISTORY_UPDATED_EVENT, refreshFromSession)
+  window.addEventListener('storage', handleStorage)
+  void syncHistoryAccess()
 })
 
 onBeforeUnmount(() => {
+  historyGeneration++
   window.removeEventListener(ARCHIVE_SEARCH_HISTORY_UPDATED_EVENT, refreshFromSession)
+  window.removeEventListener('storage', handleStorage)
 })
 </script>
 

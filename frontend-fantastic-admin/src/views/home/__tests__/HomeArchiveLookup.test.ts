@@ -8,6 +8,10 @@ vi.mock('vue-router', () => ({
   RouterLink: { props: ['to'], template: '<a :href="to"><slot /></a>' },
 }))
 
+vi.mock('@/store/modules/user', () => ({
+  useUserStore: () => ({ token: 'test-session', isSessionVerified: true, profile: { id: 1 } }),
+}))
+
 const history = vi.hoisted(() => ({
   ARCHIVE_SEARCH_HISTORY_UPDATED_EVENT: 'mrr:archive-search-history-updated',
   loadArchiveSearchHistory: vi.fn(),

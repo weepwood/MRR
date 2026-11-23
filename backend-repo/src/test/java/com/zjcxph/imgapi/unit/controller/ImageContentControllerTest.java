@@ -1,5 +1,6 @@
 package com.zjcxph.imgapi.unit.controller;
 
+import com.zjcxph.imgapi.common.ArchiveAccessAttributes;
 import com.zjcxph.imgapi.controller.ImageContentController;
 import com.zjcxph.imgapi.service.ImageContentService;
 import org.junit.jupiter.api.BeforeEach;
@@ -11,6 +12,9 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.mock.web.MockHttpServletRequest;
+import org.springframework.web.context.request.RequestContextHolder;
+import org.springframework.web.context.request.ServletRequestAttributes;
 import org.springframework.web.servlet.mvc.method.annotation.StreamingResponseBody;
 
 import java.io.ByteArrayInputStream;
@@ -65,6 +69,28 @@ class ImageContentControllerTest {
 
         assertThat(output.toByteArray()).containsExactly(payload);
         assertThat(input.isClosed()).isTrue();
+    }
+
+    @Test
+    @DisplayName("把影像所属病案绑定为本次请求的审计目标")
+    void bindsArchiveAuditTargetToCurrentRequest() {
+        MockHttpServletRequest request = new MockHttpServletRequest("GET", "/api/v1/img/content/14");
+        RequestContextHolder.setRequestAttributes(new ServletRequestAttributes(request));
+        try {
+            when(imageContentService.open(14)).thenReturn(new ImageContentService.ImageContent(
+                    new ByteArrayInputStream(new byte[]{1}),
+                    "image-14.jpg",
+                    MediaType.IMAGE_JPEG,
+                    1L,
+                    "00789508:12345678"
+            ));
+
+            controller.getContent(14);
+
+            assertThat(request.getAttribute(ArchiveAccessAttributes.AUDIT_TARGET)).isEqualTo("00789508:12345678");
+        } finally {
+            RequestContextHolder.resetRequestAttributes();
+        }
     }
 
     @Test

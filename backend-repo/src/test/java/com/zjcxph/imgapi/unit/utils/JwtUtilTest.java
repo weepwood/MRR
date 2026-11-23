@@ -140,4 +140,22 @@ class JwtUtilTest {
 
         assertThatThrownBy(() -> JwtUtil.verifyToken(forged)).isInstanceOf(RuntimeException.class);
     }
+
+    @Test
+    @DisplayName("deriveKey — 按用途隔离、可复现，且随 JWT 密钥轮换变化")
+    void deriveKey_isPurposeSeparatedAndRotatesWithSecret() {
+        byte[] image = JwtUtil.deriveKey("MRR-IMAGE-ACCESS-V1");
+
+        assertThat(image).hasSize(32).isEqualTo(JwtUtil.deriveKey("MRR-IMAGE-ACCESS-V1"));
+        assertThat(image).isNotEqualTo(JwtUtil.deriveKey("MRR-OTHER-PURPOSE"));
+        assertThat(new String(image, java.nio.charset.StandardCharsets.ISO_8859_1)).doesNotContain(TEST_SECRET);
+        assertThatThrownBy(() -> JwtUtil.deriveKey(" ")).isInstanceOf(IllegalArgumentException.class);
+
+        try {
+            JwtUtil.configure("rotated-secret-for-derive-key-test-0123456789");
+            assertThat(JwtUtil.deriveKey("MRR-IMAGE-ACCESS-V1")).isNotEqualTo(image);
+        } finally {
+            JwtUtil.configure(TEST_SECRET);
+        }
+    }
 }

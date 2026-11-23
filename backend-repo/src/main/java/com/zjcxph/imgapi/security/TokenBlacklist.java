@@ -21,6 +21,21 @@ public class TokenBlacklist {
                 hash(jti), new Timestamp(expiryTimestamp));
     }
 
+    /** 令牌编号在撤销表中的存储形式（SHA-256 十六进制），供不携带原始 jti 的派生凭据引用。 */
+    public static String tokenHash(String jti) {
+        if (jti == null || jti.isBlank()) {
+            throw new IllegalArgumentException("Token identifier missing");
+        }
+        return hash(jti);
+    }
+
+    /** 按 {@link #tokenHash(String)} 查询撤销状态；格式非法按已撤销处理（fail-closed）。 */
+    public boolean isRevokedHash(String tokenHash) {
+        if (tokenHash == null || !tokenHash.matches("[0-9a-f]{64}")) return true;
+        return Boolean.TRUE.equals(jdbc.queryForObject("SELECT EXISTS(SELECT 1 FROM app.token_revocation "
+                + "WHERE token_hash=? AND expires_at>CURRENT_TIMESTAMP)", Boolean.class, tokenHash));
+    }
+
     public boolean isRevoked(String jti) {
         if (jti == null || jti.isBlank()) return true;
         return Boolean.TRUE.equals(jdbc.queryForObject("SELECT EXISTS(SELECT 1 FROM app.token_revocation "

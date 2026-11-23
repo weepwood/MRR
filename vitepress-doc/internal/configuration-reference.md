@@ -76,6 +76,14 @@ Spring Boot 常见优先级从高到低为：
 
 实际 HMAC 配置名称以外部调阅模块和当前配置类为准；升级前应核对运行环境已有配置。
 
+## 档案袋影像下发（ADR-0009）
+
+| 配置 | 默认值 | 说明 |
+| --- | --- | --- |
+| `archive.image-delivery.mode`（环境变量 `ARCHIVE_IMAGE_DELIVERY_MODE`） | `direct` | `direct`：列表返回影像源 Nginx / OSS 预签名地址，浏览器直接取图。`gateway`：列表只返回 `/api/v1/img/content/{id}`，浏览器凭 HttpOnly `MRR_IMAGE_ACCESS` Cookie 经内容网关取图，逐张校验权限并写入 `VIEW_IMAGE` 审计 |
+
+`gateway` 要求前端与 API 同源。Windows 正式部署可在 `mrr-backend.xml` 中增加 `<env name="ARCHIVE_IMAGE_DELIVERY_MODE" value="gateway" />` 后重跑安装脚本；改回 `direct` 并重启即回退。稳定运行后应让影像源 Nginx 节点只对 MRR 服务器开放。
+
 ## 加密身份证查询
 
 | 配置 | 默认值 | 说明 |

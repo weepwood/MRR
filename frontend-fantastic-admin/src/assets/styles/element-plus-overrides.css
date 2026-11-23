@@ -423,24 +423,65 @@ body .el-button--info.is-plain:not(.is-disabled):hover {
   color: var(--mrr-foreground);
 }
 
-.el-input__inner::placeholder,
-.el-textarea__inner::placeholder,
-.el-select__placeholder {
+body .el-input__inner::placeholder,
+body .el-textarea__inner::placeholder,
+body .el-select .el-select__selected-item.is-transparent,
+body .el-select__placeholder {
   color: var(--mrr-muted-foreground);
-  opacity: 0.78;
 }
 
-.el-input__prefix,
-.el-input__suffix,
-.el-select__caret,
-.el-input__icon {
+/*
+ * 字数计数与提示条说明文字走次要文字令牌。
+ * Element Plus 默认把两者指向 --el-color-info（桥接后为中性档 #64748b），
+ * 在 info-light 提示条底（#f0f1f3）上只有 4.2:1；muted 在卡面、工作区、
+ * 提示条淡底上均 ≥ 4.5:1（见 contrast-baseline.test.ts）。
+ * 用 body 前缀抬过 EP 的 .el-textarea .el-input__count 双类选择器。
+ */
+body .el-input .el-input__count,
+body .el-textarea .el-input__count,
+body .el-input__count-inner {
+  color: var(--mrr-muted-foreground);
+}
+
+body .el-alert .el-alert__title {
+  color: var(--mrr-foreground);
+}
+
+/*
+ * 提示条说明文字走次要文字令牌。EP 按类型逐条设置 .el-alert--*.is-light
+ * .el-alert__description（0,3,0），这里须逐型覆写才能胜出；muted 在各类
+ * tone-soft 淡底上 4.61–4.72:1，均 ≥ 4.5（EP 的 --el-color-info 桥接后
+ * 为中性档 #64748b，在 info 淡底上只有 4.21:1）。
+ */
+body .el-alert.el-alert--primary.is-light .el-alert__description,
+body .el-alert.el-alert--success.is-light .el-alert__description,
+body .el-alert.el-alert--info.is-light .el-alert__description,
+body .el-alert.el-alert--warning.is-light .el-alert__description,
+body .el-alert.el-alert--error.is-light .el-alert__description {
+  color: var(--mrr-muted-foreground);
+}
+
+/*
+ * Element Plus 复选框自带回弹曲线（cubic-bezier(.71,-.46,.29,1.46)），
+ * 违反 §2.9「不用弹跳做交互反馈」；颜色类过渡改走 feedback 档令牌。
+ */
+body .el-checkbox .el-checkbox__inner {
+  transition: border-color var(--mrr-motion-feedback) var(--mrr-ease-out), background-color var(--mrr-motion-feedback) var(--mrr-ease-out);
+}
+
+body .el-input .el-input__prefix,
+body .el-input .el-input__suffix,
+body .el-input .el-input__icon,
+body .el-select .el-select__prefix,
+body .el-select .el-select__suffix,
+body .el-select .el-select__caret {
   color: var(--mrr-muted-foreground);
   transition: color var(--mrr-motion-feedback) var(--mrr-ease-out), transform var(--mrr-motion-move) var(--mrr-ease-out);
 }
 
-.el-input__wrapper.is-focus .el-input__prefix,
-.el-input__wrapper.is-focus .el-input__suffix,
-.el-select__wrapper.is-focused .el-select__caret {
+body .el-input .el-input__wrapper.is-focus .el-input__prefix,
+body .el-input .el-input__wrapper.is-focus .el-input__suffix,
+body .el-select .el-select__wrapper.is-focused .el-select__caret {
   color: var(--mrr-foreground);
 }
 

@@ -9,6 +9,7 @@ import com.zjcxph.imgapi.mapper.ImageContentMapper;
 import com.zjcxph.imgapi.service.ImageContentService;
 import com.zjcxph.imgapi.storage.ImageStorage;
 import com.zjcxph.imgapi.storage.InvalidImagePathException;
+import com.zjcxph.imgapi.utils.MedicalRecordCodeUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.MediaType;
@@ -57,7 +58,7 @@ public class ImageContentServiceImpl implements ImageContentService {
             Long contentLength = scan.getFileSize() != null && scan.getFileSize() > 0
                     ? scan.getFileSize()
                     : null;
-            return new ImageContent(stream, filename, mediaType, contentLength);
+            return new ImageContent(stream, filename, mediaType, contentLength, auditTarget(scan));
         } catch (IOException exception) {
             throw mapReadFailure(scanId, exception);
         }
@@ -87,6 +88,16 @@ public class ImageContentServiceImpl implements ImageContentService {
 
         logger.error("读取受控影像内容失败: scanId={}", scanId, failure);
         return new BusinessException(503, "影像来源暂不可用");
+    }
+
+    /** 与 ArchiveAccessService 的档案袋列表审计口径一致：病案号，或“病案号:上架号”。 */
+    private String auditTarget(Scan scan) {
+        String bah = MedicalRecordCodeUtils.normalizeOrEmpty(scan.getBah());
+        String sjh = MedicalRecordCodeUtils.normalizeOrEmpty(scan.getSjh());
+        if (bah.isEmpty() && sjh.isEmpty()) {
+            return null;
+        }
+        return sjh.isEmpty() ? bah : bah + ":" + sjh;
     }
 
     private PathDO toPath(Scan scan) {

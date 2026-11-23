@@ -116,6 +116,15 @@ class NginxSecurityHeadersTest(unittest.TestCase):
             self.assertNotIn(header, self.config, '安全头只允许在 security-headers.inc 中定义')
         self.assertIn('config/nginx/security-headers.inc', self.config, 'server 级必须 include 该片段')
 
+    def test_security_headers_include_baseline_csp(self):
+        fragment = (ROOT / 'deploy/windows/templates/security-headers.inc').read_text(encoding='utf-8')
+
+        csp = re.search(r'add_header Content-Security-Policy "([^"]+)" always;', fragment)
+        self.assertIsNotNone(csp, '安全头片段必须声明 CSP')
+        for directive in ("object-src 'none'", "base-uri 'self'", "frame-ancestors 'self'"):
+            self.assertIn(directive, csp.group(1))
+        self.assertIn('Permissions-Policy', fragment)
+
     def test_installer_ships_the_fragment(self):
         installer = (ROOT / 'deploy/windows/install.ps1').read_text(encoding='utf-8')
 
@@ -129,6 +138,51 @@ class NginxSecurityHeadersTest(unittest.TestCase):
         self.assertIn('Assert-SecurityHeaders', doctor)
         self.assertIn('function Assert-SecurityHeaders', controller)
         self.assertIn('security-headers\\.inc', controller)
+
+
+class NginxDocumentationAccessTest(unittest.TestCase):
+    """正式入口的文档目录必须与 Docker 入口一样经后端文档会话鉴权。"""
+
+    @property
+    def config(self) -> str:
+        return (ROOT / 'deploy/windows/templates/nginx.conf').read_text(encoding='utf-8')
+
+    def location_body(self, prefix: str) -> str:
+        match = re.search(r'location\s+' + re.escape(prefix) + r'\s*\{', self.config)
+        self.assertIsNotNone(match, f'缺少 location {prefix}')
+        start = match.end()
+        depth = 1
+        cursor = start
+        while depth:
+            if self.config[cursor] == '{':
+                depth += 1
+            elif self.config[cursor] == '}':
+                depth -= 1
+            cursor += 1
+        return self.config[start:cursor - 1]
+
+    def test_documentation_locations_require_auth_request(self):
+        for prefix, access in (('/docs/internal/', 'internal'), ('/docs/', 'user')):
+            with self.subTest(location=prefix):
+                body = self.location_body(prefix)
+                self.assertIn(f'auth_request /_documentation_access_{access};', body)
+                self.assertIn('add_header Cache-Control "private, no-store" always;', body)
+                self.assertIn('error_page 401 = @documentation_login;', body)
+                self.assertIn('error_page 403 = @documentation_forbidden;', body)
+
+    def test_documentation_access_subrequest_is_internal_and_bodyless(self):
+        for access, target in (('user', '/docs/'), ('internal', '/docs/internal/')):
+            with self.subTest(access=access):
+                body = self.location_body(f'= /_documentation_access_{access}')
+                self.assertIn('internal;', body)
+                self.assertIn('proxy_pass http://mrr_backend/api/v1/documentation/access;', body)
+                self.assertIn('proxy_pass_request_body off;', body)
+                self.assertIn(f'proxy_set_header X-Original-URI "{target}";', body)
+                self.assertNotIn('$request_uri', body)
+
+    def test_doctor_warns_when_deployed_config_lacks_documentation_auth(self):
+        controller = (ROOT / 'deploy/windows/mrrctl.ps1').read_text(encoding='utf-8')
+        self.assertIn('auth_request\\s+/_documentation_access', controller)
 
 
 if __name__ == '__main__':

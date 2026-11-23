@@ -402,13 +402,14 @@ onBeforeUnmount(hideTooltip)
 }
 
 .heatmap-header strong {
-  font-size: 17px;
+  font-size: var(--mrr-font-size-lg);
   font-weight: 650;
+  font-variant-numeric: tabular-nums;
   color: var(--el-text-color-primary);
 }
 
 .heatmap-header span {
-  font-size: 11px;
+  font-size: var(--mrr-font-size-xs);
   color: var(--el-text-color-secondary);
 }
 
@@ -419,8 +420,8 @@ onBeforeUnmount(hideTooltip)
 }
 
 .heatmap-legend span {
-  padding: 0 3px;
-  font-size: 10px;
+  padding: 0 var(--mrr-space-1);
+  font-size: var(--mrr-font-size-xs);
   color: var(--el-text-color-placeholder);
 }
 
@@ -453,7 +454,7 @@ onBeforeUnmount(hideTooltip)
   width: var(--heatmap-grid-width);
   height: 20px;
   margin-left: 34px;
-  font-size: 10px;
+  font-size: var(--mrr-font-size-xs);
   color: var(--el-text-color-secondary);
 }
 
@@ -474,7 +475,9 @@ onBeforeUnmount(hideTooltip)
   grid-template-rows: repeat(7, var(--heatmap-cell-size));
   row-gap: var(--heatmap-cell-gap);
   width: 28px;
-  font-size: 9px;
+
+  /* 只在一、三、五行出现，相邻标签之间隔一行，12px 字形不会互相挤压。 */
+  font-size: var(--mrr-font-size-xs);
   line-height: var(--heatmap-cell-size);
   color: var(--el-text-color-placeholder);
   text-align: right;
@@ -561,22 +564,23 @@ onBeforeUnmount(hideTooltip)
   background: color-mix(in srgb, var(--el-bg-color-overlay) 97%, transparent);
   border: 1px solid var(--el-border-color-lighter);
   border-radius: var(--mrr-radius-lg);
-  box-shadow: 0 14px 34px rgb(15 23 42 / 18%);
+  box-shadow: var(--mrr-shadow-md);
   transition: transform var(--mrr-motion-press) var(--mrr-ease-out);
   will-change: transform;
 }
 
 .heatmap-tooltip > span {
   display: block;
-  margin-bottom: 4px;
-  font-size: 11px;
+  margin-bottom: var(--mrr-space-1);
+  font-size: var(--mrr-font-size-xs);
   color: var(--el-text-color-secondary);
 }
 
 .heatmap-tooltip > strong {
   display: block;
   margin-bottom: var(--mrr-space-3);
-  font-size: 18px;
+  font-size: var(--mrr-font-size-lg);
+  font-variant-numeric: tabular-nums;
   line-height: 1.25;
 }
 
@@ -588,9 +592,9 @@ onBeforeUnmount(hideTooltip)
 
 .heatmap-tooltip dl div {
   display: flex;
-  gap: 12px;
+  gap: var(--mrr-space-3);
   justify-content: space-between;
-  font-size: 11px;
+  font-size: var(--mrr-font-size-xs);
 }
 
 .heatmap-tooltip dt {
@@ -600,6 +604,7 @@ onBeforeUnmount(hideTooltip)
 .heatmap-tooltip dd {
   margin: 0;
   font-weight: 600;
+  font-variant-numeric: tabular-nums;
   text-align: right;
 }
 
@@ -609,7 +614,7 @@ onBeforeUnmount(hideTooltip)
 
 .empty-hint {
   padding: var(--mrr-space-2) var(--mrr-space-3);
-  font-size: 11px;
+  font-size: var(--mrr-font-size-xs);
   color: var(--el-text-color-secondary);
   background: var(--el-fill-color-extra-light);
   border: 1px dashed var(--el-border-color-lighter);

@@ -296,6 +296,7 @@ function today() {
 <template>
   <MrrPageShell class="data-exchange-page">
     <MrrPageHeader
+      size="compact"
       eyebrow="Data Exchange"
       title="数据导入导出"
       description="患者、统计、病案主档、档案装箱和扫描记录统一在此导入导出。系统只开放预定义数据集，不接受任意表名、SQL 或服务器路径。"

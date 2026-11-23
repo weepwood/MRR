@@ -23,6 +23,11 @@ import java.util.function.LongSupplier;
  * 同一 IP 每分钟最多 3 次注册请求。管理员可在后台调整，保存后立即生效。
  * 服务重启后计数归零（可接受）。
  * </p>
+ * <p>
+ * 另按账号单独计数：攻击者轮换来源 IP 时，“username + IP”维度永远达不到阈值，
+ * 因此同一账号在同一窗口内累计失败达到 {@value #ACCOUNT_ATTEMPT_MULTIPLIER} 倍登录上限时
+ * 也会被临时限制。倍数留出余量，避免共用终端上的正常输错把账号锁死。
+ * </p>
  */
 @Component
 public class LoginRateLimiter {
@@ -33,12 +38,23 @@ public class LoginRateLimiter {
     private static final int DEFAULT_MAX_LOGIN_ATTEMPTS = 5;
     private static final long DEFAULT_LOGIN_WINDOW_MS = 15 * 60 * 1000L;
     private static final int MAX_LOGIN_KEYS = 20_000;
+    /** 账号维度阈值 = 登录上限 × 该倍数。 */
+    static final int ACCOUNT_ATTEMPT_MULTIPLIER = 4;
+    private static final int MAX_ACCOUNT_KEYS = 20_000;
+    /**
+     * 空闲过期必须长于系统设置允许的最大锁定窗口（60 分钟），否则较长窗口下的失败记录
+     * 会在窗口结束前被缓存淘汰，限制提前失效。
+     */
+    private static final Duration LOGIN_STATE_IDLE_EXPIRATION = Duration.ofMinutes(70);
 
     private static final int DEFAULT_MAX_REGISTER_PER_IP = 3;
     private static final long DEFAULT_REGISTER_WINDOW_MS = 60 * 1000L;
     private static final int MAX_REGISTER_KEYS = 10_000;
+    /** 长于注册统计窗口允许的最大值（600 秒）。 */
+    private static final Duration REGISTER_STATE_IDLE_EXPIRATION = Duration.ofMinutes(15);
 
     private final Cache<String, LinkedList<Long>> loginFailures;
+    private final Cache<String, LinkedList<Long>> accountFailures;
     private final Cache<String, LinkedList<Long>> registerAttempts;
     private final LongSupplier currentTimeMillis;
     private final RuntimeSettingStore settingStore;
@@ -60,12 +76,17 @@ public class LoginRateLimiter {
         this.settingStore = settingStore;
         loginFailures = Caffeine.newBuilder()
                 .maximumSize(MAX_LOGIN_KEYS)
-                .expireAfterAccess(Duration.ofMinutes(30))
+                .expireAfterAccess(LOGIN_STATE_IDLE_EXPIRATION)
+                .ticker(ticker)
+                .build();
+        accountFailures = Caffeine.newBuilder()
+                .maximumSize(MAX_ACCOUNT_KEYS)
+                .expireAfterAccess(LOGIN_STATE_IDLE_EXPIRATION)
                 .ticker(ticker)
                 .build();
         registerAttempts = Caffeine.newBuilder()
                 .maximumSize(MAX_REGISTER_KEYS)
-                .expireAfterAccess(Duration.ofMinutes(5))
+                .expireAfterAccess(REGISTER_STATE_IDLE_EXPIRATION)
                 .ticker(ticker)
                 .build();
     }
@@ -129,6 +150,37 @@ public class LoginRateLimiter {
      */
     public void resetLoginFailures(String attemptKey) {
         loginFailures.invalidate(attemptKey);
+    }
+
+    // ==================== 账号维度限制 ====================
+
+    /** 账号维度失败上限（次）。 */
+    public int maxAccountAttempts() {
+        return maxLoginAttempts() * ACCOUNT_ATTEMPT_MULTIPLIER;
+    }
+
+    /**
+     * 检查账号是否因跨来源累计失败被临时限制。
+     */
+    public boolean isAccountBlocked(String accountKey) {
+        return isBlocked(accountFailures, accountKey, loginWindowMillis(), maxAccountAttempts());
+    }
+
+    /**
+     * 记录一次账号维度的登录失败。
+     */
+    public void recordAccountFailure(String accountKey) {
+        recordAttempt(accountFailures, accountKey);
+    }
+
+    /**
+     * 登录成功后清除账号维度的失败记录。
+     */
+    public void resetAccountFailures(String accountKey) {
+        if (accountKey == null || accountKey.isBlank()) {
+            return;
+        }
+        accountFailures.invalidate(accountKey);
     }
 
     // ==================== 注册限制 ====================

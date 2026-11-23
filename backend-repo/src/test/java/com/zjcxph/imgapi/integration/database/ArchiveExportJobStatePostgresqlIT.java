@@ -107,9 +107,9 @@ class ArchiveExportJobStatePostgresqlIT extends PostgresqlIntegrationTestSupport
     @Test
     void failedCleanupBatchDoesNotStarveLaterExpiredFiles() throws Exception {
         ArchiveExportJobRepository repository = new ArchiveExportJobRepository(jdbc);
-        Path blocked = Files.createDirectory(directory.resolve("synthetic-blocked.zip"));
+        Path blocked = Files.createDirectory(directory.toRealPath().resolve("synthetic-blocked.zip"));
         Files.writeString(blocked.resolve("child"), "synthetic");
-        Path removable = Files.writeString(directory.resolve("synthetic-removable.zip"), "synthetic");
+        Path removable = Files.writeString(directory.toRealPath().resolve("synthetic-removable.zip"), "synthetic");
         String last = null;
         for (int index = 0; index < 201; index++) {
             String id = insert(repository);

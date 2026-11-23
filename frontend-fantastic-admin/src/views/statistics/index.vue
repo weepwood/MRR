@@ -120,10 +120,11 @@ const trendBars = computed<MrrBarSeries[]>(() => [{
   name: '扫描页数',
   data: sortedDateData.value.map(item => Number(item.totalPages ?? item.pages ?? 0)),
 }])
+// 逐日数据不做平滑：样条在相邻两天骤降时会画出低于 0 或高于实际值的弧线，看起来像真实波动。
 const trendLines = computed<MrrLineSeries[]>(() => [{
   name: '扫描记录数',
   data: sortedDateData.value.map(item => Number(item.recordCount ?? 0)),
-  smooth: true,
+  smooth: false,
 }])
 
 const trendRecordTotal = computed(() => sortedDateData.value.reduce(
@@ -386,19 +387,16 @@ onMounted(refreshAll)
       <MrrMetricCard
         label="总扫描页数"
         icon="i-lucide:ticket"
-        tone="rose"
         :value="formatNumber(summaryData.total?.totalPages ?? 0)"
       />
       <MrrMetricCard
         label="扫描病案数"
         icon="i-lucide:file-text"
-        tone="green"
         :value="formatNumber(summaryData.uniqueBAHCount ?? 0)"
       />
       <MrrMetricCard
         label="统计时间范围"
         icon="i-lucide:chart-no-axes-combined"
-        tone="amber"
         compact-value
         :value="`${dateRange.start} — ${dateRange.end}`"
       />

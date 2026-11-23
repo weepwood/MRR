@@ -106,4 +106,38 @@ class JwtUtilTest {
                     .hasMessageContaining("exp");
         }
     }
+
+    @Test
+    @DisplayName("verifyToken — 一次验签返回类型、编号、过期时间与会话")
+    void verifyToken_returnsAllClaimsFromSingleVerification() {
+        AuthSession session = new AuthSession();
+        session.setId(7L);
+        session.setUsername("doctor7");
+        session.setPasswordVersion(3);
+        session.setPermissions(List.of("record:read"));
+        long before = System.currentTimeMillis();
+
+        String token = JwtUtil.getToken(session, 60_000L, JwtUtil.ACCESS_TOKEN_TYPE);
+        JwtUtil.VerifiedToken verified = JwtUtil.verifyToken(token);
+
+        assertThat(verified.tokenType()).isEqualTo(JwtUtil.ACCESS_TOKEN_TYPE);
+        assertThat(verified.jti()).isEqualTo(JwtUtil.getJti(token));
+        assertThat(verified.expiresAtMillis()).isEqualTo(JwtUtil.getExpirationMillis(token));
+        assertThat(verified.expiresAtMillis()).isBetween(before, before + 61_000L);
+        assertThat(verified.session().getId()).isEqualTo(7L);
+        assertThat(verified.session().getUsername()).isEqualTo("doctor7");
+        assertThat(verified.session().getPasswordVersion()).isEqualTo(3);
+        assertThat(verified.session().getPermissions()).containsExactly("record:read");
+    }
+
+    @Test
+    @DisplayName("verifyToken — 其他密钥签发的令牌被拒绝")
+    void verifyToken_rejectsForeignSignature() {
+        String forged = JWT.create()
+                .withClaim("tokenType", JwtUtil.ACCESS_TOKEN_TYPE)
+                .withClaim("username", "admin")
+                .sign(Algorithm.HMAC256("another-secret-key-with-at-least-32-characters"));
+
+        assertThatThrownBy(() -> JwtUtil.verifyToken(forged)).isInstanceOf(RuntimeException.class);
+    }
 }

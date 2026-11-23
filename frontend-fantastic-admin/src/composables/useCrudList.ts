@@ -49,6 +49,11 @@ export function useCrudList<T, Q extends Record<string, any>>(opts: CrudListOpti
   const pageNum = ref(1)
   const pageSize = ref(opts.defaultPageSize ?? 20)
   const loading = ref(false)
+  /**
+   * 结果代次：只在「非静默」请求的结果写入列表后 +1。传给 MrrDataTablePanel 的 result-key，
+   * 用户发起的查询、翻页会让新结果逐行淡入；30 秒静默轮询不加，避免阅读时整表周期性闪动。
+   */
+  const resultVersion = ref(0)
   const query = reactive({ ...opts.defaultQuery }) as Q
   let generation = 0
   let disposed = false
@@ -80,6 +85,7 @@ export function useCrudList<T, Q extends Record<string, any>>(opts: CrudListOpti
       const pageData = ('data' in res ? res.data : res) as PaginatedResult<T> | undefined
       list.value = pageData?.list ?? []
       total.value = pageData?.total ?? 0
+      if (!silent) { resultVersion.value += 1 }
     }
     catch (error) {
       // 静默刷新不抛错也不清数据，失败静默保留旧值。
@@ -125,6 +131,7 @@ export function useCrudList<T, Q extends Record<string, any>>(opts: CrudListOpti
     pageNum,
     pageSize,
     loading,
+    resultVersion,
     query,
     loadData,
     handleSearch,

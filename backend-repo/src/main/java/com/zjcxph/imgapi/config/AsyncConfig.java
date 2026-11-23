@@ -16,6 +16,9 @@ import java.util.concurrent.ThreadPoolExecutor;
 @EnableAsync
 public class AsyncConfig {
 
+    /** 单个执行器停机等待上限（秒），见 deploy/windows/services/mrr-backend.xml 的 stoptimeout。 */
+    static final int SHUTDOWN_AWAIT_SECONDS = 15;
+
     /**
      * 日志异步写入线程池
      * 专门用于处理日志批量写入,避免阻塞主请求线程
@@ -30,7 +33,9 @@ public class AsyncConfig {
         executor.setThreadNamePrefix("log-async-");
         executor.setRejectedExecutionHandler(new ThreadPoolExecutor.CallerRunsPolicy());
         executor.setWaitForTasksToCompleteOnShutdown(true);
-        executor.setAwaitTerminationSeconds(60);
+        // 停机预算：Web 优雅停机 30s + 本池 15s + 通用池 15s，须小于 WinSW stoptimeout，
+        // 否则服务包装器会在日志缓冲区落库前强制结束进程。
+        executor.setAwaitTerminationSeconds(SHUTDOWN_AWAIT_SECONDS);
 
         executor.initialize();
         return executor;
@@ -49,7 +54,7 @@ public class AsyncConfig {
         executor.setThreadNamePrefix("task-async-");
         executor.setRejectedExecutionHandler(new ThreadPoolExecutor.CallerRunsPolicy());
         executor.setWaitForTasksToCompleteOnShutdown(true);
-        executor.setAwaitTerminationSeconds(60);
+        executor.setAwaitTerminationSeconds(SHUTDOWN_AWAIT_SECONDS);
 
         executor.initialize();
         return executor;

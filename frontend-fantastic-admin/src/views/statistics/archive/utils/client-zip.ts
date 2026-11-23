@@ -1,4 +1,5 @@
 import JSZip from 'jszip'
+import { imageFetchInit } from './image-fetch'
 
 export interface ClientZipImage {
   imageUrl?: string
@@ -7,11 +8,7 @@ export interface ClientZipImage {
 
 async function fetchImageBlob(imageUrl: string): Promise<Blob> {
   const resolvedUrl = new URL(imageUrl, window.location.href)
-  const response = await fetch(resolvedUrl.toString(), {
-    method: 'GET',
-    mode: 'cors',
-    credentials: 'omit',
-  })
+  const response = await fetch(resolvedUrl.toString(), imageFetchInit(resolvedUrl))
   if (!response.ok) {
     throw new Error(`影像获取失败（HTTP ${response.status}）`)
   }

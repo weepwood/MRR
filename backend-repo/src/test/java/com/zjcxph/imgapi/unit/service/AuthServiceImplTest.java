@@ -35,6 +35,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -93,7 +94,32 @@ class AuthServiceImplTest {
             assertThat(result.getUser().getUsername()).isEqualTo("admin");
             assertThat(result.getUser().getRoleCode()).isEqualTo("ADMIN");
             verify(rateLimiter).resetLoginFailures("admin|10.0.0.8");
+            verify(rateLimiter).resetAccountFailures("admin");
             verify(authUserMapper).updateLastLoginAt(eq(1L), any(LocalDateTime.class));
+        }
+
+        @Test
+        @DisplayName("账号维度被限制时 — 不查询用户并返回 429")
+        void login_accountBlocked() {
+            when(rateLimiter.isAccountBlocked("admin")).thenReturn(true);
+
+            assertThatThrownBy(() -> authService.login(request("admin", "123456"), "10.0.0.9"))
+                    .isInstanceOf(BusinessException.class)
+                    .hasMessageContaining("过于频繁")
+                    .extracting("code").isEqualTo(429);
+            verify(authUserMapper, never()).findByUsername(any());
+        }
+
+        @Test
+        void login_accountLimitFollowsCaseSensitiveLookup() {
+            when(rateLimiter.isAccountBlocked(any(String.class)))
+                    .thenAnswer(call -> "admin".equals(call.getArgument(0)));
+
+            assertThatThrownBy(() -> authService.login(request("Admin", "123456"), "10.0.0.9"))
+                    .isInstanceOf(IllegalArgumentException.class)
+                    .hasMessageContaining("用户名或密码错误");
+            verify(authUserMapper).findByUsername("Admin");
+            verify(rateLimiter).recordAccountFailure("Admin");
         }
 
         @Test
@@ -113,6 +139,7 @@ class AuthServiceImplTest {
                     .isInstanceOf(IllegalArgumentException.class)
                     .hasMessageContaining("用户名或密码错误");
             verify(rateLimiter).recordLoginFailure("ghost|10.0.0.8");
+            verify(rateLimiter).recordAccountFailure("ghost");
         }
 
         @Test
@@ -124,6 +151,7 @@ class AuthServiceImplTest {
                     .isInstanceOf(IllegalArgumentException.class)
                     .hasMessageContaining("用户名或密码错误");
             verify(rateLimiter).recordLoginFailure("admin|10.0.0.8");
+            verify(rateLimiter).recordAccountFailure("admin");
         }
 
         @Test

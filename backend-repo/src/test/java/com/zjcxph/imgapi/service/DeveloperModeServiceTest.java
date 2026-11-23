@@ -1,5 +1,6 @@
 package com.zjcxph.imgapi.service;
 
+import com.zjcxph.imgapi.config.ImageDeliveryProperties;
 import com.zjcxph.imgapi.entity.SystemSetting;
 import com.zjcxph.imgapi.exception.BusinessException;
 import com.zjcxph.imgapi.mapper.SystemSettingMapper;
@@ -56,6 +57,36 @@ class DeveloperModeServiceTest {
                 .isTrue();
         assertThat(service.isArchiveLegacyRequestAllowed(
                 proxiedRequest("GET", "/api/v1/img/search", "127.0.0.1", "192.168.10.26")))
+                .isFalse();
+    }
+
+    @Test
+    void shouldRequireGatewayModeForLegacyContentRequests() {
+        DeveloperModeService service = createService(true, List.of("127.0.0.1", "::1"));
+        service.refreshFromValue("true");
+        service.refreshAllowedSourcesFromValue("192.168.10.25");
+
+        assertThat(service.isArchiveLegacyRequestAllowed(
+                proxiedRequest("GET", "/api/v1/img/content/42", "127.0.0.1", "192.168.10.25")))
+                .isFalse();
+    }
+
+    @Test
+    void shouldAllowContentGatewayImagesForLegacyArchiveOnlyByGet() {
+        ImageDeliveryProperties delivery = new ImageDeliveryProperties();
+        delivery.setMode(ImageDeliveryProperties.Mode.GATEWAY);
+        DeveloperModeService service = new DeveloperModeService(systemSettingMapper, true, "127.0.0.1,::1", delivery);
+        service.refreshFromValue("true");
+        service.refreshAllowedSourcesFromValue("192.168.10.25");
+
+        assertThat(service.isArchiveLegacyRequestAllowed(
+                proxiedRequest("GET", "/api/v1/img/content/42", "127.0.0.1", "192.168.10.25")))
+                .isTrue();
+        assertThat(service.isArchiveLegacyRequestAllowed(
+                proxiedRequest("DELETE", "/api/v1/img/content/42", "127.0.0.1", "192.168.10.25")))
+                .isFalse();
+        assertThat(service.isArchiveLegacyRequestAllowed(
+                proxiedRequest("GET", "/api/v1/img/content/42", "127.0.0.1", "192.168.10.26")))
                 .isFalse();
     }
 
@@ -193,7 +224,8 @@ class DeveloperModeServiceTest {
     }
 
     private DeveloperModeService createService(boolean startupAllowed, List<String> trustedProxyAddresses) {
-        return new DeveloperModeService(systemSettingMapper, startupAllowed, trustedProxyAddresses);
+        return new DeveloperModeService(systemSettingMapper, startupAllowed, String.join(",", trustedProxyAddresses),
+                new ImageDeliveryProperties());
     }
 
     private MockHttpServletRequest proxiedRequest(

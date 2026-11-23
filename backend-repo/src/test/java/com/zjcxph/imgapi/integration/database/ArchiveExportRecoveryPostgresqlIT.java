@@ -103,7 +103,7 @@ class ArchiveExportRecoveryPostgresqlIT extends PostgresqlIntegrationTestSupport
     @Test
     void aOneSlotExecutorEventuallyCompletesAllRecoveredJobsWithoutFailingOverflow() throws Exception {
         insert(1); insert(2); insert(3);
-        Path partial = Files.write(directory.resolve(id(1) + ".zip"), new byte[]{2, 3});
+        Path partial = Files.write(directory.toRealPath().resolve(id(1) + ".zip"), new byte[]{2, 3});
         jdbc.update("UPDATE app.archive_export_job SET status='PROCESSING', file_path=? WHERE id=CAST(? AS UUID)",
                 partial.toString(), id(1));
         jdbc.update("UPDATE app.archive_export_job SET expires_at=? WHERE id=CAST(? AS UUID)", SAME_TIME.minusDays(1), id(2));
@@ -132,7 +132,7 @@ class ArchiveExportRecoveryPostgresqlIT extends PostgresqlIntegrationTestSupport
     @Test
     void cancellationAfterThePageReadPreventsSubmissionAndCleansOnlyTheCancelledFile() throws Exception {
         insert(1);
-        Path partial = Files.write(directory.resolve("synthetic-partial.zip"), new byte[]{1});
+        Path partial = Files.write(directory.toRealPath().resolve("synthetic-partial.zip"), new byte[]{1});
         jdbc.update("UPDATE app.archive_export_job SET file_path=? WHERE id=CAST(? AS UUID)", partial.toString(), id(1));
         var racing = new ArchiveExportJobRepository(jdbc) {
             @Override public int resetToPending(String id) {
@@ -149,7 +149,7 @@ class ArchiveExportRecoveryPostgresqlIT extends PostgresqlIntegrationTestSupport
     @Test
     void aSuccessWinningTheCancellationUpdateKeepsItsFile() throws Exception {
         insert(1); repository.requestCancel(id(1));
-        Path success = Files.write(directory.resolve("synthetic-success.zip"), new byte[]{1});
+        Path success = Files.write(directory.toRealPath().resolve("synthetic-success.zip"), new byte[]{1});
         jdbc.update("UPDATE app.archive_export_job SET file_path=? WHERE id=CAST(? AS UUID)", success.toString(), id(1));
         var racing = new ArchiveExportJobRepository(jdbc) {
             @Override public int markCancelled(String id, LocalDateTime time) {

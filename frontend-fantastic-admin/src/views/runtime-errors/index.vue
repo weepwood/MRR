@@ -94,7 +94,7 @@ function rangeStart(range: string) {
   return undefined
 }
 
-const { query, list, total, loading, pageNum: page, pageSize: size, loadData, handleSearch } = useCrudList<SystemErrorEvent, typeof defaultQuery>({
+const { query, list, total, loading, resultVersion, pageNum: page, pageSize: size, loadData, handleSearch } = useCrudList<SystemErrorEvent, typeof defaultQuery>({
   defaultQuery: { ...defaultQuery, keyword: linkedRequestId.value },
   fetchApi: async ({ page, size, keyword, level, module, range }, { isCurrent, silent }) => {
     try {
@@ -219,6 +219,7 @@ function levelTagType(level: string) {
 <template>
   <MrrPageShell class="runtime-errors-page">
     <MrrPageHeader
+      size="compact"
       eyebrow="Runtime Error Center"
       title="运行错误中心"
       description="集中查看后端 WARN / ERROR，按指纹合并重复事件，并通过错误编号、Request ID 关联接口访问日志。"
@@ -247,7 +248,7 @@ function levelTagType(level: string) {
       </button>
     </section>
 
-    <MrrDataTablePanel title="运行错误组" :count="total" class="runtime-errors-panel">
+    <MrrDataTablePanel title="运行错误组" :count="total" :loading="loading" :result-key="resultVersion" class="runtime-errors-panel">
       <template #filters>
         <!-- 筛选栏对齐用户管理页模式：无可见标签，控件 aria-label + 自描述占位符 -->
         <MrrFilterBar embedded>
@@ -298,7 +299,7 @@ function levelTagType(level: string) {
         </MrrFilterBar>
       </template>
 
-      <AppLoading v-if="loading" type="table" :rows="8" />
+      <AppLoading v-if="loading && !list.length" type="table" :rows="8" />
       <AppError v-else-if="error" :message="error" @retry="loadData()" />
       <AppEmpty
         v-else-if="!list.length"

@@ -191,16 +191,6 @@ function typeTone(type: string | undefined) {
   return 'info'
 }
 
-function toneClass(item: ArchiveItem, index = 0) {
-  const palette = ['tone-blue', 'tone-green', 'tone-amber', 'tone-rose', 'tone-slate']
-  const seed = `${item.bah || ''}-${item.type || ''}-${index}`
-  let hash = 0
-  for (let i = 0; i < seed.length; i += 1) {
-    hash = (hash * 31 + seed.charCodeAt(i)) >>> 0
-  }
-  return palette[hash % palette.length]
-}
-
 async function loadSummary() {
   try {
     const res = await getStatisticsSummary()
@@ -500,62 +490,73 @@ onBeforeUnmount(() => {
         <AppEmpty v-else-if="!listData.list.length" description="暂无统计明细" />
         <div v-else-if="archiveDisplayMode === 'folder'" class="archive-grid">
           <article v-for="(item, index) in listData.list" :key="archiveKey(item, index)" class="archive-folder-card"
-            :class="[toneClass(item, index), { 'is-selected': selectedArchiveKey === archiveKey(item, index) }]"
-            role="button" tabindex="0" :aria-pressed="selectedArchiveKey === archiveKey(item, index)"
-            :aria-label="`患者 ${normalizeText(item.patientName)}，病案号 ${padTo8Digits(item.bah)}，上架号 ${padTo8Digits(item.sjh)}，${Number(item.pages || 0)} 页`"
-            @click="selectArchive(item, index)" @keyup.enter="selectArchive(item, index)"
-            @keyup.space.prevent="selectArchive(item, index)">
+            :class="{ 'is-selected': selectedArchiveKey === archiveKey(item, index) }"
+            :data-department-name="normalizeText(item.inpatientDepartment)">
             <div class="folder-layer folder-layer-back" />
             <div class="folder-layer folder-layer-middle" />
             <div class="folder-card-body">
-              <div class="folder-top">
-                <div class="folder-identity">
-                  <span class="folder-index">NO. A{{ tableIndex(index) }}</span>
-                  <span v-if="selectedArchiveKey === archiveKey(item, index)" class="folder-selected-label">
-                    <i />已选中
-                  </span>
-                </div>
-                <el-tag size="small" :type="typeTone(item.type)" effect="plain">
+              <header class="folder-top">
+                <span class="folder-index">NO. A{{ tableIndex(index) }}</span>
+                <span v-if="selectedArchiveKey === archiveKey(item, index)" class="folder-selected-label">
+                  <i />已选中
+                </span>
+                <el-tag class="folder-type" size="small" :type="typeTone(item.type)" effect="plain">
                   {{ normalizeText(item.type) }}
                 </el-tag>
-              </div>
+              </header>
 
-              <div class="folder-code-block folder-code-block-full">
-                <span class="folder-code-label">病人姓名</span>
-                <strong class="folder-code-value">{{ normalizeText(item.patientName) }}</strong>
-              </div>
+              <!--
+                选择档案用一个真实按钮承担，按钮的 ::after 铺满卡片，整卡仍可点击。
+                原先整张卡是 role="button"，里面又有「查看影像」与复制两类按钮，交互元素互相嵌套；
+                现在复制、查看影像与选择是并列的三个按钮，键盘依次可达，读屏各自读出名称。
+              -->
+              <h3 class="folder-name">
+                <button type="button" class="folder-select" :aria-pressed="selectedArchiveKey === archiveKey(item, index)"
+                  :aria-label="`选择患者 ${normalizeText(item.patientName)}，病案号 ${padTo8Digits(item.bah)}，上架号 ${padTo8Digits(item.sjh)}，${Number(item.pages || 0)} 页`"
+                  @click="selectArchive(item, index)">
+                  {{ normalizeText(item.patientName) }}
+                </button>
+              </h3>
 
-              <div class="folder-code-grid">
-                <div class="folder-code-block">
-                  <span class="folder-code-label">住院科室</span>
-                  <strong class="folder-code-value">{{ normalizeText(item.inpatientDepartment) }}</strong>
-                </div>
-                <div class="folder-code-block">
-                  <span class="folder-code-label">出院日期</span>
-                  <strong class="folder-code-value">{{ formatDate(item.dischargeDate) }}</strong>
-                </div>
-                <div class="folder-code-block folder-code-copyable" title="点击复制病案号"
-                  @click="copyCode(padTo8Digits(item.bah), '病案号', item.bah)">
-                  <span class="folder-code-label">病案号</span>
-                  <strong class="folder-code-value">{{ padTo8Digits(item.bah) }}</strong>
-                </div>
-                <div class="folder-code-block folder-code-copyable" title="点击复制上架号"
-                  @click="copyCode(padTo8Digits(item.sjh), '上架号', item.sjh)">
-                  <span class="folder-code-label">上架号</span>
-                  <strong class="folder-code-value">{{ padTo8Digits(item.sjh) }}</strong>
-                </div>
-              </div>
+              <p class="folder-meta">
+                <span class="folder-department">{{ normalizeText(item.inpatientDepartment) }}</span>
+                <span class="folder-meta-dot" aria-hidden="true" />
+                <span>出院 <time class="folder-date">{{ formatDate(item.dischargeDate) }}</time></span>
+              </p>
 
-              <div class="folder-footer">
-                <div class="folder-page-count">
+              <dl class="folder-codes">
+                <div class="folder-code">
+                  <dt>病案号</dt>
+                  <dd>
+                    <span class="folder-code-value">{{ padTo8Digits(item.bah) }}</span>
+                    <button type="button" class="folder-copy" :aria-label="`复制病案号 ${padTo8Digits(item.bah)}`" title="复制病案号"
+                      @click.stop="copyCode(padTo8Digits(item.bah), '病案号', item.bah)">
+                      <FaIcon name="i-lucide:copy" />
+                    </button>
+                  </dd>
+                </div>
+                <div class="folder-code">
+                  <dt>上架号</dt>
+                  <dd>
+                    <span class="folder-code-value">{{ padTo8Digits(item.sjh) }}</span>
+                    <button type="button" class="folder-copy" :aria-label="`复制上架号 ${padTo8Digits(item.sjh)}`" title="复制上架号"
+                      @click.stop="copyCode(padTo8Digits(item.sjh), '上架号', item.sjh)">
+                      <FaIcon name="i-lucide:copy" />
+                    </button>
+                  </dd>
+                </div>
+              </dl>
+
+              <footer class="folder-footer">
+                <p class="folder-page-count">
                   <strong>{{ Number(item.pages || 0).toLocaleString('zh-CN') }}</strong>
-                  <span>扫描页</span>
-                </div>
+                  <span>页扫描影像</span>
+                </p>
                 <el-button class="folder-action" text type="primary" @click.stop="openArchive(item)">
                   查看影像
                   <span aria-hidden="true">→</span>
                 </el-button>
-              </div>
+              </footer>
             </div>
           </article>
         </div>
@@ -742,7 +743,7 @@ onBeforeUnmount(() => {
 }
 
 .archive-patient-cell span {
-  font-size: 11px;
+  font-size: var(--mrr-font-size-xs);
   color: var(--text-secondary);
 }
 
@@ -755,334 +756,283 @@ onBeforeUnmount(() => {
 }
 
 .archive-folder-card {
-  --folder-accent: var(--color-primary-hover);
+  --folder-accent: var(--color-primary);
   --folder-tint: var(--mrr-tone-primary-soft);
 
   position: relative;
-  min-height: 412px;
-  padding: 16px 8px 8px;
-  cursor: pointer;
-  outline: none;
+  padding: var(--mrr-space-3) var(--mrr-space-2) var(--mrr-space-2);
   isolation: isolate;
-  transition: z-index 0s linear var(--mrr-motion-move);
 }
 
-.archive-folder-card:hover,
-.archive-folder-card:focus-visible {
-  z-index: 2;
-  transition-delay: 0s;
-}
-
+/*
+ * 叠层纸是档案袋隐喻（DESIGN.md §2.9 保留项），只留静态错位：悬停时只有卡面抬起，
+ * 背后两张纸不再各自旋转位移，避免一屏 18 张卡同时“翻动”。
+ */
 .folder-layer {
   position: absolute;
   pointer-events: none;
-  border: 1px solid color-mix(in srgb, var(--folder-accent) 22%, var(--divider));
+  border: 1px solid color-mix(in srgb, var(--folder-accent) 18%, var(--divider));
   border-radius: var(--mrr-radius-xl);
-  transition: transform var(--mrr-motion-move) var(--mrr-ease-out), border-color var(--mrr-motion-feedback) var(--mrr-ease-out), box-shadow var(--mrr-motion-feedback) var(--mrr-ease-out);
 }
 
 .folder-layer-back {
-  inset: 6px 24px 18px 20px;
+  /* Lightning CSS can lower literal inset values for Chrome 86. */
+  inset: 4px 24px 16px 20px;
   z-index: -2;
-  background: color-mix(in srgb, var(--folder-tint) 72%, var(--surface));
-  transform: rotate(-1.4deg);
+  background: color-mix(in srgb, var(--folder-tint) 60%, var(--surface));
+  transform: rotate(-1.2deg);
 }
 
 .folder-layer-middle {
-  inset: 11px 12px 11px 14px;
+  inset: 8px 12px 12px;
   z-index: -1;
-  background: color-mix(in srgb, var(--folder-tint) 48%, var(--surface));
-  transform: rotate(0.8deg);
+  background: color-mix(in srgb, var(--folder-tint) 36%, var(--surface));
+  transform: rotate(0.7deg);
 }
 
 .folder-card-body {
   position: relative;
   display: grid;
   gap: var(--mrr-space-3);
-  min-height: 388px;
-  padding: 21px 20px 17px;
+  padding: var(--mrr-space-5) var(--mrr-card-inset) var(--mrr-space-4);
   overflow: hidden;
-  background: linear-gradient(155deg, color-mix(in srgb, var(--folder-tint) 35%, var(--surface)) 0%, var(--surface) 42%);
+  background: var(--surface);
   border: 1px solid var(--divider);
   border-radius: var(--mrr-radius-xl);
-  box-shadow: var(--mrr-shadow-sm);
-  transition: transform var(--mrr-motion-move) var(--mrr-ease-out), border-color var(--mrr-motion-feedback) var(--mrr-ease-out), box-shadow var(--mrr-motion-feedback) var(--mrr-ease-out), background-color var(--mrr-motion-feedback) var(--mrr-ease-out);
+  box-shadow: var(--mrr-shadow-xs);
+  transition: transform var(--mrr-motion-move) var(--mrr-ease-out), border-color var(--mrr-motion-feedback) var(--mrr-ease-out), box-shadow var(--mrr-motion-feedback) var(--mrr-ease-out);
 }
 
+/* 科室色条：静态身份信号，同一科室同一颜色；颜色由科室档案袋配色设置决定。 */
 .folder-card-body::before {
   position: absolute;
-  top: 0;
-  right: 22px;
-  left: 22px;
+  inset: 0 0 auto;
   height: 3px;
   content: "";
-  background: var(--folder-accent);
-  border-radius: 0 0 999px 999px;
-  opacity: 0.34;
-  transform: scaleX(0.42);
-  transform-origin: center;
-  transition: opacity var(--mrr-motion-move) var(--mrr-ease-out), transform var(--mrr-motion-move) var(--mrr-ease-out);
+  background: var(--folder-strip, var(--folder-accent));
 }
 
-.folder-card-body::after {
-  position: absolute;
-  right: -42px;
-  bottom: -58px;
-  width: 150px;
-  height: 150px;
-  pointer-events: none;
-  content: "";
-  background: radial-gradient(circle, color-mix(in srgb, var(--folder-accent) 9%, transparent), transparent 68%);
-  transition: opacity var(--mrr-motion-move) var(--mrr-ease-out), transform var(--mrr-motion-move) var(--mrr-ease-out);
-}
-
-/*
- * 悬停 ≠ 选中：悬停只做「抬起 + 描边加深」，不再叠加 3px 主色外环。
- * 原实现悬停（72% 描边 + 11% 外环）与选中（100% 描边 + 13% 外环）几乎无法区分，
- * 鼠标停在未选卡片上时，用户会误以为它已被选中。外环现在只属于选中态。
- */
 .archive-folder-card:hover .folder-card-body {
-  background: linear-gradient(155deg, color-mix(in srgb, var(--folder-tint) 54%, var(--surface)) 0%, var(--surface) 48%);
-  border-color: color-mix(in srgb, var(--folder-accent) 48%, var(--divider));
-  box-shadow: var(--mrr-shadow-md);
+  border-color: color-mix(in srgb, var(--folder-accent) 40%, var(--divider));
+  box-shadow: var(--mrr-shadow-sm);
   transform: var(--mrr-motion-decor, translateY(-2px));
 }
 
-/*
- * 键盘焦点改用 outline，不再借用 box-shadow。
- *
- * .folder-card-body 带 overflow: hidden，用 box-shadow 画的焦点环在多卡并列时会被相邻卡片
- * 的层叠上下文裁掉；而且 box-shadow 只允许一条声明表达「投影 + 焦点环」，两者互相替换。
- * 投影归投影、焦点归焦点，box-shadow 里因此不再出现 0 0 0 Npx 形式的替代品。
- */
-.archive-folder-card:focus-visible .folder-card-body {
-  outline: 2px solid var(--folder-accent);
-  outline-offset: 3px;
-  background: linear-gradient(155deg, color-mix(in srgb, var(--folder-tint) 54%, var(--surface)) 0%, var(--surface) 48%);
-  border-color: color-mix(in srgb, var(--folder-accent) 72%, var(--divider));
-  box-shadow: var(--mrr-shadow-md);
-  transform: var(--mrr-motion-decor, translateY(-2px));
-}
-
-.archive-folder-card:hover .folder-card-body::before,
-.archive-folder-card:focus-visible .folder-card-body::before,
-.archive-folder-card.is-selected .folder-card-body::before {
-  opacity: 0.9;
-  transform: scaleX(1);
-}
-
-.archive-folder-card:hover .folder-card-body::after,
-.archive-folder-card:focus-visible .folder-card-body::after {
-  opacity: 1;
-  transform: var(--mrr-motion-decor, translate(-8px, -8px) scale(1.08));
-}
-
-.archive-folder-card:hover .folder-layer-back,
-.archive-folder-card:focus-visible .folder-layer-back {
-  border-color: color-mix(in srgb, var(--folder-accent) 42%, var(--divider));
-  box-shadow: 0 8px 18px color-mix(in srgb, var(--folder-accent) 10%, transparent);
-  transform: var(--mrr-motion-decor, translate(-5px, -4px) rotate(-2.6deg));
-}
-
-.archive-folder-card:hover .folder-layer-middle,
-.archive-folder-card:focus-visible .folder-layer-middle {
-  border-color: color-mix(in srgb, var(--folder-accent) 34%, var(--divider));
-  transform: var(--mrr-motion-decor, translate(5px, -2px) rotate(1.6deg));
-}
-
+/* 选中：主色描边 + 3px 外环（§5.2，外环只属于选中态）。 */
 .archive-folder-card.is-selected .folder-card-body {
   border-color: var(--folder-accent);
-  box-shadow: var(--mrr-shadow-md), 0 0 0 3px color-mix(in srgb, var(--folder-accent) 18%, transparent);
-}
-
-.archive-folder-card.is-selected .folder-layer-back {
-  transform: translate(-2px, -2px) rotate(-2deg);
-}
-
-.archive-folder-card.is-selected .folder-layer-middle {
-  transform: translate(2px, -1px) rotate(1.2deg);
-}
-
-.tone-blue {
-  --folder-accent: var(--color-primary);
-  --folder-tint: var(--mrr-tone-primary-soft);
-}
-
-.tone-green {
-  --folder-accent: var(--mrr-tone-teal);
-  --folder-tint: var(--mrr-tone-teal-soft);
-}
-
-.tone-amber {
-  --folder-accent: var(--mrr-tone-warning);
-  --folder-tint: var(--mrr-tone-warning-soft);
-}
-
-.tone-rose {
-  --folder-accent: var(--mrr-tone-rose);
-  --folder-tint: var(--mrr-tone-rose-soft);
-}
-
-.tone-slate {
-  --folder-accent: var(--mrr-tone-neutral);
-  --folder-tint: var(--surface-alt);
+  box-shadow: var(--mrr-shadow-sm), 0 0 0 3px color-mix(in srgb, var(--folder-accent) 18%, transparent);
 }
 
 .folder-top,
 .folder-footer {
-  position: relative;
-  z-index: 1;
   display: flex;
-  gap: 12px;
-  align-items: center;
-  justify-content: space-between;
-}
-
-.folder-identity {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
+  gap: var(--mrr-space-2);
   align-items: center;
 }
 
 .folder-index {
-  font-size: 10px;
-  font-weight: 800;
+  font-family: var(--mrr-font-mono);
+  font-size: var(--mrr-font-size-xs);
+  font-weight: 600;
   font-variant-numeric: tabular-nums;
   color: var(--text-secondary);
-  letter-spacing: 0.11em;
+  letter-spacing: 0.04em;
 }
 
 .folder-selected-label {
   display: inline-flex;
-  gap: 5px;
+  gap: var(--mrr-space-1);
   align-items: center;
-  padding: 3px var(--mrr-space-2);
-  font-size: 10px;
-  font-weight: 700;
+  padding: 2px var(--mrr-space-2);
+  font-size: var(--mrr-font-size-xs);
+  font-weight: 600;
   color: var(--folder-accent);
-  background: color-mix(in srgb, var(--folder-accent) 9%, transparent);
+  background: color-mix(in srgb, var(--folder-accent) 10%, transparent);
   border-radius: var(--mrr-radius-pill);
 }
 
 .folder-selected-label i {
-  width: 5px;
-  height: 5px;
+  width: 6px;
+  height: 6px;
   background: var(--folder-accent);
   border-radius: 50%;
-  box-shadow: 0 0 0 3px color-mix(in srgb, var(--folder-accent) 14%, transparent);
 }
 
-.folder-code-grid {
+.folder-type {
   position: relative;
   z-index: 1;
+  margin-left: auto;
+}
+
+.folder-name {
+  min-width: 0;
+  margin: 0;
+  font-size: var(--mrr-font-size-lg);
+  font-weight: 650;
+  line-height: 1.35;
+}
+
+/* 选择按钮外观与标题一致；::after 铺满卡面，承担整卡点击。 */
+.folder-select {
+  display: block;
+  max-width: 100%;
+  padding: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font: inherit;
+  color: var(--text-primary);
+  text-align: left;
+  white-space: nowrap;
+  cursor: pointer;
+  outline: none;
+  background: none;
+  border: 0;
+}
+
+.folder-select::after {
+  position: absolute;
+  inset: 0;
+  content: "";
+  border-radius: var(--mrr-radius-xl);
+}
+
+/* 卡面 overflow: hidden，焦点轮廓画在内侧，避免被裁切。 */
+.folder-select:focus-visible::after {
+  outline: 2px solid var(--mrr-ring);
+  outline-offset: -2px;
+}
+
+.folder-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--mrr-space-1) var(--mrr-space-2);
+  align-items: center;
+  min-width: 0;
+  margin: 0;
+  font-size: var(--mrr-font-size-sm);
+  color: var(--text-secondary);
+}
+
+.folder-department {
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.folder-meta-dot {
+  width: 3px;
+  height: 3px;
+  background: currentcolor;
+  border-radius: 50%;
+  opacity: 0.6;
+}
+
+.folder-date {
+  font-variant-numeric: tabular-nums;
+}
+
+.folder-codes {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 8px;
+  gap: var(--mrr-space-3);
+  padding: var(--mrr-space-3) 0;
+  margin: 0;
+  border-block: 1px solid var(--divider);
 }
 
-.folder-code-block {
-  position: relative;
+.folder-code {
+  display: grid;
+  gap: var(--mrr-space-1);
   min-width: 0;
-  padding: var(--mrr-space-3) 12px;
-  background: color-mix(in srgb, var(--folder-accent) 4%, var(--surface));
-  border: 1px solid color-mix(in srgb, var(--folder-accent) 13%, var(--divider));
-  border-radius: var(--mrr-radius-lg);
 }
 
-.folder-code-copyable {
-  cursor: pointer;
-}
-
-.folder-code-copyable:hover {
-  background: color-mix(in srgb, var(--folder-accent) 8%, var(--surface));
-  border-color: color-mix(in srgb, var(--folder-accent) 24%, var(--divider));
-}
-
-.folder-code-label {
-  display: block;
-  margin-bottom: 5px;
-  font-size: 10px;
-  font-weight: 700;
+.folder-code dt {
+  font-size: var(--mrr-font-size-xs);
   color: var(--text-secondary);
-  letter-spacing: 0.08em;
+}
+
+.folder-code dd {
+  display: flex;
+  gap: var(--mrr-space-1);
+  align-items: center;
+  min-width: 0;
+  margin: 0;
 }
 
 .folder-code-value {
-  display: block;
+  min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
-  font-size: clamp(15px, 1.4vw, 18px);
-  font-weight: 800;
+  font-family: var(--mrr-font-mono);
+  font-size: var(--mrr-font-size-md);
+  font-weight: 600;
   font-variant-numeric: tabular-nums;
-  line-height: 1.2;
-  color: color-mix(in srgb, var(--text-primary) 90%, var(--bg));
+  color: var(--text-primary);
   white-space: nowrap;
 }
 
-.folder-code-block-full {
-  display: flex;
-  gap: 12px;
-  align-items: center;
-  justify-content: space-between;
-}
-
-.folder-code-block-full .folder-code-label {
+.folder-copy {
+  position: relative;
+  z-index: 1;
+  display: inline-grid;
   flex: none;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  font-size: var(--mrr-font-size-sm);
+  color: var(--text-secondary);
+  cursor: pointer;
+  background: transparent;
+  border: 0;
+  border-radius: var(--mrr-radius-sm);
+  transition: color var(--mrr-motion-feedback) var(--mrr-ease-out), background-color var(--mrr-motion-feedback) var(--mrr-ease-out);
 }
 
-.folder-code-block-full .folder-code-value {
-  flex: 1;
-  min-width: 0;
-  font-size: clamp(18px, 3.2vw, 20px);
-  line-height: 1.1;
-  color: color-mix(in srgb, var(--text-primary) 88%, var(--bg));
-  text-align: right;
+.folder-copy:hover {
+  color: var(--folder-accent);
+  background: var(--mrr-muted);
 }
 
-.folder-code-block:nth-child(-n+2) .folder-code-value {
-  font-size: clamp(13px, 1.2vw, 14px);
-  font-weight: 700;
-  color: color-mix(in srgb, var(--text-primary) 88%, var(--bg));
-}
-
-.folder-footer {
-  padding-top: var(--mrr-space-3);
-  border-top: 1px dashed color-mix(in srgb, var(--folder-accent) 18%, var(--divider));
+.folder-copy:focus-visible {
+  outline: 2px solid var(--mrr-ring);
+  outline-offset: 1px;
 }
 
 .folder-page-count {
   display: flex;
-  gap: var(--mrr-space-2);
+  gap: var(--mrr-space-1);
   align-items: baseline;
-  color: var(--folder-accent);
+  margin: 0;
 }
 
 .folder-page-count strong {
-  font-size: 22px;
+  font-family: var(--mrr-font-mono);
+  font-size: var(--mrr-font-size-lg);
+  font-weight: 650;
   font-variant-numeric: tabular-nums;
-  line-height: 1;
+  color: var(--text-primary);
 }
 
 .folder-page-count span {
-  font-size: 11px;
-  font-weight: 700;
+  font-size: var(--mrr-font-size-xs);
   color: var(--text-secondary);
 }
 
 .folder-action {
-  font-weight: 700;
+  position: relative;
+  z-index: 1;
+  margin-left: auto;
+  font-weight: 600;
 }
 
 .folder-action span {
-  margin-left: 5px;
-  font-size: 15px;
+  margin-left: var(--mrr-space-1);
   transition: transform var(--mrr-motion-move) var(--mrr-ease-out);
 }
 
-.archive-folder-card:hover .folder-action span,
-.archive-folder-card:focus-visible .folder-action span {
-  transform: var(--mrr-motion-decor, translateX(4px));
+.archive-folder-card:hover .folder-action span {
+  transform: var(--mrr-motion-decor, translateX(3px));
 }
 
 .pagination-wrapper {
@@ -1114,7 +1064,7 @@ onBeforeUnmount(() => {
     grid-template-columns: minmax(0, 1fr);
   }
 
-  .folder-code-grid {
+  .folder-codes {
     grid-template-columns: 1fr;
   }
 }
@@ -1144,26 +1094,7 @@ onBeforeUnmount(() => {
     background: var(--mrr-card);
   }
 
-  /* 右上角的高光只是氛围，86 上直接不画，避免在实色卡面上留一块多余色斑。 */
-  .folder-card-body::after {
-    background: none;
-  }
-
-  .archive-folder-card:hover .folder-card-body,
-  .archive-folder-card:focus-visible .folder-card-body {
-    background: var(--mrr-card);
-    border-color: var(--folder-accent);
-    box-shadow: var(--mrr-shadow-lg);
-  }
-
-  .archive-folder-card:hover .folder-layer-back,
-  .archive-folder-card:focus-visible .folder-layer-back {
-    border-color: var(--folder-accent);
-    box-shadow: var(--mrr-shadow-sm);
-  }
-
-  .archive-folder-card:hover .folder-layer-middle,
-  .archive-folder-card:focus-visible .folder-layer-middle {
+  .archive-folder-card:hover .folder-card-body {
     border-color: var(--folder-accent);
   }
 
@@ -1171,33 +1102,11 @@ onBeforeUnmount(() => {
   .archive-folder-card.is-selected .folder-card-body {
     outline: 2px solid var(--folder-accent);
     outline-offset: 3px;
-    box-shadow: var(--mrr-shadow-md);
+    box-shadow: var(--mrr-shadow-sm);
   }
 
   .folder-selected-label {
     background: var(--folder-tint);
-  }
-
-  .folder-selected-label i {
-    box-shadow: none;
-  }
-
-  .folder-code-block {
-    background: var(--mrr-card);
-    border: 1px solid var(--divider);
-  }
-
-  .folder-code-copyable:hover {
-    background: var(--mrr-muted);
-    border-color: var(--folder-accent);
-  }
-
-  .folder-footer {
-    border-top: 1px dashed var(--divider);
-  }
-
-  .folder-code-block:nth-child(-n+2) .folder-code-value {
-    color: var(--text-primary);
   }
 }
 </style>

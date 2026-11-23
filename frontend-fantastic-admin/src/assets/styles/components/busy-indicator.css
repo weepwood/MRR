@@ -1,0 +1,66 @@
+/*
+ * 刷新反馈：已有结果之上的「正在重新查询」。
+ *
+ * 首次加载（区域还没有内容）用 AppLoading 骨架；已有结果再查询时保留结果，
+ * 叠加这里的进度条与浅遮罩（DESIGN.md §5.1）。两处入口共用同一种外观：
+ * 1. `.mrr-busy-bar`：MrrDataTablePanel 的 loading 属性渲染；
+ * 2. 表格上的 v-loading（Element Plus 遮罩）：不再显示居中的大转圈，改为表格顶边一条进度条。
+ *    只改表格（`.el-table > .el-loading-mask`）与表格面板内的遮罩；图表、设置分区、
+ *    档案袋等区域的 v-loading 保持原样。
+ * 两者都延迟 --mrr-motion-busy-delay 出现，与顶部路由进度条同一节奏。
+ */
+
+.mrr-busy-bar,
+body .el-table > .el-loading-mask::before,
+body .mrr-data-table-panel__content .el-loading-mask::before {
+  height: 2px;
+  background:
+    linear-gradient(var(--mrr-primary), var(--mrr-primary)) no-repeat,
+    var(--mrr-tone-primary-soft);
+  background-size: 30% 100%, 100% 100%;
+  border-radius: var(--mrr-radius-pill);
+  animation: mrr-busy-bar var(--mrr-motion-loop-soft) ease-in-out infinite;
+}
+
+body .el-table > .el-loading-mask,
+body .mrr-data-table-panel__content .el-loading-mask {
+  /* 浅遮罩：结果仍可辨认（知道刷新的是哪批），但明显处于「待更新」。 */
+  background-color: color-mix(in srgb, var(--mrr-card) 55%, transparent);
+  animation: mrr-fade-enter var(--mrr-motion-feedback) var(--mrr-ease-out) var(--mrr-motion-busy-delay) backwards;
+}
+
+body .el-table > .el-loading-mask::before,
+body .mrr-data-table-panel__content .el-loading-mask::before {
+  position: absolute;
+  inset: 0 0 auto;
+  content: "";
+  border-radius: 0;
+}
+
+body .el-table > .el-loading-mask .el-loading-spinner,
+body .mrr-data-table-panel__content .el-loading-mask .el-loading-spinner {
+  display: none;
+}
+
+/* Chrome 86：遮罩是「这批结果待更新」的唯一面信号，给静态半透明卡面色。 */
+@supports not (color: color-mix(in srgb, #000 50%, #fff)) {
+  body .el-table > .el-loading-mask,
+  body .mrr-data-table-panel__content .el-loading-mask {
+    background-color: rgb(255 255 255 / 55%);
+  }
+
+  html.dark body .el-table > .el-loading-mask,
+  html.dark body .mrr-data-table-panel__content .el-loading-mask {
+    background-color: rgb(24 28 38 / 55%);
+  }
+}
+
+/* 强制颜色模式会清掉背景图层，进度条改用系统高亮色整条显示。 */
+@media (forced-colors: active) {
+  .mrr-busy-bar,
+  body .el-table > .el-loading-mask::before,
+  body .mrr-data-table-panel__content .el-loading-mask::before {
+    forced-color-adjust: none;
+    background: Highlight;
+  }
+}

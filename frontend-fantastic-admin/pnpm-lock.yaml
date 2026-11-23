@@ -121,8 +121,8 @@ importers:
         specifier: ^20.5.3
         version: 20.5.3(@types/node@22.15.30)(conventional-commits-parser@6.4.0)(typescript@6.0.3)
       '@faker-js/faker':
-        specifier: ^10.4.0
-        version: 10.4.0
+        specifier: ^10.6.0
+        version: 10.6.0
       '@iconify/json':
         specifier: ^2.2.556
         version: 2.2.556
@@ -1913,8 +1913,8 @@ packages:
       '@noble/hashes':
         optional: true
 
-  '@faker-js/faker@10.4.0':
-    resolution: {integrity: sha512-sDBWI3yLy8EcDzgobvJTWq1MJYzAkQdpjXuPukga9wXonhpMRvd1Izuo2Qgwey2OiEoRIBr35RMU9HJRoOHzpw==}
+  '@faker-js/faker@10.6.0':
+    resolution: {integrity: sha512-3RQHgEtvL1Frl/d1cSreo7qhJ3Gk1OdNUai/CtZ8G+wYeRQnJih3s9xJ9/kgYekPQRdwgh0HXRPqMlzWGwivIQ==}
     engines: {node: ^20.19.0 || ^22.13.0 || ^23.5.0 || >=24.0.0, npm: '>=10'}
 
   '@floating-ui/core@1.8.0':
@@ -9820,7 +9820,7 @@ snapshots:
 
   '@exodus/bytes@1.16.0': {}
 
-  '@faker-js/faker@10.4.0': {}
+  '@faker-js/faker@10.6.0': {}
 
   '@floating-ui/core@1.8.0':
     dependencies:

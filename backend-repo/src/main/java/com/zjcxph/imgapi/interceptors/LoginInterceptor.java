@@ -75,13 +75,14 @@ public class LoginInterceptor implements HandlerInterceptor {
         AuthSession tokenSession;
         String jti;
         try {
-            String tokenType = JwtUtil.getTokenType(token);
-            if (!JwtUtil.ACCESS_TOKEN_TYPE.equals(tokenType)) {
+            // 只验签一次：类型、编号与会话信息来自同一次解码结果。
+            JwtUtil.VerifiedToken verified = JwtUtil.verifyToken(token);
+            if (!JwtUtil.ACCESS_TOKEN_TYPE.equals(verified.tokenType())) {
                 writeUnauthorized(response, "Token 类型无效", "INVALID_TOKEN_TYPE");
                 return false;
             }
-            jti = JwtUtil.getJti(token);
-            tokenSession = JwtUtil.parseToken(token);
+            jti = verified.jti();
+            tokenSession = verified.session();
         } catch (Exception exception) {
             logger.debug("JWT verification failed: {}", exception.getMessage());
             writeUnauthorized(response, "Token 无效或已过期", "INVALID_OR_EXPIRED_TOKEN");

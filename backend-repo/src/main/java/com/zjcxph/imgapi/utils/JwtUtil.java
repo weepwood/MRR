@@ -100,8 +100,32 @@ public final class JwtUtil {
         return builder.sign(algorithm());
     }
 
-    public static AuthSession parseToken(String token) {
+    /**
+     * 一次验签后返回令牌的类型、编号、过期时间与会话信息。
+     *
+     * <p>认证拦截器每个请求都会解析令牌；旧调用方式分别执行 {@link #getTokenType}、
+     * {@link #getJti} 和 {@link #parseToken}，同一令牌被完整验签三次。档案袋这类一次
+     * 打开数百个受保护请求的页面，应只付一次 HMAC 与 JSON 解析的成本。</p>
+     */
+    public static VerifiedToken verifyToken(String token) {
         DecodedJWT decodedJWT = verify(token);
+        Date expiresAt = decodedJWT.getExpiresAt();
+        return new VerifiedToken(
+                decodedJWT.getClaim("tokenType").asString(),
+                decodedJWT.getId(),
+                expiresAt == null ? 0L : expiresAt.getTime(),
+                toSession(decodedJWT));
+    }
+
+    /** 已验签令牌的认证信息；{@code expiresAtMillis} 为 0 表示令牌未声明过期时间。 */
+    public record VerifiedToken(String tokenType, String jti, long expiresAtMillis, AuthSession session) {
+    }
+
+    public static AuthSession parseToken(String token) {
+        return toSession(verify(token));
+    }
+
+    private static AuthSession toSession(DecodedJWT decodedJWT) {
         AuthSession session = new AuthSession();
         session.setId(decodedJWT.getClaim("id").isNull() ? null : decodedJWT.getClaim("id").asLong());
         session.setUsername(decodedJWT.getClaim("username").asString());

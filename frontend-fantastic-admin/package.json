@@ -112,7 +112,7 @@
     "picocolors": "^1.1.1",
     "plop": "^4.0.5",
     "postcss": "^8.5.33",
-    "postcss-nested": "^7.0.2",
+    "postcss-nested": "^9.0.1",
     "sass-embedded": "^1.108.2",
     "simple-git-hooks": "^2.14.0",
     "stylelint": "^17.15.0",

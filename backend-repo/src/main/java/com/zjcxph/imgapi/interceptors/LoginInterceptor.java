@@ -6,6 +6,7 @@ import com.zjcxph.imgapi.common.Permissions;
 import com.zjcxph.imgapi.entity.AuthUser;
 import com.zjcxph.imgapi.mapper.AuthUserMapper;
 import com.zjcxph.imgapi.security.ApiAccessPolicy;
+import com.zjcxph.imgapi.security.ImageAccessCookieService;
 import com.zjcxph.imgapi.security.TokenBlacklist;
 import com.zjcxph.imgapi.service.DeveloperApiAccessService;
 import com.zjcxph.imgapi.service.DeveloperModeService;
@@ -16,6 +17,7 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
 import org.springframework.web.servlet.HandlerInterceptor;
@@ -44,15 +46,29 @@ public class LoginInterceptor implements HandlerInterceptor {
     private final AuthUserMapper authUserMapper;
     private final DeveloperModeService developerModeService;
     private final DeveloperApiAccessService developerApiAccessService;
+    private final ImageAccessCookieService imageAccessCookieService;
 
     public LoginInterceptor(TokenBlacklist tokenBlacklist,
                             AuthUserMapper authUserMapper,
                             DeveloperModeService developerModeService,
                             DeveloperApiAccessService developerApiAccessService) {
+        this(tokenBlacklist, authUserMapper, developerModeService, developerApiAccessService,
+                ImageAccessCookieService.disabled());
+    }
+
+    @Autowired
+    public LoginInterceptor(TokenBlacklist tokenBlacklist,
+                            AuthUserMapper authUserMapper,
+                            DeveloperModeService developerModeService,
+                            DeveloperApiAccessService developerApiAccessService,
+                            ImageAccessCookieService imageAccessCookieService) {
         this.tokenBlacklist = tokenBlacklist;
         this.authUserMapper = authUserMapper;
         this.developerModeService = developerModeService;
         this.developerApiAccessService = developerApiAccessService;
+        this.imageAccessCookieService = imageAccessCookieService == null
+                ? ImageAccessCookieService.disabled()
+                : imageAccessCookieService;
     }
 
     @Override
@@ -63,6 +79,13 @@ public class LoginInterceptor implements HandlerInterceptor {
 
         String authorization = request.getHeader("Authorization");
         if (!StringUtils.hasText(authorization)) {
+            // <img> 无法携带 Bearer 头：网关模式下内容网关接受影像访问 Cookie（ADR-0009），其他接口一律不接受。
+            if (imageAccessCookieService.isContentRequest(request)) {
+                String imageAccess = imageAccessCookieService.findCookie(request);
+                if (imageAccess != null) {
+                    return authenticateImageAccess(request, response, imageAccess);
+                }
+            }
             return allowArchiveLegacyOrReject(request, response);
         }
 
@@ -74,6 +97,7 @@ public class LoginInterceptor implements HandlerInterceptor {
 
         AuthSession tokenSession;
         String jti;
+        long tokenExpiresAtMillis;
         try {
             // 只验签一次：类型、编号与会话信息来自同一次解码结果。
             JwtUtil.VerifiedToken verified = JwtUtil.verifyToken(token);
@@ -82,6 +106,7 @@ public class LoginInterceptor implements HandlerInterceptor {
                 return false;
             }
             jti = verified.jti();
+            tokenExpiresAtMillis = verified.expiresAtMillis();
             tokenSession = verified.session();
         } catch (Exception exception) {
             logger.debug("JWT verification failed: {}", exception.getMessage());
@@ -131,6 +156,59 @@ public class LoginInterceptor implements HandlerInterceptor {
         AuthSession session = toCurrentSession(currentUser);
         applyDeveloperPermissionBypass(request, response, session);
         installSession(request, session);
+        imageAccessCookieService.issueIfApplicable(request, response, session,
+                TokenBlacklist.tokenHash(jti), tokenExpiresAtMillis);
+        return true;
+    }
+
+    /**
+     * 内容网关的影像访问 Cookie 认证。签名与过期先在内存中校验，伪造或过期的 Cookie 不访问数据库；
+     * 随后复用 Bearer 认证的撤销、账号状态与密码版本检查，权限仍由 AuthorizationInterceptor 判定。
+     */
+    private boolean authenticateImageAccess(HttpServletRequest request,
+                                            HttpServletResponse response,
+                                            String cookieValue) throws Exception {
+        ImageAccessCookieService.Grant grant = imageAccessCookieService.verify(cookieValue);
+        if (grant == null) {
+            writeUnauthorized(response, "影像访问凭据无效或已过期，请刷新页面", "INVALID_IMAGE_ACCESS");
+            return false;
+        }
+
+        try {
+            if (tokenBlacklist.isRevokedHash(grant.tokenHash())) {
+                writeUnauthorized(response, "Token 已失效，请重新登录", "REVOKED_TOKEN");
+                return false;
+            }
+        } catch (Exception exception) {
+            logger.error("Token revocation store unavailable", exception);
+            writeServiceUnavailable(response, "认证状态服务暂时不可用，请稍后重试");
+            return false;
+        }
+
+        AuthUser currentUser;
+        try {
+            currentUser = authUserMapper.findById(grant.userId());
+        } catch (Exception exception) {
+            logger.error("Authentication user store unavailable: userId={}", grant.userId(), exception);
+            writeServiceUnavailable(response, "认证用户服务暂时不可用，请稍后重试");
+            return false;
+        }
+
+        if (currentUser == null || !StringUtils.hasText(currentUser.getUsername())) {
+            writeUnauthorized(response, "账号不存在或 Token 已失效", "MISSING_TOKEN_USER");
+            return false;
+        }
+        if (!"active".equalsIgnoreCase(currentUser.getStatus())) {
+            writeUnauthorized(response, "账号已被禁用", "DISABLED_USER");
+            return false;
+        }
+        if (grant.passwordVersion() != currentUser.effectivePasswordVersion()) {
+            writeUnauthorized(response, "账号凭据已发生变化，请重新登录", "AUTH_CREDENTIAL_CHANGED");
+            return false;
+        }
+
+        installSession(request, toCurrentSession(currentUser));
+        request.setAttribute(ACCESS_MODE_ATTRIBUTE, ImageAccessCookieService.ACCESS_MODE);
         return true;
     }
 

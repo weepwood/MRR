@@ -73,6 +73,24 @@ class LogInterceptorTest {
     }
 
     @Test
+    void auditsContentGatewayReadsAsImageViewsWithArchiveTarget() throws Exception {
+        MockHttpServletRequest request = new MockHttpServletRequest("GET", "/api/v1/img/content/42");
+        request.setAttribute(HandlerMapping.BEST_MATCHING_PATTERN_ATTRIBUTE, "/api/v1/img/content/{id}");
+        MockHttpServletResponse response = new MockHttpServletResponse();
+
+        interceptor.preHandle(request, response, new Object());
+        request.setAttribute(com.zjcxph.imgapi.common.ArchiveAccessAttributes.AUDIT_TARGET, "00789508");
+        interceptor.afterCompletion(request, response, new Object(), null);
+
+        var logCaptor = org.mockito.ArgumentCaptor.forClass(Log.class);
+        verify(asyncLogService).saveLogAsync(logCaptor.capture());
+        Log savedLog = logCaptor.getValue();
+        assertThat(savedLog.getAuditAction()).isEqualTo("VIEW_IMAGE");
+        assertThat(savedLog.getAuditDescription()).isEqualTo("经内容网关查看病案图片");
+        assertThat(savedLog.getAuditTarget()).isNotNull().doesNotContain("00789508");
+    }
+
+    @Test
     void retainsAuditStructureWithoutPatientOrCredentialValues() throws Exception {
         MockHttpServletRequest rawRequest = new MockHttpServletRequest(
                 "POST", "/api/v1/img/image/00789508/605746/24.04.30/0072.jpg");

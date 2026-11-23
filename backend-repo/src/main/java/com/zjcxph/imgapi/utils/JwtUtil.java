@@ -5,6 +5,10 @@ import com.auth0.jwt.algorithms.Algorithm;
 import com.auth0.jwt.interfaces.DecodedJWT;
 import com.zjcxph.imgapi.common.AuthSession;
 
+import javax.crypto.Mac;
+import javax.crypto.spec.SecretKeySpec;
+import java.nio.charset.StandardCharsets;
+import java.security.GeneralSecurityException;
 import java.util.Date;
 import java.util.List;
 import java.util.UUID;
@@ -153,6 +157,29 @@ public final class JwtUtil {
 
     public static long getExpirationMillis(String token) {
         return verify(token).getExpiresAt().getTime();
+    }
+
+    /**
+     * 从 JWT 签名密钥派生出用途隔离的子密钥（HMAC-SHA256）。
+     *
+     * <p>影像访问 Cookie 等与访问令牌同生命周期的凭据使用子密钥签名：轮换 {@code JWT_SECRET_KEY}
+     * 会同时作废它们，且子密钥与 JWT 签名不会互相替代。</p>
+     */
+    public static byte[] deriveKey(String purpose) {
+        if (purpose == null || purpose.isBlank()) {
+            throw new IllegalArgumentException("purpose must not be blank");
+        }
+        String currentSecret = secret;
+        if (currentSecret == null) {
+            throw new IllegalStateException("JWT_SECRET_KEY must be configured before deriving keys");
+        }
+        try {
+            Mac mac = Mac.getInstance("HmacSHA256");
+            mac.init(new SecretKeySpec(currentSecret.getBytes(StandardCharsets.UTF_8), "HmacSHA256"));
+            return mac.doFinal(("MRR-DERIVED-KEY\u0000" + purpose).getBytes(StandardCharsets.UTF_8));
+        } catch (GeneralSecurityException exception) {
+            throw new IllegalStateException("HmacSHA256 unavailable", exception);
+        }
     }
 
     private static DecodedJWT verify(String token) {

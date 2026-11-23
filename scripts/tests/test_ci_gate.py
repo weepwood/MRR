@@ -66,6 +66,35 @@ class CiGateTest(unittest.TestCase):
             self.assertTrue(scope['frontend'])
             self.assertFalse(any(scope[key] for key in ('build', 'backend', 'live', 'postgres', 'windows', 'recovery', 'release')))
 
+    def test_pages_demo_smoke_skips_only_pure_styles_and_docs(self):
+        scope = classify_paths([
+            'frontend-fantastic-admin/src/assets/styles/tokens.css',
+            'frontend-fantastic-admin/src/assets/styles/components/forms.scss',
+            'frontend-fantastic-admin/DESIGN.md',
+        ])
+        self.assertTrue(scope['frontend'])
+        self.assertFalse(scope['pages_demo_smoke'])
+
+    def test_pages_demo_smoke_runs_for_behavior_and_configuration_changes(self):
+        for path in (
+            'frontend-fantastic-admin/src/router/guards.ts',
+            'frontend-fantastic-admin/src/views/users/index.vue',
+            'frontend-fantastic-admin/.env.pages.example',
+            'frontend-fantastic-admin/e2e/smoke-pages-demo.mjs',
+            '.github/workflows/deploy-pages-demo.yml',
+            'VERSION',
+            'release-baseline.json',
+        ):
+            with self.subTest(path=path):
+                self.assertTrue(classify_paths([path])['pages_demo_smoke'])
+
+    def test_pages_demo_smoke_fails_closed_when_behavior_and_styles_are_mixed(self):
+        scope = classify_paths([
+            'frontend-fantastic-admin/src/assets/styles/tokens.css',
+            'frontend-fantastic-admin/src/router/guards.ts',
+        ])
+        self.assertTrue(scope['pages_demo_smoke'])
+
     def test_build_dependencies_require_production_build(self):
         scope = classify_paths(['frontend-fantastic-admin/pnpm-lock.yaml'])
         self.assertTrue(scope['frontend'])
@@ -108,6 +137,29 @@ class CiGateTest(unittest.TestCase):
                 self.assertTrue(scope['frontend'])
                 self.assertFalse(scope['integration'])
                 self.assertFalse(scope['e2e'])
+
+    def test_backend_only_identity_pr_does_not_rebuild_unchanged_frontend(self):
+        scope = classify_paths(['backend-repo/src/main/java/com/zjcxph/imgapi/controller/UserController.java'])
+        self.assertTrue(scope['integration'])
+        self.assertFalse(scope['integration_frontend'])
+
+    def test_identity_pr_with_frontend_changes_keeps_frontend_checks_in_integration(self):
+        scope = classify_paths(['backend-repo/src/main/java/com/zjcxph/imgapi/controller/UserController.java',
+                                'frontend-fantastic-admin/src/views/users/index.vue'])
+        self.assertTrue(scope['integration'])
+        # frontend job 被集成 job 取代，前端检查必须在集成 job 中继续执行
+        self.assertFalse(scope['frontend'])
+        self.assertTrue(scope['integration_frontend'])
+
+    def test_frontend_only_or_docs_pr_never_selects_integration_frontend(self):
+        for path in ('frontend-fantastic-admin/src/views/users/index.vue', 'README.md'):
+            with self.subTest(path=path):
+                self.assertFalse(classify_paths([path])['integration_frontend'])
+
+    def test_main_integration_always_builds_frontend_for_the_embedded_live_flow(self):
+        scope = classify_paths(['backend-repo/src/main/java/example/Example.java'], mode='integration')
+        self.assertTrue(scope['integration'])
+        self.assertTrue(scope['integration_frontend'])
 
     def test_main_integration_defers_mock_e2e_but_keeps_live_application_checks(self):
         scope = classify_paths(['frontend-fantastic-admin/src/views/login.vue'], mode='integration')

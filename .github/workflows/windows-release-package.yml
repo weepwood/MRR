@@ -9,6 +9,9 @@ on:
       live_checks:
         type: boolean
         default: false
+      frontend_checks:
+        type: boolean
+        default: true
       retain_candidate:
         type: boolean
         default: false
@@ -20,6 +23,9 @@ on:
   workflow_dispatch:
     inputs:
       full:
+        type: boolean
+        default: true
+      frontend_checks:
         type: boolean
         default: true
       retain_candidate:
@@ -115,7 +121,11 @@ jobs:
       - name: Test and package backend once
         working-directory: backend-repo
         run: |
-          bash ./mvnw -B -ntp -Drevision="${PRODUCT_VERSION}" clean verify -Dlocal.config.exclude=true
+          jacoco_args=()
+          if [ "${FULL}" != true ]; then
+            jacoco_args+=(-Djacoco.skip=true)
+          fi
+          bash ./mvnw -B -ntp -Drevision="${PRODUCT_VERSION}" clean verify -Dlocal.config.exclude=true "${jacoco_args[@]}"
           python ../scripts/check_test_execution.py --reports target/failsafe-reports
           if [ "${FULL}" = true ]; then
             python ../scripts/jacoco_coverage.py --xml target/site/jacoco/jacoco.xml --baseline ../quality/coverage-baseline.json --fail-on-regression --github-summary "${GITHUB_STEP_SUMMARY}"
@@ -145,6 +155,7 @@ jobs:
           if-no-files-found: ignore
       - name: Test, build and embed frontend
         working-directory: frontend-fantastic-admin
+        if: inputs.full || inputs.live_checks || inputs.frontend_checks
         run: |
           pnpm install --frozen-lockfile
           pnpm lint:tsc

@@ -68,6 +68,38 @@ flowchart LR
 
 具体字段以当前迁移文件和运行数据库为准。
 
+## access_log 按月分区（ADR-0010）
+
+`V20261123170000` 起，`access_log` 迁移到按 `access_time` 月分区的结构，分阶段进行：
+
+| 阶段 | `access_log` | 说明 |
+| --- | --- | --- |
+| `COPYING` | 旧的普通表 | 触发器把新增和删除同步到影子表 `access_log_partitioned`；开启 `APP_ACCESS_LOG_PARTITION_COPY_ENABLED` 后后台按 id 分批复制历史数据 |
+| `READY` | 旧的普通表 | 历史数据已追平，可以切换 |
+| `CUTOVER` | 分区表 | 旧表改名为 `access_log_legacy` 保留；可 `rollback` 回到 `READY` |
+| `ABORTED` | 旧的普通表 | 切换前放弃，影子表与触发器已删除 |
+
+常用检查：
+
+```sql
+SELECT jsonb_pretty(app.access_log_partition_status());
+SELECT pg_size_pretty(pg_total_relation_size('app.access_log'));
+SELECT c.relname, pg_get_expr(c.relpartbound, c.oid)
+FROM pg_inherits i JOIN pg_class c ON c.oid = i.inhrelid
+WHERE i.inhparent = app.access_log_partition_parent()
+ORDER BY 1;
+```
+
+运维接口（`/api/v1/operations/access-log-partition`）：`GET status` 需 `system:read`；`POST copy`、`maintain`、`cutover`、`rollback`、`abort` 需 `system:manage`，切换类操作写入安全审计日志。
+
+注意事项：
+
+- 分区命名 `access_log_yYYYYmMM`；`access_time` 为空或月份未建分区的行进入 `access_log_default`，维护任务（每小时）会把已有月份迁出为独立分区。
+- 旧表退役后，访问日志保留开启时，维护任务整月删除过期分区。可回退期间继续使用分批清理，并把切换后的新增和删除同步给旧表。
+- 分区表上 `request_id` 不再唯一，仅保留普通索引。
+- 旧索引名随旧表留在 `access_log_legacy`。新迁移在 `access_log` 上建索引时必须使用新名称，不要写 `CREATE INDEX IF NOT EXISTS idx_access_log_…`。
+- 切换、回退会以 `ACCESS EXCLUSIVE` 锁住表（等锁上限 5 秒），在业务低峰执行；维护模式会拦截这些请求。
+
 ## 编号规范
 
 `bah` 和 `sjh` 使用文本类型保存，因为它们是业务编号并参与本地图片路径定位。

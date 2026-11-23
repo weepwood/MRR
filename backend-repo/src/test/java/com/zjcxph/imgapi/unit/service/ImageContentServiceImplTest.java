@@ -63,6 +63,7 @@ class ImageContentServiceImplTest {
         assertThat(content.filename()).isEqualTo("病案首页-01.jpg");
         assertThat(content.mediaType()).isEqualTo(MediaType.IMAGE_JPEG);
         assertThat(content.contentLength()).isEqualTo(1234L);
+        assertThat(content.auditTarget()).isEqualTo("10000001:12345678");
 
         ArgumentCaptor<PathDO> pathCaptor = ArgumentCaptor.forClass(PathDO.class);
         verify(imageStorage).open(pathCaptor.capture());

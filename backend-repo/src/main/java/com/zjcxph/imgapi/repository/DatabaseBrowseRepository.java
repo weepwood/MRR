@@ -43,11 +43,22 @@ public class DatabaseBrowseRepository {
      * VACUUM/ANALYZE 时更新，新建表插入数据后仍是 0。实测 {@code flyway_schema_history}
      * 44 行、{@code mr_auth_role} 4 行，两张表都是 {@code reltuples=-1, relpages=0}，
      * 按 relpages 推断会把它们显示成「0 行」。</p>
+     *
+     * <p>分区表（{@code relkind = 'p'}，如 ADR-0010 切换后的 {@code access_log}）自身不存数据，
+     * autovacuum 也不会 ANALYZE 父表，其 {@code reltuples} 恒为 -1 或过期值；此时按分区逐个取估算后求和，
+     * 每个分区同样遵循「reltuples 优先、未 ANALYZE 退回 n_live_tup」。</p>
      */
     public Long estimateRows(String schema, String table) {
         try {
             List<Map<String, Object>> rows = browseTemplate.queryForList("""
-                    SELECT c.reltuples::bigint AS tuples,
+                    SELECT CASE WHEN c.relkind = 'p' THEN (
+                               SELECT COALESCE(sum(CASE WHEN pc.reltuples >= 0 THEN pc.reltuples::bigint
+                                                        ELSE COALESCE(ps.n_live_tup, 0) END), 0)
+                               FROM pg_inherits i
+                               JOIN pg_class pc ON pc.oid = i.inhrelid
+                               LEFT JOIN pg_stat_user_tables ps ON ps.relid = pc.oid
+                               WHERE i.inhparent = c.oid)
+                           ELSE c.reltuples::bigint END AS tuples,
                            COALESCE(s.n_live_tup, 0) AS live_tuples,
                            CASE WHEN s.relid IS NULL THEN 0 ELSE 1 END AS has_stats
                     FROM pg_class c

@@ -79,10 +79,11 @@ public class DocumentationAccessService {
             return AccessDecision.UNAUTHORIZED;
         }
         try {
-            if (!JwtUtil.DOCUMENTATION_TOKEN_TYPE.equals(JwtUtil.getTokenType(token))) {
+            JwtUtil.VerifiedToken verified = JwtUtil.verifyToken(token);
+            if (!JwtUtil.DOCUMENTATION_TOKEN_TYPE.equals(verified.tokenType())) {
                 return AccessDecision.UNAUTHORIZED;
             }
-            return authorizeSession(JwtUtil.parseToken(token), target);
+            return authorizeSession(verified.session(), target);
         } catch (RuntimeException ex) {
             return AccessDecision.UNAUTHORIZED;
         }

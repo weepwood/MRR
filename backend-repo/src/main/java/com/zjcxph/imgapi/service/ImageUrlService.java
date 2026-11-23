@@ -1,5 +1,6 @@
 package com.zjcxph.imgapi.service;
 
+import com.zjcxph.imgapi.config.ImageDeliveryProperties;
 import com.zjcxph.imgapi.config.ImageProperties;
 import com.zjcxph.imgapi.dto.resp.BAHDataResponseDTO;
 import com.zjcxph.imgapi.entity.PathDO;
@@ -9,6 +10,7 @@ import com.zjcxph.imgapi.exception.BusinessException;
 import com.zjcxph.imgapi.utils.MedicalRecordCodeUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
@@ -20,6 +22,9 @@ import java.util.function.Function;
  *
  * <p>系统设置 {@code imageSource} 控制影像档案默认从本地或 OSS 获取：
  * 未设置、设置为空或设置为非法值时均回退为 {@code local}。</p>
+ *
+ * <p>{@code archive.image-delivery.mode=gateway} 时（ADR-0009），返回给浏览器的地址统一为
+ * {@code /api/v1/img/content/{id}}，影像源地址与 OSS 预签名不再下发；来源选择改由内容网关在服务端完成。</p>
  */
 @Service
 public class ImageUrlService {
@@ -27,19 +32,51 @@ public class ImageUrlService {
     public static final String IMAGE_SOURCE_SETTING_KEY = "imageSource";
     public static final String IMAGE_SOURCE_LOCAL = "local";
     public static final String IMAGE_SOURCE_OSS = "oss";
+    public static final String CONTENT_GATEWAY_PATH = "/api/v1/img/content/";
 
     private static final Logger logger = LoggerFactory.getLogger(ImageUrlService.class);
 
     private final ImageProperties imageProperties;
     private final OssService ossService;
     private final SystemSettingService systemSettingService;
+    private final ImageDeliveryProperties deliveryProperties;
 
     public ImageUrlService(ImageProperties imageProperties,
                            OssService ossService,
                            SystemSettingService systemSettingService) {
+        this(imageProperties, ossService, systemSettingService, new ImageDeliveryProperties());
+    }
+
+    @Autowired
+    public ImageUrlService(ImageProperties imageProperties,
+                           OssService ossService,
+                           SystemSettingService systemSettingService,
+                           ImageDeliveryProperties deliveryProperties) {
         this.imageProperties = imageProperties;
         this.ossService = ossService;
         this.systemSettingService = systemSettingService;
+        this.deliveryProperties = deliveryProperties == null ? new ImageDeliveryProperties() : deliveryProperties;
+    }
+
+    /** 当前是否通过内容网关下发影像。 */
+    public boolean isGatewayDelivery() {
+        return deliveryProperties.isGateway();
+    }
+
+    /** 内容网关地址；ID 缺失时返回 {@code null}。 */
+    public static String contentGatewayUrl(Integer scanId) {
+        return scanId == null || scanId <= 0 ? null : CONTENT_GATEWAY_PATH + scanId;
+    }
+
+    /**
+     * 返回给浏览器的单张影像地址：网关模式为内容网关地址，否则与 {@link #buildPreferredImageUrl} 相同。
+     * 诊断等服务端用途请继续使用 {@link #buildPreferredImageUrl}。
+     */
+    public String buildDeliveryUrl(Scan scan) {
+        if (scan == null) {
+            return null;
+        }
+        return isGatewayDelivery() ? contentGatewayUrl(scan.getId()) : buildPreferredImageUrl(scan);
     }
 
     /**
@@ -216,7 +253,9 @@ public class ImageUrlService {
             return new ArrayList<>();
         }
 
-        boolean useOss = isOssPreferred();
+        boolean gateway = isGatewayDelivery();
+        // 网关模式下来源选择在服务端完成，不读取来源设置，也不为每张图生成 OSS 预签名。
+        boolean useOss = !gateway && isOssPreferred();
         List<BAHDataResponseDTO> items = new ArrayList<>(scans.size());
         ImageDirectoryRoutingRules routing = null;
         for (Scan scan : scans) {
@@ -224,6 +263,12 @@ public class ImageUrlService {
             org.springframework.beans.BeanUtils.copyProperties(scan, dto);
             dto.setBah(MedicalRecordCodeUtils.normalize(scan.getBah()));
             dto.setSjh(MedicalRecordCodeUtils.normalize(scan.getSjh()));
+            if (gateway) {
+                dto.setImg_url(contentGatewayUrl(scan.getId()));
+                dto.setOssUrl(null);
+                items.add(dto);
+                continue;
+            }
 
             String selectedUrl = null;
             String signedOssUrl = null;

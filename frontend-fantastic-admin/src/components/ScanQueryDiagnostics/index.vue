@@ -437,7 +437,7 @@ onBeforeUnmount(resetReport)
 
 .meta-label {
   flex-shrink: 0;
-  font-size: 11px;
+  font-size: var(--mrr-font-size-xs);
   font-weight: 700;
   color: var(--text-tertiary);
   text-transform: uppercase;
@@ -451,14 +451,14 @@ onBeforeUnmount(resetReport)
 }
 
 .meta-value {
-  font-size: 13px;
+  font-size: var(--mrr-font-size-sm);
   color: var(--text-primary);
 }
 
 .meta-code {
   padding: 1px var(--mrr-space-2);
   font-family: var(--mrr-font-mono);
-  font-size: 12px;
+  font-size: var(--mrr-font-size-xs);
   color: var(--text-primary);
   background: var(--el-fill-color-light);
   border-radius: var(--mrr-radius-sm);
@@ -467,13 +467,13 @@ onBeforeUnmount(resetReport)
 .diagnostics-summary {
   display: flex;
   flex-wrap: wrap;
-  gap: var(--mrr-space-2) 8px;
+  gap: var(--mrr-space-2);
   align-items: center;
 }
 
 .summary-pill {
-  padding: 1px 8px;
-  font-size: 12px;
+  padding: 1px var(--mrr-space-2);
+  font-size: var(--mrr-font-size-xs);
   font-weight: 600;
   color: var(--el-color-info);
   background: var(--el-color-info-light-9);
@@ -491,13 +491,13 @@ onBeforeUnmount(resetReport)
 }
 
 .summary-total {
-  font-size: 12px;
+  font-size: var(--mrr-font-size-xs);
   color: var(--text-tertiary);
 }
 
 .diagnostics-attention h3 {
   margin: 0;
-  font-size: 13px;
+  font-size: var(--mrr-font-size-sm);
   font-weight: 600;
 }
 
@@ -556,7 +556,7 @@ onBeforeUnmount(resetReport)
   width: 22px;
   height: 22px;
   margin-top: 1px;
-  font-size: 14px;
+  font-size: var(--mrr-font-size-md);
   color: var(--el-color-info);
   background: var(--el-color-info-light-9);
   border-radius: var(--mrr-radius-pill);
@@ -592,7 +592,7 @@ onBeforeUnmount(resetReport)
 
 .step-title {
   margin: 0;
-  font-size: 13px;
+  font-size: var(--mrr-font-size-sm);
   font-weight: 600;
   color: var(--text-primary);
   scroll-margin-top: 8px;
@@ -600,13 +600,13 @@ onBeforeUnmount(resetReport)
 
 .step-code {
   font-family: var(--mrr-font-mono);
-  font-size: 11px;
+  font-size: var(--mrr-font-size-xs);
   color: var(--text-tertiary);
 }
 
 .step-status {
   padding: 0 var(--mrr-space-2);
-  font-size: 11px;
+  font-size: var(--mrr-font-size-xs);
   font-weight: 600;
   line-height: 18px;
   color: var(--el-color-info);
@@ -632,13 +632,14 @@ onBeforeUnmount(resetReport)
 .step-duration {
   margin-left: auto;
   font-family: var(--mrr-font-mono);
-  font-size: 11px;
+  font-size: var(--mrr-font-size-xs);
+  font-variant-numeric: tabular-nums;
   color: var(--text-tertiary);
 }
 
 .step-message {
   margin: 0;
-  font-size: 12px;
+  font-size: var(--mrr-font-size-xs);
   line-height: 1.65;
   color: var(--text-secondary);
 }
@@ -646,9 +647,9 @@ onBeforeUnmount(resetReport)
 .step-facts {
   display: flex;
   flex-wrap: wrap;
-  gap: 2px 12px;
+  gap: 2px var(--mrr-space-3);
   margin: 0;
-  font-size: 12px;
+  font-size: var(--mrr-font-size-xs);
 }
 
 .step-facts dt {
@@ -656,7 +657,7 @@ onBeforeUnmount(resetReport)
 }
 
 .step-facts dd {
-  margin: 0 8px 0 0;
+  margin: 0 var(--mrr-space-2) 0 0;
   font-family: var(--mrr-font-mono);
   color: var(--text-primary);
 }
@@ -668,14 +669,14 @@ onBeforeUnmount(resetReport)
 
 .step-sample-table {
   width: 100%;
-  font-size: 12px;
+  font-size: var(--mrr-font-size-xs);
   table-layout: fixed;
   border-collapse: collapse;
 }
 
 .step-samples th,
 .step-samples td {
-  padding: 4px 8px;
+  padding: var(--mrr-space-1) var(--mrr-space-2);
   text-align: left;
   overflow-wrap: anywhere;
   border-bottom: 1px solid var(--divider);
@@ -696,34 +697,34 @@ onBeforeUnmount(resetReport)
 }
 
 .samples-note {
-  margin: 4px 0 0;
-  font-size: 11px;
+  margin: var(--mrr-space-1) 0 0;
+  font-size: var(--mrr-font-size-xs);
   color: var(--text-tertiary);
 }
 
 .diagnostics-footer {
   display: flex;
   flex-wrap: wrap;
-  gap: 8px;
+  gap: var(--mrr-space-2);
   align-items: center;
   justify-content: flex-end;
 }
 
 .diagnostics-log-link {
-  font-size: 13px;
+  font-size: var(--mrr-font-size-sm);
   color: var(--el-color-primary);
 }
 
 .diagnostics-hint {
   margin: 0;
-  font-size: 12px;
+  font-size: var(--mrr-font-size-xs);
   color: var(--text-tertiary);
 }
 
 @media (max-width: 560px) {
   .diagnostics-step {
     grid-template-columns: 20px minmax(0, 1fr);
-    gap: 8px;
+    gap: var(--mrr-space-2);
   }
 
   .step-dot {
@@ -738,7 +739,7 @@ onBeforeUnmount(resetReport)
   .step-sample-list {
     display: grid;
     gap: var(--mrr-space-2);
-    font-size: 12px;
+    font-size: var(--mrr-font-size-xs);
   }
 
   .step-sample-list dl {

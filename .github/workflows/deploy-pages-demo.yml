@@ -16,12 +16,33 @@ on:
       - 'VERSION'
       - 'release-baseline.json'
 
+# PR 上连续推送时只保留最新一次运行；main 发布不中途取消，避免 Pages 部署半途而废。
 concurrency:
   group: github-pages-mrr-demo-${{ github.ref }}
-  cancel-in-progress: false
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
+  scope:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    outputs:
+      pages_demo_smoke: ${{ steps.select.outputs.pages_demo_smoke }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+      - name: Select Pages demo validation scope
+        id: select
+        env:
+          PR_BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          PR_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: python3 -m scripts.ci_gate scope --mode pr --base "${PR_BASE_SHA}" --head "${PR_HEAD_SHA}" --output "${GITHUB_OUTPUT}"
+
   build:
+    needs: scope
+    if: always() && (github.event_name != 'pull_request' || needs.scope.outputs.pages_demo_smoke != 'false')
     runs-on: ubuntu-latest
     timeout-minutes: 30
     permissions:
@@ -54,8 +75,24 @@ jobs:
       - name: 构建静态演示版本
         run: pnpm build:pages
 
+      - name: 读取 Playwright 版本
+        id: playwright
+        run: echo "version=$(pnpm exec playwright --version | awk '{print $2}')" >> "${GITHUB_OUTPUT}"
+
+      - name: 缓存 Playwright 浏览器
+        id: playwright-cache
+        uses: actions/cache@v6
+        with:
+          path: ~/.cache/ms-playwright
+          key: ${{ runner.os }}-playwright-chromium-${{ steps.playwright.outputs.version }}
+
       - name: 安装 Chromium
+        if: steps.playwright-cache.outputs.cache-hit != 'true'
         run: pnpm exec playwright install --with-deps chromium
+
+      - name: 安装 Chromium 系统依赖（浏览器已缓存）
+        if: steps.playwright-cache.outputs.cache-hit == 'true'
+        run: pnpm exec playwright install-deps chromium
 
       - name: Pages 静态演示冒烟
         run: node e2e/smoke-pages-demo.mjs

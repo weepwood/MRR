@@ -24,9 +24,18 @@ defineOptions({ name: 'ArchiveHeader' })
 const props = withDefaults(defineProps<{
   loading?: boolean
   showBack?: boolean
+  /** 尚未查询时没有可刷新的内容，「刷新」不显示。 */
+  canRefresh?: boolean
+  /**
+   * 空态卡片里已经内联了最近查询列表，此时隐藏这里的「最近查询」弹层入口；
+   * 「查看全部」对话框仍保留，由页面通过 openAllHistory() 打开。
+   */
+  showHistoryTrigger?: boolean
 }>(), {
   loading: false,
   showBack: false,
+  canRefresh: true,
+  showHistoryTrigger: true,
 })
 
 const emit = defineEmits<{
@@ -208,6 +217,8 @@ onUnmounted(() => {
   historyGeneration++
   detachHistoryListeners()
 })
+
+defineExpose({ openAllHistory })
 </script>
 
 <template>
@@ -218,11 +229,12 @@ onUnmounted(() => {
         <span v-if="accessModeLabel" class="access-mode-label">{{ accessModeLabel }}</span>
       </div>
       <div class="heading-actions">
-        <el-button text size="small" :icon="Refresh" :loading="props.loading" @click="emit('refresh')">
+        <el-button v-if="props.canRefresh" text size="small" :icon="Refresh" :loading="props.loading" @click="emit('refresh')">
           刷新
         </el-button>
         <template v-if="!externalAccess">
           <el-popover
+            v-if="props.showHistoryTrigger"
             v-model:visible="historyVisible"
             placement="bottom-end"
             trigger="click"

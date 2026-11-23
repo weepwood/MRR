@@ -21,6 +21,7 @@ import {
   sortWidgetPreferences,
   updateWidgetPreference,
 } from './dashboard-widgets'
+import HomeArchiveLookup from './HomeArchiveLookup.vue'
 
 defineOptions({ name: 'DashboardWorkspace' })
 
@@ -260,7 +261,8 @@ const visibleWidgets = computed<DashboardWidgetView[]>(() => sortWidgetPreferenc
 
 const accessibleWidgetCount = computed(() => accessibleDefinitions.value.length)
 const hiddenWidgetCount = computed(() => accessibleDefinitions.value.filter(definition => !isWidgetVisible(definition.id)).length)
-const welcomeDescription = computed(() => `欢迎回来${userStore.profile?.displayName ? `，${userStore.profile.displayName}` : ''}。可以按自己的工作习惯调整小组件内容、颜色、大小和位置。`)
+const welcomeDescription = computed(() => `欢迎回来${userStore.profile?.displayName ? `，${userStore.profile.displayName}` : ''}。按编号查询病案影像，或从下方进入常用模块。`)
+const canLookupArchive = computed(() => hasPermission('record:read'))
 
 function loadPreferences() {
   try {
@@ -541,36 +543,44 @@ watch(storageKey, loadPreferences, { immediate: true })
 
 <template>
   <MrrPageShell width="fluid">
+    <!--
+      页头只说明“这是哪里、我是谁”；小组件的数量与管理操作属于下方「常用模块」，
+      不再占据页面最显眼的位置。
+    -->
     <MrrPageHeader
-      eyebrow="Medical Record Repository"
+      size="compact"
       title="管理概览"
       :description="welcomeDescription"
-    >
-      <template #badge>
-        <span class="overview-count">
-          <span class="overview-count__dot" />
-          {{ visibleWidgets.length }} / {{ accessibleWidgetCount }} 个小组件
-        </span>
-      </template>
+    />
 
-      <template #actions>
-        <el-button @click="managerVisible = true">
-          <FaIcon name="i-lucide:layout-grid" />
-          管理小组件
-          <span v-if="hiddenWidgetCount" class="hidden-count">{{ hiddenWidgetCount }}</span>
-        </el-button>
-        <el-button :type="editMode ? 'primary' : undefined" @click="editMode = !editMode">
-          <FaIcon :name="editMode ? 'i-lucide:check' : 'i-lucide:move'" />
-          {{ editMode ? '完成调整' : '调整布局' }}
-        </el-button>
-        <el-button v-if="editMode" @click="resetDashboard">
-          <FaIcon name="i-lucide:rotate-cw" />
-          恢复默认
-        </el-button>
-      </template>
-    </MrrPageHeader>
+    <!-- 首页主任务：直接按编号打开影像档案袋。无 record:read 的账号不显示。 -->
+    <HomeArchiveLookup v-if="canLookupArchive" />
 
-    <section class="dashboard-workspace" aria-label="我的工作台">
+    <section class="dashboard-workspace" aria-labelledby="dashboard-modules-title">
+      <header class="dashboard-workspace__head">
+        <div class="dashboard-workspace__title">
+          <h2 id="dashboard-modules-title">
+            常用模块
+          </h2>
+          <span class="dashboard-workspace__count">{{ visibleWidgets.length }} / {{ accessibleWidgetCount }}</span>
+        </div>
+        <div class="dashboard-workspace__actions">
+          <el-button @click="managerVisible = true">
+            <FaIcon name="i-lucide:layout-grid" />
+            管理模块
+            <span v-if="hiddenWidgetCount" class="hidden-count" :aria-label="`${hiddenWidgetCount} 个已隐藏`">{{ hiddenWidgetCount }}</span>
+          </el-button>
+          <el-button :type="editMode ? 'primary' : undefined" @click="editMode = !editMode">
+            <FaIcon :name="editMode ? 'i-lucide:check' : 'i-lucide:move'" />
+            {{ editMode ? '完成调整' : '调整布局' }}
+          </el-button>
+          <el-button v-if="editMode" @click="resetDashboard">
+            <FaIcon name="i-lucide:rotate-cw" />
+            恢复默认
+          </el-button>
+        </div>
+      </header>
+
       <div v-if="editMode" class="dashboard-workspace__notice">
         <FaIcon name="i-lucide:move" />
         拖动卡片（或聚焦后按 Alt + 方向键）调整顺序；右上角菜单可修改大小、颜色、内容和置顶状态。
@@ -792,7 +802,6 @@ watch(storageKey, loadPreferences, { immediate: true })
 </template>
 
 <style scoped>
-.overview-count,
 .dashboard-workspace__notice {
   display: inline-flex;
   gap: var(--mrr-space-2);
@@ -805,14 +814,6 @@ watch(storageKey, loadPreferences, { immediate: true })
   background: var(--mrr-secondary);
   border: 1px solid var(--mrr-border);
   border-radius: var(--mrr-radius-pill);
-}
-
-.overview-count__dot {
-  width: 6px;
-  height: 6px;
-  background: var(--mrr-primary);
-  border-radius: 50%;
-  box-shadow: 0 0 0 3px color-mix(in srgb, var(--mrr-primary) 10%, transparent);
 }
 
 .hidden-count {
@@ -833,6 +834,46 @@ watch(storageKey, loadPreferences, { immediate: true })
   display: grid;
   gap: var(--mrr-space-4);
   min-width: 0;
+}
+
+/* 分区标题与分区卡（MrrSectionCard）同档：14px / 650；操作靠右，窄屏折到标题下方。 */
+.dashboard-workspace__head {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--mrr-space-3);
+  align-items: center;
+  justify-content: space-between;
+  min-width: 0;
+}
+
+.dashboard-workspace__title {
+  display: flex;
+  gap: var(--mrr-space-2);
+  align-items: baseline;
+  min-width: 0;
+}
+
+.dashboard-workspace__title h2 {
+  margin: 0;
+  font-size: var(--mrr-font-size-md);
+  font-weight: 650;
+  color: var(--mrr-foreground);
+}
+
+.dashboard-workspace__count {
+  font-size: var(--mrr-font-size-xs);
+  font-variant-numeric: tabular-nums;
+  color: var(--mrr-muted-foreground);
+}
+
+.dashboard-workspace__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--mrr-space-2);
+}
+
+.dashboard-workspace__actions :deep(.el-button + .el-button) {
+  margin-left: 0;
 }
 
 .dashboard-workspace__notice {

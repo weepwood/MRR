@@ -96,7 +96,7 @@ const defaultQuery: LogsQuery = {
 const routeRequestId = computed(() => typeof route.query.requestId === 'string' ? route.query.requestId.trim() : '')
 const linkedRequestId = ref(routeRequestId.value)
 
-const { list, total, loading, pageNum, pageSize, query, handleSearch, handlePageChange, loadData } = useCrudList<
+const { list, total, loading, resultVersion, pageNum, pageSize, query, handleSearch, handlePageChange, loadData } = useCrudList<
   LogRecord,
   LogsQuery
 >({
@@ -214,7 +214,7 @@ function statusTagType(status: string | number) {
 
 <template>
   <MrrPageShell>
-    <MrrPageHeader title="日志管理" eyebrow="Operation Logs" description="按请求 ID、真实 URI、接口模板、业务参数、用户、IP、状态码和时间范围追溯接口访问。">
+    <MrrPageHeader size="compact" title="日志管理" eyebrow="Operation Logs" description="按请求 ID、真实 URI、接口模板、业务参数、用户、IP、状态码和时间范围追溯接口访问。">
       <!-- 自动刷新说明放 #meta（DESIGN.md §3.3），与运行错误中心一致；原来与刷新按钮挤在操作区，窄屏下把按钮推出页头。 -->
       <template #meta>
         <span class="auto-refresh-note" aria-live="polite">每 30 秒自动刷新<template v-if="lastRefreshedAt"> · 上次 {{ lastRefreshedAt }}</template></span>
@@ -227,7 +227,7 @@ function statusTagType(status: string | number) {
       </template>
     </MrrPageHeader>
 
-    <MrrDataTablePanel title="日志记录" :count="total">
+    <MrrDataTablePanel title="日志记录" :count="total" :loading="loading" :result-key="resultVersion">
       <template #filters>
         <el-form label-position="top" @submit.prevent>
           <MrrFilterBar embedded layout="grid">
@@ -286,7 +286,8 @@ function statusTagType(status: string | number) {
         </el-form>
       </template>
 
-      <AppLoading v-if="loading" type="table" :rows="8" />
+      <!-- 只有首次（列表为空）用骨架；已有结果时再次查询保留表格，由面板显示进度条（§5.1）。 -->
+      <AppLoading v-if="loading && !list.length" type="table" :rows="8" />
       <AppError v-else-if="error" :message="error" @retry="loadData" />
       <AppEmpty
         v-else-if="!list.length"

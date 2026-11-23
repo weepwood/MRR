@@ -122,6 +122,8 @@ tokens.css（语义令牌，唯一数值源）
 
 新样式从字号令牌取值；存量页面随迁移逐步替换。说明文字围绕数据口径、时间范围或操作方法；关键提示不能只靠省略号截断。
 
+**正文最小档是 12px（`--mrr-font-size-xs`）。** 已收口的文件由 [type-scale.test.ts](src/assets/styles/type-scale.test.ts) 锁定，收口一处就把文件加进清单。以下位置有意保留更小字号，不视为违规：登录页「客户端环境」浮层内的两列字段与品牌区徽标（登录外壳有像素级 E2E 约束）、主导航窄栏图标下的标签、计数徽标（菜单错误数、开发者模式、输入位数、类型计数、隐藏组件数）、缩略图遮罩上的页码与类型、系统设置里的登录页微缩预览、公共状态页分钟热力图的小时刻度。
+
 ### 2.5 间距与卡片留白
 
 - 间距令牌按 4px 递进：`--mrr-space-1/2/3/4/5/6/8` = 4/8/12/16/20/24/32px。
@@ -196,6 +198,8 @@ tokens.css（语义令牌，唯一数值源）
 | `--mrr-motion-move` | 180ms | 位移、展开收起、内容入场、重排、**离场** |
 | `--mrr-motion-overlay` | 220ms | 浮层入场（抽屉、对话框、菜单、移动端侧栏），上限 |
 | `--mrr-motion-loop` / `-loop-soft` | 1s / 1.5s | spinner / shimmer |
+| `--mrr-motion-stagger` | 30ms | 兄弟元素依次入场的间隔（页面区块、骨架行），最多叠 3 档 |
+| `--mrr-motion-attention` | 900ms | 数据已更新的提示淡出（指标数值），只表达「刚变过」 |
 | `--mrr-ease-out` | `cubic-bezier(0.22, 1, 0.36, 1)` | 入场、状态变化 |
 | `--mrr-ease-in` | `cubic-bezier(0.55, 0, 0.75, 0.2)` | 离场、收起 |
 
@@ -227,6 +231,13 @@ tokens.css（语义令牌，唯一数值源）
 | 吸顶隐藏 | 带方向阈值（≥6px） | 1–2px 惯性抖动也触发显隐 |
 | 反馈性动画 | 点击后 ≤100ms 开始，总长 ≤ 350ms | 先等 300ms 再出效果 |
 
+**共享组件内置的状态动效**（页面不需要再写）：
+
+- `MrrPageShell` 的直接子区块入场：opacity + 4px 上移，stagger 依次播放，`fill-mode: backwards`，结束后不残留 transform；KeepAlive 重新激活时自动重播；嵌套壳层只播外层。
+- `MrrStatusTag` 的「进行中」光圈：识别为运行中 / 处理中的状态自动开启（显式 `tone` 时用 `live` 控制）；状态仍由文字与语义色表达，强制颜色模式下隐藏。
+- `MrrMetricCard` 的数值更新提示：首屏不播，`value` 变化后主色浅底从数字背后淡出一次。
+- `AppLoading` 骨架：表头行 + 行 / 卡依次淡入，尺寸取 `--mrr-table-header-height` / `--mrr-table-row-height`，结果到达时不跳版。
+
 动效默认开启，由设置写入 `data-motion`，`index.html` 首帧按本地缓存预置。系统 `prefers-reduced-motion` 缩短 CSS 动效；JS 空间动效（登录、主题切换、`scrollTo` / `scrollIntoView` 平滑滚动、WAAPI）必须先调用 `isMotionEnabled()`。关闭路径保留 1ms 的动画结束信号，以完成浮层生命周期。路由加载沿用顶部 2px 进度条，延迟 200ms 显示；主内容不做离场过渡。
 
 ---
@@ -255,6 +266,11 @@ tokens.css（语义令牌，唯一数值源）
 
 - **card**：实色细边框卡片，最小高度与指标卡一致（110px），隐藏英文 eyebrow，说明 13px。
 - **plain**：标题位于内容层级，显示 eyebrow，底部留白只有 4px，与下一块的距离交给壳层间距。
+
+**尺寸**（`size`，与模式正交）：
+
+- **default**：上述两种模式的原样。用于首页、分析与监控、工作台、详情、设置等「页头本身承载概览」的页面。
+- **compact**：查询列表、游标大表、存储浏览、审计、导入导出等「页头只做定位」的页面。card 模式下取消 110px 最小高度，标题 22px（`--mrr-font-size-title-compact`）；说明始终位于标题下方并自然折行，不截断。紧凑尺寸只调整留白、字号和图标，不改变标题与说明的上下顺序；plain 模式本身已经紧凑，不受影响。图标降为 32px。当前使用者：用户、记录、患者、档案装箱、日志、运行错误中心、权限、病历访问审计、OCR 批次、OSS 浏览、Nginx 浏览、数据表浏览、数据导入导出。
 
 页面标题使用 `<h1>`。辅助信息（自动刷新时间、数据范围）放 `#meta`，提示图标放 `#badge`，操作放 `#actions`。页头图标为实色浅底，不用渐变。
 
@@ -293,7 +309,7 @@ tokens.css（语义令牌，唯一数值源）
 | --- | --- |
 | [MrrPageShell](src/components/MrrPageShell/index.vue) / [MrrPageHeader](src/components/MrrPageHeader/index.vue) | 页面壳层与页头；见 [§3](#3-布局) |
 | [MrrSectionCard](src/components/MrrSectionCard/index.vue) | 分区标题、说明、操作区与 bodyPadding；卡头浅底分隔 |
-| [MrrDataTablePanel](src/components/MrrDataTablePanel/index.vue) | filters / toolbar / content / pagination；`count` 只在服务端给出可信总数时传 |
+| [MrrDataTablePanel](src/components/MrrDataTablePanel/index.vue) | filters / toolbar / content / pagination；`count` 只在服务端给出可信总数时传；`loading` 显示刷新进度条，`result-key` 让新结果逐行淡入（见 §5.1） |
 | [MrrFilterBar](src/components/MrrFilterBar/index.vue) | 筛选字段与 actions；`embedded` / `labelled` / `layout="grid"` |
 | [MrrMetricCard](src/components/MrrMetricCard/index.vue) | label / value / note / icon / tone / valueTone / compactValue / extra |
 | [MrrTableActions](src/components/MrrTableActions/index.vue) | 行内 / 更多操作；规则见 [TABLE_ACTIONS.md](TABLE_ACTIONS.md) |
@@ -384,6 +400,22 @@ Element Plus `el-button` 与 reka-ui `FaButton`（`.fa-button-control`）**尺�
 | 拒绝 / 会话失效 | 需要重新登录或缺少权限 | 后端仍是授权边界；切换账号后不残留上一账号结果 |
 | 禁用 / 处理中 | 为什么不可用 | 不只降透明度；原因可读，防重复提交 |
 | 导出完成但下载失败 | 任务完成与下载失败是两回事 | 保留重新下载入口；超限要求分批，不静默丢页 |
+
+**列表的加载与刷新**（共享组件已内置，页面按下面写即可）：
+
+```vue
+<MrrDataTablePanel :loading="loading" :result-key="resultVersion">
+  <AppLoading v-if="loading && !list.length" type="table" />  <!-- 只在没有结果可保留时用骨架 -->
+  <AppError v-else-if="error" … />
+  <AppEmpty v-else-if="!list.length" … />
+  <el-table v-else :data="list" … />
+</MrrDataTablePanel>
+```
+
+- `v-if="loading"` 直接整表换成骨架是旧写法：每次翻页表格都消失再出现，页面高度跳动，也丢了「刷新的是哪批结果」。
+- `loading`：200ms（`--mrr-motion-busy-delay`）后在表格上方出现 2px 不定进度条，结果变暗到 55% 并暂停交互；内容区 `aria-busy="true"`。快于 200ms 的响应不出现任何反馈。
+- `result-key`：用户发起的查询返回后换值，前 6 行依次淡入（只动 opacity）。`useCrudList` 提供 `resultVersion`，静默轮询不递增；自写请求的页面可以直接传结果数组。
+- 表格上的 `v-loading` 遮罩已统一为同一外观（顶边进度条 + 浅遮罩，无居中转圈），见 [busy-indicator.css](src/assets/styles/components/busy-indicator.css)。图表、设置分区、档案袋的 `v-loading` 不受影响。
 
 **可写配置页的可保存基线只能来自服务器读取。** 读取失败时，本地缓存与默认值只供只读页面降级使用；配置页显示 `AppError` + 重新加载，读取成功前不算修改、不能保存，也不提供"保存并离开"。已读取成功后再次重新加载失败，保留当前表单与基线并提示。服务器可达但尚无任何设置（全新部署）时以默认值为基线。`loadEffectiveSystemSettings()` 用 `serverReachable` 区分这两种回退。
 
@@ -695,3 +727,55 @@ Element Plus `el-button` 与 reka-ui `FaButton`（`.fa-button-control`）**尺�
 
 - 登录页：仅改「客户端环境」浮层内的两类分组小标题 10px → 12px（浮层在登录外壳之外，不影响外壳高度与表单间距；浮层内两列字段的字号未动，宽度断言不受影响）。品牌区、表单区、底部版本徽标未改——已全部使用令牌，且处于高度 / 间距断言路径上。
 - 影像档案袋：浮动工具条与空态侧栏的黑色投影改 `--mrr-shadow-md / -sm`；病案列表的编号与副标题、患者卡字段标签、快捷键分组标题 11px → 12px（这些组件不在 E2E 选择器内）。头部编号输入区、类型筛选计数、缩略图遮罩（深色半透明，用于图片上的文字可读性）保留原值。
+
+**2026-11-23（共享组件动效与配色收口）**
+
+- §2.9 新增 `--mrr-motion-stagger`（30ms）与 `--mrr-motion-attention`（900ms）；新增 `mrr-page-enter` / `mrr-live-pulse` / `mrr-value-update` 三个关键帧，只在共享组件内使用。
+- `MrrPageShell` 区块依次入场；`MrrStatusTag` 进行中光圈；`MrrMetricCard` 数值更新提示；`AppLoading` 骨架改为令牌尺寸并补表头行。均遵守「只入场、不离场」「关闭动效后状态仍可读」。
+- 图标块与状态胶囊配色收口到 tones.css：页头图标、分区卡图标、`MrrStatusTag` 改读 `--mrr-tone-*-soft / -border`，指标卡图标改为同一配方（10% / 22%）。此前四处分别写 8/9/16/18%，调色板对浅底与描边强度的调整（暗色 16% / 34%）到不了这些组件。对应的 `@supports not` 分支随之删除（令牌自带静态回退）。
+- `MrrPageHeader` 新增 `size="compact"`（§3.3），13 个查询 / 列表 / 浏览页改用紧凑页头：card 模式下页头从 110px 降到约 64px（省出 46px，正好一行表格行高）。plain 模式、标题层级与插槽结构不变。
+- 首页工作台小组件（§5.4 所在页面）：删除底栏「进入模块 → / 拖动调整位置」，入口暗示统一由头部箭头承担，悬停时箭头右移、图标块描边加深；标准卡恢复显示两行说明（原先为放下底栏而隐藏）。网格行高 132 → 116px，窄屏最小高度同步。拖拽、键盘排序、置顶与编辑逻辑不变。
+- 表格刷新反馈（§5.1）：新增 `--mrr-motion-busy-delay`、`busy-indicator.css`、`MrrDataTablePanel` 的 `loading` / `result-key`、`useCrudList` 的 `resultVersion`。日志、运行错误中心、病历访问审计、患者、档案装箱五页由「每次查询整表换成骨架」改为「首次骨架、之后保留结果叠加进度条」；用户管理补上刷新反馈。表格 `v-loading` 遮罩去掉居中转圈，改为顶边进度条。
+- UI 组件页新增「页头尺寸」（基础与导航）与「动效与刷新反馈」（反馈与浮层）两组示例：默认 / 紧凑页头实时高度对照与长说明折行；进行中光圈、数值更新提示、表格慢查询 / 快查询 / 首次加载三种刷新路径、区块入场重播。示例页头对读屏隐藏（每页只有一个 `h1`），E2E 补两条用例。
+
+**2026-11-23（逐页优化 · 第 9 批：字号下限与键盘可达）**
+
+- §2.4 新增「正文最小档 12px」与有意保留的小字清单，并以 `type-scale.test.ts` 锁定已收口文件。
+- 查询诊断（档案袋查询失败弹窗）：18 处写死字号改为字号令牌，其中 5 处 11px（追踪标签、步骤编码、状态胶囊、耗时、样本说明）提到 12px；网格外间距改 `--mrr-space-*`；耗时等宽。
+- 每日请求热力图：月份 / 星期刻度 10 / 9px、图例、摘要、浮层与空态 11px 统一提到 12px；摘要与浮层主值 17 / 18px 回到 16px 档并等宽；浮层写死的冷色投影改 `--mrr-shadow-md`（暗色 / 暖色主题不再发蓝灰）。
+- 病案明细档案卡：编号、「已选中」、字段标签、页数单位 10 / 11px 提到 12px（含 `statistics-detail-typography.css` 的 `--folder-meta-font-size`）。
+- 系统设置「应用配置」面板：调色板说明、强调色说明等 3 处 11px 提到 12px，其余 12 处 12 / 13px 改用字号令牌（数值不变）。
+- 顶栏面包屑：可跳转层级由带 `@click` 的 `span` 改为 `RouterLink`（键盘 Tab 可达、Enter 跳转、支持中键新标签页），补 `:focus-visible` 轮廓；当前层级标 `aria-current="page"`，分隔符对读屏隐藏，外层改为带名称的 `nav`。
+
+**2026-11-23（逐页优化 · 第 10 批：病案明细档案卡与扫描统计）**
+
+- 病案明细档案卡改版（§1「工具而非展示」、§2.3 实色表面）：
+  - 去掉卡面渐变、右下径向光斑和 5 个各自带底色、描边、图标的字段格子；卡面改为实色，叠层纸保留但改为静态错位，悬停只抬起卡面。卡高由固定 412px 改为随内容（约 270px）。
+  - 信息层级：患者姓名为卡内 `h3`（16px / 650），科室与出院日期并为一行 13px，病案号 / 上架号为等宽 14px / 600 的定义列表，页数等宽。顶部 3px 科室色条改为常显（静态身份信号），颜色仍由科室档案袋配色设置决定。
+  - 交互（§5.3）：整卡不再是 `role="button"`。选择由姓名处的真实按钮承担（`::after` 铺满卡面，整卡仍可点击）；病案号、上架号各有独立的复制按钮；与「查看影像」三者并列，不再按钮套按钮，读屏分别读出名称。
+  - 去掉按病案号哈希随机分配的 5 种卡片色（违反「不用随机色映射」）；首帧用主色，科室配色加载后覆盖。科室配色改读卡片的 `data-department-name`，不再按「住院科室」标签文字反查 DOM。
+  - 修正：每页条数计算用的网格间距写的是 18px，样式实际是 16px，列数临界点前 4px 内会算少一列、非末页出现残缺行；常量改为 16 并用测试锁定与样式一致。
+- 指标卡色调只在有含义时使用（§2.2）：病案扫描统计、接口响应分析、影像访问审计去掉装饰性的 rose / green / amber / violet / teal；成功率（绿）、异常告警（红）、待处理（琥珀）等语义色保留。
+- 扫描趋势图（`MrrDualAxisChart`，仅此页使用）：90 根逐日柱子 `barMaxWidth` 30 → 20、类目间隙 40%、圆角 6 → 3px，柱与柱不再粘成一片；折线 2.5 → 2px，逐日数据不再样条平滑（相邻两天骤降时样条会画出不存在的弧线）。
+
+**2026-11-23（逐页优化 · 第 11 批：首页工作台）**
+
+- 首页的主任务从“配置小组件”改为“查询病案影像”（§1「工具而非展示」）：
+  - 新增 `HomeArchiveLookup`：病案号 / 上架号两个带可见标签的输入框 + 「打开档案袋」，校验与档案袋页共用 `getArchiveLookupValidationMessage`，病案号 ≥ 10000000 且未填上架号时标签显示「（必填）」，提示固定占一行，出现时版面不跳动；跳转到 `/archive/embed?bah=&sjh=`，由档案袋页按路由参数查询，首页不直接请求影像接口。编号输入等宽。
+  - 右侧「最近查询」复用档案袋搜索历史（同一账号、服务端保存）：只列成功的查询，收藏在前、按时间倒序最多 6 条，每行为一个按钮（编号等宽、影像张数、时间）；读取中显示 3 行占位，无记录时给出说明而不是空白。只读，删除与收藏仍在档案袋页操作。
+  - 无 `record:read` 的账号不显示该区域。
+- 页头改为紧凑尺寸（§3.3），去掉英文眉题与「N / M 个小组件」徽标；说明改为欢迎语 + 本页用途。
+- 小组件区改名「常用模块」，补 `h2` 分区标题与可见数量，「管理模块 / 调整布局 / 恢复默认」从页头移到分区标题右侧（它们只作用于这一区）。小组件本身的尺寸、颜色、拖拽、键盘排序与置顶逻辑不变。
+
+**2026-11-23（逐页优化 · 第 12 批：影像档案袋搜索空态与侧栏操作区）**
+
+先核对 E2E 约束再动：空态只有 `mock-mode.spec.ts` 断言 `.search-card` 圆角 > 0 与「住院病案」标题可见；`archive-code-input.spec.ts` 在查询后的 320px 侧栏里测量三个号码输入框不被截断（字号 ≥ 13px、位数徽标 ≤ 10px），并按 `input[name="archive-*"]` 与 `.search-card` 内的「查询」按钮定位。本批保持这些选择器与侧栏结构不变；全屏看图、分类浮层、平铺模式（`archive-type-select-layer.spec.ts` 等）未改动。
+
+- 搜索空态（尚未查询，`archive-workspace.is-empty`）：
+  - `ArchiveSearchBar` 新增 `labelled`：三个输入框上方显示可见标签，病案号 ≥ 10000000 且未填身份证号时上架号标签显示「（必填）」，下方一行写明查询规则（填其一即可 / 大病案号须填上架号 / 身份证号优先并列出全部病案），三个输入框以 `aria-describedby` 关联该说明。查询后的侧栏不启用：标签容器为 `display: contents`，网格与号码宽度和改造前一致。
+  - 插画空态改为内联「最近查询」（最多 5 条，收藏在前，一次点击即按该编号查询）；右上「全部记录」打开原有的搜索记录对话框。外部访问与兼容模式没有搜索记录，仍显示原空态。
+  - 「刷新」在尚未查询时隐藏（没有可刷新的内容）；头部「最近查询」弹层入口在空态隐藏，避免与内联列表重复。
+  - 最近查询列表抽为共享组件 `ArchiveRecentLookups`，首页工作台改用它，删除首页自带的一份列表实现；悬停底色由外层通过 `--recent-lookups-hover` 指定。
+- 侧栏底部操作区：原为 2×2 四个按钮，三个「选中」操作各自在文案里重复选中数，唯一不依赖选择的「下载病案（整份）」排在最后。现改为两排：上排「已选 N 张」+ ZIP / 打印 / PDF（可见文字收短，完整说明与进度放在 `aria-label` / `title`），下排整宽的整份下载。外部 / 兼容模式按原规则隐藏对应按钮，剩余按钮平分宽度；整个区域在没有任何可用按钮时不再渲染空的分隔线。
+- 修正：PDF 按钮文案此前恒为「导出选中 PDF（N）」，而后台任务进行中 / 已完成时点击实际是取消 / 下载；文案现跟随任务状态（取消 PDF（后端生成 x/y）/ 下载已生成的 PDF），平铺模式工具条同步受益。
+- 测试：`ArchiveSearchBar`、`ArchiveRecentLookups` 单测；新增 `archive-search-and-actions.spec.ts`（空态标签、必填提示、刷新隐藏、最近查询打开病案；底部操作区计数、禁用态、选择后启用、320px 内不溢出）。首页单测改用共享组件的类名。

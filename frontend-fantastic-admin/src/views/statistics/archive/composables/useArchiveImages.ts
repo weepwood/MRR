@@ -239,12 +239,12 @@ export function useArchiveImages(options: UseArchiveImagesOptions = {}) {
         ...item,
         bah: normalizeMedicalRecordCode(item.bah),
         sjh: normalizeMedicalRecordCode(item.sjh),
+        // 外部调阅与内容网关（ADR-0009）都返回 /api/ 相对地址，统一按 API 基址解析；
+        // 直连模式返回的影像源绝对地址不受影响。
         imageUrl: resolveImageUrl(
           item,
           cacheBuster,
-          externalSession
-            ? (import.meta.env.DEV ? '/proxy' : import.meta.env.VITE_APP_API_BASEURL)
-            : undefined,
+          import.meta.env.DEV ? '/proxy' : import.meta.env.VITE_APP_API_BASEURL,
         ),
       }))
       const patientBah = normalizeMedicalRecordCode(rawList[0]?.bah || bah)

@@ -437,6 +437,7 @@ onMounted(refreshAll)
 <template>
   <MrrPageShell compact>
     <MrrPageHeader
+      size="compact"
       title="档案装箱管理"
       description="维护实体病案与箱号的对应关系，支持按病案反查位置和按箱号查看箱内病案。"
     >
@@ -461,6 +462,8 @@ onMounted(refreshAll)
     <MrrDataTablePanel
       :title="activeView === 'records' ? '装箱明细' : '箱号列表'"
       :count="loading || error ? undefined : resultCount"
+      :loading="loading"
+      :result-key="activeView === 'records' ? records : boxes"
     >
       <template #filters>
         <div class="view-switcher">
@@ -529,7 +532,7 @@ onMounted(refreshAll)
         </MrrFilterBar>
       </template>
 
-      <AppLoading v-if="loading" type="table" :rows="8" />
+      <AppLoading v-if="loading && !(activeView === 'records' ? records.length : boxes.length)" type="table" :rows="8" />
       <AppError v-else-if="error" :message="error" @retry="activeView === 'records' ? loadRecords() : loadBoxes()" />
       <template v-else-if="activeView === 'records'">
         <AppEmpty v-if="!records.length" description="暂无符合条件的装箱记录" />

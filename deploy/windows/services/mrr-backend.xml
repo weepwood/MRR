@@ -10,7 +10,8 @@
   <env name="APP_VERSION" value="managed-release" />
   <startmode>Automatic</startmode>
   <delayedAutoStart>true</delayedAutoStart>
-  <stoptimeout>45 sec</stoptimeout>
+  <!-- 停机预算：Web 优雅停机 30s + 日志/通用执行器各 15s + OSS 执行器 10s + 10s 余量。 -->
+  <stoptimeout>80 sec</stoptimeout>
 
   <logpath>{{MRR_ROOT}}\logs\service</logpath>
   <log mode="roll-by-size">

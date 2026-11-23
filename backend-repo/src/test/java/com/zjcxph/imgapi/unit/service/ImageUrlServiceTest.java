@@ -1,5 +1,6 @@
 package com.zjcxph.imgapi.unit.service;
 
+import com.zjcxph.imgapi.config.ImageDeliveryProperties;
 import com.zjcxph.imgapi.config.ImageProperties;
 import com.zjcxph.imgapi.dto.resp.BAHDataResponseDTO;
 import com.zjcxph.imgapi.entity.PathDO;
@@ -48,6 +49,51 @@ class ImageUrlServiceTest {
 
         determineImageUrlMethod = ImageUrlService.class.getDeclaredMethod("determineImageUrl", String.class);
         determineImageUrlMethod.setAccessible(true);
+    }
+
+    @Test
+    @DisplayName("网关模式 — 只返回内容网关地址，不下发影像源地址，也不生成 OSS 预签名")
+    void gatewayModeReturnsOnlyContentGatewayUrls() {
+        ImageDeliveryProperties delivery = new ImageDeliveryProperties();
+        delivery.setMode(ImageDeliveryProperties.Mode.GATEWAY);
+        ImageUrlService gateway = new ImageUrlService(props, ossService, systemSettingService, delivery);
+        Scan scan = new Scan();
+        scan.setId(42);
+        scan.setBah("123");
+        scan.setBrxh("7");
+        scan.setFolder("24.04.30");
+        scan.setFilename("0001.jpg");
+        scan.setOssUrl("records/2024/0001.jpg");
+
+        List<BAHDataResponseDTO> items = gateway.toDtoList(List.of(scan));
+
+        assertThat(items).singleElement().satisfies(item -> {
+            assertThat(item.getImg_url()).isEqualTo("/api/v1/img/content/42");
+            assertThat(item.getOssUrl()).isNull();
+        });
+        assertThat(gateway.buildDeliveryUrl(scan)).isEqualTo("/api/v1/img/content/42");
+        verifyNoInteractions(ossService, systemSettingService);
+    }
+
+    @Test
+    @DisplayName("网关模式 — 缺少记录 ID 时不构造地址")
+    void gatewayModeWithoutIdReturnsNull() {
+        assertThat(ImageUrlService.contentGatewayUrl(null)).isNull();
+        assertThat(ImageUrlService.contentGatewayUrl(0)).isNull();
+    }
+
+    @Test
+    @DisplayName("默认直连模式 — 单图地址与 buildPreferredImageUrl 一致")
+    void directModeDeliveryUrlMatchesPreferredUrl() {
+        Scan scan = new Scan();
+        scan.setId(42);
+        scan.setBah("123");
+        scan.setBrxh("42");
+        scan.setFilename("page.jpg");
+        when(systemSettingService.getSetting(ImageUrlService.IMAGE_SOURCE_SETTING_KEY)).thenReturn("local");
+
+        assertThat(service.isGatewayDelivery()).isFalse();
+        assertThat(service.buildDeliveryUrl(scan)).isEqualTo("http://default/42-123/page.jpg");
     }
 
     @Test

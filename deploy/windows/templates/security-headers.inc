@@ -10,3 +10,9 @@
 add_header X-Content-Type-Options nosniff always;
 add_header X-Frame-Options SAMEORIGIN always;
 add_header Referrer-Policy strict-origin-when-cross-origin always;
+# CSP 先只启用不依赖脚本、样式和影像来源的指令，可安全全局生效：禁止插件对象、
+# 篡改 <base>、被第三方页面嵌入和向外部地址提交表单。script-src / img-src 需在确认
+# 影像源（内网 HTTP 节点、OSS 域名）和 VitePress 内联脚本后再收紧，见
+# docs/engineering/optimization-plan-20261123.md。
+add_header Content-Security-Policy "object-src 'none'; base-uri 'self'; frame-ancestors 'self'; form-action 'self'" always;
+add_header Permissions-Policy "geolocation=(), microphone=(), camera=()" always;

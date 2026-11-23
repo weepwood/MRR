@@ -87,8 +87,10 @@
   height: 44px;
   font-size: 22px;
   color: var(--mrr-metric-accent);
-  background: color-mix(in srgb, var(--mrr-metric-accent) 9%, var(--mrr-card));
-  border: 1px solid color-mix(in srgb, var(--mrr-metric-accent) 18%, transparent);
+
+  /* 与 tones.css 的 -soft（10%）/ -border（22%，混入 --mrr-border）同一配方，页头、分区卡、指标卡三处图标块不再各用一套比例。 */
+  background: color-mix(in srgb, var(--mrr-metric-accent) 10%, var(--mrr-card));
+  border: 1px solid color-mix(in srgb, var(--mrr-metric-accent) 22%, var(--mrr-border));
   border-radius: var(--mrr-radius-lg);
 }
 
@@ -139,6 +141,11 @@
   color: var(--mrr-card-foreground);
   letter-spacing: -0.035em;
   overflow-wrap: anywhere;
+}
+
+.mrr-metric-card__value.is-updated {
+  border-radius: var(--mrr-radius-sm);
+  animation: mrr-value-update var(--mrr-motion-attention) var(--mrr-ease-out);
 }
 
 .mrr-metric-card__value--compact {

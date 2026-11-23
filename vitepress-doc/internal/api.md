@@ -44,7 +44,9 @@ OpenAPI YAML：/v3/api-docs.yaml
 
 关于界面外观设置的例外：`GET /api/v1/settings/ui` 由 `@AuthenticatedOnly` 保护，只要求登录会话，不要求 `system:read`。原因是它只承载需要被全体登录用户同步的展示型配置，且**仅返回 `adminAppSettings` 一个键**，不暴露任何安全或运维参数。写入仍走 `PUT /api/v1/settings`，需要 `system:manage`；因此无该权限的账号只能在本机生效，前端会明确提示生效范围。
 
-关于文档会话：`/v3/api-docs`、`/v3/api-docs.yaml`、`/swagger-ui/**` 与 `/swagger-ui.html` 由后端文档访问拦截器校验 `MRR_DOCS_ACCESS` Cookie，未携带有效会话时返回 401，权限不足时返回 403。`/docs/**` 由 Nginx 直接读取静态目录，不经过后端，需要限制时应在 Nginx 层配置。
+关于文档会话：`/v3/api-docs`、`/v3/api-docs.yaml`、`/swagger-ui/**` 与 `/swagger-ui.html` 由后端文档访问拦截器校验 `MRR_DOCS_ACCESS` Cookie，未携带有效会话时返回 401，权限不足时返回 403。
+
+Windows 正式部署的新版 Nginx 模板通过 `auth_request` 调用 `/api/v1/documentation/access`，分别验证 `/docs/` 和 `/docs/internal/` 的文档会话范围。未携带有效会话时跳转到 `/help?docsAuth=required`，权限不足时返回 403。升级定制部署时先备份 `nginx.conf`，再手动合并新版文档鉴权配置。运行 `mrrctl.ps1 doctor` 检查缺失指令提示，然后分别验证两类文档的未登录跳转、权限拒绝和正常访问。
 
 ## 加密身份证查询的时间戳约束
 

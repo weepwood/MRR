@@ -62,6 +62,21 @@
   --mrr-motion-overlay: 220ms;
   --mrr-motion-loop: 1s;
   --mrr-motion-loop-soft: 1.5s;
+
+  /*
+   * - stagger    30ms   同一批兄弟元素依次入场的间隔（页面区块、骨架行）。
+   *                     最多叠加 3 档：move 180ms + 90ms = 270ms，仍在「反馈总长 ≤ 350ms」内。
+   * - attention  900ms  数据已更新的提示淡出（指标数值变化）。只承载「刚变过」，
+   *                     数值本身始终由文字表达；关闭动效后不出现。
+   */
+  --mrr-motion-stagger: 30ms;
+  --mrr-motion-attention: 900ms;
+
+  /*
+   * - busy-delay 200ms  刷新反馈（表格进度条、遮罩、变暗）的出现延迟，与路由进度条同值。
+   *                     内网常见的 100ms 级响应不出现任何反馈，避免每次翻页都闪一下。
+   */
+  --mrr-motion-busy-delay: 200ms;
   --mrr-ease-out: cubic-bezier(0.22, 1, 0.36, 1);
 
   /* 离场与收起：先慢后快，配合 ease-out 入场，避免「进出同速」显得拖沓。 */

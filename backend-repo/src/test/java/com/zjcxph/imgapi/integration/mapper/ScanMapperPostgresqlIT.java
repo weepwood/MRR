@@ -10,6 +10,7 @@ import org.flywaydb.core.Flyway;
 import org.flywaydb.core.api.MigrationInfo;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.mybatis.spring.SqlSessionTemplate;
 import org.mybatis.spring.boot.test.autoconfigure.MybatisTest;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.autoconfigure.ImportAutoConfiguration;
@@ -43,6 +44,9 @@ class ScanMapperPostgresqlIT extends PostgresqlIntegrationTestSupport {
 
     @Autowired
     private ScanMapper scanMapper;
+
+    @Autowired
+    private SqlSessionTemplate sqlSession;
 
     @Autowired
     private MigrationJobMapper migrationJobMapper;
@@ -99,21 +103,19 @@ class ScanMapperPostgresqlIT extends PostgresqlIntegrationTestSupport {
     @Test
     @DisplayName("游标查询仅返回 afterId 之后的记录")
     void queriesScanAfterId() {
-        jdbcTemplate.update("""
+        List<Integer> insertedIds = jdbcTemplate.queryForList("""
                 INSERT INTO app.mr_scan
                     (brxh, bah, filename, pages, uploadflag, folder)
                 VALUES
                     ('1', '00000001', '1.jpg', 1, 1, '25.03.15'),
                     ('2', '00000002', '2.jpg', 2, 1, '25.03.15')
-                """);
-        Integer firstId = jdbcTemplate.queryForObject(
-                "SELECT MIN(id) FROM app.mr_scan WHERE bah IN ('00000001', '00000002')",
-                Integer.class
-        );
+                RETURNING id
+                """, Integer.class);
 
-        List<Scan> results = scanMapper.findAfterId(firstId, 10);
+        List<Scan> results = scanMapper.findAfterId(insertedIds.getFirst(), 10);
 
-        assertThat(results).extracting(Scan::getBah).contains("00000002").doesNotContain("00000001");
+        assertThat(results).extracting(Scan::getId)
+                .contains(insertedIds.getLast()).doesNotContain(insertedIds.getFirst());
     }
 
     @Test
@@ -187,6 +189,8 @@ class ScanMapperPostgresqlIT extends PostgresqlIntegrationTestSupport {
     @Test
     @DisplayName("迁移统计区分待迁移、等待上架号和失败重试")
     void migrationStatsUseOssKeyAndSjhAsSourceOfTruth() {
+        Map<String, Object> baseline = scanMapper.countMigrationStats();
+        Map<String, Object> before = baseline == null ? Map.of() : baseline;
         jdbcTemplate.update("""
                 INSERT INTO app.mr_scan
                     (brxh, bah, sjh, filename, pages, uploadflag, folder, oss_url, migration_status)
@@ -199,14 +203,22 @@ class ScanMapperPostgresqlIT extends PostgresqlIntegrationTestSupport {
                     ('5', '00991005', NULL, 'waiting.jpg', 1, 1, '25.03.15', NULL, NULL)
                 """);
 
+        // JDBC fixture writes do not invalidate the MyBatis session cache.
+        sqlSession.clearCache();
         Map<String, Object> stats = scanMapper.countMigrationStats();
 
-        assertThat(((Number) stats.get("total")).longValue()).isEqualTo(5);
-        assertThat(((Number) stats.get("migrated")).longValue()).isEqualTo(1);
-        assertThat(((Number) stats.get("failed")).longValue()).isEqualTo(1);
-        assertThat(((Number) stats.get("retry_wait")).longValue()).isEqualTo(1);
-        assertThat(((Number) stats.get("pending")).longValue()).isEqualTo(2);
-        assertThat(((Number) stats.get("waiting_sjh")).longValue()).isEqualTo(1);
+        assertThat(((Number) stats.get("total")).longValue()
+                - ((Number) before.getOrDefault("total", 0)).longValue()).isEqualTo(5);
+        assertThat(((Number) stats.get("migrated")).longValue()
+                - ((Number) before.getOrDefault("migrated", 0)).longValue()).isEqualTo(1);
+        assertThat(((Number) stats.get("failed")).longValue()
+                - ((Number) before.getOrDefault("failed", 0)).longValue()).isEqualTo(1);
+        assertThat(((Number) stats.get("retry_wait")).longValue()
+                - ((Number) before.getOrDefault("retry_wait", 0)).longValue()).isEqualTo(1);
+        assertThat(((Number) stats.get("pending")).longValue()
+                - ((Number) before.getOrDefault("pending", 0)).longValue()).isEqualTo(2);
+        assertThat(((Number) stats.get("waiting_sjh")).longValue()
+                - ((Number) before.getOrDefault("waiting_sjh", 0)).longValue()).isEqualTo(1);
     }
 
     @Test

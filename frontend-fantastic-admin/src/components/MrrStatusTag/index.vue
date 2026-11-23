@@ -1,13 +1,23 @@
 <script setup lang="ts">
 defineOptions({ name: 'MrrStatusTag' })
 
-const props = defineProps<{
+const props = withDefaults(defineProps<{
   status?: string
   label?: string
   tone?: StatusTone
-}>()
+  /**
+   * 进行中提示（状态点外的呼吸光圈）。不传时，自动识别为「运行中 / 处理中」的状态开启；
+   * 显式传 tone 时默认关闭，需要时再传 live。
+   */
+  live?: boolean
+}>(), {
+  // 布尔 prop 缺省会被 Vue 转成 false，这里显式保留 undefined 以区分「未传」与「关闭」。
+  live: undefined,
+})
 
 type StatusTone = 'success' | 'info' | 'warning' | 'danger' | 'neutral'
+
+const RUNNING_STATUSES = ['running', 'processing', 'pending-review', '进行中', '处理中', '运行中']
 
 const normalizedStatus = computed(() => String(props.status || '').trim().toLowerCase())
 
@@ -20,7 +30,7 @@ const statusMeta = computed(() => {
   if (['active', 'enabled', 'success', 'completed', 'complete', 'up', 'healthy', '启用', '正常', '成功', '完成'].includes(status)) {
     return { tone: 'success' as const, label: props.label || (status === 'active' ? '启用' : props.status || '正常') }
   }
-  if (['running', 'processing', 'pending-review', '进行中', '处理中', '运行中'].includes(status)) {
+  if (RUNNING_STATUSES.includes(status)) {
     return { tone: 'info' as const, label: props.label || props.status || '处理中' }
   }
   if (['warning', 'pending', 'waiting', '待处理', '警告', '等待'].includes(status)) {
@@ -31,10 +41,12 @@ const statusMeta = computed(() => {
   }
   return { tone: 'neutral' as const, label: props.label || props.status || '未知' }
 })
+
+const isLive = computed(() => props.live ?? (!props.tone && RUNNING_STATUSES.includes(normalizedStatus.value)))
 </script>
 
 <template>
-  <span class="mrr-status-tag" :class="`mrr-status-tag--${statusMeta.tone}`">
+  <span class="mrr-status-tag" :class="[`mrr-status-tag--${statusMeta.tone}`, { 'mrr-status-tag--live': isLive }]">
     <span class="mrr-status-tag__dot" aria-hidden="true" />
     <span>{{ statusMeta.label }}</span>
   </span>
@@ -56,16 +68,33 @@ const statusMeta = computed(() => {
   line-height: 1;
   color: var(--mrr-status-color);
   white-space: nowrap;
-  background: color-mix(in srgb, var(--mrr-status-color) 9%, var(--mrr-card));
-  border: 1px solid color-mix(in srgb, var(--mrr-status-color) 18%, transparent);
+
+  /*
+   * 直接读 tones.css 的 -soft / -border：调色板（theme-palette.ts）按明暗调整的
+   * 浅底与描边强度（暗色 16% / 34%）会自动生效；此前这里自写 9% / 18%，
+   * 调色板的调整到不了状态胶囊。两组令牌在 browser-compatibility.css 都有静态回退。
+   */
+  background: var(--mrr-status-soft);
+  border: 1px solid var(--mrr-status-border);
   border-radius: var(--mrr-radius-sm);
 }
 
 .mrr-status-tag__dot {
-  width: 5px;
-  height: 5px;
+  position: relative;
+  width: 6px;
+  height: 6px;
   background: currentcolor;
   border-radius: 50%;
+}
+
+.mrr-status-tag--live .mrr-status-tag__dot::after {
+  position: absolute;
+  inset: 0;
+  content: "";
+  background: currentcolor;
+  border-radius: 50%;
+  opacity: 0;
+  animation: mrr-live-pulse calc(var(--mrr-motion-loop-soft) * 4 / 3) var(--mrr-ease-out) infinite;
 }
 
 .mrr-status-tag--success {
@@ -92,16 +121,12 @@ const statusMeta = computed(() => {
   --mrr-status-border: var(--mrr-tone-danger-border);
 }
 
-/*
- * Chrome 86 回退：状态胶囊的底色是「这一行是什么状态」的唯一填充信号。
- * 86 上 color-mix 失效后底色透明、描边退成 currentColor，四档只剩色相差别；
- * 这里复用 tones.css 的 tone-soft / tone-border（它们在 browser-compatibility.css
- * 已有静态定义），让胶囊恢复成四种可辨的浅色底。
- */
-@supports not (color: color-mix(in srgb, #000 50%, #fff)) {
-  .mrr-status-tag {
-    background: var(--mrr-status-soft);
-    border: 1px solid var(--mrr-status-border);
+/* Chrome 86：-soft / -border 令牌本身就有静态回退，不再需要单独的 @supports 分支。 */
+
+/* 强制颜色模式会清掉底色，光圈没有意义，只保留状态点与文字。 */
+@media (forced-colors: active) {
+  .mrr-status-tag--live .mrr-status-tag__dot::after {
+    display: none;
   }
 }
 </style>

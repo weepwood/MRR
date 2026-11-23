@@ -56,3 +56,36 @@ type PageWidth = 'fluid' | 'standard' | 'narrow'
   }
 }
 </style>
+
+<!--
+  区块入场写在非 scoped 块里：壳层的子元素是调用方的插槽内容，带的是页面的 scope id，
+  scoped 选择器（.mrr-page-shell > *[data-v-壳层]）匹配不到它们。类名本身已带 mrr- 前缀，不会外溢。
+-->
+<style>
+/*
+ * 区块依次入场：页头 → 摘要 → 主体，间隔一个 stagger 档，最多三档。
+ * 不需要脚本触发 —— 元素插入文档或 display 从 none 恢复时 CSS 动画会自动重播，
+ * 因此 KeepAlive 重新激活、v-show 切回时同样生效；关闭动效由 motion.css 全局清零。
+ * 只有入场、没有离场，与布局「主内容不做离场过渡」的约定一致。
+ */
+.mrr-page-shell > * {
+  animation: mrr-page-enter var(--mrr-motion-move) var(--mrr-ease-out) backwards;
+}
+
+.mrr-page-shell > :nth-child(2) {
+  animation-delay: var(--mrr-motion-stagger);
+}
+
+.mrr-page-shell > :nth-child(3) {
+  animation-delay: calc(var(--mrr-motion-stagger) * 2);
+}
+
+.mrr-page-shell > :nth-child(n + 4) {
+  animation-delay: calc(var(--mrr-motion-stagger) * 3);
+}
+
+/* 嵌套壳层（监控聚合页）只由外层播放一次，避免同一区块淡入两遍。 */
+.mrr-page-shell .mrr-page-shell > * {
+  animation: none;
+}
+</style>

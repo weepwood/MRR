@@ -25,9 +25,21 @@ const cardClass = computed(() => [
   hasIcon.value ? '' : 'mrr-metric-card--no-icon',
 ])
 
+/*
+ * 数值变化提示：首屏渲染不提示，之后每次 value 变化（轮询刷新、筛选切换）重建数值节点，
+ * 播放一次 mrr-value-update。key 变化即重播，不依赖定时器清类名。
+ */
+const updateRevision = ref(0)
+watch(() => props.value, (next, previous) => {
+  if (next !== previous) {
+    updateRevision.value += 1
+  }
+})
+
 const valueClass = computed(() => [
   props.compactValue ? 'mrr-metric-card__value--compact' : '',
   props.valueTone === 'default' ? '' : `mrr-metric-card__value--${props.valueTone}`,
+  updateRevision.value > 0 ? 'is-updated' : '',
 ])
 </script>
 
@@ -39,7 +51,7 @@ const valueClass = computed(() => [
     <div class="mrr-metric-card__body">
       <span class="mrr-metric-card__label">{{ props.label }}</span>
       <div class="mrr-metric-card__value-row">
-        <strong class="mrr-metric-card__value" :class="valueClass">
+        <strong :key="updateRevision" class="mrr-metric-card__value" :class="valueClass">
           {{ props.value }}
         </strong>
         <span v-if="props.suffix" class="mrr-metric-card__suffix">{{ props.suffix }}</span>

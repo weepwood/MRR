@@ -201,7 +201,31 @@ html[data-page-title-style="card"] .mrr-page-header__aside {
   align-self: center;
 }
 
-/* ===== 5. 响应式 ===== */
+/* ===== 5. 紧凑尺寸：查询 / 列表 / 浏览页 ===== */
+
+/*
+ * `<MrrPageHeader size="compact">`：页头只做定位，不占首屏。
+ * - 只在 card 模式生效：plain 模式本身没有卡片外壳和最小高度，已经是紧凑形态，
+ *   标题字号保持 26px（page-header-style.spec 依赖两种模式下标题字号一致的口径）。
+ * - 去掉与指标卡对齐的 110px 最小高度；标题降到 title-compact（22px，与 ≤760px 档同值）。
+ * - 说明始终位于标题下方，与 default 保持相同的信息顺序；长说明自然折行，不截断、不隐藏。
+ * - compact 只调整容器留白、标题字号和图标尺寸，不改变标题与说明的排版方向。
+ * 选择器比第 4 节多一个类名，因此不依赖书写顺序覆盖。
+ */
+html[data-page-title-style="card"] .mrr-page-header.mrr-page-header--compact {
+  min-height: 0;
+  padding: var(--mrr-space-4) var(--mrr-card-inset);
+}
+
+html[data-page-title-style="card"] .mrr-page-header--compact h1 {
+  font-size: var(--mrr-font-size-title-compact);
+}
+
+html[data-page-title-style="card"] .mrr-page-header--compact .mrr-page-header__meta {
+  margin-top: var(--mrr-space-1);
+}
+
+/* ===== 6. 响应式 ===== */
 
 @media (max-width: 760px) {
   html[data-page-title-style] .page-header h1,
@@ -231,6 +255,12 @@ html[data-page-title-style="card"] .mrr-page-header__aside {
     flex-wrap: wrap;
     justify-content: flex-start;
     width: 100%;
+  }
+}
+
+@media (max-width: 760px) {
+  html[data-page-title-style="card"] .mrr-page-header.mrr-page-header--compact {
+    padding: var(--mrr-space-3) var(--mrr-card-inset-compact);
   }
 }
 

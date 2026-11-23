@@ -656,15 +656,12 @@ watch(storageKey, loadPreferences, { immediate: true })
                 </template>
               </el-dropdown>
             </div>
-            <FaIcon v-else name="i-lucide:chevron-right" class="dashboard-widget__arrow" />
+            <!-- 整卡可点，头部箭头是唯一的入口暗示；底部不再重复「进入模块 →」。 -->
+            <FaIcon v-else name="i-lucide:chevron-right" class="dashboard-widget__arrow" aria-hidden="true" />
           </header>
 
           <div class="dashboard-widget__body">
             <p>{{ widget.description }}</p>
-            <div class="dashboard-widget__footer">
-              <span>{{ editMode ? '拖动调整位置' : '进入模块' }}</span>
-              <FaIcon :name="editMode ? 'i-lucide:move' : 'i-lucide:arrow-right'" />
-            </div>
           </div>
         </article>
       </TransitionGroup>
@@ -846,7 +843,12 @@ watch(storageKey, loadPreferences, { immediate: true })
 .dashboard-grid {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
-  grid-auto-rows: 132px;
+
+  /*
+   * 去掉底栏后标准卡只剩「头部 56px + 两行说明 + 12px 底距」≈ 106px，
+   * 行高 132 → 116px，留 10px 余量给 125% 系统缩放下的行高取整。大卡（两行 + 间距）= 248px。
+   */
+  grid-auto-rows: 116px;
   grid-auto-flow: dense;
   gap: var(--mrr-space-4);
 }
@@ -937,6 +939,11 @@ watch(storageKey, loadPreferences, { immediate: true })
 
   .dashboard-widget:hover {
     border-color: var(--widget-accent);
+  }
+
+  /* 悬停时图标块描边：含 var() 的 color-mix 在 86 上会失效成 currentColor，这里给实色。 */
+  .dashboard-widget:not(.is-editing):hover .dashboard-widget__icon {
+    border-color: var(--widget-accent, var(--mrr-primary));
   }
 
   .dashboard-widget__icon,
@@ -1036,6 +1043,18 @@ watch(storageKey, loadPreferences, { immediate: true })
   border-radius: var(--mrr-radius-md);
 }
 
+/* 悬停时图标块与箭头同步染上强调色：一张卡只有一个「可进入」信号，但它会随指针亮起。 */
+.dashboard-widget__icon {
+  transition:
+    color var(--mrr-motion-feedback) var(--mrr-ease-out),
+    background-color var(--mrr-motion-feedback) var(--mrr-ease-out),
+    border-color var(--mrr-motion-feedback) var(--mrr-ease-out);
+}
+
+.dashboard-widget:not(.is-editing):hover .dashboard-widget__icon {
+  border-color: color-mix(in srgb, var(--widget-accent, var(--mrr-primary)) 36%, var(--mrr-border));
+}
+
 .dashboard-widget__heading {
   min-width: 0;
 }
@@ -1083,11 +1102,14 @@ watch(storageKey, loadPreferences, { immediate: true })
 }
 
 .dashboard-widget__arrow {
+  flex: 0 0 auto;
+  font-size: 16px;
   color: var(--mrr-muted-foreground);
   transition: color var(--mrr-motion-feedback) var(--mrr-ease-out), transform var(--mrr-motion-feedback) var(--mrr-ease-out);
 }
 
-.dashboard-widget:hover .dashboard-widget__arrow {
+.dashboard-widget:hover .dashboard-widget__arrow,
+.dashboard-widget:focus-visible .dashboard-widget__arrow {
   color: var(--widget-accent);
   transform: var(--mrr-motion-decor, translateX(2px));
 }
@@ -1116,22 +1138,12 @@ watch(storageKey, loadPreferences, { immediate: true })
   font-size: var(--mrr-font-size-sm);
 }
 
-.dashboard-widget__footer {
-  display: flex;
-  gap: var(--mrr-space-2);
-  align-items: center;
-  justify-content: flex-end;
-  padding-top: var(--mrr-space-2);
-  margin-top: auto;
-  font-size: var(--mrr-font-size-xs);
-  color: var(--mrr-muted-foreground);
-}
-
-/* 小卡高度有限：描述与「进入模块」暗示二选一，保留暗示以保证全部卡片
- * 的可点性提示一致（此前 small 隐藏 footer 导致 2/6 卡无入口暗示）。 */
-.dashboard-widget--small .dashboard-widget__body p {
-  display: none;
-}
+/*
+ * 原底栏「进入模块 → / 拖动调整位置」已删除：
+ * - 浏览态：与头部箭头重复，且小卡为了放下它而隐藏了说明，卡片只剩标题；
+ * - 编辑态：与页面顶部的编辑提示条、拖动手柄的提示重复。
+ * 现在所有尺寸都显示说明，入口暗示统一由头部箭头承担（编辑态换成工具按钮）。
+ */
 
 .dashboard-empty {
   display: grid;
@@ -1372,11 +1384,11 @@ watch(storageKey, loadPreferences, { immediate: true })
   .dashboard-widget--large {
     grid-row: auto;
     grid-column: span 1;
-    min-height: 132px;
+    min-height: 116px;
   }
 
   .dashboard-widget--large {
-    min-height: 190px;
+    min-height: 172px;
   }
 
   .widget-manager-item {

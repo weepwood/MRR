@@ -196,6 +196,8 @@ tokens.css（语义令牌，唯一数值源）
 | `--mrr-motion-move` | 180ms | 位移、展开收起、内容入场、重排、**离场** |
 | `--mrr-motion-overlay` | 220ms | 浮层入场（抽屉、对话框、菜单、移动端侧栏），上限 |
 | `--mrr-motion-loop` / `-loop-soft` | 1s / 1.5s | spinner / shimmer |
+| `--mrr-motion-stagger` | 30ms | 兄弟元素依次入场的间隔（页面区块、骨架行），最多叠 3 档 |
+| `--mrr-motion-attention` | 900ms | 数据已更新的提示淡出（指标数值），只表达「刚变过」 |
 | `--mrr-ease-out` | `cubic-bezier(0.22, 1, 0.36, 1)` | 入场、状态变化 |
 | `--mrr-ease-in` | `cubic-bezier(0.55, 0, 0.75, 0.2)` | 离场、收起 |
 
@@ -227,6 +229,13 @@ tokens.css（语义令牌，唯一数值源）
 | 吸顶隐藏 | 带方向阈值（≥6px） | 1–2px 惯性抖动也触发显隐 |
 | 反馈性动画 | 点击后 ≤100ms 开始，总长 ≤ 350ms | 先等 300ms 再出效果 |
 
+**共享组件内置的状态动效**（页面不需要再写）：
+
+- `MrrPageShell` 的直接子区块入场：opacity + 4px 上移，stagger 依次播放，`fill-mode: backwards`，结束后不残留 transform；KeepAlive 重新激活时自动重播；嵌套壳层只播外层。
+- `MrrStatusTag` 的「进行中」光圈：识别为运行中 / 处理中的状态自动开启（显式 `tone` 时用 `live` 控制）；状态仍由文字与语义色表达，强制颜色模式下隐藏。
+- `MrrMetricCard` 的数值更新提示：首屏不播，`value` 变化后主色浅底从数字背后淡出一次。
+- `AppLoading` 骨架：表头行 + 行 / 卡依次淡入，尺寸取 `--mrr-table-header-height` / `--mrr-table-row-height`，结果到达时不跳版。
+
 动效默认开启，由设置写入 `data-motion`，`index.html` 首帧按本地缓存预置。系统 `prefers-reduced-motion` 缩短 CSS 动效；JS 空间动效（登录、主题切换、`scrollTo` / `scrollIntoView` 平滑滚动、WAAPI）必须先调用 `isMotionEnabled()`。关闭路径保留 1ms 的动画结束信号，以完成浮层生命周期。路由加载沿用顶部 2px 进度条，延迟 200ms 显示；主内容不做离场过渡。
 
 ---
@@ -255,6 +264,11 @@ tokens.css（语义令牌，唯一数值源）
 
 - **card**：实色细边框卡片，最小高度与指标卡一致（110px），隐藏英文 eyebrow，说明 13px。
 - **plain**：标题位于内容层级，显示 eyebrow，底部留白只有 4px，与下一块的距离交给壳层间距。
+
+**尺寸**（`size`，与模式正交）：
+
+- **default**：上述两种模式的原样。用于首页、分析与监控、工作台、详情、设置等「页头本身承载概览」的页面。
+- **compact**：查询列表、游标大表、存储浏览、审计、导入导出等「页头只做定位」的页面。card 模式下取消 110px 最小高度，标题 22px（`--mrr-font-size-title-compact`）；说明始终位于标题下方并自然折行，不截断。紧凑尺寸只调整留白、字号和图标，不改变标题与说明的上下顺序；plain 模式本身已经紧凑，不受影响。图标降为 32px。当前使用者：用户、记录、患者、档案装箱、日志、运行错误中心、权限、病历访问审计、OCR 批次、OSS 浏览、Nginx 浏览、数据表浏览、数据导入导出。
 
 页面标题使用 `<h1>`。辅助信息（自动刷新时间、数据范围）放 `#meta`，提示图标放 `#badge`，操作放 `#actions`。页头图标为实色浅底，不用渐变。
 
@@ -293,7 +307,7 @@ tokens.css（语义令牌，唯一数值源）
 | --- | --- |
 | [MrrPageShell](src/components/MrrPageShell/index.vue) / [MrrPageHeader](src/components/MrrPageHeader/index.vue) | 页面壳层与页头；见 [§3](#3-布局) |
 | [MrrSectionCard](src/components/MrrSectionCard/index.vue) | 分区标题、说明、操作区与 bodyPadding；卡头浅底分隔 |
-| [MrrDataTablePanel](src/components/MrrDataTablePanel/index.vue) | filters / toolbar / content / pagination；`count` 只在服务端给出可信总数时传 |
+| [MrrDataTablePanel](src/components/MrrDataTablePanel/index.vue) | filters / toolbar / content / pagination；`count` 只在服务端给出可信总数时传；`loading` 显示刷新进度条，`result-key` 让新结果逐行淡入（见 §5.1） |
 | [MrrFilterBar](src/components/MrrFilterBar/index.vue) | 筛选字段与 actions；`embedded` / `labelled` / `layout="grid"` |
 | [MrrMetricCard](src/components/MrrMetricCard/index.vue) | label / value / note / icon / tone / valueTone / compactValue / extra |
 | [MrrTableActions](src/components/MrrTableActions/index.vue) | 行内 / 更多操作；规则见 [TABLE_ACTIONS.md](TABLE_ACTIONS.md) |
@@ -384,6 +398,22 @@ Element Plus `el-button` 与 reka-ui `FaButton`（`.fa-button-control`）**尺�
 | 拒绝 / 会话失效 | 需要重新登录或缺少权限 | 后端仍是授权边界；切换账号后不残留上一账号结果 |
 | 禁用 / 处理中 | 为什么不可用 | 不只降透明度；原因可读，防重复提交 |
 | 导出完成但下载失败 | 任务完成与下载失败是两回事 | 保留重新下载入口；超限要求分批，不静默丢页 |
+
+**列表的加载与刷新**（共享组件已内置，页面按下面写即可）：
+
+```vue
+<MrrDataTablePanel :loading="loading" :result-key="resultVersion">
+  <AppLoading v-if="loading && !list.length" type="table" />  <!-- 只在没有结果可保留时用骨架 -->
+  <AppError v-else-if="error" … />
+  <AppEmpty v-else-if="!list.length" … />
+  <el-table v-else :data="list" … />
+</MrrDataTablePanel>
+```
+
+- `v-if="loading"` 直接整表换成骨架是旧写法：每次翻页表格都消失再出现，页面高度跳动，也丢了「刷新的是哪批结果」。
+- `loading`：200ms（`--mrr-motion-busy-delay`）后在表格上方出现 2px 不定进度条，结果变暗到 55% 并暂停交互；内容区 `aria-busy="true"`。快于 200ms 的响应不出现任何反馈。
+- `result-key`：用户发起的查询返回后换值，前 6 行依次淡入（只动 opacity）。`useCrudList` 提供 `resultVersion`，静默轮询不递增；自写请求的页面可以直接传结果数组。
+- 表格上的 `v-loading` 遮罩已统一为同一外观（顶边进度条 + 浅遮罩，无居中转圈），见 [busy-indicator.css](src/assets/styles/components/busy-indicator.css)。图表、设置分区、档案袋的 `v-loading` 不受影响。
 
 **可写配置页的可保存基线只能来自服务器读取。** 读取失败时，本地缓存与默认值只供只读页面降级使用；配置页显示 `AppError` + 重新加载，读取成功前不算修改、不能保存，也不提供"保存并离开"。已读取成功后再次重新加载失败，保留当前表单与基线并提示。服务器可达但尚无任何设置（全新部署）时以默认值为基线。`loadEffectiveSystemSettings()` 用 `serverReachable` 区分这两种回退。
 
@@ -695,3 +725,13 @@ Element Plus `el-button` 与 reka-ui `FaButton`（`.fa-button-control`）**尺�
 
 - 登录页：仅改「客户端环境」浮层内的两类分组小标题 10px → 12px（浮层在登录外壳之外，不影响外壳高度与表单间距；浮层内两列字段的字号未动，宽度断言不受影响）。品牌区、表单区、底部版本徽标未改——已全部使用令牌，且处于高度 / 间距断言路径上。
 - 影像档案袋：浮动工具条与空态侧栏的黑色投影改 `--mrr-shadow-md / -sm`；病案列表的编号与副标题、患者卡字段标签、快捷键分组标题 11px → 12px（这些组件不在 E2E 选择器内）。头部编号输入区、类型筛选计数、缩略图遮罩（深色半透明，用于图片上的文字可读性）保留原值。
+
+**2026-11-23（共享组件动效与配色收口）**
+
+- §2.9 新增 `--mrr-motion-stagger`（30ms）与 `--mrr-motion-attention`（900ms）；新增 `mrr-page-enter` / `mrr-live-pulse` / `mrr-value-update` 三个关键帧，只在共享组件内使用。
+- `MrrPageShell` 区块依次入场；`MrrStatusTag` 进行中光圈；`MrrMetricCard` 数值更新提示；`AppLoading` 骨架改为令牌尺寸并补表头行。均遵守「只入场、不离场」「关闭动效后状态仍可读」。
+- 图标块与状态胶囊配色收口到 tones.css：页头图标、分区卡图标、`MrrStatusTag` 改读 `--mrr-tone-*-soft / -border`，指标卡图标改为同一配方（10% / 22%）。此前四处分别写 8/9/16/18%，调色板对浅底与描边强度的调整（暗色 16% / 34%）到不了这些组件。对应的 `@supports not` 分支随之删除（令牌自带静态回退）。
+- `MrrPageHeader` 新增 `size="compact"`（§3.3），13 个查询 / 列表 / 浏览页改用紧凑页头：card 模式下页头从 110px 降到约 64px（省出 46px，正好一行表格行高）。plain 模式、标题层级与插槽结构不变。
+- 首页工作台小组件（§5.4 所在页面）：删除底栏「进入模块 → / 拖动调整位置」，入口暗示统一由头部箭头承担，悬停时箭头右移、图标块描边加深；标准卡恢复显示两行说明（原先为放下底栏而隐藏）。网格行高 132 → 116px，窄屏最小高度同步。拖拽、键盘排序、置顶与编辑逻辑不变。
+- 表格刷新反馈（§5.1）：新增 `--mrr-motion-busy-delay`、`busy-indicator.css`、`MrrDataTablePanel` 的 `loading` / `result-key`、`useCrudList` 的 `resultVersion`。日志、运行错误中心、病历访问审计、患者、档案装箱五页由「每次查询整表换成骨架」改为「首次骨架、之后保留结果叠加进度条」；用户管理补上刷新反馈。表格 `v-loading` 遮罩去掉居中转圈，改为顶边进度条。
+- UI 组件页新增「页头尺寸」（基础与导航）与「动效与刷新反馈」（反馈与浮层）两组示例：默认 / 紧凑页头实时高度对照与长说明折行；进行中光圈、数值更新提示、表格慢查询 / 快查询 / 首次加载三种刷新路径、区块入场重播。示例页头对读屏隐藏（每页只有一个 `h1`），E2E 补两条用例。

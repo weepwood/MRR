@@ -1,5 +1,7 @@
 <script setup lang="ts">
+import { computed, provide } from 'vue'
 import MrrSectionCard from '@/components/MrrSectionCard/index.vue'
+import { mrrDataTablePanelLoadingKey } from './context'
 
 defineOptions({ name: 'MrrDataTablePanel' })
 
@@ -21,9 +23,24 @@ const props = defineProps<{
   resultKey?: unknown
 }>()
 
+provide(mrrDataTablePanelLoadingKey, computed(() => Boolean(props.loading)))
+
 const slots = useSlots()
 const hasActions = computed(() => props.count !== undefined || Boolean(slots.actions))
 const countText = computed(() => Number(props.count ?? 0).toLocaleString('zh-CN'))
+
+function blockClickWhileLoading(event: Event) {
+  if (!props.loading) { return }
+  event.preventDefault()
+  event.stopPropagation()
+}
+
+function blockKeyboardActivationWhileLoading(event: KeyboardEvent) {
+  if (props.loading && ['Enter', ' ', 'Spacebar'].includes(event.key)) {
+    event.preventDefault()
+    event.stopPropagation()
+  }
+}
 
 // a / b 轮换：两份同内容关键帧，名字一变就重新播放（见 motion.css 的 mrr-row-enter-*）。
 const resultPass = ref<'a' | 'b'>()
@@ -70,7 +87,10 @@ watch(() => props.resultKey, (next, previous) => {
       class="mrr-data-table-panel__content"
       :class="{ 'is-refreshing': props.loading }"
       :aria-busy="props.loading ? 'true' : undefined"
+      :aria-disabled="props.loading ? 'true' : undefined"
       :data-result-pass="resultPass"
+      @click.capture="blockClickWhileLoading"
+      @keydown.capture="blockKeyboardActivationWhileLoading"
     >
       <div v-if="props.loading" class="mrr-busy-bar mrr-data-table-panel__progress" aria-hidden="true" />
       <slot />

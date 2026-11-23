@@ -24,6 +24,7 @@ test.describe('系统设置分类布局', () => {
       const iconBox = await icon.boundingBox()
       return Math.abs((iconBox?.width ?? 0) - (iconBox?.height ?? 0))
     }).toBeLessThanOrEqual(1)
+    await expect(icon).toHaveCSS('font-size', '22px')
   })
 
   test('按功能分类切换设置内容', async ({ page }) => {

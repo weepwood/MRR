@@ -44,6 +44,8 @@ foreach ($target in @($private, $file)) {
                 ['powershell.exe', '-NoProfile', '-NonInteractive', '-ExecutionPolicy', 'Bypass', '-File',
                  str(path), str(WINDOWS_DEPLOY / 'install.ps1'), directory],
                 capture_output=True, text=True, errors='replace', timeout=30,
+                # GitHub starts Python from pwsh; let Windows PowerShell discover its own inbox modules.
+                env={key: value for key, value in os.environ.items() if key.casefold() != 'psmodulepath'},
             )
         self.assertEqual(result.returncode, 0, result.stderr)
 

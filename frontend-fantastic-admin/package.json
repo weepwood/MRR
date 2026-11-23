@@ -65,7 +65,7 @@
     "mitt": "^3.0.1",
     "nprogress": "^0.2.0",
     "path-browserify": "^1.0.1",
-    "path-to-regexp": "^8.4.2",
+    "path-to-regexp": "^9.0.0",
     "pinia": "^3.0.4",
     "pinyin-pro": "3.29.5",
     "reka-ui": "^2.11.0",

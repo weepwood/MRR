@@ -203,9 +203,9 @@ class ImageControllerTest {
     }
 
     @Test
-    void getImageUrlUsesPreferredSource() {
+    void getImageUrlUsesConfiguredDelivery() {
         when(scanService.findById(1)).thenReturn(mockScan);
-        when(imageUrlService.buildPreferredImageUrl(mockScan)).thenReturn("https://oss/signed-image");
+        when(imageUrlService.buildDeliveryUrl(mockScan)).thenReturn("https://oss/signed-image");
 
         Result<String> result = imageController.getImageUrl(1);
 

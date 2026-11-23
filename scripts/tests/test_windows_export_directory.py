@@ -10,10 +10,10 @@ class WindowsExportDirectoryTest(unittest.TestCase):
 
     def test_new_installation_default_is_in_the_preserved_production_template(self):
         service = (ROOT / 'deploy/windows/services/mrr-backend.xml').read_text(encoding='utf-8')
-        template = (ROOT / 'deploy/windows/templates/application-prod.properties').read_text(encoding='utf-8')
         installer = (ROOT / 'deploy/windows/install.ps1').read_text(encoding='utf-8')
         self.assertNotIn('ARCHIVE_EXPORT_TEMP_DIRECTORY', service)
-        self.assertIn('archive.export.temp-directory=${ARCHIVE_EXPORT_TEMP_DIRECTORY:{{MRR_URI_ROOT}}/data/exports}', template)
+        self.assertIn("-AdditionalContent ('archive.export.temp-directory=${ARCHIVE_EXPORT_TEMP_DIRECTORY:' + $rootUri + '/data/exports}')", installer)
+        self.assertLess(installer.index('($PreserveExisting -or -not $Force)'), installer.index('if ($AdditionalContent)'))
         self.assertIn("-Tokens $templateTokens -PreserveExisting", installer)
         self.assertIn("($PreserveExisting -or -not $Force)", installer)
         self.assertIn("Write-TemplateIfMissing `\n    -Source (Join-Path $scriptDir 'templates\\application-prod.properties')", installer)

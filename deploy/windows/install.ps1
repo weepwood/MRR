@@ -64,7 +64,8 @@ function Write-TemplateIfMissing {
         [Parameter(Mandatory = $true)][string]$Source,
         [Parameter(Mandatory = $true)][string]$Destination,
         [hashtable]$Tokens = @{},
-        [switch]$PreserveExisting
+        [switch]$PreserveExisting,
+        [string]$AdditionalContent
     )
 
     if ((Test-Path -LiteralPath $Destination) -and ($PreserveExisting -or -not $Force)) {
@@ -75,6 +76,10 @@ function Write-TemplateIfMissing {
     $content = Get-Content -LiteralPath $Source -Raw -Encoding UTF8
     foreach ($entry in $Tokens.GetEnumerator()) {
         $content = $content.Replace("{{$($entry.Key)}}", [string]$entry.Value)
+    }
+
+    if ($AdditionalContent) {
+        $content = $content.TrimEnd() + "`r`n`r`n" + $AdditionalContent + "`r`n"
     }
 
     New-Item -ItemType Directory -Path (Split-Path -Parent $Destination) -Force | Out-Null
@@ -238,7 +243,8 @@ $templateTokens = @{
 Write-TemplateIfMissing `
     -Source (Join-Path $scriptDir 'templates\application-prod.properties') `
     -Destination (Join-Path $Root 'config\application-prod.properties') `
-    -Tokens $templateTokens -PreserveExisting
+    -Tokens $templateTokens -PreserveExisting `
+    -AdditionalContent ('archive.export.temp-directory=${ARCHIVE_EXPORT_TEMP_DIRECTORY:' + $rootUri + '/data/exports}')
 # 敏感配置只允许 Administrators 和 SYSTEM 访问。MRR-Backend 默认以 LocalSystem 运行。
 $secretsPath = Join-Path $Root 'secrets'
 & icacls.exe $secretsPath /grant:r '*S-1-5-32-544:(OI)(CI)F' '*S-1-5-18:(OI)(CI)F' | Out-Null

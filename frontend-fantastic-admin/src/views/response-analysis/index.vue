@@ -5,8 +5,10 @@ import { computed, onMounted, ref } from 'vue'
 import { getResponseMetricAnalysis } from '@/api/modules/response-metrics'
 import AppEmpty from '@/components/AppEmpty/index.vue'
 import AppError from '@/components/AppError/index.vue'
+import AppLoading from '@/components/AppLoading/index.vue'
 import MrrPageHeader from '@/components/MrrPageHeader/index.vue'
 import MrrPageShell from '@/components/MrrPageShell/index.vue'
+import MrrSectionCard from '@/components/MrrSectionCard/index.vue'
 import ResponseTrendChart from './components/ResponseTrendChart.vue'
 
 defineOptions({ name: 'ResponseAnalysisPage' })
@@ -81,6 +83,9 @@ onMounted(loadData)
 
     <AppEmpty v-else-if="isEmpty" icon="i-lucide:activity" description="近一年暂无响应指标数据" />
 
+    <!-- 首次加载用骨架屏；刷新时保留上一份结果，只在卡片上叠加 v-loading。 -->
+    <AppLoading v-else-if="loading && !analysis" type="stats" :cols="4" />
+
     <template v-else>
       <section class="mrr-metric-grid" aria-label="近一年响应指标总览">
         <MrrMetricCard
@@ -99,74 +104,65 @@ onMounted(loadData)
         <MrrMetricCard
           label="客户端 P95"
           icon="i-lucide:calendar-clock"
-          tone="violet"
           note="包含网络与浏览器处理耗时"
           :value="formatDuration(analysis?.overview.p95ClientDurationMs)"
         />
         <MrrMetricCard
           label="服务端平均耗时"
           icon="i-lucide:layout-dashboard"
-          tone="amber"
           note="最近一年服务端请求处理平均值"
           :value="formatDuration(analysis?.overview.avgServerDurationMs)"
         />
       </section>
 
       <div class="analysis-stack">
-        <el-card v-loading="loading" shadow="never" class="analysis-card response-trend-card">
-          <template #header>
-            <div class="card-header">
-              <div>
-                <strong>近一年响应趋势</strong>
-                <span>每日请求热力图及客户端、服务端平均耗时</span>
-              </div>
-            </div>
-          </template>
+        <MrrSectionCard v-loading="loading" class="analysis-card response-trend-card" title="近一年响应趋势" description="每日请求热力图及客户端、服务端平均耗时">
           <ResponseTrendChart v-if="analysis?.trend.length" :data="analysis.trend" />
           <AppEmpty v-else icon="i-lucide:chart-line" description="近一年暂无趋势数据" />
-        </el-card>
+        </MrrSectionCard>
 
-        <el-card v-loading="loading" shadow="never" class="analysis-card slow-endpoint-card">
-          <template #header>
-            <div class="card-header">
-              <div>
-                <strong>慢接口排行</strong>
-                <span>按最近一年客户端 P95 响应耗时排序</span>
-              </div>
-            </div>
-          </template>
+        <MrrSectionCard v-loading="loading" class="analysis-card slow-endpoint-card" title="慢接口排行" description="按最近一年客户端 P95 响应耗时排序">
           <el-table
             v-if="analysis?.slowEndpoints.length"
             :data="analysis.slowEndpoints"
             stripe
             empty-text="暂无慢接口数据"
           >
-            <el-table-column prop="method" label="方法" width="90" />
-            <el-table-column prop="routePattern" label="接口模板" min-width="220" show-overflow-tooltip />
-            <el-table-column prop="requestCount" label="请求数" width="100" />
-            <el-table-column label="错误率" width="110">
+            <el-table-column prop="method" label="方法" width="90">
+              <template #default="{ row }">
+                <span class="endpoint-mono">{{ row.method }}</span>
+              </template>
+            </el-table-column>
+            <el-table-column prop="routePattern" label="接口模板" min-width="220" show-overflow-tooltip>
+              <template #default="{ row }">
+                <span class="endpoint-mono">{{ row.routePattern }}</span>
+              </template>
+            </el-table-column>
+            <!-- 数值列右对齐，按个位对齐便于比较；P95 是本表的排序依据，加粗突出。 -->
+            <el-table-column prop="requestCount" label="请求数" width="100" align="right" />
+            <el-table-column label="错误率" width="110" align="right">
               <template #default="{ row }">
                 {{ formatPercent(errorRate(row.errorCount, row.requestCount)) }}
               </template>
             </el-table-column>
-            <el-table-column label="客户端平均" width="130">
+            <el-table-column label="客户端平均" width="130" align="right">
               <template #default="{ row }">
                 {{ formatDuration(row.avgClientDurationMs) }}
               </template>
             </el-table-column>
-            <el-table-column label="客户端 P95" width="130">
+            <el-table-column label="客户端 P95" width="130" align="right">
               <template #default="{ row }">
-                {{ formatDuration(row.p95ClientDurationMs) }}
+                <strong class="endpoint-p95">{{ formatDuration(row.p95ClientDurationMs) }}</strong>
               </template>
             </el-table-column>
-            <el-table-column label="服务端平均" width="130">
+            <el-table-column label="服务端平均" width="130" align="right">
               <template #default="{ row }">
                 {{ formatDuration(row.avgServerDurationMs) }}
               </template>
             </el-table-column>
           </el-table>
           <AppEmpty v-else icon="i-lucide:gauge" description="暂无慢接口数据" />
-        </el-card>
+        </MrrSectionCard>
       </div>
     </template>
   </MrrPageShell>
@@ -178,6 +174,15 @@ onMounted(loadData)
   min-width: 0;
   border: 1px solid var(--mrr-border);
   border-radius: var(--mrr-radius-card);
+}
+
+.endpoint-mono {
+  font-family: var(--mrr-font-mono);
+  font-size: var(--mrr-font-size-xs);
+}
+
+.endpoint-p95 {
+  font-weight: 600;
 }
 
 .analysis-stack {
@@ -192,28 +197,6 @@ onMounted(loadData)
 
 .slow-endpoint-card {
   overflow: hidden;
-}
-
-.card-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-}
-
-.card-header div {
-  display: grid;
-  gap: 4px;
-}
-
-.card-header strong {
-  font-size: 16px;
-  font-weight: 600;
-  color: var(--mrr-foreground);
-}
-
-.card-header span {
-  font-size: 12px;
-  color: var(--mrr-muted-foreground);
 }
 
 @media (min-width: 1440px) {

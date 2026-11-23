@@ -19,6 +19,7 @@ import {
 } from '@/api/modules/system'
 import MrrPageHeader from '@/components/MrrPageHeader/index.vue'
 import MrrPageShell from '@/components/MrrPageShell/index.vue'
+import MrrSectionCard from '@/components/MrrSectionCard/index.vue'
 
 defineOptions({ name: 'MonitoringPage' })
 
@@ -324,17 +325,11 @@ onUnmounted(pause)
     </section>
 
     <div class="monitor-grid monitor-grid--availability">
-      <el-card shadow="never" class="monitor-card">
-        <template #header>
-          <div class="card-header">
-            <div>
-              <strong>PostgreSQL 运行状态</strong>
-              <p>实时连接、事务、锁等待和缓存情况</p>
-            </div>
-            <el-tag :type="databaseStatus === 'UP' ? 'success' : 'danger'">
-              {{ databaseStatus }}
-            </el-tag>
-          </div>
+      <MrrSectionCard class="monitor-card" title="PostgreSQL 运行状态" description="实时连接、事务、锁等待和缓存情况">
+        <template #actions>
+          <el-tag :type="databaseStatus === 'UP' ? 'success' : 'danger'">
+            {{ databaseStatus }}
+          </el-tag>
         </template>
 
         <el-descriptions :column="2" border>
@@ -384,19 +379,13 @@ onUnmounted(pause)
             <el-progress :percentage="hikariUsage" :status="hikariUsage >= 90 ? 'exception' : hikariUsage >= 80 ? 'warning' : 'success'" />
           </div>
         </div>
-      </el-card>
+      </MrrSectionCard>
 
-      <el-card shadow="never" class="monitor-card">
-        <template #header>
-          <div class="card-header">
-            <div>
-              <strong>应用运行状态</strong>
-              <p>JVM、内存与运行环境摘要</p>
-            </div>
-            <el-tag :type="statusType(String(healthStatus.status || 'UNKNOWN'))">
-              {{ healthStatus.status || 'UNKNOWN' }}
-            </el-tag>
-          </div>
+      <MrrSectionCard class="monitor-card" title="应用运行状态" description="JVM、内存与运行环境摘要">
+        <template #actions>
+          <el-tag :type="statusType(String(healthStatus.status || 'UNKNOWN'))">
+            {{ healthStatus.status || 'UNKNOWN' }}
+          </el-tag>
         </template>
         <el-descriptions :column="1" border>
           <el-descriptions-item label="应用">
@@ -418,32 +407,34 @@ onUnmounted(pause)
             {{ systemInfo.operatingSystem?.systemLoadAverage || '-' }}
           </el-descriptions-item>
         </el-descriptions>
-      </el-card>
+      </MrrSectionCard>
     </div>
 
-    <el-card shadow="never" class="monitor-card">
-      <template #header>
-        <div class="card-header">
-          <div>
-            <strong>数据质量监控</strong>
-            <p>检查结果按批次落库，Prometheus 仅采集聚合数量</p>
-          </div>
-          <div class="quality-actions">
-            <el-tag :type="statusType(latestRun?.status)">
-              {{ qualitySummary.running ? 'RUNNING' : latestRun?.status || 'NOT_RUN' }}
-            </el-tag>
-            <el-button type="primary" :loading="qualityRunning || qualitySummary.running" @click="runQualityCheck">
-              立即检查
-            </el-button>
-          </div>
+    <MrrSectionCard class="monitor-card" title="数据质量监控" description="检查结果按批次落库，Prometheus 仅采集聚合数量">
+      <template #actions>
+        <div class="quality-actions">
+          <el-tag :type="statusType(latestRun?.status)">
+            {{ qualitySummary.running ? 'RUNNING' : latestRun?.status || 'NOT_RUN' }}
+          </el-tag>
+          <el-button type="primary" :loading="qualityRunning || qualitySummary.running" @click="runQualityCheck">
+            立即检查
+          </el-button>
         </div>
       </template>
 
-      <div class="quality-summary">
-        <div><span>严重异常</span><strong class="danger-text">{{ formatNumber(criticalIssues) }}</strong></div>
-        <div><span>警告</span><strong class="warning-text">{{ formatNumber(warningIssues) }}</strong></div>
-        <div><span>检查项</span><strong>{{ latestRun?.check_count ?? 0 }}</strong></div>
-        <div><span>完成时间</span><strong>{{ formatDate(latestRun?.completed_at) }}</strong></div>
+      <div class="quality-summary mrr-stat-strip mrr-stat-strip--4">
+        <div class="mrr-stat-tile">
+          <span class="mrr-stat-tile__label">严重异常</span><strong class="mrr-stat-tile__value mrr-stat-tile__value--danger">{{ formatNumber(criticalIssues) }}</strong>
+        </div>
+        <div class="mrr-stat-tile">
+          <span class="mrr-stat-tile__label">警告</span><strong class="mrr-stat-tile__value mrr-stat-tile__value--warning">{{ formatNumber(warningIssues) }}</strong>
+        </div>
+        <div class="mrr-stat-tile">
+          <span class="mrr-stat-tile__label">检查项</span><strong class="mrr-stat-tile__value">{{ latestRun?.check_count ?? 0 }}</strong>
+        </div>
+        <div class="mrr-stat-tile">
+          <span class="mrr-stat-tile__label">完成时间</span><strong class="mrr-stat-tile__value mrr-stat-tile__value--text">{{ formatDate(latestRun?.completed_at) }}</strong>
+        </div>
       </div>
 
       <el-table :data="qualitySummary.checks" stripe border empty-text="尚未执行数据质量检查">
@@ -459,15 +450,10 @@ onUnmounted(pause)
         <el-table-column prop="issue_count" label="异常数" width="110" sortable />
         <el-table-column prop="sampled_count" label="已保存样本" width="120" />
       </el-table>
-    </el-card>
+    </MrrSectionCard>
 
     <div class="monitor-grid monitor-grid--details">
-      <el-card shadow="never" class="monitor-card">
-        <template #header>
-          <div class="card-header">
-            <strong>异常样本</strong><span>最多显示最近 100 条</span>
-          </div>
-        </template>
+      <MrrSectionCard class="monitor-card" title="异常样本" description="最多显示最近 100 条">
         <el-table :data="qualityIssues" stripe border max-height="460" empty-text="没有异常样本">
           <el-table-column prop="severity" label="级别" width="100">
             <template #default="scope">
@@ -481,13 +467,8 @@ onUnmounted(pause)
           <el-table-column prop="sjh" label="上架号" width="120" />
           <el-table-column prop="detail" label="说明" min-width="260" show-overflow-tooltip />
         </el-table>
-      </el-card>
-      <el-card shadow="never" class="monitor-card">
-        <template #header>
-          <div class="card-header">
-            <strong>数据库占用最大的表</strong><span>包含表与索引</span>
-          </div>
-        </template>
+      </MrrSectionCard>
+      <MrrSectionCard class="monitor-card" title="数据库占用最大的表" description="包含表与索引">
         <el-table :data="databaseOverview.tables" stripe border max-height="460" empty-text="暂无表统计">
           <el-table-column prop="table_name" label="表" min-width="180" />
           <el-table-column label="总大小" width="120">
@@ -503,31 +484,23 @@ onUnmounted(pause)
             </template>
           </el-table-column>
         </el-table>
-      </el-card>
+      </MrrSectionCard>
     </div>
   </MrrPageShell>
 </template>
 
 <style scoped>
-.card-header,
 .quality-actions,
 .progress-label {
   display: flex;
-  gap: 12px;
+  gap: var(--mrr-space-3);
   align-items: center;
   justify-content: space-between;
 }
 
-.card-header p,
-.card-header span {
-  margin: 0;
-  font-size: 13px;
-  color: var(--el-text-color-secondary);
-}
-
 .monitor-grid {
   display: grid;
-  gap: 16px;
+  gap: var(--mrr-space-4);
 }
 
 .monitor-grid--availability,
@@ -542,64 +515,20 @@ onUnmounted(pause)
   border-radius: var(--mrr-radius-card);
 }
 
-.card-header > div:first-child {
-  display: grid;
-  gap: 4px;
-}
-
 .progress-grid {
   display: grid;
-  gap: 18px;
-  margin-top: 22px;
+  gap: var(--mrr-space-4);
+  margin-top: var(--mrr-space-5);
 }
 
 .progress-label {
-  margin-bottom: 8px;
-  font-size: 13px;
+  margin-bottom: var(--mrr-space-2);
+  font-size: var(--mrr-font-size-sm);
 }
 
+/* 摘要块外观由共享 .mrr-stat-tile 提供，这里只保留与下方表格的距离。 */
 .quality-summary {
-  display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 12px;
-  margin-bottom: 18px;
-}
-
-.quality-summary > div {
-  display: grid;
-  gap: 6px;
-  padding: 14px 16px;
-  background: var(--el-fill-color-lighter);
-  border: 1px solid var(--el-border-color-lighter);
-  border-radius: var(--mrr-radius-lg);
-}
-
-.quality-summary span {
-  font-size: 13px;
-  color: var(--el-text-color-secondary);
-}
-
-.quality-summary strong {
-  font-size: 20px;
-}
-
-.danger-text {
-  color: var(--el-color-danger);
-}
-
-.warning-text {
-  color: var(--el-color-warning);
-}
-
-@media (max-width: 900px) {
-  .card-header {
-    flex-direction: column;
-    align-items: flex-start;
-  }
-
-  .quality-summary {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
+  margin-bottom: var(--mrr-space-4);
 }
 
 @media (min-width: 1200px) {

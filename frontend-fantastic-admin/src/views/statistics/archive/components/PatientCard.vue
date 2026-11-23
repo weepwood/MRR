@@ -62,7 +62,7 @@ function toggleRecordNumber() {
 
 <style scoped>
 .patient-card {
-  padding: 14px;
+  padding: var(--mrr-space-3);
   background: var(--surface);
   border: 1px solid var(--divider);
   border-radius: var(--mrr-radius-card);
@@ -71,7 +71,7 @@ function toggleRecordNumber() {
 .patient-card-body {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 10px 14px;
+  gap: var(--mrr-space-3) var(--mrr-space-3);
 }
 
 .patient-field {
@@ -82,7 +82,7 @@ function toggleRecordNumber() {
 }
 
 .field-label {
-  font-size: 11px;
+  font-size: var(--mrr-font-size-xs);
   font-weight: 700;
   color: var(--text-tertiary);
   text-transform: uppercase;
@@ -98,7 +98,7 @@ function toggleRecordNumber() {
   cursor: pointer;
   background: transparent;
   border: 0;
-  transition: color var(--mrr-motion-feedback) ease;
+  transition: color var(--mrr-motion-feedback) var(--mrr-ease-out);
 }
 
 .field-label--switchable:hover,

@@ -9,6 +9,7 @@ defineOptions({ name: 'OssBrowserPage' })
 <template>
   <MrrPageShell>
     <MrrPageHeader
+      size="compact"
       title="OSS 文件浏览"
       description="浏览受管 Bucket 中的目录与对象。"
     >

@@ -194,13 +194,13 @@ watch(
 
 <style scoped>
 .edit-alert {
-  margin-bottom: 18px;
+  margin-bottom: var(--mrr-space-4);
 }
 
 .form-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  column-gap: 18px;
+  column-gap: var(--mrr-space-4);
 }
 
 .full-width {

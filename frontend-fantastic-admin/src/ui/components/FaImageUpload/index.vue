@@ -157,14 +157,14 @@ function onMove(index: number, direction: 'forward' | 'backward') {
       >
         <img :src="img" alt="" class="h-full w-full object-contain">
         <div v-if="!props.disabled" class="absolute inset-0 grid grid-cols-2 place-items-center rounded-lg bg-black/50 p-2 text-white opacity-0 transition-opacity group-hover/image-upload:opacity-100">
-          <div class="flex-center cursor-pointer opacity-60 transition-all hover:(scale-110 opacity-100)" @click.prevent="onPreview(index)">
+          <div class="flex-center cursor-pointer opacity-60 transition-[opacity,transform] hover:(scale-110 opacity-100)" @click.prevent="onPreview(index)">
             <FaIcon name="i-lucide:eye" class="size-6" />
           </div>
-          <div class="flex-center cursor-pointer opacity-60 transition-all hover:(scale-110 opacity-100)" @click.prevent="onRemove(index)">
+          <div class="flex-center cursor-pointer opacity-60 transition-[opacity,transform] hover:(scale-110 opacity-100)" @click.prevent="onRemove(index)">
             <FaIcon name="i-lucide:trash-2" class="size-6" />
           </div>
           <div
-            v-show="images.length > 1" :class="cn('flex-center cursor-pointer opacity-60 transition-all', {
+            v-show="images.length > 1" :class="cn('flex-center cursor-pointer opacity-60 transition-[opacity,transform]', {
               'hover:(scale-110 opacity-100)': index !== 0,
               'cursor-not-allowed': index === 0,
             })" @click="onMove(index, 'forward')"
@@ -172,7 +172,7 @@ function onMove(index: number, direction: 'forward' | 'backward') {
             <FaIcon name="i-lucide:circle-arrow-left" class="size-6" />
           </div>
           <div
-            v-show="images.length > 1" :class="cn('flex-center cursor-pointer opacity-60 transition-all', {
+            v-show="images.length > 1" :class="cn('flex-center cursor-pointer opacity-60 transition-[opacity,transform]', {
               'hover:(scale-110 opacity-100)': index !== images.length - 1,
               'cursor-not-allowed': index === images.length - 1,
             })" @click="onMove(index, 'backward')"

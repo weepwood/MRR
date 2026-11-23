@@ -631,7 +631,13 @@ onMounted(async () => {
             <MrrMetricCard label="警告" value-tone="warning" :value="diagnosticRun.summary.warnings" />
           </section>
           <div class="diagnostic-list">
-            <el-card v-for="check in diagnosticRun.checks" :key="check.code" shadow="never" class="check-card">
+            <el-card
+              v-for="check in diagnosticRun.checks"
+              :key="check.code"
+              shadow="never"
+              class="check-card"
+              :class="check.passed ? 'check-card--passed' : check.severity === 'CRITICAL' ? 'check-card--critical' : 'check-card--warning'"
+            >
               <div class="check-row">
                 <div class="check-copy">
                   <div class="check-title-line">
@@ -663,7 +669,8 @@ onMounted(async () => {
       </el-tab-pane>
 
       <el-tab-pane label="图片来源诊断" name="image">
-        <el-card shadow="never">
+        <!-- 条件区补标题与说明，与本页其他分区卡同一层级；原来是一张无标题的 el-card，只有三个输入框。 -->
+        <MrrSectionCard title="诊断目标" description="填写病案号、上架号或图片 ID 中的任一项，查看该影像的来源解析与回退过程。">
           <el-form :model="imageForm" inline class="diagnosis-form">
             <el-form-item label="病案号">
               <el-input v-model="imageForm.bah" clearable placeholder="输入病案号" />
@@ -680,7 +687,7 @@ onMounted(async () => {
               </el-button>
             </el-form-item>
           </el-form>
-        </el-card>
+        </MrrSectionCard>
         <template v-if="imageDiagnosis">
           <section class="mrr-metric-grid mrr-metric-grid--three metric-row">
             <MrrMetricCard
@@ -692,10 +699,7 @@ onMounted(async () => {
             <MrrMetricCard label="最终来源" compact-value :value="imageDiagnosis.selectedSource || '-'" />
             <MrrMetricCard label="回退原因" compact-value :value="imageDiagnosis.fallbackReason || '未发生回退'" />
           </section>
-          <el-card shadow="never" class="section-card">
-            <template #header>
-              解析与回退过程
-            </template>
+          <MrrSectionCard class="section-card" title="解析与回退过程">
             <el-timeline>
               <el-timeline-item v-for="step in imageDiagnosis.steps" :key="step.code" :type="step.success ? 'success' : 'danger'" :hollow="!step.success">
                 <div class="timeline-title">
@@ -704,7 +708,7 @@ onMounted(async () => {
                 <pre v-if="Object.keys(step.details || {}).length" class="detail-json">{{ JSON.stringify(step.details, null, 2) }}</pre>
               </el-timeline-item>
             </el-timeline>
-          </el-card>
+          </MrrSectionCard>
         </template>
       </el-tab-pane>
 
@@ -725,10 +729,7 @@ onMounted(async () => {
             <MrrMetricCard label="重复病案组" value-tone="danger" :value="formatNumber(integrity.duplicateArchiveGroups)" />
             <MrrMetricCard label="样本有效扫描图片" :value="formatNumber(integrity.totalActiveScans)" :note="integrity.sampleScope" />
           </section>
-          <el-card shadow="never" class="section-card">
-            <template #header>
-              各业务表关联情况
-            </template>
+          <MrrSectionCard class="section-card" title="各业务表关联情况">
             <el-table :data="integrity.tables" border>
               <el-table-column prop="table" label="数据表" min-width="180" />
               <el-table-column prop="total" label="统计范围内总数" min-width="130" />
@@ -740,7 +741,7 @@ onMounted(async () => {
                 </template>
               </el-table-column>
             </el-table>
-          </el-card>
+          </MrrSectionCard>
         </template>
       </el-tab-pane>
 
@@ -840,15 +841,12 @@ onMounted(async () => {
             </template>
           </el-table-column>
         </el-table>
-        <el-card v-if="permissionMatrix?.diff.available && permissionMatrix.diff.changes.length" shadow="never" class="section-card">
-          <template #header>
-            与上一版本的差异
-          </template>
+        <MrrSectionCard v-if="permissionMatrix?.diff.available && permissionMatrix.diff.changes.length" class="section-card" title="与上一版本的差异">
           <el-table :data="permissionMatrix.diff.changes" border>
             <el-table-column prop="type" label="变化" width="110" />
             <el-table-column prop="key" label="接口" min-width="300" />
           </el-table>
-        </el-card>
+        </MrrSectionCard>
       </el-tab-pane>
 
       <el-tab-pane label="维护模式" name="maintenance">
@@ -888,18 +886,15 @@ onMounted(async () => {
             :value-tone="maintenance?.enabled ? 'warning' : 'success'"
           />
         </section>
-        <el-card shadow="never" class="section-card">
-          <template #header>
-            <div class="card-header">
-              <div><strong>维护操作</strong><p>所有操作通过现有访问日志保留 requestId、用户和结果</p></div>
-              <div class="toolbar-actions">
-                <el-button v-if="!maintenance?.enabled" type="warning" @click="enableMaintenance">
-                  进入维护模式
-                </el-button>
-                <el-button v-else type="success" @click="disableMaintenance">
-                  退出主动维护
-                </el-button>
-              </div>
+        <MrrSectionCard class="section-card" title="维护操作" description="所有操作通过现有访问日志保留 requestId、用户和结果">
+          <template #actions>
+            <div class="toolbar-actions">
+              <el-button v-if="!maintenance?.enabled" type="warning" @click="enableMaintenance">
+                进入维护模式
+              </el-button>
+              <el-button v-else type="success" @click="disableMaintenance">
+                退出主动维护
+              </el-button>
             </div>
           </template>
           <el-alert v-if="readiness?.automaticReadOnly" title="当前同时存在自动只读降级。即使退出主动维护，系统仍会保持只读。" type="error" :closable="false" show-icon />
@@ -911,7 +906,7 @@ onMounted(async () => {
               </el-tag>
             </div>
           </div>
-        </el-card>
+        </MrrSectionCard>
       </el-tab-pane>
 
       <el-tab-pane label="操作审计" name="audit">
@@ -960,7 +955,6 @@ onMounted(async () => {
 
 .toolbar-row,
 .toolbar-actions,
-.card-header,
 .check-row,
 .issue-row,
 .check-title-line {
@@ -969,7 +963,6 @@ onMounted(async () => {
 }
 
 .toolbar-row,
-.card-header,
 .check-row,
 .issue-row {
   justify-content: space-between;
@@ -981,16 +974,14 @@ onMounted(async () => {
 }
 
 .toolbar-row,
-.card-header p,
 .issue-row p,
 .check-copy > p {
   color: var(--el-text-color-secondary);
 }
 
-.card-header p,
 .issue-row p,
 .check-copy > p {
-  margin: 4px 0 0;
+  margin: var(--mrr-space-1) 0 0;
 }
 
 .diagnostics-tabs {
@@ -1003,14 +994,14 @@ onMounted(async () => {
 .overview-dashboard,
 .overview-task-states {
   display: grid;
-  gap: 16px;
+  gap: var(--mrr-space-4);
 }
 
 .snapshot-times,
 .task-state-label {
   display: flex;
   flex-wrap: wrap;
-  gap: 4px 16px;
+  gap: var(--mrr-space-1) var(--mrr-space-4);
 }
 
 .task-state-label {
@@ -1019,36 +1010,28 @@ onMounted(async () => {
 }
 
 .overview-hint {
-  margin-block-start: 12px;
+  margin-block-start: var(--mrr-space-3);
 }
 
 .overview-metrics {
-  margin-top: 16px;
+  margin-top: var(--mrr-space-4);
 }
 
 /* 指标组统一使用 MrrMetricCard，只保留与页面节奏相关的间距。 */
 .metric-row {
-  margin-top: 16px;
+  margin-top: var(--mrr-space-4);
 }
 
 .two-column-layout {
   display: grid;
   grid-template-columns: minmax(0, 1.25fr) minmax(320px, 0.75fr);
-  gap: 16px;
+  gap: var(--mrr-space-4);
 }
 
 .section-card,
 .diagnostic-list,
 .task-summary {
-  margin-top: 16px;
-}
-
-.card-header {
-  gap: 16px;
-}
-
-.card-header > div:first-child {
-  min-width: 0;
+  margin-top: var(--mrr-space-4);
 }
 
 .issue-list,
@@ -1058,7 +1041,7 @@ onMounted(async () => {
 }
 
 .issue-row {
-  gap: 16px;
+  gap: var(--mrr-space-4);
   padding: var(--mrr-space-3) 0;
   border-bottom: 1px solid var(--el-border-color-lighter);
 }
@@ -1070,7 +1053,7 @@ onMounted(async () => {
 .overview-links {
   display: flex;
   flex-wrap: wrap;
-  gap: 8px;
+  gap: var(--mrr-space-2);
 }
 
 .overview-links .el-button {
@@ -1086,7 +1069,7 @@ onMounted(async () => {
 }
 
 .toolbar-row {
-  gap: 16px;
+  gap: var(--mrr-space-4);
   margin-bottom: var(--mrr-space-3);
 }
 
@@ -1094,8 +1077,24 @@ onMounted(async () => {
   flex-wrap: wrap;
 }
 
+/*
+ * 左侧状态条按检查结果着色：原来所有检查都是同一条灰边，几十项检查里要逐张看标签才知道哪项失败。
+ * 状态仍由右侧文字标签表达，色条只是辅助扫读（DESIGN.md §1：状态不只靠颜色）。宽度与本页其他强调条一致取 3px。
+ */
 .check-card {
-  border-left: 4px solid var(--el-border-color);
+  border-left: 3px solid var(--mrr-border-strong);
+}
+
+.check-card--passed {
+  border-left-color: var(--mrr-tone-success);
+}
+
+.check-card--warning {
+  border-left-color: var(--mrr-tone-warning);
+}
+
+.check-card--critical {
+  border-left-color: var(--mrr-tone-danger);
 }
 
 .check-copy {
@@ -1104,38 +1103,39 @@ onMounted(async () => {
 }
 
 .check-title-line code {
-  padding: 2px 6px;
-  border-radius: 5px;
+  padding: 2px var(--mrr-space-2);
+  border-radius: max(0px, calc(var(--mrr-radius-sm) - 2px));
   background: var(--el-fill-color-light);
   color: var(--el-text-color-secondary);
-  font-size: 11px;
+  font-family: var(--mrr-font-mono);
+  font-size: var(--mrr-font-size-xs);
 }
 
 .check-actions {
   display: grid;
   flex: 0 0 auto;
-  gap: 8px;
+  gap: var(--mrr-space-2);
   justify-items: end;
 }
 
 .suggestion-box {
   display: grid;
-  gap: 4px;
+  gap: var(--mrr-space-1);
   margin-top: var(--mrr-space-3);
   padding: var(--mrr-space-2) var(--mrr-space-3);
   border-radius: var(--mrr-radius-md);
   background: var(--el-fill-color-light);
-  font-size: 13px;
+  font-size: var(--mrr-font-size-sm);
 }
 
 .details-panel {
-  margin-top: 12px;
+  margin-top: var(--mrr-space-3);
 }
 
 .details-panel summary {
   cursor: pointer;
   color: var(--el-color-primary);
-  font-size: 13px;
+  font-size: var(--mrr-font-size-sm);
 }
 
 .detail-json {
@@ -1146,7 +1146,7 @@ onMounted(async () => {
   border-radius: var(--mrr-radius-md);
   background: var(--el-fill-color-light);
   color: var(--el-text-color-regular);
-  font-size: 12px;
+  font-size: var(--mrr-font-size-xs);
   white-space: pre-wrap;
   word-break: break-all;
 }
@@ -1154,16 +1154,23 @@ onMounted(async () => {
 .diagnosis-form {
   display: flex;
   flex-wrap: wrap;
+  gap: 0 var(--mrr-space-4);
+  align-items: flex-end;
+}
+
+.diagnosis-form :deep(.el-form-item) {
+  margin-right: 0;
+  margin-bottom: 0;
 }
 
 .timeline-title {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: var(--mrr-space-1);
 }
 
 .maintenance-checks {
-  margin-top: 12px;
+  margin-top: var(--mrr-space-3);
 }
 
 @media (max-width: 1100px) {

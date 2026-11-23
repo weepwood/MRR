@@ -69,6 +69,12 @@ export function useUnifiedSettings() {
   const activeSection = ref<SettingsSection>('system')
   const loading = ref(false)
   const saving = ref(false)
+  /**
+   * 是否已从服务器读到可保存的基线。读取成功前表单里只有默认值（或上一次成功读取的值），
+   * 既不算修改，也不能保存：保存会提交全部字段，回退值会整批覆盖服务器设置。
+   */
+  const loaded = ref(false)
+  const loadError = ref('')
   const savedSnapshot = ref<Record<string, string>>({})
   const settings = ref<EffectiveSystemSettings>(createDefaultSystemSettings())
 
@@ -83,7 +89,7 @@ export function useUnifiedSettings() {
   ].includes(activeSection.value))
   const currentSnapshot = computed(() => serializeSystemSettings(settings.value))
   const changedKeys = computed(() => Object.keys(currentSnapshot.value).filter(key => currentSnapshot.value[key] !== savedSnapshot.value[key]))
-  const isDirty = computed(() => changedKeys.value.length > 0)
+  const isDirty = computed(() => loaded.value && changedKeys.value.length > 0)
   /** 保存前复核用的可读变更清单（字段中文名 + 旧值 → 新值）。 */
   const changedItems = computed(() => describeSettingChanges(
     changedKeys.value,
@@ -118,13 +124,23 @@ export function useUnifiedSettings() {
     settings.value = parseSystemSettings({ ...savedSnapshot.value })
   }
 
-  async function loadSettings(showMessage = false) {
+  async function loadSettings(showMessage = false): Promise<boolean> {
     loading.value = true
     try {
       const result = await loadEffectiveSystemSettings()
-      settings.value = result.settings
+      if (!result.serverReachable) {
+        // 回退值只供只读页面降级使用。已有服务器基线时保留当前表单与基线；首次失败由页面显示错误与重试。
+        loadError.value = '系统设置读取失败'
+        if (loaded.value || showMessage) { ElMessage.error('系统设置读取失败，当前内容未更新，请稍后重新加载') }
+        return false
+      }
+      // 服务器可达但还没有任何设置（全新部署）时以默认值为基线，不采用可能来自其他会话的本地缓存。
+      settings.value = result.source === 'server' ? result.settings : createDefaultSystemSettings()
       markAsSaved()
+      loaded.value = true
+      loadError.value = ''
       if (showMessage) { ElMessage.success('设置已重新加载') }
+      return true
     }
     finally {
       loading.value = false
@@ -213,6 +229,10 @@ export function useUnifiedSettings() {
   async function handleSave(options: { confirmChanges?: boolean } = {}): Promise<boolean> {
     // 页头按钮靠 loading 自禁用，但「离开前保存」与页头保存可以同时进入，需要显式互斥。
     if (saving.value) { return false }
+    if (!loaded.value) {
+      ElMessage.warning('系统设置尚未从服务器读取成功，请重新加载后再保存')
+      return false
+    }
     if (!validateSettings()) { return false }
     if (options.confirmChanges !== false && isDirty.value && !await confirmSaveChanges()) { return false }
     if (!await confirmDeveloperModeEnable()) { return false }
@@ -247,6 +267,7 @@ export function useUnifiedSettings() {
   }
 
   async function handleReset() {
+    if (!loaded.value) { return }
     try {
       await actionDialog.confirm('恢复默认会覆盖当前页面中的设置修改，恢复后仍需点击“保存”才会生效。确定继续吗？', '恢复默认设置', {
         type: 'warning',
@@ -297,6 +318,8 @@ export function useUnifiedSettings() {
     activeSection,
     activeMeta,
     loading,
+    loaded,
+    loadError,
     saving,
     settings,
     changedKeys,

@@ -7,6 +7,7 @@ import {
   DEFAULT_DOCUMENTATION_SETTINGS,
   getPublicDocumentationSettings,
 } from '@/api/modules/documentation-settings'
+import AppLoading from '@/components/AppLoading/index.vue'
 import { notify } from '@/utils/notification'
 
 defineOptions({ name: 'HelpCenter' })
@@ -120,7 +121,9 @@ onMounted(async () => {
       </div>
     </header>
 
-    <section v-loading="loading" class="documentation-grid" aria-label="文档入口">
+    <!-- 入口地址来自系统设置；加载完成前不展示可能被覆盖的默认链接。 -->
+    <AppLoading v-if="loading" type="card" :cols="3" />
+    <section v-else class="documentation-grid" aria-label="文档入口">
       <el-card
         v-for="entry in entries"
         :key="entry.key"
@@ -129,7 +132,7 @@ onMounted(async () => {
         :class="[`documentation-card--${entry.tone}`, { 'is-unconfigured': !entry.target }]"
       >
         <div class="card-icon">
-          <el-icon :size="26">
+          <el-icon :size="22">
             <component :is="entry.icon" />
           </el-icon>
         </div>
@@ -158,54 +161,25 @@ onMounted(async () => {
 </template>
 
 <style scoped>
+/*
+ * 页头（.help-header / .help-kicker / h1 / .help-description）的外观全部由 page-header.css 提供，
+ * 权重 (0,3,1) 高于这里的 scoped 规则；原先这里的 2xl 圆角、38px 标题、内边距等声明从未生效，已删除。
+ */
 .help-center {
   display: flex;
   flex-direction: column;
-  gap: 20px;
+  gap: var(--mrr-page-gap);
   width: min(1280px, 100%);
   margin: 0 auto;
-}
-
-.help-header {
-  display: flex;
-  gap: 24px;
-  align-items: flex-start;
-  justify-content: space-between;
-  padding: 28px;
-  background: var(--el-bg-color);
-  border: 1px solid var(--el-border-color-light);
-  border-radius: var(--mrr-radius-2xl);
-}
-
-.help-kicker {
-  margin: 0 0 8px;
-  font-size: 12px;
-  font-weight: 700;
-  color: var(--el-color-primary);
-  letter-spacing: 0.16em;
-}
-
-.help-header h1 {
-  margin: 0;
-  font-size: clamp(26px, 3vw, 38px);
-  line-height: 1.2;
-  color: var(--el-text-color-primary);
-}
-
-.help-description {
-  max-width: 680px;
-  margin: 12px 0 0;
-  line-height: 1.7;
-  color: var(--el-text-color-secondary);
 }
 
 .help-status {
   display: inline-flex;
   flex: none;
-  gap: 8px;
+  gap: var(--mrr-space-2);
   align-items: center;
-  padding: 8px 12px;
-  font-size: 13px;
+  padding: var(--mrr-space-2) var(--mrr-space-3);
+  font-size: var(--mrr-font-size-sm);
   color: var(--el-text-color-regular);
   background: var(--el-fill-color-light);
   border: 1px solid var(--el-border-color-lighter);
@@ -223,7 +197,7 @@ onMounted(async () => {
 .documentation-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 16px;
+  gap: var(--mrr-space-4);
   min-height: 220px;
 }
 
@@ -233,13 +207,16 @@ onMounted(async () => {
   background: color-mix(in srgb, var(--card-accent, var(--el-color-primary)) 4%, var(--el-bg-color));
   border: 1px solid var(--el-border-color-light);
   border-radius: var(--mrr-radius-card);
-  transition: border-color var(--mrr-motion-feedback) ease, transform var(--mrr-motion-press) var(--mrr-ease-out), box-shadow var(--mrr-motion-feedback) ease;
+  transition: border-color var(--mrr-motion-feedback) var(--mrr-ease-out), box-shadow var(--mrr-motion-feedback) var(--mrr-ease-out);
 }
 
+/*
+ * 卡片本身不可点击（入口是卡内按钮），因此不再上浮 2px —— 位移暗示「整张可点」（DESIGN.md §2.7）。
+ * 保留描边加深 + 升一档阴影作为悬停反馈；阴影改用令牌，暖色 / 暗色主题自动适配。
+ */
 .documentation-card:hover {
   border-color: color-mix(in srgb, var(--card-accent, var(--el-color-primary)) 40%, var(--el-border-color));
-  box-shadow: 0 12px 30px rgb(0 0 0 / 7%);
-  transform: var(--mrr-motion-decor, translateY(-2px));
+  box-shadow: var(--mrr-shadow-sm);
 }
 
 .documentation-card.is-unconfigured {
@@ -249,16 +226,15 @@ onMounted(async () => {
 .documentation-card.is-unconfigured:hover {
   border-color: var(--el-border-color-light);
   box-shadow: none;
-  transform: none;
 }
 
 .documentation-card :deep(.el-card__body) {
   display: grid;
-  grid-template-columns: 52px minmax(0, 1fr);
-  gap: 18px;
+  grid-template-columns: 44px minmax(0, 1fr);
+  gap: var(--mrr-space-4);
   align-content: start;
   min-height: 196px;
-  padding: 18px;
+  padding: var(--mrr-card-inset);
 }
 
 .documentation-card--primary {
@@ -280,11 +256,13 @@ onMounted(async () => {
 .card-icon {
   display: grid;
   place-items: center;
-  width: 52px;
-  height: 52px;
+
+  /* 与指标卡图标块同尺寸（44px / radius-lg），全站「图标 + 标题」卡片只有一种比例。 */
+  width: 44px;
+  height: 44px;
   color: var(--card-accent);
   background: color-mix(in srgb, var(--card-accent) 12%, transparent);
-  border-radius: var(--mrr-radius-xl);
+  border-radius: var(--mrr-radius-lg);
 }
 
 /*
@@ -322,13 +300,15 @@ onMounted(async () => {
 }
 
 .card-content h2 {
-  margin: 2px 0 10px;
-  font-size: 19px;
+  margin: 2px 0 var(--mrr-space-2);
+  font-size: var(--mrr-font-size-lg);
+  font-weight: 650;
   color: var(--el-text-color-primary);
 }
 
 .card-content p {
-  margin: 0 0 12px;
+  margin: 0 0 var(--mrr-space-3);
+  font-size: var(--mrr-font-size-sm);
   line-height: 1.7;
   color: var(--el-text-color-secondary);
 }
@@ -336,11 +316,11 @@ onMounted(async () => {
 .card-footer {
   display: flex;
   grid-column: 1 / -1;
-  gap: 16px;
+  gap: var(--mrr-space-4);
   align-items: center;
   justify-content: flex-end;
-  padding-top: 14px;
-  margin-top: 16px;
+  padding-top: var(--mrr-space-3);
+  margin-top: var(--mrr-space-4);
   border-top: 1px solid var(--el-border-color-lighter);
 }
 
@@ -349,19 +329,14 @@ onMounted(async () => {
 }
 
 @media (max-width: 820px) {
-  .help-header {
-    flex-direction: column;
-  }
-
   .documentation-grid {
     grid-template-columns: 1fr;
   }
 }
 
 @media (max-width: 520px) {
-  .help-header,
   .documentation-card :deep(.el-card__body) {
-    padding: 18px;
+    padding: var(--mrr-card-inset-compact);
   }
 
   .documentation-card :deep(.el-card__body) {

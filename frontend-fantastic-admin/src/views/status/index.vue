@@ -532,18 +532,18 @@ useVisibleInterval(refreshCurrentStatus, 60_000)
 
 .refresh-button {
   display: inline-flex;
-  gap: 8px;
+  gap: var(--mrr-space-2);
   align-items: center;
   height: var(--mrr-control-height);
   padding: 0 var(--mrr-space-3);
   font: inherit;
-  font-size: 13px;
+  font-size: var(--mrr-font-size-sm);
   color: var(--el-text-color-primary);
   cursor: pointer;
   background: var(--mrr-card);
   border: 1px solid var(--mrr-border);
   border-radius: var(--mrr-radius-lg);
-  box-shadow: 0 5px 18px rgb(15 23 42 / 4%);
+  box-shadow: var(--mrr-shadow-xs);
 }
 
 .refresh-button:disabled {
@@ -563,8 +563,8 @@ useVisibleInterval(refreshCurrentStatus, 60_000)
 .summary-card {
   background: var(--mrr-card);
   border: 1px solid var(--mrr-border);
-  border-radius: var(--mrr-radius-2xl);
-  box-shadow: 0 18px 50px rgb(15 23 42 / 5%);
+  border-radius: var(--mrr-radius-card);
+  box-shadow: var(--mrr-shadow-xs);
 }
 
 .state-panel {
@@ -625,8 +625,8 @@ useVisibleInterval(refreshCurrentStatus, 60_000)
 .eyebrow {
   display: block;
   margin-bottom: var(--mrr-space-2);
-  font-size: 10px;
-  font-weight: 800;
+  font-size: var(--mrr-font-size-xs);
+  font-weight: 700;
   color: var(--color-primary);
   text-transform: uppercase;
   letter-spacing: 0.14em;
@@ -666,7 +666,7 @@ useVisibleInterval(refreshCurrentStatus, 60_000)
 }
 
 .state-meta span {
-  font-size: 11px;
+  font-size: var(--mrr-font-size-xs);
   color: var(--mrr-muted-foreground);
 }
 
@@ -686,7 +686,7 @@ useVisibleInterval(refreshCurrentStatus, 60_000)
   background: currentcolor;
   border-radius: 50%;
   box-shadow: 0 0 0 8px var(--mrr-tone-primary-soft);
-  animation: pulse 1.2s ease-in-out infinite;
+  animation: pulse var(--mrr-motion-loop-soft) ease-in-out infinite;
 }
 
 .loading-panel p {
@@ -715,11 +715,11 @@ useVisibleInterval(refreshCurrentStatus, 60_000)
 .summary-card {
   display: grid;
   gap: var(--mrr-space-2);
-  padding: 20px;
+  padding: var(--mrr-card-inset);
 }
 
 .summary-card > span {
-  font-size: 12px;
+  font-size: var(--mrr-font-size-xs);
   color: var(--mrr-muted-foreground);
 }
 
@@ -749,9 +749,9 @@ useVisibleInterval(refreshCurrentStatus, 60_000)
 .legend {
   display: flex;
   flex-wrap: wrap;
-  gap: 12px;
+  gap: var(--mrr-space-3);
   justify-content: flex-end;
-  font-size: 11px;
+  font-size: var(--mrr-font-size-xs);
   color: var(--mrr-muted-foreground);
 }
 
@@ -872,7 +872,7 @@ useVisibleInterval(refreshCurrentStatus, 60_000)
   cursor: pointer;
   border: 0;
   border-radius: 4px;
-  transition: opacity var(--mrr-motion-feedback) ease, transform var(--mrr-motion-press) var(--mrr-ease-out);
+  transition: opacity var(--mrr-motion-feedback) var(--mrr-ease-out), transform var(--mrr-motion-press) var(--mrr-ease-out);
 }
 
 .day-cell.is-selected {
@@ -954,7 +954,7 @@ useVisibleInterval(refreshCurrentStatus, 60_000)
 
 .ongoing-tag {
   padding: 2px var(--mrr-space-2);
-  font-size: 10px;
+  font-size: var(--mrr-font-size-xs);
   color: var(--mrr-tone-danger);
   background: var(--mrr-tone-danger-soft);
   border-radius: var(--mrr-radius-pill);

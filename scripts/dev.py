@@ -30,6 +30,16 @@ HIDDEN = {'creationflags': subprocess.CREATE_NO_WINDOW} if os.name == 'nt' else 
 
 
 def process_stamp(pid: int) -> str | None:
+    if pid <= 0:
+        return None
+    if sys.platform == 'darwin':
+        try:
+            result = subprocess.run(['/bin/ps', '-p', str(pid), '-o', 'lstart='],
+                                    capture_output=True, text=True, timeout=5,
+                                    env={**os.environ, 'LC_ALL': 'C', 'TZ': 'UTC'})
+            return (result.stdout.strip() or None) if result.returncode == 0 else None
+        except (OSError, subprocess.TimeoutExpired):
+            return None
     if os.name != 'nt':
         try:
             return Path(f'/proc/{pid}/stat').read_text().rsplit(')', 1)[1].split()[19]
@@ -55,7 +65,8 @@ def process_stamp(pid: int) -> str | None:
 
 def stop_owned_process(record: dict) -> None:
     pid = record['pid']
-    if process_stamp(pid) != record['stamp']:
+    stamp = process_stamp(pid)
+    if stamp is None or stamp != record['stamp']:
         return
     if os.name == 'nt':
         result = subprocess.run(['taskkill', '/PID', str(pid), '/T', '/F'], capture_output=True,

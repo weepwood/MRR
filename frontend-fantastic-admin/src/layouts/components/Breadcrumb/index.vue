@@ -1,7 +1,11 @@
+<script setup lang="ts">
+defineProps<{ navigationLabel?: string }>()
+</script>
+
 <template>
-  <div class="flex items-center text-sm">
+  <component :is="navigationLabel ? 'nav' : 'div'" class="flex items-center text-sm" :aria-label="navigationLabel">
     <slot />
-  </div>
+  </component>
 </template>
 
 <style scoped>

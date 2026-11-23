@@ -132,7 +132,7 @@ function handleAnimationEnd() {
           :src="srcList[index]"
           class="mx-auto max-h-full max-w-full object-contain"
           :class="{
-            'transition-all duration-300': !isDragging,
+            'transition-transform duration-mrr-move ease-mrr-out': !isDragging,
           }"
           :style="{
             transform: `translate(${position.x}px, ${position.y}px) scale(${scale}) rotate(${rotate}deg)`,

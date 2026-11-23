@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import type { MrrTableAction } from './types'
-import { computed } from 'vue'
+import { computed, inject } from 'vue'
+import { mrrDataTablePanelLoadingKey } from '../MrrDataTablePanel/context'
 
 const props = withDefaults(defineProps<{
   actions: MrrTableAction[]
@@ -15,6 +16,8 @@ const props = withDefaults(defineProps<{
 const emit = defineEmits<{
   select: [key: string]
 }>()
+
+const panelLoading = inject(mrrDataTablePanelLoadingKey, computed(() => false))
 
 const availableActions = computed(() => props.actions.filter((action) => {
   if (action.visible === false) {
@@ -44,7 +47,7 @@ function actionTooltip(action: MrrTableAction) {
 }
 
 function handleAction(action: MrrTableAction) {
-  if (action.disabled || action.loading) {
+  if (panelLoading.value || action.disabled || action.loading) {
     return
   }
   emit('select', action.key)
@@ -75,7 +78,7 @@ defineExpose({ availableActions, inlineActions, overflowActions })
           circle
           :aria-label="action.label"
           :aria-busy="action.loading ? 'true' : 'false'"
-          :disabled="action.disabled"
+          :disabled="panelLoading || action.disabled || action.loading"
           :loading="action.loading"
           class="mrr-table-actions__button"
           :class="`mrr-table-actions__button--${action.tone || 'default'}`"
@@ -91,6 +94,7 @@ defineExpose({ availableActions, inlineActions, overflowActions })
       trigger="click"
       placement="bottom-end"
       :teleported="true"
+      :disabled="panelLoading"
       :hide-on-click="true"
       @command="handleOverflowCommand"
     >
@@ -98,6 +102,7 @@ defineExpose({ availableActions, inlineActions, overflowActions })
         text
         circle
         :aria-label="moreLabel"
+        :disabled="panelLoading"
         class="mrr-table-actions__button mrr-table-actions__button--more"
         @click.stop
       >
@@ -110,7 +115,7 @@ defineExpose({ availableActions, inlineActions, overflowActions })
             v-for="action in overflowActions"
             :key="action.key"
             :command="action.key"
-            :disabled="action.disabled || action.loading"
+            :disabled="panelLoading || action.disabled || action.loading"
             :title="action.disabledReason || action.label"
             :class="[`mrr-table-actions__menu-item--${action.tone || 'default'}`]"
           >
@@ -203,7 +208,7 @@ defineExpose({ availableActions, inlineActions, overflowActions })
 }
 
 :global(.mrr-table-actions__menu .el-dropdown-menu__item) {
-  gap: 10px;
+  gap: var(--mrr-space-2);
 }
 
 :global(.mrr-table-actions__menu-item--danger) {

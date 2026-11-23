@@ -527,6 +527,11 @@ function Assert-SecurityHeaders {
     if ($config -notmatch 'security-headers\.inc') {
         Write-Warning 'Nginx 配置未 include security-headers.inc，SPA 与状态页会丢失 X-Content-Type-Options / X-Frame-Options / Referrer-Policy；请按新版 templates/nginx.conf 重新生成配置。'
     }
+    # 安装脚本只在配置缺失时写入模板，旧现场不会自动获得文档鉴权。
+    if ($config -notmatch 'auth_request\s+/_documentation_access_user;' -or
+        $config -notmatch 'auth_request\s+/_documentation_access_internal;') {
+        Write-Warning 'Nginx 配置的 /docs/ 与 /docs/internal/ 未启用 auth_request，内部文档可被未登录访问；请按新版 templates/nginx.conf 合并文档鉴权配置。'
+    }
 }
 
 function Doctor {

@@ -9,8 +9,10 @@ import re
 ROOT = Path(__file__).resolve().parents[1]
 FONTS = ROOT / "public" / "fonts"
 CSS = ROOT / "src" / "assets" / "styles" / "fonts.css"
+INDEX = ROOT / "index.html"
 MANIFEST = FONTS / "ui-fonts.json"
 WEIGHTS = [(400, "regular"), (500, "medium"), (700, "bold")]
+PRELOAD_WEIGHTS = ("regular", "medium")
 
 
 def digest(data):
@@ -81,6 +83,15 @@ def stylesheet(entries, common):
     return header + "\n".join(faces)
 
 
+def synchronize_preload_links(html, entries):
+    for name in PRELOAD_WEIGHTS:
+        entry = next(entry for entry in entries if entry["subset"].startswith(f"harmonyos-sans-sc-ui-{name}-"))
+        pattern = rf"/fonts/harmonyos-sans-sc-ui-{name}-[0-9a-f]{{12}}\.woff2"
+        html, count = re.subn(pattern, f"/fonts/{entry['subset']}", html)
+        assert count == 1, f"Expected one {name} font preload, found {count}"
+    return html
+
+
 def build():
     from fontTools import subset
     from fontTools.ttLib import TTFont
@@ -111,9 +122,11 @@ def build():
         (FONTS / filename).write_bytes(data)
         entries.append({"weight": weight, "source": path.name, "sourceSha256": digest(path.read_bytes()),
                         "subset": filename, "subsetSha256": sha, "bytes": len(data)})
+    index_html = synchronize_preload_links(INDEX.read_text(encoding="utf-8"), entries)
     CSS.write_text(stylesheet(entries, common), encoding="utf-8", newline="\n")
     manifest = {"schemaVersion": 1, "commonUnicodeRange": unicode_css(common), "fonts": entries}
     MANIFEST.write_text(json.dumps(manifest, ensure_ascii=True, indent=2) + "\n", encoding="utf-8", newline="\n")
+    INDEX.write_text(index_html, encoding="utf-8", newline="\n")
     # Remove only obsolete generated subsets inside this fixed asset directory.
     keep = {entry["subset"] for entry in entries}
     for path in FONTS.glob("harmonyos-sans-sc-ui-*.woff2"):
@@ -131,6 +144,8 @@ def check():
     common_points = {point for start, end in common for point in range(start, end + 1)}
     entries = manifest["fonts"]
     assert CSS.read_text(encoding="utf-8") == stylesheet(entries, common), "CSS ranges do not match manifest"
+    index_html = INDEX.read_text(encoding="utf-8")
+    assert synchronize_preload_links(index_html, entries) == index_html, "Font preload hashes do not match manifest"
     # Parse the shipped CSS, then verify every original encoding against both actual cmaps.
     css_ranges = [parse_unicode_css(text) for text in re.findall(r"unicode-range: ([^;]+);", CSS.read_text(encoding="utf-8"))]
     def contains(intervals, point):
@@ -145,7 +160,9 @@ def check():
         subset_font = TTFont(generated)
         original_map = original_font.getBestCmap()
         subset_map = subset_font.getBestCmap()
-        assert set(subset_map) == common_points, "Unexpected subset encoding"
+        # OpenType layout closure can retain extra encoded glyphs for shaping.
+        # CSS still limits this face to the source characters in common_points.
+        assert common_points <= subset_map.keys() <= original_map.keys(), "Unexpected subset encoding"
         for table, fields in [("hhea", ["ascent", "descent", "lineGap"]), ("OS/2", ["sTypoAscender", "sTypoDescender", "sTypoLineGap", "usWinAscent", "usWinDescent", "fsType"])]:
             assert all(getattr(original_font[table], field) == getattr(subset_font[table], field) for field in fields), "Font metrics changed"
         for name_id in [0, 13, 14]:
@@ -157,7 +174,7 @@ def check():
             in_subset = contains(css_ranges[index * 2 + 1], point)
             assert in_full != in_subset, f"Missing/overlapping U+{point:X}"
             assert glyph != ".notdef"
-            if in_subset:
+            if point in subset_map:
                 assert subset_map[point] != ".notdef"
                 expected = DecomposingRecordingPen(original_glyphs)
                 actual = DecomposingRecordingPen(subset_glyphs)

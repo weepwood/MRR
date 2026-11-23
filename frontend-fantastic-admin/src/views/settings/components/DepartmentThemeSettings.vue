@@ -6,6 +6,7 @@ import { computed, onMounted, ref } from 'vue'
 import { getSystemSettings, setSetting } from '@/api/modules/settings'
 import { getDepartments } from '@/api/modules/statistics'
 import AppEmpty from '@/components/AppEmpty/index.vue'
+import AppLoading from '@/components/AppLoading/index.vue'
 import { actionDialog } from '@/ui/components/ActionDialog'
 import {
   addArchiveDepartmentThemeHistoryToLocal,
@@ -27,6 +28,8 @@ interface EditableDepartmentTheme extends ArchiveDepartmentTheme {
 }
 
 const loading = ref(false)
+/** 首次读取（服务器或本地回退）完成前，编辑区不展示「自动配色」空态。 */
+const loaded = ref(false)
 const saving = ref(false)
 const rows = ref<EditableDepartmentTheme[]>([])
 const departments = ref<string[]>([])
@@ -39,7 +42,8 @@ let nextId = 1
 const colorPresets = ARCHIVE_DEPARTMENT_THEME_PRESETS.flatMap(item => [item.folderColor, item.stripColor])
 const hasRows = computed(() => rows.value.length > 0)
 const hasHistory = computed(() => history.value.length > 0)
-const isDirty = computed(() => JSON.stringify(normalizedRows()) !== JSON.stringify(persistedThemes.value))
+const controlsDisabled = computed(() => !loaded.value || loading.value || saving.value)
+const isDirty = computed(() => loaded.value && JSON.stringify(normalizedRows()) !== JSON.stringify(persistedThemes.value))
 const configuredDepartments = computed(() => new Set(rows.value.map(r => r.department.trim().toLocaleLowerCase('zh-CN'))))
 const availableDepartments = computed(() => departments.value.filter(d => !configuredDepartments.value.has(d.toLocaleLowerCase('zh-CN'))))
 
@@ -52,6 +56,7 @@ function setRows(themes: ArchiveDepartmentTheme[]) {
 }
 
 function addDepartmentTheme() {
+  if (controlsDisabled.value) { return }
   const preset = ARCHIVE_DEPARTMENT_THEME_PRESETS[rows.value.length % ARCHIVE_DEPARTMENT_THEME_PRESETS.length]
   rows.value.push(toEditable({
     department: '',
@@ -143,6 +148,7 @@ async function loadThemes() {
     setRows(themes)
     persistedThemes.value = themes
     refreshHistory()
+    loaded.value = true
     loading.value = false
   }
 }
@@ -158,7 +164,7 @@ async function loadDepartments() {
 }
 
 async function saveThemes() {
-  if (!validateRows()) {
+  if (controlsDisabled.value || !validateRows()) {
     return
   }
 
@@ -183,6 +189,7 @@ async function saveThemes() {
 }
 
 function handleExport() {
+  if (controlsDisabled.value) { return }
   const themes = normalizedRows()
   const url = URL.createObjectURL(new Blob([JSON.stringify(themes, null, 2)], { type: 'application/json' }))
   const link = document.createElement('a')
@@ -194,13 +201,14 @@ function handleExport() {
 }
 
 function triggerImport() {
+  if (controlsDisabled.value) { return }
   importInput.value?.click()
 }
 
 async function handleImport(event: Event) {
   const input = event.target as HTMLInputElement
   const file = input.files?.[0]
-  if (!file) {
+  if (!file || controlsDisabled.value) {
     return
   }
 
@@ -229,7 +237,7 @@ onMounted(() => {
 </script>
 
 <template>
-  <el-card v-loading="loading" shadow="never" class="department-theme-card">
+  <el-card v-loading="loading && loaded" shadow="never" class="department-theme-card">
     <template #header>
       <div class="department-theme-header">
         <div>
@@ -237,17 +245,17 @@ onMounted(() => {
           <p>同一科室始终使用相同配色，可分别设置档案袋主色与顶部色条颜色。</p>
         </div>
         <div class="department-theme-actions">
-          <el-button :disabled="!hasHistory" @click="historyVisible = true">
+          <el-button :disabled="controlsDisabled || !hasHistory" @click="historyVisible = true">
             历史配色
           </el-button>
-          <el-button @click="resetToAutomaticThemes">
+          <el-button :disabled="controlsDisabled" @click="resetToAutomaticThemes">
             恢复自动配色
           </el-button>
-          <el-button @click="handleExport">
+          <el-button :disabled="controlsDisabled" @click="handleExport">
             <FaIcon name="i-lucide:download" />
             导出配色
           </el-button>
-          <el-button @click="triggerImport">
+          <el-button :disabled="controlsDisabled" @click="triggerImport">
             <FaIcon name="i-lucide:upload" />
             导入配色
           </el-button>
@@ -263,7 +271,8 @@ onMounted(() => {
       title="没有单独配置的科室会根据科室名称稳定生成颜色；分页、排序或刷新后颜色不会改变。"
     />
 
-    <div v-if="hasRows" class="theme-editor">
+    <AppLoading v-if="!loaded" type="table" :rows="4" :cols="5" />
+    <div v-else-if="hasRows" class="theme-editor">
       <div class="theme-editor-head" aria-hidden="true">
         <span>科室名称</span>
         <span>档案袋主色</span>
@@ -307,7 +316,7 @@ onMounted(() => {
     <AppEmpty v-else icon="i-lucide:palette" description="当前使用按科室名称自动生成的稳定配色" />
 
     <div class="editor-footer">
-      <el-button plain @click="addDepartmentTheme">
+      <el-button plain :disabled="controlsDisabled" @click="addDepartmentTheme">
         添加科室配色
       </el-button>
     </div>
@@ -364,13 +373,15 @@ onMounted(() => {
 }
 
 .department-theme-header strong {
-  font-size: 16px;
+  font-size: var(--mrr-font-size-md);
+  font-weight: 650;
   color: var(--text-primary);
 }
 
 .department-theme-header p {
   margin: var(--mrr-space-2) 0 0;
-  font-size: 13px;
+  font-size: var(--mrr-font-size-xs);
+  line-height: 1.6;
   color: var(--text-secondary);
 }
 
@@ -383,7 +394,7 @@ onMounted(() => {
 }
 
 .department-theme-actions :deep(.el-button) {
-  gap: 6px;
+  gap: var(--mrr-space-2);
   margin-left: 0;
 }
 

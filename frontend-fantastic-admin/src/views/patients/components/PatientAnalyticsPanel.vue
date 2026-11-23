@@ -307,7 +307,7 @@ onMounted(reloadAll)
 .archive-tags {
   display: flex;
   flex-wrap: wrap;
-  gap: 6px 12px;
+  gap: var(--mrr-space-2) 12px;
 }
 
 @media (max-width: 600px) {

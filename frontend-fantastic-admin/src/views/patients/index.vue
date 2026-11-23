@@ -190,6 +190,7 @@ onUnmounted(() => {
 <template>
   <MrrPageShell compact>
     <MrrPageHeader
+      size="compact"
       title="患者管理"
       description="查询和编辑患者基本信息，并查看身份证完整性与重复患者情况。"
     >
@@ -209,6 +210,8 @@ onUnmounted(() => {
           title="患者列表"
           description="支持按病案号、姓名、身份证号、科室、病区或床位查询。"
           :count="loading || error ? undefined : total"
+          :loading="loading"
+          :result-key="tableData"
         >
           <template #filters>
             <MrrFilterBar embedded labelled>
@@ -238,11 +241,16 @@ onUnmounted(() => {
             </MrrFilterBar>
           </template>
 
-          <AppLoading v-if="loading" type="table" :rows="8" />
+          <AppLoading v-if="loading && !tableData.length" type="table" :rows="8" />
           <AppError v-else-if="error" :message="error" @retry="loadData" />
           <AppEmpty v-else-if="!tableData.length" description="暂无患者记录" />
+          <!--
+            列宽改为 min-width：原来 9 个固定 width 列合计约 1240px（不含操作列），
+            1366 宽屏下容器放不下，操作列被挤出视区需要横向滚动；
+            宽屏下又不会伸展，右侧留出空白。min-width 让 el-table 按容器分配余量。
+          -->
           <el-table v-else :data="tableData" stripe class="patients-table">
-            <el-table-column prop="bah" label="病案号" width="140">
+            <el-table-column prop="bah" label="病案号" min-width="130">
               <template #default="{ row }">
                 <router-link
                   v-if="row.bah"
@@ -256,8 +264,8 @@ onUnmounted(() => {
                 <span v-else>—</span>
               </template>
             </el-table-column>
-            <el-table-column prop="name" label="姓名" width="100" />
-            <el-table-column prop="idCard" label="身份证号" width="200">
+            <el-table-column prop="name" label="姓名" min-width="90" />
+            <el-table-column prop="idCard" label="身份证号" min-width="190">
               <template #default="{ row }">
                 <el-button
                   v-if="patientIdCardRevealEnabled || patientIdCardCopyEnabled"
@@ -267,15 +275,15 @@ onUnmounted(() => {
                 >
                   {{ isIdCardRevealed(row.idCard) ? row.idCard : maskIdCard(row.idCard) }}
                 </el-button>
-                <span v-else>{{ maskIdCard(row.idCard) }}</span>
+                <span v-else class="patient-id-card">{{ maskIdCard(row.idCard) }}</span>
               </template>
             </el-table-column>
-            <el-table-column prop="department" label="科室" width="150" show-overflow-tooltip />
-            <el-table-column prop="bingqu" label="病区" width="150" show-overflow-tooltip />
-            <el-table-column prop="chuangwei" label="床位" width="120" show-overflow-tooltip />
-            <el-table-column prop="ruyuan" label="入院日期" width="120" />
+            <el-table-column prop="department" label="科室" min-width="120" show-overflow-tooltip />
+            <el-table-column prop="bingqu" label="病区" min-width="120" show-overflow-tooltip />
+            <el-table-column prop="chuangwei" label="床位" min-width="90" show-overflow-tooltip />
+            <el-table-column prop="ruyuan" label="入院日期" min-width="110" />
             <el-table-column prop="admissiontime" label="入院时间" min-width="160" show-overflow-tooltip />
-            <el-table-column prop="id" label="ID" width="100" />
+            <el-table-column prop="id" label="ID" min-width="80" />
             <el-table-column
               v-if="canEditPatients"
               label="操作"
@@ -321,11 +329,16 @@ onUnmounted(() => {
   flex: 1 1 280px;
 }
 
-.id-card-toggle {
-  font-size: 12px;
+/* 身份证号用等宽字体：掩码 * 与数字等宽，逐行上下对齐，掩码位数一眼可数。 */
+.id-card-toggle,
+.patients-table :deep(.patient-id-card) {
+  font-family: var(--mrr-font-mono);
+  font-size: var(--mrr-font-size-xs);
+  letter-spacing: 0.02em;
 }
 
 .bah-link {
+  font-variant-numeric: tabular-nums;
   color: var(--mrr-navigation-active-foreground);
   text-decoration: underline;
   text-underline-offset: 2px;

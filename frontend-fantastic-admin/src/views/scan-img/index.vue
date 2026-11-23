@@ -6,6 +6,7 @@ import { useRoute } from 'vue-router'
 import { getImgApiByBah, updateImageType } from '@/api/modules/image'
 import { getBAHByIdCard } from '@/api/modules/search'
 import { getMedicalRecordTypeLabel, MEDICAL_RECORD_TYPE_CODES } from '@/constants/medical-record-types'
+import { Z_INDEX } from '@/constants/z-index'
 import { isMotionEnabled } from '@/utils/motion-preference'
 
 defineOptions({ name: 'ScanImgPage' })
@@ -696,7 +697,7 @@ watch(idCardParam, async (newId) => {
                 fit="contain"
                 :preview-src-list="previewList"
                 :initial-index="selectedImageIndex"
-                :z-index="3000"
+                :z-index="Z_INDEX.viewer"
                 :hide-on-click-modal="false"
                 :preview-teleported="true"
                 @show="onViewerShow"
@@ -809,7 +810,7 @@ watch(idCardParam, async (newId) => {
   overflow: hidden;
   background: var(--color-bg);
   border-radius: var(--mrr-radius-card);
-  box-shadow: 0 1px 4px rgb(0 0 0 / 8%);
+  box-shadow: var(--mrr-shadow-xs);
 }
 
 .left-top {
@@ -854,7 +855,7 @@ watch(idCardParam, async (newId) => {
   cursor: pointer;
   border: 1px solid var(--color-border);
   border-radius: var(--mrr-radius-md);
-  transition: background-color var(--mrr-motion-feedback) ease, border-color var(--mrr-motion-feedback) ease;
+  transition: background-color var(--mrr-motion-feedback) var(--mrr-ease-out), border-color var(--mrr-motion-feedback) var(--mrr-ease-out);
 }
 
 .id-result-item:hover {
@@ -908,7 +909,7 @@ watch(idCardParam, async (newId) => {
   cursor: pointer;
   background: var(--color-bg-warm);
   border: 1px solid var(--color-border);
-  border-radius: 6px;
+  border-radius: var(--mrr-radius-sm);
 }
 
 .thumbs-mode-btn.active,
@@ -936,7 +937,7 @@ watch(idCardParam, async (newId) => {
   background: transparent;
   border: 1px solid var(--color-border);
   border-radius: var(--mrr-radius-md);
-  transition: background-color var(--mrr-motion-feedback) ease, border-color var(--mrr-motion-feedback) ease;
+  transition: background-color var(--mrr-motion-feedback) var(--mrr-ease-out), border-color var(--mrr-motion-feedback) var(--mrr-ease-out);
 }
 
 .type-item:hover {
@@ -993,7 +994,7 @@ watch(idCardParam, async (newId) => {
   overflow: hidden;
   background: var(--color-bg);
   border-radius: var(--mrr-radius-card);
-  box-shadow: 0 1px 4px rgb(0 0 0 / 8%);
+  box-shadow: var(--mrr-shadow-xs);
 }
 
 /* ==================== 缩略图区域 ==================== */
@@ -1022,7 +1023,7 @@ watch(idCardParam, async (newId) => {
   cursor: pointer;
   border: 1px solid var(--color-border);
   border-radius: var(--mrr-radius-md);
-  transition: background-color var(--mrr-motion-feedback) ease, border-color var(--mrr-motion-feedback) ease;
+  transition: background-color var(--mrr-motion-feedback) var(--mrr-ease-out), border-color var(--mrr-motion-feedback) var(--mrr-ease-out);
 }
 
 .thumb-item:hover {
@@ -1039,9 +1040,9 @@ watch(idCardParam, async (newId) => {
   height: 100%;
   object-fit: contain;
   background: var(--color-bg-warm);
-  border-radius: 4px;
+  border-radius: max(0px, calc(var(--mrr-radius-sm) - 2px));
   opacity: 1;
-  transition: opacity var(--mrr-motion-move) ease;
+  transition: opacity var(--mrr-motion-move) var(--mrr-ease-out);
 }
 
 .thumb-meta {
@@ -1065,7 +1066,7 @@ watch(idCardParam, async (newId) => {
   cursor: pointer;
   border: 1px solid var(--color-border);
   border-radius: var(--mrr-radius-md);
-  transition: background-color var(--mrr-motion-feedback) ease, border-color var(--mrr-motion-feedback) ease;
+  transition: background-color var(--mrr-motion-feedback) var(--mrr-ease-out), border-color var(--mrr-motion-feedback) var(--mrr-ease-out);
 }
 
 .thumb-row:hover {
@@ -1148,6 +1149,8 @@ watch(idCardParam, async (newId) => {
   color: var(--mrr-primary-foreground);
   background: var(--color-bg-dark);
   border-radius: var(--mrr-radius-lg);
+
+  /* 浮在深色全屏看图区之上，保留更重的黑色投影：令牌投影在深底上几乎不可见。 */
   box-shadow: 0 8px 24px rgb(0 0 0 / 20%);
 }
 
@@ -1170,8 +1173,8 @@ watch(idCardParam, async (newId) => {
   font-size: 13px;
   cursor: pointer;
   background: rgb(255 255 255 / 6%);
-  border-radius: 6px;
-  transition: background-color var(--mrr-motion-feedback) ease;
+  border-radius: var(--mrr-radius-sm);
+  transition: background-color var(--mrr-motion-feedback) var(--mrr-ease-out);
 }
 
 .type-option:hover {
@@ -1240,8 +1243,8 @@ watch(idCardParam, async (newId) => {
   cursor: pointer;
   background: var(--el-color-danger);
   border: none;
-  border-radius: 6px;
-  transition: opacity var(--mrr-motion-feedback) ease;
+  border-radius: var(--mrr-control-radius);
+  transition: opacity var(--mrr-motion-feedback) var(--mrr-ease-out);
 }
 
 .retry-btn:hover {
@@ -1268,7 +1271,7 @@ watch(idCardParam, async (newId) => {
   text-align: center;
   background: var(--color-bg);
   border-radius: var(--mrr-radius-card);
-  box-shadow: 0 16px 48px rgb(0 0 0 / 20%);
+  box-shadow: var(--mrr-shadow-lg);
 }
 
 .download-spinner-large {

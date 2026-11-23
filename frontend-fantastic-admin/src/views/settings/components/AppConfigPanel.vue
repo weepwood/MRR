@@ -706,7 +706,7 @@ function handleReset() {
 
 .config-save-feedback p {
   margin: var(--mrr-space-1) 0 0;
-  font-size: 12px;
+  font-size: var(--mrr-font-size-xs);
   color: var(--mrr-muted-foreground);
 }
 
@@ -714,7 +714,7 @@ function handleReset() {
   display: inline-flex;
   gap: var(--mrr-space-2);
   align-items: center;
-  font-size: 13px;
+  font-size: var(--mrr-font-size-sm);
   font-weight: 650;
 }
 
@@ -756,7 +756,7 @@ function handleReset() {
   padding-inline: var(--mrr-space-2);
   border: 1px solid transparent;
   border-radius: var(--mrr-radius-md);
-  transition: background-color var(--mrr-motion-feedback) ease, border-color var(--mrr-motion-feedback) ease;
+  transition: background-color var(--mrr-motion-feedback) var(--mrr-ease-out), border-color var(--mrr-motion-feedback) var(--mrr-ease-out);
 }
 
 .appearance-tab[data-state="active"] {
@@ -773,7 +773,7 @@ function handleReset() {
   gap: var(--mrr-space-2);
   align-items: center;
   justify-content: center;
-  font-size: 13px;
+  font-size: var(--mrr-font-size-sm);
   line-height: 1.35;
 }
 
@@ -821,13 +821,13 @@ function handleReset() {
 }
 
 .label-copy strong {
-  font-size: 13px;
+  font-size: var(--mrr-font-size-sm);
   color: var(--el-text-color-primary);
 }
 
 .label-copy small {
   margin-top: 4px;
-  font-size: 11px;
+  font-size: var(--mrr-font-size-xs);
   line-height: 1.5;
   color: var(--el-text-color-secondary);
 }
@@ -854,7 +854,7 @@ function handleReset() {
   background: var(--mrr-card);
   border: 1px solid var(--mrr-border);
   border-radius: var(--mrr-radius-card);
-  transition: border-color var(--mrr-motion-feedback) ease, box-shadow var(--mrr-motion-feedback) ease;
+  transition: border-color var(--mrr-motion-feedback) var(--mrr-ease-out), box-shadow var(--mrr-motion-feedback) var(--mrr-ease-out);
 }
 
 .theme-palette-option[aria-pressed="true"] {
@@ -940,7 +940,7 @@ function handleReset() {
   gap: var(--mrr-space-2);
   align-items: center;
   justify-content: space-between;
-  font-size: 13px;
+  font-size: var(--mrr-font-size-sm);
   color: var(--mrr-foreground);
 }
 
@@ -949,7 +949,7 @@ function handleReset() {
 }
 
 .theme-palette-option > small {
-  font-size: 11px;
+  font-size: var(--mrr-font-size-xs);
   line-height: 1.5;
   color: var(--mrr-muted-foreground);
 }
@@ -957,7 +957,7 @@ function handleReset() {
 /* 主题附带的结构变化说明：弱化处理，不与选项卡片争夺注意力。 */
 .theme-palette-note {
   margin: 0;
-  font-size: 11px;
+  font-size: var(--mrr-font-size-xs);
   line-height: 1.6;
   color: var(--mrr-muted-foreground);
 }
@@ -981,18 +981,18 @@ function handleReset() {
 .theme-palette-accent__copy {
   display: grid;
   gap: 2px;
-  font-size: 12px;
+  font-size: var(--mrr-font-size-xs);
 }
 
 .theme-palette-accent__copy small {
-  font-size: 11px;
+  font-size: var(--mrr-font-size-xs);
   color: var(--mrr-muted-foreground);
 }
 
 .theme-palette-accent__reset {
   padding: var(--mrr-space-2) var(--mrr-space-2);
   margin-inline-start: auto;
-  font-size: 12px;
+  font-size: var(--mrr-font-size-xs);
   color: var(--mrr-navigation-active-foreground);
   cursor: pointer;
   background: var(--mrr-muted);
@@ -1012,7 +1012,7 @@ function handleReset() {
 }
 
 .slider-field { flex: 1; min-width: 0; }
-.radius-value { min-width: 4ch; font-size: 12px; font-variant-numeric: tabular-nums; text-align: right; }
+.radius-value { min-width: 4ch; font-size: var(--mrr-font-size-xs); font-variant-numeric: tabular-nums; text-align: right; }
 
 .corner-options {
   display: grid;
@@ -1027,13 +1027,13 @@ function handleReset() {
   place-items: center;
   min-width: 0;
   padding: var(--mrr-space-2);
-  font-size: 12px;
+  font-size: var(--mrr-font-size-xs);
   white-space: nowrap;
   cursor: pointer;
   background: var(--mrr-card);
   border: 1px solid var(--mrr-border);
   border-radius: var(--mrr-radius-md);
-  transition: border-color var(--mrr-motion-feedback) ease;
+  transition: border-color var(--mrr-motion-feedback) var(--mrr-ease-out);
 }
 
 .corner-option:hover,
@@ -1070,7 +1070,7 @@ function handleReset() {
   gap: var(--mrr-space-1);
   align-items: center;
   margin: 0;
-  font-size: 12px;
+  font-size: var(--mrr-font-size-xs);
   line-height: 1.5;
   color: var(--mrr-muted-foreground);
 }
@@ -1096,14 +1096,14 @@ function handleReset() {
   border: 2px solid var(--mrr-card);
   border-radius: 50%;
   box-shadow: 0 0 0 1px var(--mrr-border);
-  transition: box-shadow var(--mrr-motion-feedback) ease, transform var(--mrr-motion-press) var(--mrr-ease-out);
+  transition: box-shadow var(--mrr-motion-feedback) var(--mrr-ease-out), transform var(--mrr-motion-press) var(--mrr-ease-out);
 }
 
 .theme-swatch:hover { box-shadow: 0 0 0 1px var(--mrr-border), var(--mrr-shadow-xs, 0 2px 6px rgb(0 0 0 / 12%)); transform: var(--mrr-motion-decor, translateY(-1px)); }
 .theme-swatch:active { transform: var(--mrr-motion-decor, scale(0.94)); }
 .theme-swatch[aria-pressed="true"] { box-shadow: 0 0 0 2px var(--swatch-color); }
 .theme-swatch:focus-visible { outline: 2px solid var(--mrr-navigation-active-foreground, var(--mrr-primary)); outline-offset: 3px; }
-.custom-color { padding-left: var(--mrr-space-2); font-size: 12px; color: var(--mrr-muted-foreground); border-left: 1px solid var(--mrr-border); }
+.custom-color { padding-left: var(--mrr-space-2); font-size: var(--mrr-font-size-xs); color: var(--mrr-muted-foreground); border-left: 1px solid var(--mrr-border); }
 
 .setting-item > :not(.label-copy) {
   max-width: 100%;
@@ -1130,13 +1130,15 @@ function handleReset() {
 }
 
 .subsection-heading strong {
-  font-size: 13px;
+  font-size: var(--mrr-font-size-sm);
+  font-weight: 600;
   color: var(--el-text-color-primary);
 }
 
 .subsection-heading small {
   margin-top: 3px;
-  font-size: 11px;
+  font-size: var(--mrr-font-size-xs);
+  line-height: 1.6;
   color: var(--el-text-color-secondary);
 }
 
@@ -1153,13 +1155,13 @@ function handleReset() {
   place-items: center;
   min-width: 0;
   padding: var(--mrr-space-2);
-  font-size: 12px;
+  font-size: var(--mrr-font-size-xs);
   white-space: nowrap;
   cursor: pointer;
   background: var(--mrr-card);
   border: 1px solid var(--mrr-border);
   border-radius: var(--mrr-radius-md);
-  transition: border-color var(--mrr-motion-feedback) ease;
+  transition: border-color var(--mrr-motion-feedback) var(--mrr-ease-out);
 }
 
 .mode-option:hover,

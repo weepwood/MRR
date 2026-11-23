@@ -112,14 +112,16 @@ const hasHeader = computed(() => Boolean(
   height: 32px;
   font-size: 15px;
   color: var(--mrr-primary);
-  background: color-mix(in srgb, var(--mrr-primary) 8%, var(--mrr-card));
-  border: 1px solid color-mix(in srgb, var(--mrr-primary) 16%, var(--mrr-border));
+
+  /* 与页头图标、指标卡图标同一配方（tones.css 的 -soft / -border）。 */
+  background: var(--mrr-tone-primary-soft);
+  border: 1px solid var(--mrr-tone-primary-border);
   border-radius: var(--mrr-radius-md);
 }
 
 .mrr-section-card__title-row {
   display: flex;
-  gap: 6px;
+  gap: var(--mrr-space-2);
   align-items: center;
 }
 
@@ -185,11 +187,6 @@ const hasHeader = computed(() => Boolean(
 @supports not (color: color-mix(in srgb, #000 50%, #fff)) {
   .mrr-section-card :deep(.el-card__header) {
     background: var(--mrr-card);
-  }
-
-  .mrr-section-card__icon {
-    background: var(--mrr-muted);
-    border: 1px solid var(--mrr-border);
   }
 }
 </style>

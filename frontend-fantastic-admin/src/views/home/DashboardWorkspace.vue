@@ -21,6 +21,7 @@ import {
   sortWidgetPreferences,
   updateWidgetPreference,
 } from './dashboard-widgets'
+import HomeArchiveLookup from './HomeArchiveLookup.vue'
 
 defineOptions({ name: 'DashboardWorkspace' })
 
@@ -260,7 +261,8 @@ const visibleWidgets = computed<DashboardWidgetView[]>(() => sortWidgetPreferenc
 
 const accessibleWidgetCount = computed(() => accessibleDefinitions.value.length)
 const hiddenWidgetCount = computed(() => accessibleDefinitions.value.filter(definition => !isWidgetVisible(definition.id)).length)
-const welcomeDescription = computed(() => `欢迎回来${userStore.profile?.displayName ? `，${userStore.profile.displayName}` : ''}。可以按自己的工作习惯调整小组件内容、颜色、大小和位置。`)
+const welcomeDescription = computed(() => `欢迎回来${userStore.profile?.displayName ? `，${userStore.profile.displayName}` : ''}。按编号查询病案影像，或从下方进入常用模块。`)
+const canLookupArchive = computed(() => hasPermission('record:read'))
 
 function loadPreferences() {
   try {
@@ -541,36 +543,44 @@ watch(storageKey, loadPreferences, { immediate: true })
 
 <template>
   <MrrPageShell width="fluid">
+    <!--
+      页头只说明“这是哪里、我是谁”；小组件的数量与管理操作属于下方「常用模块」，
+      不再占据页面最显眼的位置。
+    -->
     <MrrPageHeader
-      eyebrow="Medical Record Repository"
+      size="compact"
       title="管理概览"
       :description="welcomeDescription"
-    >
-      <template #badge>
-        <span class="overview-count">
-          <span class="overview-count__dot" />
-          {{ visibleWidgets.length }} / {{ accessibleWidgetCount }} 个小组件
-        </span>
-      </template>
+    />
 
-      <template #actions>
-        <el-button @click="managerVisible = true">
-          <FaIcon name="i-lucide:layout-grid" />
-          管理小组件
-          <span v-if="hiddenWidgetCount" class="hidden-count">{{ hiddenWidgetCount }}</span>
-        </el-button>
-        <el-button :type="editMode ? 'primary' : undefined" @click="editMode = !editMode">
-          <FaIcon :name="editMode ? 'i-lucide:check' : 'i-lucide:move'" />
-          {{ editMode ? '完成调整' : '调整布局' }}
-        </el-button>
-        <el-button v-if="editMode" @click="resetDashboard">
-          <FaIcon name="i-lucide:rotate-cw" />
-          恢复默认
-        </el-button>
-      </template>
-    </MrrPageHeader>
+    <!-- 首页主任务：直接按编号打开影像档案袋。无 record:read 的账号不显示。 -->
+    <HomeArchiveLookup v-if="canLookupArchive" />
 
-    <section class="dashboard-workspace" aria-label="我的工作台">
+    <section class="dashboard-workspace" aria-labelledby="dashboard-modules-title">
+      <header class="dashboard-workspace__head">
+        <div class="dashboard-workspace__title">
+          <h2 id="dashboard-modules-title">
+            常用模块
+          </h2>
+          <span class="dashboard-workspace__count">{{ visibleWidgets.length }} / {{ accessibleWidgetCount }}</span>
+        </div>
+        <div class="dashboard-workspace__actions">
+          <el-button @click="managerVisible = true">
+            <FaIcon name="i-lucide:layout-grid" />
+            管理模块
+            <span v-if="hiddenWidgetCount" class="hidden-count" :aria-label="`${hiddenWidgetCount} 个已隐藏`">{{ hiddenWidgetCount }}</span>
+          </el-button>
+          <el-button :type="editMode ? 'primary' : undefined" @click="editMode = !editMode">
+            <FaIcon :name="editMode ? 'i-lucide:check' : 'i-lucide:move'" />
+            {{ editMode ? '完成调整' : '调整布局' }}
+          </el-button>
+          <el-button v-if="editMode" @click="resetDashboard">
+            <FaIcon name="i-lucide:rotate-cw" />
+            恢复默认
+          </el-button>
+        </div>
+      </header>
+
       <div v-if="editMode" class="dashboard-workspace__notice">
         <FaIcon name="i-lucide:move" />
         拖动卡片（或聚焦后按 Alt + 方向键）调整顺序；右上角菜单可修改大小、颜色、内容和置顶状态。
@@ -656,15 +666,12 @@ watch(storageKey, loadPreferences, { immediate: true })
                 </template>
               </el-dropdown>
             </div>
-            <FaIcon v-else name="i-lucide:chevron-right" class="dashboard-widget__arrow" />
+            <!-- 整卡可点，头部箭头是唯一的入口暗示；底部不再重复「进入模块 →」。 -->
+            <FaIcon v-else name="i-lucide:chevron-right" class="dashboard-widget__arrow" aria-hidden="true" />
           </header>
 
           <div class="dashboard-widget__body">
             <p>{{ widget.description }}</p>
-            <div class="dashboard-widget__footer">
-              <span>{{ editMode ? '拖动调整位置' : '进入模块' }}</span>
-              <FaIcon :name="editMode ? 'i-lucide:move' : 'i-lucide:arrow-right'" />
-            </div>
           </div>
         </article>
       </TransitionGroup>
@@ -795,14 +802,13 @@ watch(storageKey, loadPreferences, { immediate: true })
 </template>
 
 <style scoped>
-.overview-count,
 .dashboard-workspace__notice {
   display: inline-flex;
   gap: var(--mrr-space-2);
   align-items: center;
   min-height: 25px;
   padding: 3px var(--mrr-space-2);
-  font-size: 12px;
+  font-size: var(--mrr-font-size-xs);
   font-weight: 550;
   color: var(--mrr-secondary-foreground);
   background: var(--mrr-secondary);
@@ -810,22 +816,15 @@ watch(storageKey, loadPreferences, { immediate: true })
   border-radius: var(--mrr-radius-pill);
 }
 
-.overview-count__dot {
-  width: 6px;
-  height: 6px;
-  background: var(--mrr-primary);
-  border-radius: 50%;
-  box-shadow: 0 0 0 3px color-mix(in srgb, var(--mrr-primary) 10%, transparent);
-}
-
 .hidden-count {
   display: inline-grid;
   place-items: center;
   min-width: 18px;
   height: 18px;
-  padding-inline: 4px;
+  padding-inline: var(--mrr-space-1);
   margin-left: 2px;
-  font-size: 10px;
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
   color: var(--mrr-primary-foreground);
   background: var(--mrr-primary);
   border-radius: var(--mrr-radius-pill);
@@ -837,6 +836,46 @@ watch(storageKey, loadPreferences, { immediate: true })
   min-width: 0;
 }
 
+/* 分区标题与分区卡（MrrSectionCard）同档：14px / 650；操作靠右，窄屏折到标题下方。 */
+.dashboard-workspace__head {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--mrr-space-3);
+  align-items: center;
+  justify-content: space-between;
+  min-width: 0;
+}
+
+.dashboard-workspace__title {
+  display: flex;
+  gap: var(--mrr-space-2);
+  align-items: baseline;
+  min-width: 0;
+}
+
+.dashboard-workspace__title h2 {
+  margin: 0;
+  font-size: var(--mrr-font-size-md);
+  font-weight: 650;
+  color: var(--mrr-foreground);
+}
+
+.dashboard-workspace__count {
+  font-size: var(--mrr-font-size-xs);
+  font-variant-numeric: tabular-nums;
+  color: var(--mrr-muted-foreground);
+}
+
+.dashboard-workspace__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--mrr-space-2);
+}
+
+.dashboard-workspace__actions :deep(.el-button + .el-button) {
+  margin-left: 0;
+}
+
 .dashboard-workspace__notice {
   justify-self: start;
   border-style: dashed;
@@ -845,7 +884,12 @@ watch(storageKey, loadPreferences, { immediate: true })
 .dashboard-grid {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
-  grid-auto-rows: 132px;
+
+  /*
+   * 去掉底栏后标准卡只剩「头部 56px + 两行说明 + 12px 底距」≈ 106px，
+   * 行高 132 → 116px，留 10px 余量给 125% 系统缩放下的行高取整。大卡（两行 + 间距）= 248px。
+   */
+  grid-auto-rows: 116px;
   grid-auto-flow: dense;
   gap: var(--mrr-space-4);
 }
@@ -867,10 +911,10 @@ watch(storageKey, loadPreferences, { immediate: true })
   border-radius: var(--mrr-radius-xl);
   box-shadow: var(--mrr-shadow-xs);
   transition:
-    background-color var(--mrr-motion-feedback) ease,
-    border-color var(--mrr-motion-feedback) ease,
-    box-shadow var(--mrr-motion-feedback) ease,
-    opacity var(--mrr-motion-feedback) ease,
+    background-color var(--mrr-motion-feedback) var(--mrr-ease-out),
+    border-color var(--mrr-motion-feedback) var(--mrr-ease-out),
+    box-shadow var(--mrr-motion-feedback) var(--mrr-ease-out),
+    opacity var(--mrr-motion-feedback) var(--mrr-ease-out),
     transform var(--mrr-motion-press) var(--mrr-ease-out);
 }
 
@@ -936,6 +980,11 @@ watch(storageKey, loadPreferences, { immediate: true })
 
   .dashboard-widget:hover {
     border-color: var(--widget-accent);
+  }
+
+  /* 悬停时图标块描边：含 var() 的 color-mix 在 86 上会失效成 currentColor，这里给实色。 */
+  .dashboard-widget:not(.is-editing):hover .dashboard-widget__icon {
+    border-color: var(--widget-accent, var(--mrr-primary));
   }
 
   .dashboard-widget__icon,
@@ -1035,6 +1084,18 @@ watch(storageKey, loadPreferences, { immediate: true })
   border-radius: var(--mrr-radius-md);
 }
 
+/* 悬停时图标块与箭头同步染上强调色：一张卡只有一个「可进入」信号，但它会随指针亮起。 */
+.dashboard-widget__icon {
+  transition:
+    color var(--mrr-motion-feedback) var(--mrr-ease-out),
+    background-color var(--mrr-motion-feedback) var(--mrr-ease-out),
+    border-color var(--mrr-motion-feedback) var(--mrr-ease-out);
+}
+
+.dashboard-widget:not(.is-editing):hover .dashboard-widget__icon {
+  border-color: color-mix(in srgb, var(--widget-accent, var(--mrr-primary)) 36%, var(--mrr-border));
+}
+
 .dashboard-widget__heading {
   min-width: 0;
 }
@@ -1049,7 +1110,7 @@ watch(storageKey, loadPreferences, { immediate: true })
 .dashboard-widget__title-row strong {
   overflow: hidden;
   text-overflow: ellipsis;
-  font-size: 14px;
+  font-size: var(--mrr-font-size-md);
   font-weight: 650;
   white-space: nowrap;
 }
@@ -1060,7 +1121,7 @@ watch(storageKey, loadPreferences, { immediate: true })
   gap: 3px;
   align-items: center;
   padding: 2px var(--mrr-space-2);
-  font-size: 9px;
+  font-size: var(--mrr-font-size-xs);
   font-weight: 650;
   color: var(--widget-accent);
   background: color-mix(in srgb, var(--widget-accent) 10%, var(--mrr-card));
@@ -1082,11 +1143,14 @@ watch(storageKey, loadPreferences, { immediate: true })
 }
 
 .dashboard-widget__arrow {
+  flex: 0 0 auto;
+  font-size: 16px;
   color: var(--mrr-muted-foreground);
-  transition: color var(--mrr-motion-feedback) ease, transform var(--mrr-motion-feedback) var(--mrr-ease-out);
+  transition: color var(--mrr-motion-feedback) var(--mrr-ease-out), transform var(--mrr-motion-feedback) var(--mrr-ease-out);
 }
 
-.dashboard-widget:hover .dashboard-widget__arrow {
+.dashboard-widget:hover .dashboard-widget__arrow,
+.dashboard-widget:focus-visible .dashboard-widget__arrow {
   color: var(--widget-accent);
   transform: var(--mrr-motion-decor, translateX(2px));
 }
@@ -1104,7 +1168,7 @@ watch(storageKey, loadPreferences, { immediate: true })
   margin: 0;
   overflow: hidden;
   -webkit-line-clamp: 2;
-  font-size: 12px;
+  font-size: var(--mrr-font-size-xs);
   line-height: 1.6;
   color: var(--mrr-muted-foreground);
   -webkit-box-orient: vertical;
@@ -1112,25 +1176,15 @@ watch(storageKey, loadPreferences, { immediate: true })
 
 .dashboard-widget--large .dashboard-widget__body p {
   -webkit-line-clamp: 7;
-  font-size: 13px;
+  font-size: var(--mrr-font-size-sm);
 }
 
-.dashboard-widget__footer {
-  display: flex;
-  gap: var(--mrr-space-2);
-  align-items: center;
-  justify-content: flex-end;
-  padding-top: var(--mrr-space-2);
-  margin-top: auto;
-  font-size: 10px;
-  color: var(--mrr-muted-foreground);
-}
-
-/* 小卡高度有限：描述与「进入模块」暗示二选一，保留暗示以保证全部卡片
- * 的可点性提示一致（此前 small 隐藏 footer 导致 2/6 卡无入口暗示）。 */
-.dashboard-widget--small .dashboard-widget__body p {
-  display: none;
-}
+/*
+ * 原底栏「进入模块 → / 拖动调整位置」已删除：
+ * - 浏览态：与头部箭头重复，且小卡为了放下它而隐藏了说明，卡片只剩标题；
+ * - 编辑态：与页面顶部的编辑提示条、拖动手柄的提示重复。
+ * 现在所有尺寸都显示说明，入口暗示统一由头部箭头承担（编辑态换成工具按钮）。
+ */
 
 .dashboard-empty {
   display: grid;
@@ -1145,24 +1199,24 @@ watch(storageKey, loadPreferences, { immediate: true })
 }
 
 .dashboard-empty > :first-child {
-  margin-bottom: 12px;
+  margin-bottom: var(--mrr-space-3);
   font-size: 42px;
   color: var(--mrr-muted-foreground);
 }
 
 .dashboard-empty strong {
-  font-size: 14px;
+  font-size: var(--mrr-font-size-md);
 }
 
 .dashboard-empty p {
-  margin: var(--mrr-space-2) 0 16px;
-  font-size: 12px;
+  margin: var(--mrr-space-2) 0 var(--mrr-space-4);
+  font-size: var(--mrr-font-size-xs);
   color: var(--mrr-muted-foreground);
 }
 
 .dialog-description {
   margin: 0 0 var(--mrr-space-3);
-  font-size: 12px;
+  font-size: var(--mrr-font-size-xs);
   line-height: 1.6;
   color: var(--mrr-muted-foreground);
 }
@@ -1181,7 +1235,7 @@ watch(storageKey, loadPreferences, { immediate: true })
   gap: var(--mrr-space-3);
   align-items: center;
   min-width: 0;
-  padding: var(--mrr-space-3) 12px;
+  padding: var(--mrr-space-3) var(--mrr-space-3);
   border-bottom: 1px solid var(--mrr-shell-divider);
 }
 
@@ -1223,11 +1277,11 @@ watch(storageKey, loadPreferences, { immediate: true })
 }
 
 .widget-manager-item__copy strong {
-  font-size: 13px;
+  font-size: var(--mrr-font-size-sm);
 }
 
 .widget-manager-item__copy small {
-  font-size: 10px;
+  font-size: var(--mrr-font-size-xs);
   color: var(--mrr-muted-foreground);
 }
 
@@ -1241,7 +1295,7 @@ watch(storageKey, loadPreferences, { immediate: true })
 
 .color-option {
   display: inline-flex;
-  gap: 8px;
+  gap: var(--mrr-space-2);
   align-items: center;
 }
 
@@ -1282,18 +1336,18 @@ watch(storageKey, loadPreferences, { immediate: true })
 .color-picker-options {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 8px;
+  gap: var(--mrr-space-2);
   width: 100%;
 }
 
 .color-picker-option {
   display: flex;
-  gap: 8px;
+  gap: var(--mrr-space-2);
   align-items: center;
   height: var(--mrr-control-height);
   min-height: var(--mrr-control-height);
   padding: 0 var(--mrr-space-3);
-  font-size: 12px;
+  font-size: var(--mrr-font-size-xs);
   color: var(--mrr-foreground);
   cursor: pointer;
   background: var(--mrr-card);
@@ -1371,11 +1425,11 @@ watch(storageKey, loadPreferences, { immediate: true })
   .dashboard-widget--large {
     grid-row: auto;
     grid-column: span 1;
-    min-height: 132px;
+    min-height: 116px;
   }
 
   .dashboard-widget--large {
-    min-height: 190px;
+    min-height: 172px;
   }
 
   .widget-manager-item {

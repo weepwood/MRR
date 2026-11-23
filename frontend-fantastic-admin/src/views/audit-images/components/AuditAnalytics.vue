@@ -5,6 +5,7 @@ import type { MrrTableAction } from '@/components/MrrTableActions/types'
 import type { MrrLineSeries } from '@/types/chart'
 import { computed } from 'vue'
 import { MrrChartCard, MrrLineChart } from '@/components/charts'
+import MrrSectionCard from '@/components/MrrSectionCard/index.vue'
 import MrrTableActions from '@/components/MrrTableActions/index.vue'
 import { useTableActionLayout } from '@/composables/useTableActionLayout'
 import { mrrChartColor } from '@/config/chart-theme'
@@ -88,7 +89,6 @@ function handleTargetAction(action: string, target: string) {
       <MrrMetricCard
         label="被访问病历数"
         icon="i-lucide:files"
-        tone="teal"
         :value="loading ? '—' : formatNumber(analytics.uniqueTargets)"
       />
       <MrrMetricCard
@@ -113,9 +113,9 @@ function handleTargetAction(action: string, target: string) {
     </section>
 
     <div class="ranking-grid">
-      <el-card shadow="never" class="ranking-card">
-        <template #header>
-          <div class="section-title"><div><strong>按用户查看</strong><span>查看每位用户的病历访问量</span></div><el-tag type="info" effect="plain">可导出</el-tag></div>
+      <MrrSectionCard class="ranking-card" title="按用户查看" description="查看每位用户的病历访问量">
+        <template #actions>
+          <el-tag type="info" effect="plain">可导出</el-tag>
         </template>
         <el-table :data="analytics.topUsers" size="small" table-layout="fixed">
           <el-table-column type="index" label="排名" width="64" />
@@ -135,11 +135,11 @@ function handleTargetAction(action: string, target: string) {
             </template>
           </el-table-column>
         </el-table>
-      </el-card>
+      </MrrSectionCard>
 
-      <el-card shadow="never" class="ranking-card">
-        <template #header>
-          <div class="section-title"><div><strong>按病历查看</strong><span>查看每份病历的访问用户</span></div><el-tag type="success" effect="plain">可导出</el-tag></div>
+      <MrrSectionCard class="ranking-card" title="按病历查看" description="查看每份病历的访问用户">
+        <template #actions>
+          <el-tag type="success" effect="plain">可导出</el-tag>
         </template>
         <el-table :data="topTargets" size="small" table-layout="fixed">
           <el-table-column type="index" label="排名" width="64" />
@@ -159,7 +159,7 @@ function handleTargetAction(action: string, target: string) {
             </template>
           </el-table-column>
         </el-table>
-      </el-card>
+      </MrrSectionCard>
     </div>
 
     <div class="trend-grid">
@@ -175,13 +175,12 @@ function handleTargetAction(action: string, target: string) {
 
 <style scoped>
 /* stylelint-disable @stylistic/selector-list-comma-newline-after, order/properties-order, at-rule-empty-line-before, media-feature-range-notation */
-.analytics-shell { display: grid; gap: 16px; }
-.ranking-grid, .trend-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
-.section-title { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
-.section-title > div { display: grid; gap: 4px; }
-.section-title strong { font-size: 16px; }
-.section-title span { font-size: 12px; color: var(--el-text-color-secondary); }
-.count-cell { display: grid; grid-template-columns: minmax(90px, 1fr) 64px; gap: 12px; align-items: center; }
+.analytics-shell { display: grid; gap: var(--mrr-space-4); }
+.ranking-grid, .trend-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--mrr-space-4); }
+
+/* 排行卡的标题、说明与右侧标签由 MrrSectionCard 提供，与下方图表卡（MrrChartCard）同一字号与留白。 */
+.ranking-card { min-width: 0; }
+.count-cell { display: grid; grid-template-columns: minmax(90px, 1fr) 64px; gap: var(--mrr-space-3); align-items: center; }
 .count-cell b { font-variant-numeric: tabular-nums; text-align: right; }
 .bar-track { height: 8px; overflow: hidden; background: var(--el-fill-color-light); border-radius: var(--mrr-radius-pill); }
 .bar-track span { display: block; height: 100%; background: var(--color-primary); border-radius: inherit; }

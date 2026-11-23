@@ -1,19 +1,26 @@
 <script setup lang="ts">
 defineOptions({ name: 'MrrPageHeader' })
 
-const props = defineProps<{
+const props = withDefaults(defineProps<{
   title: string
   description?: string
   eyebrow?: string
   icon?: string
-}>()
+  /**
+   * compact：查询 / 列表 / 浏览页使用。card 模式下去掉 110px 最小高度、标题 22px、
+   * 说明仍固定在标题下方。plain 模式不受影响。样式见 page-header.css 第 5 节。
+   */
+  size?: 'default' | 'compact'
+}>(), {
+  size: 'default',
+})
 
 const slots = useSlots()
 const hasAside = computed(() => Boolean(slots.actions))
 </script>
 
 <template>
-  <header class="mrr-page-header">
+  <header class="mrr-page-header" :class="{ 'mrr-page-header--compact': props.size === 'compact' }">
     <div class="mrr-page-header__main">
       <span v-if="props.icon" class="mrr-page-header__icon" aria-hidden="true">
         <FaIcon :name="props.icon" />
@@ -75,10 +82,22 @@ const hasAside = computed(() => Boolean(slots.actions))
   font-size: 19px;
   color: var(--mrr-primary);
 
-  /* 实色浅底 + 细描边，与分区卡图标同一做法；DESIGN.md 约定页头不叠加渐变与阴影。 */
-  background: color-mix(in srgb, var(--mrr-primary) 9%, var(--mrr-card));
-  border: 1px solid color-mix(in srgb, var(--mrr-primary) 18%, var(--mrr-border));
+  /*
+   * 实色浅底 + 细描边，与分区卡图标同一做法；DESIGN.md 约定页头不叠加渐变与阴影。
+   * 直接用品牌色 tone 令牌：调色板对浅底 / 描边强度的调整会一并生效，Chrome 86 也有静态回退。
+   */
+  background: var(--mrr-tone-primary-soft);
+  border: 1px solid var(--mrr-tone-primary-border);
   border-radius: var(--mrr-radius-lg);
+}
+
+/* 紧凑页头的图标降一档，与 22px 标题等高。 */
+.mrr-page-header--compact .mrr-page-header__icon {
+  flex-basis: 32px;
+  width: 32px;
+  height: 32px;
+  font-size: 16px;
+  border-radius: var(--mrr-radius-md);
 }
 
 .mrr-page-header__copy {
@@ -158,11 +177,5 @@ const hasAside = computed(() => Boolean(slots.actions))
   }
 }
 
-/* Chrome 86 回退：页头图标胶囊是页面唯一的品牌色锚点，补实色避免退成透明线框。 */
-@supports not (color: color-mix(in srgb, #000 50%, #fff)) {
-  .mrr-page-header__icon {
-    background: var(--mrr-tone-primary-soft);
-    border: 1px solid var(--mrr-tone-primary-border);
-  }
-}
+/* Chrome 86：图标胶囊已直接使用带静态回退的 tone 令牌，不再需要 @supports 分支。 */
 </style>

@@ -77,8 +77,8 @@ watch(scrollTop, (val) => {
   border-bottom: 1px solid var(--mrr-shell-divider);
   transition:
     transform var(--mrr-motion-move) var(--mrr-ease-out),
-    box-shadow var(--mrr-motion-feedback) ease,
-    background-color var(--mrr-motion-feedback) ease;
+    box-shadow var(--mrr-motion-feedback) var(--mrr-ease-out),
+    background-color var(--mrr-motion-feedback) var(--mrr-ease-out);
 
   &.mask {
     box-shadow: 0 8px 24px rgb(15 23 42 / 6%);

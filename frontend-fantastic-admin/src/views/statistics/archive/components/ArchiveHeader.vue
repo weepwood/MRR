@@ -24,9 +24,18 @@ defineOptions({ name: 'ArchiveHeader' })
 const props = withDefaults(defineProps<{
   loading?: boolean
   showBack?: boolean
+  /** 尚未查询时没有可刷新的内容，「刷新」不显示。 */
+  canRefresh?: boolean
+  /**
+   * 空态卡片里已经内联了最近查询列表，此时隐藏这里的「最近查询」弹层入口；
+   * 「查看全部」对话框仍保留，由页面通过 openAllHistory() 打开。
+   */
+  showHistoryTrigger?: boolean
 }>(), {
   loading: false,
   showBack: false,
+  canRefresh: true,
+  showHistoryTrigger: true,
 })
 
 const emit = defineEmits<{
@@ -208,6 +217,8 @@ onUnmounted(() => {
   historyGeneration++
   detachHistoryListeners()
 })
+
+defineExpose({ openAllHistory })
 </script>
 
 <template>
@@ -218,11 +229,12 @@ onUnmounted(() => {
         <span v-if="accessModeLabel" class="access-mode-label">{{ accessModeLabel }}</span>
       </div>
       <div class="heading-actions">
-        <el-button text size="small" :icon="Refresh" :loading="props.loading" @click="emit('refresh')">
+        <el-button v-if="props.canRefresh" text size="small" :icon="Refresh" :loading="props.loading" @click="emit('refresh')">
           刷新
         </el-button>
         <template v-if="!externalAccess">
           <el-popover
+            v-if="props.showHistoryTrigger"
             v-model:visible="historyVisible"
             placement="bottom-end"
             trigger="click"
@@ -371,7 +383,7 @@ onUnmounted(() => {
 <style scoped>
 .archive-header {
   display: grid;
-  gap: 10px;
+  gap: var(--mrr-space-3);
   padding: 2px;
 }
 
@@ -455,7 +467,7 @@ onUnmounted(() => {
 
 .history-groups {
   display: grid;
-  gap: 6px;
+  gap: var(--mrr-space-2);
   max-height: min(420px, calc(100vh - 180px));
   padding-right: 3px;
   overflow: hidden auto;
@@ -466,7 +478,7 @@ onUnmounted(() => {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 2px 6px;
+  padding: 2px var(--mrr-space-2);
   font-size: 11px;
   font-weight: 600;
   color: var(--text-secondary);
@@ -491,7 +503,7 @@ onUnmounted(() => {
 
 .history-dialog-header {
   display: grid;
-  gap: 10px;
+  gap: var(--mrr-space-3);
   width: 100%;
   padding-right: 16px;
 }
@@ -522,8 +534,8 @@ onUnmounted(() => {
 .history-tab-enter-active,
 .history-tab-leave-active {
   transition:
-    opacity 180ms var(--mrr-ease-out),
-    transform 180ms var(--mrr-ease-out);
+    opacity var(--mrr-motion-move) var(--mrr-ease-out),
+    transform var(--mrr-motion-move) var(--mrr-ease-out);
 }
 
 .history-tab-enter-from {
@@ -569,7 +581,7 @@ onUnmounted(() => {
 
 .history-status {
   flex: none;
-  padding: 2px 6px;
+  padding: 2px var(--mrr-space-2);
   font-size: 10px;
   font-weight: 600;
   color: var(--el-color-danger);
@@ -578,10 +590,10 @@ onUnmounted(() => {
 }
 
 .history-item {
-  gap: 6px;
+  gap: var(--mrr-space-2);
   padding: 5px 4px;
   border-radius: var(--mrr-radius-md);
-  transition: background-color var(--mrr-motion-feedback) ease;
+  transition: background-color var(--mrr-motion-feedback) var(--mrr-ease-out);
 }
 
 .history-item:hover {
@@ -629,7 +641,7 @@ onUnmounted(() => {
   height: var(--icon-size);
   fill: var(--icon-secondary-color);
   transform-origin: top;
-  transition: fill var(--mrr-motion-feedback) ease, transform var(--mrr-motion-move) var(--mrr-ease-out);
+  transition: fill var(--mrr-motion-feedback) var(--mrr-ease-out), transform var(--mrr-motion-move) var(--mrr-ease-out);
 }
 
 .bookmark::after {
@@ -693,7 +705,7 @@ onUnmounted(() => {
   gap: 4px 12px;
   align-items: center;
   min-width: 0;
-  padding: 5px 6px;
+  padding: 5px var(--mrr-space-2);
   font: inherit;
   color: inherit;
   text-align: left;
@@ -711,7 +723,7 @@ onUnmounted(() => {
 
 .history-main-trailing {
   display: flex;
-  gap: 6px;
+  gap: var(--mrr-space-2);
   align-items: center;
   align-self: center;
   justify-content: flex-end;
@@ -765,7 +777,7 @@ onUnmounted(() => {
 }
 
 .access-mode-label {
-  padding: 2px 7px;
+  padding: 2px var(--mrr-space-2);
   font-size: 12px;
   line-height: 1.4;
   color: var(--el-color-primary-dark-2);

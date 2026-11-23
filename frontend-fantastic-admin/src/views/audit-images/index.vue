@@ -180,6 +180,7 @@ const {
   list,
   total,
   loading,
+  resultVersion,
   pageNum,
   pageSize,
   query,
@@ -325,9 +326,8 @@ onMounted(loadData)
 
 <template>
   <MrrPageShell>
-    <MrrPageHeader title="病历访问审计可视化" eyebrow="Medical Record Audit" description="按用户和病历双向追溯访问关系，并导出完整审计证据。">
+    <MrrPageHeader size="compact" title="病历访问审计可视化" eyebrow="Medical Record Audit" description="按用户和病历双向追溯访问关系，并导出完整审计证据。">
       <template #actions>
-        <el-button :loading="exportLoading" @click="exportAudit('all')"><el-icon><Download /></el-icon>导出当前明细</el-button>
         <el-button :loading="loading || analyticsLoading" @click="() => loadData()"><el-icon><Refresh /></el-icon>刷新</el-button>
       </template>
     </MrrPageHeader>
@@ -347,11 +347,15 @@ onMounted(loadData)
     <el-alert v-if="analyticsError" type="error" show-icon :closable="false" :title="`分析数据加载失败：${analyticsError}`" />
     <AuditAnalytics :analytics="analytics" :loading="analyticsLoading" @export-user="value => exportAudit('user', value)" @export-target="value => exportAudit('target', value)" />
 
-    <MrrDataTablePanel title="最近访问明细" description="病案号、上架号和身份证号独立展示" :count="total">
+    <MrrDataTablePanel title="最近访问明细" description="病案号、上架号和身份证号独立展示" :count="total" :loading="loading" :result-key="resultVersion">
+      <!--
+        页头原有一个「导出当前明细」，与这里的「导出明细」调用同一个导出（scope=all），两处同名不同字。
+        只保留明细卡头这一处：导出的就是这张表的当前筛选结果，按钮应紧挨它的对象。
+      -->
       <template #actions>
-        <el-button size="small" :loading="exportLoading" @click="exportAudit('all')"><el-icon><Download /></el-icon>导出明细</el-button>
+        <el-button :loading="exportLoading" @click="exportAudit('all')"><el-icon><Download /></el-icon>导出当前明细</el-button>
       </template>
-      <AppLoading v-if="loading" type="table" :rows="8" />
+      <AppLoading v-if="loading && !list.length" type="table" :rows="8" />
       <AppError v-else-if="error" :message="error" @retry="loadListData" />
       <AppEmpty v-else-if="!list.length" description="暂无审计记录" />
       <el-table v-else :data="list" stripe>
@@ -359,11 +363,11 @@ onMounted(loadData)
         <el-table-column prop="username" label="用户" min-width="120"><template #default="{ row }">{{ row.username || '-' }}</template></el-table-column>
         <el-table-column label="病案号" min-width="130"><template #default="{ row }">{{ auditIdentifiers(row).bah }}</template></el-table-column>
         <el-table-column label="上架号" min-width="130"><template #default="{ row }">{{ auditIdentifiers(row).sjh }}</template></el-table-column>
-        <el-table-column label="身份证号" min-width="190" show-overflow-tooltip><template #default="{ row }">{{ auditIdentifiers(row).idCard }}</template></el-table-column>
+        <el-table-column label="身份证号" min-width="190" show-overflow-tooltip><template #default="{ row }"><span class="audit-mono">{{ auditIdentifiers(row).idCard }}</span></template></el-table-column>
         <el-table-column prop="auditDescription" label="访问类型" min-width="170"><template #default="{ row }"><el-tag effect="plain">{{ row.auditDescription || actionLabel(row.auditAction) }}</el-tag></template></el-table-column>
-        <el-table-column prop="clientIp" label="客户端 IP" min-width="140" />
+        <el-table-column prop="clientIp" label="客户端 IP" min-width="140"><template #default="{ row }"><span class="audit-mono">{{ row.clientIp || '-' }}</span></template></el-table-column>
         <el-table-column prop="responseStatus" label="状态码" width="100"><template #default="{ row }"><el-tag :type="statusTagType(row.responseStatus)">{{ row.responseStatus || '-' }}</el-tag></template></el-table-column>
-        <el-table-column prop="executeTime" label="耗时(ms)" width="105" />
+        <el-table-column prop="executeTime" label="耗时(ms)" width="105" align="right" />
         <el-table-column label="操作" :width="detailActionColumnWidth" fixed="right" align="center">
           <template #default="{ row }">
             <MrrTableActions
@@ -404,5 +408,11 @@ onMounted(loadData)
 
 :global(.audit-detail .el-descriptions__cell) {
   overflow-wrap: anywhere;
+}
+
+/* 身份证号（含掩码）与 IP 用等宽字体，逐行对齐，与患者管理页同一处理。 */
+.audit-mono {
+  font-family: var(--mrr-font-mono);
+  font-size: var(--mrr-font-size-xs);
 }
 </style>

@@ -3,6 +3,7 @@ import type { SettingSchema, SettingSchemaItem } from '@/api/modules/settings'
 import { ElMessage } from 'element-plus'
 import { computed, onActivated, onBeforeUnmount, onDeactivated, onMounted, reactive, ref } from 'vue'
 import { deleteSetting, getSettingsSchema, saveSystemSettings } from '@/api/modules/settings'
+import AppLoading from '@/components/AppLoading/index.vue'
 import { actionDialog } from '@/ui/components/ActionDialog'
 import { DIRECTORY_ROUTING_KEY } from './image-directory-routing'
 
@@ -251,7 +252,9 @@ onBeforeUnmount(() => { alive = false; active.value = false; generation++ })
 </script>
 
 <template>
-  <section v-loading="loading" class="setting-section">
+  <!-- 首次读取完成前没有服务器参数，用骨架屏代替默认值表单；之后的重新加载保留内容，只叠加遮罩。 -->
+  <AppLoading v-if="loading && !loaded" type="table" :rows="6" :cols="3" />
+  <section v-else v-loading="loading" class="setting-section">
     <el-alert
       type="info"
       :closable="false"
@@ -362,22 +365,20 @@ onBeforeUnmount(() => { alive = false; active.value = false; generation++ })
   padding: var(--mrr-space-4) var(--mrr-space-5);
   background: var(--mrr-card);
   border: 1px solid var(--mrr-border);
-  border-radius: var(--mrr-radius-xl);
+  border-radius: var(--mrr-radius-card);
 }
 
-.actions-copy strong { font-size: 13px; }
-.actions-copy p { margin: 3px 0 0; font-size: 10px; color: var(--mrr-muted-foreground); }
+.actions-copy strong { font-size: var(--mrr-font-size-sm); font-weight: 600; }
+.actions-copy p { margin: 3px 0 0; font-size: var(--mrr-font-size-xs); line-height: 1.6; color: var(--mrr-muted-foreground); }
 .actions-buttons { display: flex; flex-shrink: 0; gap: var(--mrr-space-2); }
 
-.setting-group { padding: var(--mrr-space-5); background: var(--mrr-card); border: 1px solid var(--mrr-border); border-radius: var(--mrr-radius-xl); }
+.setting-group { padding: var(--mrr-space-5); background: var(--mrr-card); border: 1px solid var(--mrr-border); border-radius: var(--mrr-radius-card); }
 .group-heading { margin-bottom: var(--mrr-space-4); }
-.group-heading strong { font-size: 15px; }
-.group-heading p { margin: 4px 0 0; font-size: 11px; color: var(--mrr-muted-foreground); }
 
 .control-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--mrr-space-4); }
 .field-label { display: inline-flex; flex-wrap: wrap; gap: 6px; align-items: center; }
-.field-hint { margin: 6px 0 0; font-size: 10px; line-height: 1.6; color: var(--mrr-muted-foreground); }
-.field-meta { display: flex; flex-wrap: wrap; gap: var(--mrr-space-3); margin: 4px 0 0; font-size: 10px; color: var(--mrr-muted-foreground); }
+.field-hint { margin: 6px 0 0; font-size: var(--mrr-font-size-xs); line-height: 1.6; color: var(--mrr-muted-foreground); }
+.field-meta { display: flex; flex-wrap: wrap; gap: var(--mrr-space-3); margin: 4px 0 0; font-size: var(--mrr-font-size-xs); line-height: 1.6; color: var(--mrr-muted-foreground); }
 .number-control { display: flex; gap: var(--mrr-space-2); align-items: center; }
 .full-width { width: 100%; }
 .reset-link { padding: 0; margin-top: 4px; }

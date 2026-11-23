@@ -3,6 +3,7 @@ import type { AuthTestHistoryEvent } from '../types'
 import type { OssCheckId, OssCheckSummary } from './oss-checks'
 import { computed, onBeforeUnmount, reactive, ref } from 'vue'
 import { executeAuthTestRequest } from '@/api/modules/auth-test'
+import MrrSectionCard from '@/components/MrrSectionCard/index.vue'
 import { useUserStore } from '@/store/modules/user'
 import { OSS_CHECKS, summarizeOssCheck } from './oss-checks'
 
@@ -59,21 +60,15 @@ onBeforeUnmount(() => { generation++ })
 </script>
 
 <template>
-  <el-card shadow="never" class="oss-check-panel">
-    <template #header>
-      <div class="panel-header">
-        <div>
-          <strong>OSS 只读检查</strong>
-          <p>使用当前登录会话。后端仍校验 record:read 权限；结果仅保存在当前标签页内存。</p>
-        </div>
-        <div class="panel-actions">
-          <el-button :disabled="busy || completed === 0" @click="clear">
-            清空检查结果
-          </el-button>
-          <el-button type="primary" :loading="busy" @click="run(OSS_CHECKS.map(item => item.id))">
-            运行全部 OSS 检查
-          </el-button>
-        </div>
+  <MrrSectionCard class="oss-check-panel" title="OSS 只读检查" description="使用当前登录会话。后端仍校验 record:read 权限；结果仅保存在当前标签页内存。">
+    <template #actions>
+      <div class="panel-actions">
+        <el-button :disabled="busy || completed === 0" @click="clear">
+          清空检查结果
+        </el-button>
+        <el-button type="primary" :loading="busy" @click="run(OSS_CHECKS.map(item => item.id))">
+          运行全部 OSS 检查
+        </el-button>
       </div>
     </template>
     <el-alert title="仅执行有限只读请求；不会上传、删除文件或启动迁移。检查通过仅表示对应接口本次可用。" type="info" :closable="false" show-icon />
@@ -100,11 +95,10 @@ onBeforeUnmount(() => { generation++ })
         执行检查
       </el-button>
     </section>
-  </el-card>
+  </MrrSectionCard>
 </template>
 
 <style scoped>
-.panel-header,
 .panel-actions {
   display: flex;
   flex-wrap: wrap;
@@ -113,13 +107,8 @@ onBeforeUnmount(() => { generation++ })
   justify-content: space-between;
 }
 
-.panel-header > div {
-  min-width: 0;
-}
-
-.panel-header p,
 .check-copy p {
-  margin: 6px 0;
+  margin: var(--mrr-space-2) 0;
   line-height: 1.6;
   color: var(--mrr-muted-foreground);
 }
@@ -160,7 +149,7 @@ onBeforeUnmount(() => { generation++ })
 }
 
 .check-result {
-  margin-top: 10px;
+  margin-top: var(--mrr-space-3);
   font-size: 13px;
 }
 

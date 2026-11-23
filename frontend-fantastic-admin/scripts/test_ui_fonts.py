@@ -1,6 +1,7 @@
 """Unicode boundary and source-census tests; no font tool dependency needed."""
 
 import importlib.util
+import json
 from pathlib import Path
 import tempfile
 import unittest
@@ -25,6 +26,15 @@ class UiFontRangesTest(unittest.TestCase):
         expected = [[0x20, 0x7E], [0x7528, 0x7528], [0x10FFFF, 0x10FFFF]]
         self.assertEqual(fonts.parse_unicode_css("U+20-7E, U+7528, U+10FFFF"), expected)
         self.assertEqual(fonts.parse_unicode_css(fonts.unicode_css(expected)), expected)
+
+    def test_preload_links_follow_generated_subset_hashes(self):
+        manifest = json.loads(fonts.MANIFEST.read_text(encoding="utf-8"))
+        html = (fonts.ROOT / "index.html").read_text(encoding="utf-8")
+
+        for weight in (400, 500):
+            subset = next(entry["subset"] for entry in manifest["fonts"] if entry["weight"] == weight)
+            with self.subTest(weight=weight):
+                self.assertIn(f'href="/fonts/{subset}"', html)
 
     def test_census_excludes_tests_and_generated_declarations(self):
         with tempfile.TemporaryDirectory() as directory:

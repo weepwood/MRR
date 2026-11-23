@@ -164,7 +164,7 @@ function removeFile(idx: number) {
   <div class="space-y-2">
     <button
       type="button"
-      class="h-40 w-full flex flex-col cursor-pointer items-center justify-center border border-2 rounded-lg border-dashed bg-transparent p-4 transition-all"
+      class="h-40 w-full flex flex-col cursor-pointer items-center justify-center border border-2 rounded-lg border-dashed bg-transparent p-4 transition-[color,background-color,border-color]"
       :class="{
         'border-primary bg-primary/5': isDragging,
         'opacity-50 cursor-not-allowed': props.disabled || (props.max > 0 && fileList.length >= props.max),

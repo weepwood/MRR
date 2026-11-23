@@ -94,11 +94,14 @@ const option = computed<ECOption>(() => ({
       yAxisIndex: 0,
       data: item.data,
       stack: item.stack,
-      barMaxWidth: 30,
+      // 90 根逐日柱子时，30px 上限几乎填满类目宽度，柱与柱粘成一整块；
+      // 留出 40% 类目间隙并收小圆角，单日起伏才能被逐根读出。
+      barMaxWidth: 20,
+      barCategoryGap: '40%',
       itemStyle: {
         color: item.color,
-        borderRadius: [6, 6, 2, 2],
-        opacity: 0.72,
+        borderRadius: [3, 3, 0, 0],
+        opacity: 0.82,
       },
       emphasis: { focus: 'series' as const },
     })),
@@ -112,7 +115,7 @@ const option = computed<ECOption>(() => ({
       symbol: 'circle',
       symbolSize: 7,
       lineStyle: {
-        width: 2.5,
+        width: 2,
         type: item.dashed ? 'dashed' as const : 'solid' as const,
         color: item.color,
       },

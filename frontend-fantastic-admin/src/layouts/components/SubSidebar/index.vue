@@ -98,7 +98,7 @@ watch(() => menuStore.actived, (val, oldVal) => {
   width: var(--g-sub-sidebar-width);
   color: var(--text-primary);
   background: var(--mrr-navigation-bg-solid);
-  transition: background-color var(--mrr-motion-feedback) ease, inset-inline-start var(--mrr-motion-move) var(--mrr-ease-out), width var(--mrr-motion-move) var(--mrr-ease-out);
+  transition: background-color var(--mrr-motion-feedback) var(--mrr-ease-out), inset-inline-start var(--mrr-motion-move) var(--mrr-ease-out), width var(--mrr-motion-move) var(--mrr-ease-out);
 
   &.is-collapse {
     width: var(--g-sub-sidebar-collapse-width);
@@ -145,13 +145,13 @@ watch(() => menuStore.actived, (val, oldVal) => {
 
       .menu-item-container {
         min-height: 34px;
-        padding: 6px 10px !important;
+        padding: 6px var(--mrr-space-3) !important;
         font-size: 13px;
         font-weight: 500;
         color: var(--text-secondary) !important;
         border: 1px solid transparent;
         border-radius: var(--mrr-radius-md);
-        transition: color var(--mrr-motion-feedback) ease, background-color var(--mrr-motion-feedback) ease, border-color var(--mrr-motion-feedback) ease;
+        transition: color var(--mrr-motion-feedback) var(--mrr-ease-out), background-color var(--mrr-motion-feedback) var(--mrr-ease-out), border-color var(--mrr-motion-feedback) var(--mrr-ease-out);
 
         &:hover {
           color: var(--text-primary) !important;
@@ -174,9 +174,9 @@ watch(() => menuStore.actived, (val, oldVal) => {
     }
 
     :deep(.sub-menu .menu-item-container) {
-      width: calc(100% - 18px);
+      width: calc(100% - var(--mrr-space-4));
       padding-inline-start: 8px !important;
-      margin-inline-start: 18px;
+      margin-inline-start: var(--mrr-space-4);
     }
 
     /* 收进背景边界，同时抵消一层内容缩进，保留子项图标和文字的位置。 */
@@ -186,7 +186,7 @@ watch(() => menuStore.actived, (val, oldVal) => {
   }
 
   .menu--grouped-single {
-    padding-top: 10px;
+    padding-top: var(--mrr-space-3);
 
     & > :deep(.menu-item) {
       padding: 1px 0;
@@ -197,7 +197,7 @@ watch(() => menuStore.actived, (val, oldVal) => {
      * 改为「字重 + 上间距」建立分组边界，只有悬停和激活才出现底色。 */
     & > :deep(.menu-item > .menu-item-container) {
       min-height: 32px;
-      padding-inline: 10px !important;
+      padding-inline: var(--mrr-space-3) !important;
       font-weight: 640;
       color: var(--text-primary) !important;
       background: transparent;
@@ -207,12 +207,12 @@ watch(() => menuStore.actived, (val, oldVal) => {
 
     /* 分组之间留出呼吸间距，让标题与下方子项成为一组。 */
     & > :deep(.menu-item + .menu-item) {
-      margin-top: 6px;
+      margin-top: var(--mrr-space-2);
     }
 
     & > :deep(.sub-menu) {
       padding-inline-start: 2px;
-      margin: 1px 0 6px;
+      margin: 1px 0 var(--mrr-space-2);
     }
 
     /* 子项比分组标题弱一档：常规态用次级文本色，靠左缩进读出层级。 */

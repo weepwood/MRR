@@ -51,7 +51,7 @@
 .nav-title {
   overflow: hidden;
   text-overflow: ellipsis;
-  font-size: 13px;
+  font-size: var(--mrr-font-size-sm);
   font-weight: 600;
   white-space: nowrap;
 }
@@ -60,20 +60,25 @@
 
 .settings-panel { display: grid; gap: var(--mrr-space-4); }
 .section-header { padding-bottom: var(--mrr-space-3); border-bottom: 1px solid var(--mrr-border); }
-.section-title { display: flex; gap: var(--mrr-space-3); align-items: center; }
-.section-title h3 { margin: 0; font-size: 18px; font-weight: 700; }
-.section-title p { margin: 2px 0 0; font-size: 13px; color: var(--mrr-muted-foreground); }
+.section-title { display: flex; gap: var(--mrr-space-3); align-items: stretch; }
+
+/*
+ * 分区标题层级：页面 h1（26px）→ 分区 h2（16px / 650）→ 分组卡（14px / 650）→ 设置项（13px / 600）→ 说明（12px）。
+ * 原来分区标题是 18px / 700 的 h3，夹在页面标题与分组卡之间多出一档字号，且标题层级从 h2 跳到 h3。
+ */
+.section-title h2 { margin: 0; font-size: var(--mrr-font-size-lg); font-weight: 650; line-height: 1.4; letter-spacing: -0.01em; }
+.section-title p { margin: var(--mrr-space-1) 0 0; font-size: var(--mrr-font-size-sm); line-height: 1.6; color: var(--mrr-muted-foreground); }
 
 .section-icon {
   display: grid;
-  flex: 0 0 auto;
+  flex: 0 0 48px;
   place-items: center;
-  width: 36px;
-  height: 36px;
+  width: 48px;
+  font-size: 22px;
   color: var(--mrr-navigation-active-foreground, var(--mrr-primary));
   background: var(--mrr-card);
   border: 1px solid var(--mrr-border);
-  border-radius: var(--mrr-radius-lg);
+  border-radius: var(--mrr-radius-md);
 }
 
 .section-icon.danger { color: var(--color-danger); }
@@ -105,8 +110,8 @@
 
 .save-status strong,
 .save-status small { display: block; }
-.save-status strong { font-size: 13px; }
-.save-status small { margin-top: 2px; font-size: 12px; color: var(--mrr-muted-foreground); }
+.save-status strong { font-size: var(--mrr-font-size-sm); }
+.save-status small { margin-top: 2px; font-size: var(--mrr-font-size-xs); color: var(--mrr-muted-foreground); }
 
 @media (max-width: 980px) {
   .settings-layout { grid-template-columns: minmax(0, 1fr); gap: var(--mrr-space-5); }

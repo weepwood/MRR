@@ -140,6 +140,34 @@ describe('statistics detail responsive pagination', () => {
     wrapper.unmount()
   })
 
+  it('keeps selection, copy and image actions as sibling buttons on each archive card', async () => {
+    api.getStatisticsList.mockResolvedValueOnce(createArchiveResponse(3, 18))
+    const wrapper = mount(StatisticsDetailPage, { global: { stubs } })
+    await flushPromises()
+
+    const [firstCard, card] = wrapper.findAll('.archive-folder-card')
+    expect(firstCard.get('button.folder-select').attributes('aria-pressed')).toBe('true')
+    // 整卡不再是 role="button"，避免按钮嵌套按钮。
+    expect(card.attributes('role')).toBeUndefined()
+    expect(card.attributes('tabindex')).toBeUndefined()
+
+    const select = card.get('button.folder-select')
+    expect(select.attributes('aria-pressed')).toBe('false')
+    expect(select.attributes('aria-label')).toContain('选择患者')
+    expect(card.findAll('button.folder-copy').map(button => button.attributes('aria-label')))
+      .toEqual([expect.stringContaining('复制病案号'), expect.stringContaining('复制上架号')])
+
+    expect(card.get('button.folder-action').text()).toContain('查看影像')
+    await select.trigger('click')
+
+    const selected = wrapper.get('.archive-folder-card.is-selected')
+    expect(selected.element).toBe(card.element)
+    expect(select.attributes('aria-pressed')).toBe('true')
+    expect(firstCard.get('button.folder-select').attributes('aria-pressed')).toBe('false')
+    expect(wrapper.findAll('.archive-folder-card.is-selected')).toHaveLength(1)
+    wrapper.unmount()
+  })
+
   it('uses a complete-row page size on the first request', async () => {
     const wrapper = mount(StatisticsDetailPage, { global: { stubs } })
     await flushPromises()

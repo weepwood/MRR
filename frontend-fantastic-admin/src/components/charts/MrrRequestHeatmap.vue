@@ -381,14 +381,14 @@ onBeforeUnmount(hideTooltip)
 <style scoped>
 .request-heatmap {
   display: grid;
-  gap: 14px;
+  gap: var(--mrr-space-3);
   min-width: 0;
 }
 
 .heatmap-header {
   display: flex;
   flex-wrap: wrap;
-  gap: 14px;
+  gap: var(--mrr-space-3);
   align-items: end;
   justify-content: space-between;
 }
@@ -396,19 +396,20 @@ onBeforeUnmount(hideTooltip)
 .heatmap-summary {
   display: flex;
   flex-wrap: wrap;
-  gap: 4px 10px;
+  gap: 4px var(--mrr-space-3);
   align-items: baseline;
   min-width: 0;
 }
 
 .heatmap-header strong {
-  font-size: 17px;
+  font-size: var(--mrr-font-size-lg);
   font-weight: 650;
+  font-variant-numeric: tabular-nums;
   color: var(--el-text-color-primary);
 }
 
 .heatmap-header span {
-  font-size: 11px;
+  font-size: var(--mrr-font-size-xs);
   color: var(--el-text-color-secondary);
 }
 
@@ -419,8 +420,8 @@ onBeforeUnmount(hideTooltip)
 }
 
 .heatmap-legend span {
-  padding: 0 3px;
-  font-size: 10px;
+  padding: 0 var(--mrr-space-1);
+  font-size: var(--mrr-font-size-xs);
   color: var(--el-text-color-placeholder);
 }
 
@@ -453,7 +454,7 @@ onBeforeUnmount(hideTooltip)
   width: var(--heatmap-grid-width);
   height: 20px;
   margin-left: 34px;
-  font-size: 10px;
+  font-size: var(--mrr-font-size-xs);
   color: var(--el-text-color-secondary);
 }
 
@@ -464,7 +465,7 @@ onBeforeUnmount(hideTooltip)
 
 .heatmap-body {
   display: flex;
-  gap: 6px;
+  gap: var(--mrr-space-2);
   align-items: flex-start;
 }
 
@@ -474,7 +475,9 @@ onBeforeUnmount(hideTooltip)
   grid-template-rows: repeat(7, var(--heatmap-cell-size));
   row-gap: var(--heatmap-cell-gap);
   width: 28px;
-  font-size: 9px;
+
+  /* 只在一、三、五行出现，相邻标签之间隔一行，12px 字形不会互相挤压。 */
+  font-size: var(--mrr-font-size-xs);
   line-height: var(--heatmap-cell-size);
   color: var(--el-text-color-placeholder);
   text-align: right;
@@ -499,7 +502,7 @@ onBeforeUnmount(hideTooltip)
   outline: none;
   border: 1px solid color-mix(in srgb, var(--el-border-color-lighter) 82%, transparent);
   border-radius: 2px;
-  transition: border-color var(--mrr-motion-feedback) ease, filter var(--mrr-motion-feedback) ease, transform var(--mrr-motion-press) var(--mrr-ease-out);
+  transition: border-color var(--mrr-motion-feedback) var(--mrr-ease-out), filter var(--mrr-motion-feedback) var(--mrr-ease-out), transform var(--mrr-motion-press) var(--mrr-ease-out);
 }
 
 .heatmap-cell:hover,
@@ -555,42 +558,43 @@ onBeforeUnmount(hideTooltip)
   z-index: var(--mrr-z-overlay-top);
   box-sizing: border-box;
   width: 236px;
-  padding: 13px 14px;
+  padding: var(--mrr-space-3) var(--mrr-space-3);
   color: var(--el-text-color-primary);
   pointer-events: none;
   background: color-mix(in srgb, var(--el-bg-color-overlay) 97%, transparent);
   border: 1px solid var(--el-border-color-lighter);
   border-radius: var(--mrr-radius-lg);
-  box-shadow: 0 14px 34px rgb(15 23 42 / 18%);
+  box-shadow: var(--mrr-shadow-md);
   transition: transform var(--mrr-motion-press) var(--mrr-ease-out);
   will-change: transform;
 }
 
 .heatmap-tooltip > span {
   display: block;
-  margin-bottom: 4px;
-  font-size: 11px;
+  margin-bottom: var(--mrr-space-1);
+  font-size: var(--mrr-font-size-xs);
   color: var(--el-text-color-secondary);
 }
 
 .heatmap-tooltip > strong {
   display: block;
-  margin-bottom: 10px;
-  font-size: 18px;
+  margin-bottom: var(--mrr-space-3);
+  font-size: var(--mrr-font-size-lg);
+  font-variant-numeric: tabular-nums;
   line-height: 1.25;
 }
 
 .heatmap-tooltip dl {
   display: grid;
-  gap: 7px;
+  gap: var(--mrr-space-2);
   margin: 0;
 }
 
 .heatmap-tooltip dl div {
   display: flex;
-  gap: 12px;
+  gap: var(--mrr-space-3);
   justify-content: space-between;
-  font-size: 11px;
+  font-size: var(--mrr-font-size-xs);
 }
 
 .heatmap-tooltip dt {
@@ -600,6 +604,7 @@ onBeforeUnmount(hideTooltip)
 .heatmap-tooltip dd {
   margin: 0;
   font-weight: 600;
+  font-variant-numeric: tabular-nums;
   text-align: right;
 }
 
@@ -608,8 +613,8 @@ onBeforeUnmount(hideTooltip)
 }
 
 .empty-hint {
-  padding: 9px 11px;
-  font-size: 11px;
+  padding: var(--mrr-space-2) var(--mrr-space-3);
+  font-size: var(--mrr-font-size-xs);
   color: var(--el-text-color-secondary);
   background: var(--el-fill-color-extra-light);
   border: 1px dashed var(--el-border-color-lighter);

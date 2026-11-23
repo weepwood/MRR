@@ -22,8 +22,8 @@
 .mrr-icon-interactive {
   transform-origin: center;
   transition:
-    color var(--mrr-motion-feedback) ease,
-    opacity var(--mrr-motion-feedback) ease,
+    color var(--mrr-motion-feedback) var(--mrr-ease-out),
+    opacity var(--mrr-motion-feedback) var(--mrr-ease-out),
     transform var(--mrr-motion-press) var(--mrr-ease-out);
 }
 
@@ -52,7 +52,7 @@ a:active .mrr-icon-interactive,
 }
 
 .mrr-fade-enter {
-  animation: mrr-fade-enter var(--mrr-motion-feedback) ease-out both;
+  animation: mrr-fade-enter var(--mrr-motion-feedback) var(--mrr-ease-out) both;
 }
 
 @keyframes mrr-icon-spin {
@@ -111,6 +111,73 @@ a:active .mrr-icon-interactive,
 
   to {
     opacity: 1;
+  }
+}
+
+/*
+ * 页面区块入场。只配合 fill-mode: backwards 使用：结束后元素回到 transform: none，
+ * 不会给内部 position: fixed 的浮层（档案袋工具条、存储浏览器最大化）留下新的包含块。
+ */
+@keyframes mrr-page-enter {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+}
+
+/*
+ * 进行中状态的呼吸光圈。状态本身由文字与语义色表达，光圈只提示「仍在变化」；
+ * 关闭动效时只播 1ms 一次，终点 opacity: 0，等同不显示。
+ */
+@keyframes mrr-live-pulse {
+  0% {
+    opacity: 0.55;
+    transform: scale(1);
+  }
+
+  100% {
+    opacity: 0;
+    transform: scale(2.8);
+  }
+}
+
+/*
+ * 不定进度条：主色短段从左扫到右。背景图层 1 是短段、图层 2 是浅色轨道；
+ * 关闭动效时只播 1ms，结束后回到静止位置（短段停在左端），仍能读出「处理中」。
+ */
+@keyframes mrr-busy-bar {
+  from {
+    background-position: -50% 0, 0 0;
+  }
+
+  to {
+    background-position: 150% 0, 0 0;
+  }
+}
+
+/*
+ * 结果行淡入。两份内容相同、名字不同的关键帧轮换使用：animation-name 改变时浏览器
+ * 会重新播放，不必移除再添加类名，也不依赖 requestAnimationFrame。只动 opacity，
+ * 不给 <tr> 加 transform，避免影响固定列的 position: sticky。
+ */
+@keyframes mrr-row-enter-a {
+  from {
+    opacity: 0;
+  }
+}
+
+@keyframes mrr-row-enter-b {
+  from {
+    opacity: 0;
+  }
+}
+
+/* 数值刚更新：主色浅底从数字背后淡出，没有位移、不改变尺寸。 */
+@keyframes mrr-value-update {
+  from {
+    color: var(--mrr-primary);
+    background-color: var(--mrr-tone-primary-soft);
+    box-shadow: 0 0 0 4px var(--mrr-tone-primary-soft);
   }
 }
 

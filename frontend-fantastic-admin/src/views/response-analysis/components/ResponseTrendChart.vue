@@ -123,14 +123,14 @@ function formatBucket(bucket: string) {
 <style scoped>
 .chart-shell {
   display: grid;
-  gap: 20px;
+  gap: var(--mrr-space-5);
 }
 
 .chart-overview {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 0;
-  padding-bottom: 16px;
+  padding-bottom: var(--mrr-space-4);
   border-bottom: 1px solid var(--el-border-color-lighter);
 }
 
@@ -139,10 +139,10 @@ function formatBucket(bucket: string) {
 
   display: grid;
   grid-template-columns: auto auto;
-  gap: 2px 5px;
+  gap: 2px var(--mrr-space-1);
   align-content: center;
   min-width: 0;
-  padding: 0 18px;
+  padding: 0 var(--mrr-space-4);
 }
 
 .overview-item:first-child {
@@ -156,12 +156,12 @@ function formatBucket(bucket: string) {
 .overview-item span {
   display: flex;
   grid-column: 1 / -1;
-  gap: 7px;
+  gap: var(--mrr-space-2);
   align-items: center;
   min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
-  font-size: 11px;
+  font-size: var(--mrr-font-size-xs);
   color: var(--el-text-color-secondary);
   white-space: nowrap;
 }
@@ -181,6 +181,7 @@ function formatBucket(bucket: string) {
   text-overflow: ellipsis;
   font-size: 18px;
   font-weight: 650;
+  font-variant-numeric: tabular-nums;
   line-height: 1.3;
   color: var(--el-text-color-primary);
   white-space: nowrap;
@@ -191,7 +192,7 @@ function formatBucket(bucket: string) {
   padding-bottom: 2px;
   overflow: hidden;
   text-overflow: ellipsis;
-  font-size: 10px;
+  font-size: var(--mrr-font-size-xs);
   font-style: normal;
   color: var(--el-text-color-placeholder);
   white-space: nowrap;
@@ -205,43 +206,43 @@ function formatBucket(bucket: string) {
 .trend-section,
 .duration-section {
   display: grid;
-  gap: 14px;
+  gap: var(--mrr-space-3);
   min-width: 0;
 }
 
 .duration-section {
-  padding-top: 18px;
+  padding-top: var(--mrr-space-4);
   border-top: 1px solid var(--el-border-color-lighter);
 }
 
 .section-heading {
   display: flex;
-  gap: 16px;
+  gap: var(--mrr-space-4);
   align-items: flex-start;
   justify-content: space-between;
 }
 
 .section-heading > div {
   display: grid;
-  gap: 4px;
+  gap: var(--mrr-space-1);
   min-width: 0;
 }
 
 .section-heading strong {
-  font-size: 14px;
+  font-size: var(--mrr-font-size-md);
   font-weight: 650;
   color: var(--el-text-color-primary);
 }
 
 .section-heading span,
 .section-heading small {
-  font-size: 11px;
+  font-size: var(--mrr-font-size-xs);
   color: var(--el-text-color-secondary);
 }
 
 .section-heading small {
   flex: none;
-  padding: 4px 8px;
+  padding: var(--mrr-space-1) var(--mrr-space-2);
   color: var(--color-primary);
   background: color-mix(in srgb, var(--color-primary) 8%, var(--el-bg-color));
   border: 1px solid color-mix(in srgb, var(--color-primary) 14%, transparent);
@@ -259,7 +260,7 @@ function formatBucket(bucket: string) {
 @media (max-width: 900px) {
   .chart-overview {
     grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 14px 0;
+    gap: var(--mrr-space-3) 0;
   }
 
   .overview-item:nth-child(3) {
@@ -278,7 +279,7 @@ function formatBucket(bucket: string) {
   .overview-item:first-child,
   .overview-item:nth-child(3) {
     grid-template-columns: 1fr auto;
-    padding: 10px 0;
+    padding: var(--mrr-space-3) 0;
     border-top: 1px solid var(--el-border-color-lighter);
     border-left: 0;
   }

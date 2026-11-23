@@ -62,6 +62,21 @@
   --mrr-motion-overlay: 220ms;
   --mrr-motion-loop: 1s;
   --mrr-motion-loop-soft: 1.5s;
+
+  /*
+   * - stagger    30ms   同一批兄弟元素依次入场的间隔（页面区块、骨架行）。
+   *                     最多叠加 3 档：move 180ms + 90ms = 270ms，仍在「反馈总长 ≤ 350ms」内。
+   * - attention  900ms  数据已更新的提示淡出（指标数值变化）。只承载「刚变过」，
+   *                     数值本身始终由文字表达；关闭动效后不出现。
+   */
+  --mrr-motion-stagger: 30ms;
+  --mrr-motion-attention: 900ms;
+
+  /*
+   * - busy-delay 200ms  刷新反馈（表格进度条、遮罩、变暗）的出现延迟，与路由进度条同值。
+   *                     内网常见的 100ms 级响应不出现任何反馈，避免每次翻页都闪一下。
+   */
+  --mrr-motion-busy-delay: 200ms;
   --mrr-ease-out: cubic-bezier(0.22, 1, 0.36, 1);
 
   /* 离场与收起：先慢后快，配合 ease-out 入场，避免「进出同速」显得拖沓。 */
@@ -213,7 +228,13 @@
    * - blocking   1900  页内阻断遮罩（下载、导出进度）：低于弹层，保证消息与确认框可见
    * - header     2000  顶部导航；与弹层基准相同，后打开的弹层自然在上
    * - progress   3000  路由进度条
+   * - viewer     3000  全屏影像查看器；档案袋预览工具条 +1、其下拉 +2
+   * - ocr-drawer 3100  档案袋 OCR 抽屉基座
+   * - action-dialog 3200 确认/输入弹窗（须压住沉浸层）
+   * - message    3300  消息提示条（须压住确认弹窗与全屏影像）
    * - overlay-top 4000 全屏看图上的说明条、跟随鼠标的图表提示
+   * - watermark  4000  档案水印（pointer-events: none）
+   * 必须传数字的地方（Element Plus 的 z-index prop、行内样式）用 constants/z-index.ts，两边由单测对齐。
    */
   --mrr-z-sticky: 1000;
   --mrr-z-sidebar-mask: 1009;
@@ -221,7 +242,12 @@
   --mrr-z-blocking: 1900;
   --mrr-z-header: 2000;
   --mrr-z-progress: 3000;
+  --mrr-z-viewer: 3000;
+  --mrr-z-ocr-drawer: 3100;
+  --mrr-z-action-dialog: 3200;
+  --mrr-z-message: 3300;
   --mrr-z-overlay-top: 4000;
+  --mrr-z-watermark: 4000;
 
   /* 阴影 */
   --mrr-shadow-xs: 0 1px 2px rgb(15 23 42 / 4%);

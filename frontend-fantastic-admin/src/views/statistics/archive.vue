@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import type { ArchiveLocalPreferences, ArchiveTypeDisplayMode } from './archive/composables/useArchiveLocalPreferences'
+import type { ArchiveSearchHistoryItem } from './archive/composables/useArchiveSearchHistory'
 import type { GalleryImage, ViewMode } from './archive/types'
 import type { ArchiveExportJob } from '@/api/modules/archive-export'
 import type { IdCardArchiveCase } from '@/api/modules/search'
@@ -22,6 +23,7 @@ import ArchiveCaseList from './archive/components/ArchiveCaseList.vue'
 import ArchiveHeader from './archive/components/ArchiveHeader.vue'
 import ArchiveMoreSettings from './archive/components/ArchiveMoreSettings.vue'
 import ArchiveQueryFailure from './archive/components/ArchiveQueryFailure.vue'
+import ArchiveRecentLookups from './archive/components/ArchiveRecentLookups.vue'
 import ArchiveSearchBar from './archive/components/ArchiveSearchBar.vue'
 import ArchiveWall from './archive/components/ArchiveWall.vue'
 import PatientCard from './archive/components/PatientCard.vue'
@@ -86,6 +88,7 @@ const viewMode = ref<ViewMode>('thumb')
 const previewMode = ref<ArchivePreviewMode>('single')
 const typeDisplayMode = ref<ArchiveTypeDisplayMode>('double-column')
 const archiveLocalPreferences = ref<ArchiveLocalPreferences>(readArchiveLocalPreferences())
+const archiveHeaderRef = ref<InstanceType<typeof ArchiveHeader> | null>(null)
 const thumbStripRef = ref<InstanceType<typeof ThumbStrip> | null>(null)
 const previewPanelRef = ref<InstanceType<typeof PreviewPanel> | null>(null)
 const archiveWallRef = ref<InstanceType<typeof ArchiveWall> | null>(null)
@@ -166,7 +169,29 @@ const downloadButtonLabel = computed(() => {
   }
   return '下载病案（整份）'
 })
-const pdfButtonLabel = computed(() => `导出选中 PDF（${selectedCount.value}）`)
+/**
+ * PDF 按钮文案跟随任务状态。原先始终显示「导出选中 PDF（N）」，而点击行为会随任务变成
+ * 取消生成或下载已生成文件，文案与实际操作不一致。
+ */
+const pdfButtonLabel = computed(() => {
+  const job = pdfJob.value
+  if (job && isJobRunning(job)) {
+    const total = Math.max(0, Number(job.plannedCount || 0))
+    const completed = Math.min(total, Math.max(0, Number(job.processedCount || 0)))
+    return total > 0 ? `取消 PDF（后端生成 ${completed}/${total}）` : '取消 PDF（后端生成）'
+  }
+  if (job?.status === 'SUCCESS') {
+    return '下载已生成的 PDF'
+  }
+  return `导出选中 PDF（${selectedCount.value}）`
+})
+const pdfShortLabel = computed(() => {
+  const job = pdfJob.value
+  if (job && isJobRunning(job)) {
+    return '取消 PDF'
+  }
+  return job?.status === 'SUCCESS' ? '下载 PDF' : 'PDF'
+})
 
 const {
   job: selectedZipJob,
@@ -184,6 +209,13 @@ const selectedZipLabel = computed(() => {
     return `取消选中 ZIP（${job.processedCount}/${job.plannedCount}）`
   }
   return job?.status === 'SUCCESS' ? '重新下载选中 ZIP' : `导出选中 ZIP（${selectedCount.value}）`
+})
+const selectedZipShortLabel = computed(() => {
+  const job = selectedZipJob.value
+  if (job && isJobRunning(job)) {
+    return '取消 ZIP'
+  }
+  return job?.status === 'SUCCESS' ? '下载 ZIP' : 'ZIP'
 })
 
 async function handleSelectedZipAction() {
@@ -630,6 +662,13 @@ async function handleExportPdfAction() {
   await exportSelectedPdf(selectedItems.value)
 }
 
+function selectRecentLookup(item: ArchiveSearchHistoryItem) {
+  searchIdCard.value = ''
+  searchBah.value = item.bah
+  searchSjh.value = item.sjh
+  void handleSearch()
+}
+
 function goBack() {
   router.push('/statistics-detail')
 }
@@ -928,11 +967,14 @@ onUnmounted(() => {
       <template v-else>
         <section class="archive-sidebar">
           <ArchiveHeader
+            ref="archiveHeaderRef"
             v-model:search-id-card="searchIdCard"
             v-model:search-bah="searchBah"
             v-model:search-sjh="searchSjh"
             :loading="loading || idCardLoading"
             :show-back="showBackToStatisticsDetail"
+            :can-refresh="showViewer"
+            :show-history-trigger="showViewer"
             @back="goBack"
             @refresh="handleRefresh"
             @search="handleSearch"
@@ -943,6 +985,7 @@ onUnmounted(() => {
             v-model:search-bah="searchBah"
             v-model:search-sjh="searchSjh"
             :loading="loading || idCardLoading"
+            :labelled="!showViewer"
             @search="handleSearch"
           />
 
@@ -984,37 +1027,73 @@ onUnmounted(() => {
             />
           </template>
 
-          <div v-else-if="!showViewer && !loading && !idCardLoading && !errorMsg" class="empty-state">
-            <AppEmpty icon="i-lucide:scan-search" description="输入身份证号、病案号或上架号查询影像" />
-          </div>
-
-          <div v-if="images.length > 0" class="archive-bottom-actions">
-            <el-button
+          <!-- 尚未查询：用最近查询代替插画，一次点击即可回到上次的病案；外部访问没有搜索记录，保留原空态。 -->
+          <template v-else-if="!showViewer && !loading && !idCardLoading && !errorMsg">
+            <ArchiveRecentLookups
               v-if="showSelectionStatus"
-              :icon="Download"
-              :disabled="!selectedCount"
-              :loading="selectedZipCreating || selectedZipCancelling || selectedZipDownloading"
-              @click="handleSelectedZipAction"
+              class="archive-empty-recent"
+              heading-tag="h3"
+              :limit="5"
+              @select="selectRecentLookup"
             >
-              {{ selectedZipLabel }}
-            </el-button>
-            <el-button v-if="!isExternalTicketMode" :icon="Printer" :loading="printing" :disabled="!selectedCount" @click="handlePrint">
-              打印选中页面<template v-if="selectedCount">
-                ({{ selectedCount }})
+              <template #actions>
+                <el-button text size="small" @click="archiveHeaderRef?.openAllHistory()">
+                  全部记录
+                </el-button>
               </template>
-            </el-button>
+            </ArchiveRecentLookups>
+            <div v-else class="empty-state">
+              <AppEmpty icon="i-lucide:scan-search" description="输入身份证号、病案号或上架号查询影像" />
+            </div>
+          </template>
+
+          <!--
+            底部操作区：上排是「对选中影像」的三项操作，选中数量只写一次；下排是不依赖选择的整份下载。
+            按钮可见文字收短，完整说明（含进度）放在 aria-label / title 中。
+          -->
+          <div v-if="images.length > 0 && (showSelectionStatus || !isExternalTicketMode)" class="archive-bottom-actions">
+            <div class="archive-selection-actions" role="group" :aria-label="`对已选 ${selectedCount} 张影像的操作`">
+              <span v-if="showSelectionStatus" class="archive-selection-count" :class="{ 'is-empty': !selectedCount }">
+                已选 <b>{{ selectedCount }}</b> 张
+              </span>
+              <el-button
+                v-if="showSelectionStatus"
+                :icon="Download"
+                :disabled="!selectedCount"
+                :loading="selectedZipCreating || selectedZipCancelling || selectedZipDownloading"
+                :aria-label="selectedZipLabel"
+                :title="selectedZipLabel"
+                @click="handleSelectedZipAction"
+              >
+                {{ selectedZipShortLabel }}
+              </el-button>
+              <el-button
+                v-if="!isExternalTicketMode"
+                :icon="Printer"
+                :loading="printing"
+                :disabled="!selectedCount"
+                :aria-label="`打印选中页面（${selectedCount}）`"
+                :title="`打印选中页面（${selectedCount}）`"
+                @click="handlePrint"
+              >
+                打印
+              </el-button>
+              <el-button
+                v-if="!isExternalTicketMode"
+                :type="pdfButtonType || undefined"
+                :icon="Document"
+                :loading="pdfButtonLoading"
+                :disabled="!pdfJob && !selectedCount"
+                :aria-label="pdfButtonLabel"
+                :title="pdfButtonLabel"
+                @click="handleExportPdfAction"
+              >
+                {{ pdfShortLabel }}
+              </el-button>
+            </div>
             <el-button
               v-if="!isExternalTicketMode"
-              :type="pdfButtonType || undefined"
-              :icon="Document"
-              :loading="pdfButtonLoading"
-              :disabled="!pdfJob && !selectedCount"
-              @click="handleExportPdfAction"
-            >
-              {{ pdfButtonLabel }}
-            </el-button>
-            <el-button
-              v-if="!isExternalTicketMode"
+              class="archive-download-all"
               :type="downloadButtonType || undefined"
               :icon="Download"
               :loading="downloadButtonLoading"
@@ -1183,18 +1262,18 @@ onUnmounted(() => {
   justify-content: space-between;
   width: min(calc(100% - 32px), 1280px);
   min-height: 56px;
-  padding: 9px 12px;
+  padding: var(--mrr-space-2) 12px;
   background: var(--surface);
   border: 1px solid var(--divider);
   border-radius: var(--mrr-radius-xl);
-  box-shadow: 0 12px 32px rgb(0 0 0 / 14%);
+  box-shadow: var(--mrr-shadow-md);
   transform: translateX(-50%);
 }
 
 .archive-wall-summary {
   display: flex;
   flex: none;
-  gap: 9px;
+  gap: var(--mrr-space-2);
   align-items: center;
   min-width: 0;
   font-size: 12px;
@@ -1206,7 +1285,7 @@ onUnmounted(() => {
 }
 
 .archive-wall-summary span + span::before {
-  margin-right: 9px;
+  margin-right: var(--mrr-space-2);
   color: var(--divider);
   content: "·";
 }
@@ -1240,7 +1319,7 @@ onUnmounted(() => {
 .archive-sidebar {
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: var(--mrr-space-3);
   min-width: 0;
 }
 
@@ -1251,11 +1330,52 @@ onUnmounted(() => {
 .archive-bottom-actions {
   display: grid;
   flex: none;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 8px;
-  padding-top: 10px;
+  gap: var(--mrr-space-2);
+  padding-top: var(--mrr-space-3);
   margin-top: auto;
   border-top: 1px solid var(--divider);
+}
+
+/* flex 而非固定列：外部 / 兼容模式下按钮数量不同，余下按钮平分宽度。 */
+.archive-selection-actions {
+  display: flex;
+  gap: var(--mrr-space-2);
+  align-items: center;
+  min-width: 0;
+}
+
+.archive-selection-actions :deep(.el-button) {
+  flex: 1 1 0;
+  padding-inline: var(--mrr-space-2);
+}
+
+.archive-selection-actions :deep(.el-button > span) {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.archive-selection-count {
+  flex: none;
+  font-size: var(--mrr-font-size-xs);
+  color: var(--mrr-muted-foreground);
+  white-space: nowrap;
+}
+
+.archive-selection-count b {
+  font-family: var(--mrr-font-mono);
+  font-weight: 650;
+  font-variant-numeric: tabular-nums;
+  color: var(--mrr-foreground);
+}
+
+.archive-selection-count.is-empty b {
+  color: var(--mrr-muted-foreground);
+}
+
+.archive-download-all {
+  width: 100%;
 }
 
 .archive-bottom-actions :deep(.el-button) {
@@ -1293,7 +1413,7 @@ onUnmounted(() => {
   background: var(--surface);
   border: 1px solid var(--divider);
   border-radius: var(--mrr-radius-2xl);
-  box-shadow: 0 12px 32px rgb(0 0 0 / 5%);
+  box-shadow: var(--mrr-shadow-sm);
 }
 
 .is-empty .search-card {
@@ -1304,6 +1424,12 @@ onUnmounted(() => {
 
 .is-empty .empty-state {
   min-height: 120px;
+}
+
+/* 空态卡片里，最近查询与上方搜索区用一条分隔线区分，不再放插画。 */
+.archive-empty-recent {
+  padding-top: var(--mrr-space-4);
+  border-top: 1px solid var(--divider);
 }
 
 .viewer-layout {
@@ -1371,7 +1497,7 @@ onUnmounted(() => {
   .archive-wall-toolbar {
     bottom: 10px;
     flex-direction: column;
-    gap: 7px;
+    gap: var(--mrr-space-2);
     align-items: stretch;
     width: calc(100% - 20px);
   }

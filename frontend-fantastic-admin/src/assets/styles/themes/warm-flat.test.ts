@@ -52,5 +52,38 @@ describe('暖色扁平风格的设计层契约', () => {
     expect(themeCss).toMatch(/--mrr-radius-sm:\s*min\(calc\(var\(--radius/)
     expect(themeCss).toMatch(/--mrr-radius-lg:\s*min\(calc\(var\(--radius/)
     expect(themeCss).toMatch(/--mrr-control-radius:\s*var\(--mrr-radius-md\)/)
+    // 标签圆角同样跟随滑块，不再写死 5px。
+    const tag = themeCode.match(/html\[data-mrr-palette="gr8r"\] \.el-tag \{([^}]*)\}/)?.[1] ?? ''
+    expect(tag).toMatch(/border-radius:\s*max\(0px, calc\(var\(--mrr-radius-sm\)/)
+  })
+
+  it('字号只用整数像素', () => {
+    // 12.5px 这类半像素字号在 Windows 100% 缩放下中文渲染发虚，医院终端多为此配置。
+    const fractional = themeCode.match(/font-size:\s*\d+\.\d+px/g) ?? []
+    const fractionalTokens = themeCode.match(/--mrr-[\w-]*font-size[\w-]*:\s*\d+\.\d+px/g) ?? []
+    expect([...fractional, ...fractionalTokens]).toEqual([])
+  })
+
+  it('element Plus 未桥接的中性令牌在暖色主题下改指 MRR 令牌', () => {
+    // 否则骨架屏 shimmer、空态图标、开关轨道会露出 Element Plus 自带的冷灰。
+    const block = themeCode.match(/html\[data-mrr-palette="gr8r"\]:root\s*\{([^}]*)\}/)?.[1] ?? ''
+    for (const token of [
+      '--el-fill-color',
+      '--el-fill-color-dark',
+      '--el-fill-color-extra-light',
+      '--el-border-color-dark',
+      '--el-text-color-placeholder',
+      '--el-text-color-disabled',
+      '--el-box-shadow-light',
+    ]) {
+      expect(block, `缺少 ${token}`).toMatch(new RegExp(`${token}:\\s*var\\(--(mrr|color)-[\\w-]+\\);`))
+    }
+  })
+
+  it('分区卡头的左右留白与表格面板共用 --mrr-card-inset', () => {
+    // 写死 16px 时卡头标题比筛选区、表体、分页少缩进 4px，堆叠后左缘出现锯齿。
+    const header = themeCode.match(/html\[data-mrr-palette="gr8r"\] \.mrr-section-card \.el-card__header \{([^}]*)\}/)?.[1] ?? ''
+    expect(header).toMatch(/padding:\s*var\(--mrr-space-\d\)\s+var\(--mrr-card-inset\);/)
+    expect(themeCode).toMatch(/@media \(max-width: 760px\)\s*\{\s*html\[data-mrr-palette="gr8r"\] \.mrr-section-card \.el-card__header \{[^}]*--mrr-card-inset-compact/)
   })
 })

@@ -46,11 +46,11 @@ function handleClick() {
 </script>
 
 <template>
-  <div class="group/image-preview relative inline-block overflow-hidden border rounded-lg">
+  <div class="group/image-preview relative inline-block overflow-hidden border rounded-lg transition-[border-color,box-shadow] hover:border-primary hover:shadow-md">
     <img
       :src="src"
       alt=""
-      :class="cn('size-50 object-contain cursor-pointer bg-background transition-all duration-300 group-hover/image-preview:scale-110', props.class, {
+      :class="cn('size-50 object-contain cursor-pointer bg-background', props.class, {
         invisible: isError || isLoading,
       })"
       width="200"

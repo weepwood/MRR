@@ -201,7 +201,7 @@ defineExpose({ resetVisible, scrollToIndex })
   display: flex;
   flex: 1;
   flex-wrap: wrap;
-  gap: 6px;
+  gap: var(--mrr-space-2);
   align-content: flex-start;
   width: 100%;
   min-width: 0;
@@ -223,7 +223,7 @@ defineExpose({ resetVisible, scrollToIndex })
   align-items: center;
   width: 100% !important;
   min-height: 42px;
-  padding: 8px 10px;
+  padding: 8px var(--mrr-space-3);
 }
 
 .thumb-item {
@@ -232,7 +232,7 @@ defineExpose({ resetVisible, scrollToIndex })
   display: grid;
   gap: 5px;
   min-width: 0;
-  padding: 6px;
+  padding: var(--mrr-space-2);
   cursor: pointer;
 
   /* 双击卡片是「切换选中」手势，禁掉浏览器默认的文本选区（会把页码/类型名拖蓝） */
@@ -240,7 +240,7 @@ defineExpose({ resetVisible, scrollToIndex })
   background: var(--surface);
   border: 1px solid var(--divider);
   border-radius: var(--mrr-radius-md);
-  transition: border-color var(--mrr-motion-feedback) ease, box-shadow var(--mrr-motion-feedback) ease;
+  transition: border-color var(--mrr-motion-feedback) var(--mrr-ease-out), box-shadow var(--mrr-motion-feedback) var(--mrr-ease-out);
 }
 
 /* 键盘焦点不再单独画圈：@focus → selectItem 让预览跟随焦点，active 圈即唯一指示；
@@ -292,7 +292,7 @@ defineExpose({ resetVisible, scrollToIndex })
   background: transparent;
   border: 1.5px solid rgb(255 255 255 / 85%);
   border-radius: var(--mrr-radius-sm);
-  transition: color var(--mrr-motion-feedback) ease, background-color var(--mrr-motion-feedback) ease, border-color var(--mrr-motion-feedback) ease;
+  transition: color var(--mrr-motion-feedback) var(--mrr-ease-out), background-color var(--mrr-motion-feedback) var(--mrr-ease-out), border-color var(--mrr-motion-feedback) var(--mrr-ease-out);
 }
 
 /* 命中区比视觉块大一圈，但只在上下与左侧外扩，不盖住右侧页码的点击范围。 */
@@ -353,12 +353,12 @@ defineExpose({ resetVisible, scrollToIndex })
 .thumb-image-placeholder {
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: var(--mrr-space-2);
   align-items: center;
   justify-content: center;
   min-height: 200px;
   aspect-ratio: 3 / 4;
-  padding: 10px;
+  padding: var(--mrr-space-3);
   font-size: 11px;
   color: var(--text-tertiary);
   text-align: center;
@@ -392,7 +392,7 @@ defineExpose({ resetVisible, scrollToIndex })
   bottom: 11px;
   left: 11px;
   display: flex;
-  gap: 6px;
+  gap: var(--mrr-space-2);
   align-items: center;
   min-width: 0;
   max-width: calc(100% - 22px);

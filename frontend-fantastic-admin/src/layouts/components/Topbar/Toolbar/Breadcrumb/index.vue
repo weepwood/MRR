@@ -50,9 +50,9 @@ function pathCompile(path: string) {
 </script>
 
 <template>
-  <Breadcrumb v-if="settingsStore.mode === 'pc' && settingsStore.settings.app.routeBaseOn !== 'filesystem'" class="breadcrumb whitespace-nowrap px-2">
+  <Breadcrumb v-if="settingsStore.mode === 'pc' && settingsStore.settings.app.routeBaseOn !== 'filesystem'" class="breadcrumb whitespace-nowrap px-2" navigation-label="面包屑导航">
     <TransitionGroup name="breadcrumb">
-      <BreadcrumbItem v-for="(item, index) in breadcrumbList" :key="breadcrumbKeys[index]" :to="Number(index) < breadcrumbList.length - 1 && item.path !== '' ? pathCompile(item.path) : ''">
+      <BreadcrumbItem v-for="(item, index) in breadcrumbList" :key="breadcrumbKeys[index]" :current="Number(index) === breadcrumbList.length - 1" :to="Number(index) < breadcrumbList.length - 1 && item.path !== '' ? pathCompile(item.path) : ''">
         {{ item.title }}
       </BreadcrumbItem>
     </TransitionGroup>

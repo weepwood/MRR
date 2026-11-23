@@ -143,6 +143,7 @@ async function skipRollbackPage() {
 <template>
   <MrrPageShell v-loading="busy" class="ocr-batches" width="fluid">
     <MrrPageHeader
+      size="compact"
       eyebrow="OCR BATCH PROCESSING"
       title="历史未分类影像识别"
       description="只处理有效、病案关联已核验且仍未分类的页面。批次有明确上界，每次最多 10,000 页，主要在北京时间 22:00–06:00 运行。"

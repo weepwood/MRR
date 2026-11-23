@@ -42,6 +42,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Locale;
 import java.util.Optional;
+import java.util.UUID;
 import java.util.regex.Pattern;
 
 @Service
@@ -64,6 +65,14 @@ public class AuthServiceImpl implements AuthService {
      * 因此这里若给高权限角色，等于绕过审核授予病历编辑与下载能力。</p>
      */
     private static final String DEFAULT_REGISTER_ROLE = "READER";
+
+    /**
+     * 用户不存在时用于对齐耗时的 bcrypt 哈希。
+     *
+     * <p>不存在的用户若直接返回，响应比 bcrypt(12) 校验快约两个数量级，
+     * 调用方可据此枚举有效账号。该哈希对应一个随机值，不可能匹配任何输入。</p>
+     */
+    private static final String TIMING_EQUALIZER_HASH = PasswordUtil.encode(UUID.randomUUID().toString());
 
     private final AuthUserMapper authUserMapper;
     private final AuthRoleMapper authRoleMapper;
@@ -108,14 +117,19 @@ public class AuthServiceImpl implements AuthService {
         }
 
         String attemptKey = loginAttemptKey(username, clientIp);
-        if (rateLimiter.isLoginBlocked(attemptKey)) {
+        // 全局计数使用与数据库精确查找相同的用户名。
+        if (rateLimiter.isLoginBlocked(attemptKey) || rateLimiter.isAccountBlocked(username)) {
             throw new BusinessException(429,
                     "登录尝试过于频繁，请 " + rateLimiter.loginLockWindowMinutes() + " 分钟后重试");
         }
 
         AuthUser user = authUserMapper.findByUsername(username);
-        if (user == null || !PasswordUtil.matches(password, user.getPasswordHash())) {
+        // 无论用户是否存在都执行一次 bcrypt，避免以响应耗时区分有效账号。
+        String passwordHash = user != null ? user.getPasswordHash() : TIMING_EQUALIZER_HASH;
+        boolean passwordMatches = PasswordUtil.matches(password, passwordHash);
+        if (user == null || !passwordMatches) {
             rateLimiter.recordLoginFailure(attemptKey);
+            rateLimiter.recordAccountFailure(username);
             throw new IllegalArgumentException("用户名或密码错误");
         }
 
@@ -129,6 +143,7 @@ public class AuthServiceImpl implements AuthService {
         }
 
         rateLimiter.resetLoginFailures(attemptKey);
+        rateLimiter.resetAccountFailures(username);
         LocalDateTime now = LocalDateTime.now();
         authUserMapper.updateLastLoginAt(user.getId(), now);
         user.setLastLoginAt(now);

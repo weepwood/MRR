@@ -200,6 +200,7 @@ onMounted(loadTables)
 <template>
   <MrrPageShell class="db-browse-page">
     <MrrPageHeader
+      size="compact"
       eyebrow="Database Browser"
       title="数据表浏览"
       description="只读浏览已授权的数据表。含个人信息的字段已脱敏，大表限制单页行数；离开页面后结果即被丢弃，不做缓存。"

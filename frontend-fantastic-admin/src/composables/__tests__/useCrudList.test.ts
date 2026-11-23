@@ -10,6 +10,36 @@ function deferred<T>() {
 }
 const result = (value: string) => ({ list: [value], total: 1, page: 1, size: 20 })
 
+describe('cRUD列表结果代次', () => {
+  it('非静默请求写入结果后递增，静默轮询与过期响应不递增', async () => {
+    const old = deferred<ReturnType<typeof result>>()
+    const fetchApi = vi.fn()
+      .mockResolvedValueOnce(result('first'))
+      .mockResolvedValueOnce(result('polled'))
+      .mockReturnValueOnce(old.promise)
+      .mockResolvedValue(result('current'))
+    const scope = effectScope()
+    const list = scope.run(() => useCrudList({ fetchApi, defaultQuery: {}, immediate: false }))!
+    try {
+      expect(list.resultVersion.value).toBe(0)
+      await list.loadData()
+      expect(list.resultVersion.value).toBe(1)
+
+      await list.loadData({ silent: true })
+      expect(list.list.value).toEqual(['polled'])
+      expect(list.resultVersion.value).toBe(1)
+
+      const stale = list.loadData()
+      await list.handleSearch()
+      old.resolve(result('stale'))
+      await stale
+      expect(list.list.value).toEqual(['current'])
+      expect(list.resultVersion.value).toBe(2)
+    }
+    finally { scope.stop() }
+  })
+})
+
 describe('cRUD列表请求归属', () => {
   it.each(['handleSearch', 'resetFilters', 'handlePageChange', 'handleSizeChange'] as const)('%s后旧响应不覆盖当前结果', async (action) => {
     const old = deferred<ReturnType<typeof result>>()

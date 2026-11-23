@@ -66,7 +66,10 @@ ADR 必须说明：
 | ADR-0006 | 只读降级模式（主动维护 + 自动降级） | Accepted | 主动维护设置 + 就绪检查快照 + `ReadOnlyDegradationInterceptor` |
 | ADR-0007 | 受控只读数据库浏览（表数据查看） | Accepted（2026-11-19 修订：默认开启） | 32 张表注册表 + 三个只读端点，默认开启、可显式关闭；接口契约见 `docs/engineering/database-browse-contract.md` |
 | ADR-0008 | 取消运行日志 journal 功能，错误中心承担 WARN/ERROR 展示 | Proposed | journal 链路删除 + `V20261119083000` 前向 DROP 三表；实时捕获常驻 + 文件日志保留 |
+| ADR-0009 | 档案袋影像经内容网关下发（影像访问 Cookie） | Proposed | `archive.image-delivery.mode=direct\|gateway`（默认 `direct`）+ `ImageAccessCookieService`；无数据库变更 |
 
 ADR-0007 已落地，初始默认关闭；2026-11-19 起修订为默认开启（`app.operations.db-browse-enabled=true`，可用环境变量 `APP_OPERATIONS_DB_BROWSE_ENABLED=false` 关闭，详见 ADR-0007 修订记录）。其接口契约、注册表字段定义与失败路径测试清单见 `docs/engineering/database-browse-contract.md`。
 
 > 已知缺口（本应记录但尚未起草，后续视需要补充）：多来源影像解析与统一内容网关（OSS/Nginx/NAS/本地降级）、档案数据模型重构（`V20260715232228`）、用户凭证生命周期与强制改密（`V20260719053000` / `...19174500`）。
+
+- [ADR-0010：访问日志按月分区](0010-access-log-monthly-partitions.md)

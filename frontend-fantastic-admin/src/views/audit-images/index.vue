@@ -180,6 +180,7 @@ const {
   list,
   total,
   loading,
+  resultVersion,
   pageNum,
   pageSize,
   query,
@@ -325,7 +326,7 @@ onMounted(loadData)
 
 <template>
   <MrrPageShell>
-    <MrrPageHeader title="病历访问审计可视化" eyebrow="Medical Record Audit" description="按用户和病历双向追溯访问关系，并导出完整审计证据。">
+    <MrrPageHeader size="compact" title="病历访问审计可视化" eyebrow="Medical Record Audit" description="按用户和病历双向追溯访问关系，并导出完整审计证据。">
       <template #actions>
         <el-button :loading="loading || analyticsLoading" @click="() => loadData()"><el-icon><Refresh /></el-icon>刷新</el-button>
       </template>
@@ -346,7 +347,7 @@ onMounted(loadData)
     <el-alert v-if="analyticsError" type="error" show-icon :closable="false" :title="`分析数据加载失败：${analyticsError}`" />
     <AuditAnalytics :analytics="analytics" :loading="analyticsLoading" @export-user="value => exportAudit('user', value)" @export-target="value => exportAudit('target', value)" />
 
-    <MrrDataTablePanel title="最近访问明细" description="病案号、上架号和身份证号独立展示" :count="total">
+    <MrrDataTablePanel title="最近访问明细" description="病案号、上架号和身份证号独立展示" :count="total" :loading="loading" :result-key="resultVersion">
       <!--
         页头原有一个「导出当前明细」，与这里的「导出明细」调用同一个导出（scope=all），两处同名不同字。
         只保留明细卡头这一处：导出的就是这张表的当前筛选结果，按钮应紧挨它的对象。
@@ -354,7 +355,7 @@ onMounted(loadData)
       <template #actions>
         <el-button :loading="exportLoading" @click="exportAudit('all')"><el-icon><Download /></el-icon>导出当前明细</el-button>
       </template>
-      <AppLoading v-if="loading" type="table" :rows="8" />
+      <AppLoading v-if="loading && !list.length" type="table" :rows="8" />
       <AppError v-else-if="error" :message="error" @retry="loadListData" />
       <AppEmpty v-else-if="!list.length" description="暂无审计记录" />
       <el-table v-else :data="list" stripe>

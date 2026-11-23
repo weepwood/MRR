@@ -273,7 +273,7 @@ public class ImageController {
         if (scan == null) {
             return Result.fail("扫描记录不存在");
         }
-        String url = imageUrlService.buildPreferredImageUrl(scan);
+        String url = imageUrlService.buildDeliveryUrl(scan);
         if (url == null) {
             return Result.fail("无法构造图片URL，缺少必要字段");
         }

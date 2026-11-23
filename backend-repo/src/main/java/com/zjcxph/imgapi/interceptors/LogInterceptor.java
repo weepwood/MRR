@@ -379,6 +379,10 @@ public class LogInterceptor implements HandlerInterceptor {
             log.setAuditAction("VIEW_OSS_IMAGE");
             log.setAuditTarget(uri.substring(uri.lastIndexOf('/') + 1));
             log.setAuditDescription("查看 OSS 病案图片");
+        } else if (uri.startsWith("/api/v1/img/content/")) {
+            log.setAuditAction("VIEW_IMAGE");
+            log.setAuditTarget(archiveTarget != null ? archiveTarget : uri.substring(uri.lastIndexOf('/') + 1));
+            log.setAuditDescription("经内容网关查看病案图片");
         } else if (uri.startsWith("/api/v1/img/image/")) {
             log.setAuditAction("VIEW_IMAGE");
             log.setAuditTarget(parts.length > 5 ? parts[5] : uri);

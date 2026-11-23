@@ -83,4 +83,4 @@ jobs:
 
       - name: 发布 Pages 演示站
         id: deployment
-        uses: actions/deploy-pages@v4
+        uses: actions/deploy-pages@v5

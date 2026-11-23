@@ -62,7 +62,7 @@ jobs:
 
       - name: 上传 Pages 构建产物
         if: github.event_name != 'pull_request'
-        uses: actions/upload-pages-artifact@v4
+        uses: actions/upload-pages-artifact@v5
         with:
           path: frontend-fantastic-admin/dist-pages
 

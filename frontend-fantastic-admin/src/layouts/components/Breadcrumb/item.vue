@@ -4,6 +4,7 @@ import { RouterLink } from 'vue-router'
 
 const props = withDefaults(
   defineProps<{
+    current?: boolean
     to?: RouteLocationRaw
     replace?: boolean
     separator?: string
@@ -31,7 +32,7 @@ const props = withDefaults(
     >
       <slot />
     </RouterLink>
-    <span v-else class="text flex items-center opacity-60" aria-current="page">
+    <span v-else class="text flex items-center opacity-60" :aria-current="props.current ? 'page' : undefined">
       <slot />
     </span>
   </div>

@@ -1,5 +1,6 @@
 import { mount } from '@vue/test-utils'
 import { describe, expect, it } from 'vitest'
+import { h } from 'vue'
 import { createMemoryHistory, createRouter } from 'vue-router'
 import Breadcrumb from '../index.vue'
 import BreadcrumbItem from '../item.vue'
@@ -39,7 +40,7 @@ describe('breadcrumb item', () => {
     const router = makeRouter()
     await router.push('/')
     const wrapper = mount(BreadcrumbItem, {
-      props: { to: '' },
+      props: { current: true },
       slots: { default: '用户管理' },
       global: { plugins: [router] },
     })
@@ -50,8 +51,15 @@ describe('breadcrumb item', () => {
   })
 
   it('wraps the trail in a labelled navigation landmark', () => {
-    const wrapper = mount(Breadcrumb, { slots: { default: '<span>x</span>' } })
+    const wrapper = mount(Breadcrumb, { props: { navigationLabel: '面包屑导航' }, slots: { default: '<span>x</span>' } })
 
     expect(wrapper.get('nav').attributes('aria-label')).toBe('面包屑导航')
+  })
+
+  it('keeps descriptive search result trails free of navigation and current page semantics', () => {
+    const wrapper = mount(Breadcrumb, { slots: { default: () => h(BreadcrumbItem, null, '系统管理') } })
+
+    expect(wrapper.find('nav').exists()).toBe(false)
+    expect(wrapper.find('[aria-current]').exists()).toBe(false)
   })
 })

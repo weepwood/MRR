@@ -1,5 +1,6 @@
 package com.zjcxph.imgapi.service;
 
+import com.zjcxph.imgapi.config.ImageDeliveryProperties;
 import com.zjcxph.imgapi.entity.SystemSetting;
 import com.zjcxph.imgapi.exception.BusinessException;
 import com.zjcxph.imgapi.mapper.SystemSettingMapper;
@@ -43,12 +44,15 @@ public class DeveloperModeService {
     private static final Pattern IMAGE_CONTENT = Pattern.compile("^/api/v1/img/image/[^/]+/[^/]+/[^/]+/[^/]+$");
     private static final Pattern IMAGE_URL = Pattern.compile("^/api/v1/img/url/\\d+$");
     private static final Pattern OSS_IMAGE = Pattern.compile("^/api/v1/img/oss-image/\\d+$");
+    /** 旧 OSS 入口已 302 到内容网关；网关模式下档案袋列表也只返回该地址（ADR-0009）。 */
+    private static final Pattern GATEWAY_IMAGE = Pattern.compile("^/api/v1/img/content/\\d+$");
     private static final Pattern PATIENT_BY_BAH = Pattern.compile("^/api/v1/search/patient/\\d{1,7}$");
     private static final Pattern NUMERIC_ADDRESS = Pattern.compile("^[0-9a-fA-F:.]+$");
 
     private final SystemSettingMapper systemSettingMapper;
     private final boolean startupAllowed;
     private final List<IpRule> trustedProxyRules;
+    private final ImageDeliveryProperties imageDelivery;
 
     private volatile boolean cachedDatabaseEnabled;
     private volatile List<IpRule> cachedAllowedSourceRules = List.of();
@@ -58,22 +62,13 @@ public class DeveloperModeService {
     public DeveloperModeService(
             SystemSettingMapper systemSettingMapper,
             @Value("${mrr.developer-mode.allowed:false}") boolean startupAllowed,
-            @Value("${mrr.developer-mode.trusted-proxy-addresses:127.0.0.1,::1}") String trustedProxyAddresses
+            @Value("${mrr.developer-mode.trusted-proxy-addresses:127.0.0.1,::1}") String trustedProxyAddresses,
+            ImageDeliveryProperties imageDelivery
     ) {
         this.systemSettingMapper = systemSettingMapper;
         this.startupAllowed = startupAllowed;
         this.trustedProxyRules = List.copyOf(parseConfiguredRules(trustedProxyAddresses, "可信代理地址"));
-    }
-
-    DeveloperModeService(
-            SystemSettingMapper systemSettingMapper,
-            boolean startupAllowed,
-            List<String> trustedProxyAddresses
-    ) {
-        this.systemSettingMapper = systemSettingMapper;
-        this.startupAllowed = startupAllowed;
-        String configured = String.join(",", trustedProxyAddresses == null ? List.of() : trustedProxyAddresses);
-        this.trustedProxyRules = List.copyOf(parseConfiguredRules(configured, "可信代理地址"));
+        this.imageDelivery = imageDelivery;
     }
 
     /**
@@ -114,6 +109,7 @@ public class DeveloperModeService {
         return IMAGE_CONTENT.matcher(path).matches()
                 || IMAGE_URL.matcher(path).matches()
                 || OSS_IMAGE.matcher(path).matches()
+                || (imageDelivery.isGateway() && GATEWAY_IMAGE.matcher(path).matches())
                 || PATIENT_BY_BAH.matcher(path).matches();
     }
 
@@ -376,7 +372,25 @@ public class DeveloperModeService {
 
         private static byte[] parseNumericAddress(String value) {
             try {
-                return InetAddress.getByName(value).getAddress();
+                if (value.indexOf(':') >= 0) {
+                    return InetAddress.getByName("[" + value + "]").getAddress();
+                }
+                String[] octets = value.split("\\.", -1);
+                if (octets.length != 4) {
+                    throw new IllegalArgumentException("IPv4 地址无效");
+                }
+                byte[] address = new byte[4];
+                for (int index = 0; index < octets.length; index++) {
+                    if (!octets[index].matches("[0-9]{1,3}")) {
+                        throw new IllegalArgumentException("IPv4 地址无效");
+                    }
+                    int octet = Integer.parseInt(octets[index]);
+                    if (octet > 255) {
+                        throw new IllegalArgumentException("IPv4 地址无效");
+                    }
+                    address[index] = (byte) octet;
+                }
+                return address;
             } catch (UnknownHostException exception) {
                 throw new IllegalArgumentException("IP 地址无效", exception);
             }

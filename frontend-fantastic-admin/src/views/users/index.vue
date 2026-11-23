@@ -630,6 +630,7 @@ onMounted(loadData)
 <template>
   <MrrPageShell width="fluid">
     <MrrPageHeader
+      size="compact"
       eyebrow="User Management"
       title="用户管理"
       description="管理系统账号、注册申请审核、角色、凭据状态、启停状态与最近登录信息。"
@@ -639,7 +640,7 @@ onMounted(loadData)
       <MrrMetricCard v-for="item in summaryCards" :key="item.label" v-bind="item" />
     </section>
 
-    <MrrDataTablePanel class="users-table-panel" title="用户列表" :count="total">
+    <MrrDataTablePanel class="users-table-panel" title="用户列表" :count="total" :loading="loading" :result-key="users">
       <!-- 「创建用户」是对列表的写操作，放在卡头操作区；筛选栏只保留查询 / 重置，不再把增删与查询混在一组。 -->
       <template v-if="canManage" #actions>
         <el-button type="primary" @click="openCreate"><FaIcon name="i-lucide:user-round-plus" />创建用户</el-button>

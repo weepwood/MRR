@@ -93,6 +93,32 @@ class JwtUtilTest {
     }
 
     @Test
+    @DisplayName("configure — 拒绝部署模板中的占位密钥，且不替换已生效的密钥")
+    void configure_rejectsTemplatePlaceholderAndKeepsCurrentSecret() {
+        assertThatThrownBy(() -> JwtUtil.configure("CHANGE_ME_WITH_A_LONG_RANDOM_VALUE"))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("占位值")
+                .hasMessageNotContaining("CHANGE_ME_WITH_A_LONG_RANDOM_VALUE");
+
+        String token = JwtUtil.getToken("doctor");
+        String forged = JWT.create()
+                .withClaim("tokenType", JwtUtil.ACCESS_TOKEN_TYPE)
+                .withClaim("username", "doctor")
+                .sign(Algorithm.HMAC256("CHANGE_ME_WITH_A_LONG_RANDOM_VALUE"));
+
+        assertThat(JwtUtil.parseToken(token).getUsername()).isEqualTo("doctor");
+        assertThatThrownBy(() -> JwtUtil.parseToken(forged)).isInstanceOf(RuntimeException.class);
+    }
+
+    @Test
+    @DisplayName("configure — 拒绝字符种类过少的长密钥")
+    void configure_rejectsLowDiversitySecret() {
+        assertThatThrownBy(() -> JwtUtil.configure("x".repeat(48)))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("字符种类过少");
+    }
+
+    @Test
     @DisplayName("parseToken — 超出 Instant 范围的 NumericDate 应受控拒绝")
     void parseToken_rejectsOutOfRangeNumericDate() {
         for (long expiration : new long[] {Long.MAX_VALUE, Long.MIN_VALUE}) {
@@ -104,6 +130,58 @@ class JwtUtilTest {
             assertThatThrownBy(() -> JwtUtil.parseToken(token))
                     .isInstanceOf(JWTDecodeException.class)
                     .hasMessageContaining("exp");
+        }
+    }
+
+    @Test
+    @DisplayName("verifyToken — 一次验签返回类型、编号、过期时间与会话")
+    void verifyToken_returnsAllClaimsFromSingleVerification() {
+        AuthSession session = new AuthSession();
+        session.setId(7L);
+        session.setUsername("doctor7");
+        session.setPasswordVersion(3);
+        session.setPermissions(List.of("record:read"));
+        long before = System.currentTimeMillis();
+
+        String token = JwtUtil.getToken(session, 60_000L, JwtUtil.ACCESS_TOKEN_TYPE);
+        JwtUtil.VerifiedToken verified = JwtUtil.verifyToken(token);
+
+        assertThat(verified.tokenType()).isEqualTo(JwtUtil.ACCESS_TOKEN_TYPE);
+        assertThat(verified.jti()).isEqualTo(JwtUtil.getJti(token));
+        assertThat(verified.expiresAtMillis()).isEqualTo(JwtUtil.getExpirationMillis(token));
+        assertThat(verified.expiresAtMillis()).isBetween(before, before + 61_000L);
+        assertThat(verified.session().getId()).isEqualTo(7L);
+        assertThat(verified.session().getUsername()).isEqualTo("doctor7");
+        assertThat(verified.session().getPasswordVersion()).isEqualTo(3);
+        assertThat(verified.session().getPermissions()).containsExactly("record:read");
+    }
+
+    @Test
+    @DisplayName("verifyToken — 其他密钥签发的令牌被拒绝")
+    void verifyToken_rejectsForeignSignature() {
+        String forged = JWT.create()
+                .withClaim("tokenType", JwtUtil.ACCESS_TOKEN_TYPE)
+                .withClaim("username", "admin")
+                .sign(Algorithm.HMAC256("another-secret-key-with-at-least-32-characters"));
+
+        assertThatThrownBy(() -> JwtUtil.verifyToken(forged)).isInstanceOf(RuntimeException.class);
+    }
+
+    @Test
+    @DisplayName("deriveKey — 按用途隔离、可复现，且随 JWT 密钥轮换变化")
+    void deriveKey_isPurposeSeparatedAndRotatesWithSecret() {
+        byte[] image = JwtUtil.deriveKey("MRR-IMAGE-ACCESS-V1");
+
+        assertThat(image).hasSize(32).isEqualTo(JwtUtil.deriveKey("MRR-IMAGE-ACCESS-V1"));
+        assertThat(image).isNotEqualTo(JwtUtil.deriveKey("MRR-OTHER-PURPOSE"));
+        assertThat(new String(image, java.nio.charset.StandardCharsets.ISO_8859_1)).doesNotContain(TEST_SECRET);
+        assertThatThrownBy(() -> JwtUtil.deriveKey(" ")).isInstanceOf(IllegalArgumentException.class);
+
+        try {
+            JwtUtil.configure("rotated-secret-for-derive-key-test-0123456789");
+            assertThat(JwtUtil.deriveKey("MRR-IMAGE-ACCESS-V1")).isNotEqualTo(image);
+        } finally {
+            JwtUtil.configure(TEST_SECRET);
         }
     }
 }

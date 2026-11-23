@@ -164,7 +164,7 @@ class ArchiveExportJobFailureTest {
         SimpleMeterRegistry registry = new SimpleMeterRegistry();
         files.registerCleanupMetrics(registry);
         // A nonempty directory deterministically rejects delete on Windows and Unix.
-        Path locked = Files.createDirectory(directory.resolve("synthetic-task.zip"));
+        Path locked = Files.createDirectory(directory.toRealPath().resolve("synthetic-task.zip"));
         Path child = Files.writeString(locked.resolve("synthetic-child"), "synthetic");
         ArchiveExportJob job = new ArchiveExportJob();
         job.setId("synthetic-task");

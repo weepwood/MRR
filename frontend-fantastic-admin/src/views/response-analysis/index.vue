@@ -104,14 +104,12 @@ onMounted(loadData)
         <MrrMetricCard
           label="客户端 P95"
           icon="i-lucide:calendar-clock"
-          tone="violet"
           note="包含网络与浏览器处理耗时"
           :value="formatDuration(analysis?.overview.p95ClientDurationMs)"
         />
         <MrrMetricCard
           label="服务端平均耗时"
           icon="i-lucide:layout-dashboard"
-          tone="amber"
           note="最近一年服务端请求处理平均值"
           :value="formatDuration(analysis?.overview.avgServerDurationMs)"
         />

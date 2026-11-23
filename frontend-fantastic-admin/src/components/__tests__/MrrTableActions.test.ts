@@ -1,6 +1,8 @@
 import type { MrrTableAction } from '../MrrTableActions/types'
 import { mount } from '@vue/test-utils'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { computed, ref } from 'vue'
+import { mrrDataTablePanelLoadingKey } from '../MrrDataTablePanel/context'
 import MrrTableActions from '../MrrTableActions/index.vue'
 
 const mockPermissionChecker = vi.fn((permission: string | string[]) => permission !== 'denied')
@@ -19,8 +21,9 @@ const stubs = {
     template: '<button class="button-stub" :disabled="disabled" @click="$emit(\'click\')"><slot /></button>',
   },
   'el-dropdown': {
+    props: ['disabled'],
     emits: ['command'],
-    template: '<div class="dropdown-stub"><slot /><slot name="dropdown" /></div>',
+    template: '<div class="dropdown-stub" :data-disabled="disabled"><slot /><slot name="dropdown" /><button class="simulate-command" @click="$emit(\'command\', \'reset\')" /></div>',
   },
   'el-dropdown-menu': {
     template: '<div class="dropdown-menu-stub"><slot /></div>',
@@ -37,7 +40,7 @@ const actions: MrrTableAction[] = [
   { key: 'disable', label: '禁用', icon: 'i-lucide:ban', tone: 'danger' },
 ]
 
-function mountActions(overrides: Partial<InstanceType<typeof MrrTableActions>['$props']> = {}) {
+function mountActions(overrides: Partial<InstanceType<typeof MrrTableActions>['$props']> = {}, panelLoading = ref(false)) {
   return mount(MrrTableActions, {
     props: {
       actions,
@@ -45,7 +48,10 @@ function mountActions(overrides: Partial<InstanceType<typeof MrrTableActions>['$
       permissionChecker: mockPermissionChecker,
       ...overrides,
     },
-    global: { stubs },
+    global: {
+      stubs,
+      provide: { [mrrDataTablePanelLoadingKey as symbol]: computed(() => panelLoading.value) },
+    },
   })
 }
 
@@ -148,5 +154,19 @@ describe('mrrTableActions', () => {
       actions: [{ key: 'hidden', label: '隐藏', icon: 'i-lucide:eye-off', visible: false }],
     })
     expect(wrapper.find('.mrr-table-actions').exists()).toBe(false)
+  })
+
+  it('父面板刷新时禁用行内和传送菜单操作，并阻止菜单命令', async () => {
+    const panelLoading = ref(false)
+    const wrapper = mountActions({}, panelLoading)
+    panelLoading.value = true
+    await wrapper.vm.$nextTick()
+
+    expect(wrapper.find('[aria-label="编辑"]').attributes('disabled')).toBeDefined()
+    expect(wrapper.find('[aria-label="更多操作"]').attributes('disabled')).toBeDefined()
+    expect(wrapper.find('.dropdown-stub').attributes('data-disabled')).toBe('true')
+    expect(wrapper.find('.dropdown-item-stub[data-command="reset"]').attributes('disabled')).toBeDefined()
+    await wrapper.find('.simulate-command').trigger('click')
+    expect(wrapper.emitted('select')).toBeUndefined()
   })
 })

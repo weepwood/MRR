@@ -67,4 +67,20 @@ describe('mrrMetricCard', () => {
   it('未提供 extra 插槽时不渲染附加区', () => {
     expect(mountCard().find('.mrr-metric-card__extra').exists()).toBe(false)
   })
+
+  it('首屏不提示更新，数值变化后才追加 is-updated', async () => {
+    const wrapper = mountCard()
+    expect(wrapper.find('.mrr-metric-card__value').classes()).not.toContain('is-updated')
+
+    await wrapper.setProps({ value: 43 })
+    const value = wrapper.find('.mrr-metric-card__value')
+    expect(value.classes()).toContain('is-updated')
+    expect(value.text()).toBe('43')
+  })
+
+  it('数值未变化时不重播更新提示', async () => {
+    const wrapper = mountCard()
+    await wrapper.setProps({ note: '只改说明' })
+    expect(wrapper.find('.mrr-metric-card__value').classes()).not.toContain('is-updated')
+  })
 })

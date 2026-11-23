@@ -5,6 +5,10 @@ import com.auth0.jwt.algorithms.Algorithm;
 import com.auth0.jwt.interfaces.DecodedJWT;
 import com.zjcxph.imgapi.common.AuthSession;
 
+import javax.crypto.Mac;
+import javax.crypto.spec.SecretKeySpec;
+import java.nio.charset.StandardCharsets;
+import java.security.GeneralSecurityException;
 import java.util.Date;
 import java.util.List;
 import java.util.UUID;
@@ -38,6 +42,11 @@ public final class JwtUtil {
         }
         if (normalized.length() < 32) {
             throw new IllegalArgumentException("JWT_SECRET_KEY must contain at least 32 characters");
+        }
+        String rejection = SecretPolicy.rejectionReason(normalized);
+        if (rejection != null) {
+            // 公开模板中的占位值长度足以通过上面的长度校验；漏改即等于所有人都能签发令牌。
+            throw new IllegalArgumentException("JWT_SECRET_KEY " + rejection + "，请改为随机生成的密钥");
         }
         secret = normalized;
     }
@@ -100,8 +109,32 @@ public final class JwtUtil {
         return builder.sign(algorithm());
     }
 
-    public static AuthSession parseToken(String token) {
+    /**
+     * 一次验签后返回令牌的类型、编号、过期时间与会话信息。
+     *
+     * <p>认证拦截器每个请求都会解析令牌；旧调用方式分别执行 {@link #getTokenType}、
+     * {@link #getJti} 和 {@link #parseToken}，同一令牌被完整验签三次。档案袋这类一次
+     * 打开数百个受保护请求的页面，应只付一次 HMAC 与 JSON 解析的成本。</p>
+     */
+    public static VerifiedToken verifyToken(String token) {
         DecodedJWT decodedJWT = verify(token);
+        Date expiresAt = decodedJWT.getExpiresAt();
+        return new VerifiedToken(
+                decodedJWT.getClaim("tokenType").asString(),
+                decodedJWT.getId(),
+                expiresAt == null ? 0L : expiresAt.getTime(),
+                toSession(decodedJWT));
+    }
+
+    /** 已验签令牌的认证信息；{@code expiresAtMillis} 为 0 表示令牌未声明过期时间。 */
+    public record VerifiedToken(String tokenType, String jti, long expiresAtMillis, AuthSession session) {
+    }
+
+    public static AuthSession parseToken(String token) {
+        return toSession(verify(token));
+    }
+
+    private static AuthSession toSession(DecodedJWT decodedJWT) {
         AuthSession session = new AuthSession();
         session.setId(decodedJWT.getClaim("id").isNull() ? null : decodedJWT.getClaim("id").asLong());
         session.setUsername(decodedJWT.getClaim("username").asString());
@@ -129,6 +162,29 @@ public final class JwtUtil {
 
     public static long getExpirationMillis(String token) {
         return verify(token).getExpiresAt().getTime();
+    }
+
+    /**
+     * 从 JWT 签名密钥派生出用途隔离的子密钥（HMAC-SHA256）。
+     *
+     * <p>影像访问 Cookie 等与访问令牌同生命周期的凭据使用子密钥签名：轮换 {@code JWT_SECRET_KEY}
+     * 会同时作废它们，且子密钥与 JWT 签名不会互相替代。</p>
+     */
+    public static byte[] deriveKey(String purpose) {
+        if (purpose == null || purpose.isBlank()) {
+            throw new IllegalArgumentException("purpose must not be blank");
+        }
+        String currentSecret = secret;
+        if (currentSecret == null) {
+            throw new IllegalStateException("JWT_SECRET_KEY must be configured before deriving keys");
+        }
+        try {
+            Mac mac = Mac.getInstance("HmacSHA256");
+            mac.init(new SecretKeySpec(currentSecret.getBytes(StandardCharsets.UTF_8), "HmacSHA256"));
+            return mac.doFinal(("MRR-DERIVED-KEY\u0000" + purpose).getBytes(StandardCharsets.UTF_8));
+        } catch (GeneralSecurityException exception) {
+            throw new IllegalStateException("HmacSHA256 unavailable", exception);
+        }
     }
 
     private static DecodedJWT verify(String token) {

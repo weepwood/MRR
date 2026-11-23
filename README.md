@@ -1,6 +1,6 @@
 # MRR 医疗病案文件管理系统
 
-[![Spring Boot](https://img.shields.io/badge/Spring%20Boot-4.1.2-brightgreen)](https://spring.io/projects/spring-boot)
+[![Spring Boot](https://img.shields.io/badge/Spring%20Boot-4.2.0-brightgreen)](https://spring.io/projects/spring-boot)
 [![Vue](https://img.shields.io/badge/Vue-3.5-4FC08D)](https://vuejs.org/)
 [![PostgreSQL](https://img.shields.io/badge/PostgreSQL-16-336791)](https://www.postgresql.org/)
 [![VitePress](https://img.shields.io/badge/VitePress-1.5-646CFF)](https://vitepress.dev/)
@@ -47,7 +47,7 @@ MRR 不是 DICOM 诊断工作站，不提供窗宽窗位、医学测量、多帧
 
 | 层次 | 技术 |
 | --- | --- |
-| 后端 | Java 21、Spring Boot 4.1.2、MyBatis 4、Flyway、Springdoc、Micrometer |
+| 后端 | Java 21、Spring Boot 4.2.0、MyBatis 4、Flyway、Springdoc、Micrometer |
 | 前端 | Vue 3.5、TypeScript 5.9、Vite 8、Element Plus、Pinia、ECharts |
 | 数据库 | PostgreSQL 16，业务 Schema 为 `app` |
 | 认证安全 | JWT、bcrypt、AES-GCM、RBAC、HMAC 外部调阅票据 |
@@ -122,7 +122,7 @@ Actuator 默认监听 `127.0.0.1:18046`。所有业务端口都可以通过 `SER
 根目录运行 `python scripts/engineering_preflight.py --scope all --integration` 只读检查。Maven OCR 测试需将 `MRR_TEST_PYTHON` 指向实际 Python；Linux 使用 `./mvnw`。
 
 - JDK 21+
-- 仓库自带 Maven Wrapper 3.10.1（以 Wrapper 配置为准），无需全局 Maven
+- 仓库自带 Maven Wrapper 3.10.2（以 Wrapper 配置为准），无需全局 Maven
 - PostgreSQL 16+
 - Node.js `^24.15.0 || >=26.0.0`
 - pnpm 10.33.0

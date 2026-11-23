@@ -30,6 +30,7 @@ jobs:
       recovery: ${{ steps.scope.outputs.recovery }}
       release: ${{ steps.scope.outputs.release }}
       development: ${{ steps.scope.outputs.development }}
+      integration_frontend: ${{ steps.scope.outputs.integration_frontend }}
       base: ${{ steps.scope.outputs.base }}
     steps:
       - uses: actions/checkout@v7
@@ -92,14 +93,29 @@ jobs:
           cache: pnpm
           cache-dependency-path: frontend-fantastic-admin/pnpm-lock.yaml
       - run: pnpm install --frozen-lockfile
-      - run: pnpm lint:tsc
       - name: Lint changed sources
         env:
           LINT_BASE_SHA: ${{ needs.scope.outputs.base }}
           LINT_HEAD_SHA: ${{ github.sha }}
         run: node scripts/lint-changed.mjs
-      - name: Unit tests without coverage collection
-        run: pnpm test:run
+      - name: Type check and unit tests without coverage collection
+        # 类型检查与单测互不依赖，同时运行以缩短关键路径；两者任一失败都会使本步骤失败。
+        shell: bash
+        run: |
+          set +e
+          tsc_log="${RUNNER_TEMP}/vue-tsc.log"
+          pnpm lint:tsc > "${tsc_log}" 2>&1 &
+          tsc_pid=$!
+          pnpm test:run
+          test_status=$?
+          wait "${tsc_pid}"
+          tsc_status=$?
+          echo "::group::Type check output (vue-tsc)"
+          cat "${tsc_log}"
+          echo "::endgroup::"
+          if [ "${tsc_status}" -ne 0 ]; then echo "::error::Type check failed with exit code ${tsc_status}."; fi
+          if [ "${test_status}" -ne 0 ]; then echo "::error::Unit tests failed with exit code ${test_status}."; fi
+          [ "${tsc_status}" -eq 0 ] && [ "${test_status}" -eq 0 ]
       - name: Production build and Chrome 86 compatibility
         if: needs.scope.outputs.build == 'true'
         run: |
@@ -133,17 +149,18 @@ jobs:
           distribution: temurin
           java-version: '21'
           cache: maven
+      # PR 与 main 集成不比较覆盖率（只在完整发布验收中阻断回退），这里关闭 JaCoCo 插桩以节省时间。
       - name: Unit tests
         if: needs.scope.outputs.postgres != 'true'
-        run: bash backend-repo/mvnw -B -ntp -f backend-repo/pom.xml test -Dlocal.config.exclude=true
+        run: bash backend-repo/mvnw -B -ntp -f backend-repo/pom.xml test -Dlocal.config.exclude=true -Djacoco.skip=true
       - name: Unit and actual PostgreSQL tests
         if: needs.scope.outputs.postgres == 'true'
         run: |
-          bash backend-repo/mvnw -B -ntp -f backend-repo/pom.xml verify -Dlocal.config.exclude=true
+          bash backend-repo/mvnw -B -ntp -f backend-repo/pom.xml verify -Dlocal.config.exclude=true -Djacoco.skip=true
           python scripts/check_test_execution.py --reports backend-repo/target/failsafe-reports
       - name: Package compiled classes for selected real checks
         if: needs.scope.outputs.postgres != 'true' && needs.scope.outputs.recovery == 'true'
-        run: bash backend-repo/mvnw -B -ntp -f backend-repo/pom.xml package -DskipTests -Dlocal.config.exclude=true
+        run: bash backend-repo/mvnw -B -ntp -f backend-repo/pom.xml package -DskipTests -Dlocal.config.exclude=true -Djacoco.skip=true
       - name: Share the same backend JAR
         if: needs.scope.outputs.recovery == 'true'
         uses: actions/upload-artifact@v7
@@ -172,6 +189,8 @@ jobs:
       full: false
       # PRs keep database/build checks but defer browser flows to main/release.
       live_checks: ${{ github.event_name != 'pull_request' }}
+      # 只改后端的 PR 不使用嵌入前端的 JAR，跳过未改动前端的重复检查与构建。
+      frontend_checks: ${{ github.event_name != 'pull_request' || needs.scope.outputs.integration_frontend == 'true' }}
 
   windows:
     needs: scope

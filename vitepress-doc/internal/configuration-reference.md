@@ -76,6 +76,8 @@ Spring Boot 常见优先级从高到低为：
 
 实际 HMAC 配置名称以外部调阅模块和当前配置类为准；升级前应核对运行环境已有配置。
 
+应用启动时校验 JWT 密钥和已配置的 AES 密钥。模板占位值或明显弱值会阻止启动。外部调阅 HMAC 密钥为空或仍为模板占位值时，该客户端按密钥未配置处理。Windows 首次安装会为 JWT、AES 和模板中的外部调阅客户端生成随机密钥，并将本机密钥文件的访问权限限制为 Administrators 和 SYSTEM。
+
 ## 档案袋影像下发（ADR-0009）
 
 | 配置 | 默认值 | 说明 |
@@ -199,6 +201,8 @@ ARCHIVE_IMAGE_SOURCE_HTTP_NODES_BA01_BASE_URL=http://10.0.0.11/images/
 | `ARCHIVE_EXPORT_ASYNC_ESTIMATED_BYTES_THRESHOLD` | `1073741824` | 预估 1 GiB 异步阈值 |
 | `ARCHIVE_EXPORT_ASYNC_SOURCE_COUNT_THRESHOLD` | `2` | 多来源异步阈值 |
 | `ARCHIVE_EXPORT_FALLBACK_BYTES_PER_IMAGE` | `5242880` | 无大小信息时每图估算 5 MiB |
+
+Windows 新安装会将默认导出临时目录设为安装根目录下的 `data\exports`，并限制为 Administrators 和 SYSTEM 访问。已有应用配置保留原导出路径。修改已有路径前需确认旧目录内的导出任务和文件已处理完毕。
 
 生产建议：
 

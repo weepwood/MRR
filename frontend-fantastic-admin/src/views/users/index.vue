@@ -5,7 +5,6 @@ import type { CredentialAwareUser, UserCredentialResult } from '@/api/user-crede
 import type { MrrTableAction } from '@/components/MrrTableActions/types'
 import { ElMessage } from 'element-plus'
 import { KeyRound } from 'lucide-vue-next'
-import { nextTick } from 'vue'
 import apiUser from '@/api/modules/user'
 import AppEmpty from '@/components/AppEmpty/index.vue'
 import AppError from '@/components/AppError/index.vue'
@@ -32,9 +31,10 @@ const canManage = computed(() => auth('user:manage'))
 const loading = ref(false)
 const hasLoaded = ref(false)
 const dataLoadingAction = ref<'search' | 'reset' | null>(null)
-const minDataLoadingDuration = 320
-const queryNoticeStackStep = 14
 const users = ref<CredentialAwareUser[]>([])
+
+// 查询是读操作：新结果到达由 MrrDataTablePanel 的顶边进度条与行淡入反馈，
+// 不再弹「查询成功」toast，也不设置人为的最低加载时长（原来的 320ms 下限单纯放慢高频操作）。
 const error = ref('')
 const roles = ref<AuthRole[]>([])
 const total = ref(0)
@@ -84,9 +84,6 @@ const resetForm = reactive({ administratorPassword: '', temporaryPasswordValidHo
 const disableVisible = ref(false)
 const disableSaving = ref(false)
 const disableTarget = ref<CredentialAwareUser | null>(null)
-const maxQueryNoticeStack = 3
-const activeQueryNotices: Array<{ id: number, close: () => void, element: HTMLElement | null }> = []
-let queryNoticeId = 0
 
 const credentialVisible = ref(false)
 const credentialAcknowledged = ref(false)
@@ -151,51 +148,6 @@ const resetRules = {
   administratorPassword: [{ required: true, message: '请输入当前管理员密码', trigger: 'blur' }],
 }
 
-function restackQueryNotices() {
-  const notices = activeQueryNotices
-    .map(notice => notice.element)
-    .filter((element): element is HTMLElement => Boolean(element?.isConnected))
-    .sort((left, right) => (Number.parseFloat(left.style.top) || 0) - (Number.parseFloat(right.style.top) || 0))
-  if (!notices.length) return
-
-  const firstTop = Number.parseFloat(notices[0].style.top) || 16
-  notices.forEach((notice, index) => {
-    const naturalTop = Number.parseFloat(notice.style.top) || firstTop
-    notice.style.marginTop = `${firstTop + index * queryNoticeStackStep - naturalTop}px`
-  })
-}
-
-async function showQuerySuccessNotice() {
-  if (activeQueryNotices.length >= maxQueryNoticeStack) {
-    const oldestNotice = activeQueryNotices.shift()
-    oldestNotice?.close()
-    await nextTick()
-    restackQueryNotices()
-  }
-
-  const id = ++queryNoticeId
-  const notice = { id, close: () => {}, element: null as HTMLElement | null }
-  const message = ElMessage.success({
-    message: `查询成功：已加载 ${users.value.length} 条账号与注册申请记录`,
-    duration: 3200,
-    grouping: false,
-    placement: 'top-right',
-    customClass: `users-query-success-notice users-query-success-notice--${id}`,
-    onClose: () => {
-      const activeIndex = activeQueryNotices.findIndex(item => item.id === id)
-      if (activeIndex !== -1) {
-        activeQueryNotices.splice(activeIndex, 1)
-      }
-      window.requestAnimationFrame(restackQueryNotices)
-    },
-  })
-  notice.close = message.close
-  activeQueryNotices.push(notice)
-  await nextTick()
-  notice.element = document.querySelector<HTMLElement>(`.users-query-success-notice--${id}`)
-  restackQueryNotices()
-}
-
 watch(resetSaving, (isSaving, _, onCleanup) => {
   if (!isSaving) {
     showResetLoading.value = false
@@ -210,7 +162,6 @@ watch(resetSaving, (isSaving, _, onCleanup) => {
 
 async function loadData(action?: 'search' | 'reset') {
   const showButtonLoading = hasLoaded.value && action !== undefined
-  const loadingStartedAt = Date.now()
   loading.value = true
   if (showButtonLoading) {
     dataLoadingAction.value = action!
@@ -230,9 +181,6 @@ async function loadData(action?: 'search' | 'reset') {
     users.value = (Array.isArray(usersRes.data?.list) ? usersRes.data.list : []) as CredentialAwareUser[]
     total.value = Number(usersRes.data?.total ?? users.value.length)
     roles.value = Array.isArray(rolesRes.data) ? rolesRes.data : []
-    if (action === 'search') {
-      void showQuerySuccessNotice()
-    }
   }
   catch (err: any) {
     users.value = []
@@ -242,14 +190,8 @@ async function loadData(action?: 'search' | 'reset') {
   finally {
     loading.value = false
     hasLoaded.value = true
-    if (showButtonLoading) {
-      const remainingDuration = minDataLoadingDuration - (Date.now() - loadingStartedAt)
-      if (remainingDuration > 0) {
-        await new Promise(resolve => setTimeout(resolve, remainingDuration))
-      }
-      if (dataLoadingAction.value === action) {
-        dataLoadingAction.value = null
-      }
+    if (showButtonLoading && dataLoadingAction.value === action) {
+      dataLoadingAction.value = null
     }
   }
 }
@@ -812,7 +754,6 @@ onMounted(loadData)
  * 这些让用户页成为唯一「没有分区线、页码矮一截」的列表页；现在回到共享面板的统一外观，
  * 输入框聚焦也恢复全站一致的焦点环（DESIGN.md §5.2）。
  */
-:global(.el-message.users-query-success-notice) { transition: opacity var(--mrr-motion-overlay) var(--mrr-ease-out), transform var(--mrr-motion-overlay) var(--mrr-ease-out), top var(--mrr-motion-overlay) var(--mrr-ease-out), bottom var(--mrr-motion-overlay) var(--mrr-ease-out), margin-top var(--mrr-motion-overlay) var(--mrr-ease-out); box-shadow: var(--mrr-shadow-md); }
 .users-state { display: grid; min-height: 280px; padding: var(--mrr-space-5); place-items: center; }
 .user-identity { display: flex; gap: var(--mrr-space-2); align-items: center; min-width: 0; }
 .user-avatar { display: grid; flex: 0 0 30px; width: 30px; height: 30px; font-size: var(--mrr-font-size-xs); font-weight: 700; color: var(--color-primary); background: color-mix(in srgb, var(--color-primary) 9%, var(--mrr-card)); border: 1px solid var(--mrr-border); border-radius: 50%; place-items: center; }

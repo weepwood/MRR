@@ -779,3 +779,10 @@ Element Plus `el-button` 与 reka-ui `FaButton`（`.fa-button-control`）**尺�
 - 侧栏底部操作区：原为 2×2 四个按钮，三个「选中」操作各自在文案里重复选中数，唯一不依赖选择的「下载病案（整份）」排在最后。现改为两排：上排「已选 N 张」+ ZIP / 打印 / PDF（可见文字收短，完整说明与进度放在 `aria-label` / `title`），下排整宽的整份下载。外部 / 兼容模式按原规则隐藏对应按钮，剩余按钮平分宽度；整个区域在没有任何可用按钮时不再渲染空的分隔线。
 - 修正：PDF 按钮文案此前恒为「导出选中 PDF（N）」，而后台任务进行中 / 已完成时点击实际是取消 / 下载；文案现跟随任务状态（取消 PDF（后端生成 x/y）/ 下载已生成的 PDF），平铺模式工具条同步受益。
 - 测试：`ArchiveSearchBar`、`ArchiveRecentLookups` 单测；新增 `archive-search-and-actions.spec.ts`（空态标签、必填提示、刷新隐藏、最近查询打开病案；底部操作区计数、禁用态、选择后启用、320px 内不溢出）。首页单测改用共享组件的类名。
+
+**2026-11-24（用户管理查询反馈：删除读操作成功通知与人为加载延迟）**
+
+- 用户管理每次「查询」此前必弹右上「查询成功：已加载 N 条账号与注册申请记录」toast（3.2s 存活、自研堆叠逻辑），并强制按钮转圈至少 320ms——全站唯一这样做的页面。读操作的成功通知是噪声：频率高了训练用户忽略 ElMessage（包括真正的失败提示），MrrDataTablePanel 的顶边进度条与 result-key 行淡入已构成「新结果到达」的完整反馈通道；320ms 人为下限单纯放慢高频操作。
+- 现在删除 showQuerySuccessNotice、通知堆叠（restackQueryNotices/activeQueryNotices 等约 60 行）与 minDataLoadingDuration 补时逻辑；查询失败仍走原有 error 态与 AppError 通道，按钮忙态只反映真实的请求在途时间。
+- 新增 E2E `users-query-feedback.spec.ts`：先热身一轮（固定 mock 编译与首次响应抖动，并等旧实现可能弹出的 toast 完全离场）后，忙态周期用页面内 MutationObserver 记录 `aria-busy` 翻转边沿（`performance.now`，测量不含 Playwright 协议往返——CI 慢环境下协议往返可 >100ms，会污染紧上界断言），断言 < 310ms（旧实现 320ms 下限必然超过）；toast 断言按文案收窄为「不出现含『查询成功』的 ElMessage」，从点击起 1.5s 轮询捕获（旧实现的 3.2s toast 在忙态翻回 false 前必已弹出，该窗口是回归检测窗口）。两组断言均先在旧实现上确认 RED（借 ui-polish worktree 的 mock 服务器复用验证，toast 捕获实测成立），实现删除后转 GREEN。
+

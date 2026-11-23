@@ -63,10 +63,11 @@ function Write-TemplateIfMissing {
     param(
         [Parameter(Mandatory = $true)][string]$Source,
         [Parameter(Mandatory = $true)][string]$Destination,
-        [hashtable]$Tokens = @{}
+        [hashtable]$Tokens = @{},
+        [switch]$PreserveExisting
     )
 
-    if ((Test-Path -LiteralPath $Destination) -and -not $Force) {
+    if ((Test-Path -LiteralPath $Destination) -and ($PreserveExisting -or -not $Force)) {
         Write-Host "保留现有文件：$Destination"
         return
     }
@@ -78,6 +79,46 @@ function Write-TemplateIfMissing {
 
     New-Item -ItemType Directory -Path (Split-Path -Parent $Destination) -Force | Out-Null
     Set-Content -LiteralPath $Destination -Value $content -Encoding UTF8
+}
+
+function New-RandomSecret {
+    param([int]$ByteCount = 48)
+
+    $bytes = New-Object byte[] $ByteCount
+    $rng = [System.Security.Cryptography.RandomNumberGenerator]::Create()
+    try { $rng.GetBytes($bytes) } finally { $rng.Dispose() }
+    # Base64URL：不含 = + /，可直接写入 properties 而无需转义。
+    return ([Convert]::ToBase64String($bytes)).TrimEnd('=').Replace('+', '-').Replace('/', '_')
+}
+
+# 模板中的占位值是公开内容。应用内部密钥在安装时直接生成随机值，
+# 不依赖运维手工修改；数据库与影像源口令属于外部系统，仍须人工填写真实值。
+# 后端启动时同样会拒绝这些占位值（SecretPolicy），两道防线互不依赖。
+function Initialize-GeneratedSecrets {
+    param([Parameter(Mandatory = $true)][string]$Path)
+
+    $content = Get-Content -LiteralPath $Path -Raw -Encoding UTF8
+    $generated = @()
+    $placeholders = [ordered]@{
+        'JWT_SECRET_KEY'                    = @('CHANGE_ME_WITH_A_LONG_RANDOM_VALUE', 48)
+        'aes.secret.key'                    = @('CHANGE_ME_WITH_AT_LEAST_32_BYTES', 24)
+        'mrr.integration.clients[0].secret' = @('CHANGE_ME_WITH_A_DIFFERENT_LONG_RANDOM_HMAC_SECRET', 48)
+    }
+    foreach ($entry in $placeholders.GetEnumerator()) {
+        $placeholderLine = "$($entry.Key)=$($entry.Value[0])"
+        if ($content.Contains($placeholderLine)) {
+            $content = $content.Replace($placeholderLine, "$($entry.Key)=$(New-RandomSecret -ByteCount $entry.Value[1])")
+            $generated += $entry.Key
+        }
+    }
+
+    if ($generated.Count -gt 0) {
+        Set-Content -LiteralPath $Path -Value $content -Encoding UTF8
+        Write-Host "已自动生成随机密钥：$($generated -join ', ')" -ForegroundColor Green
+    }
+    if ($content -match 'CHANGE_ME') {
+        Write-Warning "$Path 仍包含 CHANGE_ME 占位值（数据库或影像源口令），启动前必须改为真实值。"
+    }
 }
 
 function Install-WinSWService {
@@ -156,6 +197,7 @@ $directories = @(
     'logs\nginx',
     'logs\service',
     'monitoring-data',
+    'data\exports',
     'ops\services',
     'runtime',
     'shared',
@@ -196,10 +238,22 @@ $templateTokens = @{
 Write-TemplateIfMissing `
     -Source (Join-Path $scriptDir 'templates\application-prod.properties') `
     -Destination (Join-Path $Root 'config\application-prod.properties') `
-    -Tokens $templateTokens
+    -Tokens $templateTokens -PreserveExisting
+# 敏感配置只允许 Administrators 和 SYSTEM 访问。MRR-Backend 默认以 LocalSystem 运行。
+$secretsPath = Join-Path $Root 'secrets'
+& icacls.exe $secretsPath /grant:r '*S-1-5-32-544:(OI)(CI)F' '*S-1-5-18:(OI)(CI)F' | Out-Null
+if ($LASTEXITCODE -ne 0) {
+    throw "授予 secrets ACL 失败：$secretsPath"
+}
+& icacls.exe $secretsPath /inheritance:r | Out-Null
+if ($LASTEXITCODE -ne 0) {
+    throw "关闭 secrets ACL 继承失败：$secretsPath"
+}
+
 Write-TemplateIfMissing `
     -Source (Join-Path $scriptDir 'templates\application-secrets.properties') `
-    -Destination (Join-Path $Root 'secrets\application-secrets.properties')
+    -Destination (Join-Path $Root 'secrets\application-secrets.properties') -PreserveExisting
+Initialize-GeneratedSecrets -Path (Join-Path $Root 'secrets\application-secrets.properties')
 Write-TemplateIfMissing `
     -Source (Join-Path $scriptDir 'templates\nginx.conf') `
     -Destination (Join-Path $Root 'config\nginx\nginx.conf') `
@@ -229,12 +283,15 @@ Copy-Item -LiteralPath (Join-Path $scriptDir 'mrr-manager.ps1') -Destination (Jo
 Copy-Item -LiteralPath (Join-Path $scriptDir 'MRR-Manager.cmd') -Destination (Join-Path $Root 'ops\MRR-Manager.cmd') -Force
 Copy-Item -LiteralPath (Join-Path $scriptDir 'MRR-Manager.cmd') -Destination (Join-Path $Root 'ops\MRR-管理中心.cmd') -Force
 
-# 敏感配置只允许 Administrators 和 SYSTEM 访问。MRR-Backend 默认以 LocalSystem 运行。
-$secretsPath = Join-Path $Root 'secrets'
-& icacls.exe $secretsPath /inheritance:r | Out-Null
-& icacls.exe $secretsPath /grant:r '*S-1-5-32-544:(OI)(CI)F' '*S-1-5-18:(OI)(CI)F' | Out-Null
+# 导出临时目录保存完整病案 ZIP/PDF，同样只允许 Administrators 与 SYSTEM 访问。
+$exportsPath = Join-Path $Root 'data\exports'
+& icacls.exe $exportsPath /grant:r '*S-1-5-32-544:(OI)(CI)F' '*S-1-5-18:(OI)(CI)F' | Out-Null
 if ($LASTEXITCODE -ne 0) {
-    throw "设置 secrets ACL 失败：$secretsPath"
+    throw "授予导出临时目录 ACL 失败：$exportsPath"
+}
+& icacls.exe $exportsPath /inheritance:r | Out-Null
+if ($LASTEXITCODE -ne 0) {
+    throw "关闭导出临时目录 ACL 继承失败：$exportsPath"
 }
 
 $tokens = @{
@@ -264,7 +321,7 @@ if ($LASTEXITCODE -ne 0) {
 Write-Host ''
 Write-Host 'MRR Windows 运维环境安装完成。' -ForegroundColor Green
 Write-Host "1. 编辑 $Root\config\application-prod.properties"
-Write-Host "2. 编辑 $Root\secrets\application-secrets.properties"
+Write-Host "2. 编辑 $Root\secrets\application-secrets.properties（JWT/AES/HMAC 已随机生成；数据库与影像源口令须填写真实值，AES 密钥需同步给使用加密身份证查询的外部系统）"
 Write-Host "3. 将发布包放入 $Root\packages"
 Write-Host "4. 执行：$Root\ops\mrrctl.ps1 deploy <发布包路径>"
 Write-Host "5. 默认使用 JAR 内嵌前端；可执行 mrrctl.ps1 frontend external 临时切回外置前端。"

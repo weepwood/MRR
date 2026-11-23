@@ -81,7 +81,7 @@
     "@antfu/eslint-config": "^9.5.1",
     "@clack/prompts": "^1.8.1",
     "@commitlint/cli": "^20.5.3",
-    "@faker-js/faker": "^10.4.0",
+    "@faker-js/faker": "^10.6.0",
     "@iconify/json": "^2.2.556",
     "@iconify/vue": "^5.0.5",
     "@pinia/testing": "^1.0.3",

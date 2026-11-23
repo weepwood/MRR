@@ -124,8 +124,8 @@ importers:
         specifier: ^10.6.0
         version: 10.6.0
       '@iconify/json':
-        specifier: ^2.2.556
-        version: 2.2.556
+        specifier: ^2.2.559
+        version: 2.2.559
       '@iconify/vue':
         specifier: ^5.0.5
         version: 5.0.5(vue@3.5.45(typescript@6.0.3))
@@ -173,7 +173,7 @@ importers:
         version: 0.9.1(typescript@6.0.3)(vue@3.5.45(typescript@6.0.3))
       autoprefixer:
         specifier: ^10.4.27
-        version: 10.4.27(postcss@8.5.32)
+        version: 10.4.27(postcss@8.5.33)
       boxen:
         specifier: ^8.0.1
         version: 8.0.1
@@ -199,8 +199,8 @@ importers:
         specifier: ^1.33.0
         version: 1.33.0
       lint-staged:
-        specifier: ^17.6.0
-        version: 17.6.0
+        specifier: ^17.6.1
+        version: 17.6.1
       npm-run-all2:
         specifier: ^8.0.4
         version: 8.0.4
@@ -211,11 +211,11 @@ importers:
         specifier: ^4.0.5
         version: 4.0.5(@types/node@22.15.30)
       postcss:
-        specifier: ^8.5.32
-        version: 8.5.32
+        specifier: ^8.5.33
+        version: 8.5.33
       postcss-nested:
         specifier: ^7.0.2
-        version: 7.0.2(postcss@8.5.32)
+        version: 7.0.2(postcss@8.5.33)
       sass-embedded:
         specifier: ^1.108.2
         version: 1.108.2
@@ -230,7 +230,7 @@ importers:
         version: 7.10.0(stylelint-order@6.0.4(stylelint@17.16.0(typescript@6.0.3)))(stylelint@17.16.0(typescript@6.0.3))
       stylelint-config-standard-scss:
         specifier: ^17.0.0
-        version: 17.0.0(postcss@8.5.32)(stylelint@17.16.0(typescript@6.0.3))
+        version: 17.0.0(postcss@8.5.33)(stylelint@17.16.0(typescript@6.0.3))
       stylelint-config-standard-vue:
         specifier: ^1.0.0
         version: 1.0.0(postcss-html@1.8.0)(stylelint@17.16.0(typescript@6.0.3))
@@ -1954,8 +1954,8 @@ packages:
     resolution: {integrity: sha512-bV0Tgo9K4hfPCek+aMAn81RppFKv2ySDQeMoSZuvTASywNTnVJCArCZE2FWqpvIatKu7VMRLWlR1EazvVhDyhQ==}
     engines: {node: '>=18.18'}
 
-  '@iconify/json@2.2.556':
-    resolution: {integrity: sha512-qSG9FGaQHdlt5qEwctDiFToYMmVCl5hN0BGju0aAyyRe75j9Nw49tmb1xLglkUi8GfInBrHj5PJ2W8Cko9yJ3Q==}
+  '@iconify/json@2.2.559':
+    resolution: {integrity: sha512-H8cKSqE1irQCwpn8oKDgfIAxCshMmARXWxecd4h2QYiENgD+Hke2DucFkvOsjTh15aIotMF083jtmNtY/qLwnA==}
 
   '@iconify/types@2.0.0':
     resolution: {integrity: sha512-+wluvCrRhXrhyOmRDJ3q8mux9JkKy5SJ/v8ol2tu4FVjyYvtEzkc/3pK15ET6RKg4b4w4BmTk1+gsCUhf21Ykg==}
@@ -3297,6 +3297,9 @@ packages:
 
   '@vue/shared@3.5.45':
     resolution: {integrity: sha512-ue9fgHmVNPlP7iW3+cxoBX/Cnlw53dHlVSw0JKGY6z1lObg8pHoj928M2nzG4/yVsMZ3NaRZ2s2z61uC16NDwQ==}
+
+  '@vue/shared@3.5.46':
+    resolution: {integrity: sha512-P1WePbdzHrcIciWtmY2Im9EFhdakd3rZxYqvalOa3SfoxtF35Q8Uhmj1tKn6bWP4utcOpN8ao6BoJUItq0Uf+g==}
 
   '@vue/test-utils@2.5.1':
     resolution: {integrity: sha512-V/4a99odJ7hapr0bRt35XxljGk8hefq31gSOnlKTcEq2fUeoj2qb+FcpJYfQu4qfYhW9Ug+O2+CZ3QmZ7gXDzA==}
@@ -5700,8 +5703,8 @@ packages:
   lines-and-columns@1.2.4:
     resolution: {integrity: sha512-7ylylesZQ/PV29jhEDl3Ufjo6ZX7gCqJr5F7PKrqc93v7fzSymt1BpwEU8nAUXs8qzzvqhbjhK5QZg6Mt/HkBg==}
 
-  lint-staged@17.6.0:
-    resolution: {integrity: sha512-nOhBfYkZEwkFtNzD5pK9s9LkcWoxJ+whLzEnhqi9nl7zTB5n7tg8+9iYgMGx2Wm3VlLu8cbNj0RACzY+nWi5iQ==}
+  lint-staged@17.6.1:
+    resolution: {integrity: sha512-3MXgVN7BERDR/6CXZs2fDHGc+r0+hlvGAa9wqMlVbIS6RVRuaPOnb5SnN6wMXulwfEy9DXVkMVUN/8cUlpPDnw==}
     engines: {node: '>=22.22.1'}
     hasBin: true
 
@@ -6494,10 +6497,6 @@ packages:
     resolution: {integrity: sha512-zrUjRRe1bpXKsX1qAJNJjqZViErVuyEkMTRrwu4ud4sbTtIBRmtaYDrHmcGgmrbsW3MHfmtIf+vJumgQn+PrXg==}
     engines: {node: '>=0.12'}
 
-  postcss@8.5.32:
-    resolution: {integrity: sha512-LJlKCCAUFKOuZxipUdYw1NzIITEsPcgyOG9LkvRJvuKj/bRzbuRY0ARXvL0pWGpsZvn8jku+LMep2eU0seHp8g==}
-    engines: {node: ^10 || ^12 || >=14}
-
   postcss@8.5.33:
     resolution: {integrity: sha512-RVHEU9/Pp1Fnjr/MpAJsZoADukCKhfIi15OunEYiGktIkYLkPVvC1sioWolGDS7XByMTx9m/IGbro0Js13zhnQ==}
     engines: {node: ^10 || ^12 || >=14}
@@ -7024,10 +7023,6 @@ packages:
     resolution: {integrity: sha512-FtyOnWN/wCHTVXOMwvSv26d+ko5vWlIDD6zoUJ7LW8vh+ZBC8QdljveRP+crNrtBwioEUWy/4dMtbBjA4ioNlg==}
     engines: {node: '>=0.10.0'}
 
-  source-map-js@1.2.2:
-    resolution: {integrity: sha512-KGj/8Y43x35aZVDtt+J4mK1hoLGHULMYfSkODJNQjNDC3oW1PqPoxMwo0pLUsWM/UEGzON/NxeHywEfNXNP3Vw==}
-    engines: {node: '>=0.10.0'}
-
   source-map-js@1.2.4:
     resolution: {integrity: sha512-J7ZjMvHd9O1fcT/5V09QWaaSl2BbWx3F6O08spde82Namf9UB0GxRVIPiNbVsdKkoizHiSpTodo3vp2bAy91MA==}
     engines: {node: '>=6.0.0'}
@@ -7101,9 +7096,9 @@ packages:
     resolution: {integrity: sha512-R3f198pcvnB+5IpnBlRkphuE9n46WyVl8I39W/ZUTZLz4nqSP/oLYUrcnJrw462Ds8he4YKMov2efsTIw1BDGQ==}
     engines: {node: '>=0.10.0'}
 
-  string-argv@0.3.2:
-    resolution: {integrity: sha512-aqD2Q0144Z+/RqG52NeHEkZauTAUWJO8c6yTftGJKO3Tja5tUgIfmIl6kExvhtxSDP7fXB6DvzkfMpCd/F3G+Q==}
-    engines: {node: '>=0.6.19'}
+  string-argv@0.4.0:
+    resolution: {integrity: sha512-UOtaksJ3SK3KLHba2i9I27fvuZNfBlImDP5wKsCOxCDMRDNxlipCe8rmnUAaDpqlQ93upnA0SzF2pjWhttozSA==}
+    engines: {node: '>=16.20.0'}
 
   string-width@4.2.3:
     resolution: {integrity: sha512-wKyQRQpjJ0sIp62ErSZdGsjMJWsap5oRNihHhu6G7JVO/9jIB6UyevL+tXuOqrng8j/cxKTWyWUwvSTriiZz/g==}
@@ -9793,7 +9788,7 @@ snapshots:
   '@eslint/css-tree@4.0.5':
     dependencies:
       mdn-data: 2.29.0
-      source-map-js: 1.2.2
+      source-map-js: 1.2.4
 
   '@eslint/markdown@8.0.3':
     dependencies:
@@ -9857,7 +9852,7 @@ snapshots:
 
   '@humanwhocodes/retry@0.4.3': {}
 
-  '@iconify/json@2.2.556':
+  '@iconify/json@2.2.559':
     dependencies:
       '@iconify/types': 2.0.0
       pathe: 2.0.3
@@ -9985,7 +9980,7 @@ snapshots:
 
   '@nuxt/schema@4.0.3':
     dependencies:
-      '@vue/shared': 3.5.45
+      '@vue/shared': 3.5.46
       consola: 3.4.2
       defu: 6.1.7
       pathe: 2.0.3
@@ -10422,7 +10417,7 @@ snapshots:
       '@csstools/css-parser-algorithms': 4.0.2(@csstools/css-tokenizer@4.0.2)
       '@csstools/css-tokenizer': 4.0.2
       '@csstools/media-query-list-parser': 5.0.0(@csstools/css-parser-algorithms@4.0.2(@csstools/css-tokenizer@4.0.2))(@csstools/css-tokenizer@4.0.2)
-      postcss: 8.5.32
+      postcss: 8.5.33
       postcss-selector-parser: 7.2.1
       postcss-value-parser: 4.2.0
       style-search: 0.1.0
@@ -11063,7 +11058,7 @@ snapshots:
       '@vue/shared': 3.5.45
       entities: 7.0.1
       estree-walker: 2.0.2
-      source-map-js: 1.2.2
+      source-map-js: 1.2.4
 
   '@vue/compiler-dom@3.5.45':
     dependencies:
@@ -11079,8 +11074,8 @@ snapshots:
       '@vue/shared': 3.5.45
       estree-walker: 2.0.2
       magic-string: 0.30.21
-      postcss: 8.5.32
-      source-map-js: 1.2.2
+      postcss: 8.5.33
+      source-map-js: 1.2.4
 
   '@vue/compiler-ssr@3.5.45':
     dependencies:
@@ -11161,6 +11156,9 @@ snapshots:
       '@vue/shared': 3.5.45
 
   '@vue/shared@3.5.45': {}
+
+  '@vue/shared@3.5.46':
+    optional: true
 
   '@vue/test-utils@2.5.1(@vue/compiler-dom@3.5.45)(@vue/server-renderer@3.5.45)(vue@3.5.45(typescript@6.0.3))':
     dependencies:
@@ -11357,13 +11355,13 @@ snapshots:
 
   atob@2.1.2: {}
 
-  autoprefixer@10.4.27(postcss@8.5.32):
+  autoprefixer@10.4.27(postcss@8.5.33):
     dependencies:
       browserslist: 4.28.1
       caniuse-lite: 1.0.30001775
       fraction.js: 5.3.4
       picocolors: 1.1.1
-      postcss: 8.5.32
+      postcss: 8.5.33
       postcss-value-parser: 4.2.0
 
   available-typed-arrays@1.0.7:
@@ -11886,12 +11884,12 @@ snapshots:
   css-tree@2.2.1:
     dependencies:
       mdn-data: 2.0.28
-      source-map-js: 1.2.2
+      source-map-js: 1.2.4
 
   css-tree@3.2.1:
     dependencies:
       mdn-data: 2.27.1
-      source-map-js: 1.2.2
+      source-map-js: 1.2.4
 
   css-what@6.2.2: {}
 
@@ -13719,10 +13717,10 @@ snapshots:
 
   lines-and-columns@1.2.4: {}
 
-  lint-staged@17.6.0:
+  lint-staged@17.6.1:
     dependencies:
       picomatch: 4.0.7
-      string-argv: 0.3.2
+      string-argv: 0.4.0
       tinyexec: 1.3.1
     optionalDependencies:
       yaml: 2.9.1
@@ -13805,7 +13803,7 @@ snapshots:
     dependencies:
       '@babel/parser': 7.29.8
       '@babel/types': 7.29.8
-      source-map-js: 1.2.2
+      source-map-js: 1.2.4
 
   magicast@0.5.4:
     dependencies:
@@ -14694,9 +14692,9 @@ snapshots:
 
   postcss-media-query-parser@0.2.3: {}
 
-  postcss-nested@7.0.2(postcss@8.5.32):
+  postcss-nested@7.0.2(postcss@8.5.33):
     dependencies:
-      postcss: 8.5.32
+      postcss: 8.5.33
       postcss-selector-parser: 7.1.0
 
   postcss-prefix-selector@1.16.1(postcss@5.2.18):
@@ -14709,13 +14707,13 @@ snapshots:
     dependencies:
       postcss: 8.5.33
 
-  postcss-safe-parser@7.0.1(postcss@8.5.32):
+  postcss-safe-parser@7.0.1(postcss@8.5.33):
     dependencies:
-      postcss: 8.5.32
+      postcss: 8.5.33
 
-  postcss-scss@4.0.9(postcss@8.5.32):
+  postcss-scss@4.0.9(postcss@8.5.33):
     dependencies:
-      postcss: 8.5.32
+      postcss: 8.5.33
 
   postcss-selector-parser@7.1.0:
     dependencies:
@@ -14743,12 +14741,6 @@ snapshots:
       js-base64: 2.6.4
       source-map: 0.5.7
       supports-color: 3.2.3
-
-  postcss@8.5.32:
-    dependencies:
-      nanoid: 3.3.20
-      picocolors: 1.1.1
-      source-map-js: 1.2.2
 
   postcss@8.5.33:
     dependencies:
@@ -15202,7 +15194,7 @@ snapshots:
     dependencies:
       chokidar: 5.0.0
       immutable: 5.2.1
-      source-map-js: 1.2.2
+      source-map-js: 1.2.4
     optionalDependencies:
       '@parcel/watcher': 2.6.0
     optional: true
@@ -15345,8 +15337,6 @@ snapshots:
     transitivePeerDependencies:
       - supports-color
 
-  source-map-js@1.2.2: {}
-
   source-map-js@1.2.4: {}
 
   source-map-resolve@0.5.3:
@@ -15414,7 +15404,7 @@ snapshots:
 
   strict-uri-encode@1.1.0: {}
 
-  string-argv@0.3.2: {}
+  string-argv@0.4.0: {}
 
   string-width@4.2.3:
     dependencies:
@@ -15500,14 +15490,14 @@ snapshots:
       stylelint: 17.16.0(typescript@6.0.3)
       stylelint-order: 6.0.4(stylelint@17.16.0(typescript@6.0.3))
 
-  stylelint-config-recommended-scss@17.0.0(postcss@8.5.32)(stylelint@17.16.0(typescript@6.0.3)):
+  stylelint-config-recommended-scss@17.0.0(postcss@8.5.33)(stylelint@17.16.0(typescript@6.0.3)):
     dependencies:
-      postcss-scss: 4.0.9(postcss@8.5.32)
+      postcss-scss: 4.0.9(postcss@8.5.33)
       stylelint: 17.16.0(typescript@6.0.3)
       stylelint-config-recommended: 18.0.0(stylelint@17.16.0(typescript@6.0.3))
       stylelint-scss: 7.5.0(stylelint@17.16.0(typescript@6.0.3))
     optionalDependencies:
-      postcss: 8.5.32
+      postcss: 8.5.33
 
   stylelint-config-recommended-vue@1.6.0(postcss-html@1.8.0)(stylelint@17.16.0(typescript@6.0.3)):
     dependencies:
@@ -15525,13 +15515,13 @@ snapshots:
     dependencies:
       stylelint: 17.16.0(typescript@6.0.3)
 
-  stylelint-config-standard-scss@17.0.0(postcss@8.5.32)(stylelint@17.16.0(typescript@6.0.3)):
+  stylelint-config-standard-scss@17.0.0(postcss@8.5.33)(stylelint@17.16.0(typescript@6.0.3)):
     dependencies:
       stylelint: 17.16.0(typescript@6.0.3)
-      stylelint-config-recommended-scss: 17.0.0(postcss@8.5.32)(stylelint@17.16.0(typescript@6.0.3))
+      stylelint-config-recommended-scss: 17.0.0(postcss@8.5.33)(stylelint@17.16.0(typescript@6.0.3))
       stylelint-config-standard: 40.0.0(stylelint@17.16.0(typescript@6.0.3))
     optionalDependencies:
-      postcss: 8.5.32
+      postcss: 8.5.33
 
   stylelint-config-standard-vue@1.0.0(postcss-html@1.8.0)(stylelint@17.16.0(typescript@6.0.3)):
     dependencies:
@@ -15600,8 +15590,8 @@ snapshots:
       micromatch: 4.0.8
       normalize-path: 3.0.0
       picocolors: 1.1.1
-      postcss: 8.5.32
-      postcss-safe-parser: 7.0.1(postcss@8.5.32)
+      postcss: 8.5.33
+      postcss-safe-parser: 7.0.1(postcss@8.5.33)
       postcss-selector-parser: 7.1.6
       postcss-value-parser: 4.2.0
       string-width: 8.2.2
@@ -16405,7 +16395,7 @@ snapshots:
       esbuild: 0.28.1
       fdir: 6.5.0(picomatch@4.0.7)
       picomatch: 4.0.7
-      postcss: 8.5.32
+      postcss: 8.5.33
       rollup: 4.46.2
       tinyglobby: 0.2.17
     optionalDependencies:
@@ -16423,7 +16413,7 @@ snapshots:
     dependencies:
       lightningcss: 1.33.0
       picomatch: 4.0.7
-      postcss: 8.5.32
+      postcss: 8.5.33
       rolldown: 1.2.19
       tinyglobby: 0.2.17
     optionalDependencies:

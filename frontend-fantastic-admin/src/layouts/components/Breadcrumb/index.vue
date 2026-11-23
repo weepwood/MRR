@@ -1,7 +1,7 @@
 <template>
-  <div class="flex items-center text-sm">
+  <nav class="flex items-center text-sm" aria-label="面包屑导航">
     <slot />
-  </div>
+  </nav>
 </template>
 
 <style scoped>

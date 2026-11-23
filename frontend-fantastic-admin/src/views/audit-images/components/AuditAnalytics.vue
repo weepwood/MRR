@@ -89,7 +89,6 @@ function handleTargetAction(action: string, target: string) {
       <MrrMetricCard
         label="被访问病历数"
         icon="i-lucide:files"
-        tone="teal"
         :value="loading ? '—' : formatNumber(analytics.uniqueTargets)"
       />
       <MrrMetricCard

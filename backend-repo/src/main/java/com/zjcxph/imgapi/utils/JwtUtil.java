@@ -43,6 +43,11 @@ public final class JwtUtil {
         if (normalized.length() < 32) {
             throw new IllegalArgumentException("JWT_SECRET_KEY must contain at least 32 characters");
         }
+        String rejection = SecretPolicy.rejectionReason(normalized);
+        if (rejection != null) {
+            // 公开模板中的占位值长度足以通过上面的长度校验；漏改即等于所有人都能签发令牌。
+            throw new IllegalArgumentException("JWT_SECRET_KEY " + rejection + "，请改为随机生成的密钥");
+        }
         secret = normalized;
     }
 

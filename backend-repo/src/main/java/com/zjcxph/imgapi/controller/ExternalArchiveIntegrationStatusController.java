@@ -5,6 +5,7 @@ import com.zjcxph.imgapi.common.Result;
 import com.zjcxph.imgapi.config.IntegrationProperties;
 import com.zjcxph.imgapi.dto.resp.ExternalArchiveIntegrationStatusResponse;
 import com.zjcxph.imgapi.utils.IpUtil;
+import com.zjcxph.imgapi.utils.SecretPolicy;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.util.StringUtils;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -38,7 +39,7 @@ public class ExternalArchiveIntegrationStatusController {
                 .map(client -> new ExternalArchiveIntegrationStatusResponse.ClientStatus(
                         StringUtils.hasText(client.getClientId()) ? client.getClientId().trim() : "",
                         client.isEnabled(),
-                        StringUtils.hasText(client.getSecret()),
+                        StringUtils.hasText(client.getSecret()) && !SecretPolicy.isPlaceholder(client.getSecret()),
                         safeAllowedIps(client),
                         isIpAllowed(client, requestIp)
                 ))

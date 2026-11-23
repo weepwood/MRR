@@ -93,6 +93,32 @@ class JwtUtilTest {
     }
 
     @Test
+    @DisplayName("configure — 拒绝部署模板中的占位密钥，且不替换已生效的密钥")
+    void configure_rejectsTemplatePlaceholderAndKeepsCurrentSecret() {
+        assertThatThrownBy(() -> JwtUtil.configure("CHANGE_ME_WITH_A_LONG_RANDOM_VALUE"))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("占位值")
+                .hasMessageNotContaining("CHANGE_ME_WITH_A_LONG_RANDOM_VALUE");
+
+        String token = JwtUtil.getToken("doctor");
+        String forged = JWT.create()
+                .withClaim("tokenType", JwtUtil.ACCESS_TOKEN_TYPE)
+                .withClaim("username", "doctor")
+                .sign(Algorithm.HMAC256("CHANGE_ME_WITH_A_LONG_RANDOM_VALUE"));
+
+        assertThat(JwtUtil.parseToken(token).getUsername()).isEqualTo("doctor");
+        assertThatThrownBy(() -> JwtUtil.parseToken(forged)).isInstanceOf(RuntimeException.class);
+    }
+
+    @Test
+    @DisplayName("configure — 拒绝字符种类过少的长密钥")
+    void configure_rejectsLowDiversitySecret() {
+        assertThatThrownBy(() -> JwtUtil.configure("x".repeat(48)))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("字符种类过少");
+    }
+
+    @Test
     @DisplayName("parseToken — 超出 Instant 范围的 NumericDate 应受控拒绝")
     void parseToken_rejectsOutOfRangeNumericDate() {
         for (long expiration : new long[] {Long.MAX_VALUE, Long.MIN_VALUE}) {

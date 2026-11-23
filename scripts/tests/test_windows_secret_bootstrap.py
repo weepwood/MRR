@@ -13,9 +13,12 @@ class WindowsSecretBootstrapTest(unittest.TestCase):
 
     def test_secrets_directory_is_restricted_before_writing_configuration(self):
         installer = (ROOT / 'deploy/windows/install.ps1').read_text(encoding='utf-8')
-        self.assertLess(installer.index('& icacls.exe $secretsPath /inheritance:r'),
+        self.assertLess(installer.index('Set-MrrPrivatePathAcl -Path $secretsPath'),
                         installer.index('Initialize-GeneratedSecrets -Path'))
-        self.assertRegex(installer, r'icacls\.exe \$secretsPath /inheritance:r \| Out-Null\s+if \(\$LASTEXITCODE -ne 0\)')
+        self.assertLess(installer.index('Set-MrrPrivatePathAcl -Path $secretsFile'),
+                        installer.index('Initialize-GeneratedSecrets -Path'))
+        self.assertIn('$acl.SetAccessRuleProtection($true, $false)', installer)
+        self.assertIn('$acl.PurgeAccessRules($rule.IdentityReference)', installer)
 
     def test_installer_generates_secrets_with_csprng(self):
         installer = INSTALLER.read_text(encoding='utf-8')

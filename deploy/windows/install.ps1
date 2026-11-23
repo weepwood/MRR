@@ -86,6 +86,38 @@ function Write-TemplateIfMissing {
     Set-Content -LiteralPath $Destination -Value $content -Encoding UTF8
 }
 
+function Set-MrrPrivatePathAcl {
+    param([Parameter(Mandatory = $true)][string]$Path)
+
+    $target = Get-Item -LiteralPath $Path -Force
+    if ($target.Attributes -band [IO.FileAttributes]::ReparsePoint) {
+        throw "敏感目录或文件不能是重解析点：$Path"
+    }
+
+    $acl = Get-Acl -LiteralPath $Path
+    $acl.SetAccessRuleProtection($true, $false)
+    $sidType = [Security.Principal.SecurityIdentifier]
+    foreach ($rule in $acl.GetAccessRules($true, $false, $sidType)) {
+        $acl.PurgeAccessRules($rule.IdentityReference)
+    }
+
+    $inheritance = [Security.AccessControl.InheritanceFlags]::None
+    if ($target.PSIsContainer) {
+        $inheritance = [Security.AccessControl.InheritanceFlags]::ContainerInherit -bor
+            [Security.AccessControl.InheritanceFlags]::ObjectInherit
+    }
+    $admin = [Security.Principal.SecurityIdentifier]::new('S-1-5-32-544')
+    $system = [Security.Principal.SecurityIdentifier]::new('S-1-5-18')
+    $acl.SetOwner($admin)
+    foreach ($identity in @($admin, $system)) {
+        $rule = [Security.AccessControl.FileSystemAccessRule]::new(
+            $identity, [Security.AccessControl.FileSystemRights]::FullControl, $inheritance,
+            [Security.AccessControl.PropagationFlags]::None, [Security.AccessControl.AccessControlType]::Allow)
+        $acl.AddAccessRule($rule)
+    }
+    Set-Acl -LiteralPath $Path -AclObject $acl
+}
+
 function New-RandomSecret {
     param([int]$ByteCount = 48)
 
@@ -247,13 +279,10 @@ Write-TemplateIfMissing `
     -AdditionalContent ('archive.export.temp-directory=${ARCHIVE_EXPORT_TEMP_DIRECTORY:' + $rootUri + '/data/exports}')
 # 敏感配置只允许 Administrators 和 SYSTEM 访问。MRR-Backend 默认以 LocalSystem 运行。
 $secretsPath = Join-Path $Root 'secrets'
-& icacls.exe $secretsPath /grant:r '*S-1-5-32-544:(OI)(CI)F' '*S-1-5-18:(OI)(CI)F' | Out-Null
-if ($LASTEXITCODE -ne 0) {
-    throw "授予 secrets ACL 失败：$secretsPath"
-}
-& icacls.exe $secretsPath /inheritance:r | Out-Null
-if ($LASTEXITCODE -ne 0) {
-    throw "关闭 secrets ACL 继承失败：$secretsPath"
+Set-MrrPrivatePathAcl -Path $secretsPath
+$secretsFile = Join-Path $secretsPath 'application-secrets.properties'
+if (Test-Path -LiteralPath $secretsFile) {
+    Set-MrrPrivatePathAcl -Path $secretsFile
 }
 
 Write-TemplateIfMissing `
@@ -291,14 +320,7 @@ Copy-Item -LiteralPath (Join-Path $scriptDir 'MRR-Manager.cmd') -Destination (Jo
 
 # 导出临时目录保存完整病案 ZIP/PDF，同样只允许 Administrators 与 SYSTEM 访问。
 $exportsPath = Join-Path $Root 'data\exports'
-& icacls.exe $exportsPath /grant:r '*S-1-5-32-544:(OI)(CI)F' '*S-1-5-18:(OI)(CI)F' | Out-Null
-if ($LASTEXITCODE -ne 0) {
-    throw "授予导出临时目录 ACL 失败：$exportsPath"
-}
-& icacls.exe $exportsPath /inheritance:r | Out-Null
-if ($LASTEXITCODE -ne 0) {
-    throw "关闭导出临时目录 ACL 继承失败：$exportsPath"
-}
+Set-MrrPrivatePathAcl -Path $exportsPath
 
 $tokens = @{
     'MRR_ROOT'     = $Root

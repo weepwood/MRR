@@ -1,5 +1,6 @@
 import os
 import subprocess
+import tempfile
 import unittest
 from pathlib import Path
 
@@ -10,6 +11,42 @@ UTF8_BOM = b'\xef\xbb\xbf'
 
 
 class WindowsOneClickManagerTest(unittest.TestCase):
+    @unittest.skipUnless(os.name == 'nt', 'ACL integration test requires Windows PowerShell 5.1')
+    def test_installer_removes_existing_explicit_access_to_private_paths(self):
+        script = r'''param([string]$Installer, [string]$Directory)
+$ErrorActionPreference = 'Stop'
+$ast = [System.Management.Automation.Language.Parser]::ParseFile($Installer, [ref]$null, [ref]$null)
+$definition = $ast.Find({ param($node)
+    $node -is [System.Management.Automation.Language.FunctionDefinitionAst] -and $node.Name -eq 'Set-MrrPrivatePathAcl'
+}, $true)
+if ($null -eq $definition) { throw 'Missing installer ACL function' }
+. ([scriptblock]::Create($definition.Extent.Text))
+$private = New-Item -ItemType Directory -Path (Join-Path $Directory 'private')
+$file = New-Item -ItemType File -Path (Join-Path $private.FullName 'synthetic.txt')
+$everyone = [Security.Principal.SecurityIdentifier]::new('S-1-1-0')
+$identityType = [Security.Principal.SecurityIdentifier]
+foreach ($target in @($private, $file)) {
+    $acl = Get-Acl -LiteralPath $target.FullName
+    $acl.AddAccessRule([Security.AccessControl.FileSystemAccessRule]::new($everyone, 'Read', 'Allow'))
+    Set-Acl -LiteralPath $target.FullName -AclObject $acl
+    Set-MrrPrivatePathAcl -Path $target.FullName
+    $acl = Get-Acl -LiteralPath $target.FullName
+    $sids = @($acl.GetAccessRules($true, $true, $identityType) | ForEach-Object { $_.IdentityReference.Value } | Sort-Object)
+    if (-not $acl.AreAccessRulesProtected -or ($sids -join ',') -ne 'S-1-5-18,S-1-5-32-544') {
+        throw 'Unexpected private ACL or an explicit rule survived'
+    }
+}
+'''
+        with tempfile.TemporaryDirectory(prefix='mrr-acl-') as directory:
+            path = Path(directory) / 'check-acl.ps1'
+            path.write_text(script, encoding='utf-8-sig')
+            result = subprocess.run(
+                ['powershell.exe', '-NoProfile', '-NonInteractive', '-ExecutionPolicy', 'Bypass', '-File',
+                 str(path), str(WINDOWS_DEPLOY / 'install.ps1'), directory],
+                capture_output=True, text=True, errors='replace', timeout=30,
+            )
+        self.assertEqual(result.returncode, 0, result.stderr)
+
     def test_manager_reuses_existing_control_scripts(self):
         manager = (WINDOWS_DEPLOY / 'mrr-manager.ps1').read_text(encoding='utf-8-sig')
 

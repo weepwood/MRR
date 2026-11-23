@@ -26,8 +26,7 @@ class WindowsExportDirectoryTest(unittest.TestCase):
         installer = (ROOT / 'deploy/windows/install.ps1').read_text(encoding='utf-8')
         self.assertIn("'data\\exports'", installer)
         self.assertIn("$exportsPath = Join-Path $Root 'data\\exports'", installer)
-        self.assertIn('& icacls.exe $exportsPath /inheritance:r', installer)
-        self.assertIn("& icacls.exe $exportsPath /grant:r '*S-1-5-32-544:(OI)(CI)F' '*S-1-5-18:(OI)(CI)F'", installer)
+        self.assertIn('Set-MrrPrivatePathAcl -Path $exportsPath', installer)
 
     def test_directory_exists_before_services_are_installed(self):
         installer = (ROOT / 'deploy/windows/install.ps1').read_text(encoding='utf-8')

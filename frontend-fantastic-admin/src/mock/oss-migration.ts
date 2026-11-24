@@ -1,7 +1,8 @@
 import type { MockScanRecord } from '../mock-support/records'
 import type { MigrationJob } from '@/api/modules/oss'
 import { defineFakeRoute } from 'vite-plugin-fake-server/client'
-import { migrationSnapshot, resetDemoFailures, uploadDemoScans } from '../mock-support/migration'
+import { migrationSnapshot } from '../mock-support/migration'
+import { demoMigrationJournal } from '../mock-support/migration-journal'
 import { demoRecords } from '../mock-support/records'
 import { boundedInt, demoError, demoPage } from '../mock-support/response'
 
@@ -47,36 +48,6 @@ const jobs: MigrationJob[] = [
 ]
 
 let nextJobId = 13
-
-const logs = [
-  {
-    id: 1,
-    scanId: 1,
-    localPath: 'NGINX:scan:1',
-    ossUrl: 'https://example.test/signed/1',
-    migrationStatus: 'success',
-    fileSize: 235000,
-    checksumMd5: '0123456789abcdef0123456789abcdef',
-    migratedAt: new Date().toISOString(),
-    createdAt: new Date().toISOString(),
-  },
-  {
-    id: 2,
-    scanId: 6,
-    localPath: 'NGINX:scan:6',
-    migrationStatus: 'failed',
-    errorMessage: 'Nginx 图片服务返回状态码 404',
-    createdAt: new Date(Date.now() - 120000).toISOString(),
-  },
-  {
-    id: 3,
-    scanId: 7,
-    localPath: 'NGINX:scan:7',
-    migrationStatus: 'retry_wait',
-    errorMessage: 'Nginx 连接超时',
-    createdAt: new Date(Date.now() - 180000).toISOString(),
-  },
-]
 
 function browserDirectory(name: string, key: string) {
   return {
@@ -166,6 +137,10 @@ function filteredRecords(records: MockScanRecord[], query: Record<string, unknow
     limit,
     hasMore: filtered.length > limit,
   }
+}
+
+function migrationLogsResponse(query: Record<string, unknown>) {
+  return ok(demoPage(demoMigrationJournal.list(query), query.page, query.size))
 }
 
 export default defineFakeRoute([
@@ -304,14 +279,11 @@ export default defineFakeRoute([
   },
   {
     url: '/api/v1/oss/migration/management/logs',
-    response: ({ query }) => {
-      const request = (query ?? {}) as Record<string, unknown>
-      const filtered = logs.filter((item) => {
-        return (!request.status || item.migrationStatus === request.status)
-          && (!request.scanId || item.scanId === Number(request.scanId))
-      })
-      return ok(demoPage(filtered, request.page, request.size))
-    },
+    response: ({ query }) => migrationLogsResponse((query ?? {}) as Record<string, unknown>),
+  },
+  {
+    url: '/api/v1/oss/migration/logs',
+    response: ({ query }) => migrationLogsResponse((query ?? {}) as Record<string, unknown>),
   },
   {
     url: '/api/v1/oss/migration/retry',
@@ -324,7 +296,7 @@ export default defineFakeRoute([
       if (!Array.isArray(ids) || !ids.length || ids.length > 500 || !ids.every(id => Number.isSafeInteger(id) && id > 0)) {
         return demoError(400, '请输入有效的演示扫描编号（最多500条）')
       }
-      return ok({ updated: resetDemoFailures(demoRecords.scans, ids) }, '失败记录已重置')
+      return ok({ updated: demoMigrationJournal.reset(ids) }, '失败记录已重置')
     },
   },
   {
@@ -338,7 +310,7 @@ export default defineFakeRoute([
       if (!Array.isArray(ids) || !ids.length || ids.length > 500 || !ids.every(id => Number.isSafeInteger(id) && id > 0)) {
         return demoError(400, '请输入有效的演示扫描编号（最多500条）')
       }
-      return ok(uploadDemoScans(demoRecords.scans, ids), '上传完成')
+      return ok(demoMigrationJournal.upload(ids), '上传完成')
     },
   },
   {
@@ -351,7 +323,7 @@ export default defineFakeRoute([
       const bah = String(params.bah).trim()
       const ids = demoRecords.scans.filter(scan => scan.bah === bah && scan.uploadFlag).map(scan => scan.id)
       if (!ids.length) { return demoError(404, '未找到可上传的演示病案记录') }
-      return ok({ bah, ...uploadDemoScans(demoRecords.scans, ids) }, '上传完成')
+      return ok({ bah, ...demoMigrationJournal.upload(ids) }, '上传完成')
     },
   },
 ])

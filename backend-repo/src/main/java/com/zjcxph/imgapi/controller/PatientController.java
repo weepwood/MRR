@@ -173,6 +173,7 @@ public class PatientController {
 
     @Operation(summary = "根据身份证号查询患者信息（请求体）")
     @PostMapping("/idcard")
+    @RequirePermissions({"record:read"})
     public Result<List<Patient>> getByIdCard(@Valid @RequestBody IdCardQueryRequest request,
                                             HttpServletResponse response) {
         response.setHeader("Cache-Control", "private, no-store");

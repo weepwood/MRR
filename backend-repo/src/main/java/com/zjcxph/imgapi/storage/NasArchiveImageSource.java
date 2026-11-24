@@ -17,11 +17,13 @@ public class NasArchiveImageSource implements ArchiveImageSource {
 
     private final ArchiveImageSourceProperties properties;
     private final SourcePermitGuard permitGuard;
+    private final NasOperationIsolation isolation;
 
     public NasArchiveImageSource(ArchiveImageSourceProperties properties) {
         this.properties = properties;
         this.permitGuard = new SourcePermitGuard(
                 properties.getNasMaxConcurrency(), properties.getAcquireTimeout());
+        this.isolation = new NasOperationIsolation(properties.getNasMaxConcurrency(), properties.getNasNodes().keySet());
     }
 
     @Override
@@ -34,18 +36,28 @@ public class NasArchiveImageSource implements ArchiveImageSource {
 
     @Override
     public InputStream open(PathDO image) throws IOException {
-        return permitGuard.open(() -> openFile(image));
+        return isolation.call(image.getSourceNode(), properties.getNasOpenTimeout(),
+                () -> permitGuard.open(() -> openFile(image)), stream -> {
+                    try { stream.close(); } catch (IOException | RuntimeException failure) {
+                        org.slf4j.LoggerFactory.getLogger(NasArchiveImageSource.class)
+                                .warn("Late NAS stream close failed: errorType={}", failure.getClass().getSimpleName());
+                    }
+                });
     }
 
     @Override
     public long size(PathDO image) throws IOException {
-        return permitGuard.call(() -> Files.size(requireReadable(image)));
+        return isolation.call(image.getSourceNode(), properties.getNasOpenTimeout(),
+                () -> permitGuard.call(() -> Files.size(requireReadable(image))), ignored -> {});
     }
 
     @Override
     public String describeSource(PathDO image) {
         return "NAS";
     }
+
+    @jakarta.annotation.PreDestroy
+    void shutdown() { isolation.close(); }
 
     InputStream openFile(PathDO image) throws IOException {
         return ImageReadStream.openFile(requireReadable(image));

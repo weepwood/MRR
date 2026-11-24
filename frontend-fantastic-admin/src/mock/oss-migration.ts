@@ -3,6 +3,7 @@ import { defineFakeRoute } from 'vite-plugin-fake-server/client'
 import { migrationSnapshot } from '../mock-support/migration'
 import { demoMigrationJobs } from '../mock-support/migration-jobs'
 import { demoMigrationJournal } from '../mock-support/migration-journal'
+import { sharedObjectEntries, sharedObjectUrl } from '../mock-support/oss-browser'
 import { demoRecords } from '../mock-support/records'
 import { boundedInt, demoError, demoPage } from '../mock-support/response'
 
@@ -52,6 +53,7 @@ function browserEntries(prefix: string, continuationToken?: string) {
       browserDirectory('0012', 'medical-records/0012/'),
       browserDirectory('0013', 'medical-records/0013/'),
       browserDirectory('0024', 'medical-records/0024/'),
+      ...sharedObjectEntries(demoRecords.scans, prefix),
     ]
   }
   if (prefix === 'medical-records/0012/') {
@@ -75,14 +77,20 @@ function browserEntries(prefix: string, continuationToken?: string) {
       browserFile('病案目录说明.txt', 'medical-records/0012/00123456-00789124/病案目录说明.txt', 1200),
     ]
   }
-  return []
+  return sharedObjectEntries(demoRecords.scans, prefix)
 }
 
 function browserPage(query: Record<string, unknown>) {
   const prefix = String(query.prefix || 'medical-records/')
   const continuationToken = query.continuationToken ? String(query.continuationToken) : undefined
-  const entries = browserEntries(prefix, continuationToken)
-  const truncated = prefix === 'medical-records/0012/00123456-00789124/' && !continuationToken
+  demoMigrationJobs.advance()
+  const legacyPage = prefix === 'medical-records/0012/00123456-00789124/'
+  const maxKeys = boundedInt(query.maxKeys, 200, 1000)
+  const allEntries = browserEntries(prefix, continuationToken)
+  const offset = !legacyPage && /^shared-page-\d+$/.test(continuationToken ?? '') ? Number(continuationToken?.slice(12)) : 0
+  const entries = legacyPage ? allEntries : allEntries.slice(offset, offset + maxKeys)
+  const truncated = legacyPage ? !continuationToken : offset + entries.length < allEntries.length
+  const nextContinuationToken = truncated ? (legacyPage ? 'mock-page-2' : `shared-page-${offset + entries.length}`) : null
   return {
     configured: true,
     bucket: 'mrr-medical-records',
@@ -91,9 +99,9 @@ function browserPage(query: Record<string, unknown>) {
     rootPrefix: 'medical-records/',
     prefix,
     entries,
-    nextContinuationToken: truncated ? 'mock-page-2' : null,
+    nextContinuationToken,
     truncated,
-    maxKeys: Number(query.maxKeys || 200),
+    maxKeys,
     loadedDirectories: entries.filter(entry => entry.directory).length,
     loadedFiles: entries.filter(entry => !entry.directory).length,
     loadedBytes: entries.reduce((sum, entry) => sum + (entry.directory ? 0 : entry.size), 0),
@@ -136,6 +144,15 @@ export default defineFakeRoute([
     url: '/api/v1/oss/browser/url',
     response: ({ query }) => {
       const key = String((query as Record<string, unknown>)?.key || '')
+      demoMigrationJobs.advance()
+      const sharedUrl = sharedObjectUrl(demoRecords.scans, key)
+      if (sharedUrl) { return ok({ key, ossUrl: sharedUrl }) }
+      // Legacy storage-preview examples are retained for navigation regressions.
+      const prefix = key.slice(0, key.lastIndexOf('/') + 1)
+      const legacyPrefix = 'medical-records/0012/00123456-00789124/'
+      const legacyFile = prefix === legacyPrefix
+        && [...browserEntries(prefix), ...browserEntries(prefix, 'mock-page-2')].some(entry => !entry.directory && entry.key === key)
+      if (!legacyFile) { return demoError(404, '演示 OSS 对象不存在') }
       const demoImage = /\.(?:jpg|tif)$/i.test(key)
       return ok({
         key,

@@ -34,6 +34,7 @@ final class SourcePermitGuard {
         acquire();
         boolean success = false;
         try {
+            SourceOpenBudget.check();
             InputStream delegate = supplier.get();
             if (delegate == null) {
                 throw new IOException("图片来源返回了空数据流");
@@ -68,6 +69,7 @@ final class SourcePermitGuard {
     <T> T call(IoSupplier<T> supplier) throws IOException {
         acquire();
         try {
+            SourceOpenBudget.check();
             return supplier.get();
         } finally {
             semaphore.release();
@@ -82,7 +84,7 @@ final class SourcePermitGuard {
 
     private void acquire() throws IOException {
         try {
-            if (!semaphore.tryAcquire(timeout.toMillis(), TimeUnit.MILLISECONDS)) {
+            if (!semaphore.tryAcquire(SourceOpenBudget.limit(timeout).toNanos(), TimeUnit.NANOSECONDS)) {
                 throw new CapacityException();
             }
         } catch (InterruptedException exception) {

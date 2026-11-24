@@ -935,63 +935,12 @@ export default defineFakeRoute([
     },
   },
   {
-    url: '/api/v1/oss/migration/statistics',
-    response: () => {
-      const migratedCount = scans.filter(item => item.migrationStatus !== 'not_migrated').length
-      const failedCount = migrationLogs.filter(item => item.migrationStatus === 'failed').length
-      return ok({
-        totalCount: scans.length,
-        migratedCount,
-        pendingCount: scans.length - migratedCount,
-        failedCount,
-        percentage: Math.round(migratedCount / scans.length * 100),
-      })
-    },
-  },
-  {
-    url: '/api/v1/oss/migration/pending',
-    response: ({ query }) => {
-      const folder = normalize(firstQuery(query.folder))
-      const limit = toNumber(query.limit, 100)
-      const pending = scans.filter(item =>
-        item.migrationStatus === 'not_migrated' && (!folder || normalize(item.folder).includes(folder)),
-      )
-      return ok({ list: pending.slice(0, limit), total: pending.length })
-    },
-  },
-  {
-    url: '/api/v1/oss/migration/pending-folders',
-    response: () => {
-      const grouped = new Map<string, number>()
-      scans.filter(item => item.migrationStatus === 'not_migrated').forEach((item) => {
-        grouped.set(item.folder, (grouped.get(item.folder) ?? 0) + 1)
-      })
-      return ok([...grouped.entries()].map(([folder, cnt]) => ({ folder, cnt })))
-    },
-  },
-  {
     url: '/api/v1/oss/migration/logs',
     response: ({ query }) => {
       const status = normalize(firstQuery(query.status))
       const filtered = migrationLogs.filter(item => !status || normalize(item.migrationStatus) === status)
       return ok(paginate(filtered, query.page, query.size))
     },
-  },
-  {
-    url: '/api/v1/oss/upload',
-    method: 'POST',
-    response: ({ body }) => ok((body.scanIds ?? []).map((scanId: number) => ({
-      scanId,
-      ossUrl: `https://example.invalid/mock/${scanId}.jpg`,
-      status: 'success',
-    })), '模拟上传完成'),
-  },
-  {
-    url: '/api/v1/oss/upload/bah/:bah',
-    method: 'POST',
-    response: ({ params }) => ok(scans
-      .filter(item => item.bah === String(params.bah))
-      .map(item => ({ scanId: item.id, ossUrl: `https://example.invalid/mock/${item.id}.jpg`, status: 'success' }))),
   },
   {
     url: '/api/v1/oss/upload/folder/:folder',
@@ -1003,21 +952,5 @@ export default defineFakeRoute([
   {
     url: '/api/v1/oss/url/:scanId',
     response: ({ params }) => ok(`https://example.invalid/mock/${params.scanId}.jpg`),
-  },
-  {
-    url: '/api/v1/oss/migration/jobs',
-    method: 'POST',
-    response: () => ok({ id: 1, status: 'RUNNING', progress: 35 }),
-  },
-  {
-    url: '/api/v1/oss/migration/jobs',
-    response: ({ query }) => ok(paginate([
-      { id: 1, status: 'RUNNING', progress: 35, createdAt: mockTimestamp },
-      { id: 2, status: 'COMPLETED', progress: 100, createdAt: '2026-07-12T08:00:00.000Z' },
-    ], query.page, query.size)),
-  },
-  {
-    url: '/api/v1/oss/migration/jobs/:id',
-    response: ({ params }) => ok({ id: Number(params.id), status: 'RUNNING', progress: 35 }),
   },
 ])

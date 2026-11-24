@@ -50,6 +50,17 @@ public class OperationsCenterService {
     @org.springframework.beans.factory.annotation.Autowired
     void setNasSource(com.zjcxph.imgapi.storage.NasArchiveImageSource source) { this.nasSource = source; }
 
+    private com.zjcxph.imgapi.storage.HttpArchiveImageSource httpSource;
+    private com.zjcxph.imgapi.storage.NginxArchiveImageSource nginxSource;
+    private com.zjcxph.imgapi.storage.OssArchiveImageSource ossSource;
+
+    @org.springframework.beans.factory.annotation.Autowired
+    void setNetworkSources(com.zjcxph.imgapi.storage.HttpArchiveImageSource http,
+                           com.zjcxph.imgapi.storage.NginxArchiveImageSource nginx,
+                           com.zjcxph.imgapi.storage.OssArchiveImageSource oss) {
+        httpSource = http; nginxSource = nginx; ossSource = oss;
+    }
+
     public Map<String, Object> overview() {
         Map<String, Object> readiness = overviewReadiness(effectiveReadiness(readinessService.getSnapshot()));
         Long recentErrors = recentServerErrorCount();
@@ -65,6 +76,8 @@ public class OperationsCenterService {
         result.put("latestOperation", Map.of());
         result.put("quickLinks", quickLinks());
         if (nasSource != null) result.put("nasRuntime", nasSource.runtimeSnapshot());
+        if (httpSource != null && nginxSource != null && ossSource != null) result.put("networkRuntime",
+                Map.of("HTTP", httpSource.runtimeSnapshot(), "NGINX", nginxSource.runtimeSnapshot(), "OSS", ossSource.runtimeSnapshot()));
         return Map.copyOf(result);
     }
 

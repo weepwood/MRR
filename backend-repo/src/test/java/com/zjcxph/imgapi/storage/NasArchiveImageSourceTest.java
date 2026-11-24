@@ -291,6 +291,59 @@ class NasArchiveImageSourceTest {
     }
 
     @Test
+    void twoBlockedNodesDoNotStarveThirdAndPermitsRecoverOnlyAfterNativeClose() throws Exception {
+        var properties = new ArchiveImageSourceProperties();
+        properties.setNasMaxConcurrency(3);
+        properties.setAcquireTimeout(Duration.ofMillis(200));
+        properties.setNasOpenTimeout(Duration.ofSeconds(1));
+        properties.setNasBodyTimeout(Duration.ofMillis(300));
+        var node = new ArchiveImageSourceProperties.NasNode();
+        node.setRoot(tempDir.toString());
+        properties.setNasNodes(Map.of("a", node, "b", node, "c", node));
+        var release = new java.util.concurrent.CountDownLatch(1);
+        var entered = new java.util.concurrent.CountDownLatch(2);
+        var closed = new java.util.concurrent.CountDownLatch(2);
+        var executor = java.util.concurrent.Executors.newFixedThreadPool(2);
+        var source = new NasArchiveImageSource(properties) {
+            @Override InputStream openFile(PathDO image) {
+                if ("c".equals(image.getSourceNode())) return new java.io.ByteArrayInputStream(new byte[]{7});
+                return new InputStream() {
+                    @Override public int read() {
+                        entered.countDown();
+                        while (release.getCount() > 0) {
+                            try { release.await(); } catch (InterruptedException ignored) {}
+                        }
+                        return 9;
+                    }
+                    @Override public void close() { closed.countDown(); }
+                };
+            }
+        };
+        java.util.function.Function<String, PathDO> image = name -> {
+            var value = new PathDO(); value.setSourceType("NAS"); value.setSourceNode(name); return value;
+        };
+        try (var a = source.open(image.apply("a")); var b = source.open(image.apply("b"))) {
+            var first = executor.submit(() -> assertThatThrownBy(a::read).isInstanceOf(java.net.SocketTimeoutException.class));
+            var second = executor.submit(() -> assertThatThrownBy(b::read).isInstanceOf(java.net.SocketTimeoutException.class));
+            assertThat(entered.await(2, java.util.concurrent.TimeUnit.SECONDS)).isTrue();
+            first.get(2, java.util.concurrent.TimeUnit.SECONDS);
+            second.get(2, java.util.concurrent.TimeUnit.SECONDS);
+            assertThat(source.runtimeSnapshot().get("inUse")).isEqualTo(2);
+            try (var c = source.open(image.apply("c"))) {
+                assertThat(c.read()).isEqualTo(7);
+                assertThat(source.runtimeSnapshot().get("inUse")).isEqualTo(3);
+            }
+            assertThat(source.runtimeSnapshot().get("inUse")).isEqualTo(2);
+            release.countDown();
+            assertThat(closed.await(2, java.util.concurrent.TimeUnit.SECONDS)).isTrue();
+            long deadline = System.nanoTime() + Duration.ofSeconds(2).toNanos();
+            while (!source.runtimeSnapshot().get("inUse").equals(0) && System.nanoTime() < deadline) Thread.sleep(5);
+            assertThat(source.runtimeSnapshot().get("inUse")).isEqualTo(0);
+            try (var recovered = source.open(image.apply("a"))) { assertThat(recovered.read()).isEqualTo(9); }
+        } finally { release.countDown(); executor.shutdownNow(); source.shutdown(); }
+    }
+
+    @Test
     void blockedNativeCloseRetainsPermitAndRecoversAfterActualCompletion() throws Exception {
         var properties = new ArchiveImageSourceProperties();
         properties.setNasMaxConcurrency(1);

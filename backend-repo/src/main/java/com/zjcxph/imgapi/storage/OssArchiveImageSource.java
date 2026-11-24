@@ -61,6 +61,15 @@ public class OssArchiveImageSource implements ArchiveImageSource {
         return circuit.size(() -> permitGuard.call(() -> objectReader.size(key)));
     }
 
+    public java.util.Map<String, Object> runtimeSnapshot() {
+        var configured = ossProperties.getEndpoint() != null && !ossProperties.getEndpoint().isBlank()
+                && ossProperties.getBucket() != null && !ossProperties.getBucket().isBlank();
+        var result = new java.util.LinkedHashMap<>(NetworkRuntimeSnapshot.of(permitGuard,
+                configured ? java.util.List.of("oss") : java.util.List.of(), java.util.Map.of("oss", circuit)));
+        result.put("poolSample", objectReader.poolSnapshot());
+        return java.util.Map.copyOf(result);
+    }
+
     @Override
     public String describeSource(PathDO image) {
         return "OSS";

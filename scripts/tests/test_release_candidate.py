@@ -73,6 +73,22 @@ class ReleaseCandidateTest(unittest.TestCase):
                 self.assertEqual(1, api.call_count)
                 self.assertEqual({}, api.call_args.kwargs)
 
+    def test_rc_complete_candidate_binds_all_files_without_publication(self):
+        with tempfile.TemporaryDirectory() as folder:
+            root = Path(folder)
+            version = '1.0.0-rc.1'
+            files = [root / name for name in (
+                f'MRR-v{version}.zip', f'MRR-v{version}-standalone.jar',
+                f'MRR-v{version}-standalone.jar.sha256')]
+            for file in files:
+                file.write_bytes(b'synthetic candidate')
+            with patch('scripts.release_candidate.gh_json') as api:
+                create_manifest(root, version, SHA, '123', '1', files)
+                manifest = verify_manifest(root, SHA, '123', '1')
+                self.assertEqual(version, manifest['version'])
+                self.assertEqual({f.name for f in files}, set(manifest['files']))
+                api.assert_not_called()
+
     def test_real_release_requires_main_and_full_sha(self):
         validate_identity('1.2.3', SHA, 'refs/heads/main', dry_run=False)
         for sha, ref in ((SHA, 'refs/heads/feature'), ('abc123', 'refs/heads/main')):

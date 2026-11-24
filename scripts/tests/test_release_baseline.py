@@ -94,6 +94,15 @@ class ReleaseBaselineTest(unittest.TestCase):
         self.assertEqual("0.4.0", version)
         self.assertEqual("20260720000000", baseline["database"]["maximumCompatibleMigration"])
 
+    def test_release_candidate_preserves_prerelease_version(self) -> None:
+        release_baseline.VERSION_FILE.write_text("1.0.0-rc.1\n", encoding="utf-8")
+        pom = release_baseline.POM_FILE
+        pom.write_text(pom.read_text(encoding="utf-8").replace("<revision>0.4.0</revision>", "<revision>1.0.0-rc.1</revision>"), encoding="utf-8")
+        version, baseline = release_baseline.validate()
+        manifest = release_baseline.build_manifest(version, baseline, "b" * 40, "2026-11-25T00:00:00Z")
+        self.assertEqual("1.0.0-rc.1", manifest["productVersion"])
+        self.assertFalse(manifest["applicationRollback"]["allowed"])
+
     def test_validate_rejects_version_drift_between_version_file_and_pom(self) -> None:
         release_baseline.VERSION_FILE.write_text("0.4.1\n", encoding="utf-8")
 

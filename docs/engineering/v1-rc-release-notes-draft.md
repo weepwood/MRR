@@ -1,6 +1,6 @@
-# MRR 1.0.0-rc.1 说明草稿（未冻结、未发布）
+# MRR 1.0.0-rc.1 说明草稿（历史记录）
 
-此文仅为候选说明准备，不是 release-notes/1.0.0-rc.1.md，不改变 VERSION 或 Maven revision。最终内容必须复核固定SHA实际包含的改动及门禁，兼容POST专项合并前不得写成已交付。
+此文保留冻结前历史。#799已合并e0ac2036；现行候选说明见 [release-notes/1.0.0-rc.1.md](../../release-notes/1.0.0-rc.1.md)，候选版本PR与最终SHA/验收以[RC交付清单](v1-rc-delivery-checklist.md)及实际CI为准，尚未正式发布。
 
 ## 候选范围
 

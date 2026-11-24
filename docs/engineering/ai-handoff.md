@@ -312,6 +312,12 @@
 - 患者实际RED 13项4失败（1b45ef27），GREEN 31项；扫描浏览器RED等待POST超时，第一轮6通过1失败（返回时URL尚未替换），等待实际导航后8项含预热通过，验证普通URL无身份证、旧深链、刷新返回、迟到响应不继续请求影像。后端最终70项定向零失败错误跳过（含真实AuthorizationInterceptor+standalone MVC 401/403/允许POST、旧GET拒绝、日志脱敏/只读），非完整登录链或院内联调。日志 /tmp/mrr-compatible-patient-red.log、/tmp/mrr-compatible-patient-final.log、/tmp/mrr-scan-privacy-red.log、/tmp/mrr-scan-privacy-green-r2.log。类型/lint/hooks及文档检查。保留#712/#722待现场审批，不擅自关闭；#752仍暂缓。独立安全前向修复，未改数据、Flyway、生产配置及版本。
 - #797已合并d361a71a（1186单测/933前端，PG16按范围跳过），#798已合并141f53b9（governance45458082461、quality45458082439，其他文档范围跳过），完整dry-run45451701999 PASS（旧SHA6ac73ed4，Windows恢复/覆盖率/JAR哈希实证）。同步141f53b9，最新CI待验收；RC说明已准备，最终SHA和VERSION待兼容专项合并及版本范围审批。未正式发布。
 
+## 07 V1.0 RC1 候选冻结准备（2026-11-25）
+
+- #350 P1发布链路，维护者已批准准备1.0.0-rc.1，明确不创建正式Tag/Release、不停用旧GET、不重复数据库基准。独立worktree `/Volumes/data/Project/MRR-worktrees/350-v1-rc1`，分支 `release/350-v1-rc1`。#799已合并e0ac2036（head65e5b5be，治理45458426170、质量45458425598、演示45458425802通过；1191单测/150PG16/933前端零失败，Chrome86静态通过有装饰性降级警告）。保留#712/#722现场审批、#752暂缓，不再扩大功能。
+- VERSION/Maven revision/README/正式release-notes/1.0.0-rc.1.md一致，release-baseline及Flyway不变。新增[RC交付与现场清单](v1-rc-delivery-checklist.md)，旧0.9.0预演仅绑定6ac73ed4。Release现有手动dry_run=true默认不变，新增retain_candidate可选默认false；显式true时同轮留存完整ZIP/JAR/独立sha/manifest并使Windows检查完整文件，publish仍须dry_run=false且main，不修改原门禁。RED真实契约1项失败后修复，版本及完整RC候选单测补齐；实际259工具测试（254通过、5按环境跳过），release_baseline及工程文档通过；首次README版本漂移检查失败后修正。同步e0ac2036，独立revert版本与留存选项（不涉及业务/数据），未正式发布。
+- 最新版本PR尚待实际CI及自主复审；通过后合并并记录确切main SHA，核查main quality及手动Release `dry_run=true retain_candidate=true` 的实际run/attempt/sha。完整验证与制品下载检查未执行前不得标记通过；任何后续代码改动重验最终SHA。现场A1–F4/E5/旧协议/容量/RPO/RTO/真实Chrome86及存储全部待授权，安全前向修复，不直接回退应用。源码不预填自己的未来SHA；以PR/Issue及run/manifest记录实际身份。
+
 ## 每轮交接模板
 
 - 更新时间、任务、风险、目标及非目标：

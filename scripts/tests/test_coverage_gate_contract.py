@@ -42,3 +42,16 @@ class CoverageGateContractTest(unittest.TestCase):
         release = (ROOT / ".github/workflows/release-on-version-bump.yml").read_text(encoding="utf-8")
         self.assertIn("needs: [identity, qualify]", release)
         self.assertIn("./.github/workflows/release-validation.yml", release)
+
+    def test_full_dry_run_retention_does_not_grant_publication(self):
+        release = (ROOT / ".github/workflows/release-on-version-bump.yml").read_text(encoding="utf-8")
+        dispatch = release.split("permissions:", 1)[0]
+        self.assertIn("retain_candidate:", dispatch)
+        self.assertRegex(dispatch, r"retain_candidate:[\s\S]*?type: boolean[\s\S]*?default: false")
+        self.assertIn("retain_candidate: ${{ !inputs.dry_run || inputs.retain_candidate }}", release)
+        self.assertIn("if: inputs.dry_run == false && github.ref == 'refs/heads/main'", release)
+        self.assertIn("needs: [identity, qualify]", release)
+        validation = (ROOT / ".github/workflows/release-validation.yml").read_text(encoding="utf-8")
+        self.assertIn("candidate_complete: ${{ inputs.retain_candidate }}", validation)
+        self.assertIn("retain_candidate: ${{ inputs.retain_candidate }}", validation)
+        self.assertIn('test "${BUILD}" = success && test "${RECOVERY}" = success', validation)

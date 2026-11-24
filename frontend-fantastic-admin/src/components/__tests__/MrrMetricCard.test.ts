@@ -83,4 +83,16 @@ describe('mrrMetricCard', () => {
     await wrapper.setProps({ note: '只改说明' })
     expect(wrapper.find('.mrr-metric-card__value').classes()).not.toContain('is-updated')
   })
+
+  it('scope 徽标区分本页与全库口径，未传时不渲染', () => {
+    const withScope = mountCard({ label: '已启用', value: '3', scope: 'total' })
+    expect(withScope.get('.mrr-metric-card__scope').attributes('data-scope')).toBe('total')
+    expect(withScope.get('.mrr-metric-card__scope').text()).toBe('全库')
+
+    const pageScope = mountCard({ label: '待审核', value: '0', scope: 'page' })
+    expect(pageScope.get('.mrr-metric-card__scope').text()).toBe('本页')
+
+    const bare = mountCard({ label: '已拒绝', value: '0' })
+    expect(bare.find('.mrr-metric-card__scope').exists()).toBe(false)
+  })
 })

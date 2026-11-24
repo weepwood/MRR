@@ -4,7 +4,7 @@ import type { HealthInfo, MemoryInfo, RuntimeInfo, SystemInfo } from '@/api/type
 import type { MetricTone } from '@/components/MrrMetricCard/types'
 import { useDocumentVisibility, useIntervalFn } from '@vueuse/core'
 import { ElMessage } from 'element-plus'
-import { computed, onActivated, onDeactivated, onMounted, onUnmounted, ref, watch } from 'vue'
+import { computed, onActivated, onDeactivated, onMounted, onUnmounted, reactive, ref, watch } from 'vue'
 import {
   getDatabaseOverview,
   getDataQualityIssues,
@@ -39,6 +39,8 @@ const qualityRunning = ref(false)
 const autoRefresh = ref(true)
 const lastRefresh = ref('')
 const failedSections = ref<string[]>([])
+// 各分区最后一次成功取数的时间，用于区分「数据旧」与「从未成功」。
+const sectionRefreshedAt = reactive<Record<string, string>>({})
 const healthStatus = ref<HealthInfo>({})
 const runtimeInfo = ref<RuntimeInfo>({})
 const memoryInfo = ref<MemoryInfo>({ heap: {}, nonHeap: {} })
@@ -203,12 +205,20 @@ async function fetchMonitoringSnapshot() {
   }
 
   const labels = ['健康状态', '运行时间', '内存', '系统信息', '数据库概览', '数据质量摘要', '数据质量明细']
+  // 同一轮刷新只取一次当前时间，避免秒边界跨越导致分区时间差 1 秒。
+  const now = new Date()
+  labels.forEach((label, index) => {
+    const result = results[index]
+    if (result?.status === 'fulfilled' && result.value.data != null) {
+      sectionRefreshedAt[label] = now.toLocaleTimeString('zh-CN', { hour12: false })
+    }
+  })
   failedSections.value = labels.filter((_, index) => {
     const result = results[index]
     return result?.status !== 'fulfilled' || result.value.data == null
   })
   if (!failedSections.value.length) {
-    lastRefresh.value = new Date().toLocaleTimeString()
+    lastRefresh.value = now.toLocaleTimeString('zh-CN', { hour12: false })
   }
 }
 
@@ -254,7 +264,27 @@ function openGrafana() {
 const active = ref(false)
 const visibility = useDocumentVisibility()
 // 页头说明：刷新状态文案。E2E 通过 .mrr-page-header__description 读取「上次完整刷新」时间。
-const refreshDescription = computed(() => `${autoRefresh.value ? '每 15 秒自动刷新' : '自动刷新已暂停'} · 上次完整刷新 ${lastRefresh.value || '--'}`)
+// 从未完整刷新过时给可读的说明，而不是恒显时间占位符「--」。
+const refreshDescription = computed(() => {
+  const mode = autoRefresh.value ? '每 15 秒自动刷新' : '自动刷新已暂停'
+  const timing = lastRefresh.value ? `上次完整刷新 ${lastRefresh.value}` : '尚未完成过一次完整刷新'
+  return `${mode} · ${timing}`
+})
+// 分区级失败摘要：说明每个失败分区「最后一次取得数据的时间」或「本次会话尚未取得过数据」。
+const sectionRefreshSummary = computed(() => {
+  if (!failedSections.value.length) {
+    return ''
+  }
+  return failedSections.value
+    .map(label => sectionRefreshedAt[label]
+      ? `${label}上次取得数据 ${sectionRefreshedAt[label]}`
+      : `${label}本次会话尚未取得过数据`)
+    .join('；')
+})
+const alertDescription = computed(() => {
+  const base = `${failedSections.value.join('、')}未取得新数据，相应区域可能显示上次读取的值。`
+  return sectionRefreshSummary.value ? `${base} ${sectionRefreshSummary.value}` : base
+})
 const shouldPoll = computed(() => active.value && autoRefresh.value && visibility.value === 'visible')
 const { pause, resume } = useIntervalFn(() => {
   if (shouldPoll.value) {
@@ -315,7 +345,7 @@ onUnmounted(pause)
     <el-alert
       v-if="failedSections.length"
       title="本次监控刷新未完整完成"
-      :description="`${failedSections.join('、')}未取得新数据，相应区域可能显示上次读取的值。`"
+      :description="alertDescription"
       type="warning"
       :closable="false"
       show-icon

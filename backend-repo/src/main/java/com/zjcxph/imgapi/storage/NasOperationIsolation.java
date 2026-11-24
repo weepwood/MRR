@@ -59,6 +59,10 @@ final class NasOperationIsolation implements AutoCloseable {
             throw rejected;
         }
         var nativeStarted = new java.util.concurrent.atomic.AtomicBoolean();
+        var slotReleased = new java.util.concurrent.atomic.AtomicBoolean();
+        Runnable releaseSlot = () -> {
+            if (slotReleased.compareAndSet(false, true)) slots.release();
+        };
         var result = new CompletableFuture<T>();
         var claimed = new CompletableFuture<Boolean>();
         try {
@@ -66,6 +70,7 @@ final class NasOperationIsolation implements AutoCloseable {
                 try {
                     long remaining = deadline - System.nanoTime();
                     if (claimed.isDone() || remaining <= 0) {
+                        releaseSlot.run();
                         result.completeExceptionally(new SocketTimeoutException("NAS operation timed out"));
                         return;
                     }
@@ -79,13 +84,14 @@ final class NasOperationIsolation implements AutoCloseable {
                         if (!claimed.join()) discard.accept(value);
                     }
                 } catch (IOException | RuntimeException failure) {
+                    releaseSlot.run();
                     result.completeExceptionally(failure);
                 } finally {
-                    slots.release();
+                    releaseSlot.run();
                 }
             });
         } catch (RejectedExecutionException rejected) {
-            slots.release();
+            releaseSlot.run();
             circuit.finish(attempt, NasNodeCircuit.Outcome.NEUTRAL);
             throw new SourcePermitGuard.CapacityException();
         }
@@ -115,6 +121,9 @@ final class NasOperationIsolation implements AutoCloseable {
         } finally {
             claimed.complete(false);
             circuit.finish(attempt, outcome);
+            // A successful caller owns the already-opened stream; its source permit
+            // remains held by the stream, not by the now-finished NAS open operation.
+            if (outcome == NasNodeCircuit.Outcome.SUCCESS) releaseSlot.run();
         }
     }
 

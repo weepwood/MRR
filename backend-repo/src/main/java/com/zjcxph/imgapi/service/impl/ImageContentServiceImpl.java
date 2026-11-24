@@ -49,7 +49,7 @@ public class ImageContentServiceImpl implements ImageContentService {
             throw new BusinessException(404, "影像不存在或已删除");
         }
 
-        PathDO path = toPath(scan);
+        PathDO path = PathDO.fromScan(scan);
         try {
             InputStream stream = imageStorage.open(path);
             String filename = safeFilename(scan);
@@ -98,22 +98,6 @@ public class ImageContentServiceImpl implements ImageContentService {
             return null;
         }
         return sjh.isEmpty() ? bah : bah + ":" + sjh;
-    }
-
-    private PathDO toPath(Scan scan) {
-        return new PathDO(
-                scan.getId(),
-                scan.getFolder(),
-                scan.getFilename(),
-                scan.getBrxh(),
-                scan.getBah(),
-                scan.getSjh(),
-                scan.getSourceType(),
-                scan.getSourceNode(),
-                scan.getSourceRef(),
-                scan.getOssUrl(),
-                scan.getFileSize()
-        );
     }
 
     private String safeFilename(Scan scan) {

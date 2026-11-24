@@ -96,7 +96,7 @@ public class NginxArchiveImageSource implements ArchiveImageSource {
                         request.build(), HttpResponse.BodyHandlers.ofInputStream());
                 if (response.statusCode() < 200 || response.statusCode() >= 300) {
                     response.body().close();
-                    throw new IOException("Nginx 图片服务返回状态码 " + response.statusCode());
+                    throw new SourceHttpStatusException("Nginx", response.statusCode());
                 }
                 return response.body();
             } catch (InterruptedException exception) {

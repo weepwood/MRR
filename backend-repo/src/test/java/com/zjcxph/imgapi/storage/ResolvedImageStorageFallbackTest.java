@@ -1,6 +1,9 @@
 package com.zjcxph.imgapi.storage;
 
 import com.zjcxph.imgapi.entity.PathDO;
+import com.zjcxph.imgapi.config.ArchiveImageSourceProperties;
+import com.zjcxph.imgapi.config.OssProperties;
+import software.amazon.awssdk.services.s3.model.S3Exception;
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import org.junit.jupiter.api.Test;
 
@@ -14,6 +17,23 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 class ResolvedImageStorageFallbackTest {
+
+    @Test
+    void diagnosticClassifiesOssStatusAndDoesNotExposeObjectKey() throws Exception {
+        PathDO image = new PathDO();
+        image.setSourceType("OSS");
+        image.setSourceRef("synthetic-private-key");
+        OssObjectReader reader = mock(OssObjectReader.class);
+        when(reader.open("synthetic-private-key")).thenThrow(new IOException("synthetic-private-error",
+                S3Exception.builder().statusCode(403).message("synthetic-private-error").build()));
+        var source = new OssArchiveImageSource(reader, new ArchiveImageSourceProperties(), new OssProperties());
+        var storage = new ResolvedImageStorage(new ArchiveImageSourceResolver(List.of(source)), new SimpleMeterRegistry());
+
+        var probe = storage.probe(image);
+        assertThat(probe.available()).isFalse();
+        assertThat(probe.attempts()).containsExactly(new ResolvedImageStorage.SourceAttempt("OSS", false, "ACCESS_DENIED"));
+        assertThat(probe.toString()).doesNotContain("synthetic-private");
+    }
 
     @Test
     void fallsBackToTheNextControlledSourceWhenAutoSourceFails() throws Exception {

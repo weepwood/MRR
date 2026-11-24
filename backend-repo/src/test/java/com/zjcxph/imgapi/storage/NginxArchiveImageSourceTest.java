@@ -101,6 +101,30 @@ class NginxArchiveImageSourceTest {
         verify(localStorage).open(image);
     }
 
+    @Test
+    @SuppressWarnings({"unchecked", "rawtypes"})
+    void diagnosticsUsesAuthenticatedAdapterAndClassifiesForbiddenWithoutLeakingUrl() throws Exception {
+        PathDO image = image();
+        when(imageUrlService.buildImageUrl(image)).thenReturn(IMAGE_URL);
+        HttpResponse<java.io.InputStream> response = mock(HttpResponse.class);
+        when(response.statusCode()).thenReturn(403);
+        var input = mock(java.io.InputStream.class);
+        when(response.body()).thenReturn(input);
+        doReturn(response).when(client).send(any(HttpRequest.class), any(HttpResponse.BodyHandler.class));
+        var source = new NginxArchiveImageSource(imageUrlService, imageProperties(),
+                new ArchiveImageSourceProperties(), client);
+        var storage = new ResolvedImageStorage(new ArchiveImageSourceResolver(List.of(source)), new SimpleMeterRegistry());
+
+        var probe = storage.probe(image);
+        assertThat(probe.available()).isFalse();
+        assertThat(probe.attempts()).containsExactly(new ResolvedImageStorage.SourceAttempt("NGINX", false, "ACCESS_DENIED"));
+        assertThat(probe.toString()).doesNotContain(IMAGE_URL, "secret");
+        verify(input).close();
+        ArgumentCaptor<HttpRequest> captor = ArgumentCaptor.forClass(HttpRequest.class);
+        verify(client).send(captor.capture(), any(HttpResponse.BodyHandler.class));
+        assertThat(captor.getValue().headers().firstValue("Authorization")).isPresent();
+    }
+
     private ImageProperties imageProperties() {
         ImageProperties properties = new ImageProperties();
         properties.setUrl("http://127.0.0.1:8005/ba-img");

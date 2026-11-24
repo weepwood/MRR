@@ -210,22 +210,7 @@ public class ImageController {
             if (request != null && content.auditTarget() != null) {
                 request.setAttribute(ArchiveAccessAttributes.AUDIT_TARGET, content.auditTarget());
             }
-            HttpHeaders headers = new HttpHeaders();
-            headers.setContentType(content.mediaType());
-            headers.setContentDisposition(ContentDisposition.inline()
-                    .filename(content.filename(), StandardCharsets.UTF_8).build());
-            headers.setCacheControl("private, no-store");
-            headers.setPragma("no-cache");
-            headers.set("X-Content-Type-Options", "nosniff");
-            headers.set("Referrer-Policy", "no-referrer");
-            // The legacy route must not infer a length by separately selecting a source.
-            StreamingResponseBody body = output -> {
-                try (content) {
-                    content.inputStream().transferTo(output);
-                }
-            };
-            return ResponseEntity.ok().headers(headers)
-                    .body(PendingImageStream.wrap(request, content, body, () -> {}));
+            return ImageContentResponse.create(request, content, () -> {}, () -> {});
         } catch (BusinessException exception) {
             return ResponseEntity.status(ResultCode.resolveHttpStatus(exception.getCode()))
                     .header(HttpHeaders.CACHE_CONTROL, "private, no-store")

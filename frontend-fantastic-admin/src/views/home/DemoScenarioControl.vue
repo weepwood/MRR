@@ -32,7 +32,7 @@ async function applyScenario(value: DemoScenario) {
 </script>
 
 <template>
-  <section class="mx-4 mt-4 flex flex-wrap items-center gap-3 rounded-lg border p-3" aria-label="演示场景控制">
+  <section class="flex flex-wrap items-center gap-3 rounded-lg border p-3" aria-label="演示场景控制">
     <div class="min-w-0 flex-1">
       <div class="text-sm font-medium">
         演示场景

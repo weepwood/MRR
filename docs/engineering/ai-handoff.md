@@ -216,6 +216,11 @@
 
 - #782 已合并437f428a，head68116d01、governance45441171525、quality45441171863，1175单测/148 PG16全部通过，Development通过。
 
+## 03 三千万级完整隔离基准证据（2026-11-25）
+
+- #99/#350 P2，`docs/99-thirty-million-evidence`，独立worktree。mrr-scan-lab-3a6p6oh4 实际COUNT确认30000000/300000，造数1442.415秒，索引144.977秒，两个902MB valid/ready；同页通过、真实8并发多键325796事务、P99 1.028ms、零失败。旧兼容COUNT前后均5秒超时，报告complete_with_legacy_timeouts，server_stopped=true，pg_ctl确认停止。详见[完整基准报告](synthetic-scan-benchmark-2026-11-24.md)。原始日志保留，勿重复启动。
+- #785已合并b7980728（933前端测试/138文件，演示Pages成功）；#782已合并437f428a（1175单测/148真实PG16）；#784已合并c3590798（scope/pr-gate通过，其他按范围跳过）。#786和#787在最新main同步后仍待CI。已确认#780/#781/#783/#785/#782/#784合并树等价、干净和上游一致，归档本地报告至`/Volumes/data/Project/MRR-worktrees/merged-evidence-2026-11-25`后正常移除其专属worktree与本地分支，远端分支保留。未做生产操作或正式发布。
+
 ## 每轮交接模板
 
 - 更新时间、任务、风险、目标及非目标：

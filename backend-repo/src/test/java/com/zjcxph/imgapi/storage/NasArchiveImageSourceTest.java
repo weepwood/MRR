@@ -230,6 +230,7 @@ class NasArchiveImageSourceTest {
             }
             assertThatThrownBy(() -> source.open(bad)).isInstanceOf(SourceNodeCircuit.CircuitOpen.class);
             assertThat(opens.get()).isEqualTo(3);
+            assertThat(source.runtimeSnapshot().toString()).contains("state=OPEN").doesNotContain("bad", "good");
             clock.addAndGet(Duration.ofSeconds(30).toNanos());
             // A successful metadata-only half-open probe cannot heal the body failure.
             assertThat(source.size(bad)).isEqualTo(9);
@@ -280,6 +281,8 @@ class NasArchiveImageSourceTest {
             assertThatThrownBy(() -> { try (var unexpected = source.open(bad)) {} })
                     .isInstanceOf(SourcePermitGuard.CapacityException.class);
             assertThat(opens.get()).isEqualTo(1);
+            assertThat(source.runtimeSnapshot().get("inUse")).isEqualTo(1);
+            assertThat(source.runtimeSnapshot().toString()).contains("ordinal=1").doesNotContain("bad", "good", tempDir.toString());
             try (var healthy = source.open(good)) { assertThat(healthy.read()).isEqualTo(7); }
             release.countDown();
             assertThat(closed.await(2, java.util.concurrent.TimeUnit.SECONDS)).isTrue();

@@ -159,7 +159,14 @@ export interface OperationsQuickLink {
   path: string
 }
 
+export interface NasRuntime {
+  inUse: number
+  limit: number
+  nodes: { ordinal: number, state: 'CLOSED' | 'OPEN' | 'HALF_OPEN_READY' | 'HALF_OPEN_ACTIVE', inUse: number, limit: number }[]
+}
+
 export interface OperationsOverview {
+  nasRuntime?: NasRuntime
   imageDeliveryMode?: 'direct' | 'gateway'
   generatedAt: string
   readiness: ReadinessSnapshot

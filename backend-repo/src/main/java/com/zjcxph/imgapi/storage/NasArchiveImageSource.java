@@ -17,6 +17,7 @@ public class NasArchiveImageSource implements ArchiveImageSource {
 
     private final ArchiveImageSourceProperties properties;
     private final SourcePermitGuard permitGuard;
+    private final java.util.Map<String, SourcePermitGuard> nodePermits;
     private final NasOperationIsolation isolation;
 
     @org.springframework.beans.factory.annotation.Autowired
@@ -28,6 +29,9 @@ public class NasArchiveImageSource implements ArchiveImageSource {
         this.properties = properties;
         this.permitGuard = new SourcePermitGuard(
                 properties.getNasMaxConcurrency(), properties.getAcquireTimeout());
+        int nodeLimit = Math.max(1, properties.getNasMaxConcurrency() / Math.max(1, properties.getNasNodes().size()));
+        this.nodePermits = properties.getNasNodes().keySet().stream().collect(java.util.stream.Collectors.toUnmodifiableMap(
+                node -> node, node -> new SourcePermitGuard(nodeLimit, properties.getAcquireTimeout())));
         this.isolation = new NasOperationIsolation(properties.getNasMaxConcurrency(), properties.getNasNodes().keySet(), clock);
     }
 
@@ -42,7 +46,7 @@ public class NasArchiveImageSource implements ArchiveImageSource {
     @Override
     public InputStream open(PathDO image) throws IOException {
         return isolation.call(image.getSourceNode(), properties.getNasOpenTimeout(),
-                mark -> permitGuard.open(() -> { mark.run(); return openFile(image); }), stream -> {
+                mark -> nodePermits.get(image.getSourceNode()).open(() -> permitGuard.open(() -> { mark.run(); return openFile(image); })), stream -> {
                     try { stream.close(); } catch (IOException | RuntimeException failure) {
                         org.slf4j.LoggerFactory.getLogger(NasArchiveImageSource.class)
                                 .warn("Late NAS stream close failed: errorType={}", failure.getClass().getSimpleName());
@@ -53,7 +57,21 @@ public class NasArchiveImageSource implements ArchiveImageSource {
     @Override
     public long size(PathDO image) throws IOException {
         return isolation.call(image.getSourceNode(), properties.getNasOpenTimeout(),
-                mark -> permitGuard.call(() -> { mark.run(); return Files.size(requireReadable(image)); }), ignored -> {});
+                mark -> nodePermits.get(image.getSourceNode()).call(() -> permitGuard.call(() -> { mark.run(); return Files.size(requireReadable(image)); })), ignored -> {});
+    }
+
+    /** Passive process-local observation; no filesystem calls, names or addresses. */
+    public java.util.Map<String, Object> runtimeSnapshot() {
+        var names = nodePermits.keySet().stream().sorted().toList();
+        var nodes = new java.util.ArrayList<java.util.Map<String, Object>>();
+        for (int i = 0; i < names.size(); i++) {
+            String name = names.get(i);
+            var guard = nodePermits.get(name);
+            nodes.add(java.util.Map.of("ordinal", i + 1, "state", isolation.circuitState(name),
+                    "inUse", guard.inUse(), "limit", guard.limit()));
+        }
+        return java.util.Map.of("inUse", permitGuard.inUse(), "limit", permitGuard.limit(),
+                "nodes", java.util.List.copyOf(nodes));
     }
 
     @Override

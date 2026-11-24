@@ -57,6 +57,7 @@ function overview(): OperationsOverview {
   }
   return {
     imageDeliveryMode: 'gateway',
+    nasRuntime: { inUse: 1, limit: 4, nodes: [{ ordinal: 1, state: 'OPEN', inUse: 1, limit: 2 }, { ordinal: 2, state: 'CLOSED', inUse: 0, limit: 2 }] },
     generatedAt: new Date().toISOString(),
     readiness: readiness(),
     maintenance: { enabled: maintenance.enabled },

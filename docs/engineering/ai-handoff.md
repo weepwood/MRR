@@ -255,6 +255,20 @@
 
 - #789已合并ff8b541a，head05c9b20a，governance45445428184、quality45445428182通过，1177单测零失败，PG16按范围跳过。
 
+## 03 300万GIN选择性与COUNT策略（2026-11-25）
+
+- #99/#350 P2，`perf/99-trgm-selectivity`，独立worktree。扩展已有 --trgm 无匹配长词、一/三字符、SJH首页/90%深游标；COUNT 5秒、游标3秒，记录实际计划、返回行、共享块及预算；不强制planner、不改生产查询或DDL。首次3m造数后原精确测量分支误用budget导致NameError，实例确认停止；修复后万行冒烟完整通过，第二次3m实际COUNT确认3000000/30000，完整报告complete，server_stopped=true，pg_ctl确认停止。两个GIN31424512/38019072字节，5.324秒。无匹配COUNT117.453→0.710ms、SJH游标195.426→2.443ms；一/两字符仍非GIN，稀疏BAH仍主键；写入单次30.771→22.225ms与百万级反向，不宣称稳定收益或生产验收。详见[GIN隔离报告](synthetic-trgm-benchmark-2026-11-25.md)。默认精确游标、显式包含、无同步COUNT，旧COUNT语义不变。
+- #786/#788已合并07c06e32/2be73973，核对等价合并树、干净与上游后归档本地测试报告并移除两独立worktree/本地分支，保留远端。独立revert，无生产修改，最新CI待验收。
+
+- #789已合并ff8b541a，head05c9b20a，governance45445428184、quality45445428182通过，1177单测零失败，PG16按范围跳过。
+
+- #790已合并c825539d，head12a0399f，governance45445973554、quality45445973767通过，1177单测零失败，PG16按范围跳过。
+
+## 03 GIN提交更新删除并发成本（2026-11-25）
+
+- #99/#350 P2，`perf/99-gin-write-cost` 独立worktree，新增 --trgm-write 仅在新建隔离PG16运行固定事务ABBA对照、实际提交更新/删除重插、WAL增量、TPS与P95，不重复精确/GIN查询基准。mrr-scan-lab-9xi2ubwn 实际100000行、16组14400事务零失败，逐轮COUNT一致、报告complete、pg_ctl停止。8客户端有GIN WAL约多38–39%，TPS/P95波动，非生产吞吐。详见[GIN隔离实验](synthetic-trgm-benchmark-2026-11-25.md)。保留既有语义、不强制planner、不改生产DDL；最新CI待验收。
+- #790已合并c825539d（1177单测），#791已合并2d82ce80（governance45446800153、quality45446800105成功，其他按范围跳过）。
+
 ## 每轮交接模板
 
 - 更新时间、任务、风险、目标及非目标：

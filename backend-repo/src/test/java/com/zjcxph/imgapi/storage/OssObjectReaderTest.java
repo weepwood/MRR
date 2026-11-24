@@ -36,13 +36,16 @@ class OssObjectReaderTest {
             }
         };
         ResponseInputStream<GetObjectResponse> response = new ResponseInputStream<>(
-                GetObjectResponse.builder().build(), bytes);
+                GetObjectResponse.builder().contentLength(3L).build(), bytes);
         when(client.getObject(any(GetObjectRequest.class))).thenReturn(response);
         when(client.headObject(any(HeadObjectRequest.class)))
                 .thenReturn(HeadObjectResponse.builder().contentLength(3L).build());
 
         assertThat(reader.size("medical-records/test.jpg")).isEqualTo(3);
         try (InputStream input = reader.open("medical-records/test.jpg")) {
+            assertThat(input).isInstanceOf(ImageReadStream.class);
+            assertThat(((ImageReadStream) input).length()).isEqualTo(3L);
+            assertThat(((ImageReadStream) input).seekable()).isFalse();
             assertThat(input.readAllBytes()).containsExactly(1, 2, 3);
         }
         assertThat(closed).isTrue();

@@ -56,7 +56,8 @@ public class HttpArchiveImageSource implements ArchiveImageSource {
                     response.body().close();
                     throw new SourceHttpStatusException("HTTP", response.statusCode());
                 }
-                return response.body();
+                return ImageReadStream.withLength(response.body(),
+                        ImageReadStream.httpLength(response.headers()));
             } catch (InterruptedException exception) {
                 Thread.currentThread().interrupt();
                 throw new IOException("HTTP 图片读取被中断", exception);

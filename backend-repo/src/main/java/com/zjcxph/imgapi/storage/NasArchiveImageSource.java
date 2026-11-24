@@ -34,7 +34,7 @@ public class NasArchiveImageSource implements ArchiveImageSource {
 
     @Override
     public InputStream open(PathDO image) throws IOException {
-        return permitGuard.open(() -> Files.newInputStream(requireReadable(image)));
+        return permitGuard.open(() -> ImageReadStream.openFile(requireReadable(image)));
     }
 
     @Override

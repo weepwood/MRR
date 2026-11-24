@@ -38,7 +38,8 @@ public class OssObjectReader {
                     .overrideConfiguration(config -> config.apiCallTimeout(timeout)
                             .apiCallAttemptTimeout(timeout.compareTo(Duration.ofSeconds(60)) < 0 ? timeout : Duration.ofSeconds(60)))
                     .build());
-            return new OssResponseStream(response);
+            Long length = response.response().contentLength();
+            return ImageReadStream.withLength(new OssResponseStream(response), length == null ? -1L : length);
         } catch (RuntimeException exception) {
             throw new IOException("OSS 图片读取失败", exception);
         }

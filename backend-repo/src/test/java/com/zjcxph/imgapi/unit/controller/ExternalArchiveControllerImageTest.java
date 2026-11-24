@@ -153,6 +153,50 @@ class ExternalArchiveControllerImageTest {
     }
 
     @Test
+    void externalSingleRangePreservesAuthorizationAndAuditsSuccessfulTransfer() throws Exception {
+        var grant = grant();
+        var scan = scan();
+        var root = java.nio.file.Files.createTempDirectory("mrr-external-range");
+        var file = root.resolve("synthetic.jpg");
+        java.nio.file.Files.write(file, new byte[]{0, 1, 2, 3, 4, 5});
+        var properties = new com.zjcxph.imgapi.config.ArchiveImageSourceProperties();
+        properties.setNasMaxConcurrency(1);
+        properties.setAcquireTimeout(java.time.Duration.ofMillis(100));
+        var node = new com.zjcxph.imgapi.config.ArchiveImageSourceProperties.NasNode();
+        node.setRoot(root.toString());
+        properties.setNasNodes(java.util.Map.of("test", node));
+        var path = new com.zjcxph.imgapi.entity.PathDO();
+        path.setSourceType("NAS");
+        path.setSourceNode("test");
+        path.setSourceRef("synthetic.jpg");
+        var source = new com.zjcxph.imgapi.storage.NasArchiveImageSource(properties);
+        MockHttpServletRequest servletRequest = new MockHttpServletRequest("GET", "/api/v1/external/archive/image/42");
+        servletRequest.setCookies(new Cookie(ExternalArchiveAccessService.SESSION_COOKIE_NAME, "session-token"));
+        servletRequest.setRemoteAddr("10.0.0.8");
+        servletRequest.addHeader("User-Agent", "JUnit");
+        servletRequest.addHeader("X-Request-Id", "request-42");
+        servletRequest.addHeader("Range", "bytes=-2");
+        when(externalArchiveAccessService.requireSession("session-token")).thenReturn(grant);
+        when(externalArchiveAccessService.requireImage(grant, 42)).thenReturn(scan);
+        try (var stream = source.open(path)) {
+            when(imageContentService.open(42)).thenReturn(new ImageContentService.ImageContent(
+                    stream, "synthetic.jpg", MediaType.IMAGE_JPEG, 999L));
+            var response = controller.image(42, servletRequest);
+            assertThat(response.getStatusCode().value()).isEqualTo(206);
+            assertThat(response.getHeaders().getFirst("Content-Range")).isEqualTo("bytes 4-5/6");
+            var out = new ByteArrayOutputStream();
+            response.getBody().writeTo(out);
+            assertThat(out.toByteArray()).containsExactly((byte) 4, (byte) 5);
+            verify(externalArchiveAccessService).requireImage(grant, 42);
+            verify(externalArchiveAccessService).recordAudit(grant, "123456", "A-001", "IMAGE_VIEW", 42,
+                    "10.0.0.8", "JUnit", "request-42", "SUCCESS", null);
+        } finally {
+            java.nio.file.Files.deleteIfExists(file);
+            java.nio.file.Files.deleteIfExists(root);
+        }
+    }
+
+    @Test
     void rejectedExternalStreamClosesSourceAndAuditsFailureOnce() throws Exception {
         ExternalArchiveGrant grant = grant();
         Scan scan = scan();

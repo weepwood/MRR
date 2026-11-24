@@ -6,8 +6,6 @@ import com.zjcxph.imgapi.service.ImageContentService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
-import org.springframework.http.ContentDisposition;
-import org.springframework.http.HttpHeaders;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -17,7 +15,6 @@ import org.springframework.web.context.request.RequestContextHolder;
 import org.springframework.web.context.request.ServletRequestAttributes;
 import org.springframework.web.servlet.mvc.method.annotation.StreamingResponseBody;
 
-import java.nio.charset.StandardCharsets;
 
 @RestController
 @RequestMapping("/api/v1/img/content")
@@ -40,30 +37,9 @@ public class ImageContentController {
         ImageContentService.ImageContent content = imageContentService.open(id);
         bindAuditTarget(content.auditTarget());
 
-        StreamingResponseBody body = outputStream -> {
-            try (content) {
-                content.inputStream().transferTo(outputStream);
-            }
-        };
-
-        HttpHeaders headers = new HttpHeaders();
-        headers.setContentType(content.mediaType());
-        headers.setContentDisposition(ContentDisposition.inline()
-                .filename(content.filename(), StandardCharsets.UTF_8)
-                .build());
-        headers.setCacheControl("private, no-store");
-        headers.setPragma("no-cache");
-        headers.set("X-Content-Type-Options", "nosniff");
-        headers.set("Referrer-Policy", "no-referrer");
-        if (content.contentLength() != null && content.contentLength() > 0) {
-            headers.setContentLength(content.contentLength());
-        }
-
         var request = RequestContextHolder.getRequestAttributes() instanceof ServletRequestAttributes attributes
                 ? attributes.getRequest() : null;
-        return ResponseEntity.ok()
-                .headers(headers)
-                .body(PendingImageStream.wrap(request, content, body, () -> {}));
+        return ImageContentResponse.create(request, content, () -> {}, () -> {});
     }
 
     /** 让逐图访问审计与档案袋列表审计使用同一口径的目标，便于在影像访问审计中按病案检索。 */

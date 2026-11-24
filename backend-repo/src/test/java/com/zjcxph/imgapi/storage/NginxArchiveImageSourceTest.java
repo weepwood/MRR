@@ -48,6 +48,7 @@ class NginxArchiveImageSourceTest {
 
         HttpResponse<java.io.InputStream> response = mock(HttpResponse.class);
         when(response.statusCode()).thenReturn(200);
+        when(response.headers()).thenReturn(java.net.http.HttpHeaders.of(java.util.Map.of(), (a, b) -> true));
         when(response.body()).thenReturn(stream("nginx-image"));
         doReturn(response).when(client).send(
                 any(HttpRequest.class),

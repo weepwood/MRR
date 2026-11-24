@@ -117,7 +117,7 @@ class OssArchiveImageSourceTest {
             org.assertj.core.api.Assertions.assertThatThrownBy(() -> source.open(image))
                     .isInstanceOf(java.io.IOException.class).hasMessage("missing");
         }
-        when(reader.open(ACTUAL_OBJECT_KEY)).thenThrow(new java.net.SocketTimeoutException("synthetic timeout"));
+        org.mockito.Mockito.doThrow(new java.net.SocketTimeoutException("synthetic timeout")).when(reader).open(ACTUAL_OBJECT_KEY);
         for (int i = 0; i < 3; i++) {
             org.assertj.core.api.Assertions.assertThatThrownBy(() -> source.open(image))
                     .isInstanceOf(java.net.SocketTimeoutException.class);

@@ -167,13 +167,28 @@ public class DataQualityServiceImpl implements DataQualityService {
         String bah = normalize(issue.get("bah"));
         String sjh = normalize(issue.get("sjh"));
 
-        List<Map<String, Object>> candidates = findArchiveCandidates(bah, sjh);
         Map<String, Object> currentEntity = loadCurrentEntity(entityType, entityId);
         String suggestedAction = suggestedAction(checkCode);
+        // Historic samples are not current authority. Do not propose a link from stale codes,
+        // inactive rows or a high BAH without a valid SJH.
+        String currentBah = normalize(currentEntity.get("bah"));
+        String currentSjh = normalize(currentEntity.get("sjh"));
+        boolean current = entityType != null && LINKABLE_ENTITY_TYPES.contains(entityType)
+                && currentEntity.get("entityId") != null
+                && java.util.Objects.equals(bah, currentBah)
+                && java.util.Objects.equals(sjh, currentSjh)
+                && (!"mr_scan".equals(entityType) || currentEntity.get("uploadFlag") instanceof Number flag && flag.intValue() != 0);
+        boolean validCodes = currentBah != null && currentBah.matches("[0-9]+")
+                && (currentSjh == null || currentSjh.matches("[0-9]+"))
+                && (!com.zjcxph.imgapi.utils.MedicalRecordCodeUtils.requiresSjhForBah(currentBah)
+                    || currentSjh != null && currentSjh.length() >= 4);
+        List<Map<String, Object>> candidates = current && validCodes
+                ? findArchiveCandidates(currentBah, currentSjh) : List.of();
         boolean deterministic = "LINK_ARCHIVE_ID".equals(suggestedAction)
-                && LINKABLE_ENTITY_TYPES.contains(entityType)
-                && candidates.size() == 1
-                && currentEntity.get("archiveId") == null;
+                && current && validCodes && candidates.size() == 1
+                && currentEntity.get("archiveId") == null
+                && com.zjcxph.imgapi.utils.MedicalRecordCodeUtils.toSearchTerm(currentBah).equals(
+                    com.zjcxph.imgapi.utils.MedicalRecordCodeUtils.toSearchTerm(normalize(candidates.getFirst().get("bah"))));
 
         Map<String, Object> result = new LinkedHashMap<>();
         result.put("issue", issue);
@@ -183,7 +198,7 @@ public class DataQualityServiceImpl implements DataQualityService {
         result.put("deterministic", deterministic);
         result.put("readOnly", true);
         result.put("canApply", false);
-        result.put("reason", deterministic
+        result.put("reason", !current ? "历史异常与当前记录不一致或记录已失效，请重新检查" : !validCodes ? "当前编号不满足安全关联规则" : deterministic
                 ? "存在唯一候选主档，但第一阶段仅提供预览，尚未开放写入"
                 : "候选关系不唯一或异常类型需要人工判断，禁止自动修改");
         return result;

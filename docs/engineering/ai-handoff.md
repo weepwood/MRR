@@ -318,6 +318,10 @@
 - VERSION/Maven revision/README/正式release-notes/1.0.0-rc.1.md一致，release-baseline及Flyway不变。新增[RC交付与现场清单](v1-rc-delivery-checklist.md)，旧0.9.0预演仅绑定6ac73ed4。Release现有手动dry_run=true默认不变，新增retain_candidate可选默认false；显式true时同轮留存完整ZIP/JAR/独立sha/manifest并使Windows检查完整文件，publish仍须dry_run=false且main，不修改原门禁。RED真实契约1项失败后修复，版本及完整RC候选单测补齐；实际259工具测试（254通过、5按环境跳过），release_baseline及工程文档通过；首次README版本漂移检查失败后修正。同步e0ac2036，独立revert版本与留存选项（不涉及业务/数据），未正式发布。
 - 最新版本PR尚待实际CI及自主复审；通过后合并并记录确切main SHA，核查main quality及手动Release `dry_run=true retain_candidate=true` 的实际run/attempt/sha。完整验证与制品下载检查未执行前不得标记通过；任何后续代码改动重验最终SHA。现场A1–F4/E5/旧协议/容量/RPO/RTO/真实Chrome86及存储全部待授权，安全前向修复，不直接回退应用。源码不预填自己的未来SHA；以PR/Issue及run/manifest记录实际身份。
 
+## 08 V1.1 数据质量修复前置及历史欠账（2026-11-25）
+
+- #166/#469/#729 P1，独立worktree fix/166-v1.1-repair-preview；[现状、测试及历史Issue审计](v1.1-quality-repair-increment.md)。修复预览当前值核对、禁止过时/失效/冲突候选、抽屉代次隔离及失败重试、Mock补齐。23后端/2 Chromium含预热通过；仍只读，工单审批及事务执行待专项。RC1 24152bee冻结不变，最新CI待核对。
+
 ## 每轮交接模板
 
 - 更新时间、任务、风险、目标及非目标：

@@ -13,7 +13,7 @@ import type {
 /* eslint-disable antfu/if-newline, curly */
 import type { MrrTableAction } from '@/components/MrrTableActions/types'
 import { ElMessage } from 'element-plus'
-import { computed, onMounted, ref } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import {
   getArchiveRelationDetail,
   getDataQualityIssues,
@@ -58,6 +58,21 @@ const issueSeverity = ref('ALL')
 const issueKeyword = ref('')
 const repairPreview = ref<RepairPreview | null>(null)
 const previewVisible = ref(false)
+const previewError = ref(false)
+const previewIssue = ref<DataQualityIssue>()
+let previewVersion = 0
+function invalidatePreview() {
+  previewVersion++
+  previewLoading.value = false
+  repairPreview.value = null
+  previewError.value = false
+  previewIssue.value = undefined
+}
+watch(previewVisible, (visible) => {
+  if (!visible) invalidatePreview()
+}, { flush: 'sync' })
+watch(() => useUserStore().token, () => { previewVisible.value = false; invalidatePreview() }, { flush: 'sync' })
+onBeforeUnmount(invalidatePreview)
 
 const issueActions: MrrTableAction[] = [
   {
@@ -270,16 +285,28 @@ async function runChecks() {
 }
 
 async function showRepairPreview(issue: DataQualityIssue) {
+  const current = ++previewVersion
+  previewIssue.value = issue
   previewVisible.value = true
   previewLoading.value = true
+  previewError.value = false
   repairPreview.value = null
   try {
     const response = await getDataQualityRepairPreview(issue.id)
-    repairPreview.value = response.data ?? null
+    if (current !== previewVersion) return
+    if (!response.data || response.data.issue.id !== issue.id) throw new Error('Preview identity mismatch')
+    repairPreview.value = response.data
+  }
+  catch {
+    if (current === previewVersion) previewError.value = true
   }
   finally {
-    previewLoading.value = false
+    if (current === previewVersion) previewLoading.value = false
   }
+}
+
+function retryPreview() {
+  if (previewIssue.value) void showRepairPreview(previewIssue.value)
 }
 
 async function locateIssueArchive(issue: DataQualityIssue) {
@@ -705,7 +732,8 @@ onMounted(loadDashboard)
 
     <el-drawer v-model="previewVisible" title="只读修复预览" size="min(520px, 100%)">
       <div v-loading="previewLoading" class="preview-content">
-        <template v-if="repairPreview">
+        <AppError v-if="previewError" message="修复预览读取失败" @retry="retryPreview" />
+        <template v-else-if="repairPreview">
           <el-alert
             title="第一阶段不会修改任何数据库记录"
             type="info"

@@ -55,6 +55,50 @@ class DataQualityServiceImplTest {
     }
 
     @Test
+    void repairPreviewRejectsDeletedAndChangedRowsBeforeCandidateLookup() {
+        var issue = Map.<String,Object>of("checkCode", "SCAN_ARCHIVE_LINK_MISSING_ESTIMATED",
+                "entityType", "mr_scan", "entityId", "9", "bah", "1234");
+        when(jdbcTemplate.queryForList(contains("JOIN app.mrr_data_quality_run"), eq(1L))).thenReturn(List.of(issue));
+        when(jdbcTemplate.queryForList(contains("FROM app.mr_scan WHERE id"), eq(9L))).thenReturn(List.of());
+        var missing = service.previewRepair(1L);
+        assertThat(missing).containsEntry("deterministic", false).containsEntry("canApply", false);
+        verify(jdbcTemplate, never()).queryForList(contains("WITH input AS"), (Object) any(), (Object) any());
+        var changed = new java.util.HashMap<String,Object>();
+        changed.put("entityId", 9L);
+        changed.put("bah", "1235");
+        changed.put("uploadFlag", 1);
+        when(jdbcTemplate.queryForList(contains("FROM app.mr_scan WHERE id"), eq(9L))).thenReturn(List.of(changed));
+        assertThat(service.previewRepair(1L)).containsEntry("deterministic", false).containsEntry("canApply", false);
+        verify(jdbcTemplate, never()).queryForList(contains("WITH input AS"), (Object) any(), (Object) any());
+    }
+
+    @Test
+    void highBahWithoutSjhAndInactiveScanCannotBeDeterministic() {
+        var issue = Map.<String,Object>of("checkCode", "SCAN_ARCHIVE_LINK_MISSING_ESTIMATED",
+                "entityType", "mr_scan", "entityId", "9", "bah", "10000000");
+        when(jdbcTemplate.queryForList(contains("JOIN app.mrr_data_quality_run"), eq(1L))).thenReturn(List.of(issue));
+        when(jdbcTemplate.queryForList(contains("FROM app.mr_scan WHERE id"), eq(9L)))
+                .thenReturn(List.of(Map.of("entityId", 9L, "bah", "10000000", "uploadFlag", 1)));
+        assertThat(service.previewRepair(1L)).containsEntry("deterministic", false);
+        verify(jdbcTemplate, never()).queryForList(contains("WITH input AS"), (Object) any(), (Object) any());
+    }
+
+    @Test
+    void currentUniqueCandidateRemainsReadOnlyAndConflictingBahIsNotDeterministic() {
+        var issue = Map.<String,Object>of("checkCode", "SCAN_ARCHIVE_LINK_MISSING_ESTIMATED",
+                "entityType", "mr_scan", "entityId", "9", "bah", "10000000", "sjh", "1234");
+        when(jdbcTemplate.queryForList(contains("JOIN app.mrr_data_quality_run"), eq(1L))).thenReturn(List.of(issue));
+        when(jdbcTemplate.queryForList(contains("FROM app.mr_scan WHERE id"), eq(9L)))
+                .thenReturn(List.of(Map.of("entityId", 9L, "bah", "10000000", "sjh", "1234", "uploadFlag", 1)));
+        when(jdbcTemplate.queryForList(contains("WITH input AS"), eq("10000000"), eq("1234")))
+                .thenReturn(List.of(Map.of("id", 7L, "bah", "10000000", "sjh", "1234")))
+                .thenReturn(List.of(Map.of("id", 7L, "bah", "10000001", "sjh", "1234")));
+        assertThat(service.previewRepair(1L)).containsEntry("deterministic", true).containsEntry("canApply", false);
+        assertThat(service.previewRepair(1L)).containsEntry("deterministic", false).containsEntry("canApply", false);
+        verify(jdbcTemplate, never()).update(anyString(), any(Object[].class));
+    }
+
+    @Test
     void configuredChecksUseBusinessRulesInsteadOfFixedEightDigitValidation() {
         Object checks = ReflectionTestUtils.getField(service, "checks");
 

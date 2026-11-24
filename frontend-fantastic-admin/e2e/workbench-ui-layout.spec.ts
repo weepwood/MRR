@@ -110,3 +110,29 @@ test('候选病案可通过键盘操作查看关系，并显示匹配方式', as
   await expect(page.getByText('病案主档 #91002', { exact: true })).toBeVisible()
   await expect(page.locator('.archive-header')).toContainText('病案号（BAH）：123')
 })
+
+test('只读修复预览失败可重试且保留当前异常身份', async ({ page }) => {
+  const issue = { id: 91001, severity: 'CRITICAL', checkName: '合成检查', entityType: 'mr_scan', entityId: '91001' }
+  let calls = 0
+  await page.route('**/api/v1/system/data-quality/issues**', async (route) => {
+    const url = route.request().url()
+    if (url.includes('/repair-preview')) {
+      expect(url).toContain('/91001/repair-preview')
+      calls++
+      if (calls === 1) { await route.fulfill({ status: 503, json: { code: 503, message: '合成失败' } }); return }
+      await route.fulfill({ json: { code: 200, data: { issue, currentEntity: {}, candidateArchives: [], suggestedAction: '人工核对', deterministic: false, readOnly: true, canApply: false, reason: '历史异常与当前记录不一致' } } })
+      return
+    }
+    await route.fulfill({ json: { code: 200, data: [issue] } })
+  })
+  await page.setViewportSize({ width: 375, height: 812 })
+  await page.reload()
+  await page.getByRole('tab', { name: '检查与异常', exact: true }).click()
+  await page.locator('.quality-stack').getByRole('button', { name: /更多/ }).click()
+  await page.getByText('修复预览', { exact: true }).click()
+  const drawer = page.getByRole('dialog', { name: '只读修复预览' })
+  await expect(drawer.getByText('修复预览读取失败')).toBeVisible()
+  await drawer.getByRole('button', { name: '重试' }).click()
+  await expect(drawer.getByText('历史异常与当前记录不一致')).toBeVisible()
+  expect(calls).toBe(2)
+})

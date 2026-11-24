@@ -160,6 +160,13 @@
 
 - 原head 2c50e95c，quality45433926281，1161单测及147真实PG16零失败/错误/跳过；新实库并发用例在CI执行通过，主线变更后再次验证。#777合并21c8b960。
 
+## 04.3 网络节点熔断复用（2026-11-25）
+
+- #230/#350 P1，`fix/230-network-source-circuit`，worktree `/Volumes/data/Project/MRR-worktrees/230-network-source-circuit`。eba877bd 修正夹具后实际RED 6项1失败，重复OSS超时第四次仍回源；4b54789d 将NasNodeCircuit泛化为SourceNodeCircuit，HTTP按配置节点、Nginx按已验证authority、OSS按单配置endpoint/bucket各自状态，3次源故障/30秒冷却/单探针；保留NAS原隔离。只计明确连接/读超时、连接拒绝、SDK调用超时及502/503/504、声明长度提前EOF；401/403/404、许可饱和、本地预算耗尽、取消/提前close中性；完整正文或成功HEAD才确认恢复。无新增依赖或公开节点地址。
+- 本地29项及新增真实HTTP两节点503后拒绝第四次/健康节点仍读取的30项联合回归通过；同步 #775 正式合并 main 5612d503 并解决测试冲突，b85653db，最新CI待验收。#775 head f7b8e0a1，governance45432184945、quality45432184906，1159单测零失败/错误/跳过、PG16按范围跳过。未验收现场多节点、连接池压力、原生NAS正文/慢客户端硬阻塞，独立revert，不改生产。
+
+- #778已合并6454b5a4，head55d792ef，quality45435023953，1164单测及147 PG16零失败/错误/跳过。#779原head a6612f36质量45433783245实际1161单测通过，PG16按范围跳过，最新合并树待验收。
+
 ## 03 兼容模糊游标分页（2026-11-25）
 
 - #99/#350 P1，分支 `perf/99-legacy-cursor`，worktree `/Volumes/data/Project/MRR-worktrees/99-legacy-cursor`。4c90d9d9实际RED 18项1失败（精确游标忽略文件名条件）。现有 /api/v1/scan/cursor/condition 增加显式 legacyContains=true，复用旧LIKE及全部筛选谓词、id游标、size+1、不执行COUNT，3秒Mapper语句超时不变；默认精确游标仍为精确编号，遇不支持的非空筛选明确400。旧OFFSET/COUNT接口及其结果语义不变。未修改Flyway或生产索引。

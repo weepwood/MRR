@@ -69,6 +69,44 @@ class HttpArchiveImageSourceTest {
     }
 
     @Test
+    void circuitRejectsFailedNodeWithoutBlockingHealthyNode() throws Exception {
+        var requests = new java.util.concurrent.atomic.AtomicInteger();
+        var server = HttpServer.create(new InetSocketAddress("127.0.0.1", 0), 0);
+        server.createContext("/bad", exchange -> {
+            requests.incrementAndGet();
+            try (exchange) { exchange.sendResponseHeaders(503, -1); }
+        });
+        server.createContext("/ok", exchange -> {
+            try (exchange) {
+                exchange.sendResponseHeaders(200, 1);
+                exchange.getResponseBody().write(7);
+            }
+        });
+        server.start();
+        try {
+            var properties = new ArchiveImageSourceProperties();
+            var bad = new ArchiveImageSourceProperties.HttpNode();
+            var good = new ArchiveImageSourceProperties.HttpNode();
+            String base = "http://127.0.0.1:" + server.getAddress().getPort();
+            bad.setBaseUrl(base + "/bad/");
+            good.setBaseUrl(base + "/ok/");
+            properties.setHttpNodes(Map.of("bad", bad, "good", good));
+            var source = new HttpArchiveImageSource(properties);
+            var image = new PathDO();
+            image.setSourceType("HTTP"); image.setSourceNode("bad"); image.setSourceRef("synthetic.png");
+            for (int i = 0; i < 3; i++) {
+                org.assertj.core.api.Assertions.assertThatThrownBy(() -> source.open(image))
+                        .isInstanceOf(SourceHttpStatusException.class);
+            }
+            org.assertj.core.api.Assertions.assertThatThrownBy(() -> source.open(image))
+                    .isInstanceOf(SourceNodeCircuit.CircuitOpen.class);
+            assertThat(requests.get()).isEqualTo(3);
+            image.setSourceNode("good");
+            try (var input = source.open(image)) { assertThat(input.readAllBytes()).containsExactly((byte)7); }
+        } finally { server.stop(0); }
+    }
+
+    @Test
     void requestsHighBahBySjhDirectory() throws Exception {
         AtomicReference<String> requestedPath = new AtomicReference<>();
         HttpServer server = HttpServer.create(new InetSocketAddress("127.0.0.1", 0), 0);

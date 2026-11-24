@@ -83,8 +83,6 @@ watch(() => userStore.token, resetSearch, { flush: 'sync' })
       <p v-if="idCard && !isValid" class="search-hint">
         请输入正确格式的身份证号
       </p>
-
-
     </div>
   </div>
 </template>
@@ -106,8 +104,8 @@ watch(() => userStore.token, resetSearch, { flush: 'sync' })
 
 .query-results :deep(.image-gallery) {
   flex: 1;
-  min-height: 0;
   height: auto;
+  min-height: 0;
 }
 
 .search-page {

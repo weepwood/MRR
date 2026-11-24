@@ -505,7 +505,6 @@ watch(thumbsLayoutMode, (mode) => {
   catch {}
 })
 watch(selectedImageIndex, () => { ensureCurrentImageBlob() })
-
 </script>
 
 <template>

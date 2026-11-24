@@ -13,12 +13,27 @@ from scripts.frontend_test_scope import classify_paths as frontend_scope
 
 JOBS = ('frontend', 'backend', 'integration', 'windows', 'recovery', 'release', 'development')
 PAGES_DEMO_SMOKE_WORKFLOW = '.github/workflows/deploy-pages-demo.yml'
-# Only the established presentation layers qualify for lighter main checks.
-# API, stores, router, utils, mock, build inputs and unknown mixed changes do not.
-MAIN_PRESENTATION_PREFIXES = tuple(
-    'frontend-fantastic-admin/src/' + area + '/'
-    for area in ('views', 'components', 'ui', 'assets', 'layouts')
+# Narrow allowlist: a business view's index.vue can contain permissions,
+# patient identifiers, export or migration logic despite its harmless filename.
+FRONTEND_ROOT = 'frontend-fantastic-admin/'
+PRESENTATION_PREFIXES = tuple(
+    FRONTEND_ROOT + 'src/' + area + '/'
+    for area in (
+        'views/help', 'views/ui-components',
+        'components/AppEmpty', 'components/AppLoading', 'components/MrrMetricCard',
+        'components/MrrPageHeader', 'components/MrrPageShell', 'components/MrrSectionCard',
+        'components/MrrStatusTag', 'ui/components/FaCard', 'ui/components/FaDivider',
+        'ui/components/FaKbd', 'ui/components/FaProgress', 'ui/components/FaCopyright',
+    )
 )
+STYLE_SUFFIXES = ('.css', '.scss', '.sass', '.less', '.pcss')
+
+
+def is_presentation_path(path: str) -> bool:
+    return (
+        path.startswith(FRONTEND_ROOT + 'src/assets/styles/') and path.lower().endswith(STYLE_SUFFIXES)
+        or path.startswith(PRESENTATION_PREFIXES)
+    )
 DEVELOPMENT_INPUTS = {
     'docker-compose.yml', '.dockerignore', 'backend-repo/Dockerfile', 'frontend-fantastic-admin/Dockerfile',
     'backend-repo/pom.xml', 'backend-repo/mvnw', 'backend-repo/mvnw.cmd',
@@ -38,7 +53,8 @@ def classify_paths(paths, mode='pr') -> dict[str, bool]:
     frontend, backend = frontend_scope(paths), backend_scope(paths)
     pages_demo_smoke = frontend.e2e_changed or frontend.build_changed or any(
         path in (PAGES_DEMO_SMOKE_WORKFLOW, 'VERSION', 'release-baseline.json')
-        or path.startswith('frontend-fantastic-admin/src/mock/')
+        or (path.startswith(FRONTEND_ROOT) and not path.lower().endswith('.md')
+            and not is_presentation_path(path))
         for path in paths
     )
     database_tools = any(p.startswith('mrr-db/') and not p.lower().endswith('.md') for p in paths)
@@ -63,7 +79,7 @@ def classify_paths(paths, mode='pr') -> dict[str, bool]:
             and not frontend.build_changed and not backend.backend_changed
             and not any(scope[key] for key in ('live', 'postgres', 'windows', 'recovery',
                                                'development', 'release', 'tooling'))
-            and all(p.startswith(MAIN_PRESENTATION_PREFIXES) or p.lower().endswith('.md')
+            and all(is_presentation_path(p) or p.lower().endswith('.md')
                     for p in paths)
         )
         if mode == 'main' and ordinary_frontend:

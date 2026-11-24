@@ -157,24 +157,44 @@ class CiGateTest(unittest.TestCase):
                 self.assertFalse(classify_paths([path])['integration_frontend'])
 
     def test_ordinary_frontend_pr_keeps_unit_checks_without_duplicate_pages_build(self):
-        for path in ('frontend-fantastic-admin/src/views/users/index.vue',
+        for path in ('frontend-fantastic-admin/src/views/help/index.vue',
                      'frontend-fantastic-admin/src/assets/styles/globals.css',
-                     'frontend-fantastic-admin/src/components/shared/VisualCard.vue'):
+                     'frontend-fantastic-admin/src/components/MrrMetricCard/index.vue'):
             with self.subTest(path=path):
                 scope = classify_paths([path])
                 self.assertTrue(scope['frontend'])
                 self.assertFalse(scope['pages_demo_smoke'])
 
     def test_main_push_defers_ordinary_frontend_repeat_to_release(self):
-        for path in ('frontend-fantastic-admin/src/views/users/index.vue',
+        for path in ('frontend-fantastic-admin/src/views/help/index.vue',
                      'frontend-fantastic-admin/src/assets/styles/globals.css',
-                     'frontend-fantastic-admin/src/components/shared/VisualCard.vue'):
+                     'frontend-fantastic-admin/src/components/MrrMetricCard/index.vue'):
             with self.subTest(path=path):
                 scope = classify_paths([path, 'README.md'], mode='main')
                 self.assertFalse(any(scope[key] for key in (
                     'frontend', 'backend', 'integration', 'build', 'postgres', 'live',
                     'release', 'recovery', 'windows', 'development')))
                 self.assertTrue(classify_paths([path], mode='integration')['integration'])
+
+    def test_business_pages_and_unknown_frontend_paths_do_not_use_presentation_fast_path(self):
+        for path in (
+            'frontend-fantastic-admin/src/views/users/index.vue',
+            'frontend-fantastic-admin/src/views/patients/index.vue',
+            'frontend-fantastic-admin/src/views/idcard/index.vue',
+            'frontend-fantastic-admin/src/views/scan-img/index.vue',
+            'frontend-fantastic-admin/src/views/statistics/archive.vue',
+            'frontend-fantastic-admin/src/views/settings/index.vue',
+            'frontend-fantastic-admin/src/views/operations-center/index.vue',
+            'frontend-fantastic-admin/src/components/MrrStorageBrowser/index.vue',
+            'frontend-fantastic-admin/src/components/AccountButton/index.vue',
+            'frontend-fantastic-admin/src/components/UnknownComponent/index.vue',
+            'frontend-fantastic-admin/src/assets/unknown.ts',
+            'frontend-fantastic-admin/src/api/modules/search.ts',
+        ):
+            with self.subTest(path=path):
+                self.assertTrue(classify_paths([path])['pages_demo_smoke'])
+                scope = classify_paths([path], mode='main')
+                self.assertTrue(all(scope[k] for k in ('integration', 'build', 'postgres', 'live')))
 
     def test_main_push_keeps_integration_for_critical_or_uncertain_changes(self):
         for paths in (
@@ -184,9 +204,9 @@ class CiGateTest(unittest.TestCase):
             ['frontend-fantastic-admin/src/views/login.vue'],
             ['frontend-fantastic-admin/src/utils/date.ts'],
             ['frontend-fantastic-admin/pnpm-lock.yaml'],
-            ['frontend-fantastic-admin/src/views/users/index.vue',
+            ['frontend-fantastic-admin/src/views/help/index.vue',
              'backend-repo/src/main/java/example/Example.java'],
-            ['frontend-fantastic-admin/src/views/users/index.vue', 'unknown-build-input'],
+            ['frontend-fantastic-admin/src/views/help/index.vue', 'unknown-build-input'],
             ['backend-repo/src/main/resources/mapper/ScanMapper.xml'],
         ):
             with self.subTest(paths=paths):
@@ -198,7 +218,7 @@ class CiGateTest(unittest.TestCase):
 
     def test_main_push_keeps_other_selected_checks_for_mixed_changes(self):
         scope = classify_paths([
-            'frontend-fantastic-admin/src/views/users/index.vue',
+            'frontend-fantastic-admin/src/views/help/index.vue',
             'deploy/windows/install.ps1',
         ], mode='main')
         self.assertTrue(scope['integration'])

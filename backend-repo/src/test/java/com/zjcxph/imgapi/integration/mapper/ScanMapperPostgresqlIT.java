@@ -101,6 +101,28 @@ class ScanMapperPostgresqlIT extends PostgresqlIntegrationTestSupport {
     }
 
     @Test
+    void nonemptyShortLegacyPageAndCountUseTheSamePredicate() {
+        jdbcTemplate.update("""
+                INSERT INTO app.mr_scan(bah,filename,folder,uploadflag,pages)
+                VALUES ('765401','count-tail-a.jpg','synthetic',1,1),
+                       ('765402','count-tail-b.jpg','synthetic',1,2),
+                       ('765403','count-tail-c.jpg','synthetic',1,3),
+                       ('765404','count-tail-d.jpg','synthetic',1,4),
+                       ('765405','count-tail-e.jpg','synthetic',1,5),
+                       ('765406','count-tail-deleted.jpg','synthetic',0,6),
+                       ('765407','other.jpg','synthetic',1,7)
+                """);
+        ScanRequest request = new ScanRequest();
+        request.setFilename("count-tail-");
+        request.setUploadFlag(1);
+        List<Scan> tail = scanMapper.findByConditionWithPagination(request, 4, 2);
+        assertThat(tail).extracting(Scan::getFilename).containsExactly("count-tail-e.jpg");
+        assertThat(scanMapper.countByCondition(request)).isEqualTo(4L + tail.size());
+        assertThat(scanMapper.findByConditionWithPagination(request, 6, 2)).isEmpty();
+        assertThat(scanMapper.countByCondition(request)).isEqualTo(5L);
+    }
+
+    @Test
     @DisplayName("在 PostgreSQL 16 上应用全部 Flyway 迁移")
     void appliesAllFlywayMigrationsOnPostgresql16() {
         String serverVersion = jdbcTemplate.queryForObject("SHOW server_version", String.class);

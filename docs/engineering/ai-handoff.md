@@ -134,6 +134,11 @@
 - #99/#350 P1，`perf/99-scan-single-flight`，worktree `/Volumes/data/Project/MRR-worktrees/99-scan-single-flight`。#771已合并 e17d87e1，head d1b2cbe6，governance45428334878、quality45428335084，1151单测零失败，PG16按范围跳过，CI实测冷键8次/热键0次回源。fb40719e实际RED 9项1失败，预期1实际8；cd38d173复用GenerationAwareScanCache同代际同键加载，最多1000个在途登记（满后按普通查询执行）、数据库查询不持有全局锁；五个原注解使用自定义同步加载，空/空列表/零条ArchiveLookupResult不缓存，异常通知等待者并移除登记，旧代际不加入新请求或回填。未更改缓存键、TTL、签名缓存及DB语义。
 - 实际53项定向通过（ScanServiceCacheTest、MigrationServiceImplTest、ScanServiceArchiveLookupTest、ArchiveExportSummaryServiceTest），模拟Mapper冷并发8→1、热0；新代际不等待旧阻塞加载、异常/空结果后重查均通过。非真实端到端吞吐；等待者受首请求实际SQL耗时约束，不声称独立硬超时。同步main dae8bef7，最新CI待验收；独立revert，无生产变更。
 
+## 04.3 HTTP/Nginx 正文停发及实际SDK中止（2026-11-24）
+
+- #230/#350 P1，分支 `fix/230-http-body-idle-timeout`，worktree `/Volumes/data/Project/MRR-worktrees/230-http-body-idle-timeout`。e5dc75a0 实际RED 2项1错误：loopback HTTP 返回响应头及首字节后停发，原BodyHandlers.ofInputStream读取不能在3秒内完成。7e4668bd 用JDK BodySubscriber单次需求、2项有界事件队列、空闲读取超时，复用各节点既有readTimeout，取消subscription，不新增每读工作线程；保留实际长度、资源许可、认证和来源顺序。24项回归通过。
+- 增加真实AWS SDK loopback S3协议响应首字节后停发、部分读取关闭abort、下一对象在5秒内读取，非生产凭据/服务；扩展28项零失败/错误/跳过，原始测试 /tmp/mrr-http-oss-final.log。仅证明本机HTTP/SDK路径，并非真实Nginx/NAS/OSS多节点连接池压力或正文网络写硬截止。网络来源按节点熔断待#773合并后复用其状态逻辑，避免建立第二套机制。同步main dae8bef7，最新CI待验收；独立revert，无生产改动。
+
 ## 每轮交接模板
 
 - 更新时间、任务、风险、目标及非目标：

@@ -31,6 +31,7 @@ def main():
     parser.add_argument("--java-home", type=Path, required=True)
     parser.add_argument("--sample-seconds", type=int, default=5)
     parser.add_argument("--multikey", action="store_true")
+    parser.add_argument("--trgm", action="store_true", help="Measure optional GIN indexes only in this disposable lab")
     args = parser.parse_args()
     if not 10_000 <= args.rows <= MAX_ROWS or not 1000 <= args.batch <= 100_000:
         parser.error("rows must be 10,000..30,000,000; batch 1,000..100,000")
@@ -232,6 +233,67 @@ def main():
                     "transactions": len(samples), "tps": float(tps[1]), "failed": 0,
                     **{f"p{p}_ms": samples[math.ceil(len(samples)*p/100)-1]/1000 for p in (50,95,99)}
                 }
+        if args.trgm:
+            # Compare the same predicates and a rollback-only insert before/after candidate GIN indexes.
+            # Never change production Flyway or force planner index selection.
+            report["trgm"] = {}
+            rare = sql("SELECT bah FROM app.mr_archive WHERE id=1")
+            if not rare.isdecimal():
+                raise RuntimeError("synthetic code invariant failed")
+            trgm_cases = {
+                "rare_count": f"SELECT count(*) FROM app.mr_scan WHERE bah LIKE '%{rare}%'",
+                "common_count": "SELECT count(*) FROM app.mr_scan WHERE bah LIKE '%00%'",
+                "rare_cursor": f"SELECT id FROM app.mr_scan WHERE bah LIKE '%{rare}%' AND id>{args.rows//2} ORDER BY id LIMIT 51",
+                "common_cursor": f"SELECT id FROM app.mr_scan WHERE bah LIKE '%00%' AND id>{args.rows//2} ORDER BY id LIMIT 51",
+                "sjh_count": f"SELECT count(*) FROM app.mr_scan WHERE sjh LIKE '%{sjh}%'",
+            }
+            def trgm_measure(phase):
+                metrics = {}
+                for name, query in trgm_cases.items():
+                    key = f"trgm-{phase}-{name}"
+                    try:
+                        result = run([*psql, "-At", "-c",
+                            "BEGIN READ ONLY; SET LOCAL statement_timeout='5s'; SET LOCAL lock_timeout='1s'; "
+                            "EXPLAIN (ANALYZE,BUFFERS,FORMAT JSON) " + query + "; ROLLBACK;"], log=key+".log")
+                    except RuntimeError:
+                        if "canceling statement due to statement timeout" not in (lab / (key+".log")).read_text():
+                            raise
+                        metrics[name] = {"status":"statement_timeout","budget_ms":5000}
+                        report.setdefault("legacy_timeouts", []).append(key)
+                        continue
+                    plan = json.loads(result[result.index("["):result.rindex("]")+1])[0]
+                    (lab / (key+".json")).write_text(json.dumps(plan, indent=2))
+                    def indexes(node):
+                        return ([node["Index Name"]] if "Index Name" in node else []) + [
+                            item for child in node.get("Plans",[]) for item in indexes(child)]
+                    metrics[name] = {"execution_ms":plan["Execution Time"],"indexes":indexes(plan["Plan"]),
+                        "shared_blocks":plan["Plan"].get("Shared Hit Blocks",0)+plan["Plan"].get("Shared Read Blocks",0)}
+                # Same synthetic 1000 inserts in a transaction that always rolls back.
+                insert = f"""BEGIN; SET LOCAL statement_timeout='30s';
+                    EXPLAIN (ANALYZE,BUFFERS,FORMAT JSON)
+                    INSERT INTO app.mr_scan(id,archive_id,bah,sjh,brxh,filename,folder,pages,uploadflag,file_size)
+                    SELECT n,1,a.bah,a.sjh,'1','trgm-probe-'||n||'.jpg','synthetic',1,1,65536
+                    FROM generate_series({args.rows+1},{args.rows+1000}) n
+                    CROSS JOIN app.mr_archive a WHERE a.id=1; ROLLBACK;"""
+                result = run([*psql,"-At","-c",insert],log=f"trgm-{phase}-insert.log")
+                plan = json.loads(result[result.index("["):result.rindex("]")+1])[0]
+                metrics["insert_1000_rollback_ms"] = plan["Execution Time"]
+                return metrics
+            report["trgm"]["before"] = trgm_measure("before")
+            t = time.monotonic()
+            sql("CREATE INDEX lab_bah_trgm ON app.mr_scan USING gin(bah public.gin_trgm_ops); "
+                "CREATE INDEX lab_sjh_trgm ON app.mr_scan USING gin(sjh public.gin_trgm_ops)")
+            report["trgm"]["build_seconds"] = round(time.monotonic()-t,3)
+            if sql("SELECT count(*) FROM pg_index i JOIN pg_class c ON c.oid=i.indexrelid "
+                   "JOIN pg_namespace n ON n.oid=c.relnamespace WHERE n.nspname='app' "
+                   "AND c.relname IN ('lab_bah_trgm','lab_sjh_trgm') AND i.indisvalid AND i.indisready") != "2":
+                raise RuntimeError("candidate indexes not ready/valid")
+            report["trgm"]["index_bytes"] = {name:int(sql(f"SELECT pg_relation_size('app.{name}')"))
+                for name in ("lab_bah_trgm","lab_sjh_trgm")}
+            sql("ANALYZE app.mr_scan")
+            report["trgm"]["after"] = trgm_measure("after")
+            if int(sql("SELECT count(*) FROM app.mr_scan")) != args.rows:
+                raise RuntimeError("rollback probe changed row count")
         report["status"] = "complete_with_legacy_timeouts" if report.get("legacy_timeouts") else "complete"
     finally:
         if started or (data / "postmaster.pid").is_file():

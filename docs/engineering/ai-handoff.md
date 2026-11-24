@@ -172,6 +172,11 @@
 - #99/#350 P1，分支 `perf/99-legacy-cursor`，worktree `/Volumes/data/Project/MRR-worktrees/99-legacy-cursor`。4c90d9d9实际RED 18项1失败（精确游标忽略文件名条件）。现有 /api/v1/scan/cursor/condition 增加显式 legacyContains=true，复用旧LIKE及全部筛选谓词、id游标、size+1、不执行COUNT，3秒Mapper语句超时不变；默认精确游标仍为精确编号，遇不支持的非空筛选明确400。旧OFFSET/COUNT接口及其结果语义不变。未修改Flyway或生产索引。
 - 实际51项定向零失败/错误/跳过；新增真实PG16包含/前导零/附加筛选、同页OFFSET等价测试，待CI执行。尚未迁移前端或验证千万级模糊游标的稀疏结果性能，不能声称解决旧COUNT瓶颈；后续隔离库评估pg_trgm。main 6454b5a4，#778已合并，1164单测/147 PG16通过。独立revert，无生产操作。
 
+## 03 pg_trgm 隔离评估（2026-11-25）
+
+- #99/#350 P2，分支 `perf/99-trgm-lab`，worktree `/Volumes/data/Project/MRR-worktrees/99-trgm-lab`。复用合成PG16脚本新增 --trgm，仅新建隔离库构建 BAH/SJH GIN，不改Flyway、生产DDL或查询预算。记录计划实际索引名、共享块、容量、构建时间、5秒超时；1000行插入在事务中回滚，实际总行数不变。10万及100万实跑均结束、实例已停止。详见专题 [GIN隔离实验](synthetic-trgm-benchmark-2026-11-25.md)。
+- 3000万独立原工具运行：`/Volumes/data/Project/MRR-worktrees/mrr-scan-lab-3a6p6oh4`，日志 `/tmp/mrr-synthetic-30m-r1.log`，启动shell PID2140，2400秒总预算、15秒多键、10万/批；本轮尚未结束，不能宣称实际3000万、索引或尾延迟通过。不要并发重复启动；下一轮先读report.json并核查pg_ctl状态。#781已合并38ed106c，1169单测/148 PG16通过。
+
 ## 每轮交接模板
 
 - 更新时间、任务、风险、目标及非目标：

@@ -106,6 +106,31 @@ class DiagnosticEndpointPermissionsTest {
                 .doesNotContainKeys("sourceUrl", "secret", "cookie");
     }
 
+    @Test
+    void contentVerificationRequiresBothPermissionsAndNoStore() throws Exception {
+        var service = mock(ImageSourceDiagnosticsService.class);
+        var controller = new OperationsDiagnosticsController(mock(OperationsDiagnosticsService.class),
+                mock(OperationsCenterService.class), service, mock(IntegrityDiagnosticsService.class),
+                mock(MaintenanceModeService.class), new ImageDeliveryProperties());
+        var mvc = MockMvcBuilders.standaloneSetup(controller)
+                .addInterceptors(new AuthorizationInterceptor()).build();
+        String path = "/api/v1/operations/image-content/verify";
+        for (var permissions : List.of(List.of("system:manage"), List.of("record:read"))) {
+            mvc.perform(post(path).contentType(MediaType.APPLICATION_JSON).content("{\"imageId\":1}")
+                    .requestAttr(AuthorizationInterceptor.AUTH_SESSION_ATTRIBUTE,
+                        request(permissions).getAttribute(AuthorizationInterceptor.AUTH_SESSION_ATTRIBUTE)))
+                    .andExpect(status().isForbidden());
+        }
+        verifyNoInteractions(service);
+        when(service.verifyContent(1)).thenReturn(java.util.Map.of("status", "VERIFIED"));
+        mvc.perform(post(path).contentType(MediaType.APPLICATION_JSON).content("{\"imageId\":1}")
+                .requestAttr(AuthorizationInterceptor.AUTH_SESSION_ATTRIBUTE,
+                    request(List.of("system:manage","record:read")).getAttribute(AuthorizationInterceptor.AUTH_SESSION_ATTRIBUTE)))
+                .andExpect(status().isOk())
+                .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.header().string("Cache-Control", "private, no-store"))
+                .andExpect(jsonPath("$.data.status").value("VERIFIED"));
+    }
+
     private MockHttpServletRequest request(List<String> permissions) {
         return request("POST", "/api/v1/operations/query-diagnostics", permissions);
     }

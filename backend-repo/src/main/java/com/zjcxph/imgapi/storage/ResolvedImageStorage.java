@@ -68,6 +68,61 @@ public class ResolvedImageStorage implements ImageStorage {
     public record SourceAttempt(String source, boolean available, String error) {}
     public record SourceProbe(List<SourceAttempt> attempts, String selectedSource, boolean available, String error) {}
 
+    private static final long VERIFY_BYTES = 8L * 1024 * 1024;
+    private final java.util.concurrent.Semaphore verificationPermit = new java.util.concurrent.Semaphore(1);
+
+    /** Bounded per-image integrity primitive; does not persist results or claim archive completeness.
+     * Existing source permits and read timeouts remain authoritative for actual native resource release. */
+    public ContentVerification verifyContent(PathDO image, String expectedMd5) {
+        if (!verificationPermit.tryAcquire()) return new ContentVerification("BUSY", 0, "");
+        try (var budget = SourceOpenBudget.start(java.time.Duration.ofSeconds(30))) {
+            List<SourceAttempt> attempts = new ArrayList<>();
+            long bytes = 0;
+            try {
+                var md5 = java.security.MessageDigest.getInstance("MD5");
+                var sha = java.security.MessageDigest.getInstance("SHA-256");
+                try (InputStream stream = open(image, attempts::add)) {
+                    byte[] buffer = new byte[16384];
+                    while (true) {
+                        SourceOpenBudget.check();
+                        int read = stream.read(buffer, 0, (int)Math.min(buffer.length, VERIFY_BYTES + 1 - bytes));
+                        SourceOpenBudget.check();
+                        if (read < 0) break;
+                        if (read == 0) return new ContentVerification("READ_FAILED", bytes, "");
+                        bytes += read;
+                        if (bytes > VERIFY_BYTES) return new ContentVerification("BUDGET_EXCEEDED", bytes, "");
+                        md5.update(buffer, 0, read);
+                        sha.update(buffer, 0, read);
+                    }
+                }
+                SourceOpenBudget.check();
+                String digest = java.util.HexFormat.of().formatHex(sha.digest());
+                if (image.getFileSize() != null && image.getFileSize() > 0 && image.getFileSize() != bytes)
+                    return new ContentVerification("SIZE_MISMATCH", bytes, digest);
+                if (bytes == 0) return new ContentVerification("EMPTY", bytes, digest);
+                if (expectedMd5 == null || !expectedMd5.matches("(?i)[0-9a-f]{32}"))
+                    return new ContentVerification("READABLE_NO_BASELINE", bytes, digest);
+                String status = expectedMd5.equalsIgnoreCase(java.util.HexFormat.of().formatHex(md5.digest()))
+                        ? "VERIFIED" : "CHECKSUM_MISMATCH";
+                return new ContentVerification(status, bytes, digest);
+            } catch (IOException | RuntimeException failure) {
+                boolean opened = attempts.stream().anyMatch(SourceAttempt::available);
+                String code = classify(failure);
+                String status = opened ? "READ_FAILED" : "SOURCE_UNAVAILABLE";
+                if ("TIMEOUT".equals(code) || "INTERRUPTED".equals(code)) status = code;
+                else if (!opened && !attempts.isEmpty() && attempts.stream().allMatch(a -> "NOT_FOUND".equals(a.error())))
+                    status = "MISSING_OR_UNREADABLE";
+                return new ContentVerification(status, bytes, "");
+            } catch (java.security.NoSuchAlgorithmException impossible) {
+                throw new IllegalStateException("Required digest unavailable", impossible);
+            }
+        } finally {
+            verificationPermit.release();
+        }
+    }
+
+    public record ContentVerification(String status, long bytesRead, String sha256) {}
+
     private InputStream open(PathDO image, Consumer<SourceAttempt> observation) throws IOException {
         try (var budget = SourceOpenBudget.start(properties.getOpenBudget())) {
             return openWithinBudget(image, observation);

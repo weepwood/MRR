@@ -293,6 +293,21 @@ export function diagnoseImageSource(params: { bah?: string, sjh?: string, imageI
   )
 }
 
+export interface ImageContentVerification {
+  imageId: number
+  status: string
+  bytesRead: number
+  checkedAt: string
+  scope: 'SINGLE_IMAGE_BOUNDED'
+}
+
+export function verifyImageContent(imageId: number) {
+  return unwrap(
+    postRequest<ImageContentVerification>('/api/v1/operations/image-content/verify', { imageId }),
+    '影像正文校验',
+  )
+}
+
 export function getIntegritySummary() {
   return unwrap(
     getRequest<IntegritySummary>('/api/v1/operations/integrity'),

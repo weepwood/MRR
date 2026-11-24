@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import type {
   ExportCenterJob,
+  ImageContentVerification,
   ImageSourceDiagnosis,
   IntegritySummary,
   MaintenanceStatus,
@@ -11,7 +12,7 @@ import type {
   ReadinessSnapshot,
 } from '@/api/modules/operations'
 import { ElMessage } from 'element-plus'
-import { computed, onMounted, reactive, ref } from 'vue'
+import { computed, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import {
   diagnoseImageSource,
@@ -27,6 +28,7 @@ import {
   getPermissionMatrix,
   runOperationsDiagnostics,
   savePermissionMatrixSnapshot,
+  verifyImageContent,
 } from '@/api/modules/operations'
 import AppEmpty from '@/components/AppEmpty/index.vue'
 import MrrPageHeader from '@/components/MrrPageHeader/index.vue'
@@ -48,6 +50,7 @@ const loading = reactive({
   diagnostics: false,
   report: false,
   image: false,
+  content: false,
   integrity: false,
   tasks: false,
   permissions: false,
@@ -75,6 +78,49 @@ const imageForm = reactive<{ bah: string, sjh: string, imageId?: number }>({
   imageId: undefined,
 })
 const imageDiagnosis = ref<ImageSourceDiagnosis>()
+const contentVerification = ref<ImageContentVerification>()
+const contentError = ref('')
+let contentGeneration = 0
+const contentStatusLabels: Record<string, string> = {
+  VERIFIED: '已有校验和匹配',
+  READABLE_NO_BASELINE: '可读，缺少有效校验基线',
+  SIZE_MISMATCH: '文件大小不匹配',
+  CHECKSUM_MISMATCH: '校验和不匹配',
+  EMPTY: '空文件',
+  READ_FAILED: '读取或关闭失败',
+  SOURCE_UNAVAILABLE: '来源不可用',
+  MISSING_OR_UNREADABLE: '缺失或不可读',
+  BUDGET_EXCEEDED: '超过读取预算，未完成',
+  BUSY: '校验资源繁忙',
+  TIMEOUT: '校验超时',
+  INTERRUPTED: '校验中断',
+}
+function clearContentVerification() {
+  contentGeneration++
+  contentVerification.value = undefined
+  contentError.value = ''
+}
+watch(() => imageForm.imageId, clearContentVerification, { flush: 'sync' })
+watch(() => activeTab.value, clearContentVerification, { flush: 'sync' })
+watch(() => [canManage.value, canViewTasks.value], clearContentVerification, { flush: 'sync' })
+watch(() => useUserStore().token, clearContentVerification, { flush: 'sync' })
+onBeforeUnmount(clearContentVerification)
+async function runContentVerification() {
+  const id = imageForm.imageId
+  if (!canManage.value || !canViewTasks.value || !id || loading.content || loading.image) { return }
+  clearContentVerification()
+  const current = contentGeneration
+  loading.content = true
+  try {
+    const result = await verifyImageContent(id)
+    if (current === contentGeneration && result.imageId === id) { contentVerification.value = result }
+  }
+  catch {
+    if (current === contentGeneration) { contentError.value = '影像正文校验失败，请重试' }
+  }
+  finally { loading.content = false }
+}
+
 const integrity = ref<IntegritySummary>()
 const exportJobs = ref<ExportCenterJob[]>([])
 const permissionMatrix = ref<PermissionMatrix>()
@@ -852,7 +898,23 @@ onMounted(async () => {
                 开始诊断
               </el-button>
             </el-form-item>
+            <el-form-item v-if="canManage && canViewTasks">
+              <el-button :disabled="!imageForm.imageId || loading.image" :loading="loading.content" @click="runContentVerification">
+                校验单张正文
+              </el-button>
+            </el-form-item>
           </el-form>
+        </MrrSectionCard>
+        <MrrSectionCard v-if="contentVerification || contentError" title="单张正文校验" description="最多读取 8 MiB（另读 1 字节判断超限），仅反映本次受控来源，不代表整案完整性。">
+          <el-alert v-if="contentError" type="error" :title="contentError" :closable="false" />
+          <template v-else-if="contentVerification">
+            <el-tag :type="contentVerification.status === 'VERIFIED' ? 'success' : 'warning'">
+              {{ contentStatusLabels[contentVerification.status] || '未知结果' }}
+            </el-tag>
+            <p class="overview-hint">
+              读取 {{ formatNumber(contentVerification.bytesRead) }} 字节 · {{ formatTime(contentVerification.checkedAt) }}
+            </p>
+          </template>
         </MrrSectionCard>
         <template v-if="imageDiagnosis">
           <section class="mrr-metric-grid mrr-metric-grid--three metric-row">

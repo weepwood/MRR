@@ -58,6 +58,11 @@ function overview(): OperationsOverview {
   }
   return {
     imageDeliveryMode: 'gateway',
+    networkRuntime: {
+      HTTP: { inUse: 1, limit: 8, waiting: 0, nodes: [{ ordinal: 1, state: 'OPEN' }] },
+      NGINX: { inUse: 0, limit: 8, waiting: 0, nodes: [{ ordinal: 1, state: 'UNOBSERVED' }] },
+      OSS: { inUse: 0, limit: 8, waiting: 0, nodes: [{ ordinal: 1, state: 'CLOSED' }], poolSample: {} },
+    },
     nasRuntime: { inUse: 1, limit: 4, nodes: [{ ordinal: 1, state: 'OPEN', inUse: 1, limit: 2 }, { ordinal: 2, state: 'CLOSED', inUse: 0, limit: 2 }] },
     generatedAt: new Date().toISOString(),
     readiness: readiness(),

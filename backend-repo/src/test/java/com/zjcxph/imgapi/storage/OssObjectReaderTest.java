@@ -103,6 +103,9 @@ class OssObjectReaderTest {
                 try (var fast = reader.open("fast")) { return fast.readAllBytes(); }
             });
             assertThat(result.get(5, java.util.concurrent.TimeUnit.SECONDS)).containsExactly((byte)7);
+            assertThat(reader.poolSnapshot()).containsEntry("max", 50)
+                    .containsKeys("sampledAt", "leased", "available", "pending");
+            assertThat(reader.poolSnapshot().toString()).doesNotContain("synthetic", "127.0.0.1");
         } finally {
             release.countDown();
             reader.close();

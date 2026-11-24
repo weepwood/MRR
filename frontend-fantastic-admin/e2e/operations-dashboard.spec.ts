@@ -183,3 +183,22 @@ test('NAS 节点熔断和实际许可状态可见但不显示源地址', async (
   await expect(dashboard.getByText('熔断冷却')).toBeVisible()
   await expect(dashboard.getByText('探针进行中')).toBeVisible()
 })
+
+test('网络影像来源异常优先并区分应用许可和SDK采样', async ({ page }) => {
+  const data = { ...snapshot('READ_WRITE'), networkRuntime: {
+    HTTP: { inUse: 0, limit: 8, waiting: 0, nodes: [{ ordinal: 1, state: 'CLOSED' }] },
+    NGINX: { inUse: 1, limit: 8, waiting: 2, nodes: [{ ordinal: 1, state: 'OPEN' }] },
+    OSS: { inUse: 0, limit: 8, waiting: 0, nodes: [], poolSample: {} },
+  } }
+  await page.route(overviewUrl, route => route.fulfill({ json: { code: 200, data } }))
+  await page.goto('/operations-center')
+  const rows = page.locator('.network-runtime-row')
+  await expect(rows.first()).toContainText('NGINX')
+  await expect(rows.first()).toContainText('熔断冷却')
+  await expect(rows.first()).toContainText('等待约 2')
+  await expect(page.getByText('SDK 池尚无有效采样')).toBeVisible()
+  await expect(page.getByText('以上许可并非 TCP 连接数', { exact: false })).toBeVisible()
+  data.networkRuntime.NGINX.nodes[0].state = 'CLOSED'
+  await page.getByRole('button', { name: '刷新看板' }).click()
+  await expect(page.getByText('较上次成功快照，熔断或半开数量变化：NGINX')).toBeVisible()
+})

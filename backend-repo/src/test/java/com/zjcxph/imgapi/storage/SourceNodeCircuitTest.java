@@ -29,6 +29,33 @@ class SourceNodeCircuitTest {
     }
 
     @Test
+    void simultaneousHalfOpenCompetitorsHaveExactlyOneWinner() throws Exception {
+        var now = new AtomicLong();
+        var circuit = new SourceNodeCircuit(3, Duration.ofSeconds(30), now::get);
+        for (int i = 0; i < 3; i++) circuit.finish(circuit.begin(), SourceNodeCircuit.Outcome.BODY_FAILURE);
+        now.addAndGet(Duration.ofSeconds(30).toNanos());
+        var start = new java.util.concurrent.CountDownLatch(1);
+        var pool = java.util.concurrent.Executors.newFixedThreadPool(8);
+        var futures = new java.util.ArrayList<java.util.concurrent.Future<SourceNodeCircuit.Attempt>>();
+        try {
+            for (int i = 0; i < 8; i++) futures.add(pool.submit(() -> {
+                start.await();
+                try { return circuit.begin(); } catch (SourceNodeCircuit.CircuitOpen rejected) { return null; }
+            }));
+            start.countDown();
+            var winners = new java.util.ArrayList<SourceNodeCircuit.Attempt>();
+            for (var future : futures) {
+                var attempt = future.get(3, java.util.concurrent.TimeUnit.SECONDS);
+                if (attempt != null) winners.add(attempt);
+            }
+            org.assertj.core.api.Assertions.assertThat(winners).hasSize(1);
+            org.assertj.core.api.Assertions.assertThat(circuit.state()).isEqualTo("HALF_OPEN_ACTIVE");
+            circuit.finish(winners.getFirst(), SourceNodeCircuit.Outcome.SUCCESS);
+            org.assertj.core.api.Assertions.assertThat(circuit.state()).isEqualTo("CLOSED");
+        } finally { pool.shutdownNow(); }
+    }
+
+    @Test
     void neutralFailuresDoNotTripAndSuccessResetsTimeoutCount() throws Exception {
         var now = new AtomicLong();
         var circuit = new SourceNodeCircuit(3, Duration.ofSeconds(30), now::get);

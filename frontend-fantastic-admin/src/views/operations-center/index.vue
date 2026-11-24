@@ -57,6 +57,7 @@ const loading = reactive({
 
 const overview = ref<OperationsOverview>()
 const overviewFailed = ref(false)
+const networkChanges = ref<string[]>([])
 let overviewRequest: Promise<void> | undefined
 const canManage = computed(() => hasPermission('system:manage'))
 const canViewTasks = computed(() => hasPermission('record:read'))
@@ -98,6 +99,13 @@ const filteredExportJobs = computed(() => {
   return exportJobs.value.filter(item => item.status === exportStatus.value)
 })
 
+const circuitLabels: Record<string, string> = { OPEN: '熔断冷却', HALF_OPEN_ACTIVE: '探针进行中', HALF_OPEN_READY: '等待探针', CLOSED: '未熔断', UNOBSERVED: '尚无请求' }
+const circuitPriority: Record<string, number> = { OPEN: 0, HALF_OPEN_ACTIVE: 1, HALF_OPEN_READY: 2, CLOSED: 3, UNOBSERVED: 4 }
+const networkSources = computed(() => Object.entries(overview.value?.networkRuntime || {}).map(([kind, source]) => ({
+  kind,
+  ...source,
+  nodes: [...source.nodes].sort((a, b) => (circuitPriority[a.state] ?? 5) - (circuitPriority[b.state] ?? 5) || a.ordinal - b.ordinal),
+})).sort((a, b) => (circuitPriority[a.nodes[0]?.state] ?? 5) - (circuitPriority[b.nodes[0]?.state] ?? 5) || b.waiting - a.waiting))
 const overviewChecks = computed(() => overview.value?.readiness.checks || [])
 const indexCapacity = computed(() => overviewChecks.value.find(check => check.code === 'scan-code-key-indexes')?.details)
 function capacityValue(key: string, bytes = false) {
@@ -206,6 +214,17 @@ function loadOverview() {
   loading.overview = true
   overviewRequest = getOperationsOverview()
     .then((snapshot) => {
+      const previous = overview.value?.networkRuntime
+      networkChanges.value = Object.entries(snapshot.networkRuntime || {}).flatMap(([kind, source]) => {
+        const before = previous?.[kind as keyof typeof previous]
+        if (!before || before.nodes.length !== source.nodes.length) {
+          return []
+        }
+        // Compare aggregate counts, not opaque ordinals across configuration changes.
+        const states = ['OPEN', 'HALF_OPEN_ACTIVE', 'HALF_OPEN_READY']
+        const count = (nodes: typeof source.nodes, state: string) => nodes.filter(node => node.state === state).length
+        return states.some(state => count(before.nodes, state) !== count(source.nodes, state)) ? [kind] : []
+      })
       overview.value = snapshot
       readiness.value = snapshot.readiness
       overviewFailed.value = false
@@ -552,6 +571,48 @@ onMounted(async () => {
               <p class="overview-hint">
                 编号按配置键排序，不显示节点名或路径；未熔断不等于现场可用。
               </p>
+            </MrrSectionCard>
+
+            <MrrSectionCard v-if="overview.networkRuntime" title="网络影像来源" description="异常节点优先 · 应用许可与 OSS SDK 采样分开显示">
+              <template v-if="overviewFailed">
+                <el-alert title="以下为上次成功快照" type="info" :closable="false" />
+              </template>
+              <p v-if="!overviewFailed && networkChanges.length" class="overview-hint" role="status">
+                较上次成功快照，熔断或半开数量变化：{{ networkChanges.join('、') }}
+              </p>
+              <div class="issue-list">
+                <div v-for="source in networkSources" :key="source.kind" class="issue-row network-runtime-row">
+                  <div>
+                    <strong>{{ source.kind }}</strong>
+                    <p>应用许可 {{ source.inUse }} / {{ source.limit }} · 等待约 {{ source.waiting }}</p>
+                    <p v-if="!source.nodes.length">
+                      未配置节点
+                    </p>
+                    <p v-if="source.kind === 'OSS'">
+                      <template v-if="source.poolSample?.sampledAt">
+                        SDK 最近采样：租用 {{ source.poolSample.leased }} / {{ source.poolSample.max }} · 可用 {{ source.poolSample.available }} · 等待 {{ source.poolSample.pending }} · {{ formatTime(source.poolSample.sampledAt) }}
+                      </template>
+                      <template v-else>
+                        SDK 池尚无有效采样
+                      </template>
+                    </p>
+                  </div>
+                  <div class="network-node-tags">
+                    <el-tag v-for="node in source.nodes" :key="node.ordinal" :type="node.state === 'OPEN' ? 'danger' : node.state.startsWith('HALF_OPEN') ? 'warning' : 'info'">
+                      节点 {{ node.ordinal }} · {{ circuitLabels[node.state] || '未知' }}
+                    </el-tag>
+                  </div>
+                </div>
+              </div>
+              <p class="overview-hint">
+                未熔断不等于现场健康。HTTP/Nginx 的 JDK 客户端不提供连接池内部实时指标，以上许可并非 TCP 连接数；OSS 为请求时采样，非实时池状态。
+              </p>
+              <el-button v-if="canViewLogs" text type="primary" @click="navigate('/logs')">
+                查看运行日志
+              </el-button>
+              <el-button v-if="canManage" text type="primary" @click="selectTab('diagnostics')">
+                查看体检
+              </el-button>
             </MrrSectionCard>
 
             <div class="two-column-layout">
@@ -1233,5 +1294,15 @@ onMounted(async () => {
     justify-content: space-between;
     justify-items: stretch;
   }
+}
+
+.network-runtime-row {
+  flex-wrap: wrap;
+}
+
+.network-node-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
 }
 </style>

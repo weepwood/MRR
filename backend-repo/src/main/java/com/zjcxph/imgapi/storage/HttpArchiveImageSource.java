@@ -92,6 +92,10 @@ public class HttpArchiveImageSource implements ArchiveImageSource {
         }));
     }
 
+    public java.util.Map<String, Object> runtimeSnapshot() {
+        return NetworkRuntimeSnapshot.of(permitGuard, properties.getHttpNodes().keySet(), circuits);
+    }
+
     @Override
     public String describeSource(PathDO image) {
         return "HTTP";

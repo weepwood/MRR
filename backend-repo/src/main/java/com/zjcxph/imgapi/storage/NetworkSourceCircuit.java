@@ -26,6 +26,8 @@ final class NetworkSourceCircuit {
         this.circuit = java.util.Objects.requireNonNull(circuit);
     }
 
+    String state() { return circuit.state(); }
+
     InputStream open(SourcePermitGuard.InputStreamSupplier operation) throws IOException {
         var attempt = circuit.begin();
         try {
@@ -41,7 +43,7 @@ final class NetworkSourceCircuit {
                     if (count > 0) consumed += count;
                     if (count < 0 || (length >= 0 && consumed >= length)) {
                         finish(length >= 0 && consumed < length
-                                ? SourceNodeCircuit.Outcome.SOURCE_FAILURE : SourceNodeCircuit.Outcome.SUCCESS);
+                                ? SourceNodeCircuit.Outcome.BODY_FAILURE : SourceNodeCircuit.Outcome.SUCCESS);
                     }
                 }
                 @Override public int read() throws IOException {
@@ -50,7 +52,7 @@ final class NetworkSourceCircuit {
                         received(value < 0 ? -1 : 1);
                         return value;
                     } catch (IOException | RuntimeException failure) {
-                        finish(classify(failure));
+                        finish(classifyBody(failure));
                         throw failure;
                     }
                 }
@@ -60,13 +62,13 @@ final class NetworkSourceCircuit {
                         received(read);
                         return read;
                     } catch (IOException | RuntimeException failure) {
-                        finish(classify(failure));
+                        finish(classifyBody(failure));
                         throw failure;
                     }
                 }
                 @Override public void close() throws IOException {
                     try { super.close(); }
-                    catch (IOException | RuntimeException failure) { finish(classify(failure)); throw failure; }
+                    catch (IOException | RuntimeException failure) { finish(classifyBody(failure)); throw failure; }
                     finally { finish(SourceNodeCircuit.Outcome.NEUTRAL); }
                 }
             };
@@ -81,12 +83,17 @@ final class NetworkSourceCircuit {
         var attempt = circuit.begin();
         try {
             long value = operation.get();
-            circuit.finish(attempt, value >= 0 ? SourceNodeCircuit.Outcome.SUCCESS : SourceNodeCircuit.Outcome.NEUTRAL);
+            circuit.finish(attempt, value >= 0 ? SourceNodeCircuit.Outcome.METADATA_SUCCESS : SourceNodeCircuit.Outcome.NEUTRAL);
             return value;
         } catch (IOException | RuntimeException failure) {
             circuit.finish(attempt, classify(failure));
             throw failure;
         }
+    }
+
+    private static SourceNodeCircuit.Outcome classifyBody(Throwable failure) {
+        var outcome = classify(failure);
+        return outcome == SourceNodeCircuit.Outcome.SOURCE_FAILURE ? SourceNodeCircuit.Outcome.BODY_FAILURE : outcome;
     }
 
     private static SourceNodeCircuit.Outcome classify(Throwable failure) {

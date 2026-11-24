@@ -80,6 +80,7 @@ final class SourcePermitGuard {
 
     int limit() { return limit; }
     int inUse() { return limit - semaphore.availablePermits(); }
+    int waiting() { return semaphore.getQueueLength(); }
 
     static final class CapacityException extends IOException {
         CapacityException() {

@@ -135,6 +135,12 @@ public class NginxArchiveImageSource implements ArchiveImageSource {
         }));
     }
 
+    public java.util.Map<String, Object> runtimeSnapshot() {
+        var configured = configuredImageUrls().stream().map(this::parseConfiguredUri).map(this::authority)
+                .filter(java.util.Objects::nonNull).toList();
+        return NetworkRuntimeSnapshot.of(permitGuard, configured, circuits);
+    }
+
     @Override
     public String describeSource(PathDO image) {
         return "NGINX";

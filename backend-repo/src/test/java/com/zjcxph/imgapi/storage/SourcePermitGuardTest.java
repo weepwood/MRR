@@ -130,6 +130,36 @@ class SourcePermitGuardTest {
         assertExactlyOnePermitAvailable(guard);
     }
 
+    @Test
+    void queuedWaitersAcquireInOrderAndCancelledWaiterDoesNotConsumePermit() throws Exception {
+        var guard = new SourcePermitGuard(1, Duration.ofSeconds(5));
+        var initial = guard.open(InputStream::nullInputStream);
+        var order = new java.util.concurrent.CopyOnWriteArrayList<Integer>();
+        var executor = Executors.newFixedThreadPool(3);
+        try {
+            var first = executor.submit(() -> guard.call(() -> { order.add(1); return 1; }));
+            awaitWaiters(guard, 1);
+            var cancelled = executor.submit(() -> guard.call(() -> { order.add(2); return 2; }));
+            awaitWaiters(guard, 2);
+            var last = executor.submit(() -> guard.call(() -> { order.add(3); return 3; }));
+            awaitWaiters(guard, 3);
+            cancelled.cancel(true);
+            awaitWaiters(guard, 2);
+            assertThat(guard.inUse()).isEqualTo(1);
+            initial.close();
+            assertThat(first.get(3, TimeUnit.SECONDS)).isEqualTo(1);
+            assertThat(last.get(3, TimeUnit.SECONDS)).isEqualTo(3);
+            assertThat(order).containsExactly(1, 3);
+            assertThat(guard.inUse()).isZero();
+        } finally { initial.close(); executor.shutdownNow(); }
+    }
+
+    private void awaitWaiters(SourcePermitGuard guard, int expected) throws InterruptedException {
+        long deadline = System.nanoTime() + Duration.ofSeconds(2).toNanos();
+        while (guard.waiting() != expected && System.nanoTime() < deadline) Thread.sleep(5);
+        assertThat(guard.waiting()).isEqualTo(expected);
+    }
+
     private SourcePermitGuard guard() {
         return new SourcePermitGuard(1, Duration.ofMillis(30));
     }

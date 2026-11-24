@@ -101,6 +101,8 @@ class HttpArchiveImageSourceTest {
             org.assertj.core.api.Assertions.assertThatThrownBy(() -> source.open(image))
                     .isInstanceOf(SourceNodeCircuit.CircuitOpen.class);
             assertThat(requests.get()).isEqualTo(3);
+            assertThat(source.runtimeSnapshot().toString()).contains("state=OPEN", "state=UNOBSERVED")
+                    .doesNotContain("bad", "good", "127.0.0.1");
             image.setSourceNode("good");
             try (var input = source.open(image)) { assertThat(input.readAllBytes()).containsExactly((byte)7); }
         } finally { server.stop(0); }

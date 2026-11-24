@@ -24,6 +24,23 @@ public class OssObjectReader {
 
     private final OssProperties properties;
     private volatile S3Client client;
+    private volatile java.util.Map<String, Object> poolSample = java.util.Map.of();
+
+    /** SDK request-attempt observation, not a live pool gauge. */
+    public java.util.Map<String, Object> poolSnapshot() { return poolSample; }
+
+    private void observePool(software.amazon.awssdk.metrics.MetricCollection collection) {
+        var leased = collection.metricValues(software.amazon.awssdk.http.HttpMetric.LEASED_CONCURRENCY);
+        var available = collection.metricValues(software.amazon.awssdk.http.HttpMetric.AVAILABLE_CONCURRENCY);
+        var pending = collection.metricValues(software.amazon.awssdk.http.HttpMetric.PENDING_CONCURRENCY_ACQUIRES);
+        var max = collection.metricValues(software.amazon.awssdk.http.HttpMetric.MAX_CONCURRENCY);
+        if (!leased.isEmpty() && !available.isEmpty() && !pending.isEmpty() && !max.isEmpty()) {
+            poolSample = java.util.Map.of("sampledAt", java.time.Instant.now().toString(),
+                    "leased", leased.getLast(), "available", available.getLast(),
+                    "pending", pending.getLast(), "max", max.getLast());
+        }
+        collection.children().forEach(this::observePool);
+    }
 
     public OssObjectReader(OssProperties properties) {
         this.properties = properties;
@@ -94,6 +111,10 @@ public class OssObjectReader {
                         .connectionAcquisitionTimeout(Duration.ofSeconds(10))
                         .socketTimeout(Duration.ofSeconds(60))
                         .maxConnections(50))
+                .overrideConfiguration(config -> config.addMetricPublisher(new software.amazon.awssdk.metrics.MetricPublisher() {
+                    @Override public void publish(software.amazon.awssdk.metrics.MetricCollection collection) { observePool(collection); }
+                    @Override public void close() {}
+                }))
                 .serviceConfiguration(S3Configuration.builder()
                         .pathStyleAccessEnabled(properties.isPathStyleAccess()).build())
                 .requestChecksumCalculation(RequestChecksumCalculation.WHEN_REQUIRED)

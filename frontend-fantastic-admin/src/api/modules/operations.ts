@@ -165,8 +165,17 @@ export interface NasRuntime {
   nodes: { ordinal: number, state: 'CLOSED' | 'OPEN' | 'HALF_OPEN_READY' | 'HALF_OPEN_ACTIVE', inUse: number, limit: number }[]
 }
 
+export interface NetworkRuntime {
+  inUse: number
+  limit: number
+  waiting: number
+  nodes: { ordinal: number, state: NasRuntime['nodes'][number]['state'] | 'UNOBSERVED' }[]
+  poolSample?: Partial<{ sampledAt: string, leased: number, available: number, pending: number, max: number }>
+}
+
 export interface OperationsOverview {
   nasRuntime?: NasRuntime
+  networkRuntime?: Record<'HTTP' | 'NGINX' | 'OSS', NetworkRuntime>
   imageDeliveryMode?: 'direct' | 'gateway'
   generatedAt: string
   readiness: ReadinessSnapshot

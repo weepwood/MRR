@@ -23,6 +23,28 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 class NetworkSourceCircuitTest {
     @Test
+    void metadataCannotConcealBodyFailuresOrRecoverHalfOpenNode() throws Exception {
+        var clock = new AtomicLong();
+        var circuit = new NetworkSourceCircuit(new SourceNodeCircuit(3, Duration.ofSeconds(30), clock::get));
+        for (int i = 0; i < 3; i++) {
+            try (var body = circuit.open(() -> new InputStream() {
+                @Override public int read() throws IOException { throw new SocketTimeoutException("synthetic"); }
+            })) {
+                assertThatThrownBy(body::read).isInstanceOf(SocketTimeoutException.class);
+            }
+            if (i < 2) assertThat(circuit.size(() -> 1L)).isEqualTo(1);
+        }
+        assertThatThrownBy(() -> circuit.size(() -> 1L)).isInstanceOf(SourceNodeCircuit.CircuitOpen.class);
+        clock.addAndGet(Duration.ofSeconds(30).toNanos());
+        assertThat(circuit.size(() -> 1L)).isEqualTo(1);
+        try (var probe = circuit.open(() -> ImageReadStream.withLength(new java.io.ByteArrayInputStream(new byte[]{7,8}), 2))) {
+            assertThatThrownBy(() -> circuit.size(() -> 1L)).isInstanceOf(SourceNodeCircuit.CircuitOpen.class);
+            assertThat(probe.readAllBytes()).containsExactly((byte)7,(byte)8);
+        }
+        assertThat(circuit.size(() -> 1L)).isEqualTo(1);
+    }
+
+    @Test
     void actualBodyTimeoutsTripCircuitAndCompleteHalfOpenResponseRestoresNode() throws Exception {
         var clock = new AtomicLong();
         var circuit = new NetworkSourceCircuit(new SourceNodeCircuit(3, Duration.ofSeconds(30), clock::get));

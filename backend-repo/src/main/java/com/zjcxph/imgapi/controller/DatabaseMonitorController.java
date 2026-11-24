@@ -32,7 +32,7 @@ public class DatabaseMonitorController {
                 .data(databaseMonitorService.getOverview());
     }
 
-    @Operation(summary = "获取累计耗时最高的 SQL 模板")
+    @Operation(summary = "获取累计耗时最高的脱敏查询统计（不返回 SQL 原文）")
     @GetMapping("/slow-queries")
     public Result<List<Map<String, Object>>> slowQueries(@RequestParam(defaultValue = "20") int limit) {
         return Result.<List<Map<String, Object>>>success("获取慢查询成功")

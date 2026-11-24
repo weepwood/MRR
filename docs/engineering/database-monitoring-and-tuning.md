@@ -385,3 +385,7 @@ python scripts/db_performance_snapshot.py --psql "C:\PostgreSQL\bin\psql.exe" --
 - 本文：指标口径、阈值、诊断顺序、调优流程与验收；
 - `docs/engineering/mrr-data-operations-runbook.md`：数据操作类运维动作；
 - `docs/engineering/data-quality-query-timeout.md`、`export-quota-scan.md`：具体慢查询场景的既有约定，诊断时一并参考。
+
+### 应用慢查询统计接口的隐私与可用性
+
+`GET /api/v1/system/database/slow-queries` 继续要求 `system:read`，返回按累计执行时间排序的 query_id、调用次数及资源统计；兼容字段 query_template 固定为「[SQL 已隐藏]」，不向应用客户端返回原始 SQL。单条采集语句预算为 3 秒（不含连接等待等开销）。采集失败返回 HTTP 503 / SLOW_QUERY_STATS_UNAVAILABLE，成功空列表才表示本次没有满足条件的统计项。不会自动安装扩展或清空统计。确需 SQL 原文时，由授权 DBA 在院内执行既有只读脚本并妥善保护输出。

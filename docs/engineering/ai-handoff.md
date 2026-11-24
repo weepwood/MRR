@@ -145,6 +145,11 @@
 - a478aed7实际RED 11项1失败（PDF收到取消后读取5次，期望1）；5f0f639d 在既有readNBytes单图100MiB上限内逐块检查取消，保持输出大小限制。实际36项联合通过。b0a90bb0 新增真实本地临时NAS+loopback HTTP混合来源ZIP条目内容和PDF两页解析，扩展52项零失败/错误/跳过，覆盖任务策略、归属、恢复、失败及预检。并非真实医院混合源或并发下载配额验收；未强制中止已阻塞的原生读写。
 - #771已合并e17d87e1，#772已合并dae8bef7（1152单测/146 PG16），#773已合并8d7f2ece（1155单测/146 PG16）。本分支需同步最新main并复验后合并；独立revert，无生产改动。
 
+## 09 下载并发配额与临时文件租约（2026-11-25）
+
+- #171/#519/#523/#524/#350 P1，`fix/230-export-download-leases`，worktree `/Volumes/data/Project/MRR-worktrees/230-export-download-leases`。78d3a240修正macOS路径夹具后实际RED 2项1失败（第三次并发请求未拒绝）；17737864引入ArchiveExportTempFileManager实际FileChannel租约，默认全局8/每用户2（ARCHIVE_EXPORT_MAX_CONCURRENT_DOWNLOADS、ARCHIVE_EXPORT_MAX_CONCURRENT_DOWNLOADS_PER_USER），受现有单文件配额、权限和过期约束；活跃租约阻止过期清理，持实际句柄的长度/Range；429拒绝、416/异步拒绝/客户端写入失败释放，一次性close；复用PendingImageStream所有权拦截。
+- 本地43项、9a5969ac新增全局跨用户与异步拒绝后44项零失败/错误/跳过；同步 #776 正式main 913acd6e，最新CI待验收。当前配额为单进程、仅异步导出下载入口，不覆盖其他同步下载接口；默认数值需现场负载评估，真实Windows删除语义、Tomcat慢客户端写阻塞及多实例不在本次已验收范围。独立revert，无生产变更。#776 head4a7a6959、governance45433259307、quality45433259445，1162单测/146 PG16通过。
+
 ## 每轮交接模板
 
 - 更新时间、任务、风险、目标及非目标：

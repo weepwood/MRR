@@ -4,11 +4,14 @@ import ArchiveManifestCard from '../ArchiveManifestCard.vue'
 
 const api = vi.hoisted(() => ({
   getLatestManifest: vi.fn(),
+  getManifestHistory: vi.fn(),
+  getManifestVersion: vi.fn(),
   getManifestIssues: vi.fn(),
   startManifest: vi.fn(),
   cancelManifest: vi.fn(),
 }))
 vi.mock('@/api/modules/archive-manifest', () => api)
+vi.mock('@/api/modules/classification', () => ({ getReviewImage: vi.fn() }))
 vi.mock('@/utils/session', () => ({ hasPermission: () => true }))
 vi.mock('@/store/modules/user', () => ({ useUserStore: () => ({ token: 'synthetic-session' }) }))
 
@@ -27,6 +30,10 @@ function card() {
         'el-button': { template: '<button><slot /></button>' },
         'el-table': { props: ['data'], template: '<div>{{ data.map(row => row.scanId).join(",") }}</div>' },
         'el-table-column': true,
+        'el-select': true,
+        'el-option': true,
+        'el-progress': true,
+        'MrrScanContentDialog': true,
         'el-alert': { props: ['title'], template: '<div>{{ title }}</div>' },
       },
     },
@@ -36,6 +43,7 @@ function card() {
 describe('archiveManifestCard', () => {
   beforeEach(() => {
     vi.resetAllMocks()
+    api.getManifestHistory.mockResolvedValue({ data: [] })
     api.getManifestIssues.mockResolvedValue({ data: [{ cursor: 1, scanId: 123 }] })
   })
 

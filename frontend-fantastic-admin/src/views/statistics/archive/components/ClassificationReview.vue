@@ -2,8 +2,9 @@
 import type { ClassificationSuggestion, OcrItem } from '@/api/modules/classification'
 import { ElMessage } from 'element-plus'
 import { onBeforeUnmount, onMounted, ref, watch } from 'vue'
-import { getClassificationSuggestions, getOcrItems, getRecordTypes, getReviewImage, reviewClassification } from '@/api/modules/classification'
+import { getClassificationSuggestions, getOcrItems, getRecordTypes, reviewClassification } from '@/api/modules/classification'
 import { updateImageType } from '@/api/modules/image'
+import MrrScanContentDialog from '@/components/MrrScanContentDialog/index.vue'
 import useAuth from '@/utils/composables/useAuth'
 
 const props = defineProps<{ jobId: string }>()
@@ -17,25 +18,22 @@ const nextItemAfter = ref(0)
 const loadError = ref('')
 const manualTypes = ref<Record<number, number>>({})
 const busy = ref(false)
-const preview = ref('')
-const previewOpen = ref(false)
+const previewScan = ref<number | null>(null)
 let generation = 0
-let previewGeneration = 0
-async function showImage(scanId: number) {
-  const version = generation
-  const request = ++previewGeneration
-  try {
-    const result = await getReviewImage(scanId)
-    if (version !== generation || request !== previewGeneration) { return }
-    if (preview.value) { URL.revokeObjectURL(preview.value) }
-    preview.value = URL.createObjectURL(result.data)
-    previewOpen.value = true
-  }
-  catch { loadError.value = '原图读取失败' }
+function showImage(scanId: number) {
+  previewScan.value = scanId
 }
-onBeforeUnmount(() => {
-  generation++; if (preview.value) { URL.revokeObjectURL(preview.value) }
-})
+function clear() {
+  generation++
+  previewScan.value = null
+  suggestions.value = []
+  unresolved.value = []
+  manualTypes.value = {}
+  busy.value = false
+  loadError.value = ''
+}
+onBeforeUnmount(clear)
+watch(() => useUserStore().token, clear, { flush: 'sync' })
 
 async function load(reset = false) {
   if (reset) { after.value = 0; itemAfter.value = 0 }
@@ -55,19 +53,21 @@ async function load(reset = false) {
   }
 }
 async function review(row: ClassificationSuggestion, action: string) {
+  const current = generation
   busy.value = true
   try {
     await reviewClassification(row.id, action, manualTypes.value[row.scanId])
-    await load()
+    if (current === generation) { await load() }
   }
   catch { ElMessage.error('审核失败，影像、类型、源文件或权限可能已变化') }
   finally { busy.value = false }
 }
 async function manual(row: OcrItem) {
+  const current = generation
   const type = manualTypes.value[row.scanId]
   if (type === undefined) { return }
   busy.value = true
-  try { await updateImageType(row.scanId, { btype: type }); unresolved.value = unresolved.value.filter(item => item.scanId !== row.scanId) }
+  try { await updateImageType(row.scanId, { btype: type }); if (current === generation) { unresolved.value = unresolved.value.filter(item => item.scanId !== row.scanId) } }
   catch { ElMessage.error('人工分类失败，请刷新后重试') }
   finally { busy.value = false }
 }
@@ -77,7 +77,7 @@ function nextPage() {
   void load()
 }
 onMounted(() => void load(true))
-watch(() => props.jobId, () => void load(true))
+watch(() => props.jobId, () => { clear(); void load(true) })
 </script>
 
 <template>
@@ -151,8 +151,6 @@ watch(() => props.jobId, () => void load(true))
     <el-button :disabled="!suggestions.length && nextItemAfter === itemAfter" @click="nextPage">
       下一批（最多 50 页）
     </el-button>
-    <el-dialog v-model="previewOpen" title="核对影像原图" append-to-body>
-      <img v-if="preview" :src="preview" alt="待审核影像原图" style="width: 100%;">
-    </el-dialog>
+    <MrrScanContentDialog v-if="previewScan !== null" :scan-id="previewScan" @close="previewScan = null" />
   </section>
 </template>

@@ -10,6 +10,7 @@ export interface ManifestObservation {
   completeDigestAvailable: boolean
   createdAt: string
   updatedAt: string
+  snapshotCount?: number | null
 }
 
 export interface ManifestIssue {
@@ -37,4 +38,12 @@ export function cancelManifest(version: number) {
 
 export function getManifestIssues(version: number, after = 0) {
   return getRequest<ManifestIssue[]>(`${base}/${version}/anomalies`, { params: { after } })
+}
+
+export function getManifestHistory(archiveId: number, before?: number) {
+  return getRequest<ManifestObservation[]>(`${base}/history`, { params: { archiveId, before } })
+}
+
+export function getManifestVersion(version: number) {
+  return getRequest<ManifestObservation>(`${base}/${version}`)
 }

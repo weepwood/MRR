@@ -34,9 +34,11 @@ import { useTableActionLayout } from '@/composables/useTableActionLayout'
 import { formatDateTime } from '@/utils/display-format'
 import { hasPermission } from '@/utils/session'
 import ArchiveManifestCard from './ArchiveManifestCard.vue'
+import RepairOrderPanel from './RepairOrderPanel.vue'
 
 defineOptions({ name: 'DataRelationWorkbenchPage' })
 
+const canRepair = computed(() => hasPermission('system:manage') && hasPermission('record:manage'))
 const overviewLoading = ref(false)
 const searchLoading = ref(false)
 const detailLoading = ref(false)
@@ -55,6 +57,9 @@ const searchCompleted = ref(false)
 const detailError = ref(false)
 let searchVersion = 0
 let detailVersion = 0
+let overviewVersion = 0
+let qualityVersion = 0
+let sessionVersion = 0
 const relationDetail = ref<ArchiveRelationDetail | null>(null)
 const issueSeverity = ref('ALL')
 const issueKeyword = ref('')
@@ -78,6 +83,16 @@ watch(() => useUserStore().token, () => {
   invalidatePreview()
   ++searchVersion
   ++detailVersion
+  ++overviewVersion
+  ++qualityVersion
+  ++sessionVersion
+  overview.value = null
+  qualitySummary.value = null
+  issues.value = []
+  issueKeyword.value = ''
+  overviewLoading.value = false
+  checking.value = false
+  activeTab.value = 'overview'
   searchLoading.value = false
   detailLoading.value = false
   searchResults.value = []
@@ -85,7 +100,14 @@ watch(() => useUserStore().token, () => {
   selectedArchive.value = null
   relationDetail.value = null
 }, { flush: 'sync' })
-onBeforeUnmount(invalidatePreview)
+onBeforeUnmount(() => {
+  invalidatePreview()
+  ++searchVersion
+  ++detailVersion
+  ++overviewVersion
+  ++qualityVersion
+  ++sessionVersion
+})
 
 const issueActions: MrrTableAction[] = [
   {
@@ -197,21 +219,24 @@ function comparisonLabel(status: ComparisonStatus) {
 }
 
 async function loadOverview() {
+  const current = ++overviewVersion
   overviewLoading.value = true
   try {
     const response = await getDataRelationOverview()
-    overview.value = response.data ?? null
+    if (current === overviewVersion) overview.value = response.data ?? null
   }
   finally {
-    overviewLoading.value = false
+    if (current === overviewVersion) overviewLoading.value = false
   }
 }
 
 async function loadQualityData() {
+  const current = ++qualityVersion
   const [summaryResponse, issueResponse] = await Promise.all([
     getDataQualitySummary(),
     getDataQualityIssues(300),
   ])
+  if (current !== qualityVersion) return
   qualitySummary.value = summaryResponse.data ?? null
   issues.value = issueResponse.data ?? []
 }
@@ -285,15 +310,17 @@ function retryArchive() {
 }
 
 async function runChecks() {
+  const current = sessionVersion
   checking.value = true
   try {
     await runDataQualityChecks()
+    if (current !== sessionVersion) return
     ElMessage.success('数据质量检查已完成')
     await Promise.all([loadOverview(), loadQualityData()])
-    activeTab.value = 'quality'
+    if (current === sessionVersion) activeTab.value = 'quality'
   }
   finally {
-    checking.value = false
+    if (current === sessionVersion) checking.value = false
   }
 }
 
@@ -593,6 +620,7 @@ onMounted(loadDashboard)
               />
 
               <ArchiveManifestCard v-if="selectedArchive && hasPermission('system:read') && hasPermission('record:read')" :key="selectedArchive.id" :archive-id="selectedArchive.id" />
+              <RepairOrderPanel v-if="selectedArchive && canRepair" :key="`repair-${selectedArchive.id}`" :archive-id="selectedArchive.id" />
 
               <MrrSectionCard class="section-card" title="跨表字段对比" description="区分完全一致、仅前导零差异、字段缺失和真实冲突">
                 <el-table :data="relationDetail.comparisons" stripe>
@@ -659,6 +687,9 @@ onMounted(loadDashboard)
         </div>
       </el-tab-pane>
 
+      <el-tab-pane v-if="canRepair" label="修复工单" name="repairs">
+        <RepairOrderPanel v-if="activeTab === 'repairs'" />
+      </el-tab-pane>
       <el-tab-pane label="检查与异常" name="quality">
         <div class="quality-stack">
           <MrrSectionCard class="section-card" title="检查规则结果" description="关联、编号、文件元数据、重复扫描和迁移一致性">
@@ -755,7 +786,7 @@ onMounted(loadDashboard)
         <AppError v-if="previewError" message="修复预览读取失败" @retry="retryPreview" />
         <template v-else-if="repairPreview">
           <el-alert
-            title="第一阶段不会修改任何数据库记录"
+            title="预览不会修改数据库；提交工单后须独立审批和显式执行"
             type="info"
             :closable="false"
             show-icon
@@ -776,7 +807,11 @@ onMounted(loadDashboard)
           </el-descriptions>
 
           <h4>当前记录</h4>
-          <pre>{{ JSON.stringify(repairPreview.currentEntity, null, 2) }}</pre>
+          <el-descriptions :column="1" border>
+            <el-descriptions-item v-for="field in ['entityId', 'archiveId', 'bah', 'sjh', 'pages', 'uploadFlag']" :key="field" :label="field">
+              {{ repairPreview.currentEntity[field] ?? '—' }}
+            </el-descriptions-item>
+          </el-descriptions>
 
           <h4>候选病案主档</h4>
           <el-table :data="repairPreview.candidateArchives" empty-text="没有候选病案主档">
@@ -785,6 +820,7 @@ onMounted(loadDashboard)
             <el-table-column prop="sjh" label="SJH" />
             <el-table-column prop="matchType" label="匹配方式" width="120" />
           </el-table>
+          <RepairOrderPanel v-if="canRepair && repairPreview.issue.id" :key="repairPreview.issue.id" :issue-id="repairPreview.issue.id" :deterministic="repairPreview.deterministic && issueCode(repairPreview.issue) === 'SCAN_ARCHIVE_LINK_MISSING_ESTIMATED' && issueEntityType(repairPreview.issue) === 'mr_scan'" />
         </template>
       </div>
     </el-drawer>

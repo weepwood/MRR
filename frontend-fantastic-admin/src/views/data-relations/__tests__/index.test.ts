@@ -15,9 +15,12 @@ const apiMocks = vi.hoisted(() => ({
 }))
 
 vi.mock('@/api/modules/data-relations', () => apiMocks)
-vi.mock('@/api/modules/archive-manifest', () => ({ getLatestManifest: vi.fn(), getManifestIssues: vi.fn(), startManifest: vi.fn(), cancelManifest: vi.fn() }))
+vi.mock('@/api/modules/classification', () => ({ getReviewImage: vi.fn() }))
+vi.mock('@/api/modules/repair-orders', () => ({ listRepairOrders: vi.fn(), getRepairEvents: vi.fn(), proposeRepairOrder: vi.fn(), actOnRepairOrder: vi.fn() }))
+vi.mock('@/api/modules/archive-manifest', () => ({ getLatestManifest: vi.fn(), getManifestHistory: vi.fn(), getManifestVersion: vi.fn(), getManifestIssues: vi.fn(), startManifest: vi.fn(), cancelManifest: vi.fn() }))
 vi.mock('@/store/modules/user', () => ({ useUserStore: () => ({ token: 'synthetic-session' }) }))
 vi.mock('element-plus', () => ({
+  ElMessageBox: { confirm: vi.fn() },
   ElMessage: {
     error: vi.fn(),
     info: vi.fn(),

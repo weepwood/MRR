@@ -56,9 +56,6 @@ importers:
       filesize:
         specifier: ^11.0.35
         version: 11.0.35
-      gsap:
-        specifier: ^3.14.2
-        version: 3.14.2
       hotkeys-js:
         specifier: ^4.1.3
         version: 4.1.3
@@ -5045,9 +5042,6 @@ packages:
 
   graceful-fs@4.2.12:
     resolution: {integrity: sha512-iuyGF2E4oafQfPsRrG2wtY2ILupMhvtdrhzrxB+0VcjsPpSPttpfYdjnGFGsTi5MaJFjI1jOKHPQ6UTbTj9TAw==}
-
-  gsap@3.14.2:
-    resolution: {integrity: sha512-P8/mMxVLU7o4+55+1TCnQrPmgjPKnwkzkXOK1asnR9Jg2lna4tEY5qBJjMmAaOBDDZWtlRjBXjLa0w53G/uBLA==}
 
   h3@2.0.8:
     resolution: {integrity: sha512-ENuKlF9kC6E6PrvY1PUyE0qkrnnPTIt2/v48uyEEfTVfgoiqBCE0uwwf++2XrWwT1gxjQBDLQ8PAsmZVniKvTw==}
@@ -13171,8 +13165,6 @@ snapshots:
   gopd@1.2.0: {}
 
   graceful-fs@4.2.12: {}
-
-  gsap@3.14.2: {}
 
   h3@2.0.8(crossws@0.4.17(srvx@1.0.8)):
     dependencies:

@@ -135,6 +135,18 @@ export default defineFakeRoute([
     },
   },
   {
+    url: '/api/v1/img/content/:id',
+    headers: { 'content-type': 'image/svg+xml; charset=utf-8', 'cache-control': 'no-store' },
+    response: ({ params }, _req, res) => {
+      const scan = demoRecords.scans.find(row => row.id === Number(params.id) && row.uploadFlag !== 0)
+      if (!scan) {
+        if (res) { res.statusCode = 404 }
+        return ''
+      }
+      return svgMarkup(scan.bah, scan.id, MEDICAL_RECORD_TYPES.find(type => type.value === scan.btype)?.label ?? '未分类')
+    },
+  },
+  {
     url: '/mock-images/:bah/:page',
     headers: { 'content-type': 'image/svg+xml; charset=utf-8', 'cache-control': 'no-store' },
     response: ({ params }) => {

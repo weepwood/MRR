@@ -41,6 +41,13 @@ function coverage(tableName: string, label: string, total: number, linked: numbe
 
 const key = (value: unknown) => String(value ?? '').trim().replace(/^0+(?=\d)/, '')
 
+function manifest(id: number) {
+  const archive = archives().find(row => row.id === id)
+  if (!archive) { return null }
+  return { version: id, archiveId: id, status: 'COMPLETED', processed: archive.scanCount ?? 0, verified: 0, anomalies: archive.scanCount ?? 0, snapshotCount: archive.scanCount ?? 0, completeDigestAvailable: false, createdAt: hoursAgo(2), updatedAt: hoursAgo(1) }
+}
+
+const demoOrders = [{ id: 1, issueId: 2, scanId: 3, targetArchiveId: 2, status: 'PROPOSED', proposedBy: 2, approvedBy: null }]
 export default defineFakeRoute([
   {
     url: '/api/v1/system/data-relations/overview',
@@ -103,13 +110,22 @@ export default defineFakeRoute([
     url: '/api/v1/operations/archive-manifests',
     response: ({ query }) => {
       const id = Number(query?.archiveId)
-      const archive = archives().find(row => row.id === id)
-      return archive
-        ? demoOk({
-            enabled: false,
-            latest: { version: id, archiveId: id, status: 'COMPLETED', processed: archive.scanCount, verified: 0, anomalies: archive.scanCount, completeDigestAvailable: false, createdAt: hoursAgo(2), updatedAt: hoursAgo(1) },
-          })
-        : demoError(404, '演示病案不存在')
+      const latest = manifest(id)
+      return latest ? demoOk({ enabled: false, latest }) : demoError(404, '演示病案不存在')
+    },
+  },
+  {
+    url: '/api/v1/operations/archive-manifests/history',
+    response: ({ query }) => {
+      const row = manifest(Number(query?.archiveId))
+      return demoOk(row && (!query?.before || row.version < Number(query.before)) ? [row] : [])
+    },
+  },
+  {
+    url: '/api/v1/operations/archive-manifests/:version',
+    response: ({ params }) => {
+      const row = manifest(Number(params.version))
+      return row ? demoOk(row) : demoError(404, '演示版本不存在')
     },
   },
   {
@@ -123,6 +139,27 @@ export default defineFakeRoute([
       checkedAt: hoursAgo(1),
     })).filter(row => row.cursor > Number(query?.after ?? 0)).slice(0, 100)),
   },
+  {
+    url: '/api/v1/system/data-quality/repair-orders',
+    response: ({ query }) => demoOk({
+      enabled: false,
+      actorId: 1,
+      orders: demoOrders.filter(row => (!query?.archiveId || row.targetArchiveId === Number(query.archiveId))
+        && (!query?.issueId || row.issueId === Number(query.issueId)) && (!query?.before || row.id < Number(query.before))),
+    }),
+  },
+  {
+    url: '/api/v1/system/data-quality/repair-orders/:id/events',
+    response: ({ params, query }) => Number(params.id) === 1
+      ? demoOk(Number(query?.after ?? 0) < 1 ? [{ id: 1, actorId: 2, action: 'PROPOSED', beforeArchiveId: null, afterArchiveId: null, createdAt: hoursAgo(2) }] : [])
+      : demoError(404, '演示工单不存在'),
+  },
+  { url: '/api/v1/system/data-quality/repair-orders', method: 'POST', response: () => demoError(503, '演示不执行真实修复') },
+  { url: '/api/v1/system/data-quality/repair-orders/:id/approve', method: 'POST', response: () => demoError(503, '演示不执行真实修复') },
+  { url: '/api/v1/system/data-quality/repair-orders/:id/apply', method: 'POST', response: () => demoError(503, '演示不执行真实修复') },
+  { url: '/api/v1/system/data-quality/repair-orders/:id/verify', method: 'POST', response: () => demoError(503, '演示不执行真实修复') },
+  { url: '/api/v1/system/data-quality/repair-orders/:id/cancel', method: 'POST', response: () => demoError(503, '演示不执行真实修复') },
+  { url: '/api/v1/system/data-quality/repair-orders/:id/compensate', method: 'POST', response: () => demoError(503, '演示不执行真实修复') },
   { url: '/api/v1/operations/archive-manifests', method: 'POST', response: () => demoError(503, '演示不执行真实文件校验') },
   { url: '/api/v1/operations/archive-manifests/:version/cancel', method: 'POST', response: () => demoError(503, '演示不执行真实文件校验') },
 ])

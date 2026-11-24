@@ -1,6 +1,7 @@
 package com.zjcxph.imgapi.unit.security;
 
 import com.zjcxph.imgapi.common.AuthSession;
+import com.zjcxph.imgapi.config.ImageDeliveryProperties;
 import com.zjcxph.imgapi.controller.OperationsDiagnosticsController;
 import com.zjcxph.imgapi.controller.QueryDiagnosticsController;
 import com.zjcxph.imgapi.handler.ResultHttpStatusAdvice;
@@ -89,6 +90,17 @@ class DiagnosticEndpointPermissionsTest {
         assertThat(authorization.preHandle(request("POST", "/api/v1/operations/diagnostics/run", List.of("system:manage")),
                 new MockHttpServletResponse(), diagnostic)).isTrue();
         verifyNoInteractions(service);
+    }
+
+    @Test
+    void overviewExposesOnlyConfiguredImageModeNotSourceAddresses() {
+        var service = mock(OperationsCenterService.class);
+        when(service.overview()).thenReturn(java.util.Map.of("generatedAt", "synthetic"));
+        var controller = new OperationsDiagnosticsController(mock(OperationsDiagnosticsService.class),
+                service, mock(ImageSourceDiagnosticsService.class), mock(IntegrityDiagnosticsService.class),
+                mock(MaintenanceModeService.class));
+        assertThat(controller.overview().getData()).containsEntry("imageDeliveryMode", "direct");
+        assertThat(controller.overview().getData()).doesNotContainKeys("sourceUrl", "secret", "cookie");
     }
 
     private MockHttpServletRequest request(List<String> permissions) {

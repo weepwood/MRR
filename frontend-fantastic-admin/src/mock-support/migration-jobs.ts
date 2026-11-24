@@ -51,10 +51,9 @@ export function createMigrationJobs(scans: MockScanRecord[], journal: ReturnType
     create(payload: MigrationJobPayload, now = Date.now()) {
       advance(now)
       if (work) { return { ...work.job, reused: true } }
-      const ids = migrationSnapshot(scans, now).pending
-        .filter(scan => !payload.folder || scan.folder === payload.folder)
-        .slice(0, payload.mode === 'full' ? scans.length : boundedInt(payload.limit, 500, 10000))
-        .map(scan => scan.id)
+      const eligible = migrationSnapshot(scans, now).pending.filter(scan => !payload.folder || scan.folder === payload.folder)
+      const limit = payload.mode === 'full' ? scans.length : boundedInt(payload.limit, 500, 10000)
+      const ids = eligible.slice(0, limit).map(scan => scan.id)
       if (!ids.length) { return undefined }
       const job: MigrationJob = {
         id: nextId++,

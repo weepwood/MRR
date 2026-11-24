@@ -125,16 +125,17 @@ export function compare(api, mock) {
 }
 
 export function audit(root) {
-  const api = files(join(root, 'src/api/modules')).map(file =>
-    extract(readFileSync(file, 'utf8'), relative(root, file), 'api'))
-  const mock = files(join(root, 'src/mock')).map(file =>
-    extract(readFileSync(file, 'utf8'), relative(root, file), 'mock'))
+  const moduleFiles = files(join(root, 'src/api/modules'))
+  const name = file => relative(root, file).replaceAll('\\', '/')
+  const api = moduleFiles.map(file => extract(readFileSync(file, 'utf8'), name(file), 'api'))
+  const mock = files(join(root, 'src/mock')).map(file => extract(readFileSync(file, 'utf8'), name(file), 'mock'))
   const requested = api.flatMap(item => item.entries)
   const registered = mock.flatMap(item => item.entries)
   const select = mode => registered.filter(item => mode === 'pages'
     ? !item.file.endsWith('/nginx-browser.ts')
     : !item.file.endsWith('/nginx-browser.pages.ts'))
   return {
+    modules: moduleFiles.map(file => name(file).split('/').pop().replace(/\.ts$/, '')),
     dev: compare(requested, select('dev')),
     pages: compare(requested, select('pages')),
     unresolved: [...api, ...mock].flatMap(item => item.unresolved),
@@ -164,6 +165,12 @@ function main() {
   }
   if (strict) {
     const modules = new Set(strict.slice('--strict='.length).split(','))
+    const invalid = [...modules].filter(name => !report.modules.includes(name))
+    if (invalid.length) {
+      console.error(`Unknown API module: ${invalid.join(', ')}`)
+      process.exitCode = 1
+      return
+    }
     const selected = loc => [...modules].some(name => loc.file.endsWith(`/api/modules/${name}.ts`))
     const missing = [report.dev, report.pages].flatMap(mode => mode.missing).some(item => item.locations.some(selected))
     if (missing || report.unresolved.some(selected)) {

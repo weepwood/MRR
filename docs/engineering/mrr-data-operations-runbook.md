@@ -118,3 +118,9 @@ powershell.exe -NoProfile -File deploy/windows/database-recovery.ps1 -Action Res
 inspect-query-plans.sql 新增显式 compare_exact=1；compare_sjh=1 使用 SJH，默认 BAH。独立游标探测的 after_id 不参与该比较。只读 REPEATABLE READ 同一快照，从精确条件的上一条 ID 自动求边界，并比较非空有序 ID 序列；只有 SAME_PAGE_VERIFIED 才执行两份 SELECT * LIMIT 51 的实际计划。NOT_COMPARABLE 或超时不得视为性能通过。编号精确比较不同于旧 LIKE，不得混算。验证先读取数据，两份计划受缓存与顺序影响，仅是热快照证据；不同轮次需控制缓存、顺序、负载并记录边界定位成本另计，不以一次计划宣称端到端加速。档案袋 bounded probe 使用实际投影 SELECT *，完整无 LIMIT Mapper 仅 EXPLAIN，不自动执行无界读取。原3s/5s、1s锁预算保留，计划留院内。
 
 测试先提交 966bc9a（RED 未执行），直接抽取脚本标记 SQL 在真实 PG16 验证 BAH/SJH、首页、后续页、空页与缺失边界；尚未执行 psql 全流程或等量副本。关联 #99/#350，P1，独立 revert，无本地 worktree，不变更业务 SQL、DDL 或生产配置。
+
+#760 已合并 114b448，governance 45411756024、quality 45411756050；1118单测、144 PG16集成（ScanMapper 14项）均零失败、错误及跳过。仅验证脚本核心SQL，未运行完整psql或等量副本。
+
+### HTTP 延迟基线证据质量（03.5）
+
+复用 scripts/measure_query_latency.py，不扩大样本/并发上限；版本2要求随机UUIDv4案例与已知合成夹具正数返回条数。空结果、条数错误、无效JSON、预热失败不能通过；报告聚合状态、失败率、成功吞吐量、P50/P95/P99和耗时，不保存响应内容、请求值、URL或Token。两次同案例、条数、样本、并发、成功预热及有效P95才可比较；旧报告不兼容，按 [副本验收](hospital-replica-acceptance.md) 重测。带baseline时不可比或超目标返回非零。案例UUID为操作者关联标签，不证明数据/配置相同；现场仍须核对。测试先提交 27d7698（RED 未实际执行），最新CI待核验。现有 seed_dev_data.py 是小规模演示造数器，不提升其安全上限；千万级副本造数/实际压测仍待专项审批。P2，独立revert，无本地worktree。

@@ -47,13 +47,16 @@ psql -X --set ON_ERROR_STOP=1 --dbname 'service=replica' --set archive_id=1 --se
 在相同副本、相同合成病案、相同负载和相同缓存条件下，先关闭日志采集测量，再仅在副本开启并重启后复测。
 按现有安全方式在当前进程设置 `MRR_BENCH_TOKEN`、`MRR_BENCH_BAH` / `MRR_BENCH_SJH`；不输出环境变量或开启转录。
 
+使用同一随机 UUIDv4（不是病案标识）及已知合成夹具正数影像条数；下例 12 仅为示例，按实际夹具修改。版本1基线不可用于版本2比较。
+
 ```powershell
-python scripts/measure_query_latency.py --base-url http://127.0.0.1:18045 --replica --label logs-off --samples 100 --concurrency 1 --output D:\MRR-Acceptance\logs-off.json
-python scripts/measure_query_latency.py --base-url http://127.0.0.1:18045 --replica --label logs-on --samples 100 --concurrency 1 --output D:\MRR-Acceptance\logs-on.json --baseline D:\MRR-Acceptance\logs-off.json
+$caseId = [guid]::NewGuid().ToString()
+python scripts/measure_query_latency.py --base-url http://127.0.0.1:18045 --replica --label logs-off --case-id $caseId --expected-count 12 --samples 100 --concurrency 1 --output D:\MRR-Acceptance\logs-off.json
+python scripts/measure_query_latency.py --base-url http://127.0.0.1:18045 --replica --label logs-on --case-id $caseId --expected-count 12 --samples 100 --concurrency 1 --output D:\MRR-Acceptance\logs-on.json --baseline D:\MRR-Acceptance\logs-off.json
 ```
 
 两条命令之间必须实际改变副本开关并核对生效；不能只改label。工具测量经过5次预热的HTTP元数据查询，不能证明冷查询、图片读取或全部病案性能。
-两份报告均须 valid=true，第二份 comparable=true、withinTenPercentTarget=true；退出码0本身不证明额外P95≤10%。
+两份报告均须 valid=true，第二份 comparable=true、withinTenPercentTarget=true；版本2要求预热与测量均成功、响应条数匹配、案例和负载参数一致，并报告成功吞吐量及失败率。带 baseline 时不可比较或超出10%目标返回非零退出码。随机案例标识与条数相同不能证明数据、配置或索引相同，仍需现场核对；退出码0不能替代完整验收。
 另记录冷查询/大病案P50/P95/P99、连接池/锁等待、业务吞吐及采集前后磁盘和数据库字节差，使用真实现场预算判定。
 观察窗口须覆盖日常高峰和轮转，按每日增长估算保留天数、备份空间与扩容责任人；不得以短时测量承诺无限保留。
 清除当前进程的基准Token与病案环境变量，按原配置关闭副本采集。

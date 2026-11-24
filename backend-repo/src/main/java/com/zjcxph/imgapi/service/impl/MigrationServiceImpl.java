@@ -950,20 +950,28 @@ public class MigrationServiceImpl implements MigrationService {
         // Inspect the existing bounded caches by their actual result rather than
         // guessing the raw/normalized BAH/SJH aliases used to query an archive.
         for (String name : CacheConfig.SCAN_QUERY_CACHES) {
-            Cache cache = cacheManager.getCache(name);
-            if (cache == null) continue;
-            if (CacheConfig.SCAN_BY_ID.equals(name)) {
-                cache.evict(scanId);
-            } else if (cache instanceof CaffeineCache caffeine) {
-                var entries = caffeine.getNativeCache().asMap();
-                entries.forEach((key, value) -> {
-                    if (containsMigratedScan(value, scanId, archiveId)) {
-                        entries.remove(key, value);
-                    }
-                });
-            } else {
-                // A different provider has no portable entry enumeration.
-                cache.clear();
+            try {
+                Cache cache = cacheManager.getCache(name);
+                if (cache == null) continue;
+                if (CacheConfig.SCAN_BY_ID.equals(name)) {
+                    cache.evict(scanId);
+                } else if (cache instanceof CaffeineCache caffeine) {
+                    var entries = caffeine.getNativeCache().asMap();
+                    entries.forEach((key, value) -> {
+                        if (containsMigratedScan(value, scanId, archiveId)) {
+                            entries.remove(key, value);
+                        }
+                    });
+                } else {
+                    // A different provider has no portable entry enumeration.
+                    cache.clear();
+                }
+            } catch (RuntimeException exception) {
+                // The database/object update has already succeeded. A cache failure
+                // must neither revert the migration state nor stop other evictions.
+                // Log only the fixed cache name and error type, not cached data.
+                logger.warn("OSS migration scan cache invalidation failed: cache={}, errorType={}",
+                        name, exception.getClass().getSimpleName());
             }
         }
     }

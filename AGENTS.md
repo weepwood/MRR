@@ -27,7 +27,7 @@ PostgreSQL 16 + 本地/NAS/Nginx/OSS 影像来源
 1. 当前 Issue、PR 描述和验收标准；
 2. `ARCHITECTURE.md`；
 3. `docs/engineering/ai-assisted-development-governance.md`；
-4. 本文件；
+4. 本文件及 [AI 开发交接索引](docs/engineering/ai-handoff.md)；
 5. 与修改模块相关的工程文档：
    - `backend-repo/ENGINEERING_GUIDE.md`；
    - `frontend-fantastic-admin/ENGINEERING.md`；
@@ -141,6 +141,14 @@ MRR/
 - 仍未确认的假设和剩余风险。
 
 “代码看起来正确”“CI 应该会通过”不属于证据。
+
+### 5.7 跨工具开发交接
+
+- 每轮开始先读交接索引及关联任务文档，再以 GitHub Issue、PR、实际分支 SHA 和最新 CI 核对状态；不得仅依赖聊天记忆。
+- 每个独立任务在仓库内维护可接续的进度记录：目标与非目标、已完成/待办、Issue/PR/分支/提交、实际验证及未执行项、阻塞、关键决策、下一步及回滚入口。
+- 在阶段交付、暂停、切换工具或上下文前更新记录；代码变更随任务 PR 更新对应实施文档，合并状态以实时 GitHub 为准，避免把待合并写成已完成。仅交接变更可独立 P3 PR。
+- AGENTS.md 保持稳定的规则和入口，不堆积逐轮日志。长篇历史归档到关联 Issue 或专题文档；交接索引保留当前任务及指向。
+- 不记录真实患者数据、令牌、密钥、生产配置或其他敏感信息；不擅自提交用户未保存的改动。若不能写入仓库，如实报告并保留可复制交接内容。
 
 ## 6. 不可妥协规则
 

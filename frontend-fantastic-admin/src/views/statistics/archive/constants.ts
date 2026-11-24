@@ -50,7 +50,8 @@ export function resolveImageUrl(
   const resolvedUrl = apiBaseUrl && url.startsWith('/api/')
     ? `${apiBaseUrl.replace(/\/$/, '')}${url}`
     : url
-  if (!resolvedUrl || !cacheBuster) {
+  // Inline and object URLs identify local bytes, not HTTP resources.
+  if (!resolvedUrl || !cacheBuster || /^(?:data|blob):/i.test(resolvedUrl)) {
     return resolvedUrl
   }
   return `${resolvedUrl}${resolvedUrl.includes('?') ? '&' : '?'}_=${cacheBuster}`

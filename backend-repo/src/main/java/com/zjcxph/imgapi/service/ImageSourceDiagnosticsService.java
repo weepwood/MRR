@@ -1,6 +1,9 @@
 package com.zjcxph.imgapi.service;
 
 import com.zjcxph.imgapi.entity.Scan;
+import com.zjcxph.imgapi.entity.PathDO;
+import com.zjcxph.imgapi.mapper.ImageContentMapper;
+import com.zjcxph.imgapi.storage.ResolvedImageStorage;
 import com.zjcxph.imgapi.utils.MedicalRecordCodeUtils;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
@@ -9,6 +12,7 @@ import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
+import java.net.http.HttpTimeoutException;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.ArrayList;
@@ -16,12 +20,13 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Set;
 
 /**
  * 单张影像来源解析诊断。
  *
- * <p>本地资源使用实际 HTTP 状态判断文件是否存在；OSS 使用对象存储 API
- * 检查 Object Key，避免用 GET 预签名地址执行 HEAD 导致签名方法不匹配。</p>
+ * <p>direct 保留浏览器路径 HEAD/OSS 对象检查，拒绝重定向；
+ * gateway 复用真实受控来源解析和流打开/关闭，不签发 URL，不验证完整影像内容。</p>
  */
 @Service
 public class ImageSourceDiagnosticsService {
@@ -30,18 +35,24 @@ public class ImageSourceDiagnosticsService {
     private final ImageUrlService imageUrlService;
     private final OssService ossService;
     private final HttpClient httpClient;
+    private final ImageContentMapper imageContentMapper;
+    private final ResolvedImageStorage resolvedImageStorage;
 
     public ImageSourceDiagnosticsService(
             ScanService scanService,
             ImageUrlService imageUrlService,
-            OssService ossService
+            OssService ossService,
+            ImageContentMapper imageContentMapper,
+            ResolvedImageStorage resolvedImageStorage
     ) {
         this.scanService = scanService;
         this.imageUrlService = imageUrlService;
         this.ossService = ossService;
+        this.imageContentMapper = imageContentMapper;
+        this.resolvedImageStorage = resolvedImageStorage;
         this.httpClient = HttpClient.newBuilder()
                 .connectTimeout(Duration.ofSeconds(3))
-                .followRedirects(HttpClient.Redirect.NORMAL)
+                .followRedirects(HttpClient.Redirect.NEVER)
                 .build();
     }
 
@@ -68,7 +79,7 @@ public class ImageSourceDiagnosticsService {
 
         Scan scan;
         if (imageId != null) {
-            scan = scanService.findById(imageId);
+            scan = imageId > 0 ? imageContentMapper.findActiveById(imageId) : null;
             steps.add(step(
                     "IMAGE_LOOKUP",
                     scan != null,
@@ -82,7 +93,7 @@ public class ImageSourceDiagnosticsService {
                     normalizedSjh,
                     MedicalRecordCodeUtils.toSearchTerm(sjh)
             );
-            scan = scans.isEmpty() ? null : scans.getFirst();
+            scan = scans.isEmpty() ? null : imageContentMapper.findActiveById(scans.getFirst().getId());
             steps.add(step(
                     "ARCHIVE_LOOKUP",
                     scan != null,
@@ -103,6 +114,10 @@ public class ImageSourceDiagnosticsService {
                 Map.of("archiveId", scan.getArchiveId() == null ? "" : scan.getArchiveId())
         ));
 
+        if (imageUrlService.isGatewayDelivery()) {
+            return diagnoseGateway(scan, steps);
+        }
+
         String localUrl = imageUrlService.buildImageUrl(scan);
         HttpProbe localProbe = probeHttpResource(localUrl);
         steps.add(step(
@@ -113,7 +128,8 @@ public class ImageSourceDiagnosticsService {
                         "url", "[REDACTED]",
                         "serverReachable", localProbe.serverReachable(),
                         "resourceAvailable", localProbe.resourceAvailable(),
-                        "statusCode", localProbe.statusCode()
+                        "statusCode", localProbe.statusCode(),
+                        "error", localProbe.error()
                 )
         ));
 
@@ -125,7 +141,7 @@ public class ImageSourceDiagnosticsService {
                 ossSourceMessage(hasOssKey, ossProbe),
                 Map.of(
                         "ossKey", "[REDACTED]",
-                        "migrationStatus", scan.getMigrationStatus() == null ? "" : scan.getMigrationStatus(),
+                        "migrationStatus", safeMigrationStatus(scan.getMigrationStatus()),
                         "objectExists", ossProbe.objectExists(),
                         "error", ossProbe.error()
                 )
@@ -149,7 +165,7 @@ public class ImageSourceDiagnosticsService {
         };
         String fallbackReason = null;
         if ("oss".equalsIgnoreCase(preferredSource) && "LOCAL".equals(selectedType)) {
-            fallbackReason = hasOssKey ? "OSS_SIGNING_OR_OBJECT_CHECK_FAILED" : "OSS_KEY_MISSING";
+            fallbackReason = hasOssKey ? "OSS_SIGNING_FAILED" : "OSS_KEY_MISSING";
         }
 
         steps.add(step(
@@ -168,9 +184,25 @@ public class ImageSourceDiagnosticsService {
         return diagnosisResult(scan, steps, selectedType, selectedUrl, fallbackReason);
     }
 
+    private Map<String, Object> diagnoseGateway(Scan scan, List<Map<String, Object>> steps) {
+        var probe = resolvedImageStorage.probe(PathDO.fromScan(scan));
+        for (var attempt : probe.attempts()) {
+            steps.add(step("GATEWAY_SOURCE_" + attempt.source(), attempt.available(),
+                    attempt.available() ? "受控来源已打开" : "受控来源打开失败",
+                    Map.of("source", attempt.source(), "error", attempt.error(), "url", "[REDACTED]")));
+        }
+        String fallback = probe.available() && probe.attempts().size() > 1 ? "CONTROLLED_SOURCE_FALLBACK" : "";
+        steps.add(step("FINAL_SELECTION", probe.available(),
+                probe.available() ? "已打开并关闭受控影像流，未验证完整内容" : "受控影像流不可用",
+                Map.of("preferredSource", "GATEWAY_POLICY", "selectedSource", probe.selectedSource(),
+                        "selectedUrl", "[REDACTED]", "reachable", probe.available(),
+                        "error", probe.error(), "fallbackReason", fallback, "probeScope", "OPEN_AND_CLOSE")));
+        return diagnosisResult(scan, steps, probe.selectedSource(), null, fallback);
+    }
+
     private HttpProbe probeHttpResource(String url) {
         if (!StringUtils.hasText(url)) {
-            return new HttpProbe(false, false, 0);
+            return new HttpProbe(false, false, 0, "NO_URL");
         }
         try {
             HttpRequest request = HttpRequest.newBuilder(URI.create(url))
@@ -179,10 +211,22 @@ public class ImageSourceDiagnosticsService {
                     .build();
             int status = httpClient.send(request, HttpResponse.BodyHandlers.discarding()).statusCode();
             boolean serverReachable = status > 0;
-            boolean resourceAvailable = status >= 200 && status < 400;
-            return new HttpProbe(serverReachable, resourceAvailable, status);
+            boolean resourceAvailable = status >= 200 && status < 300;
+            String error = resourceAvailable ? "" : switch (status) {
+                case 401, 403 -> "ACCESS_DENIED";
+                case 404, 410 -> "NOT_FOUND";
+                case 408, 504 -> "TIMEOUT";
+                case 429 -> "SOURCE_BUSY";
+                default -> status >= 300 && status < 400 ? "REDIRECT_REJECTED" : "HTTP_ERROR";
+            };
+            return new HttpProbe(serverReachable, resourceAvailable, status, error);
+        } catch (HttpTimeoutException exception) {
+            return new HttpProbe(false, false, 0, "TIMEOUT");
+        } catch (InterruptedException exception) {
+            Thread.currentThread().interrupt();
+            return new HttpProbe(false, false, 0, "INTERRUPTED");
         } catch (Exception exception) {
-            return new HttpProbe(false, false, 0);
+            return new HttpProbe(false, false, 0, "SOURCE_UNAVAILABLE");
         }
     }
 
@@ -191,7 +235,10 @@ public class ImageSourceDiagnosticsService {
             return new OssProbe(false, "");
         }
         try {
-            return new OssProbe(ossService.doesObjectExist(ossKey), "");
+            boolean exists = ossService.doesObjectExist(ossKey);
+            return new OssProbe(exists, exists ? "" : "NOT_FOUND");
+        } catch (com.zjcxph.imgapi.exception.OssOperationException exception) {
+            return new OssProbe(false, exception.getType().name());
         } catch (Exception exception) {
             return new OssProbe(false, "SOURCE_UNAVAILABLE");
         }
@@ -246,11 +293,12 @@ public class ImageSourceDiagnosticsService {
         details.put("sjh", "[REDACTED]");
         details.put("folder", "[REDACTED]");
         details.put("filename", "[REDACTED]");
-        details.put("sourceType", scan.getSourceType() == null ? "" : scan.getSourceType());
+        String type = scan.getSourceType();
+        details.put("sourceType", type == null ? "" : Set.of("AUTO", "LOCAL", "NAS", "NGINX", "HTTP", "OSS").contains(type) ? type : "UNKNOWN");
         details.put("sourceNode", "[REDACTED]");
         details.put("sourceRef", "[REDACTED]");
         details.put("ossKey", "[REDACTED]");
-        details.put("migrationStatus", scan.getMigrationStatus() == null ? "" : scan.getMigrationStatus());
+        details.put("migrationStatus", safeMigrationStatus(scan.getMigrationStatus()));
         return details;
     }
 
@@ -263,7 +311,12 @@ public class ImageSourceDiagnosticsService {
         return step;
     }
 
-    private record HttpProbe(boolean serverReachable, boolean resourceAvailable, int statusCode) {
+    private String safeMigrationStatus(String status) {
+        return status == null ? "" : Set.of("not_migrated", "migrating", "migrated", "verified", "failed",
+                "retry_wait", "waiting_sjh").contains(status) ? status : "UNKNOWN";
+    }
+
+    private record HttpProbe(boolean serverReachable, boolean resourceAvailable, int statusCode, String error) {
     }
 
     private record OssProbe(boolean objectExists, String error) {

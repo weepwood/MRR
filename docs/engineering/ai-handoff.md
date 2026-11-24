@@ -88,6 +88,13 @@
 - 保留既有权限、票据、审计、来源顺序和 direct 默认配置。已开始的任务仍负责关闭源，不提前释放许可。真实 Tomcat 客户端断开、现场并发和大文件 Range 未验收；当前网关为全量200流，不伪造206。遗留 OSS 管理签名URL及直连页面需区分管理端与受控病案下发，单独核对兼容。回滚独立 revert。
 - #230 P1 分支 `fix/230-active-legacy-image-urls`，worktree `/Volumes/data/Project/MRR-worktrees/230-active-legacy-image-urls`。fb6836af 实际 RED 40项/2失败：软删除影像仍返回普通URL和OSS签名。修复复用 ScanService/ScanMapper.findActiveByIds，不读缓存的无过滤记录；普通URL、旧OSS跳转和单记录签名拒绝删除/不存在/非法ID，有效记录保留原行为。扩展66项全部通过；新增实际 PG16 有效/删除记录查询测试，最新CI待执行。遗留四段路径 `/api/v1/img/image/{BAH}/{BRXH}/{FOLDER}/{FILENAME}` 仍使用路径参数，开发者兼容允许名单依赖此入口；不得在没有调用方证据时直接关闭，下一步设计有界有效记录定位/受控退役及日志脱敏。OSS目录浏览/迁移日志签名与普通调阅分开核对。影像网关当前流式200，不支持Range；导出文件的 HttpByteRange 依赖可随机访问文件，不直接复用到未验证的多来源流。后续应按实际所选来源长度和能力支持单区间、416/If-Range、断开关闭及鉴权审计，不做无界跳读或虚假206。回滚独立 revert。
 
+## 04.3 受控影像来源诊断
+
+- #230/#636 P1 分支 `fix/230-controlled-source-diagnostics`，worktree `/Volumes/data/Project/MRR-worktrees/230-controlled-source-diagnostics`。6b6edf25 实际 RED 1项/1失败：旧 direct HEAD 跟随重定向，访问跳转目标。修复拒绝3xx并区分权限拒绝、不存在、超时、繁忙、HTTP失败；保留 direct 模式兼容，不自动切换。
+- gateway 诊断复用 ImageContentMapper.findActiveById（软删除/不存在不探测）、PathDO.fromScan、ResolvedImageStorage 的实际有序候选、现有认证和并发许可；每个尝试返回固定来源与错误分类，选中流立即关闭，不签发 URL、不额外 HEAD。OSS SDK 状态、Nginx 403、NAS 文件与许可、超时、脱敏及诊断权限专项实际 GREEN 21项，扩展37项零失败/错误/跳过。
+- 探测范围 OPEN_AND_CLOSE，只证明流可打开关闭，不验证完整内容或真实网络吞吐；源适配器现有超时和许可保持，NAS 文件系统及 SDK 关闭可能阻塞/读取剩余数据，尚无统一硬截止时间。无真实病案/生产源访问，不声称现场验证。最新 CI 待核验；回滚独立 revert，不改配置、数据、来源优先级或权限。
+- #763 已合并 8c68eca9；最新 head 8ee2307a，governance 45420699666、quality 45420061742 实际1129单测、144 PostgreSQL16.16集成，零失败/错误/跳过。#765 已合并 c0b0f51e，head c36379a8，governance 45421013514、quality 45421013440 实际1131单测零失败/错误/跳过，PG16按范围跳过（无数据库改动）。两项均为 AI 自审非独立审批。现场吞吐、真实 Tomcat 断开、Range、旧直连管理端兼容和来源网络隔离仍未完成。
+
 ## 每轮交接模板
 
 - 更新时间、任务、风险、目标及非目标：

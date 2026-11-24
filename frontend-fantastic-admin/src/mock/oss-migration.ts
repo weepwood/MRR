@@ -1,7 +1,7 @@
 import type { MockScanRecord } from '../mock-support/records'
-import type { MigrationJob } from '@/api/modules/oss'
 import { defineFakeRoute } from 'vite-plugin-fake-server/client'
 import { migrationSnapshot } from '../mock-support/migration'
+import { demoMigrationJobs } from '../mock-support/migration-jobs'
 import { demoMigrationJournal } from '../mock-support/migration-journal'
 import { demoRecords } from '../mock-support/records'
 import { boundedInt, demoError, demoPage } from '../mock-support/response'
@@ -16,38 +16,14 @@ function ok<T>(data: T, message = '操作成功') {
 }
 
 function snapshot() {
+  demoMigrationJobs.advance()
   return migrationSnapshot(demoRecords.scans)
 }
 
-const jobs: MigrationJob[] = [
-  {
-    id: 12,
-    status: 'completed',
-    mode: 'pilot',
-    scopeValue: '25.03.15',
-    totalCount: 500,
-    processedCount: 500,
-    failedCount: 2,
-    rate: 100,
-    createdBy: 'admin',
-    createdAt: new Date(Date.now() - 3_600_000).toISOString(),
-    completedAt: new Date(Date.now() - 3_000_000).toISOString(),
-  },
-  {
-    id: 11,
-    status: 'completed_with_errors',
-    mode: 'batch',
-    totalCount: 10000,
-    processedCount: 10000,
-    failedCount: 18,
-    rate: 100,
-    createdBy: 'admin',
-    createdAt: new Date(Date.now() - 86_400_000).toISOString(),
-    completedAt: new Date(Date.now() - 82_000_000).toISOString(),
-  },
-]
-
-let nextJobId = 13
+function activeJob() {
+  demoMigrationJobs.advance()
+  return demoMigrationJobs.active()
+}
 
 function browserDirectory(name: string, key: string) {
   return {
@@ -140,6 +116,7 @@ function filteredRecords(records: MockScanRecord[], query: Record<string, unknow
 }
 
 function migrationLogsResponse(query: Record<string, unknown>) {
+  demoMigrationJobs.advance()
   return ok(demoPage(demoMigrationJournal.list(query), query.page, query.size))
 }
 
@@ -178,19 +155,19 @@ export default defineFakeRoute([
     url: '/api/v1/oss/migration/readiness',
     response: ({ query }) => {
       const state = snapshot()
-      const activeJob = jobs.find(job => ['pending', 'running', 'cancelling'].includes(job.status ?? ''))
+      const active = activeJob()
       const sample = state.pending.slice(0, boundedInt(query?.sampleSize, 100, 200))
       const warnings: string[] = []
       if (state.waiting.length) { warnings.push(`演示：${state.waiting.length} 条记录等待合法上架号`) }
-      if (activeJob) { warnings.push('已有演示迁移任务，请先完成或取消') }
+      if (active) { warnings.push('已有演示迁移任务，请先完成或取消') }
       if (!sample.length) { warnings.push('当前没有可领取的演示记录') }
       return ok({
-        ready: !activeJob && sample.length > 0,
+        ready: !active && sample.length > 0,
         ossConfigured: true,
         sourcePathConfigured: true,
         sourcePathReadable: true,
-        noActiveJob: !activeJob,
-        activeJob,
+        noActiveJob: !active,
+        activeJob: active,
         pendingCount: state.pending.length,
         sampleSize: sample.length,
         sampleReadableCount: sample.length,
@@ -225,7 +202,10 @@ export default defineFakeRoute([
   {
     url: '/api/v1/oss/migration/jobs',
     method: 'get',
-    response: ({ query }) => ok(demoPage(jobs, query?.page, query?.size)),
+    response: ({ query }) => {
+      demoMigrationJobs.advance()
+      return ok(demoPage(demoMigrationJobs.list(), query?.page, query?.size))
+    },
   },
   {
     url: '/api/v1/oss/migration/jobs',
@@ -235,45 +215,29 @@ export default defineFakeRoute([
       if (!['pilot', 'batch', 'full'].includes(mode)) {
         return demoError(400, '无效的演示迁移模式')
       }
-      const active = jobs.find(job => ['pending', 'running', 'cancelling'].includes(job.status ?? ''))
-      if (active) {
-        return ok({ ...active, reused: true })
-      }
-      const job: MigrationJob = {
-        id: nextJobId++,
-        status: 'pending',
-        mode,
-        scopeValue: String(body?.folder ?? '').slice(0, 100),
-        totalCount: boundedInt(body?.limit, 500, 10000),
-        processedCount: 0,
-        failedCount: 0,
-        rate: 0,
-        createdBy: 'admin',
-        createdAt: new Date().toISOString(),
-      }
-      jobs.unshift(job)
-      return ok(job, '演示迁移任务已创建')
+      const job = demoMigrationJobs.create({
+        mode: mode as 'pilot' | 'batch' | 'full',
+        folder: String(body?.folder ?? ''),
+        limit: boundedInt(body?.limit, 500, 10000),
+      })
+      return job ? ok(job, '演示迁移任务已创建') : demoError(409, '当前范围没有可领取的演示记录')
     },
   },
   {
     url: '/api/v1/oss/migration/jobs/:id/cancel',
     method: 'post',
     response: ({ params }) => {
-      const job = jobs.find(item => item.id === Number(params.id))
-      if (!job) { return demoError(404, '演示任务不存在') }
-      if (job.status !== 'pending' && job.status !== 'running') {
-        return demoError(409, '演示任务当前不可取消')
-      }
-      job.status = 'cancelled'
-      job.cancelRequested = true
-      job.completedAt = new Date().toISOString()
-      return ok(job, '演示任务已取消')
+      const id = Number(params.id)
+      if (!demoMigrationJobs.list().some(job => job.id === id)) { return demoError(404, '演示任务不存在') }
+      const job = demoMigrationJobs.cancel(id)
+      return job ? ok(job, '演示任务已取消') : demoError(409, '演示任务当前不可取消')
     },
   },
   {
     url: '/api/v1/oss/migration/jobs/:id',
     response: ({ params }) => {
-      const job = jobs.find(item => item.id === Number(params.id))
+      demoMigrationJobs.advance()
+      const job = demoMigrationJobs.list().find(item => item.id === Number(params.id))
       return job ? ok(job) : demoError(404, '演示任务不存在')
     },
   },
@@ -289,7 +253,7 @@ export default defineFakeRoute([
     url: '/api/v1/oss/migration/retry',
     method: 'post',
     response: ({ body }) => {
-      if (jobs.some(job => ['pending', 'running', 'cancelling'].includes(job.status ?? ''))) {
+      if (activeJob()) {
         return demoError(409, '演示迁移任务运行期间不能重置失败记录')
       }
       const ids = (body as { scanIds?: unknown } | undefined)?.scanIds
@@ -303,7 +267,7 @@ export default defineFakeRoute([
     url: '/api/v1/oss/upload',
     method: 'post',
     response: ({ body }) => {
-      if (jobs.some(job => ['pending', 'running', 'cancelling'].includes(job.status ?? ''))) {
+      if (activeJob()) {
         return demoError(409, '演示迁移任务运行期间不能手动上传')
       }
       const ids = (body as { scanIds?: unknown } | undefined)?.scanIds
@@ -314,10 +278,22 @@ export default defineFakeRoute([
     },
   },
   {
+    url: '/api/v1/oss/upload/folder/:folder',
+    method: 'post',
+    response: ({ params }) => {
+      if (activeJob()) { return demoError(409, '演示迁移任务运行期间不能手动上传') }
+      const raw = String(params.folder)
+      const folder = raw.includes('%') ? decodeURIComponent(raw) : raw
+      const ids = demoRecords.scans.filter(scan => scan.folder === folder && scan.uploadFlag).map(scan => scan.id)
+      if (!ids.length) { return demoError(404, '未找到可上传的演示目录') }
+      return ok(demoMigrationJournal.upload(ids).results, '上传完成')
+    },
+  },
+  {
     url: '/api/v1/oss/upload/bah/:bah',
     method: 'post',
     response: ({ params }) => {
-      if (jobs.some(job => ['pending', 'running', 'cancelling'].includes(job.status ?? ''))) {
+      if (activeJob()) {
         return demoError(409, '演示迁移任务运行期间不能手动上传')
       }
       const bah = String(params.bah).trim()

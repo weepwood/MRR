@@ -36,7 +36,7 @@ export function routeKey(method, path) {
   const normalized = path.replace(/\/$/, '').split('/').map(segment =>
     /^:[\w]+$/.test(segment) || segment === '{}' ? '{}' : segment,
   ).join('/')
-  if (/[{}:*]/.test(normalized.replaceAll('{}', ''))) {
+  if (normalized.split('/').some(segment => segment !== '{}' && /[{}:*]/.test(segment))) {
     return undefined
   }
   return `${method.toUpperCase()} ${normalized}`

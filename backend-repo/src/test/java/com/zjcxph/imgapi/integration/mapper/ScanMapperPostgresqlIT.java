@@ -61,6 +61,40 @@ class ScanMapperPostgresqlIT extends PostgresqlIntegrationTestSupport {
     }
 
     @Test
+    @DisplayName("同一精确编号的游标与 OFFSET 页一致，兼容包含查询仍保留原语义")
+    void comparesEquivalentCursorAndOffsetWithoutConflatingLegacyContainsSearch() {
+        jdbcTemplate.update("""
+                INSERT INTO app.mr_scan(bah,sjh,filename,folder,uploadflag,pages)
+                VALUES ('000654321','00043210','plan-a.jpg','synthetic',1,1),
+                       ('654321','43210','plan-b.jpg','synthetic',1,2),
+                       ('654321','43210','plan-c.jpg','synthetic',1,3),
+                       ('6543219','432109','plan-partial.jpg','synthetic',1,4)
+                """);
+        ScanRequest request = new ScanRequest();
+        request.setBah("654321");
+        List<Scan> first = scanMapper.findByConditionAfterId(request, 0, 1);
+        assertThat(first).hasSize(1);
+        List<Scan> cursor = scanMapper.findByConditionAfterId(request, first.getFirst().getId(), 2);
+        List<Integer> offset = jdbcTemplate.queryForList("""
+                SELECT id FROM app.mr_scan
+                WHERE app.numeric_code_key(bah)=app.numeric_code_key(?)
+                ORDER BY id LIMIT 2 OFFSET 1
+                """, Integer.class, "654321");
+        assertThat(cursor).extracting(Scan::getId).containsExactlyElementsOf(offset);
+        assertThat(cursor).extracting(Scan::getFilename).containsExactly("plan-b.jpg", "plan-c.jpg");
+        assertThat(scanMapper.countByCondition(request)).isEqualTo(4L);
+        assertThat(scanMapper.findByConditionWithPagination(request, 0, 10))
+                .extracting(Scan::getFilename).containsExactly("plan-a.jpg", "plan-b.jpg", "plan-c.jpg", "plan-partial.jpg");
+        String explain = jdbcTemplate.queryForObject("""
+                EXPLAIN (ANALYZE,BUFFERS,SETTINGS,FORMAT JSON)
+                SELECT * FROM app.mr_scan
+                WHERE app.numeric_code_key(bah)=app.numeric_code_key(?) AND id>?
+                ORDER BY id LIMIT 2
+                """, String.class, "654321", first.getFirst().getId());
+        assertThat(explain).contains("Plan", "Actual Rows", "Execution Time");
+    }
+
+    @Test
     void compatibilityExpressionUsesSameTrimmedNumericKeyAsDatabase() {
         jdbcTemplate.update("INSERT INTO app.mr_scan(bah,filename,folder,uploadflag,pages) VALUES (' 00123 ','trimmed.jpg','synthetic',1,1)");
         assertThat(scanMapper.findBAH("123", "123")).extracting(Scan::getFilename).contains("trimmed.jpg");

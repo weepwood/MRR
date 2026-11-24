@@ -1,7 +1,9 @@
 import type { MockScanRecord } from '../mock-support/records'
-import type { MigrationJob } from '@/api/modules/oss'
 import { defineFakeRoute } from 'vite-plugin-fake-server/client'
-import { migrationSnapshot, resetDemoFailures, uploadDemoScans } from '../mock-support/migration'
+import { migrationSnapshot } from '../mock-support/migration'
+import { demoMigrationJobs } from '../mock-support/migration-jobs'
+import { demoMigrationJournal } from '../mock-support/migration-journal'
+import { sharedObjectEntries, sharedObjectUrl } from '../mock-support/oss-browser'
 import { demoRecords } from '../mock-support/records'
 import { boundedInt, demoError, demoPage } from '../mock-support/response'
 
@@ -15,68 +17,14 @@ function ok<T>(data: T, message = '操作成功') {
 }
 
 function snapshot() {
+  demoMigrationJobs.advance()
   return migrationSnapshot(demoRecords.scans)
 }
 
-const jobs: MigrationJob[] = [
-  {
-    id: 12,
-    status: 'completed',
-    mode: 'pilot',
-    scopeValue: '25.03.15',
-    totalCount: 500,
-    processedCount: 500,
-    failedCount: 2,
-    rate: 100,
-    createdBy: 'admin',
-    createdAt: new Date(Date.now() - 3_600_000).toISOString(),
-    completedAt: new Date(Date.now() - 3_000_000).toISOString(),
-  },
-  {
-    id: 11,
-    status: 'completed_with_errors',
-    mode: 'batch',
-    totalCount: 10000,
-    processedCount: 10000,
-    failedCount: 18,
-    rate: 100,
-    createdBy: 'admin',
-    createdAt: new Date(Date.now() - 86_400_000).toISOString(),
-    completedAt: new Date(Date.now() - 82_000_000).toISOString(),
-  },
-]
-
-let nextJobId = 13
-
-const logs = [
-  {
-    id: 1,
-    scanId: 1,
-    localPath: 'NGINX:scan:1',
-    ossUrl: 'https://example.test/signed/1',
-    migrationStatus: 'success',
-    fileSize: 235000,
-    checksumMd5: '0123456789abcdef0123456789abcdef',
-    migratedAt: new Date().toISOString(),
-    createdAt: new Date().toISOString(),
-  },
-  {
-    id: 2,
-    scanId: 6,
-    localPath: 'NGINX:scan:6',
-    migrationStatus: 'failed',
-    errorMessage: 'Nginx 图片服务返回状态码 404',
-    createdAt: new Date(Date.now() - 120000).toISOString(),
-  },
-  {
-    id: 3,
-    scanId: 7,
-    localPath: 'NGINX:scan:7',
-    migrationStatus: 'retry_wait',
-    errorMessage: 'Nginx 连接超时',
-    createdAt: new Date(Date.now() - 180000).toISOString(),
-  },
-]
+function activeJob() {
+  demoMigrationJobs.advance()
+  return demoMigrationJobs.active()
+}
 
 function browserDirectory(name: string, key: string) {
   return {
@@ -105,6 +53,7 @@ function browserEntries(prefix: string, continuationToken?: string) {
       browserDirectory('0012', 'medical-records/0012/'),
       browserDirectory('0013', 'medical-records/0013/'),
       browserDirectory('0024', 'medical-records/0024/'),
+      ...sharedObjectEntries(demoRecords.scans, prefix),
     ]
   }
   if (prefix === 'medical-records/0012/') {
@@ -128,14 +77,20 @@ function browserEntries(prefix: string, continuationToken?: string) {
       browserFile('病案目录说明.txt', 'medical-records/0012/00123456-00789124/病案目录说明.txt', 1200),
     ]
   }
-  return []
+  return sharedObjectEntries(demoRecords.scans, prefix)
 }
 
 function browserPage(query: Record<string, unknown>) {
   const prefix = String(query.prefix || 'medical-records/')
   const continuationToken = query.continuationToken ? String(query.continuationToken) : undefined
-  const entries = browserEntries(prefix, continuationToken)
-  const truncated = prefix === 'medical-records/0012/00123456-00789124/' && !continuationToken
+  demoMigrationJobs.advance()
+  const legacyPage = prefix === 'medical-records/0012/00123456-00789124/'
+  const maxKeys = boundedInt(query.maxKeys, 200, 1000)
+  const allEntries = browserEntries(prefix, continuationToken)
+  const offset = !legacyPage && /^shared-page-\d+$/.test(continuationToken ?? '') ? Number(continuationToken?.slice(12)) : 0
+  const entries = legacyPage ? allEntries : allEntries.slice(offset, offset + maxKeys)
+  const truncated = legacyPage ? !continuationToken : offset + entries.length < allEntries.length
+  const nextContinuationToken = truncated ? (legacyPage ? 'mock-page-2' : `shared-page-${offset + entries.length}`) : null
   return {
     configured: true,
     bucket: 'mrr-medical-records',
@@ -144,9 +99,9 @@ function browserPage(query: Record<string, unknown>) {
     rootPrefix: 'medical-records/',
     prefix,
     entries,
-    nextContinuationToken: truncated ? 'mock-page-2' : null,
+    nextContinuationToken,
     truncated,
-    maxKeys: Number(query.maxKeys || 200),
+    maxKeys,
     loadedDirectories: entries.filter(entry => entry.directory).length,
     loadedFiles: entries.filter(entry => !entry.directory).length,
     loadedBytes: entries.reduce((sum, entry) => sum + (entry.directory ? 0 : entry.size), 0),
@@ -168,6 +123,11 @@ function filteredRecords(records: MockScanRecord[], query: Record<string, unknow
   }
 }
 
+function migrationLogsResponse(query: Record<string, unknown>) {
+  demoMigrationJobs.advance()
+  return ok(demoPage(demoMigrationJournal.list(query), query.page, query.size))
+}
+
 export default defineFakeRoute([
   {
     url: '/api/v1/oss/browser/mock-content',
@@ -184,6 +144,15 @@ export default defineFakeRoute([
     url: '/api/v1/oss/browser/url',
     response: ({ query }) => {
       const key = String((query as Record<string, unknown>)?.key || '')
+      demoMigrationJobs.advance()
+      const sharedUrl = sharedObjectUrl(demoRecords.scans, key)
+      if (sharedUrl) { return ok({ key, ossUrl: sharedUrl }) }
+      // Legacy storage-preview examples are retained for navigation regressions.
+      const prefix = key.slice(0, key.lastIndexOf('/') + 1)
+      const legacyPrefix = 'medical-records/0012/00123456-00789124/'
+      const legacyFile = prefix === legacyPrefix
+        && [...browserEntries(prefix), ...browserEntries(prefix, 'mock-page-2')].some(entry => !entry.directory && entry.key === key)
+      if (!legacyFile) { return demoError(404, '演示 OSS 对象不存在') }
       const demoImage = /\.(?:jpg|tif)$/i.test(key)
       return ok({
         key,
@@ -203,19 +172,19 @@ export default defineFakeRoute([
     url: '/api/v1/oss/migration/readiness',
     response: ({ query }) => {
       const state = snapshot()
-      const activeJob = jobs.find(job => ['pending', 'running', 'cancelling'].includes(job.status ?? ''))
+      const active = activeJob()
       const sample = state.pending.slice(0, boundedInt(query?.sampleSize, 100, 200))
       const warnings: string[] = []
       if (state.waiting.length) { warnings.push(`演示：${state.waiting.length} 条记录等待合法上架号`) }
-      if (activeJob) { warnings.push('已有演示迁移任务，请先完成或取消') }
+      if (active) { warnings.push('已有演示迁移任务，请先完成或取消') }
       if (!sample.length) { warnings.push('当前没有可领取的演示记录') }
       return ok({
-        ready: !activeJob && sample.length > 0,
+        ready: !active && sample.length > 0,
         ossConfigured: true,
         sourcePathConfigured: true,
         sourcePathReadable: true,
-        noActiveJob: !activeJob,
-        activeJob,
+        noActiveJob: !active,
+        activeJob: active,
         pendingCount: state.pending.length,
         sampleSize: sample.length,
         sampleReadableCount: sample.length,
@@ -250,7 +219,10 @@ export default defineFakeRoute([
   {
     url: '/api/v1/oss/migration/jobs',
     method: 'get',
-    response: ({ query }) => ok(demoPage(jobs, query?.page, query?.size)),
+    response: ({ query }) => {
+      demoMigrationJobs.advance()
+      return ok(demoPage(demoMigrationJobs.list(), query?.page, query?.size))
+    },
   },
   {
     url: '/api/v1/oss/migration/jobs',
@@ -260,98 +232,91 @@ export default defineFakeRoute([
       if (!['pilot', 'batch', 'full'].includes(mode)) {
         return demoError(400, '无效的演示迁移模式')
       }
-      const active = jobs.find(job => ['pending', 'running', 'cancelling'].includes(job.status ?? ''))
-      if (active) {
-        return ok({ ...active, reused: true })
-      }
-      const job: MigrationJob = {
-        id: nextJobId++,
-        status: 'pending',
-        mode,
-        scopeValue: String(body?.folder ?? '').slice(0, 100),
-        totalCount: boundedInt(body?.limit, 500, 10000),
-        processedCount: 0,
-        failedCount: 0,
-        rate: 0,
-        createdBy: 'admin',
-        createdAt: new Date().toISOString(),
-      }
-      jobs.unshift(job)
-      return ok(job, '演示迁移任务已创建')
+      const job = demoMigrationJobs.create({
+        mode: mode as 'pilot' | 'batch' | 'full',
+        folder: String(body?.folder ?? ''),
+        limit: boundedInt(body?.limit, 500, 10000),
+      })
+      return job ? ok(job, '演示迁移任务已创建') : demoError(409, '当前范围没有可领取的演示记录')
     },
   },
   {
     url: '/api/v1/oss/migration/jobs/:id/cancel',
     method: 'post',
     response: ({ params }) => {
-      const job = jobs.find(item => item.id === Number(params.id))
-      if (!job) { return demoError(404, '演示任务不存在') }
-      if (job.status !== 'pending' && job.status !== 'running') {
-        return demoError(409, '演示任务当前不可取消')
-      }
-      job.status = 'cancelled'
-      job.cancelRequested = true
-      job.completedAt = new Date().toISOString()
-      return ok(job, '演示任务已取消')
+      const id = Number(params.id)
+      if (!demoMigrationJobs.list().some(job => job.id === id)) { return demoError(404, '演示任务不存在') }
+      const job = demoMigrationJobs.cancel(id)
+      return job ? ok(job, '演示任务已取消') : demoError(409, '演示任务当前不可取消')
     },
   },
   {
     url: '/api/v1/oss/migration/jobs/:id',
     response: ({ params }) => {
-      const job = jobs.find(item => item.id === Number(params.id))
+      demoMigrationJobs.advance()
+      const job = demoMigrationJobs.list().find(item => item.id === Number(params.id))
       return job ? ok(job) : demoError(404, '演示任务不存在')
     },
   },
   {
     url: '/api/v1/oss/migration/management/logs',
-    response: ({ query }) => {
-      const request = (query ?? {}) as Record<string, unknown>
-      const filtered = logs.filter((item) => {
-        return (!request.status || item.migrationStatus === request.status)
-          && (!request.scanId || item.scanId === Number(request.scanId))
-      })
-      return ok(demoPage(filtered, request.page, request.size))
-    },
+    response: ({ query }) => migrationLogsResponse((query ?? {}) as Record<string, unknown>),
+  },
+  {
+    url: '/api/v1/oss/migration/logs',
+    response: ({ query }) => migrationLogsResponse((query ?? {}) as Record<string, unknown>),
   },
   {
     url: '/api/v1/oss/migration/retry',
     method: 'post',
     response: ({ body }) => {
-      if (jobs.some(job => ['pending', 'running', 'cancelling'].includes(job.status ?? ''))) {
+      if (activeJob()) {
         return demoError(409, '演示迁移任务运行期间不能重置失败记录')
       }
       const ids = (body as { scanIds?: unknown } | undefined)?.scanIds
       if (!Array.isArray(ids) || !ids.length || ids.length > 500 || !ids.every(id => Number.isSafeInteger(id) && id > 0)) {
         return demoError(400, '请输入有效的演示扫描编号（最多500条）')
       }
-      return ok({ updated: resetDemoFailures(demoRecords.scans, ids) }, '失败记录已重置')
+      return ok({ updated: demoMigrationJournal.reset(ids) }, '失败记录已重置')
     },
   },
   {
     url: '/api/v1/oss/upload',
     method: 'post',
     response: ({ body }) => {
-      if (jobs.some(job => ['pending', 'running', 'cancelling'].includes(job.status ?? ''))) {
+      if (activeJob()) {
         return demoError(409, '演示迁移任务运行期间不能手动上传')
       }
       const ids = (body as { scanIds?: unknown } | undefined)?.scanIds
       if (!Array.isArray(ids) || !ids.length || ids.length > 500 || !ids.every(id => Number.isSafeInteger(id) && id > 0)) {
         return demoError(400, '请输入有效的演示扫描编号（最多500条）')
       }
-      return ok(uploadDemoScans(demoRecords.scans, ids), '上传完成')
+      return ok(demoMigrationJournal.upload(ids), '上传完成')
+    },
+  },
+  {
+    url: '/api/v1/oss/upload/folder/:folder',
+    method: 'post',
+    response: ({ params }) => {
+      if (activeJob()) { return demoError(409, '演示迁移任务运行期间不能手动上传') }
+      const raw = String(params.folder)
+      const folder = raw.includes('%') ? decodeURIComponent(raw) : raw
+      const ids = demoRecords.scans.filter(scan => scan.folder === folder && scan.uploadFlag).map(scan => scan.id)
+      if (!ids.length) { return demoError(404, '未找到可上传的演示目录') }
+      return ok(demoMigrationJournal.upload(ids).results, '上传完成')
     },
   },
   {
     url: '/api/v1/oss/upload/bah/:bah',
     method: 'post',
     response: ({ params }) => {
-      if (jobs.some(job => ['pending', 'running', 'cancelling'].includes(job.status ?? ''))) {
+      if (activeJob()) {
         return demoError(409, '演示迁移任务运行期间不能手动上传')
       }
       const bah = String(params.bah).trim()
       const ids = demoRecords.scans.filter(scan => scan.bah === bah && scan.uploadFlag).map(scan => scan.id)
       if (!ids.length) { return demoError(404, '未找到可上传的演示病案记录') }
-      return ok({ bah, ...uploadDemoScans(demoRecords.scans, ids) }, '上传完成')
+      return ok({ bah, ...demoMigrationJournal.upload(ids) }, '上传完成')
     },
   },
 ])

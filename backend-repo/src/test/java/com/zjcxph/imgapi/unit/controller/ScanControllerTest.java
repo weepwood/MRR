@@ -21,6 +21,8 @@ import java.util.List;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -173,13 +175,51 @@ class ScanControllerTest {
     @Test
     void findAllWithPagination() {
         when(scanService.findAllWithPagination(eq(1), eq(10))).thenReturn(List.of(mockScan));
-        when(scanService.countByCondition(any())).thenReturn(1L);
 
         Result<PageResult<Scan>> result = scanController.findAllWithPagination(1, 10);
 
         assertThat(result.getCode()).isEqualTo(200);
         assertThat(result.getData().getList()).hasSize(1);
         assertThat(result.getData().getTotal()).isEqualTo(1);
+        verify(scanService, never()).countByCondition(any());
+    }
+
+    @Test
+    void emptyFirstPageHasExactZeroWithoutCounting() {
+        when(scanService.findByConditionWithPagination(validRequest, 1, 20)).thenReturn(List.of());
+        var result = scanController.findByConditionWithPagination(1, 20, validRequest).getData();
+        assertThat(result.getTotal()).isZero();
+        assertThat(result.getTotalPages()).isZero();
+        verify(scanService, never()).countByCondition(any());
+    }
+
+    @Test
+    void shortFirstFilteredPageDerivesExactTotalWithoutCounting() {
+        when(scanService.findByConditionWithPagination(validRequest, 1, 20)).thenReturn(List.of(mockScan));
+        var result = scanController.findByConditionWithPagination(1, 20, validRequest).getData();
+        assertThat(result.getTotal()).isEqualTo(1L);
+        assertThat(result.hasNext()).isFalse();
+        verify(scanService, never()).countByCondition(any());
+    }
+
+    @Test
+    void fullFirstPageStillCountsToDistinguishMoreResults() {
+        when(scanService.findAllWithPagination(1, 1)).thenReturn(List.of(mockScan));
+        when(scanService.countByCondition(any())).thenReturn(500L);
+        var result = scanController.findAllWithPagination(1, 1).getData();
+        assertThat(result.getTotal()).isEqualTo(500L);
+        assertThat(result.hasNext()).isTrue();
+        verify(scanService).countByCondition(any());
+    }
+
+    @Test
+    void emptyLaterPageStillCountsInsteadOfInventingTotal() {
+        when(scanService.findByConditionWithPagination(validRequest, 5, 20)).thenReturn(List.of());
+        when(scanService.countByCondition(validRequest)).thenReturn(13L);
+        var result = scanController.findByConditionWithPagination(5, 20, validRequest).getData();
+        assertThat(result.getTotal()).isEqualTo(13L);
+        assertThat(result.getTotalPages()).isEqualTo(1);
+        verify(scanService).countByCondition(validRequest);
     }
 
     @Test

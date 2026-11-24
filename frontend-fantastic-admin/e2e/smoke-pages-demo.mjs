@@ -164,6 +164,72 @@ async function smokePagesDemo() {
     assert.equal(writes.after.data.migratedCount, writes.before.data.migratedCount + 1)
     assert.equal(writes.after.data.failedCount, writes.before.data.failedCount - 1)
 
+    const journal = await page.evaluate(async () => {
+      const get = path => fetch(`/proxy/api/v1/oss/migration/${path}`).then(response => response.json())
+      const [canonical, legacy, failed] = await Promise.all([
+        get('management/logs?scanId=1&status=success&page=1&size=20'),
+        get('logs?scanId=1&status=success&page=1&size=20'),
+        get('management/logs?scanId=13&status=failed&page=1&size=20'),
+      ])
+      return { canonical, legacy, failed }
+    })
+    assert.deepEqual(journal.canonical.data, journal.legacy.data)
+    assert.equal(journal.canonical.data.total, 1)
+    assert.equal(journal.canonical.data.list[0].ossUrl, writes.scan.data.ossUrl)
+    assert.equal(journal.failed.data.total, 1)
+    assert.equal(journal.failed.data.list[0].migrationStatus, 'failed')
+
+    const objects = await page.evaluate(async () => {
+      const scan = await fetch('/proxy/api/v1/scan/1').then(response => response.json())
+      const { sjh, bah, filename, ossUrl } = scan.data
+      const prefix = `medical-records/${sjh.slice(0, 4)}/${sjh}-${bah}/`
+      const key = prefix + filename
+      const get = (path, params) => fetch(`/proxy/api/v1/oss/browser${path}?${new URLSearchParams(params)}`).then(response => response.json())
+      const [listing, signed, missing] = await Promise.all([
+        get('', { prefix }), get('/url', { key }), get('/url', { key: prefix + 'missing.jpg' }),
+      ])
+      const image = new Image()
+      image.src = signed.data.ossUrl
+      await image.decode()
+      return { key, ossUrl, listing, signed, missing, width: image.naturalWidth }
+    })
+    assert.ok(objects.listing.data.entries.some(entry => entry.key === objects.key && !entry.directory))
+    assert.equal(objects.signed.data.ossUrl, objects.ossUrl)
+    assert.equal(objects.missing.code, 404)
+    assert.ok(objects.width > 0)
+
+    // Drive an actual bounded job through the browser Mock and observe its effect.
+    const execution = await page.evaluate(async () => {
+      const get = path => fetch(`/proxy/api/v1/${path}`).then(response => response.json())
+      const post = (path, body) => fetch(`/proxy/api/v1/${path}`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body),
+      }).then(response => response.json())
+      const before = await get('oss/migration/statistics')
+      const scan = (await get('scan/13')).data
+      const job = await post('oss/migration/jobs', { mode: 'pilot', folder: scan.folder, limit: 1 })
+      const blockedUpload = await post('oss/upload', { scanIds: [13] })
+      let detail = job
+      for (let attempt = 0; attempt < 20 && detail.data?.status !== 'completed'; attempt++) {
+        await new Promise(resolve => setTimeout(resolve, 250))
+        detail = await get(`oss/migration/jobs/${job.data.id}`)
+      }
+      const after = await get('oss/migration/statistics')
+      const updated = await get('scan/13')
+      const root = await get('oss/browser?prefix=medical-records%2F9000%2F&maxKeys=1')
+      const next = await get(`oss/browser?prefix=medical-records%2F9000%2F&maxKeys=1&continuationToken=${encodeURIComponent(root.data.nextContinuationToken)}`)
+      return { before, job, blockedUpload, detail, after, updated, root, next }
+    })
+    assert.equal(execution.job.data.totalCount, 1)
+    assert.equal(execution.blockedUpload.code, 409)
+    assert.equal(execution.detail.data.status, 'completed')
+    assert.equal(execution.detail.data.processedCount, 1)
+    assert.equal(execution.updated.data.migrationStatus, 'migrated')
+    assert.equal(execution.after.data.migratedCount, execution.before.data.migratedCount + 1)
+    assert.equal(execution.root.data.entries.length, 1)
+    assert.equal(execution.root.data.truncated, true)
+    assert.equal(execution.next.data.entries.length, 1)
+    assert.notEqual(execution.root.data.entries[0].key, execution.next.data.entries[0].key)
+
     const blocked = await page.evaluate(async () => {
       const path = '/proxy/api/v1/pages-smoke-unmocked'
       const fetchBlocked = await fetch(path, { method: 'POST', body: 'synthetic-demo-only' }).then(() => false, () => true)

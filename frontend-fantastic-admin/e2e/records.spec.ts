@@ -82,6 +82,27 @@ test('编辑筛选不会把旧游标用于新条件，提交查询后从头读�
   await expect(page.getByText('筛选条件已修改', { exact: false })).toHaveCount(0)
 })
 
+test('兼容包含查询提交后重置游标并按同一条件翻批', async ({ page }) => {
+  const requests: { afterId: string | null, legacy: string | null, bah?: string }[] = []
+  await page.route('**/api/v1/scan/cursor/condition?**', async (route) => {
+    const url = new URL(route.request().url())
+    requests.push({ afterId: url.searchParams.get('afterId'), legacy: url.searchParams.get('legacyContains'), bah: route.request().postDataJSON().bah })
+    await route.fulfill({ json: { code: 200, data: { list: [{ id: 100, bah: '001234', filename: 'synthetic.jpg' }], hasMore: true, nextCursorId: 100, size: 20 } } })
+  })
+  await page.goto('/records')
+  await expect(page.getByRole('cell', { name: '001234', exact: true })).toBeVisible()
+  expect(requests[0].legacy).toBe('false')
+  await page.getByRole('checkbox', { name: '兼容包含查询' }).check()
+  await page.getByLabel('病案号', { exact: true }).fill('00123')
+  await page.getByRole('button', { name: '查询', exact: true }).click()
+  await expect.poll(() => requests.length).toBe(2)
+  expect(requests[1]).toEqual({ afterId: '0', legacy: 'true', bah: '00123' })
+  await expect(page.locator('.records-query-context')).toContainText('兼容包含')
+  await page.getByRole('button', { name: '下一批', exact: true }).click()
+  await expect.poll(() => requests.length).toBe(3)
+  expect(requests[2]).toEqual({ afterId: '100', legacy: 'true', bah: '00123' })
+})
+
 for (const theme of ['light', 'dark']) {
   test(`${theme} 主题下查询面板在宽窄屏保持可读`, async ({ page }) => {
     await page.addInitScript((scheme) => {

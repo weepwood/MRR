@@ -142,6 +142,15 @@ async function smokePagesDemo() {
     await monitorPage.getByText('mrr_demo', { exact: true }).first().waitFor({ timeout: 20_000 })
     await monitorPage.getByText('mr_scan', { exact: true }).first().waitFor({ timeout: 20_000 })
 
+    const statusFrame = monitorPage.locator('iframe[title="MRR 服务可用性状态"]')
+    assert.match(await statusFrame.getAttribute('src') || '', /\/MRR\/#\/status$/)
+    const status = monitorPage.frameLocator('iframe[title="MRR 服务可用性状态"]')
+    await status.getByRole('heading', { name: '所有服务正常运行' }).waitFor({ timeout: 25_000 })
+    assert.equal(await status.locator('.day-cell').count(), 90, '状态页须渲染90天合成记录')
+    assert.equal(await status.locator('.day-cell.is-down').count(), 1, '历史合成故障须可见')
+    await status.locator('.day-cell.is-down').click()
+    await status.getByText('演示：计划维护期间短暂不可用', { exact: true }).waitFor({ timeout: 15_000 })
+
     const errorPage = await browser.newPage()
     errorPage.on('pageerror', error => pageErrors.push(error.message))
     await errorPage.goto(`${appUrl}#/runtime-errors`)

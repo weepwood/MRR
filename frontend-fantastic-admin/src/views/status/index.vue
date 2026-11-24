@@ -21,6 +21,8 @@ import useVisibleInterval from '@/utils/composables/useVisibleInterval'
 
 defineOptions({ name: 'PublicSystemStatusPage' })
 
+const router = useRouter()
+const homeHref = router.resolve('/').href
 const HISTORY_DAYS = 90
 const summary = ref<SystemStatusSummary | null>(null)
 const daily = ref<DailySystemAvailability[]>([])
@@ -263,7 +265,7 @@ useVisibleInterval(refreshCurrentStatus, 60_000)
   <main class="status-page">
     <div class="status-shell">
       <header class="status-header">
-        <a class="brand" href="/" aria-label="返回 MRR">
+        <a class="brand" :href="homeHref" aria-label="返回 MRR">
           <span class="brand-mark"><img :src="serverLogo" alt=""></span>
           <span>
             <strong>服务状态</strong>

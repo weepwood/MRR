@@ -70,7 +70,10 @@ final class NasOperationIsolation implements AutoCloseable {
                         return;
                     }
                     try (var budget = SourceOpenBudget.start(Duration.ofNanos(remaining))) {
-                        T value = operation.run(() -> nativeStarted.set(true));
+                        T value = operation.run(() -> {
+                            if (claimed.isDone()) throw new java.util.concurrent.CancellationException("NAS caller departed");
+                            nativeStarted.set(true);
+                        });
                         result.complete(value);
                         // Only the worker discards a late result; the caller never blocks on its close.
                         if (!claimed.join()) discard.accept(value);
@@ -89,6 +92,10 @@ final class NasOperationIsolation implements AutoCloseable {
         NasNodeCircuit.Outcome outcome = NasNodeCircuit.Outcome.NEUTRAL;
         try {
             T value = result.get(Math.max(0, deadline - System.nanoTime()), TimeUnit.NANOSECONDS);
+            if (deadline - System.nanoTime() <= 0) {
+                if (nativeStarted.get()) outcome = NasNodeCircuit.Outcome.NATIVE_TIMEOUT;
+                throw new SocketTimeoutException("NAS operation timed out");
+            }
             claimed.complete(true);
             outcome = NasNodeCircuit.Outcome.SUCCESS;
             return value;

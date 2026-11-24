@@ -19,11 +19,16 @@ public class NasArchiveImageSource implements ArchiveImageSource {
     private final SourcePermitGuard permitGuard;
     private final NasOperationIsolation isolation;
 
+    @org.springframework.beans.factory.annotation.Autowired
     public NasArchiveImageSource(ArchiveImageSourceProperties properties) {
+        this(properties, System::nanoTime);
+    }
+
+    NasArchiveImageSource(ArchiveImageSourceProperties properties, java.util.function.LongSupplier clock) {
         this.properties = properties;
         this.permitGuard = new SourcePermitGuard(
                 properties.getNasMaxConcurrency(), properties.getAcquireTimeout());
-        this.isolation = new NasOperationIsolation(properties.getNasMaxConcurrency(), properties.getNasNodes().keySet());
+        this.isolation = new NasOperationIsolation(properties.getNasMaxConcurrency(), properties.getNasNodes().keySet(), clock);
     }
 
     @Override
@@ -36,14 +41,13 @@ public class NasArchiveImageSource implements ArchiveImageSource {
 
     @Override
     public InputStream open(PathDO image) throws IOException {
-        InputStream opened = isolation.call(image.getSourceNode(), properties.getNasOpenTimeout(),
+        return isolation.call(image.getSourceNode(), properties.getNasOpenTimeout(),
                 mark -> permitGuard.open(() -> { mark.run(); return openFile(image); }), stream -> {
                     try { stream.close(); } catch (IOException | RuntimeException failure) {
                         org.slf4j.LoggerFactory.getLogger(NasArchiveImageSource.class)
                                 .warn("Late NAS stream close failed: errorType={}", failure.getClass().getSimpleName());
                     }
-                });
-        return NasBodyStream.wrap(opened, properties.getNasBodyTimeout());
+                }, (stream, finish) -> NasBodyStream.wrap(stream, properties.getNasBodyTimeout(), finish));
     }
 
     @Override

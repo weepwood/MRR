@@ -243,6 +243,11 @@
 
 - #786 已合并07c06e32，head e0c41350，governance45442917009、quality45442917470通过，1176单测/150真实PG16零失败。
 
+## 04.3 NAS 正文与节点熔断联动（2026-11-25）
+
+- #230/#350 P1，`fix/230-nas-body-circuit`，独立worktree。c6bcfcf0实际RED 7项1失败：正文三次超时后第四次仍回源。NasOperationIsolation 将同一次节点尝试交给已领取的正文流，保留open/size工作槽和实际流许可的不同生命周期；NasBodyStream在read/seek/close明确SocketTimeout时只报告一次BODY_FAILURE，关闭仍排在实际阻塞操作之后，迟到结果不重置。实际成功读取（含有效Range）且关闭才确认恢复，未读取的关闭/取消/普通文件错误中性。SourceNodeCircuit新增METADATA_SUCCESS：已观察正文失败时size成功不清零，半开size成功让出探针但不关闭熔断，真实正文成功才恢复。默认3次/30秒、鉴权、超时、原生隔离均不放宽。
+- 本地初次GREEN 11项；最终34项零失败/错误/跳过，包含控制时钟下metadata不能掩盖正文失败、单半开探针、健康节点、阻塞read/close、Tomcat、Controller策略、网关和导出。日志 /tmp/mrr-nas-body-circuit-red.log、/tmp/mrr-nas-body-circuit-final.log。真实NAS/Windows及永久挂起OS取消仍未验收；实际许可不会提前释放。独立revert，不改生产。#786已合并07c06e32（1176单测/150 PG16），#788已合并2be73973（scope/pr-gate通过，其余范围跳过）。最新CI待验收。
+
 ## 每轮交接模板
 
 - 更新时间、任务、风险、目标及非目标：

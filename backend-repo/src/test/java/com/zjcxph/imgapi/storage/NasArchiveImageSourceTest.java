@@ -188,6 +188,63 @@ class NasArchiveImageSourceTest {
     }
 
     @Test
+    void consecutiveBodyFailuresTripNodeDespiteSuccessfulOpensAndPreserveHealthyNode() throws Exception {
+        var properties = new ArchiveImageSourceProperties();
+        properties.setNasMaxConcurrency(2);
+        properties.setAcquireTimeout(Duration.ofMillis(200));
+        properties.setNasOpenTimeout(Duration.ofSeconds(1));
+        properties.setNasBodyTimeout(Duration.ofMillis(200));
+        var node = new ArchiveImageSourceProperties.NasNode();
+        node.setRoot(tempDir.toString());
+        properties.setNasNodes(Map.of("bad", node, "good", node));
+        Files.writeString(tempDir.resolve("probe.jpg"), "synthetic");
+        var clock = new java.util.concurrent.atomic.AtomicLong();
+        var recovered = new java.util.concurrent.atomic.AtomicBoolean();
+        var opens = new java.util.concurrent.atomic.AtomicInteger();
+        var closes = new java.util.concurrent.atomic.AtomicInteger();
+        var source = new NasArchiveImageSource(properties, clock::get) {
+            @Override java.io.InputStream openFile(PathDO image) {
+                if ("good".equals(image.getSourceNode())) return new java.io.ByteArrayInputStream(new byte[]{7});
+                opens.incrementAndGet();
+                if (recovered.get()) return new java.io.ByteArrayInputStream(new byte[]{9});
+                return new java.io.InputStream() {
+                    @Override public int read() throws IOException {
+                        throw new java.net.SocketTimeoutException("synthetic native body timeout");
+                    }
+                    @Override public void close() { closes.incrementAndGet(); }
+                };
+            }
+        };
+        var bad = new PathDO(); bad.setSourceType("NAS"); bad.setSourceNode("bad"); bad.setSourceRef("probe.jpg");
+        var good = new PathDO(); good.setSourceType("NAS"); good.setSourceNode("good");
+        try {
+            for (int i = 0; i < 3; i++) {
+                try (var input = source.open(bad)) {
+                    assertThatThrownBy(input::read).isInstanceOf(java.net.SocketTimeoutException.class);
+                }
+                long until = System.nanoTime() + Duration.ofSeconds(2).toNanos();
+                while (closes.get() <= i && System.nanoTime() < until) Thread.sleep(5);
+                assertThat(closes.get()).isEqualTo(i+1);
+                if (i < 2) assertThat(source.size(bad)).isEqualTo(9);
+            }
+            assertThatThrownBy(() -> source.open(bad)).isInstanceOf(SourceNodeCircuit.CircuitOpen.class);
+            assertThat(opens.get()).isEqualTo(3);
+            clock.addAndGet(Duration.ofSeconds(30).toNanos());
+            // A successful metadata-only half-open probe cannot heal the body failure.
+            assertThat(source.size(bad)).isEqualTo(9);
+            recovered.set(true);
+            try (var probe = source.open(bad)) {
+                assertThatThrownBy(() -> source.open(bad)).isInstanceOf(SourceNodeCircuit.CircuitOpen.class);
+                assertThat(probe.read()).isEqualTo(9);
+                assertThatThrownBy(() -> source.open(bad)).isInstanceOf(SourceNodeCircuit.CircuitOpen.class);
+            }
+            try (var next = source.open(bad)) { assertThat(next.read()).isEqualTo(9); }
+            assertThat(opens.get()).isEqualTo(5);
+            try (var input = source.open(good)) { assertThat(input.read()).isEqualTo(7); }
+        } finally { source.shutdown(); }
+    }
+
+    @Test
     void blockedNativeCloseRetainsPermitAndRecoversAfterActualCompletion() throws Exception {
         var properties = new ArchiveImageSourceProperties();
         properties.setNasMaxConcurrency(1);

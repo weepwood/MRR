@@ -248,12 +248,21 @@
 - #230/#350 P1，`fix/230-nas-body-circuit`，独立worktree。c6bcfcf0实际RED 7项1失败：正文三次超时后第四次仍回源。NasOperationIsolation 将同一次节点尝试交给已领取的正文流，保留open/size工作槽和实际流许可的不同生命周期；NasBodyStream在read/seek/close明确SocketTimeout时只报告一次BODY_FAILURE，关闭仍排在实际阻塞操作之后，迟到结果不重置。实际成功读取（含有效Range）且关闭才确认恢复，未读取的关闭/取消/普通文件错误中性。SourceNodeCircuit新增METADATA_SUCCESS：已观察正文失败时size成功不清零，半开size成功让出探针但不关闭熔断，真实正文成功才恢复。默认3次/30秒、鉴权、超时、原生隔离均不放宽。
 - 本地初次GREEN 11项；最终34项零失败/错误/跳过，包含控制时钟下metadata不能掩盖正文失败、单半开探针、健康节点、阻塞read/close、Tomcat、Controller策略、网关和导出。日志 /tmp/mrr-nas-body-circuit-red.log、/tmp/mrr-nas-body-circuit-final.log。真实NAS/Windows及永久挂起OS取消仍未验收；实际许可不会提前释放。独立revert，不改生产。#786已合并07c06e32（1176单测/150 PG16），#788已合并2be73973（scope/pr-gate通过，其余范围跳过）。最新CI待验收。
 
+## 03 三千万级编号索引部署容量与回滚（2026-11-25）
+
+- #99/#350 P1运维边界，`docs/99-index-rollout` 独立worktree。复用既有并发索引构建脚本与同名定义检查，新增只读 inspect-code-key-index-capacity.sql：估算行数、实际表/索引容量、表空间/维护配置、已存在状态及实时构建进度，不执行全表COUNT或DDL；依据三千万真实净增1892573184字节给出非上界参考量。手册增加服务器各卷余量、临时排序与WAL/归档、现场审批停止阈值、保留构建前索引身份、单条并发回滚、禁止删除已有索引及CASCADE。无自动生产操作。
+- 两次新建万行PG16隔离验收：mrr-scan-lab-m5041psp、最终 mrr-scan-lab-lh6n43nd，实际两个335872字节索引valid/ready/live，预检估算10000、参考630858字节；分别DROP CONCURRENTLY后两对象不存在、总行数仍10000，实际容量5988352→5316608字节、实例停止。临时测试脚本副本已删除，原始capacity-after/rollback.log和report.json保留。未验收Windows现场卷峰值或生产部署；本PR只读脚本及手册可独立revert。#786已合并07c06e32、#788已合并2be73973。
+
+- #789已合并ff8b541a，head05c9b20a，governance45445428184、quality45445428182通过，1177单测零失败，PG16按范围跳过。
+
 ## 03 300万GIN选择性与COUNT策略（2026-11-25）
 
 - #99/#350 P2，`perf/99-trgm-selectivity`，独立worktree。扩展已有 --trgm 无匹配长词、一/三字符、SJH首页/90%深游标；COUNT 5秒、游标3秒，记录实际计划、返回行、共享块及预算；不强制planner、不改生产查询或DDL。首次3m造数后原精确测量分支误用budget导致NameError，实例确认停止；修复后万行冒烟完整通过，第二次3m实际COUNT确认3000000/30000，完整报告complete，server_stopped=true，pg_ctl确认停止。两个GIN31424512/38019072字节，5.324秒。无匹配COUNT117.453→0.710ms、SJH游标195.426→2.443ms；一/两字符仍非GIN，稀疏BAH仍主键；写入单次30.771→22.225ms与百万级反向，不宣称稳定收益或生产验收。详见[GIN隔离报告](synthetic-trgm-benchmark-2026-11-25.md)。默认精确游标、显式包含、无同步COUNT，旧COUNT语义不变。
 - #786/#788已合并07c06e32/2be73973，核对等价合并树、干净与上游后归档本地测试报告并移除两独立worktree/本地分支，保留远端。独立revert，无生产修改，最新CI待验收。
 
 - #789已合并ff8b541a，head05c9b20a，governance45445428184、quality45445428182通过，1177单测零失败，PG16按范围跳过。
+
+- #790已合并c825539d，head12a0399f，governance45445973554、quality45445973767通过，1177单测零失败，PG16按范围跳过。
 
 ## 每轮交接模板
 

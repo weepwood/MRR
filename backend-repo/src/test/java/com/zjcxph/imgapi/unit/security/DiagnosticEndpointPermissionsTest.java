@@ -1,6 +1,7 @@
 package com.zjcxph.imgapi.unit.security;
 
 import com.zjcxph.imgapi.common.AuthSession;
+import com.zjcxph.imgapi.config.ImageDeliveryProperties;
 import com.zjcxph.imgapi.controller.OperationsDiagnosticsController;
 import com.zjcxph.imgapi.controller.QueryDiagnosticsController;
 import com.zjcxph.imgapi.handler.ResultHttpStatusAdvice;
@@ -65,7 +66,7 @@ class DiagnosticEndpointPermissionsTest {
         var service = mock(OperationsCenterService.class);
         var controller = new OperationsDiagnosticsController(mock(OperationsDiagnosticsService.class),
                 service, mock(ImageSourceDiagnosticsService.class), mock(IntegrityDiagnosticsService.class),
-                mock(MaintenanceModeService.class));
+                mock(MaintenanceModeService.class), new ImageDeliveryProperties());
         var overview = new HandlerMethod(controller, OperationsDiagnosticsController.class.getMethod("overview"));
         var diagnostic = new HandlerMethod(controller, OperationsDiagnosticsController.class.getMethod("runDiagnostics"));
         var authorization = new AuthorizationInterceptor();
@@ -89,6 +90,20 @@ class DiagnosticEndpointPermissionsTest {
         assertThat(authorization.preHandle(request("POST", "/api/v1/operations/diagnostics/run", List.of("system:manage")),
                 new MockHttpServletResponse(), diagnostic)).isTrue();
         verifyNoInteractions(service);
+    }
+
+    @Test
+    void overviewExposesOnlyConfiguredImageModeNotSourceAddresses() {
+        var service = mock(OperationsCenterService.class);
+        when(service.overview()).thenReturn(java.util.Map.of("generatedAt", "synthetic"));
+        var properties = new ImageDeliveryProperties();
+        var controller = new OperationsDiagnosticsController(mock(OperationsDiagnosticsService.class),
+                service, mock(ImageSourceDiagnosticsService.class), mock(IntegrityDiagnosticsService.class),
+                mock(MaintenanceModeService.class), properties);
+        assertThat(controller.overview().getData()).containsEntry("imageDeliveryMode", "direct");
+        properties.setMode(ImageDeliveryProperties.Mode.GATEWAY);
+        assertThat(controller.overview().getData()).containsEntry("imageDeliveryMode", "gateway")
+                .doesNotContainKeys("sourceUrl", "secret", "cookie");
     }
 
     private MockHttpServletRequest request(List<String> permissions) {

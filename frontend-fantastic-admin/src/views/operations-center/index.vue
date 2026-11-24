@@ -35,6 +35,7 @@ import MrrSectionCard from '@/components/MrrSectionCard/index.vue'
 import { actionDialog } from '@/ui/components/ActionDialog'
 import { formatDateTime as formatTime } from '@/utils/display-format'
 import { hasAnyPermission, hasPermission } from '@/utils/session'
+import DeliveryStatusCard from './DeliveryStatusCard.vue'
 
 const route = useRoute()
 const router = useRouter()
@@ -599,6 +600,8 @@ onMounted(async () => {
                 </p>
               </MrrSectionCard>
             </div>
+
+            <DeliveryStatusCard :mode="overview.imageDeliveryMode" :mode-stale="overviewFailed" />
 
             <MrrSectionCard v-if="quickLinks.length" title="运维快捷入口">
               <div class="overview-links">

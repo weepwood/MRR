@@ -179,6 +179,25 @@ async function smokePagesDemo() {
     assert.equal(journal.failed.data.total, 1)
     assert.equal(journal.failed.data.list[0].migrationStatus, 'failed')
 
+    const objects = await page.evaluate(async () => {
+      const scan = await fetch('/proxy/api/v1/scan/1').then(response => response.json())
+      const { sjh, bah, filename, ossUrl } = scan.data
+      const prefix = `medical-records/${sjh.slice(0, 4)}/${sjh}-${bah}/`
+      const key = prefix + filename
+      const get = (path, params) => fetch(`/proxy/api/v1/oss/browser${path}?${new URLSearchParams(params)}`).then(response => response.json())
+      const [listing, signed, missing] = await Promise.all([
+        get('', { prefix }), get('/url', { key }), get('/url', { key: prefix + 'missing.jpg' }),
+      ])
+      const image = new Image()
+      image.src = signed.data.ossUrl
+      await image.decode()
+      return { key, ossUrl, listing, signed, missing, width: image.naturalWidth }
+    })
+    assert.ok(objects.listing.data.entries.some(entry => entry.key === objects.key && !entry.directory))
+    assert.equal(objects.signed.data.ossUrl, objects.ossUrl)
+    assert.equal(objects.missing.code, 404)
+    assert.ok(objects.width > 0)
+
     const blocked = await page.evaluate(async () => {
       const path = '/proxy/api/v1/pages-smoke-unmocked'
       const fetchBlocked = await fetch(path, { method: 'POST', body: 'synthetic-demo-only' }).then(() => false, () => true)

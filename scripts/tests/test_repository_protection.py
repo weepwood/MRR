@@ -8,7 +8,10 @@ class RepositoryProtectionTest(unittest.TestCase):
         path = Path(__file__).resolve().parents[2] / "quality/main-branch-protection.json"
         policy = json.loads(path.read_text(encoding="utf-8"))
         self.assertTrue(policy["enforce_admins"])
-        self.assertTrue(policy["required_status_checks"]["strict"])
+        self.assertIs(policy["required_status_checks"]["strict"], False)
+        self.assertIs(policy["required_pull_request_reviews"]["dismiss_stale_reviews"], False)
+        self.assertTrue(policy["required_linear_history"])
+        self.assertFalse(policy["required_pull_request_reviews"]["require_last_push_approval"])
         self.assertEqual(0, policy["required_pull_request_reviews"]["required_approving_review_count"])
         self.assertFalse(policy["required_pull_request_reviews"]["require_code_owner_reviews"])
         self.assertTrue(policy["required_conversation_resolution"])

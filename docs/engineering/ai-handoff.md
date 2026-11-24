@@ -76,7 +76,7 @@
 | --- | --- |
 | 01 | #755 已合并 a990203（真实 Pages 测试通过）；#723、#727 已按合并与 CI 证据关闭；#752 草稿冲突，既有同步操作被工具拦截，保留；#722、#712 最新查询均冲突，旧 CI 不代表当前合并树，兼容退役需现场证据，不提前合并。逐项核对 #736、#737、#717、#719 历史验收，不以 merged 自动关闭所有 Issue。 |
 | 03 | #756 已合并 f836ff3，governance 45407989735、quality 45407989745（真实 PG16 136项，锁等待7项，无失败或跳过）。#99 后续 P1 分支 perf/99-scan-last-page-count，非空短末页免 COUNT、溢出拒绝；测试先提交 7492b24（RED 未执行），见 [扫描查询时限与精确计数](scan-legacy-query-timeout.md)。#757 已合并 3fe158b，governance 45408967982、quality 45408967772（单测1118，PG16集成137，均零失败/错误/跳过）。#758 已合并 3b0a05b，governance 45409847390、quality 45409847512（后端1118、PG16集成140、索引就绪6项均通过）。#759 已合并 676b6dd，governance 45410672727、quality 45410673024（单测1118、PG16集成143、构建专项6项均通过）。#760 已合并 114b448，governance 45411756024、quality 45411756050（1118单测、144 PG16集成、ScanMapper14项均通过）。#761 已合并 4ffab09，governance 45414401426、quality 45414401584（实际Python256项，新增3项通过）；#762 已合并 71d36fd，governance 45415453201、quality 45415453095（1121单测、144 PG16集成、迁移19项均通过）；迁移汇总缓存代际及提交后失效，见 [运维手册](mrr-data-operations-runbook.md)。千万级合成数据基准与病案缓存失效/并发回源仍待实施；现有演示造数上限不放宽。 |
-| 04 | #763 当前失败，详细复现、风险及接续步骤见 [完整交接](ai-handoff-2026-11-24.md)。#230、#694、#636、#350：统一网关剩余路径、日志分区一致性与恢复、Nginx 只读诊断、容量与备份演练；生产切换另行批准。 |
+| 04 | #763、#765、#766 已合并；#767 待最新 CI 与 P1 自审，详见下方 04.2/04.3 及 [历史交接](ai-handoff-2026-11-24.md)。#230、#694、#636、#350：统一网关剩余路径、日志分区一致性与恢复、Nginx 只读诊断、容量与备份演练；生产切换另行批准。 |
 | 09 | #171、#519、#523、#524：复核现有 ZIP/PDF 状态、取消/过期/下载预算、选页与预览生命周期，真实混合来源及 Range 验收。 |
 | 07 | #350、#619：固定 SHA，复跑全量候选、PG16、真实旧浏览器、Windows 恢复、产物身份与升级/回滚；未完成现场证据不得发布 V1.0。 |
 
@@ -84,14 +84,15 @@
 
 ## 04.2 统一影像网关专项
 
-- #230 P1 分支 `fix/230-gateway-pending-stream`（专属 worktree `/Volumes/data/Project/MRR-worktrees/230-gateway-pending-stream`），从 main 3bc4a36c 建立。异步调度拒绝前已打开上游影像流，原回调未运行导致资源泄漏。e6967007 实际 RED 4项/1失败；a204eed7 采用 Spring MVC CallableProcessingInterceptor 与原 try-with-resources 所有权交接，完成/超时/错误时仅关闭尚未被任务领取的流；外部未启动任务记录一次 FAILED 审计，晚到任务不再读流。GREEN 14项，扩展26项均零失败/错误/跳过。最新 P1 CI 待核验。
+- #230 P1 分支 `fix/230-gateway-pending-stream`（专属 worktree `/Volumes/data/Project/MRR-worktrees/230-gateway-pending-stream`），从 main 3bc4a36c 建立。异步调度拒绝前已打开上游影像流，原回调未运行导致资源泄漏。e6967007 实际 RED 4项/1失败；a204eed7 采用 Spring MVC CallableProcessingInterceptor 与原 try-with-resources 所有权交接，完成/超时/错误时仅关闭尚未被任务领取的流；外部未启动任务记录一次 FAILED 审计，晚到任务不再读流。GREEN 14项，扩展26项均零失败/错误/跳过。#765 已合并 c0b0f51e，最新 CI 证据见 04.3。
 - 保留既有权限、票据、审计、来源顺序和 direct 默认配置。已开始的任务仍负责关闭源，不提前释放许可。真实 Tomcat 客户端断开、现场并发和大文件 Range 未验收；当前网关为全量200流，不伪造206。遗留 OSS 管理签名URL及直连页面需区分管理端与受控病案下发，单独核对兼容。回滚独立 revert。
+- #230 P1 分支 `fix/230-active-legacy-image-urls`，worktree `/Volumes/data/Project/MRR-worktrees/230-active-legacy-image-urls`。fb6836af 实际 RED 40项/2失败：软删除影像仍返回普通URL和OSS签名。修复复用 ScanService/ScanMapper.findActiveByIds，不读缓存的无过滤记录；普通URL、旧OSS跳转和单记录签名拒绝删除/不存在/非法ID，有效记录保留原行为。扩展66项全部通过；新增实际 PG16 有效/删除记录查询测试，PR #767 已同步 main f5ccc03f，最新CI待执行。遗留四段路径 `/api/v1/img/image/{BAH}/{BRXH}/{FOLDER}/{FILENAME}` 仍使用路径参数，开发者兼容允许名单依赖此入口；不得在没有调用方证据时直接关闭，下一步设计有界有效记录定位/受控退役及日志脱敏。OSS目录浏览/迁移日志签名与普通调阅分开核对。影像网关当前流式200，不支持Range；导出文件的 HttpByteRange 依赖可随机访问文件，不直接复用到未验证的多来源流。后续应按实际所选来源长度和能力支持单区间、416/If-Range、断开关闭及鉴权审计，不做无界跳读或虚假206。回滚独立 revert。
 
 ## 04.3 受控影像来源诊断
 
 - #230/#636 P1 分支 `fix/230-controlled-source-diagnostics`，worktree `/Volumes/data/Project/MRR-worktrees/230-controlled-source-diagnostics`。6b6edf25 实际 RED 1项/1失败：旧 direct HEAD 跟随重定向，访问跳转目标。修复拒绝3xx并区分权限拒绝、不存在、超时、繁忙、HTTP失败；保留 direct 模式兼容，不自动切换。
 - gateway 诊断复用 ImageContentMapper.findActiveById（软删除/不存在不探测）、PathDO.fromScan、ResolvedImageStorage 的实际有序候选、现有认证和并发许可；每个尝试返回固定来源与错误分类，选中流立即关闭，不签发 URL、不额外 HEAD。OSS SDK 状态、Nginx 403、NAS 文件与许可、超时、脱敏及诊断权限专项实际 GREEN 21项，扩展37项零失败/错误/跳过。
-- 探测范围 OPEN_AND_CLOSE，只证明流可打开关闭，不验证完整内容或真实网络吞吐；源适配器现有超时和许可保持，NAS 文件系统及 SDK 关闭可能阻塞/读取剩余数据，尚无统一硬截止时间。无真实病案/生产源访问，不声称现场验证。最新 CI 待核验；回滚独立 revert，不改配置、数据、来源优先级或权限。
+- 探测范围 OPEN_AND_CLOSE，只证明流可打开关闭，不验证完整内容或真实网络吞吐；源适配器现有超时和许可保持，NAS 文件系统及 SDK 关闭可能阻塞/读取剩余数据，尚无统一硬截止时间。无真实病案/生产源访问，不声称现场验证。PR #766 已合并 f5ccc03f，最新 head 85007d4f，governance 45421600547、quality 45421600674 成功，实际1137单测及144 PG16集成均零失败/错误/跳过；回滚独立 revert，不改配置、数据、来源优先级或权限。
 - #763 已合并 8c68eca9；最新 head 8ee2307a，governance 45420699666、quality 45420061742 实际1129单测、144 PostgreSQL16.16集成，零失败/错误/跳过。#765 已合并 c0b0f51e，head c36379a8，governance 45421013514、quality 45421013440 实际1131单测零失败/错误/跳过，PG16按范围跳过（无数据库改动）。两项均为 AI 自审非独立审批。现场吞吐、真实 Tomcat 断开、Range、旧直连管理端兼容和来源网络隔离仍未完成。
 
 ## 每轮交接模板

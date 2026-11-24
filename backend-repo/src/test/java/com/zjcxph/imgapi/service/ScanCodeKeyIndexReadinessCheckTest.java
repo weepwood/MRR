@@ -48,7 +48,7 @@ class ScanCodeKeyIndexReadinessCheckTest {
         when(jdbcTemplate.queryForList(contains("idx_mr_scan_bah_numeric_cursor")))
                 .thenReturn(indexes);
         when(jdbcTemplate.queryForList(contains("reltuples")))
-                .thenReturn(List.of(Map.of("estimated_rows", estimatedRows)));
+                .thenReturn(List.of(Map.of("estimated_rows", estimatedRows, "total_bytes", 20015456256L, "heap_bytes", 15000000000L, "index_bytes", 5000000000L)));
         return jdbcTemplate;
     }
 
@@ -78,6 +78,8 @@ class ScanCodeKeyIndexReadinessCheckTest {
                 details.get("missing")
         );
         assertEquals(LARGE_TABLE_ROWS, details.get("estimatedRows"));
+        assertEquals(1892573184L, details.get("twoIndexReferenceBytes"));
+        assertEquals(20015456256L, details.get("totalBytes"));
         assertEquals("scripts/build-code-key-indexes.sql", details.get("script"));
     }
 

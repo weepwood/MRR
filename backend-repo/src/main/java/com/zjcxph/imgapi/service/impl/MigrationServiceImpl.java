@@ -424,7 +424,8 @@ public class MigrationServiceImpl implements MigrationService {
 
     @Override
     public String getOssSignedUrl(Integer scanId) {
-        Scan scan = scanMapper.findById(scanId);
+        if (scanId == null || scanId <= 0) return null;
+        Scan scan = scanMapper.findActiveByIds(List.of(scanId)).stream().findFirst().orElse(null);
         if (scan == null || scan.getOssUrl() == null || scan.getOssUrl().isBlank()) {
             return null;
         }

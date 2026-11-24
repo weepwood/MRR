@@ -269,7 +269,7 @@ public class ImageController {
             @PathVariable
             @Parameter(description = "扫描记录 ID", example = "1")
             Integer id) {
-        Scan scan = scanService.findById(id);
+        Scan scan = findActiveScan(id);
         if (scan == null) {
             return Result.fail("扫描记录不存在");
         }
@@ -286,7 +286,7 @@ public class ImageController {
             @PathVariable
             @Parameter(description = "扫描记录 ID", example = "1")
             Integer id) {
-        Scan scan = scanService.findById(id);
+        Scan scan = findActiveScan(id);
         if (scan == null) {
             return ResponseEntity.notFound().build();
         }
@@ -296,6 +296,12 @@ public class ImageController {
                 .header(HttpHeaders.LOCATION, "../content/" + id)
                 .header(HttpHeaders.CACHE_CONTROL, "private, no-store")
                 .build();
+    }
+
+    private Scan findActiveScan(Integer id) {
+        if (id == null || id <= 0) return null;
+        // URL delivery must use a fresh active record, not a cached unfiltered ID lookup.
+        return scanService.findActiveByIds(List.of(id)).stream().findFirst().orElse(null);
     }
 
     private void applyLookupMetadata(

@@ -13,7 +13,27 @@ from scripts.frontend_test_scope import classify_paths as frontend_scope
 
 JOBS = ('frontend', 'backend', 'integration', 'windows', 'recovery', 'release', 'development')
 PAGES_DEMO_SMOKE_WORKFLOW = '.github/workflows/deploy-pages-demo.yml'
-PAGES_DEMO_STYLE_SUFFIXES = ('.css', '.scss', '.sass', '.less', '.pcss')
+# Narrow allowlist: a business view's index.vue can contain permissions,
+# patient identifiers, export or migration logic despite its harmless filename.
+FRONTEND_ROOT = 'frontend-fantastic-admin/'
+PRESENTATION_PREFIXES = tuple(
+    FRONTEND_ROOT + 'src/' + area + '/'
+    for area in (
+        'views/help', 'views/ui-components',
+        'components/AppEmpty', 'components/AppLoading', 'components/MrrMetricCard',
+        'components/MrrPageHeader', 'components/MrrPageShell', 'components/MrrSectionCard',
+        'components/MrrStatusTag', 'ui/components/FaCard', 'ui/components/FaDivider',
+        'ui/components/FaKbd', 'ui/components/FaProgress', 'ui/components/FaCopyright',
+    )
+)
+STYLE_SUFFIXES = ('.css', '.scss', '.sass', '.less', '.pcss')
+
+
+def is_presentation_path(path: str) -> bool:
+    return (
+        path.startswith(FRONTEND_ROOT + 'src/assets/styles/') and path.lower().endswith(STYLE_SUFFIXES)
+        or path.startswith(PRESENTATION_PREFIXES)
+    )
 DEVELOPMENT_INPUTS = {
     'docker-compose.yml', '.dockerignore', 'backend-repo/Dockerfile', 'frontend-fantastic-admin/Dockerfile',
     'backend-repo/pom.xml', 'backend-repo/mvnw', 'backend-repo/mvnw.cmd',
@@ -31,11 +51,10 @@ DEVELOPMENT_INPUTS = {
 def classify_paths(paths, mode='pr') -> dict[str, bool]:
     paths = [p.strip().replace('\\', '/').removeprefix('./') for p in paths if p.strip()]
     frontend, backend = frontend_scope(paths), backend_scope(paths)
-    pages_demo_smoke = any(
+    pages_demo_smoke = frontend.e2e_changed or frontend.build_changed or any(
         path in (PAGES_DEMO_SMOKE_WORKFLOW, 'VERSION', 'release-baseline.json')
-        or (path.startswith('frontend-fantastic-admin/')
-            and not path.lower().endswith('.md')
-            and not path.lower().endswith(PAGES_DEMO_STYLE_SUFFIXES))
+        or (path.startswith(FRONTEND_ROOT) and not path.lower().endswith('.md')
+            and not is_presentation_path(path))
         for path in paths
     )
     database_tools = any(p.startswith('mrr-db/') and not p.lower().endswith('.md') for p in paths)
@@ -54,16 +73,30 @@ def classify_paths(paths, mode='pr') -> dict[str, bool]:
                  live=live, windows=any(p.startswith('deploy/windows/') or p in ('scripts/dev.ps1', 'scripts/dev.py') for p in paths),
                  recovery=recovery, release=needs_release_build(paths),
                  tooling=any(p.startswith(('scripts/', '.github/', 'quality/')) for p in paths))
-    if mode == 'integration':
-        if frontend.frontend_changed or backend.backend_changed or live or database_tools:
+    if mode in ('main', 'integration'):
+        ordinary_frontend = (
+            frontend.frontend_changed and not frontend.e2e_changed
+            and not frontend.build_changed and not backend.backend_changed
+            and not any(scope[key] for key in ('live', 'postgres', 'windows', 'recovery',
+                                               'development', 'release', 'tooling'))
+            and all(is_presentation_path(p) or p.lower().endswith('.md')
+                    for p in paths)
+        )
+        if mode == 'main' and ordinary_frontend:
+            # The PR still ran changed lint, type checking and frontend unit tests.
+            # Pages still builds/smokes on main; full application checks are deferred,
+            # not claimed as passed. Manual integration and release remain comprehensive.
+            scope.update(frontend=False, backend=False, integration=False,
+                         build=False, postgres=False, live=False)
+        elif frontend.frontend_changed or backend.backend_changed or live or database_tools:
             scope.update(integration=True, build=True, postgres=True, live=True)
         scope['release'] = False
         scope['e2e'] = False
     elif mode != 'pr':
         raise ValueError('Unsupported verification mode.')
-    # PR 集成 job 只有在前端确有改动时才需要重新检查和构建前端；
-    # main 集成要把前端嵌入 JAR 做真实浏览器联调，因此始终需要。
-    scope['integration_frontend'] = scope['integration'] and (mode == 'integration' or frontend.frontend_changed)
+    # PR 集成 job 只有在前端确有改动时才重新构建前端；
+    # main/手动集成若选中真实联调，必须嵌入生产前端。
+    scope['integration_frontend'] = scope['integration'] and (mode != 'pr' or frontend.frontend_changed)
     if scope['integration']:
         # Production frontend/backend/live checks share one runner and no large intermediate artifacts.
         scope.update(frontend=False, backend=recovery)
@@ -100,7 +133,7 @@ def main() -> None:
     parser = argparse.ArgumentParser(__doc__)
     commands = parser.add_subparsers(dest='command', required=True)
     select = commands.add_parser('scope')
-    select.add_argument('--mode', choices=('pr', 'integration'), required=True)
+    select.add_argument('--mode', choices=('pr', 'main', 'integration'), required=True)
     select.add_argument('--base')
     select.add_argument('--head', default='HEAD')
     select.add_argument('--runs', type=Path)

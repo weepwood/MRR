@@ -56,6 +56,14 @@ class CiBuildReuseTest(unittest.TestCase):
         self.assertIn("fetch-depth: 0", scope)
         self.assertNotIn("ref: ${{ github.event.pull_request.head.sha }}", scope)
 
+    def test_main_and_manual_scope_have_distinct_verification_modes(self):
+        quality = (ROOT / ".github/workflows/quality-gate.yml").read_text(encoding="utf-8")
+        self.assertIn("--mode main --runs main-runs.json", quality)
+        self.assertIn("--mode integration --output", quality)
+        self.assertNotIn("--mode integration --runs main-runs.json", quality)
+        read = quality.split("- name: Read last successful main quality gate", 1)[1].split("- name:", 1)[0]
+        self.assertIn("if: github.event_name == 'push'", read)
+
     def test_pr_integration_skips_frontend_only_when_nothing_consumes_it(self):
         quality = (ROOT / ".github/workflows/quality-gate.yml").read_text(encoding="utf-8")
         self.assertIn("integration_frontend: ${{ steps.scope.outputs.integration_frontend }}", quality)

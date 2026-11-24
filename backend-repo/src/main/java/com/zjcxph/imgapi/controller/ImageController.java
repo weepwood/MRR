@@ -5,15 +5,17 @@ import com.zjcxph.imgapi.common.Result;
 import com.zjcxph.imgapi.dto.req.ImageRequest;
 import com.zjcxph.imgapi.dto.resp.ArchiveLookupResult;
 import com.zjcxph.imgapi.dto.resp.BAHDataResponseDTO;
-import com.zjcxph.imgapi.entity.PathDO;
 import com.zjcxph.imgapi.entity.Scan;
 import com.zjcxph.imgapi.exception.BusinessException;
 import com.zjcxph.imgapi.service.ArchiveAccessService;
 import com.zjcxph.imgapi.service.ArchiveExportService;
 import com.zjcxph.imgapi.service.ImageUrlService;
 import com.zjcxph.imgapi.service.ScanService;
-import com.zjcxph.imgapi.storage.ImageStorage;
-import com.zjcxph.imgapi.storage.InvalidImagePathException;
+import com.zjcxph.imgapi.service.ImageContentService;
+import com.zjcxph.imgapi.common.ArchiveAccessAttributes;
+import com.zjcxph.imgapi.common.ResultCode;
+import org.springframework.web.context.request.RequestContextHolder;
+import org.springframework.web.context.request.ServletRequestAttributes;
 import com.zjcxph.imgapi.utils.MedicalRecordCodeUtils;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -23,12 +25,10 @@ import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.constraints.Pattern;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.core.io.InputStreamResource;
 import org.springframework.http.ContentDisposition;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
-import org.springframework.http.MediaTypeFactory;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -40,8 +40,6 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.servlet.mvc.method.annotation.StreamingResponseBody;
 
-import java.io.FileNotFoundException;
-import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
 import java.util.List;
@@ -64,18 +62,18 @@ public class ImageController {
 
     private final ScanService scanService;
     private final ArchiveExportService archiveExportService;
-    private final ImageStorage imageStorage;
+    private final ImageContentService imageContentService;
     private final ImageUrlService imageUrlService;
     private final ArchiveAccessService archiveAccessService;
 
     public ImageController(ScanService scanService,
                            ArchiveExportService archiveExportService,
-                           ImageStorage imageStorage,
+                           ImageContentService imageContentService,
                            ImageUrlService imageUrlService,
                            ArchiveAccessService archiveAccessService) {
         this.scanService = scanService;
         this.archiveExportService = archiveExportService;
-        this.imageStorage = imageStorage;
+        this.imageContentService = imageContentService;
         this.imageUrlService = imageUrlService;
         this.archiveAccessService = archiveAccessService;
     }
@@ -205,36 +203,18 @@ public class ImageController {
             @PathVariable String FOLDER,
             @Parameter(description = "文件名", example = "0072.jpg")
             @PathVariable String FILENAME) {
-        PathDO image = new PathDO(FOLDER, FILENAME, BRXH, BAH);
         try {
-            long contentLength = imageStorage.size(image);
-            InputStreamResource resource = new InputStreamResource(imageStorage.open(image));
-            MediaType mediaType = MediaTypeFactory.getMediaType(FILENAME)
-                    .orElse(MediaType.APPLICATION_OCTET_STREAM);
-
-            HttpHeaders headers = new HttpHeaders();
-            headers.setContentDisposition(ContentDisposition.inline()
-                    .filename(FILENAME, StandardCharsets.UTF_8)
-                    .build());
-            headers.setCacheControl("private, no-store");
-            headers.setContentType(mediaType);
-
-            return ResponseEntity.ok()
-                    .headers(headers)
-                    .contentLength(contentLength)
-                    .body(resource);
-        } catch (InvalidImagePathException exception) {
-            logger.warn("拒绝非法影像路径: BAH={}, BRXH={}, FOLDER={}, FILENAME={}, reason={}",
-                    BAH, BRXH, FOLDER, FILENAME, exception.getMessage());
-            return ResponseEntity.badRequest().body(Result.fail("影像路径参数无效"));
-        } catch (FileNotFoundException exception) {
-            return ResponseEntity.status(HttpStatus.NOT_FOUND)
-                    .body(Result.fail("图片不存在"));
-        } catch (IOException exception) {
-            logger.error("读取影像失败: BAH={}, BRXH={}, FOLDER={}, FILENAME={}",
-                    BAH, BRXH, FOLDER, FILENAME, exception);
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(Result.fail("图片读取错误"));
+            var content = imageContentService.openLegacy(BAH, BRXH, FOLDER, FILENAME);
+            var request = RequestContextHolder.getRequestAttributes() instanceof ServletRequestAttributes attributes
+                    ? attributes.getRequest() : null;
+            if (request != null && content.auditTarget() != null) {
+                request.setAttribute(ArchiveAccessAttributes.AUDIT_TARGET, content.auditTarget());
+            }
+            return ImageContentResponse.create(request, content, () -> {}, () -> {});
+        } catch (BusinessException exception) {
+            return ResponseEntity.status(ResultCode.resolveHttpStatus(exception.getCode()))
+                    .header(HttpHeaders.CACHE_CONTROL, "private, no-store")
+                    .body(Result.fail(exception.getCode(), exception.getMessage()));
         }
     }
 

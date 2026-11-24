@@ -29,11 +29,15 @@ def main():
     parser.add_argument("--batch", type=int, default=100_000)
     parser.add_argument("--max-seconds", type=int, default=1800)
     parser.add_argument("--java-home", type=Path, required=True)
+    parser.add_argument("--sample-seconds", type=int, default=5)
+    parser.add_argument("--multikey", action="store_true")
     args = parser.parse_args()
     if not 10_000 <= args.rows <= MAX_ROWS or not 1000 <= args.batch <= 100_000:
         parser.error("rows must be 10,000..30,000,000; batch 1,000..100,000")
     if not 60 <= args.max_seconds <= 7200:
         parser.error("max-seconds must be 60..7200")
+    if not 1 <= args.sample_seconds <= 60:
+        parser.error("sample-seconds must be 1..60")
     parent = args.lab_parent.resolve(strict=True)
     if not parent.is_dir():
         parser.error("lab-parent must be an existing directory")
@@ -122,6 +126,7 @@ def main():
                 FROM generate_series({lo},{hi}) n
                 JOIN app.mr_archive a ON a.id=(n-1)/{PAGES}+1
             """)
+            report["seeded_rows"] = hi
             print(f"Seeded {hi}/{args.rows}", flush=True)
         report["seed_seconds"] = round(time.monotonic() - t, 3)
         sql("ANALYZE app.mr_scan; ANALYZE app.mr_archive")
@@ -182,6 +187,40 @@ def main():
             if not failures or int(failures[1]) or not tps or not latency:
                 raise RuntimeError("pgbench incomplete or failed transactions")
             report["pgbench"][str(clients)] = {"tps": float(tps[1]), "mean_ms": float(latency[1]), "failures": 0}
+        if args.multikey:
+            # Uniform keys across the entire synthetic archive range, no real identifiers.
+            workload = lab / "multikey.sql"
+            workload.write_text(
+                f"\\set archive random(1, {archive_count})\n"
+                "SELECT * FROM app.mr_scan WHERE app.numeric_code_key(sjh) = "
+                "(20000000 + :archive)::text AND id>0 ORDER BY id LIMIT 51;\n"
+            )
+            report["multikey"] = {}
+            for clients in (1, 8):
+                prefix = lab / f"multi-{clients}"
+                output = run([pg / "pgbench", *connect, "-n", "-M", "prepared",
+                    "-c", str(clients), "-j", str(min(clients, 4)), "-T", str(args.sample_seconds),
+                    "-l", "--log-prefix=" + str(prefix), "-f", workload, "imgapi"],
+                    log=f"multikey-{clients}.log")
+                failed = re.search(r"number of failed transactions: (\d+)", output)
+                done = re.search(r"number of transactions actually processed: (\d+)", output)
+                tps = re.search(r"tps = ([0-9.]+)", output)
+                if not failed or int(failed[1]) or not done or not tps:
+                    raise RuntimeError("multikey benchmark failed")
+                samples = []
+                for log in sorted(lab.glob(prefix.name + ".*")):
+                    for line in log.read_text().splitlines():
+                        fields = line.split()
+                        if len(fields) < 6 or not fields[2].isdigit():
+                            raise RuntimeError("unexpected pgbench transaction log")
+                        samples.append(int(fields[2]))
+                if len(samples) != int(done[1]) or not samples:
+                    raise RuntimeError("transaction log count mismatch")
+                samples.sort()
+                report["multikey"][str(clients)] = {
+                    "transactions": len(samples), "tps": float(tps[1]), "failed": 0,
+                    **{f"p{p}_ms": samples[math.ceil(len(samples)*p/100)-1]/1000 for p in (50,95,99)}
+                }
         report["status"] = "complete"
     finally:
         if started or (data / "postmaster.pid").is_file():

@@ -79,6 +79,59 @@ class NasArchiveImageSourceTest {
     }
 
     @Test
+    void blockedNasOpenReturnsWithinBudgetAndClosesLateResult() throws Exception {
+        var properties = new ArchiveImageSourceProperties();
+        properties.setNasMaxConcurrency(2);
+        properties.setNasOpenTimeout(Duration.ofMillis(150));
+        var node = new ArchiveImageSourceProperties.NasNode();
+        node.setRoot(tempDir.toString());
+        properties.setNasNodes(Map.of("blocked", node, "healthy", node));
+        var entered = new java.util.concurrent.CountDownLatch(1);
+        var release = new java.util.concurrent.CountDownLatch(1);
+        var closed = new java.util.concurrent.CountDownLatch(1);
+        var source = new NasArchiveImageSource(properties) {
+            @Override java.io.InputStream openFile(PathDO image) throws IOException {
+                if ("blocked".equals(image.getSourceNode())) {
+                    entered.countDown();
+                    // Native filesystem operations may ignore interruption.
+                    while (release.getCount() > 0) {
+                        try { release.await(); } catch (InterruptedException ignored) {}
+                    }
+                    return new java.io.ByteArrayInputStream(new byte[]{1}) {
+                        @Override public void close() { closed.countDown(); }
+                    };
+                }
+                return new java.io.ByteArrayInputStream(new byte[]{2});
+            }
+        };
+        var blocked = new PathDO();
+        blocked.setSourceType("NAS");
+        blocked.setSourceNode("blocked");
+        var healthy = new PathDO();
+        healthy.setSourceType("NAS");
+        healthy.setSourceNode("healthy");
+        try (var callers = java.util.concurrent.Executors.newVirtualThreadPerTaskExecutor()) {
+            var request = callers.submit(() -> {
+                try (var ignored = source.open(blocked)) {
+                    return false;
+                } catch (IOException failure) {
+                    return true;
+                }
+            });
+            try {
+                assertThat(entered.await(2, java.util.concurrent.TimeUnit.SECONDS)).isTrue();
+                assertThat(request.get(2, java.util.concurrent.TimeUnit.SECONDS)).isTrue();
+                // A second blocked request cannot accumulate another worker for the same node.
+                assertThatThrownBy(() -> source.open(blocked)).isInstanceOf(IOException.class);
+                try (var stream = source.open(healthy)) { assertThat(stream.read()).isEqualTo(2); }
+            } finally {
+                release.countDown();
+            }
+            assertThat(closed.await(2, java.util.concurrent.TimeUnit.SECONDS)).isTrue();
+        }
+    }
+
+    @Test
     void readsHighBahFromSjhDirectoryWhenSourceRefIsAbsent() throws Exception {
         Path root = Files.createDirectory(tempDir.resolve("high-bah-root"));
         Path file = Files.createDirectories(

@@ -13,12 +13,14 @@ public class ArchiveImageSourceProperties {
 
     private boolean preferOss = true;
     private Duration acquireTimeout = Duration.ofSeconds(30);
+    private Duration transferBudget = Duration.ofSeconds(120);
     private Duration openBudget = Duration.ofSeconds(120);
     private int localMaxConcurrency = 16;
     private int nginxMaxConcurrency = 8;
     private Duration nginxConnectTimeout = Duration.ofSeconds(5);
     private Duration nginxReadTimeout = Duration.ofSeconds(60);
     private int nasMaxConcurrency = 8;
+    private Duration nasOpenTimeout = Duration.ofSeconds(30);
     private int httpMaxConcurrency = 8;
     private int ossMaxConcurrency = 8;
     private Map<String, NasNode> nasNodes = new LinkedHashMap<>();

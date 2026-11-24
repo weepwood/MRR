@@ -36,6 +36,32 @@ class ResolvedImageStorageFallbackTest {
     }
 
     @Test
+    void interruptedSourceMustNotStartAnotherFallback() throws Exception {
+        var image = new PathDO();
+        var first = mock(ArchiveImageSource.class);
+        var second = mock(ArchiveImageSource.class);
+        var resolver = mock(ArchiveImageSourceResolver.class);
+        when(resolver.resolveCandidates(image)).thenReturn(List.of(first, second));
+        when(first.describeSource(image)).thenReturn("NGINX");
+        when(second.describeSource(image)).thenReturn("LOCAL");
+        when(first.open(image)).thenAnswer(invocation -> {
+            Thread.currentThread().interrupt();
+            throw new IOException("synthetic cancelled", new InterruptedException());
+        });
+        when(second.open(image)).thenReturn(new ByteArrayInputStream(new byte[]{1}));
+        var storage = new ResolvedImageStorage(resolver, new SimpleMeterRegistry());
+        try {
+            org.assertj.core.api.Assertions.assertThatThrownBy(() -> {
+                try (var ignored = storage.open(image)) {}
+            }).isInstanceOf(IOException.class);
+            assertThat(Thread.currentThread().isInterrupted()).isTrue();
+            org.mockito.Mockito.verify(second, org.mockito.Mockito.never()).open(image);
+        } finally {
+            Thread.interrupted();
+        }
+    }
+
+    @Test
     void fallsBackToTheNextControlledSourceWhenAutoSourceFails() throws Exception {
         PathDO image = new PathDO("25.03.15", "page.jpg", "605746", "00789508");
         image.setSourceType("AUTO");

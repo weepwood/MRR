@@ -6,6 +6,25 @@
 
 [2026-11-24 生产稳定性专项完整交接](ai-handoff-2026-11-24.md)：维护者选定的开发顺序、已合并成果与 CI 证据、#763 失败根因、未完成事项、现场验收边界及接续任务。最新重点为 04 运维与存储可靠性；先处理 #763，再推进统一影像网关。以下为历史阶段索引，若与快照或实时 GitHub 状态冲突，以实时状态为准。
 
+## 2026-11-24 本地接续（#763，P1）
+
+- #764 已 squash 合并至 main 3bc4a36cffd062804178c6ab31e291b7bccb0e74；governance 45417633142、quality 45417635601 的 scope/pr-gate 成功；文档范围其他任务按计划跳过。原快照保留。
+- #763 从 78290f25 接手，专属本地 worktree `/Volumes/data/Project/MRR-worktrees/230-migration-source-cache-eviction`，分支 `fix/230-migration-source-cache-eviction`；34b41afb 同步最新 main，仅两处文档冲突已处理。
+- 测试先提交 a7990828，Java 21 / Maven Wrapper 定向 RED 实际运行 25 项，1 失败（success 被误标 retry_wait）、1 错误（afterCommit 异常外溢）、0 跳过；原 Mockito 严格参数夹具已修复。
+- 实现 9ffe44a1：各缓存分别隔离 RuntimeException，继续清理剩余缓存，日志仅固定缓存名和异常类型；不改变已完成迁移结果、权限、SQL、TTL 或零行更新既有语义。GREEN 同一专项 25 项，0 失败/错误/跳过（本地 Java 21，`./mvnw -o -B -ntp -Dtest=MigrationServiceImplTest test`）。
+- 状态：本地修复完成，最新远端 CI 待核验；未执行 PG16 集成、生产迁移、现场吞吐或正式发布。失效失败的单个缓存仍可能在 TTL 内保留旧值；在途旧查询回填以及每次遍历成本尚未解决，不能宣称完全一致性。合并前核对最新 head、main、P1 必需检查和风险；必要时另立统一缓存专项，不扩展到无关模块。
+- 04.2 初查：ImageContentServiceImpl 直接使用 ImageContentMapper.findActiveById，不经 scanById 缓存；现有 ImageUrlService 已支持 direct/gateway，不改默认模式。后续核对遗留 URL 下发、授权、审计、流关闭和 Range，见 #230 与 ADR-0009。
+- 本地已有 Homebrew JDK21 与 PG16，默认 Java 27，无 Docker CLI；使用隔离可销毁 PG16 或既有 CI，不使用医院库。#752/#722/#712 最新查询仍 mergeable=false，保留；后两项仍缺现场兼容证据。
+- 回滚：独立 revert #763，不删除或回退已迁移 OSS 对象；不修改生产配置。接续先核验 GitHub 最新 CI 和上述未解决风险。
+
+## #763 旧回填专项复验（2026-11-24）
+
+- 7b9ed5d0 的 governance 45419250290、quality 45419224037 均成功；随后因确认旧回填竞态继续修复，不以旧 CI 作为新提交的合并依据。
+- 82e03280 实际 RED：ScanServiceCacheTest 6 项，2 失败（单 ID evict、组合查询 clear 后在途旧值回填），0 错误/跳过。0c8beb34 复用原 Caffeine 原生缓存、键、TTL、容量和统计；五个非 sync Cacheable 查询使用 per-invocation CacheResolver 视图，失效与回填共享短临界区和缓存级 generation。迁移选择性失效、普通 evict/clear 递增 generation，阻止旧查询重填或覆盖新值；数据库查询不持锁，无关已缓存值保留。
+- 实际 GREEN 31 项；扩展回归 `./mvnw -o -B -ntp -Dtest=ScanServiceCacheTest,MigrationServiceImplTest,ScanServiceImplTest,ScanServiceArchiveLookupTest,OssSignedUrlCacheTest test` 63 项全部通过，0 失败/错误/跳过。迁移提交回调覆盖五类真实代际缓存、空键旧回填、覆盖新值、无关缓存及签名缓存不变。
+- 边界：在途旧调用仍可返回其自身读到的快照；每次失效保守丢弃该缓存其他在途加载的回填，并保留原四缓存遍历成本。普通写路径原事务/缓存切面提交顺序、外部进程及其他写路径未新增承诺。缓存提供者异常仍有旧数据风险；现场批量吞吐、并发命中率、真实 PG16 最新 CI 待验证。回滚独立 revert，不动已迁移对象。
+- 最新 P1 提交必须重新核验 governance/pr-gate、后端及 PG16 实际报告；保持本地 worktree，不提前合并。
+
 ## 当前重点
 
 | 任务 | 已核实状态 | 后续入口 |
@@ -61,7 +80,7 @@
 | 09 | #171、#519、#523、#524：复核现有 ZIP/PDF 状态、取消/过期/下载预算、选页与预览生命周期，真实混合来源及 Range 验收。 |
 | 07 | #350、#619：固定 SHA，复跑全量候选、PG16、真实旧浏览器、Windows 恢复、产物身份与升级/回滚；未完成现场证据不得发布 V1.0。 |
 
-每批独立 PR、中文提交、按风险分级执行测试、AI 自审与最新 SHA 检查，持续更新专题文档与关联 Issue。P1 合并前同步最新 main；不得降低门禁或执行生产操作。没有本地 worktree，使用 GitHub API 独立分支。
+每批独立 PR、中文提交、按风险分级执行测试、AI 自审与最新 SHA 检查，持续更新专题文档与关联 Issue。P1 合并前同步最新 main；不得降低门禁或执行生产操作。历史轮次使用 GitHub API 独立分支；本地接续见上方专属 worktree 记录。
 
 ## 每轮交接模板
 

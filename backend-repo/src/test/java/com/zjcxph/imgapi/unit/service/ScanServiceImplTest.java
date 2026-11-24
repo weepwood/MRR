@@ -114,6 +114,15 @@ class ScanServiceImplTest {
         }
 
         @Test
+        void exactCursorRejectsUnsupportedFiltersRatherThanSilentlyIgnoringThem() {
+            ScanRequest request = new ScanRequest();
+            request.setFilename("synthetic.jpg");
+            assertThatThrownBy(() -> scanService.findByConditionAfterId(request, 0, 20))
+                    .isInstanceOf(com.zjcxph.imgapi.exception.BusinessException.class);
+            org.mockito.Mockito.verifyNoInteractions(scanMapper);
+        }
+
+        @Test
         void findAfterId_lastPage() {
             when(scanMapper.findAfterId(10, 3)).thenReturn(List.of(mockScan));
 

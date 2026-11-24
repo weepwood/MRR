@@ -21,6 +21,47 @@ class ArchiveExportJobDownloadTest {
     @TempDir Path directory;
 
     @Test
+    void pendingDownloadsPinFileAndLimitConcurrentRequests() throws Exception {
+        var props = new com.zjcxph.imgapi.config.ArchiveExportProperties();
+        props.setTempDirectory(directory.toString());
+        var files = new com.zjcxph.imgapi.service.impl.ArchiveExportTempFileManager(props);
+        files.initialize();
+        var repository = mock(ArchiveExportJobRepository.class);
+        var service = new ArchiveExportJobService(mock(com.zjcxph.imgapi.service.ArchiveExportService.class),
+                repository, files, props, Runnable::run);
+        var controller = new ArchiveExportJobController(service, repository, mock(DeploymentReadinessService.class));
+        var session = new AuthSession();
+        session.setId(1L); session.setUsername("synthetic-user");
+        session.setPermissions(List.of("record:download"));
+        var job = new ArchiveExportJob();
+        job.setId("synthetic-job"); job.setOwnerUserId(1L); job.setStatus("SUCCESS");
+        job.setFormat("ZIP"); job.setFileName("synthetic.zip");
+        var file = Files.write(directory.resolve("synthetic.zip"), new byte[]{1,2,3,4});
+        job.setFilePath(file.toString());
+        when(repository.findById(job.getId())).thenReturn(java.util.Optional.of(job));
+        java.util.function.Supplier<MockHttpServletRequest> requests = () -> {
+            var request = new MockHttpServletRequest("GET", "/download");
+            request.setAttribute(AuthorizationInterceptor.AUTH_SESSION_ATTRIBUTE, session);
+            return request;
+        };
+        var first = controller.download(job.getId(), null, requests.get());
+        var second = controller.download(job.getId(), "bytes=1-2", requests.get());
+        org.assertj.core.api.Assertions.assertThatThrownBy(() -> controller.download(job.getId(), null, requests.get()))
+                .isInstanceOf(com.zjcxph.imgapi.exception.BusinessException.class)
+                .satisfies(failure -> assertThat(((com.zjcxph.imgapi.exception.BusinessException)failure).getCode()).isEqualTo(429));
+        assertThat(files.deleteManagedFile(file.toString())).isFalse();
+        var bytes = new ByteArrayOutputStream();
+        first.getBody().writeTo(bytes);
+        assertThat(bytes.toByteArray()).containsExactly((byte)1,(byte)2,(byte)3,(byte)4);
+        assertThat(files.deleteManagedFile(file.toString())).isFalse();
+        // A failed client write releases its handle and quota as well.
+        org.assertj.core.api.Assertions.assertThatThrownBy(() -> second.getBody().writeTo(new java.io.OutputStream() {
+            @Override public void write(int value) throws java.io.IOException { throw new java.io.IOException("synthetic disconnect"); }
+        })).isInstanceOf(java.io.IOException.class);
+        assertThat(files.deleteManagedFile(file.toString())).isTrue();
+    }
+
+    @Test
     void staleIfRangeReturnsFullRepresentationAndMatchingTagReturnsPartial() throws Exception {
         var service = mock(ArchiveExportJobService.class);
         var repository = mock(ArchiveExportJobRepository.class);

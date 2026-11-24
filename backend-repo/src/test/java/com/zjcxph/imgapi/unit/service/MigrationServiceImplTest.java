@@ -342,6 +342,16 @@ class MigrationServiceImplTest {
     }
 
     @Test
+    void deletedScanCannotReceiveOssSignedUrl() {
+        Scan scan = legacyScan(3, "00789510", "605748", null);
+        scan.setUploadFlag(0);
+        scan.setOssUrl("synthetic-object");
+        lenient().when(scanMapper.findById(3)).thenReturn(scan);
+        assertThat(migrationService.getOssSignedUrl(3)).isNull();
+        verify(ossService, never()).generatePresignedUrl(anyString());
+    }
+
+    @Test
     void successfulMigrationInvalidatesAllAffectedCacheAliasesOnlyAfterCommit() throws Exception {
         Scan scan = legacyScan(3, "00789510", "605748", null);
         scan.setArchiveId(42L);

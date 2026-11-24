@@ -38,6 +38,8 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.lenient;
+import static org.mockito.Mockito.verifyNoInteractions;
 
 @ExtendWith(MockitoExtension.class)
 @DisplayName("ImageController 影像控制器测试")
@@ -211,6 +213,16 @@ class ImageControllerTest {
 
         assertThat(result.getCode()).isEqualTo(200);
         assertThat(result.getData()).isEqualTo("https://oss/signed-image");
+    }
+
+    @Test
+    void deletedImageCannotReceiveDeliveryUrlOrLegacyGatewayRedirect() {
+        mockScan.setUploadFlag(0);
+        lenient().when(scanService.findById(1)).thenReturn(mockScan);
+        lenient().when(imageUrlService.buildDeliveryUrl(mockScan)).thenReturn("https://example.invalid/signed");
+        assertThat(imageController.getImageUrl(1).getCode()).isNotEqualTo(200);
+        assertThat(imageController.getOssImage(1).getStatusCode()).isEqualTo(HttpStatus.NOT_FOUND);
+        verifyNoInteractions(imageUrlService);
     }
 
     @Test

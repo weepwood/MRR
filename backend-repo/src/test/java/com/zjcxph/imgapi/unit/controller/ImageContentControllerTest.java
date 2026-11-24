@@ -26,6 +26,7 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.when;
 
 @DisplayName("ImageContentController 内部影像内容接口测试")
@@ -137,6 +138,8 @@ class ImageContentControllerTest {
             assertThat(manager.getConcurrentResult()).isInstanceOf(TaskRejectedException.class);
             request.getAsyncContext().complete();
             assertThat(input.isClosed()).isTrue();
+            assertThatThrownBy(() -> response.getBody().writeTo(new ByteArrayOutputStream()))
+                    .isInstanceOf(IOException.class);
         } finally {
             RequestContextHolder.resetRequestAttributes();
         }

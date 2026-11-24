@@ -16,6 +16,11 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.http.HttpHeaders;
+import org.springframework.mock.web.MockHttpServletRequest;
+import org.springframework.mock.web.MockHttpServletResponse;
+import org.springframework.core.task.AsyncTaskExecutor;
+import org.springframework.core.task.TaskRejectedException;
+import org.springframework.web.context.request.async.WebAsyncUtils;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.servlet.mvc.method.annotation.StreamingResponseBody;
@@ -145,6 +150,43 @@ class ExternalArchiveControllerImageTest {
                 "FAILED",
                 null
         );
+    }
+
+    @Test
+    void rejectedExternalStreamClosesSourceAndAuditsFailureOnce() throws Exception {
+        ExternalArchiveGrant grant = grant();
+        Scan scan = scan();
+        MockHttpServletRequest servletRequest = new MockHttpServletRequest("GET", "/api/v1/external/archive/image/42");
+        servletRequest.setAsyncSupported(true);
+        servletRequest.setCookies(new Cookie(ExternalArchiveAccessService.SESSION_COOKIE_NAME, "session-token"));
+        servletRequest.setRemoteAddr("10.0.0.8");
+        servletRequest.addHeader("User-Agent", "JUnit");
+        servletRequest.addHeader("X-Request-Id", "request-42");
+        when(externalArchiveAccessService.requireSession("session-token")).thenReturn(grant);
+        when(externalArchiveAccessService.requireImage(grant, 42)).thenReturn(scan);
+        TrackingInputStream input = new TrackingInputStream(new byte[]{1});
+        when(imageContentService.open(42)).thenReturn(new ImageContentService.ImageContent(
+                input, "image.jpg", MediaType.IMAGE_JPEG, 1L));
+        var response = controller.image(42, servletRequest);
+        var manager = WebAsyncUtils.getAsyncManager(servletRequest);
+        manager.setAsyncWebRequest(WebAsyncUtils.createAsyncWebRequest(servletRequest, new MockHttpServletResponse()));
+        manager.setTaskExecutor(new AsyncTaskExecutor() {
+            @Override
+            public void execute(Runnable task) {
+                throw new TaskRejectedException("synthetic rejection");
+            }
+        });
+        manager.startCallableProcessing(() -> {
+            response.getBody().writeTo(new ByteArrayOutputStream());
+            return null;
+        });
+        assertThat(manager.getConcurrentResult()).isInstanceOf(TaskRejectedException.class);
+        servletRequest.getAsyncContext().complete();
+        assertThat(input.isClosed()).isTrue();
+        assertThatThrownBy(() -> response.getBody().writeTo(new ByteArrayOutputStream()))
+                .isInstanceOf(IOException.class);
+        verify(externalArchiveAccessService).recordAudit(grant, "123456", "A-001", "IMAGE_VIEW", 42,
+                "10.0.0.8", "JUnit", "request-42", "FAILED", null);
     }
 
     private void prepareRequestAndAuthorization(ExternalArchiveGrant grant, Scan scan) {

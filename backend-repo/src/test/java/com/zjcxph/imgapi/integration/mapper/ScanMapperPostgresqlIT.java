@@ -95,6 +95,45 @@ class ScanMapperPostgresqlIT extends PostgresqlIntegrationTestSupport {
     }
 
     @Test
+    void actualPlanScriptVerifiesEquivalentNonemptyPagesForBothIdentifierKinds() throws Exception {
+        jdbcTemplate.update("""
+                INSERT INTO app.mr_scan(bah,sjh,filename,folder,uploadflag,pages)
+                VALUES ('000765432','00054321','plan-proof-a.jpg','synthetic',1,1),
+                       ('7654329','543219','plan-proof-unrelated.jpg','synthetic',1,2),
+                       ('765432','54321','plan-proof-b.jpg','synthetic',0,3),
+                       ('765432','54321','plan-proof-c.jpg','synthetic',1,4)
+                """);
+        String script = java.nio.file.Files.readString(java.nio.file.Path.of("scripts/inspect-query-plans.sql"));
+        String start = "-- BEGIN EXACT PAGE EVIDENCE SQL";
+        String end = "-- END EXACT PAGE EVIDENCE SQL";
+        assertThat(script).contains(start, end);
+        String query = script.substring(script.indexOf(start) + start.length(), script.indexOf(end)).trim();
+        for (String column : List.of("bah", "sjh")) {
+            String code = column.equals("bah") ? "765432" : "54321";
+            Map<String, Object> first = compareScriptPage(query, column, code, 0);
+            assertThat(first.get("comparable")).isEqualTo(true);
+            assertThat(first.get("matched_after_id")).isEqualTo(0);
+            Map<String, Object> later = compareScriptPage(query, column, code, 1);
+            assertThat(later.get("comparable")).isEqualTo(true);
+            ScanRequest request = new ScanRequest();
+            if (column.equals("bah")) request.setBah(code);
+            else request.setSjh(code);
+            assertThat(later.get("matched_after_id"))
+                    .isEqualTo(scanMapper.findByConditionAfterId(request, 0, 1).getFirst().getId());
+            assertThat(compareScriptPage(query, column, code, 3).get("comparable")).isEqualTo(false);
+            assertThat(compareScriptPage(query, column, code, 4).get("comparable")).isEqualTo(false);
+            assertThat(compareScriptPage(query, column, "99999999", 0).get("comparable")).isEqualTo(false);
+        }
+    }
+
+    private Map<String, Object> compareScriptPage(String query, String column, String code, int offset) {
+        // Fixed synthetic values only; psql quotes identifiers and literals in the actual script.
+        return jdbcTemplate.queryForMap(query.replace(":\"comparison_column\"", column)
+                .replace(":'code'", "'" + code + "'")
+                .replace(":'deep_offset'", Integer.toString(offset)));
+    }
+
+    @Test
     void compatibilityExpressionUsesSameTrimmedNumericKeyAsDatabase() {
         jdbcTemplate.update("INSERT INTO app.mr_scan(bah,filename,folder,uploadflag,pages) VALUES (' 00123 ','trimmed.jpg','synthetic',1,1)");
         assertThat(scanMapper.findBAH("123", "123")).extracting(Scan::getFilename).contains("trimmed.jpg");

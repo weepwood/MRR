@@ -179,6 +179,13 @@
 
 - #781已合并38ed106c，head c5a95683，quality45436736527，1169单测及148 PG16零失败/错误/跳过。
 
+## 03 千万级完整基准证据（2026-11-25）
+
+- #99/#350 P2，main21c8b960实际1000万合成PG16运行，报告complete_with_legacy_timeouts，10000000扫描/100000主档，造数350.102秒、索引40.047秒，两索引各301MB valid/ready，同页通过，8并发随机多键673982事务、P99 0.753ms、零失败；5秒兼容COUNT超时明确记录，实例已停止。详见 [基准报告](synthetic-scan-benchmark-2026-11-24.md)，3000万未启动、不宣称生产验收。独立文档分支 `docs/99-ten-million-evidence`。
+- #777已合并21c8b960；#778已合并6454b5a4（1164单测/147 PG16）；#779已合并8f598234（1166单测，PG16按范围跳过）。真实pg_trgm容量、写入代价、稀疏关键词及兼容游标待专项验收。
+
+- #780已合并039307d3，head947b937d，quality45438121029，1171单测/148 PG16零失败/错误/跳过，Development通过。
+
 ## 04.3 NAS正文原生操作隔离（2026-11-25）
 
 - #230/#350 P1，分支 `fix/230-nas-body-isolation`，worktree `/Volumes/data/Project/MRR-worktrees/230-nas-body-isolation`。8ae21669实际RED 5项1错误：模拟不响应中断的原生正文read阻塞调用方；b9e5ff15 每个已许可的NAS流一个串行原生I/O所有者，16KiB私有缓冲，读取/seek/close独立等待预算，超时不取消原生任务或提前释放许可，排队一次真实close；保留真实长度与Range seek。新增 ARCHIVE_IMAGE_SOURCE_NAS_BODY_TIMEOUT 默认PT30S。实际36项联合零失败/错误/跳过，覆盖迟到读取、许可持有/恢复、Range、网关及ZIP/PDF。同步#779正式main 8f598234，最新CI待验收。

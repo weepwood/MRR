@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
-import { compare, extract, routeKey } from './mock-coverage.mjs'
+import { compare, extract, routeKey, strictFailures } from './mock-coverage.mjs'
 
 test('normalizes full dynamic segments without merging HTTP methods', () => {
   assert.equal(routeKey('get', '/api/v1/items/:id'), 'GET /api/v1/items/{}')
@@ -38,4 +38,38 @@ test('reports missing methods and duplicate registrations; excludes unrelated ur
   assert.equal(report.covered, 1)
   assert.equal(report.missing[0].key, 'POST /api/v1/items')
   assert.equal(report.duplicates[0].locations.length, 2)
+})
+
+test('strict coverage rejects duplicates and missing routes only for selected API modules', () => {
+  const api = [
+    { key: 'GET /api/v1/a', file: 'src/api/modules/ready.ts', line: 1 },
+    { key: 'POST /api/v1/b', file: 'src/api/modules/ready.ts', line: 2 },
+    { key: 'GET /api/v1/c', file: 'src/api/modules/unfinished.ts', line: 1 },
+  ]
+  const mock = [
+    { key: 'GET /api/v1/a', file: 'src/mock/a.ts', line: 1 },
+    { key: 'GET /api/v1/a', file: 'src/mock/b.ts', line: 1 },
+  ]
+  const report = { modules: ['ready', 'unfinished'], dev: compare(api, mock), pages: compare(api, mock), unresolved: [] }
+  const failures = strictFailures(report, ['ready'])
+  assert.deepEqual(failures.map(item => [item.mode, item.kind, item.key]), [
+    ['dev', 'missing', 'POST /api/v1/b'],
+    ['dev', 'duplicate', 'GET /api/v1/a'],
+    ['pages', 'missing', 'POST /api/v1/b'],
+    ['pages', 'duplicate', 'GET /api/v1/a'],
+  ])
+  assert.equal(strictFailures(report, ['unknown'])[0].kind, 'unknown-module')
+})
+
+test('strict coverage detects unresolved selected calls and permits incomplete unrelated modules', () => {
+  const api = [{ key: 'GET /api/v1/a', file: 'src/api/modules/ready.ts', line: 1 }]
+  const mock = [{ key: 'GET /api/v1/a', file: 'src/mock/a.ts', line: 1 }]
+  const report = {
+    modules: ['ready', 'unfinished'],
+    dev: compare(api, mock),
+    pages: compare(api, mock),
+    unresolved: [{ file: 'src/api/modules/unfinished.ts', line: 2, method: 'GET' }],
+  }
+  assert.deepEqual(strictFailures(report, ['ready']), [])
+  assert.equal(strictFailures(report, ['unfinished'])[0].kind, 'unresolved')
 })

@@ -133,6 +133,15 @@ class ScanCodeKeyIndexReadinessCheckTest {
     }
 
     @Test
+    void unknownStatisticsDoNotMasqueradeAsAnEmptyTable() {
+        Map<String, Object> check = service(jdbcWithIndexes(List.of(), -1L)).checkScanCodeKeyIndexes();
+        assertFalse((Boolean) check.get("passed"));
+        assertFalse(detailsOf(check).containsKey("estimatedRows"));
+        assertFalse(detailsOf(check).containsKey("twoIndexReferenceBytes"));
+        assertTrue(String.valueOf(check.get("message")).contains("未知"));
+    }
+
+    @Test
     void estimateUsesStatisticsInsteadOfCountingTheWholeTable() {
         JdbcTemplate jdbcTemplate = jdbcWithIndexes(List.of(), LARGE_TABLE_ROWS);
         service(jdbcTemplate).checkScanCodeKeyIndexes();

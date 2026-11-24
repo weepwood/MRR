@@ -99,6 +99,12 @@ const filteredExportJobs = computed(() => {
 })
 
 const overviewChecks = computed(() => overview.value?.readiness.checks || [])
+const indexCapacity = computed(() => overviewChecks.value.find(check => check.code === 'scan-code-key-indexes')?.details)
+function capacityValue(key: string, bytes = false) {
+  const value = indexCapacity.value?.[key]
+  return typeof value === 'number' && Number.isFinite(value) && value >= 0 ? (bytes ? formatBytes(value) : formatNumber(value)) : '未取得'
+}
+const indexState = computed(() => (({ READY: '已就绪', MISSING: '缺失或无效', BELOW_THRESHOLD: '低于建议阈值' } as Record<string, string>)[String(indexCapacity.value?.state)] || '未知'))
 const failedReadinessChecks = computed(() => overviewChecks.value.filter(check => !check.passed)
   .sort((a, b) => Number(b.severity === 'CRITICAL') - Number(a.severity === 'CRITICAL')))
 const criticalChecks = computed(() => failedReadinessChecks.value.filter(check => check.severity === 'CRITICAL'))
@@ -519,6 +525,18 @@ onMounted(async () => {
                 </template>
               </MrrMetricCard>
             </section>
+
+            <MrrSectionCard v-if="indexCapacity" title="编号索引与容量" description="最近一次数据库目录快照 · 非服务器磁盘余量">
+              <div class="mrr-metric-grid">
+                <MrrMetricCard label="索引状态" compact-value :value="indexState" />
+                <MrrMetricCard label="估算扫描记录" compact-value :value="capacityValue('estimatedRows')" />
+                <MrrMetricCard label="扫描表及索引" compact-value :value="capacityValue('totalBytes', true)" />
+                <MrrMetricCard label="两索引容量参考" compact-value :value="capacityValue('twoIndexReferenceBytes', true)" />
+              </div>
+              <p class="overview-hint">
+                容量参考按三千万合成实测换算，不是可用空间或峰值上限；部署前需在服务器核验各卷、WAL 和临时空间。
+              </p>
+            </MrrSectionCard>
 
             <div class="two-column-layout">
               <MrrSectionCard title="待处理问题" description="严重问题优先">

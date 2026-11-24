@@ -123,7 +123,6 @@ test('维护模式确认保留非空校验，按 Esc 退出确认不发送写请
   expect(disables).toBe(1)
 })
 
-
 test('shows configured delivery mode and read-only partition status, labels stale on failure', async ({ page }) => {
   await page.route(overviewUrl, route => route.fulfill({
     json: { code: 200, data: { ...snapshot('READ_WRITE'), imageDeliveryMode: 'gateway' } },
@@ -137,8 +136,13 @@ test('shows configured delivery mode and read-only partition status, labels stal
       return
     }
     await route.fulfill({ json: { code: 200, data: {
-      phase: 'COPYING', partitionCount: 4, rowsCopied: 1200, copyLag: 42,
-      copyEnabled: false, defaultPartitionHasRows: true, legacyTablePresent: false,
+      phase: 'COPYING',
+      partitionCount: 4,
+      rowsCopied: 1200,
+      copyLag: 42,
+      copyEnabled: false,
+      defaultPartitionHasRows: true,
+      legacyTablePresent: false,
       updatedAt: snapshotTime,
     } } })
   })
@@ -155,4 +159,16 @@ test('shows configured delivery mode and read-only partition status, labels stal
   await expect(card.getByText('刷新失败，以下为上次分区状态')).toBeVisible()
   await expect(card.getByText('1,200', { exact: true })).toBeVisible()
   await expect(card.getByRole('button', { name: /切换|回退|启动复制|放弃/ })).toHaveCount(0)
+})
+
+test('索引容量展示区分估算、真实容量与服务器剩余空间', async ({ page }) => {
+  const data = snapshot('READ_WRITE')
+  data.readiness.checks.push({ code: 'scan-code-key-indexes', name: '病案影像查询索引', passed: true, severity: 'WARNING', message: '符合就绪条件', ...{ details: { state: 'READY', estimatedRows: 30000000, totalBytes: 20015456256 } } })
+  await page.route(overviewUrl, route => route.fulfill({ json: { code: 200, data } }))
+  await page.goto('/operations-center')
+  const dashboard = page.locator('.overview-dashboard')
+  await expect(dashboard.getByText('编号索引与容量', { exact: true })).toBeVisible()
+  await expect(dashboard.getByText('30,000,000', { exact: true })).toBeVisible()
+  await expect(dashboard.getByText('未取得', { exact: true })).toBeVisible()
+  await expect(dashboard.getByText('容量参考按三千万合成实测换算', { exact: false })).toBeVisible()
 })

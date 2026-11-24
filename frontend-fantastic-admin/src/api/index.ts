@@ -196,7 +196,7 @@ function showGlobalError(error: Error) {
     const decision = errorToastDedupe.check(key, requestId)
     if (!decision.shouldNotify) { return }
     const displayMessage = decision.firstRequestId
-      ? `${message}（请求 ID：${decision.firstRequestId}）`
+      ? `${message}（请求 ID：${decision.firstRequestId}，报障时请提供给管理员）`
       : message
     ElMessage.error({ message: displayMessage, grouping: true, showClose: true })
   })

@@ -9,6 +9,8 @@ public interface ImageContentService {
 
     ImageContent open(Integer scanId);
 
+    ImageContent openLegacy(String bah, String brxh, String folder, String filename);
+
     /**
      * @param auditTarget 访问审计目标（病案号，或“病案号:上架号”），与档案袋列表审计口径一致；
      *                    审计落库前由 AuditPayloadSanitizer 做 HMAC 保护，不以明文保存

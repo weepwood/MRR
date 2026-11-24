@@ -32,6 +32,8 @@ import MrrStatusTag from '@/components/MrrStatusTag/index.vue'
 import MrrTableActions from '@/components/MrrTableActions/index.vue'
 import { useTableActionLayout } from '@/composables/useTableActionLayout'
 import { formatDateTime } from '@/utils/display-format'
+import { hasPermission } from '@/utils/session'
+import ArchiveManifestCard from './ArchiveManifestCard.vue'
 
 defineOptions({ name: 'DataRelationWorkbenchPage' })
 
@@ -71,7 +73,18 @@ function invalidatePreview() {
 watch(previewVisible, (visible) => {
   if (!visible) invalidatePreview()
 }, { flush: 'sync' })
-watch(() => useUserStore().token, () => { previewVisible.value = false; invalidatePreview() }, { flush: 'sync' })
+watch(() => useUserStore().token, () => {
+  previewVisible.value = false
+  invalidatePreview()
+  ++searchVersion
+  ++detailVersion
+  searchLoading.value = false
+  detailLoading.value = false
+  searchResults.value = []
+  searchValue.value = ''
+  selectedArchive.value = null
+  relationDetail.value = null
+}, { flush: 'sync' })
 onBeforeUnmount(invalidatePreview)
 
 const issueActions: MrrTableAction[] = [
@@ -339,7 +352,7 @@ onMounted(loadDashboard)
     <MrrPageHeader
       title="数据关系工作台"
       eyebrow="Data Governance"
-      description="以 mr_archive 为中心查看统计、患者、扫描、装箱和迁移数据，发现缺失关联与字段冲突。第一阶段仅提供只读检查和修复预览。"
+      description="以 mr_archive 为中心查看统计、患者、扫描、装箱和迁移数据，发现缺失关联与字段冲突。关联检查、影像完整性观察与修复预览集中查看。"
     >
       <template #actions>
         <el-button :loading="overviewLoading" @click="loadDashboard">
@@ -462,7 +475,7 @@ onMounted(loadDashboard)
         </div>
       </el-tab-pane>
 
-      <el-tab-pane label="病案关系查询" name="archive">
+      <el-tab-pane label="病案工作台" name="archive">
         <div class="archive-stack">
           <MrrSectionCard class="search-card" title="查找病案" description="选择编号类型，查询病案主档及其跨表关系。">
             <div class="search-row">
@@ -535,9 +548,14 @@ onMounted(loadDashboard)
                       科室：{{ relationDetail.archive.department || '—' }}
                     </p>
                   </div>
-                  <el-tag type="info" effect="plain">
-                    只读关系视图
-                  </el-tag>
+                  <div class="flex flex-wrap items-center gap-2">
+                    <el-tag type="info" effect="plain">
+                      只读关系视图
+                    </el-tag>
+                    <router-link v-if="hasPermission('record:read') && selectedArchive?.sjh && /^\d{4,}$/.test(selectedArchive.sjh)" class="el-button" :to="{ path: '/archive', query: { sjh: selectedArchive.sjh } }">
+                      浏览影像
+                    </router-link>
+                  </div>
                 </div>
               </el-card>
 
@@ -573,6 +591,8 @@ onMounted(loadDashboard)
                 :closable="false"
                 show-icon
               />
+
+              <ArchiveManifestCard v-if="selectedArchive && hasPermission('system:read') && hasPermission('record:read')" :key="selectedArchive.id" :archive-id="selectedArchive.id" />
 
               <MrrSectionCard class="section-card" title="跨表字段对比" description="区分完全一致、仅前导零差异、字段缺失和真实冲突">
                 <el-table :data="relationDetail.comparisons" stripe>

@@ -15,6 +15,7 @@ const apiMocks = vi.hoisted(() => ({
 }))
 
 vi.mock('@/api/modules/data-relations', () => apiMocks)
+vi.mock('@/api/modules/archive-manifest', () => ({ getLatestManifest: vi.fn(), getManifestIssues: vi.fn(), startManifest: vi.fn(), cancelManifest: vi.fn() }))
 vi.mock('@/store/modules/user', () => ({ useUserStore: () => ({ token: 'synthetic-session' }) }))
 vi.mock('element-plus', () => ({
   ElMessage: {
@@ -84,6 +85,7 @@ function mountPage() {
       },
       stubs: {
         'FaIcon': true,
+        'RouterLink': true,
         'el-alert': {
           props: ['title'],
           template: '<div class="el-alert">{{ title }}</div>',
@@ -193,7 +195,7 @@ describe('dataRelationWorkbenchPage', () => {
     const wrapper = mountPage()
     await flushPromises()
 
-    expect(wrapper.text()).toContain('第一阶段仅提供只读检查和修复预览')
+    expect(wrapper.text()).toContain('关联检查、影像完整性观察与修复预览集中查看')
     expect(wrapper.text()).toContain('修复预览')
   })
 

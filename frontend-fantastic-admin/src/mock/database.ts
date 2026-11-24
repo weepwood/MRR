@@ -40,6 +40,13 @@ export default defineFakeRoute([
   { url: '/api/v1/system/data-quality/summary', response: () => demoOk(quality()) },
   { url: '/api/v1/system/data-quality/issues', response: ({ query }) => demoOk(issues.slice(0, boundedInt(query?.limit, 100, 300))) },
   {
+    url: '/api/v1/system/data-quality/issues/:issueId',
+    response: ({ params }) => {
+      const issue = issues.find(item => item.id === Number(params.issueId))
+      return issue ? demoOk(issue) : { code: 404, message: '未找到合成异常', data: null }
+    },
+  },
+  {
     url: '/api/v1/system/data-quality/issues/:issueId/repair-preview',
     response: ({ params }) => {
       const issue = issues.find(item => item.id === Number(params.issueId))

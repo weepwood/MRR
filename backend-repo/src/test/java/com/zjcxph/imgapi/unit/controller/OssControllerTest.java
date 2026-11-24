@@ -20,6 +20,8 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
+import org.mockito.Spy;
+import com.zjcxph.imgapi.config.ImageDeliveryProperties;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.util.List;
@@ -39,8 +41,27 @@ class OssControllerTest {
     @Mock
     private OssService ossService;
 
+    @Spy
+    private ImageDeliveryProperties deliveryProperties = new ImageDeliveryProperties();
+
     @InjectMocks
     private OssController controller;
+
+    @Test
+    void gatewayModeDoesNotIssueLegacyScanSignedUrl() {
+        deliveryProperties.setMode(ImageDeliveryProperties.Mode.GATEWAY);
+        org.mockito.Mockito.lenient().when(migrationService.getOssSignedUrl(1)).thenReturn("https://signed.example/image");
+        assertThat(controller.getOssUrl(1).getCode()).isEqualTo(409);
+        org.mockito.Mockito.verifyNoInteractions(migrationService, ossService);
+    }
+
+    @Test
+    void directModeRetainsLegacyScanSignedUrlContract() {
+        when(migrationService.getOssSignedUrl(1)).thenReturn("https://signed.example/image");
+        var result = controller.getOssUrl(1);
+        assertThat(result.getCode()).isEqualTo(200);
+        assertThat(result.getData()).containsEntry("ossUrl", "https://signed.example/image");
+    }
 
     @Test
     @DisplayName("真实失败重置Handler保持无会话401、只读403和管理权限放行")

@@ -868,13 +868,6 @@ export default defineFakeRoute([
     },
   },
   {
-    url: '/api/v1/oss/upload/folder/:folder',
-    method: 'POST',
-    response: ({ params }) => ok(scans
-      .filter(item => item.folder === decodeURIComponent(String(params.folder)))
-      .map(item => ({ scanId: item.id, ossUrl: `https://example.invalid/mock/${item.id}.jpg`, status: 'success' }))),
-  },
-  {
     url: '/api/v1/oss/url/:scanId',
     response: ({ params }) => {
       const scan = scans.find(item => item.id === Number(params.scanId))

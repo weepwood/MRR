@@ -117,6 +117,17 @@ public class OperationsDiagnosticsController {
         return Result.success(imageSourceDiagnosticsService.diagnose(bah, sjh, imageId));
     }
 
+    public record ContentVerificationRequest(Integer imageId) {}
+
+    @PostMapping("/image-content/verify")
+    @RequirePermissions({"system:manage", "record:read"})
+    @Operation(summary = "显式有界验证单张图片正文，不修改原文件")
+    public Result<Map<String, Object>> verifyImageContent(@RequestBody ContentVerificationRequest request,
+            jakarta.servlet.http.HttpServletResponse response) {
+        response.setHeader("Cache-Control", "private, no-store");
+        return Result.success(imageSourceDiagnosticsService.verifyContent(request.imageId()));
+    }
+
     @GetMapping("/integrity")
     @Operation(summary = "读取最近一次后台生成的病案数据完整性快照")
     public Result<Map<String, Object>> integrity() {

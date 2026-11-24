@@ -216,3 +216,24 @@ test('存储异常事件展示有界累计及恢复建议', async ({ page }) => 
   await expect(dashboard.getByText('不要强制释放未关闭资源', { exact: false })).toBeVisible()
   await expect(dashboard.getByText('重启清空', { exact: false })).toBeVisible()
 })
+
+test('单张正文校验使用明确ID并区分无基线与完整校验', async ({ page }) => {
+  let requests = 0
+  await page.route('**/api/v1/operations/image-content/verify', async (route) => {
+    requests++
+    expect(route.request().method()).toBe('POST')
+    expect(route.request().postDataJSON()).toEqual({ imageId: 1 })
+    await route.fulfill({ json: { code: 200, data: { imageId: 1, status: 'READABLE_NO_BASELINE', bytesRead: 1024, checkedAt: snapshotTime, scope: 'SINGLE_IMAGE_BOUNDED' } } })
+  })
+  await page.goto('/operations-center?tab=image')
+  const button = page.getByRole('button', { name: '校验单张正文' })
+  await expect(button).toBeDisabled()
+  const id = page.getByRole('spinbutton')
+  await id.fill('1')
+  await button.click()
+  await expect(page.getByText('可读，缺少有效校验基线')).toBeVisible()
+  await expect(page.getByText('不代表整案完整性', { exact: false })).toBeVisible()
+  await id.fill('2')
+  await expect(page.getByText('可读，缺少有效校验基线')).toHaveCount(0)
+  expect(requests).toBe(1)
+})

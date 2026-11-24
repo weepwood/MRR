@@ -56,6 +56,20 @@ public class ImageSourceDiagnosticsService {
                 .build();
     }
 
+    /** Explicit single-image verification, not an archive-level integrity result. */
+    public Map<String, Object> verifyContent(Integer imageId) {
+        if (imageId == null || imageId <= 0) {
+            throw new com.zjcxph.imgapi.exception.BusinessException(400, "请输入有效图片 ID");
+        }
+        Scan scan = imageContentMapper.findActiveById(imageId);
+        if (scan == null) {
+            throw new com.zjcxph.imgapi.exception.BusinessException(404, "未找到有效图片");
+        }
+        var verification = resolvedImageStorage.verifyContent(PathDO.fromScan(scan), scan.getChecksumMd5());
+        return Map.of("imageId", imageId, "status", verification.status(), "bytesRead", verification.bytesRead(),
+                "checkedAt", Instant.now().toString(), "scope", "SINGLE_IMAGE_BOUNDED");
+    }
+
     public Map<String, Object> diagnose(String bah, String sjh, Integer imageId) {
         List<Map<String, Object>> steps = new ArrayList<>();
         String normalizedBah = MedicalRecordCodeUtils.normalizeOrEmpty(bah);

@@ -147,6 +147,13 @@ export default defineFakeRoute([
     },
   },
   {
+    url: '/api/v1/operations/image-content/verify',
+    method: 'POST',
+    response: ({ body }) => Number(body?.imageId) === 1
+      ? demoOk({ imageId: 1, status: 'READABLE_NO_BASELINE', bytesRead: 1024, checkedAt: new Date().toISOString(), scope: 'SINGLE_IMAGE_BOUNDED' })
+      : { code: 404, message: '未找到合成样本', data: null },
+  },
+  {
     url: '/api/v1/operations/image-source',
     response: ({ query }) => {
       // Only a known synthetic sample is resolved; arbitrary production identifiers are never echoed.

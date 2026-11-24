@@ -167,10 +167,17 @@
 
 - #778已合并6454b5a4，head55d792ef，quality45435023953，1164单测及147 PG16零失败/错误/跳过。#779原head a6612f36质量45433783245实际1161单测通过，PG16按范围跳过，最新合并树待验收。
 
+## 03 兼容模糊游标分页（2026-11-25）
+
+- #99/#350 P1，分支 `perf/99-legacy-cursor`，worktree `/Volumes/data/Project/MRR-worktrees/99-legacy-cursor`。4c90d9d9实际RED 18项1失败（精确游标忽略文件名条件）。现有 /api/v1/scan/cursor/condition 增加显式 legacyContains=true，复用旧LIKE及全部筛选谓词、id游标、size+1、不执行COUNT，3秒Mapper语句超时不变；默认精确游标仍为精确编号，遇不支持的非空筛选明确400。旧OFFSET/COUNT接口及其结果语义不变。未修改Flyway或生产索引。
+- 实际51项定向零失败/错误/跳过；新增真实PG16包含/前导零/附加筛选、同页OFFSET等价测试，待CI执行。尚未迁移前端或验证千万级模糊游标的稀疏结果性能，不能声称解决旧COUNT瓶颈；后续隔离库评估pg_trgm。main 6454b5a4，#778已合并，1164单测/147 PG16通过。独立revert，无生产操作。
+
 ## 04.3 NAS正文原生操作隔离（2026-11-25）
 
 - #230/#350 P1，分支 `fix/230-nas-body-isolation`，worktree `/Volumes/data/Project/MRR-worktrees/230-nas-body-isolation`。8ae21669实际RED 5项1错误：模拟不响应中断的原生正文read阻塞调用方；b9e5ff15 每个已许可的NAS流一个串行原生I/O所有者，16KiB私有缓冲，读取/seek/close独立等待预算，超时不取消原生任务或提前释放许可，排队一次真实close；保留真实长度与Range seek。新增 ARCHIVE_IMAGE_SOURCE_NAS_BODY_TIMEOUT 默认PT30S。实际36项联合零失败/错误/跳过，覆盖迟到读取、许可持有/恢复、Range、网关及ZIP/PDF。同步#779正式main 8f598234，最新CI待验收。
 - #779已合并8f598234，head e29c6297，governance45435859334、quality45435859775，1166单测零失败/错误/跳过，PG16按范围跳过。原生正文仍可能永久挂起，实际许可保持直到真实关闭；不声称OS硬取消、Windows/NAS现场测试或Tomcat慢客户端硬截止。正文故障计入节点熔断仍需单独验证；独立revert，无生产变更。
+
+- 追加实际14项定向回归全部通过：模拟原生close忽略中断，超时后重复关闭一次、许可在实际close前不释放；真实嵌入Tomcat+Spring MVC+loopback TCP客户端停止读后RST，流真实关闭、失败审计、下一请求成功；实际AWS SDK Apache 2连接池饱和，第三请求未到源站，部分响应abort后恢复。仅测试配置，非生产50连接池、非真实NAS、非持续静默客户端硬截止。#781已合并38ed106c（1169单测/148 PG16）。最新CI待验收。
 
 ## 每轮交接模板
 

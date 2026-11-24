@@ -48,6 +48,8 @@ public interface ScanService {
 
     CursorPageResult<Scan> findByConditionAfterId(ScanRequest request, Integer afterId, int size);
 
+    CursorPageResult<Scan> findLegacyConditionAfterId(ScanRequest request, Integer afterId, int size);
+
     CursorPageResult<Scan> findAfterId(Integer afterId, int size);
 
     Scan findById(Integer id);

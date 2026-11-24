@@ -11,7 +11,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 class ScanLegacyQueryTimeoutTest {
     @ParameterizedTest
     @ValueSource(strings = {"findAll", "findAllWithPagination", "findByCondition",
-            "findByConditionWithPagination", "countByCondition", "findAfterId", "findByConditionAfterId"})
+            "findByConditionWithPagination", "countByCondition", "findAfterId", "findByConditionAfterId", "findLegacyConditionAfterId"})
     void scanListReadsHaveAnExplicitStatementBudget(String method) throws Exception {
         Configuration configuration = new Configuration();
         String resource = "mapper/ScanMapper.xml";

@@ -17,6 +17,14 @@
 - 本地已有 Homebrew JDK21 与 PG16，默认 Java 27，无 Docker CLI；使用隔离可销毁 PG16 或既有 CI，不使用医院库。#752/#722/#712 最新查询仍 mergeable=false，保留；后两项仍缺现场兼容证据。
 - 回滚：独立 revert #763，不删除或回退已迁移 OSS 对象；不修改生产配置。接续先核验 GitHub 最新 CI 和上述未解决风险。
 
+## #763 旧回填专项复验（2026-11-24）
+
+- 7b9ed5d0 的 governance 45419250290、quality 45419224037 均成功；随后因确认旧回填竞态继续修复，不以旧 CI 作为新提交的合并依据。
+- 82e03280 实际 RED：ScanServiceCacheTest 6 项，2 失败（单 ID evict、组合查询 clear 后在途旧值回填），0 错误/跳过。0c8beb34 复用原 Caffeine 原生缓存、键、TTL、容量和统计；五个非 sync Cacheable 查询使用 per-invocation CacheResolver 视图，失效与回填共享短临界区和缓存级 generation。迁移选择性失效、普通 evict/clear 递增 generation，阻止旧查询重填或覆盖新值；数据库查询不持锁，无关已缓存值保留。
+- 实际 GREEN 31 项；扩展回归 `./mvnw -o -B -ntp -Dtest=ScanServiceCacheTest,MigrationServiceImplTest,ScanServiceImplTest,ScanServiceArchiveLookupTest,OssSignedUrlCacheTest test` 63 项全部通过，0 失败/错误/跳过。迁移提交回调覆盖五类真实代际缓存、空键旧回填、覆盖新值、无关缓存及签名缓存不变。
+- 边界：在途旧调用仍可返回其自身读到的快照；每次失效保守丢弃该缓存其他在途加载的回填，并保留原四缓存遍历成本。普通写路径原事务/缓存切面提交顺序、外部进程及其他写路径未新增承诺。缓存提供者异常仍有旧数据风险；现场批量吞吐、并发命中率、真实 PG16 最新 CI 待验证。回滚独立 revert，不动已迁移对象。
+- 最新 P1 提交必须重新核验 governance/pr-gate、后端及 PG16 实际报告；保持本地 worktree，不提前合并。
+
 ## 当前重点
 
 | 任务 | 已核实状态 | 后续入口 |

@@ -1,12 +1,11 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue'
-import { useRouter } from 'vue-router'
+import { computed, defineAsyncComponent, ref, watch } from 'vue'
 import MrrFilterActionButton from '@/components/MrrFilterActionButton/index.vue'
 
-const router = useRouter()
+const ScanImgPage = defineAsyncComponent(() => import('../scan-img/index.vue'))
+const userStore = useUserStore()
 const idCard = ref('')
-const loading = ref(false)
-const errorMsg = ref('')
+const activeId = ref('')
 
 const isValid = computed(() => /^\d{15}(?:\d{2}[\dX])?$/i.test(idCard.value.trim()))
 
@@ -14,17 +13,29 @@ function handleSearch() {
   if (!isValid.value) {
     return
   }
-  errorMsg.value = ''
-  loading.value = true
-  // 跳转到图库页，由目标页负责查询
-  router.push(`/idcard/${idCard.value.trim()}`).finally(() => {
-    loading.value = false
-  })
+  // 仅在当前页面内存传递，不进入路由、浏览器历史或持久化存储。
+  activeId.value = idCard.value.trim()
+  idCard.value = ''
 }
+function resetSearch() {
+  activeId.value = ''
+  idCard.value = ''
+}
+
+// 账号切换/退出时同步销毁当前查询；刷新或离开路由也不会恢复身份证。
+watch(() => userStore.token, resetSearch, { flush: 'sync' })
 </script>
 
 <template>
-  <div class="search-page">
+  <div v-if="activeId" class="query-results">
+    <div class="query-results-toolbar">
+      <el-button @click="resetSearch">
+        返回查询
+      </el-button>
+    </div>
+    <ScanImgPage :id-card="activeId" />
+  </div>
+  <div v-else class="search-page">
     <div class="search-card">
       <!-- Logo / 标题区 -->
       <div class="search-header">
@@ -48,7 +59,7 @@ function handleSearch() {
             placeholder="请输入18位身份证号"
             maxlength="18"
             clearable
-            :disabled="loading"
+            autocomplete="off"
             @keyup.enter="handleSearch"
           >
             <template #prefix>
@@ -58,8 +69,6 @@ function handleSearch() {
         </div>
         <MrrFilterActionButton
           action="search"
-          :pending="loading"
-          :busy="loading"
           type="primary"
           size="large"
           :disabled="!isValid"
@@ -75,20 +84,32 @@ function handleSearch() {
         请输入正确格式的身份证号
       </p>
 
-      <!-- 错误提示 -->
-      <el-alert
-        v-if="errorMsg"
-        :title="errorMsg"
-        type="error"
-        show-icon
-        :closable="false"
-        class="search-error"
-      />
+
     </div>
   </div>
 </template>
 
 <style scoped>
+.query-results {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  min-height: 0;
+}
+
+.query-results-toolbar {
+  flex: none;
+  padding: 8px 16px;
+  background: var(--surface);
+  border-bottom: 1px solid var(--mrr-border);
+}
+
+.query-results :deep(.image-gallery) {
+  flex: 1;
+  min-height: 0;
+  height: auto;
+}
+
 .search-page {
   display: flex;
   align-items: center;
@@ -171,11 +192,6 @@ function handleSearch() {
   margin: 8px 0 0;
   font-size: var(--mrr-font-size-xs);
   color: var(--el-color-warning);
-}
-
-.search-error {
-  margin-top: 16px;
-  border-radius: var(--mrr-radius-lg);
 }
 
 /* ===== 响应式 ===== */

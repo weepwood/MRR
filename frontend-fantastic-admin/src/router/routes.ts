@@ -94,10 +94,9 @@ const constantRoutes: RouteRecordRaw[] = [
     meta: { title: '病案查询' },
   },
   {
+    // 旧明文深链仅退役重定向，不读取或传递身份证，也不保留查询串。
     path: '/idcard/:idCard',
-    name: 'scanImg',
-    component: () => import('@/views/scan-img/index.vue'),
-    meta: { title: '病案图像查询' },
+    redirect: { name: 'idcardSearch', query: {}, hash: '', replace: true },
   },
   publicStatusRoute,
   externalArchiveRoute,

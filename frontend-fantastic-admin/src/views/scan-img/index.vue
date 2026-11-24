@@ -2,7 +2,6 @@
 import type { BAHImageData, BAHRecord } from '@/api/types'
 import { ElMessage } from 'element-plus'
 import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
-import { useRoute } from 'vue-router'
 import { getImgApiByBah, updateImageType } from '@/api/modules/image'
 import { getBAHByIdCard } from '@/api/modules/search'
 import { getMedicalRecordTypeLabel, MEDICAL_RECORD_TYPE_CODES } from '@/constants/medical-record-types'
@@ -11,8 +10,8 @@ import { isMotionEnabled } from '@/utils/motion-preference'
 
 defineOptions({ name: 'ScanImgPage' })
 
-// ==================== 路由 ====================
-const route = useRoute()
+// 身份证只由当前查询页面内存传入，不读取路由。
+const props = defineProps<{ idCard: string }>()
 
 // ==================== 图片扩展类型 ====================
 interface GalleryImage extends BAHImageData {
@@ -31,8 +30,7 @@ const downloading = ref(false)
 const initDone = ref(false)
 
 // ==================== 身份证相关 ====================
-// 从路由参数取身份证号
-const idCardParam = computed(() => String(route.params.idCard || ''))
+const idCardParam = computed(() => props.idCard)
 // 脱敏显示（保留前3位和后4位）
 const displayIdCard = computed(() => {
   const v = idCardParam.value
@@ -508,12 +506,6 @@ watch(thumbsLayoutMode, (mode) => {
 })
 watch(selectedImageIndex, () => { ensureCurrentImageBlob() })
 
-// 路由参数变化时重新查询（支持在同页内切换身份证）
-watch(idCardParam, async (newId) => {
-  if (newId) {
-    await searchByIdCard(newId)
-  }
-})
 </script>
 
 <template>

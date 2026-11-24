@@ -31,8 +31,10 @@ public class OssObjectReader {
 
     public InputStream open(String objectKey) throws IOException {
         try {
-            return client().getObject(GetObjectRequest.builder()
+            var response = client().getObject(GetObjectRequest.builder()
                     .bucket(properties.getBucket()).key(objectKey).build());
+            Long length = response.response().contentLength();
+            return ImageReadStream.withLength(response, length == null ? -1L : length);
         } catch (RuntimeException exception) {
             throw new IOException("OSS 图片读取失败", exception);
         }

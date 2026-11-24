@@ -110,3 +110,11 @@ powershell.exe -NoProfile -File deploy/windows/database-recovery.ps1 -Action Res
 ### 编号索引构建前置检查（03.3.3）
 
 关联 #99、#350。现有两个并发 CREATE 保持不变；构建前检查同名关系的目录定义，与 #758 预期编号游标结构一致。缺失可创建、正确已有可重跑、无效或错误定义及同名非索引关系立即停止；脚本自身设置 ON_ERROR_STOP。不得依据名字盲目删除对象，异常交由 DBA 核对依赖与维护窗口。预检不消除其他会话并发 DDL 竞态，要求独占维护窗口并核对最终目录和应用就绪状态。代码不自动执行脚本，不改变 Flyway 或现场索引。测试先提交 73778d8（RED 未实际执行），真实 PG16 验证错误键、部分索引、同名表、正确重跑、原无效索引与可独立移除测试；最新 CI 待核验。独立 revert，无本地 worktree。
+
+#759 已合并 676b6dd，governance 45410672727、quality 45410673024；1118 单测、143 PG16集成（构建专项6项）均零失败、错误与跳过。
+
+### 同页查询计划证据（03.4）
+
+inspect-query-plans.sql 新增显式 compare_exact=1；compare_sjh=1 使用 SJH，默认 BAH。独立游标探测的 after_id 不参与该比较。只读 REPEATABLE READ 同一快照，从精确条件的上一条 ID 自动求边界，并比较非空有序 ID 序列；只有 SAME_PAGE_VERIFIED 才执行两份 SELECT * LIMIT 51 的实际计划。NOT_COMPARABLE 或超时不得视为性能通过。编号精确比较不同于旧 LIKE，不得混算。验证先读取数据，两份计划受缓存与顺序影响，仅是热快照证据；不同轮次需控制缓存、顺序、负载并记录边界定位成本另计，不以一次计划宣称端到端加速。档案袋 bounded probe 使用实际投影 SELECT *，完整无 LIMIT Mapper 仅 EXPLAIN，不自动执行无界读取。原3s/5s、1s锁预算保留，计划留院内。
+
+测试先提交 966bc9a（RED 未执行），直接抽取脚本标记 SQL 在真实 PG16 验证 BAH/SJH、首页、后续页、空页与缺失边界；尚未执行 psql 全流程或等量副本。关联 #99/#350，P1，独立 revert，无本地 worktree，不变更业务 SQL、DDL 或生产配置。

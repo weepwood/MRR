@@ -137,22 +137,24 @@ function isIdCardRevealed(value?: string) {
 }
 
 async function handleIdCardClick(value?: string) {
-  if (!value) {
+  // 点击号码只负责「查看 / 隐藏」这一个动作。
+  // 复制是敏感动作：必须由独立的显式按钮发起（见模板中的复制按钮），
+  // 静默把完整身份证号送进剪贴板（可被云剪贴板同步出内网）是隐私合规隐患。
+  if (!value || !patientIdCardRevealEnabled.value) {
     return
   }
-  if (patientIdCardRevealEnabled.value) {
-    if (revealedIdCards.value.has(value)) {
-      revealedIdCards.value.delete(value)
-    }
-    else {
-      revealedIdCards.value.add(value)
-    }
+  if (revealedIdCards.value.has(value)) {
+    revealedIdCards.value.delete(value)
   }
+  else {
+    revealedIdCards.value.add(value)
+  }
+}
 
-  if (!patientIdCardCopyEnabled.value) {
+async function handleIdCardCopy(value?: string) {
+  if (!value || !patientIdCardCopyEnabled.value) {
     return
   }
-
   await copyToClipboard(value, { success: '身份证号已复制' })
 }
 
@@ -267,15 +269,27 @@ onUnmounted(() => {
             <el-table-column prop="name" label="姓名" min-width="90" />
             <el-table-column prop="idCard" label="身份证号" min-width="190">
               <template #default="{ row }">
-                <el-button
-                  v-if="patientIdCardRevealEnabled || patientIdCardCopyEnabled"
-                  link
-                  class="id-card-toggle"
-                  @click="handleIdCardClick(row.idCard)"
-                >
-                  {{ isIdCardRevealed(row.idCard) ? row.idCard : maskIdCard(row.idCard) }}
-                </el-button>
-                <span v-else class="patient-id-card">{{ maskIdCard(row.idCard) }}</span>
+                <!-- 无身份证号的标本行（导入前/带病案号入院）不渲染任何可点控件 -->
+                <div class="id-card-cell">
+                  <el-button
+                    v-if="patientIdCardRevealEnabled && row.idCard"
+                    link
+                    class="id-card-toggle"
+                    @click="handleIdCardClick(row.idCard)"
+                  >
+                    {{ isIdCardRevealed(row.idCard) ? row.idCard : maskIdCard(row.idCard) }}
+                  </el-button>
+                  <span v-else class="patient-id-card">{{ maskIdCard(row.idCard) }}</span>
+                  <el-button
+                    v-if="patientIdCardCopyEnabled && row.idCard"
+                    link
+                    class="id-card-copy"
+                    :aria-label="`复制身份证号（病案号 ${row.bah}）`"
+                    @click="handleIdCardCopy(row.idCard)"
+                  >
+                    <FaIcon name="i-lucide:copy" class="size-3.5" aria-hidden="true" />
+                  </el-button>
+                </div>
               </template>
             </el-table-column>
             <el-table-column prop="department" label="科室" min-width="120" show-overflow-tooltip />
@@ -331,10 +345,30 @@ onUnmounted(() => {
 
 /* 身份证号用等宽字体：掩码 * 与数字等宽，逐行上下对齐，掩码位数一眼可数。 */
 .id-card-toggle,
+.id-card-copy,
 .patients-table :deep(.patient-id-card) {
   font-family: var(--mrr-font-mono);
   font-size: var(--mrr-font-size-xs);
   letter-spacing: 0.02em;
+}
+
+/* 「查看」与「复制」是两个职责分离的显式动作；复制按钮紧贴号码，不抢占点击热区 */
+.id-card-cell {
+  display: inline-flex;
+  gap: var(--mrr-space-1);
+  align-items: center;
+  min-width: 0;
+  max-width: 100%;
+}
+
+.id-card-copy {
+  flex: 0 0 auto;
+  padding: 0 var(--mrr-space-1);
+  color: var(--mrr-muted-foreground);
+}
+
+.id-card-copy:hover {
+  color: var(--mrr-foreground);
 }
 
 .bah-link {

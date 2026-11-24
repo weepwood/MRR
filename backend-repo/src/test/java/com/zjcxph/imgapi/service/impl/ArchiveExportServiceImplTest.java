@@ -179,6 +179,35 @@ class ArchiveExportServiceImplTest {
     }
 
     @Test
+    void pdfCancellationStopsBeforeReadingFurtherChunksAndClosesSource() throws Exception {
+        var item = new PathDO("25.03.15", "synthetic.png", "456", "123");
+        var cancelled = new java.util.concurrent.atomic.AtomicBoolean();
+        var closed = new java.util.concurrent.atomic.AtomicBoolean();
+        var reads = new java.util.concurrent.atomic.AtomicInteger();
+        var source = new java.io.InputStream() {
+            @Override public int read() { throw new UnsupportedOperationException(); }
+            @Override public int read(byte[] buffer, int offset, int count) {
+                int call = reads.incrementAndGet();
+                if (call > 4) return -1;
+                buffer[offset] = 1;
+                cancelled.set(true);
+                return 1;
+            }
+            @Override public void close() { closed.set(true); }
+        };
+        when(imageStorage.open(item)).thenReturn(source);
+        var service = new ArchiveExportServiceImpl(scanService, imageStorage);
+        var progress = new ArchiveExportService.ExportProgress() {
+            @Override public boolean isCancelled() { return cancelled.get(); }
+        };
+        assertThatThrownBy(() -> service.writeBatchPdf(new ArchiveExportService.BatchZipExport(List.of(item)),
+                new ByteArrayOutputStream(), progress))
+                .isInstanceOf(com.zjcxph.imgapi.exception.ArchiveExportCancelledException.class);
+        assertThat(reads.get()).isEqualTo(1);
+        assertThat(closed).isTrue();
+    }
+
+    @Test
     void streamsPdfWithOnePagePerImage() throws Exception {
         PathDO first = new PathDO("25.03.15", "page-1.png", "605746", "00789508");
         PathDO second = new PathDO("25.03.15", "page-2.png", "605746", "00789508");

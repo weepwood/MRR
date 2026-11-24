@@ -97,9 +97,15 @@
 
 ## 04.2 影像 Range 首批（2026-11-24）
 
-- #230 P1，分支 `feat/230-image-range`，worktree `/Volumes/data/Project/MRR-worktrees/230-image-range`。68bc3350 实际 RED 5项/1失败（真实临时文件经NAS适配器，Range返回200）；5e68e84b 引入同一打开句柄长度/定位及内外网关共用响应协议。同步 main 297419bf 后，本地47项零失败/错误/跳过，Java21 Maven Wrapper；最新 CI 待核验。
+- #230 P1，分支 `feat/230-image-range`，worktree `/Volumes/data/Project/MRR-worktrees/230-image-range`。68bc3350 实际 RED 5项/1失败（真实临时文件经NAS适配器，Range返回200）；5e68e84b 引入同一打开句柄长度/定位及内外网关共用响应协议。同步 main 297419bf 后，本地47项零失败/错误/跳过，Java21 Maven Wrapper；#768 已合并 479712c1，head 1ea4c43a，governance 45423606714、quality 45423606729 成功，实际1145单测、145 PG16集成均零失败/错误/跳过。
 - LOCAL/NAS 使用 FileChannel 获取实际打开文件长度、单区间有界读取、206/416、后缀区间、无整图缓存，保留许可所有权及异步流释放。Nginx/HTTP/OSS 从实际 GET 元数据获取长度（未知则不发送），不做额外HEAD，不依据可能过期的数据库长度。非随机访问源忽略Range返回200/Accept-Ranges:none；多区间、未知单位、任何无法校验的If-Range保守200。未提供强ETag或Last-Modified，不声称支持跨版本断点续传。外部先授权再读，成功及失败审计不变，416关闭流。
 - 已执行真实本地临时文件/模拟NAS配置、模拟远端响应、客户端输出异常、异步拒绝与外部审计；非真实医院NAS/OSS/Nginx、Tomcat中断、Windows及大文件吞吐验收。远端原生Range、可靠强校验器、流中内容变动与全局超时仍待专项。独立revert，不改数据库、配置或默认下发模式。
+
+## 04.2 遗留直连治理首批（2026-11-24）
+
+- #230/#350 P1，分支 `fix/230-legacy-image-lookup`，worktree `/Volumes/data/Project/MRR-worktrees/230-legacy-image-lookup`。5b0fd20c 实际 RED 16项/1失败（无有效记录仍能打开影像）；548995b0 通过 ImageContentMapper 精确匹配 BAH/BRXH/folder/filename，利用现有索引，LIMIT 2、3秒查询超时，拒绝无有效记录404、歧义409及非法路径400。高位病案号无法由四段路径确认上架号时拒绝，不猜测病案。保持已有路由和权限，使用完整 Scan 记录及统一来源解析，绑定审计目标，不再直接拼接物理路径。
+- d2eec5f0 实际 RED 9项/1失败（网关模式仍返回 OSS 签名）；67f7e24c 网关模式旧单记录签名接口返回409，direct 模式保留原行为。管理端目录浏览、迁移日志等其他签名入口不在本批改动范围，须单独核验调用方和权限。
+- e4df1511 同步 #768 后复用 ImageContentResponse，统一真实长度、Range及关闭语义；最终定向43项零失败/错误/跳过，之前扩展45项通过。#769 原head 8f4c1fd0，quality 45425139606：1147单测通过、146 PG16中1失败；本地全新PG16.16实际复现16项1失败。JdbcTemplate写入绕过MyBatis事务内一级缓存；补充SQL实际候选数3的断言、清理测试会话缓存后仍严格要求LIMIT 2，PG16全部16项通过（0失败/错误/跳过），业务SQL不改。最新CI待验收。未进行真实旧客户端现场兼容验收，不关闭原路由；独立revert，不改数据库或生产配置。
 
 ## 每轮交接模板
 

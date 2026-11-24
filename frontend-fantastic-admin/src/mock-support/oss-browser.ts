@@ -8,7 +8,8 @@ function safeSegment(value: string) {
   return segment && segment !== '.' && segment !== '..'
     && !segment.includes('/') && !segment.includes('\\')
     && !segment.includes(':') && !segment.includes(String.fromCharCode(0))
-    ? segment : undefined
+    ? segment
+    : undefined
 }
 
 // Mirrors OssMigrationRoutePolicy; independent from the legacy browser fixtures.

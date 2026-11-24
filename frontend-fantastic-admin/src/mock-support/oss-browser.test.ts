@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { sharedObjectKey, sharedObjectEntries, sharedObjectUrl } from './oss-browser'
+import { sharedObjectEntries, sharedObjectKey, sharedObjectUrl } from './oss-browser'
 import { createDemoRecords } from './records'
 
 describe('shared demo OSS objects', () => {

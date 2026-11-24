@@ -99,6 +99,44 @@ class ScanCodeKeyIndexReadinessPostgresqlIT extends PostgresqlIntegrationTestSup
     }
 
     @Test
+    @DisplayName("同名普通列及反序复合索引不能冒充比较键游标索引")
+    void rejectsValidButWrongKeyDefinitions() {
+        dropGovernanceIndexes();
+        jdbcTemplate.execute("CREATE INDEX " + BAH_INDEX + " ON app.mr_scan (bah, id)");
+        jdbcTemplate.execute("CREATE INDEX " + SJH_INDEX + " ON app.mr_scan (id, app.numeric_code_key(sjh))");
+        Map<String, Object> check = service().checkScanCodeKeyIndexes();
+        assertThat(check.get("passed")).isEqualTo(false);
+        Map<?, ?> details = (Map<?, ?>) check.get("details");
+        assertThat(details.get("invalid")).isEqualTo(List.of(BAH_INDEX, SJH_INDEX));
+        assertThat(details.get("present")).isEqualTo(List.of());
+    }
+
+    @Test
+    @DisplayName("同名部分索引不能覆盖无 uploadflag 约束的游标")
+    void rejectsPartialIndexEvenWithCorrectKeys() {
+        dropGovernanceIndexes();
+        jdbcTemplate.execute("CREATE INDEX " + BAH_INDEX + " ON app.mr_scan (app.numeric_code_key(bah), id) WHERE uploadflag <> 0");
+        createIndex(SJH_INDEX, "sjh");
+        Map<String, Object> check = service().checkScanCodeKeyIndexes();
+        assertThat(check.get("passed")).isEqualTo(false);
+        Map<?, ?> details = (Map<?, ?>) check.get("details");
+        assertThat(details.get("invalid")).isEqualTo(List.of(BAH_INDEX));
+        assertThat(details.get("present")).isEqualTo(List.of(SJH_INDEX));
+    }
+
+    @Test
+    @DisplayName("同名索引属于另一张表时不得通过")
+    void rejectsIndexOnWrongTable() {
+        dropGovernanceIndexes();
+        jdbcTemplate.execute("CREATE TABLE app.scan_index_shape_fixture (bah text, id integer)");
+        jdbcTemplate.execute("CREATE INDEX " + BAH_INDEX + " ON app.scan_index_shape_fixture (app.numeric_code_key(bah), id)");
+        createIndex(SJH_INDEX, "sjh");
+        Map<String, Object> check = service().checkScanCodeKeyIndexes();
+        assertThat(check.get("passed")).isEqualTo(false);
+        assertThat(((Map<?, ?>) check.get("details")).get("invalid")).isEqualTo(List.of(BAH_INDEX));
+    }
+
+    @Test
     @DisplayName("两个索引建好后检查通过，并按脚本走建索引路径验证 SQL 可行")
     void passesOnceBothIndexesExist() {
         dropGovernanceIndexes();

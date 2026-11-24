@@ -33,7 +33,8 @@ export function createOcrBatchStore(scans: readonly MockScanRecord[], ocr: Retur
     const upper = upperId || Math.max(0, ...scans.map(scan => scan.id))
     if (upper < afterId) { return undefined }
     const ids = scans.filter(scan => scan.id > afterId && scan.id <= upper && scan.archiveId && scan.uploadFlag && scan.btype === 0)
-      .map(scan => scan.id).sort((a, b) => a - b)
+      .map(scan => scan.id)
+      .sort((a, b) => a - b)
     return { afterId, upperId: upper, maxPages, key: idempotencyKey, ids }
   }
 

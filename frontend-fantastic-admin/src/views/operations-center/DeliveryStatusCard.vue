@@ -10,6 +10,7 @@ defineProps<{ mode?: 'direct' | 'gateway', modeStale: boolean }>()
 const partition = ref<AccessLogPartitionStatus>()
 const loading = ref(false)
 const failed = ref(false)
+const fetchedAt = ref('')
 const phaseLabels = { COPYING: '复制中', READY: '等待切换', CUTOVER: '已切换', ABORTED: '已放弃' }
 
 function count(value?: number | null) {
@@ -27,6 +28,7 @@ async function refresh() {
   loading.value = true
   try {
     partition.value = await getAccessLogPartitionStatus()
+    fetchedAt.value = new Date().toISOString()
     failed.value = false
   }
   catch {
@@ -83,6 +85,9 @@ onMounted(refresh)
       </el-descriptions-item>
       <el-descriptions-item label="切换后旧表">
         {{ state(partition.legacyTablePresent, '仍保留', '不存在') }}
+      </el-descriptions-item>
+      <el-descriptions-item label="状态获取时间">
+        {{ fetchedAt ? formatDateTime(fetchedAt) : '未知' }}
       </el-descriptions-item>
       <el-descriptions-item label="迁移状态更新时间">
         {{ partition.updatedAt ? formatDateTime(partition.updatedAt) : '未知' }}

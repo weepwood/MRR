@@ -148,6 +148,8 @@ test('shows configured delivery mode and read-only partition status, labels stal
   await expect(card.getByText('复制中', { exact: true })).toBeVisible()
   await expect(card.getByText('1,200', { exact: true })).toBeVisible()
   await expect(card.getByText('42', { exact: true })).toBeVisible()
+  await expect(card.getByText('状态获取时间', { exact: true })).toBeVisible()
+  await expect(card.getByText('迁移状态更新时间', { exact: true })).toBeVisible()
   await expect(card.getByText('有数据', { exact: true })).toBeVisible()
   await card.getByRole('button', { name: '刷新分区状态' }).click()
   await expect(card.getByText('刷新失败，以下为上次分区状态')).toBeVisible()

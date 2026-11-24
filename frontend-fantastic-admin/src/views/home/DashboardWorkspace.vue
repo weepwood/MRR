@@ -6,7 +6,7 @@ import type {
   DashboardWidgetSize,
 } from './dashboard-widgets'
 import { ElMessage } from 'element-plus'
-import { computed, nextTick, reactive, ref, watch } from 'vue'
+import { computed, defineAsyncComponent, nextTick, reactive, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import MrrPageHeader from '@/components/MrrPageHeader/index.vue'
 import MrrPageShell from '@/components/MrrPageShell/index.vue'
@@ -24,6 +24,9 @@ import {
 import HomeArchiveLookup from './HomeArchiveLookup.vue'
 
 defineOptions({ name: 'DashboardWorkspace' })
+
+const pagesScenarioEnabled = import.meta.env.MODE === 'pages' && String(import.meta.env.VITE_BUILD_MOCK) === 'true'
+const DemoScenarioControl = defineAsyncComponent(() => import('./DemoScenarioControl.vue'))
 
 type DashboardWidgetView = DashboardWidgetDefinition & DashboardWidgetPreference
 
@@ -555,6 +558,8 @@ watch(storageKey, loadPreferences, { immediate: true })
 
     <!-- 首页主任务：直接按编号打开影像档案袋。无 record:read 的账号不显示。 -->
     <HomeArchiveLookup v-if="canLookupArchive" />
+
+    <DemoScenarioControl v-if="pagesScenarioEnabled" />
 
     <section class="dashboard-workspace" aria-labelledby="dashboard-modules-title">
       <header class="dashboard-workspace__head">

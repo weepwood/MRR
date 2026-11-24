@@ -1,6 +1,8 @@
+import type { DemoScenario } from './scenarios'
 import { getMedicalRecordTypeLabel, MEDICAL_RECORD_TYPE_CODES } from '@/constants/medical-record-types'
 import { demoClock } from './clock'
 import { pageSvg } from './image'
+import { pagesScenarioStorage, readScenario } from './scenarios'
 
 export interface MockScanRecord {
   id: number
@@ -38,7 +40,7 @@ function archiveAge(index: number) {
 
 // Keep all identifiers synthetic and deterministic. Each archive belongs to
 // one patient record; both scans use that record's BAH and BRXH.
-export function createDemoRecords(clock = demoClock) {
+export function createDemoRecords(clock = demoClock, scenario: DemoScenario = 'standard') {
   const patients = Array.from({ length: 32 }, (_, index) => ({
     id: index + 1,
     brxh: String(320001 + index * 2),
@@ -53,7 +55,8 @@ export function createDemoRecords(clock = demoClock) {
     Array.from({ length: 2 }, (_, offset) => {
       const index = patientIndex * 2 + offset
       const id = index + 1
-      const btype = [3, 4, 11, 12].includes(id) ? 0 : MEDICAL_RECORD_TYPE_CODES[index % MEDICAL_RECORD_TYPE_CODES.length]
+      const reviewSample = scenario === 'ocr-review' && id % 3 === 0 && id % 16 !== 0
+      const btype = reviewSample || [3, 4, 11, 12].includes(id) ? 0 : MEDICAL_RECORD_TYPE_CODES[index % MEDICAL_RECORD_TYPE_CODES.length]
       const age = archiveAge(patientIndex)
       const uploadDate = clock.dateTime(age, 1, offset * 15)
       const monthFolder = uploadDate.slice(0, 7).replace('-', '/')
@@ -61,7 +64,7 @@ export function createDemoRecords(clock = demoClock) {
       const waiting = id % 8 === 0 && uploaded
       const failed = id % 13 === 0 && uploaded && !waiting
       const retry = id % 7 === 0 && uploaded && !waiting && !failed
-      const migrated = uploaded && !waiting && !failed && !retry && index % 4 !== 0
+      const migrated = scenario !== 'migration-backlog' && uploaded && !waiting && !failed && !retry && index % 4 !== 0
       return {
         id,
         archiveId: patient.id,
@@ -91,4 +94,4 @@ export function createDemoRecords(clock = demoClock) {
 }
 
 // One mutable dataset per demo module instance; production never imports it.
-export const demoRecords = createDemoRecords()
+export const demoRecords = createDemoRecords(demoClock, readScenario(pagesScenarioStorage()))

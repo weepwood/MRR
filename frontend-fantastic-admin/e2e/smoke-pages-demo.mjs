@@ -432,6 +432,36 @@ async function smokePagesDemo() {
     await errorPage.goto(`${appUrl}#/runtime-errors`)
     await errorPage.locator('.runtime-errors-table').getByText('DEMO-ERR-001', { exact: true }).waitFor({ timeout: 20_000 })
 
+    const scenarioPage = await browser.newPage()
+    scenarioPage.on('pageerror', error => pageErrors.push(error.message))
+    await scenarioPage.goto(`${appUrl}#/`)
+    const control = scenarioPage.getByRole('region', { name: '演示场景控制' })
+    await control.waitFor({ timeout: 20000 })
+    // Element Plus overlays its readonly combobox input with the selected label.
+    // Click the visible label, which is the actual pointer target.
+    await control.getByText('默认综合场景', { exact: true }).click()
+    await scenarioPage.getByRole('option', { name: 'OSS 迁移积压' }).click()
+    await control.getByRole('button', { name: '应用场景' }).click()
+    await Promise.all([
+      scenarioPage.waitForEvent('load'),
+      scenarioPage.getByRole('button', { name: '确认重新加载' }).click(),
+    ])
+    await control.waitFor({ timeout: 20000 })
+    assert.equal(await scenarioPage.evaluate(() => localStorage.getItem('mrr:pages:scenario:v1')), 'migration-backlog')
+    const scenarioStats = () => scenarioPage.evaluate(() => fetch('/proxy/api/v1/oss/migration/statistics').then(response => response.json()))
+    assert.equal((await scenarioStats()).data.migratedCount, 0)
+    await scenarioPage.reload()
+    await control.waitFor({ timeout: 20000 })
+    assert.equal((await scenarioStats()).data.migratedCount, 0)
+    await control.getByRole('button', { name: '恢复默认' }).click()
+    await Promise.all([
+      scenarioPage.waitForEvent('load'),
+      scenarioPage.getByRole('button', { name: '确认重新加载' }).click(),
+    ])
+    await control.waitFor({ timeout: 20000 })
+    assert.equal(await scenarioPage.evaluate(() => localStorage.getItem('mrr:pages:scenario:v1')), null)
+    assert.ok((await scenarioStats()).data.migratedCount > 0)
+
     assert.deepEqual(outboundApiRequests, [], 'API 请求不能到达 Pages 静态服务器')
     assert.deepEqual(pageErrors, [], '浏览器运行不应出现未处理异常')
     process.stdout.write('Pages 静态演示冒烟通过：子路径、hash 刷新、浏览器 Mock API 及文件预览下载\n')

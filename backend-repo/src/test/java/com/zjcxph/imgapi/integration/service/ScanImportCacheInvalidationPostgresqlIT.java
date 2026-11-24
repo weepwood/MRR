@@ -137,6 +137,50 @@ class ScanImportCacheInvalidationPostgresqlIT extends PostgresqlIntegrationTestS
                 });
     }
 
+    @Test
+    void concurrentRealPostgresLookupsAcrossKeysRemainConsistentAfterImport() throws Exception {
+        importScans(false, """
+                sjh,bah,brxh,folder,filename,btype,filesize
+                100,1,B1,F1,a.jpg,0,10
+                200,2,B2,F2,b.jpg,0,20
+                """);
+        var workers = java.util.concurrent.Executors.newFixedThreadPool(16);
+        try {
+            for (int round = 0; round < 2; round++) {
+                int expectedType = round == 0 ? 0 : 5;
+                if (round == 1) {
+                    var imported = importScans(false, """
+                            sjh,bah,brxh,folder,filename,btype,filesize
+                            100,1,B1,F1,a.jpg,5,99
+                            """);
+                    assertThat(imported.updatedRows()).isEqualTo(1);
+                }
+                var start = new java.util.concurrent.CountDownLatch(1);
+                var tasks = new java.util.ArrayList<java.util.concurrent.Future<ArchiveLookupResult>>();
+                for (int i = 0; i < 64; i++) {
+                    String code = i % 2 == 0 ? "1" : "2";
+                    tasks.add(workers.submit(() -> {
+                        if (!start.await(5, java.util.concurrent.TimeUnit.SECONDS)) throw new AssertionError("start");
+                        return scanService.getImageLookupByBAH(code, code);
+                    }));
+                }
+                start.countDown();
+                for (int i = 0; i < tasks.size(); i++) {
+                    var result = tasks.get(i).get(10, java.util.concurrent.TimeUnit.SECONDS);
+                    int type = i % 2 == 0 ? expectedType : 0;
+                    String filename = i % 2 == 0 ? "a.jpg" : "b.jpg";
+                    assertThat(result.scans()).singleElement().satisfies(scan -> {
+                        assertThat(scan.getFilename()).isEqualTo(filename);
+                        assertThat(scan.getBtype()).isEqualTo(type);
+                    });
+                }
+            }
+        } finally {
+            workers.shutdownNow();
+            assertThat(workers.awaitTermination(10, java.util.concurrent.TimeUnit.SECONDS)).isTrue();
+        }
+    }
+
     private Cache lookupCache() {
         Cache cache = cacheManager.getCache("scanLookupByBah");
         assertThat(cache).as("CacheConfig 应注册 scanLookupByBah 缓存").isNotNull();

@@ -173,7 +173,7 @@ public class ArchiveExportServiceImpl implements ArchiveExportService {
                 String imageName = sanitizeSegment(item.getFilename(), "image");
                 byte[] imageBytes;
                 try (InputStream input = imageStorage.open(item)) {
-                    imageBytes = input.readNBytes(MAX_PDF_IMAGE_BYTES + 1);
+                    imageBytes = readPdfImage(input, effectiveProgress);
                 } catch (ArchiveExportCancelledException exception) {
                     throw exception;
                 } catch (IOException exception) {
@@ -221,6 +221,26 @@ public class ArchiveExportServiceImpl implements ArchiveExportService {
             logger.error("病案 PDF 生成失败", exception);
             throw new IOException("病案 PDF 生成失败", exception);
         }
+    }
+
+    private byte[] readPdfImage(InputStream input, ExportProgress progress) throws IOException {
+        // Retain the existing per-image size limit while observing cancellation between reads.
+        // readNBytes already implements bounded chunk allocation; wrap its underlying reads.
+        InputStream cancellable = new java.io.FilterInputStream(input) {
+            @Override public int read(byte[] buffer, int offset, int count) throws IOException {
+                ensureNotCancelled(progress);
+                int read = super.read(buffer, offset, Math.min(count, COPY_BUFFER_SIZE));
+                ensureNotCancelled(progress);
+                return read;
+            }
+            @Override public int read() throws IOException {
+                ensureNotCancelled(progress);
+                int read = super.read();
+                ensureNotCancelled(progress);
+                return read;
+            }
+        };
+        return cancellable.readNBytes(MAX_PDF_IMAGE_BYTES + 1);
     }
 
     private IOException exportReadFailure(String prefix, IOException exception) {

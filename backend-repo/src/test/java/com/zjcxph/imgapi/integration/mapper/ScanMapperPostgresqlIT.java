@@ -96,6 +96,27 @@ class ScanMapperPostgresqlIT extends PostgresqlIntegrationTestSupport {
     }
 
     @Test
+    void legacyCursorMatchesOldOffsetPageIncludingPartialIdentifiersAndOtherFilters() {
+        jdbcTemplate.update("""
+                INSERT INTO app.mr_scan(bah,sjh,filename,folder,uploadflag,pages)
+                VALUES ('00123','0008','cursor-a.jpg','synthetic',1,1),
+                       ('1234','800','cursor-b.jpg','synthetic',1,1),
+                       ('1235','800','excluded.jpg','synthetic',1,1),
+                       ('1236','800','cursor-c.jpg','synthetic',0,1)
+                """);
+        ScanRequest request = new ScanRequest();
+        request.setBah("123"); request.setSjh("8"); request.setFilename("cursor-");
+        request.setFolder("synthetic"); request.setPages(1); request.setUploadFlag(1);
+        var first = scanMapper.findLegacyConditionAfterId(request, 0, 1);
+        assertThat(first).extracting(Scan::getFilename).containsExactly("cursor-a.jpg");
+        var next = scanMapper.findLegacyConditionAfterId(request, first.getFirst().getId(), 2);
+        assertThat(next).extracting(Scan::getId).containsExactlyElementsOf(
+                scanMapper.findByConditionWithPagination(request, 1, 2).stream().map(Scan::getId).toList());
+        assertThat(next).extracting(Scan::getFilename).containsExactly("cursor-b.jpg");
+        assertThat(scanMapper.countByCondition(request)).isEqualTo(2L);
+    }
+
+    @Test
     void filteredCursorUsesWholeNumericKeyAndNeverMatchesPartialIdentifier() {
         jdbcTemplate.update("INSERT INTO app.mr_scan(bah,filename,folder,uploadflag,pages) VALUES ('00123','cursor-a.jpg','synthetic',1,1),('1234','cursor-b.jpg','synthetic',1,2)");
         ScanRequest request = new ScanRequest(); request.setBah("123");

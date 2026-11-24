@@ -320,6 +320,36 @@ async function smokePagesDemo() {
     assert.equal(ocr.list.data[0].id, ocr.created.data.id)
     assert.equal(ocr.cancelled.data.status, 'CANCELLED')
 
+    const review = await page.evaluate(async () => {
+      const request = (path, body) => fetch(`/proxy/api/v1/${path}`, body === undefined ? undefined : {
+        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body),
+      }).then(response => response.json())
+      const created = await request('archive-records/10/ocr/jobs', { scanId: 19, idempotencyKey: 'pages-review' })
+      let detail = created
+      for (let attempt = 0; attempt < 20 && detail.data?.status !== 'SUCCESS'; attempt++) {
+        await new Promise(resolve => setTimeout(resolve, 250))
+        detail = await request(`ocr/jobs/${created.data.id}`)
+      }
+      const url = `classification/jobs/${created.data.id}/suggestions`
+      const suggestion = (await request(url)).data[0]
+      const before = await request('scan/19')
+      const fact = await request('scan/19/ocr?full=true')
+      const reviewed = await request(`classification/suggestions/${suggestion.id}/review`, { action: 'ACCEPT' })
+      const repeated = await request(`classification/suggestions/${suggestion.id}/review`, { action: 'REJECT' })
+      const after = await request('scan/19')
+      const afterFact = await request('scan/19/ocr?full=true')
+      const updated = (await request(url)).data[0]
+      return { before, fact, suggestion, reviewed, repeated, after, afterFact, updated }
+    })
+    assert.equal(review.before.data.btype, 0)
+    assert.equal(review.suggestion.reviewStatus, 'PENDING')
+    assert.equal(review.suggestion.autoEligible, false)
+    assert.equal(review.reviewed.code, 200)
+    assert.equal(review.repeated.code, 409)
+    assert.equal(review.after.data.btype, review.suggestion.suggestedType)
+    assert.deepEqual(review.fact.data, review.afterFact.data)
+    assert.equal(review.updated.reviewStatus, 'ACCEPTED')
+
     const blocked = await page.evaluate(async () => {
       const path = '/proxy/api/v1/pages-smoke-unmocked'
       const fetchBlocked = await fetch(path, { method: 'POST', body: 'synthetic-demo-only' }).then(() => false, () => true)

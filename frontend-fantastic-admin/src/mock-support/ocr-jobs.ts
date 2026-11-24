@@ -1,6 +1,7 @@
 import type { MockScanRecord } from './records'
-import type { OcrItem } from '@/api/modules/classification'
+import type { ClassificationSuggestion, OcrItem } from '@/api/modules/classification'
 import type { OcrFact, OcrJob } from '@/api/modules/ocr'
+import { MEDICAL_RECORD_TYPE_CODES } from '@/constants/medical-record-types'
 
 interface Work {
   job: OcrJob
@@ -17,6 +18,8 @@ export function createOcrStore(scans: readonly MockScanRecord[]) {
   const jobs: Work[] = []
   const facts = new Map<number, OcrFact>()
   let nextId = 1
+  let nextSuggestionId = 1
+  const reviews: Array<{ jobId: string, version: string | null, hash: string, row: ClassificationSuggestion }> = []
 
   function advance(now: number) {
     for (const work of jobs) {
@@ -44,6 +47,29 @@ export function createOcrStore(scans: readonly MockScanRecord[]) {
           })
           work.items[job.processedCount].status = failed ? 'FAILED' : low ? 'LOW_CONFIDENCE' : 'NO_MATCH'
           work.items[job.processedCount].failureCode = failed ? 'SOURCE_NOT_FOUND' : null
+          // These fixed examples are synthetic suggestions, not a real classification model.
+          if (!failed && !low && [19, 21, 23, 25].includes(scan.id)) {
+            const suggestedType = MEDICAL_RECORD_TYPE_CODES[scan.id % MEDICAL_RECORD_TYPE_CODES.length]
+            reviews.push({
+              jobId: job.id,
+              version: facts.get(scan.id)?.resultVersion ?? null,
+              hash: scan.checksumMd5,
+              row: {
+                id: nextSuggestionId++,
+                scanId: scan.id,
+                suggestedType,
+                ruleScore: 95,
+                ocrConfidence: 0.96,
+                reviewStatus: 'PENDING',
+                autoStatus: 'NOT_ELIGIBLE',
+                autoEligible: false,
+                reasonCode: 'DEMO_RULE_MATCH',
+                matchedRules: '合成规则样例（非真实分类模型）',
+              },
+            })
+            work.items[job.processedCount].status = 'SUGGESTED'
+            work.items[job.processedCount].suggestedType = suggestedType
+          }
           if (failed) { job.failedCount++ }
           else { job.ocrSuccessCount++ }
         }
@@ -109,6 +135,35 @@ export function createOcrStore(scans: readonly MockScanRecord[]) {
     items(id: string, now = Date.now()) {
       advance(now)
       return jobs.find(work => work.job.id === id)?.items.map(item => ({ ...item }))
+    },
+    suggestions(id: string, now = Date.now()) {
+      advance(now)
+      if (!jobs.some(work => work.job.id === id)) { return undefined }
+      return reviews.filter(entry => entry.jobId === id).map(entry => ({ ...entry.row }))
+    },
+    review(id: number, body: Record<string, unknown>, now = Date.now()) {
+      advance(now)
+      const action = body?.action
+      if (action !== 'ACCEPT' && action !== 'REJECT' && action !== 'OVERRIDE') {
+        return { code: 400, message: '审核动作无效' }
+      }
+      const entry = reviews.find(item => item.row.id === id)
+      if (!entry) { return { code: 404, message: '分类建议不存在' } }
+      if (entry.row.reviewStatus !== 'PENDING') { return { code: 409, message: '建议已被处理' } }
+      if (action === 'REJECT') {
+        entry.row.reviewStatus = 'REJECTED'
+        return { code: 200, message: '模拟操作成功' }
+      }
+      const type = action === 'OVERRIDE' ? body.type : entry.row.suggestedType
+      if (typeof type !== 'number' || !MEDICAL_RECORD_TYPE_CODES.includes(type)) { return { code: 400, message: '病案类型无效' } }
+      const scan = scans.find(item => item.id === entry.row.scanId)
+      const fact = facts.get(entry.row.scanId)
+      if (!scan?.uploadFlag || scan.btype !== 0 || scan.checksumMd5 !== entry.hash || fact?.resultVersion !== entry.version) {
+        return { code: 409, message: '影像或类型已变化，请重新生成建议' }
+      }
+      scan.btype = type
+      entry.row.reviewStatus = action === 'OVERRIDE' ? 'OVERRIDDEN' : 'ACCEPTED'
+      return { code: 200, message: '模拟操作成功' }
     },
     cancel(id: string, now = Date.now()) {
       advance(now)

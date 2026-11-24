@@ -400,7 +400,8 @@ class MigrationServiceImplTest {
         Scan scan = legacyScan(3, "00789510", "605748", null);
         CaffeineCache cache = new CaffeineCache(CacheConfig.SCAN_BY_ID, Caffeine.newBuilder().build());
         cache.put(3, scan);
-        when(cacheManager.getCache(CacheConfig.SCAN_BY_ID)).thenReturn(cache);
+        when(cacheManager.getCache(anyString())).thenAnswer(invocation ->
+                Map.of(CacheConfig.SCAN_BY_ID, cache).get(invocation.getArgument(0, String.class)));
         Path file = createFile("3.jpg", new byte[]{7, 8, 9});
         when(scanMapper.findById(3)).thenReturn(scan);
         when(sourceResolver.resolve(scan)).thenReturn(resolved(file));
@@ -409,6 +410,75 @@ class MigrationServiceImplTest {
         when(scanMapper.updateOssInfo(eq(3), anyString(), eq(3L), anyString(), eq("migrated"))).thenReturn(1);
         assertThat(migrationService.uploadSingleScan(3).getStatus()).isEqualTo("success");
         assertThat(cache.get(3)).isNull();
+    }
+
+    @Test
+    void cacheFailureDoesNotRetrySuccessfulMigrationAndStillEvictsOtherCaches() throws Exception {
+        prepareSuccessfulMigration(1);
+        CaffeineCache cache = new CaffeineCache(CacheConfig.SCAN_BY_ID, Caffeine.newBuilder().build());
+        cache.put(3, legacyScan(3, "00789510", "605748", null));
+        when(cacheManager.getCache(anyString())).thenAnswer(invocation -> {
+            String name = invocation.getArgument(0);
+            if (CacheConfig.SCAN_BY_BAH.equals(name)) throw new IllegalStateException("cache unavailable");
+            return CacheConfig.SCAN_BY_ID.equals(name) ? cache : null;
+        });
+
+        assertThat(migrationService.uploadSingleScan(3).getStatus()).isEqualTo("success");
+        assertThat(cache.get(3)).isNull();
+        verify(scanMapper, never()).markMigrationRetryWait(eq(3), anyString(), any());
+    }
+
+    @Test
+    void afterCommitCacheFailureDoesNotEscapeCallbackOrStopOtherEvictions() throws Exception {
+        prepareSuccessfulMigration(1);
+        CaffeineCache cache = new CaffeineCache(CacheConfig.SCAN_BY_ID, Caffeine.newBuilder().build());
+        cache.put(3, legacyScan(3, "00789510", "605748", null));
+        when(cacheManager.getCache(anyString())).thenAnswer(invocation -> {
+            String name = invocation.getArgument(0);
+            if (CacheConfig.SCAN_BY_BAH.equals(name)) throw new IllegalStateException("cache unavailable");
+            return CacheConfig.SCAN_BY_ID.equals(name) ? cache : null;
+        });
+        TransactionSynchronizationManager.initSynchronization();
+        try {
+            assertThat(migrationService.uploadSingleScan(3).getStatus()).isEqualTo("success");
+            assertThat(cache.get(3)).isNotNull();
+            TransactionSynchronizationManager.getSynchronizations().forEach(TransactionSynchronization::afterCommit);
+            assertThat(cache.get(3)).isNull();
+        } finally {
+            TransactionSynchronizationManager.clearSynchronization();
+        }
+        verify(scanMapper, never()).markMigrationRetryWait(eq(3), anyString(), any());
+    }
+
+    @Test
+    void rolledBackMigrationDoesNotEvictScanCaches() throws Exception {
+        prepareSuccessfulMigration(1);
+        TransactionSynchronizationManager.initSynchronization();
+        try {
+            assertThat(migrationService.uploadSingleScan(3).getStatus()).isEqualTo("success");
+            TransactionSynchronizationManager.getSynchronizations().forEach(
+                    synchronization -> synchronization.afterCompletion(TransactionSynchronization.STATUS_ROLLED_BACK));
+        } finally {
+            TransactionSynchronizationManager.clearSynchronization();
+        }
+        verifyNoInteractions(cacheManager);
+    }
+
+    @Test
+    void unchangedMigrationRowPreservesExistingResultWithoutEviction() throws Exception {
+        prepareSuccessfulMigration(0);
+        assertThat(migrationService.uploadSingleScan(3).getStatus()).isEqualTo("success");
+        verifyNoInteractions(cacheManager);
+    }
+
+    private void prepareSuccessfulMigration(int updated) throws Exception {
+        Scan scan = legacyScan(3, "00789510", "605748", null);
+        Path file = createFile("3.jpg", new byte[]{7, 8, 9});
+        when(scanMapper.findById(3)).thenReturn(scan);
+        when(sourceResolver.resolve(scan)).thenReturn(resolved(file));
+        when(ossService.calculateMd5(file.toString())).thenReturn("0123456789abcdef0123456789abcdef");
+        when(ossService.getFileSize(file.toString())).thenReturn(3L);
+        when(scanMapper.updateOssInfo(eq(3), anyString(), eq(3L), anyString(), eq("migrated"))).thenReturn(updated);
     }
 
     @Test

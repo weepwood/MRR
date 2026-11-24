@@ -186,9 +186,9 @@ public class ScanController {
     public Result<PageResult<Scan>> findAllWithPagination(
             @RequestParam(defaultValue = "1") int page,
             @RequestParam(defaultValue = "10") int size) {
-        PaginationUtils.validatePageParams(page, size);
+        long offset = validatedLegacyOffset(page, size);
         List<Scan> scans = scanService.findAllWithPagination(page, size);
-        long total = totalForLegacyPage(scans, new ScanRequest(), page, size);
+        long total = totalForLegacyPage(scans, new ScanRequest(), offset, size);
         return Result.success(PageResult.of(scans, total, page, size));
     }
 
@@ -211,19 +211,30 @@ public class ScanController {
             @RequestParam(defaultValue = "1") int page,
             @RequestParam(defaultValue = "10") int size,
             @RequestBody ScanRequest request) {
-        PaginationUtils.validatePageParams(page, size);
+        long offset = validatedLegacyOffset(page, size);
         List<Scan> scans = scanService.findByConditionWithPagination(request, page, size);
-        long total = totalForLegacyPage(scans, request, page, size);
+        long total = totalForLegacyPage(scans, request, offset, size);
         return Result.success(PageResult.of(scans, total, page, size));
     }
 
+    private long validatedLegacyOffset(int page, int size) {
+        PaginationUtils.validatePageParams(page, size);
+        long offset = (page - 1L) * size;
+        // The existing service/mapper accepts an int offset. Reject instead
+        // of wrapping around to an unrelated page or a negative SQL OFFSET.
+        if (offset > Integer.MAX_VALUE) {
+            throw new IllegalArgumentException("分页偏移量超出范围，请使用游标分页");
+        }
+        return offset;
+    }
+
     /**
-     * Only a short first page establishes the exact total from that SELECT's
-     * snapshot. A full page or any later page still needs the legacy count.
+     * A short first page or a nonempty short later page establishes the exact
+     * total in that SELECT's snapshot. Full pages and empty later pages do not.
      */
-    private long totalForLegacyPage(List<Scan> scans, ScanRequest request, int page, int size) {
-        return page == 1 && scans.size() < size
-                ? scans.size()
+    private long totalForLegacyPage(List<Scan> scans, ScanRequest request, long offset, int size) {
+        return scans.size() < size && (offset == 0 || !scans.isEmpty())
+                ? offset + scans.size()
                 : scanService.countByCondition(request);
     }
 

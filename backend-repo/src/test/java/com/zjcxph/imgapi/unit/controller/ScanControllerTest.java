@@ -19,10 +19,12 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -210,6 +212,45 @@ class ScanControllerTest {
         assertThat(result.getTotal()).isEqualTo(500L);
         assertThat(result.hasNext()).isTrue();
         verify(scanService).countByCondition(any());
+    }
+
+    @Test
+    void nonemptyShortLaterUnfilteredPageDerivesTotalWithoutCounting() {
+        when(scanService.findAllWithPagination(3, 10)).thenReturn(List.of(mockScan));
+        var result = scanController.findAllWithPagination(3, 10).getData();
+        assertThat(result.getTotal()).isEqualTo(21L);
+        assertThat(result.getTotalPages()).isEqualTo(3);
+        assertThat(result.hasNext()).isFalse();
+        verify(scanService, never()).countByCondition(any());
+    }
+
+    @Test
+    void nonemptyShortLaterFilteredPageDerivesTotalWithoutCounting() {
+        when(scanService.findByConditionWithPagination(validRequest, 4, 20)).thenReturn(List.of(mockScan));
+        var result = scanController.findByConditionWithPagination(4, 20, validRequest).getData();
+        assertThat(result.getTotal()).isEqualTo(61L);
+        assertThat(result.getTotalPages()).isEqualTo(4);
+        assertThat(result.hasNext()).isFalse();
+        verify(scanService, never()).countByCondition(any());
+    }
+
+    @Test
+    void fullLaterPageStillCounts() {
+        when(scanService.findByConditionWithPagination(validRequest, 2, 1)).thenReturn(List.of(mockScan));
+        when(scanService.countByCondition(validRequest)).thenReturn(50L);
+        var result = scanController.findByConditionWithPagination(2, 1, validRequest).getData();
+        assertThat(result.getTotal()).isEqualTo(50L);
+        assertThat(result.hasNext()).isTrue();
+        verify(scanService).countByCondition(validRequest);
+    }
+
+    @Test
+    void rejectsOffsetsBeyondMapperIntegerRangeBeforeDatabaseAccess() {
+        assertThatThrownBy(() -> scanController.findAllWithPagination(4_294_969, 1000))
+                .isInstanceOf(IllegalArgumentException.class).hasMessageContaining("分页");
+        assertThatThrownBy(() -> scanController.findByConditionWithPagination(Integer.MAX_VALUE, 1000, validRequest))
+                .isInstanceOf(IllegalArgumentException.class).hasMessageContaining("分页");
+        verifyNoInteractions(scanService);
     }
 
     @Test

@@ -172,6 +172,13 @@
 - #99/#350 P1，分支 `perf/99-legacy-cursor`，worktree `/Volumes/data/Project/MRR-worktrees/99-legacy-cursor`。4c90d9d9实际RED 18项1失败（精确游标忽略文件名条件）。现有 /api/v1/scan/cursor/condition 增加显式 legacyContains=true，复用旧LIKE及全部筛选谓词、id游标、size+1、不执行COUNT，3秒Mapper语句超时不变；默认精确游标仍为精确编号，遇不支持的非空筛选明确400。旧OFFSET/COUNT接口及其结果语义不变。未修改Flyway或生产索引。
 - 实际51项定向零失败/错误/跳过；新增真实PG16包含/前导零/附加筛选、同页OFFSET等价测试，待CI执行。尚未迁移前端或验证千万级模糊游标的稀疏结果性能，不能声称解决旧COUNT瓶颈；后续隔离库评估pg_trgm。main 6454b5a4，#778已合并，1164单测/147 PG16通过。独立revert，无生产操作。
 
+## 09 下载并发配额与临时文件租约（2026-11-25）
+
+- #171/#519/#523/#524/#350 P1，`fix/230-export-download-leases`，worktree `/Volumes/data/Project/MRR-worktrees/230-export-download-leases`。78d3a240修正macOS路径夹具后实际RED 2项1失败（第三次并发请求未拒绝）；17737864引入ArchiveExportTempFileManager实际FileChannel租约，默认全局8/每用户2（ARCHIVE_EXPORT_MAX_CONCURRENT_DOWNLOADS、ARCHIVE_EXPORT_MAX_CONCURRENT_DOWNLOADS_PER_USER），受现有单文件配额、权限和过期约束；活跃租约阻止过期清理，持实际句柄的长度/Range；429拒绝、416/异步拒绝/客户端写入失败释放，一次性close；复用PendingImageStream所有权拦截。
+- 本地43项、9a5969ac新增全局跨用户与异步拒绝后44项零失败/错误/跳过；同步 #776 正式main 913acd6e，最新CI待验收。当前配额为单进程、仅异步导出下载入口，不覆盖其他同步下载接口；默认数值需现场负载评估，真实Windows删除语义、Tomcat慢客户端写阻塞及多实例不在本次已验收范围。独立revert，无生产变更。#776 head4a7a6959、governance45433259307、quality45433259445，1162单测/146 PG16通过。
+
+- #781已合并38ed106c，head c5a95683，quality45436736527，1169单测及148 PG16零失败/错误/跳过。
+
 ## 每轮交接模板
 
 - 更新时间、任务、风险、目标及非目标：

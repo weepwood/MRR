@@ -32,7 +32,9 @@ class NginxLogPrivacyTest(unittest.TestCase):
         self.assertIn('default "[route omitted]";', mapping)
         # 分类结果不得插值或使用正则捕获值。
         for line in mapping.splitlines()[1:-1]:
-            output = re.search(r'"([^"]*)";\s*
+            output = re.search(r'"([^"]*)";\s*$', line)
+            self.assertIsNotNone(output, '每个分类必须使用固定引号字面量')
+            self.assertNotIn('$', output.group(1))
         for fmt in formats:
             self.assertIn('$mrr_log_route', fmt)
             self.assertNotRegex(fmt, r'\$(?:uri|request_uri|request|args|query_string|http_referer)\b')

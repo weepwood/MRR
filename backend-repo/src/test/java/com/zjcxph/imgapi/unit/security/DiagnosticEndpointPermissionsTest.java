@@ -3,6 +3,7 @@ package com.zjcxph.imgapi.unit.security;
 import com.zjcxph.imgapi.common.AuthSession;
 import com.zjcxph.imgapi.config.ImageDeliveryProperties;
 import com.zjcxph.imgapi.controller.OperationsDiagnosticsController;
+import com.zjcxph.imgapi.controller.ArchiveManifestController;
 import com.zjcxph.imgapi.controller.QueryDiagnosticsController;
 import com.zjcxph.imgapi.handler.ResultHttpStatusAdvice;
 import com.zjcxph.imgapi.interceptors.AuthorizationInterceptor;
@@ -129,6 +130,38 @@ class DiagnosticEndpointPermissionsTest {
                 .andExpect(status().isOk())
                 .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.header().string("Cache-Control", "private, no-store"))
                 .andExpect(jsonPath("$.data.status").value("VERIFIED"));
+    }
+
+    @Test
+    void manifestUsesDualPermissionsAndTrustedActor() throws Exception {
+        var service = mock(ArchiveManifestService.class);
+        var controller = new ArchiveManifestController(service);
+        String path = "/api/v1/operations/archive-manifests";
+        var handler = new HandlerMethod(controller, ArchiveManifestController.class.getMethod(
+                "start", long.class, jakarta.servlet.http.HttpServletResponse.class));
+        var authorization = new AuthorizationInterceptor();
+        for (var permissions : List.of(List.of("system:manage"), List.of("record:read"))) {
+            var response = new MockHttpServletResponse();
+            assertThat(authorization.preHandle(request("POST", path, permissions), response, handler)).isFalse();
+            assertThat(response.getStatus()).isEqualTo(403);
+        }
+        assertThat(authorization.preHandle(request("POST", path, List.of("system:manage","record:read")),
+                new MockHttpServletResponse(), handler)).isTrue();
+        assertThat(org.assertj.core.api.Assertions.catchThrowable(() ->
+                controller.start(9L, new MockHttpServletResponse())))
+                .isInstanceOf(com.zjcxph.imgapi.exception.BusinessException.class);
+        verifyNoInteractions(service);
+        var session = new AuthSession();
+        session.setId(7L);
+        com.zjcxph.imgapi.utils.AuthContext.setCurrentUser(session);
+        try {
+            var response = new MockHttpServletResponse();
+            controller.start(9L, response);
+            verify(service).start(9L, 7L);
+            assertThat(response.getHeader("Cache-Control")).isEqualTo("private, no-store");
+        } finally {
+            com.zjcxph.imgapi.utils.AuthContext.clear();
+        }
     }
 
     private MockHttpServletRequest request(List<String> permissions) {

@@ -39,6 +39,9 @@ final class SourcePermitGuard {
                 throw new IOException("图片来源返回了空数据流");
             }
             success = true;
+            if (delegate instanceof ImageReadStream imageStream) {
+                return imageStream.withPermit(semaphore::release);
+            }
             return new FilterInputStream(delegate) {
                 private final AtomicBoolean closed = new AtomicBoolean();
 

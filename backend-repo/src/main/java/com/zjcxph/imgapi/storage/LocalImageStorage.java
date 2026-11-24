@@ -25,7 +25,7 @@ public class LocalImageStorage implements ImageStorage {
 
     @Override
     public InputStream open(PathDO image) throws IOException {
-        return Files.newInputStream(requireReadableFile(image));
+        return ImageReadStream.openFile(requireReadableFile(image));
     }
 
     @Override

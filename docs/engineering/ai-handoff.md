@@ -129,6 +129,11 @@
 - ce29e67f 仅对NAS实际进入原生调用后的超时计数，默认3次超时/30秒冷却/单探针半开；成功恢复，旧代际不改变新状态，文件缺失、访问拒绝、未开始I/O的排队或许可饱和不触发熔断，半开中性结果不证明恢复。状态局限于本进程配置节点，重启清零，固定安全分类，不泄露根目录。
 - 同步main 20d29651 后联合34项出现2错误，其中真实原因是成功交接后节点槽位释放竞争，另一个为Mockito连带未完成stub；b70abe57 以一次性释放及调用方成功移交同步处理，保留原资源许可，最终34项零失败/错误/跳过。首轮26项与熔断28项通过。真实Windows/NAS native阻塞、正文read/write/close不可中断、更多节点并发、网络源熔断尚未验收，不承诺操作系统硬取消。独立revert，无生产配置、来源顺序或权限修改。#770已合并20d29651，最新165c0558，1150单测/146 PG16通过；本PR最新CI待核验。
 
+## 03 同键并发回源合并（2026-11-24）
+
+- #99/#350 P1，`perf/99-scan-single-flight`，worktree `/Volumes/data/Project/MRR-worktrees/99-scan-single-flight`。#771已合并 e17d87e1，head d1b2cbe6，governance45428334878、quality45428335084，1151单测零失败，PG16按范围跳过，CI实测冷键8次/热键0次回源。fb40719e实际RED 9项1失败，预期1实际8；cd38d173复用GenerationAwareScanCache同代际同键加载，最多1000个在途登记（满后按普通查询执行）、数据库查询不持有全局锁；五个原注解使用自定义同步加载，空/空列表/零条ArchiveLookupResult不缓存，异常通知等待者并移除登记，旧代际不加入新请求或回填。未更改缓存键、TTL、签名缓存及DB语义。
+- 实际53项定向通过（ScanServiceCacheTest、MigrationServiceImplTest、ScanServiceArchiveLookupTest、ArchiveExportSummaryServiceTest），模拟Mapper冷并发8→1、热0；新代际不等待旧阻塞加载、异常/空结果后重查均通过。非真实端到端吞吐；等待者受首请求实际SQL耗时约束，不声称独立硬超时。同步main dae8bef7，最新CI待验收；独立revert，无生产变更。
+
 ## 每轮交接模板
 
 - 更新时间、任务、风险、目标及非目标：

@@ -198,7 +198,7 @@ class ScanServiceCacheTest {
             release.countDown();
             for (var task : tasks) assertThat(task.get(5, TimeUnit.SECONDS)).isSameAs(scan);
             int coldLoads = calls.get();
-            assertThat(coldLoads).isBetween(1, workers);
+            assertThat(coldLoads).isEqualTo(1);
             tasks.clear();
             for (int i = 0; i < workers; i++) tasks.add(executor.submit(() -> scanService.findById(1)));
             for (var task : tasks) assertThat(task.get(5, TimeUnit.SECONDS)).isSameAs(scan);
@@ -209,6 +209,46 @@ class ScanServiceCacheTest {
             release.countDown();
             executor.shutdownNow();
         }
+    }
+
+    @Test
+    void newGenerationDoesNotJoinBlockedOldLoad() throws Exception {
+        var old = new Scan(); old.setId(1);
+        var fresh = new Scan(); fresh.setId(1); fresh.setOssUrl("synthetic-fresh");
+        var entered = new CountDownLatch(1);
+        var release = new CountDownLatch(1);
+        when(scanMapper.findById(1)).thenAnswer(call -> {
+            entered.countDown();
+            if (!release.await(5, TimeUnit.SECONDS)) throw new AssertionError("not released");
+            return old;
+        }).thenReturn(fresh);
+        var executor = Executors.newFixedThreadPool(2);
+        try {
+            var first = executor.submit(() -> scanService.findById(1));
+            assertThat(entered.await(5, TimeUnit.SECONDS)).isTrue();
+            context.getBean(CacheManager.class).getCache(CacheConfig.SCAN_BY_ID).evict(1);
+            assertThat(executor.submit(() -> scanService.findById(1)).get(2, TimeUnit.SECONDS)).isSameAs(fresh);
+            release.countDown();
+            assertThat(first.get(5, TimeUnit.SECONDS)).isSameAs(old);
+            assertThat(scanService.findById(1)).isSameAs(fresh);
+            verify(scanMapper, times(2)).findById(1);
+        } finally {
+            release.countDown();
+            executor.shutdownNow();
+        }
+    }
+
+    @Test
+    void failedAndNullLoadsAreNotRetained() {
+        var fresh = new Scan(); fresh.setId(1);
+        when(scanMapper.findById(1)).thenThrow(new IllegalStateException("synthetic failure"))
+                .thenReturn(null).thenReturn(fresh);
+        org.assertj.core.api.Assertions.assertThatThrownBy(() -> scanService.findById(1))
+                .isInstanceOf(IllegalStateException.class);
+        assertThat(scanService.findById(1)).isNull();
+        assertThat(scanService.findById(1)).isSameAs(fresh);
+        assertThat(scanService.findById(1)).isSameAs(fresh);
+        verify(scanMapper, times(3)).findById(1);
     }
 
     @Configuration

@@ -306,6 +306,12 @@
 - #350 P2文档，`docs/350-v1-dry-run-evidence`，独立worktree。[V1验收矩阵](v1-release-readiness-2026-11-25.md)追加实际dry-run45451701999 attempt1，SHA6ac73ed4，identity/candidate/recovery/complete/summary成功，publish跳过。1184单测/150 PG16/933前端/266 Mock浏览器/2真实候选浏览器；覆盖率全门禁通过，Windows PS5.1/PG16.15真实空库恢复通过。下载JAR/manifest，verify_manifest jar_only=true 实际身份/哈希一致，完整ZIP/独立sha文件未保留；不得伪称下载校验。#797已合并d361a71a，1186后端/933前端，PG16按范围跳过，最新门禁通过。当前非最终RC，保留VERSION0.9.0，不创建Tag/Release，兼容POST专项与院内验收仍待。
 - 准备RC说明草稿，正式版本文件变更留待兼容专项收口，不提前绑定旧SHA；现场调用者迁移、等量副本与Windows/NAS实际运行仍为BLOCKED。工程文档、release工具与基线校验，不放宽门禁。
 
+## 07 历史身份证协议兼容迁移（2026-11-25）
+
+- #715/#112 P1，`fix/715-compatible-patient-post` 独立worktree；复用#722测试及#712扫描页候选实现但不退役任何旧HTTP GET、不移除加密接口或改变默认开关。患者新增精确POST /api/v1/patients/idcard，复用DTO/Mapper及record:read，合法15/18位校验；旧GET保留原查询、两者private no-store；只读精确allowlist不放行import。客户端及Mock新增POST，旧GET保留。普通扫描查询在 /idcard 当前页面内存，调用既有search:read POST，返回/刷新/账号变化清空，销毁后拒绝迟到响应；合法旧明文深链仍可发起POST，返回查询替换为/idcard，旧URL历史/Referer/定制Nginx日志风险未消除。旧Search GET及archive token/HMAC不改。API文档明确现场消费者清单、迁移与另行退役审批。
+- 患者实际RED 13项4失败（1b45ef27），GREEN 31项；扫描浏览器RED等待POST超时，第一轮6通过1失败（返回时URL尚未替换），等待实际导航后8项含预热通过，验证普通URL无身份证、旧深链、刷新返回、迟到响应不继续请求影像。后端最终70项定向零失败错误跳过（含真实AuthorizationInterceptor+standalone MVC 401/403/允许POST、旧GET拒绝、日志脱敏/只读），非完整登录链或院内联调。日志 /tmp/mrr-compatible-patient-red.log、/tmp/mrr-compatible-patient-final.log、/tmp/mrr-scan-privacy-red.log、/tmp/mrr-scan-privacy-green-r2.log。类型/lint/hooks及文档检查。保留#712/#722待现场审批，不擅自关闭；#752仍暂缓。独立安全前向修复，未改数据、Flyway、生产配置及版本。
+- #797已合并d361a71a（1186单测/933前端，PG16按范围跳过），#798已合并141f53b9（governance45458082461、quality45458082439，其他文档范围跳过），完整dry-run45451701999 PASS（旧SHA6ac73ed4，Windows恢复/覆盖率/JAR哈希实证）。同步141f53b9，最新CI待验收；RC说明已准备，最终SHA和VERSION待兼容专项合并及版本范围审批。未正式发布。
+
 ## 每轮交接模板
 
 - 更新时间、任务、风险、目标及非目标：

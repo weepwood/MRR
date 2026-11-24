@@ -133,7 +133,7 @@ export function getPatientByBah(bah: string) {
   return getRequest<PatientRecord[]>(`/api/v1/patients/bah/${bah}`)
 }
 
-/** GET /api/v1/patients/idcard/{idCard} — 根据身份证号查询 */
+/** POST /api/v1/patients/idcard — 根据身份证号查询 */
 export function getPatientByIdCard(idCard: string) {
-  return getRequest<PatientRecord[]>(`/api/v1/patients/idcard/${idCard}`)
+  return postRequest<PatientRecord[]>('/api/v1/patients/idcard', { idCard })
 }

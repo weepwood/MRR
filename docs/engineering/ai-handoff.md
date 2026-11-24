@@ -207,6 +207,11 @@
 
 - #785已合并b7980728，head2c6dff9e，governance45440104179、quality45440104187、deploy-pages-demo45440104039通过，933前端单测/138文件。
 
+## 04.3 真实HTTP正文熔断与半开恢复验收（2026-11-25）
+
+- #230/#350 P1边界内的验证补充，`test/230-network-body-circuit-recovery`，独立worktree。NetworkSourceCircuit仅增加包内构造注入以使用测试时钟，生产默认3次/30秒/单调时钟完全不变。实际loopback HTTP返回首字节后停发、TimedHttpBody实际读取超时三次、SourcePermitGuard单许可释放，第四次拒绝未触达源站；模拟推进冷却时钟，半开单探针、响应头/部分正文不能恢复、完整正文后同节点恢复。定向6项零失败/错误/跳过，原始 /tmp/mrr-network-body-circuit.log。#782已合并437f428a，1175单测/148真实PG16通过。
+- 不声称NAS正文故障已联动节点熔断：NAS原有打开/size熔断与正文隔离仍分阶段。无现场NAS/Windows、Nginx、真实OSS或永久静默慢客户端硬截止结论。独立revert，不修改生产配置与权限，最新CI待验收。
+
 ## 每轮交接模板
 
 - 更新时间、任务、风险、目标及非目标：

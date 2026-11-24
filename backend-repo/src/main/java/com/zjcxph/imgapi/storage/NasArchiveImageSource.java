@@ -36,13 +36,14 @@ public class NasArchiveImageSource implements ArchiveImageSource {
 
     @Override
     public InputStream open(PathDO image) throws IOException {
-        return isolation.call(image.getSourceNode(), properties.getNasOpenTimeout(),
+        InputStream opened = isolation.call(image.getSourceNode(), properties.getNasOpenTimeout(),
                 mark -> permitGuard.open(() -> { mark.run(); return openFile(image); }), stream -> {
                     try { stream.close(); } catch (IOException | RuntimeException failure) {
                         org.slf4j.LoggerFactory.getLogger(NasArchiveImageSource.class)
                                 .warn("Late NAS stream close failed: errorType={}", failure.getClass().getSimpleName());
                     }
                 });
+        return NasBodyStream.wrap(opened, properties.getNasBodyTimeout());
     }
 
     @Override

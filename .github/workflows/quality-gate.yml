@@ -39,8 +39,8 @@ jobs:
       - uses: actions/setup-python@v7
         with:
           python-version: '3.12'
-      - name: Read last successful main integration
-        if: github.event_name != 'pull_request'
+      - name: Read last successful main quality gate
+        if: github.event_name == 'push'
         env:
           GH_TOKEN: ${{ github.token }}
         run: gh api "repos/${GITHUB_REPOSITORY}/actions/workflows/quality-gate.yml/runs?branch=main&event=push&status=success&per_page=20" > main-runs.json
@@ -53,8 +53,11 @@ jobs:
           set -euo pipefail
           if [ "${GITHUB_EVENT_NAME}" = pull_request ]; then
             python -m scripts.ci_gate scope --mode pr --base "${BASE_SHA}" --output "${GITHUB_OUTPUT}"
+          elif [ "${GITHUB_EVENT_NAME}" = push ]; then
+            python -m scripts.ci_gate scope --mode main --runs main-runs.json --output "${GITHUB_OUTPUT}"
           else
-            python -m scripts.ci_gate scope --mode integration --runs main-runs.json --output "${GITHUB_OUTPUT}"
+            # Explicit manual checks must not inherit a lightweight main-push baseline.
+            python -m scripts.ci_gate scope --mode integration --output "${GITHUB_OUTPUT}"
           fi
       - name: Repository invariants
         run: |

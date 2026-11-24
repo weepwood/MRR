@@ -12,21 +12,22 @@ import java.util.concurrent.atomic.AtomicBoolean;
 /** Length and optional random access belong to the actual opened source. */
 public final class ImageReadStream extends FilterInputStream {
     private final long length;
-    private final FileChannel channel;
+    @FunctionalInterface interface SeekOperation { void seek(long offset) throws IOException; }
+    private final SeekOperation seekOperation;
     private final Runnable release;
     private final AtomicBoolean closed = new AtomicBoolean();
 
-    private ImageReadStream(InputStream delegate, long length, FileChannel channel, Runnable release) {
+    private ImageReadStream(InputStream delegate, long length, SeekOperation seekOperation, Runnable release) {
         super(delegate);
         this.length = length;
-        this.channel = channel;
+        this.seekOperation = seekOperation;
         this.release = release;
     }
 
     static ImageReadStream openFile(Path file) throws IOException {
         FileChannel channel = FileChannel.open(file, StandardOpenOption.READ);
         try {
-            return new ImageReadStream(Channels.newInputStream(channel), channel.size(), channel, () -> {});
+            return new ImageReadStream(Channels.newInputStream(channel), channel.size(), channel::position, () -> {});
         } catch (IOException | RuntimeException failure) {
             try { channel.close(); } catch (IOException closeFailure) { failure.addSuppressed(closeFailure); }
             throw failure;
@@ -45,16 +46,20 @@ public final class ImageReadStream extends FilterInputStream {
         return new ImageReadStream(delegate, length, null, () -> {});
     }
 
+    static ImageReadStream withSeek(InputStream delegate, long length, SeekOperation seek) {
+        return new ImageReadStream(delegate, length, seek, () -> {});
+    }
+
     ImageReadStream withPermit(Runnable release) {
-        return new ImageReadStream(this, length, channel, release);
+        return new ImageReadStream(this, length, seekOperation, release);
     }
 
     public long length() { return length; }
-    public boolean seekable() { return channel != null; }
+    public boolean seekable() { return seekOperation != null; }
 
     public void seek(long offset) throws IOException {
-        if (channel == null) throw new IOException("Image source is not seekable");
-        channel.position(offset);
+        if (seekOperation == null) throw new IOException("Image source is not seekable");
+        seekOperation.seek(offset);
     }
 
     @Override

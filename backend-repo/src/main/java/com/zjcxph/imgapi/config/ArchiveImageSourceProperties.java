@@ -21,6 +21,7 @@ public class ArchiveImageSourceProperties {
     private Duration nginxReadTimeout = Duration.ofSeconds(60);
     private int nasMaxConcurrency = 8;
     private Duration nasOpenTimeout = Duration.ofSeconds(30);
+    private Duration nasBodyTimeout = Duration.ofSeconds(30);
     private int httpMaxConcurrency = 8;
     private int ossMaxConcurrency = 8;
     private Map<String, NasNode> nasNodes = new LinkedHashMap<>();

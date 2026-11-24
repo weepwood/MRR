@@ -88,10 +88,18 @@
   border-radius: 8px;
 }
 
-.browser-compat-button:hover,
-.browser-compat-button:focus-visible {
+.browser-compat-button:hover:not(:focus-visible) {
   background: #fff7ed;
   outline: none;
+}
+
+.browser-compat-button:focus-visible {
+  background: #fff7ed;
+}
+
+:focus-visible {
+  outline: 2px solid #c2410c;
+  outline-offset: 2px;
 }
 
 .browser-compat-button-primary {

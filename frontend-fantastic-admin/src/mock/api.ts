@@ -1,26 +1,10 @@
+import type { MockScanRecord } from '../mock-support/records'
 import { defineFakeRoute } from 'vite-plugin-fake-server/client'
-import { MEDICAL_RECORD_TYPE_CODES, MEDICAL_RECORD_TYPES } from '@/constants/medical-record-types'
+import { MEDICAL_RECORD_TYPES } from '@/constants/medical-record-types'
+import { demoClock } from '../mock-support/clock'
+import { demoRecords } from '../mock-support/records'
 
 type QueryValue = string | string[] | undefined
-
-interface MockScanRecord {
-  id: number
-  brxh: string
-  bah: string
-  sjh: string
-  filename: string
-  btype: number
-  pages: number
-  openerNo: string
-  uploadDate: string
-  uploadFlag: number
-  folder: string
-  ossUrl?: string
-  fileSize: number
-  checksumMd5: string
-  migrationStatus: string
-  migratedAt?: string
-}
 
 interface MockUser {
   id: number
@@ -37,46 +21,8 @@ const typeNames: Record<number, string> = Object.fromEntries(
   MEDICAL_RECORD_TYPES.map(item => [item.value, item.label] as const),
 )
 
-const departments = ['心内科', '神经内科', '普外科', '骨科', '呼吸科', '消化内科']
-const operators = ['scanner-01', 'scanner-02', 'scanner-03', 'scanner-04']
-const mockTimestamp = '2026-07-13T08:00:00.000Z'
-
-const scans: MockScanRecord[] = Array.from({ length: 64 }, (_, index) => {
-  const id = index + 1
-  const btypeValues = MEDICAL_RECORD_TYPE_CODES
-  const btype = btypeValues[index % btypeValues.length]
-  const day = String((index % 28) + 1).padStart(2, '0')
-  const month = String(6 + Math.floor(index / 28)).padStart(2, '0')
-  const migrated = index % 4 !== 0
-
-  return {
-    id,
-    brxh: String(320000 + id),
-    bah: String(26070000 + Math.floor(index / 2)).padStart(8, '0'),
-    sjh: String(90000000 + id),
-    filename: `${String(26070000 + Math.floor(index / 2)).padStart(8, '0')}_${btype}_${id}.jpg`,
-    btype,
-    pages: 8 + (index * 7) % 83,
-    openerNo: operators[index % operators.length],
-    uploadDate: `2026-${month}-${day} ${String(8 + index % 10).padStart(2, '0')}:30:00`,
-    uploadFlag: migrated ? 1 : 0,
-    folder: `/mock/archive/2026/${month}/${String(26070000 + Math.floor(index / 2)).padStart(8, '0')}`,
-    ossUrl: migrated ? `https://example.invalid/mock/${id}.jpg` : undefined,
-    fileSize: 512_000 + index * 31_337,
-    checksumMd5: `mock-md5-${String(id).padStart(4, '0')}`,
-    migrationStatus: migrated ? (index % 5 === 0 ? 'verified' : 'migrated') : 'not_migrated',
-    migratedAt: migrated ? `2026-${month}-${day} 12:00:00` : undefined,
-  }
-})
-
-const patients = Array.from({ length: 32 }, (_, index) => ({
-  id: index + 1,
-  idCard: `330106199${index % 10}${String(101 + index).padStart(4, '0')}12${String(index % 10).padStart(2, '0')}`,
-  bah: String(26070000 + index).padStart(8, '0'),
-  name: ['张敏', '李华', '王芳', '陈杰', '赵宁', '刘洋'][index % 6],
-  admissiontime: `2026-${String(5 + index % 3).padStart(2, '0')}-${String(index % 28 + 1).padStart(2, '0')} 09:00:00`,
-  department: departments[index % departments.length],
-}))
+const mockTimestamp = demoClock.iso()
+const { patients, scans } = demoRecords
 
 let users: MockUser[] = [
   {
@@ -97,7 +43,7 @@ let users: MockUser[] = [
     roleName: '审计员',
     permissions: ['audit:read', 'logs:read', 'statistics:read'],
     status: 'ACTIVE',
-    lastLoginAt: '2026-07-12T08:30:00.000Z',
+    lastLoginAt: demoClock.iso(1),
   },
   {
     id: 3,
@@ -107,7 +53,7 @@ let users: MockUser[] = [
     roleName: '操作员',
     permissions: ['scan:read', 'scan:write', 'statistics:read'],
     status: 'ACTIVE',
-    lastLoginAt: '2026-07-11T06:20:00.000Z',
+    lastLoginAt: demoClock.iso(2),
   },
 ]
 
@@ -147,7 +93,10 @@ const logs = Array.from({ length: 72 }, (_, index) => {
   const actions = ['LIST', 'VIEW_IMAGE', 'VIEW_OSS_IMAGE', 'DOWNLOAD']
   const action = actions[index % actions.length]
   const status = index % 17 === 0 ? 404 : index % 29 === 0 ? 500 : 200
-  const target = scans[index % scans.length].bah
+  const scan = scans[index % scans.length]
+  const target = scan.bah
+  const candidateTime = demoClock.dateTime(Math.floor(index / 12), 0, index % 12 * 15)
+  const earliestTime = action === 'VIEW_OSS_IMAGE' ? (scan.migratedAt ?? scan.uploadDate) : scan.uploadDate
 
   return {
     id: index + 1,
@@ -156,13 +105,13 @@ const logs = Array.from({ length: 72 }, (_, index) => {
     requestUri: action === 'DOWNLOAD'
       ? `/api/v1/img/download/${target}`
       : action === 'VIEW_IMAGE'
-        ? `/api/v1/img/image/${target}/${index + 1}`
+        ? `/api/v1/img/image/${target}/${scan.id}`
         : action === 'VIEW_OSS_IMAGE'
-          ? `/api/v1/img/oss-image/${index + 1}`
+          ? `/api/v1/img/oss-image/${scan.id}`
           : `/api/v1/img/${target}`,
     method: 'GET',
     userAgent: 'Mozilla/5.0 Mock Browser',
-    accessTime: `2026-07-${String(13 - Math.floor(index / 12)).padStart(2, '0')} ${String(8 + index % 10).padStart(2, '0')}:${String(index % 60).padStart(2, '0')}:00`,
+    accessTime: candidateTime < earliestTime ? earliestTime : candidateTime,
     queryString: '',
     requestBody: '',
     responseStatus: status,
@@ -310,9 +259,8 @@ function dateSummary() {
 function buildResponseAnalysis(days: number) {
   const pointCount = Math.min(Math.max(days, 7), 30)
   const trend = Array.from({ length: pointCount }, (_, index) => {
-    const day = String(Math.max(1, 13 - (pointCount - index - 1))).padStart(2, '0')
     return {
-      bucket: `2026-07-${day}`,
+      bucket: demoClock.date(pointCount - index - 1),
       requestCount: 720 + index * 41,
       errorCount: index % 6 === 0 ? 9 : 3,
       avgServerDurationMs: 88 + (index * 11) % 54,
@@ -433,7 +381,7 @@ function imageAuditAnalytics(filteredLogs = logs) {
 const systemInfo = {
   application: {
     name: 'MRR Backend Mock',
-    startTime: '2026-07-13 08:00:00',
+    startTime: demoClock.dateTime(0, 6),
     runTime: '5小时 42分钟',
   },
   jvm: {
@@ -936,63 +884,12 @@ export default defineFakeRoute([
     },
   },
   {
-    url: '/api/v1/oss/migration/statistics',
-    response: () => {
-      const migratedCount = scans.filter(item => item.migrationStatus !== 'not_migrated').length
-      const failedCount = migrationLogs.filter(item => item.migrationStatus === 'failed').length
-      return ok({
-        totalCount: scans.length,
-        migratedCount,
-        pendingCount: scans.length - migratedCount,
-        failedCount,
-        percentage: Math.round(migratedCount / scans.length * 100),
-      })
-    },
-  },
-  {
-    url: '/api/v1/oss/migration/pending',
-    response: ({ query }) => {
-      const folder = normalize(firstQuery(query.folder))
-      const limit = toNumber(query.limit, 100)
-      const pending = scans.filter(item =>
-        item.migrationStatus === 'not_migrated' && (!folder || normalize(item.folder).includes(folder)),
-      )
-      return ok({ list: pending.slice(0, limit), total: pending.length })
-    },
-  },
-  {
-    url: '/api/v1/oss/migration/pending-folders',
-    response: () => {
-      const grouped = new Map<string, number>()
-      scans.filter(item => item.migrationStatus === 'not_migrated').forEach((item) => {
-        grouped.set(item.folder, (grouped.get(item.folder) ?? 0) + 1)
-      })
-      return ok([...grouped.entries()].map(([folder, cnt]) => ({ folder, cnt })))
-    },
-  },
-  {
     url: '/api/v1/oss/migration/logs',
     response: ({ query }) => {
       const status = normalize(firstQuery(query.status))
       const filtered = migrationLogs.filter(item => !status || normalize(item.migrationStatus) === status)
       return ok(paginate(filtered, query.page, query.size))
     },
-  },
-  {
-    url: '/api/v1/oss/upload',
-    method: 'POST',
-    response: ({ body }) => ok((body.scanIds ?? []).map((scanId: number) => ({
-      scanId,
-      ossUrl: `https://example.invalid/mock/${scanId}.jpg`,
-      status: 'success',
-    })), '模拟上传完成'),
-  },
-  {
-    url: '/api/v1/oss/upload/bah/:bah',
-    method: 'POST',
-    response: ({ params }) => ok(scans
-      .filter(item => item.bah === String(params.bah))
-      .map(item => ({ scanId: item.id, ossUrl: `https://example.invalid/mock/${item.id}.jpg`, status: 'success' }))),
   },
   {
     url: '/api/v1/oss/upload/folder/:folder',
@@ -1003,22 +900,11 @@ export default defineFakeRoute([
   },
   {
     url: '/api/v1/oss/url/:scanId',
-    response: ({ params }) => ok(`https://example.invalid/mock/${params.scanId}.jpg`),
-  },
-  {
-    url: '/api/v1/oss/migration/jobs',
-    method: 'POST',
-    response: () => ok({ id: 1, status: 'RUNNING', progress: 35 }),
-  },
-  {
-    url: '/api/v1/oss/migration/jobs',
-    response: ({ query }) => ok(paginate([
-      { id: 1, status: 'RUNNING', progress: 35, createdAt: mockTimestamp },
-      { id: 2, status: 'COMPLETED', progress: 100, createdAt: '2026-07-12T08:00:00.000Z' },
-    ], query.page, query.size)),
-  },
-  {
-    url: '/api/v1/oss/migration/jobs/:id',
-    response: ({ params }) => ok({ id: Number(params.id), status: 'RUNNING', progress: 35 }),
+    response: ({ params }) => {
+      const scan = scans.find(item => item.id === Number(params.scanId))
+      return scan?.ossUrl
+        ? ok({ scanId: scan.id, ossUrl: scan.ossUrl })
+        : { code: 404, message: '该演示记录未迁移到 OSS', data: null }
+    },
   },
 ])

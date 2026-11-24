@@ -18,7 +18,7 @@ interface MockUser {
 }
 
 const typeNames: Record<number, string> = Object.fromEntries(
-  MEDICAL_RECORD_TYPES.map(item => [item.value, item.label] as const),
+  [[0, '未分类'], ...MEDICAL_RECORD_TYPES.map(item => [item.value, item.label] as const)],
 )
 
 const mockTimestamp = demoClock.iso()

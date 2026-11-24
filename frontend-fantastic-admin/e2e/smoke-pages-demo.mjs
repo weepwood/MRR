@@ -260,6 +260,38 @@ async function smokePagesDemo() {
     assert.equal(execution.next.data.entries.length, 1)
     assert.notEqual(execution.root.data.entries[0].key, execution.next.data.entries[0].key)
 
+    const ocr = await page.evaluate(async () => {
+      const request = (path, body) => fetch(`/proxy/api/v1/${path}`, body === undefined ? undefined : {
+        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body),
+      }).then(response => response.json())
+      const before = await request('scan/3/ocr')
+      const created = await request('archive-records/2/ocr/jobs', { idempotencyKey: 'pages-ocr' })
+      const reused = await request('archive-records/2/ocr/jobs', { idempotencyKey: 'pages-ocr' })
+      let detail = created
+      for (let attempt = 0; attempt < 20 && detail.data?.status !== 'SUCCESS'; attempt++) {
+        await new Promise(resolve => setTimeout(resolve, 250))
+        detail = await request(`ocr/jobs/${created.data.id}`)
+      }
+      const [full, hidden, items, scan, list] = await Promise.all([
+        request('scan/3/ocr?full=true'), request('scan/3/ocr'),
+        request(`ocr/jobs/${created.data.id}/items`), request('scan/3'), request('archive-records/2/ocr/jobs'),
+      ])
+      const another = await request('archive-records/6/ocr/jobs', { idempotencyKey: 'pages-cancel' })
+      const cancelled = await request(`ocr/jobs/${another.data.id}/cancel`, {})
+      return { before, created, reused, detail, full, hidden, items, scan, list, cancelled }
+    })
+    assert.equal(ocr.before.data.status, 'PENDING')
+    assert.equal(ocr.created.data.plannedCount, 2)
+    assert.equal(ocr.reused.data.id, ocr.created.data.id)
+    assert.equal(ocr.detail.data.status, 'SUCCESS')
+    assert.equal(ocr.detail.data.processedCount, 2)
+    assert.ok(ocr.full.data.text.includes('合成影像'))
+    assert.equal(ocr.hidden.data.text, null)
+    assert.deepEqual(ocr.items.data.map(item => item.status), ['NO_MATCH', 'LOW_CONFIDENCE'])
+    assert.equal(ocr.scan.data.btype, 0)
+    assert.equal(ocr.list.data[0].id, ocr.created.data.id)
+    assert.equal(ocr.cancelled.data.status, 'CANCELLED')
+
     const blocked = await page.evaluate(async () => {
       const path = '/proxy/api/v1/pages-smoke-unmocked'
       const fetchBlocked = await fetch(path, { method: 'POST', body: 'synthetic-demo-only' }).then(() => false, () => true)

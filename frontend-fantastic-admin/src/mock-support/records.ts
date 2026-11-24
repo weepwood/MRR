@@ -4,6 +4,7 @@ import { pageSvg } from './image'
 
 export interface MockScanRecord {
   id: number
+  archiveId?: number
   brxh: string
   bah: string
   sjh: string
@@ -52,7 +53,7 @@ export function createDemoRecords(clock = demoClock) {
     Array.from({ length: 2 }, (_, offset) => {
       const index = patientIndex * 2 + offset
       const id = index + 1
-      const btype = MEDICAL_RECORD_TYPE_CODES[index % MEDICAL_RECORD_TYPE_CODES.length]
+      const btype = [3, 4, 11, 12].includes(id) ? 0 : MEDICAL_RECORD_TYPE_CODES[index % MEDICAL_RECORD_TYPE_CODES.length]
       const age = archiveAge(patientIndex)
       const uploadDate = clock.dateTime(age, 1, offset * 15)
       const monthFolder = uploadDate.slice(0, 7).replace('-', '/')
@@ -63,6 +64,7 @@ export function createDemoRecords(clock = demoClock) {
       const migrated = uploaded && !waiting && !failed && !retry && index % 4 !== 0
       return {
         id,
+        archiveId: patient.id,
         brxh: patient.brxh,
         bah: patient.bah,
         sjh: waiting ? `INVALID-${id}` : String(90000000 + id),
@@ -73,7 +75,7 @@ export function createDemoRecords(clock = demoClock) {
         uploadDate,
         uploadFlag: uploaded ? 1 : 0,
         folder: `/mock/archive/${monthFolder}/${patient.bah}`,
-        ossUrl: migrated ? pageSvg(patient.bah, id, getMedicalRecordTypeLabel(btype)) : undefined,
+        ossUrl: migrated ? pageSvg(patient.bah, id, btype === 0 ? '未分类' : getMedicalRecordTypeLabel(btype)) : undefined,
         fileSize: 512_000 + index * 31_337,
         checksumMd5: `mock-md5-${String(id).padStart(4, '0')}`,
         migrationStatus: migrated ? (index % 5 === 0 ? 'verified' : 'migrated') : waiting ? 'waiting_sjh' : failed ? 'failed' : retry ? 'retry_wait' : 'not_migrated',

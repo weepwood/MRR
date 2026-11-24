@@ -82,6 +82,27 @@ class ImageContentServiceImplTest {
     }
 
     @Test
+    void legacyLookupUsesExactActiveMetadataAndRejectsAmbiguity() throws Exception {
+        Scan scan = activeScan();
+        scan.setBah("000123");
+        when(imageContentMapper.findActiveLegacyCandidates("000123", "605746", "BA01-2026", "synthetic.jpg"))
+                .thenReturn(java.util.List.of(scan));
+        var input = new ByteArrayInputStream(new byte[]{1});
+        when(imageStorage.open(any(PathDO.class))).thenReturn(input);
+        try (var content = service.openLegacy("000123", "605746", "BA01-2026", "synthetic.jpg")) {
+            assertThat(content.inputStream()).isSameAs(input);
+        }
+        var captured = ArgumentCaptor.forClass(PathDO.class);
+        verify(imageStorage).open(captured.capture());
+        assertThat(captured.getValue().getSourceRef()).isEqualTo(scan.getSourceRef());
+        when(imageContentMapper.findActiveLegacyCandidates("123", "605746", "BA01-2026", "synthetic.jpg"))
+                .thenReturn(java.util.List.of(scan, scan));
+        assertThatThrownBy(() -> service.openLegacy("123", "605746", "BA01-2026", "synthetic.jpg"))
+                .isInstanceOfSatisfying(BusinessException.class, e -> assertThat(e.getCode()).isEqualTo(409));
+        verify(imageStorage, org.mockito.Mockito.times(1)).open(any());
+    }
+
+    @Test
     @DisplayName("空或负数影像 ID 返回稳定 400")
     void rejectsInvalidId() {
         assertThatThrownBy(() -> service.open(0))

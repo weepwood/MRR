@@ -35,7 +35,7 @@ class ImageControllerLookupTest {
     @Mock
     private ArchiveExportService archiveExportService;
     @Mock
-    private ImageStorage imageStorage;
+    private com.zjcxph.imgapi.service.ImageContentService imageContentService;
     @Mock
     private OssService ossService;
     @Mock
@@ -54,7 +54,7 @@ class ImageControllerLookupTest {
         controller = new ImageController(
                 scanService,
                 archiveExportService,
-                imageStorage,
+                imageContentService,
                 imageUrlService,
                 archiveAccessService
         );

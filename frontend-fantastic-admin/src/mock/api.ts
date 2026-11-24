@@ -1,5 +1,6 @@
 import { defineFakeRoute } from 'vite-plugin-fake-server/client'
 import { MEDICAL_RECORD_TYPE_CODES, MEDICAL_RECORD_TYPES } from '@/constants/medical-record-types'
+import { demoClock } from '../mock-support/clock'
 
 type QueryValue = string | string[] | undefined
 
@@ -39,14 +40,15 @@ const typeNames: Record<number, string> = Object.fromEntries(
 
 const departments = ['心内科', '神经内科', '普外科', '骨科', '呼吸科', '消化内科']
 const operators = ['scanner-01', 'scanner-02', 'scanner-03', 'scanner-04']
-const mockTimestamp = '2026-07-13T08:00:00.000Z'
+const mockTimestamp = demoClock.iso()
 
 const scans: MockScanRecord[] = Array.from({ length: 64 }, (_, index) => {
   const id = index + 1
   const btypeValues = MEDICAL_RECORD_TYPE_CODES
   const btype = btypeValues[index % btypeValues.length]
-  const day = String((index % 28) + 1).padStart(2, '0')
-  const month = String(6 + Math.floor(index / 28)).padStart(2, '0')
+  const daysAgo = Math.floor(index / 2)
+  const uploadDate = demoClock.dateTime(daysAgo, 1, index % 2 * 15)
+  const monthFolder = uploadDate.slice(0, 7).replace('-', '/')
   const migrated = index % 4 !== 0
 
   return {
@@ -58,14 +60,14 @@ const scans: MockScanRecord[] = Array.from({ length: 64 }, (_, index) => {
     btype,
     pages: 8 + (index * 7) % 83,
     openerNo: operators[index % operators.length],
-    uploadDate: `2026-${month}-${day} ${String(8 + index % 10).padStart(2, '0')}:30:00`,
+    uploadDate,
     uploadFlag: migrated ? 1 : 0,
-    folder: `/mock/archive/2026/${month}/${String(26070000 + Math.floor(index / 2)).padStart(8, '0')}`,
+    folder: `/mock/archive/${monthFolder}/${String(26070000 + Math.floor(index / 2)).padStart(8, '0')}`,
     ossUrl: migrated ? `https://example.invalid/mock/${id}.jpg` : undefined,
     fileSize: 512_000 + index * 31_337,
     checksumMd5: `mock-md5-${String(id).padStart(4, '0')}`,
     migrationStatus: migrated ? (index % 5 === 0 ? 'verified' : 'migrated') : 'not_migrated',
-    migratedAt: migrated ? `2026-${month}-${day} 12:00:00` : undefined,
+    migratedAt: migrated ? demoClock.dateTime(daysAgo, 0, index % 2 * 15) : undefined,
   }
 })
 
@@ -74,7 +76,7 @@ const patients = Array.from({ length: 32 }, (_, index) => ({
   idCard: `330106199${index % 10}${String(101 + index).padStart(4, '0')}12${String(index % 10).padStart(2, '0')}`,
   bah: String(26070000 + index).padStart(8, '0'),
   name: ['张敏', '李华', '王芳', '陈杰', '赵宁', '刘洋'][index % 6],
-  admissiontime: `2026-${String(5 + index % 3).padStart(2, '0')}-${String(index % 28 + 1).padStart(2, '0')} 09:00:00`,
+  admissiontime: demoClock.dateTime(index + 3, 2),
   department: departments[index % departments.length],
 }))
 
@@ -97,7 +99,7 @@ let users: MockUser[] = [
     roleName: '审计员',
     permissions: ['audit:read', 'logs:read', 'statistics:read'],
     status: 'ACTIVE',
-    lastLoginAt: '2026-07-12T08:30:00.000Z',
+    lastLoginAt: demoClock.iso(1),
   },
   {
     id: 3,
@@ -107,7 +109,7 @@ let users: MockUser[] = [
     roleName: '操作员',
     permissions: ['scan:read', 'scan:write', 'statistics:read'],
     status: 'ACTIVE',
-    lastLoginAt: '2026-07-11T06:20:00.000Z',
+    lastLoginAt: demoClock.iso(2),
   },
 ]
 
@@ -162,7 +164,7 @@ const logs = Array.from({ length: 72 }, (_, index) => {
           : `/api/v1/img/${target}`,
     method: 'GET',
     userAgent: 'Mozilla/5.0 Mock Browser',
-    accessTime: `2026-07-${String(13 - Math.floor(index / 12)).padStart(2, '0')} ${String(8 + index % 10).padStart(2, '0')}:${String(index % 60).padStart(2, '0')}:00`,
+    accessTime: demoClock.dateTime(Math.floor(index / 12), 0, index % 12 * 15),
     queryString: '',
     requestBody: '',
     responseStatus: status,
@@ -310,9 +312,8 @@ function dateSummary() {
 function buildResponseAnalysis(days: number) {
   const pointCount = Math.min(Math.max(days, 7), 30)
   const trend = Array.from({ length: pointCount }, (_, index) => {
-    const day = String(Math.max(1, 13 - (pointCount - index - 1))).padStart(2, '0')
     return {
-      bucket: `2026-07-${day}`,
+      bucket: demoClock.date(pointCount - index - 1),
       requestCount: 720 + index * 41,
       errorCount: index % 6 === 0 ? 9 : 3,
       avgServerDurationMs: 88 + (index * 11) % 54,
@@ -433,7 +434,7 @@ function imageAuditAnalytics(filteredLogs = logs) {
 const systemInfo = {
   application: {
     name: 'MRR Backend Mock',
-    startTime: '2026-07-13 08:00:00',
+    startTime: demoClock.dateTime(0, 6),
     runTime: '5小时 42分钟',
   },
   jvm: {

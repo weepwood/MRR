@@ -70,6 +70,21 @@ test.describe('无后端 Mock 模式', () => {
     expect(setting.data).toBe('enabled')
   })
 
+  test('最近日期统计持续有数据且趋势日期不重复', async ({ request }) => {
+    const now = new Date()
+    const start = new Date(now)
+    start.setDate(start.getDate() - 7)
+    const format = (value: Date) => [value.getFullYear(), String(value.getMonth() + 1).padStart(2, '0'), String(value.getDate()).padStart(2, '0')].join('-')
+    const filtered = await (await request.get('/proxy/api/v1/statistics', {
+      params: { startDate: format(start), endDate: format(now), page: 1, size: 20 },
+    })).json()
+    expect(filtered.data.list.length).toBeGreaterThan(0)
+    expect(filtered.data.list.every((item: { date: string }) => item.date >= format(start) && item.date <= format(now))).toBe(true)
+    const analysis = await (await request.get('/proxy/api/v1/response-metrics/analysis?days=30')).json()
+    expect(analysis.data.trend).toHaveLength(30)
+    expect(new Set(analysis.data.trend.map((item: { bucket: string }) => item.bucket)).size).toBe(30)
+  })
+
   test('影像档案袋保持可见并应用全局圆角', async ({ page }) => {
     await page.setViewportSize({ width: 1440, height: 900 })
     await page.addInitScript(() => {

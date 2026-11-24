@@ -102,6 +102,51 @@ async function smokePagesDemo() {
     assert.equal(download.suggestedFilename(), '存储说明.txt')
     assert.match(await readFile(await download.path(), 'utf8'), /MRR 文件浏览演示数据/)
 
+    // Use the actual bundled browser Mock, not Playwright page.route stubs.
+    const opsPage = await browser.newPage()
+    opsPage.on('pageerror', error => pageErrors.push(error.message))
+    await opsPage.goto(`${appUrl}#/operations-center`)
+    await opsPage.locator('.overview-dashboard').getByText('当前允许业务写入。').waitFor({ timeout: 20_000 })
+    const simulated = await opsPage.evaluate(async () => {
+      async function request(path, body) {
+        const options = body === undefined ? undefined : {
+          method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body),
+        }
+        return fetch(`/proxy/api/v1/${path}`, options).then(response => response.json())
+      }
+      const database = await request('system/database/overview')
+      const quality = await request('system/data-quality/summary')
+      const invalidMaintenance = await request('operations/maintenance/enable', { reason: '' })
+      await request('operations/maintenance/enable', { reason: '合成演练' })
+      const during = await request('operations/overview')
+      await request('operations/maintenance/disable', {})
+      const after = await request('operations/overview')
+      const errors = await request('system-errors?page=1&size=2&level=ERROR')
+      const id = errors.data?.list?.[0]?.id
+      await request(`system-errors/${id}/status`, { status: 'ACKNOWLEDGED' })
+      const detail = await request(`system-errors/${id}`)
+      return { database, quality, invalidMaintenance, during, after, errors, detail }
+    })
+    assert.ok(simulated.database.data?.tables?.length > 0, '数据库概览须有合成表统计')
+    assert.ok(simulated.quality.data?.checks?.length > 0, '数据质量须有检查结果')
+    assert.equal(simulated.invalidMaintenance.code, 400)
+    assert.equal(simulated.during.data?.readiness?.mode, 'READ_ONLY_MAINTENANCE')
+    assert.equal(simulated.after.data?.readiness?.mode, 'READ_WRITE')
+    assert.equal(simulated.errors.data?.list?.length, 2)
+    assert.ok(simulated.errors.data.list.every(item => item.level === 'ERROR'))
+    assert.equal(simulated.detail.data?.status, 'ACKNOWLEDGED')
+
+    const monitorPage = await browser.newPage()
+    monitorPage.on('pageerror', error => pageErrors.push(error.message))
+    await monitorPage.goto(`${appUrl}#/monitoring`)
+    await monitorPage.getByText('mrr_demo', { exact: true }).first().waitFor({ timeout: 20_000 })
+    await monitorPage.getByText('mr_scan', { exact: true }).first().waitFor({ timeout: 20_000 })
+
+    const errorPage = await browser.newPage()
+    errorPage.on('pageerror', error => pageErrors.push(error.message))
+    await errorPage.goto(`${appUrl}#/runtime-errors`)
+    await errorPage.locator('.runtime-errors-table').getByText('DEMO-ERR-001', { exact: true }).waitFor({ timeout: 20_000 })
+
     assert.deepEqual(outboundApiRequests, [], 'API 请求不能到达 Pages 静态服务器')
     assert.deepEqual(pageErrors, [], '浏览器运行不应出现未处理异常')
     process.stdout.write('Pages 静态演示冒烟通过：子路径、hash 刷新、浏览器 Mock API 及文件预览下载\n')

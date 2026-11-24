@@ -160,3 +160,36 @@ test('旧明文路径不再发起查询，刷新与返回均清除临时查询',
   await expect(page.getByPlaceholder('请输入18位身份证号')).toHaveValue('')
   expect(lookups).toBe(2)
 })
+
+test('返回查询后忽略迟到的身份证响应，不继续请求旧病案影像', async ({ page }) => {
+  let releaseLookup: () => void = () => {}
+  const blocked = new Promise<void>(resolve => { releaseLookup = resolve })
+  let oldImageRequests = 0
+  await page.route('**/api/v1/search/getBAHByID', async (route) => {
+    if (route.request().postDataJSON().idCard === ID_CARD) {
+      await blocked
+      await route.fulfill({ json: { code: 200, data: [{ bah: '00800001' }] } })
+    }
+    else {
+      await route.fulfill({ json: { code: 200, data: [] } })
+    }
+  })
+  await page.route('**/api/v1/img/00800001', async (route) => {
+    oldImageRequests++
+    await route.fulfill({ json: { code: 200, data: [] } })
+  })
+  try {
+    await submitIdCard(page, ID_CARD)
+    await page.getByRole('button', { name: '返回查询', exact: true }).click()
+    const response = page.waitForResponse(res => new URL(res.url()).pathname.endsWith('/api/v1/search/getBAHByID'))
+    releaseLookup()
+    await response
+    await page.getByPlaceholder('请输入18位身份证号').fill(EMPTY_ID_CARD)
+    await page.getByRole('button', { name: '查询病案', exact: true }).click()
+    await expect(page.getByText('未查询到相关住院记录')).toBeVisible()
+    expect(oldImageRequests).toBe(0)
+  }
+  finally {
+    releaseLookup()
+  }
+})

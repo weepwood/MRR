@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import type { BAHImageData, BAHRecord } from '@/api/types'
 import { ElMessage } from 'element-plus'
-import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
+import { computed, nextTick, onBeforeUnmount, onMounted, onUnmounted, ref, watch } from 'vue'
 import { getImgApiByBah, updateImageType } from '@/api/modules/image'
 import { getBAHByIdCard } from '@/api/modules/search'
 import { getMedicalRecordTypeLabel, MEDICAL_RECORD_TYPE_CODES } from '@/constants/medical-record-types'
@@ -28,6 +28,8 @@ const selectedType = ref<number | 'all'>('all')
 const searchBah = ref('')
 const downloading = ref(false)
 const initDone = ref(false)
+let disposed = false
+let imageRequestId = 0
 
 // ==================== 身份证相关 ====================
 const idCardParam = computed(() => props.idCard)
@@ -135,11 +137,14 @@ function onViewerClose() {
 
 // ==================== 数据加载 ====================
 async function loadImages() {
-  if (!searchBah.value) { return }
+  if (disposed || !searchBah.value) { return }
+  const requestId = ++imageRequestId
+  const isCurrent = () => !disposed && requestId === imageRequestId
   loading.value = true
   errorMsg.value = ''
   try {
     const response = await getImgApiByBah(searchBah.value)
+    if (!isCurrent()) { return }
     const rawList = Array.isArray(response.data) ? response.data : []
     images.value = rawList.map((item: BAHImageData) => {
       // 优先使用 ossUrl，如果没有则使用 img_url
@@ -149,24 +154,26 @@ async function loadImages() {
     selectedType.value = 'all'
     selectedImageIndex.value = 0
     await nextTick()
+    if (!isCurrent()) { return }
     setupThumbObserver()
     ensureCurrentImageBlob()
   }
   catch {
-    errorMsg.value = '图片加载失败，请重试'
+    if (isCurrent()) { errorMsg.value = '图片加载失败，请重试' }
   }
   finally {
-    loading.value = false
+    if (isCurrent()) { loading.value = false }
   }
 }
 
 async function searchByIdCard(idCard: string) {
-  if (!idCard) { return }
+  if (disposed || !idCard) { return }
   idSearchLoading.value = true
   idSearchResults.value = []
   images.value = []
   try {
     const res = await getBAHByIdCard(idCard)
+    if (disposed) { return }
     const data = res.data
     idSearchResults.value = Array.isArray(data) ? data : []
     // 优先自动选中在可访问区间内的第一条
@@ -180,17 +187,22 @@ async function searchByIdCard(idCard: string) {
     }
   }
   catch {
-    ElMessage.error('身份证查询失败，请检查网络')
-    idSearchResults.value = []
+    if (!disposed) {
+      ElMessage.error('身份证查询失败，请检查网络')
+      idSearchResults.value = []
+    }
   }
   finally {
-    idSearchLoading.value = false
-    initDone.value = true
+    if (!disposed) {
+      idSearchLoading.value = false
+      initDone.value = true
+    }
   }
 }
 
 // ==================== 选择和导航 ====================
 function selectRecord(rec: BAHRecord) {
+  if (disposed) { return }
   selectedRecord.value = rec
   searchBah.value = rec.bah || ''
   images.value = []
@@ -479,6 +491,11 @@ onMounted(async () => {
   }
 })
 
+onBeforeUnmount(() => {
+  disposed = true
+  imageRequestId++
+})
+
 onUnmounted(() => {
   window.removeEventListener('resize', onWindowResize)
   window.removeEventListener('keydown', onKeyDown)
@@ -491,6 +508,7 @@ onUnmounted(() => {
 // ==================== 监听器 ====================
 watch(filteredImages, async () => {
   await nextTick()
+  if (disposed) { return }
   const maxIndex = Math.max(0, filteredImages.value.length - 1)
   if (selectedImageIndex.value > maxIndex) { selectedImageIndex.value = 0 }
   try {

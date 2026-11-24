@@ -179,6 +179,85 @@ class ArchiveExportServiceImplTest {
     }
 
     @Test
+    void pdfCancellationStopsBeforeReadingFurtherChunksAndClosesSource() throws Exception {
+        var item = new PathDO("25.03.15", "synthetic.png", "456", "123");
+        var cancelled = new java.util.concurrent.atomic.AtomicBoolean();
+        var closed = new java.util.concurrent.atomic.AtomicBoolean();
+        var reads = new java.util.concurrent.atomic.AtomicInteger();
+        var source = new java.io.InputStream() {
+            @Override public int read() { throw new UnsupportedOperationException(); }
+            @Override public int read(byte[] buffer, int offset, int count) {
+                int call = reads.incrementAndGet();
+                if (call > 4) return -1;
+                buffer[offset] = 1;
+                cancelled.set(true);
+                return 1;
+            }
+            @Override public void close() { closed.set(true); }
+        };
+        when(imageStorage.open(item)).thenReturn(source);
+        var service = new ArchiveExportServiceImpl(scanService, imageStorage);
+        var progress = new ArchiveExportService.ExportProgress() {
+            @Override public boolean isCancelled() { return cancelled.get(); }
+        };
+        assertThatThrownBy(() -> service.writeBatchPdf(new ArchiveExportService.BatchZipExport(List.of(item)),
+                new ByteArrayOutputStream(), progress))
+                .isInstanceOf(com.zjcxph.imgapi.exception.ArchiveExportCancelledException.class);
+        assertThat(reads.get()).isEqualTo(1);
+        assertThat(closed).isTrue();
+    }
+
+    @Test
+    void exportsRealNasAndLoopbackHttpSourcesToZipAndPdf(@org.junit.jupiter.api.io.TempDir java.nio.file.Path root) throws Exception {
+        java.nio.file.Files.write(root.resolve("nas.png"), ONE_PIXEL_PNG);
+        var server = com.sun.net.httpserver.HttpServer.create(new java.net.InetSocketAddress("127.0.0.1", 0), 0);
+        server.createContext("/http.png", exchange -> {
+            try (exchange) {
+                exchange.sendResponseHeaders(200, ONE_PIXEL_PNG.length);
+                exchange.getResponseBody().write(ONE_PIXEL_PNG);
+            }
+        });
+        server.start();
+        try {
+            var properties = new com.zjcxph.imgapi.config.ArchiveImageSourceProperties();
+            var nas = new com.zjcxph.imgapi.config.ArchiveImageSourceProperties.NasNode();
+            nas.setRoot(root.toString());
+            properties.setNasNodes(java.util.Map.of("nas", nas));
+            var http = new com.zjcxph.imgapi.config.ArchiveImageSourceProperties.HttpNode();
+            http.setBaseUrl("http://127.0.0.1:" + server.getAddress().getPort());
+            properties.setHttpNodes(java.util.Map.of("http", http));
+            properties.setNasMaxConcurrency(1);
+            properties.setHttpMaxConcurrency(1);
+            var storage = new com.zjcxph.imgapi.storage.ResolvedImageStorage(
+                    new com.zjcxph.imgapi.storage.ArchiveImageSourceResolver(List.of(
+                            new com.zjcxph.imgapi.storage.NasArchiveImageSource(properties),
+                            new com.zjcxph.imgapi.storage.HttpArchiveImageSource(properties))),
+                    new io.micrometer.core.instrument.simple.SimpleMeterRegistry(), properties);
+            var first = new PathDO("25.03.15", "nas.png", "456", "123");
+            first.setSourceType("NAS"); first.setSourceNode("nas"); first.setSourceRef("nas.png");
+            var second = new PathDO("25.03.15", "http.png", "456", "123");
+            second.setSourceType("HTTP"); second.setSourceNode("http"); second.setSourceRef("http.png");
+            var export = new ArchiveExportService.BatchZipExport(List.of(first, second));
+            var service = new ArchiveExportServiceImpl(scanService, storage);
+            var bytes = new ByteArrayOutputStream();
+            service.writeBatchZip(export, bytes);
+            try (var zip = new ZipInputStream(new ByteArrayInputStream(bytes.toByteArray()))) {
+                assertThat(zip.getNextEntry().getName()).endsWith("/nas.png");
+                assertThat(zip.readAllBytes()).isEqualTo(ONE_PIXEL_PNG);
+                assertThat(zip.getNextEntry().getName()).endsWith("/http.png");
+                assertThat(zip.readAllBytes()).isEqualTo(ONE_PIXEL_PNG);
+                assertThat(zip.getNextEntry()).isNull();
+            }
+            bytes.reset();
+            service.writeBatchPdf(export, bytes);
+            try (var pdf = new com.itextpdf.kernel.pdf.PdfDocument(
+                    new com.itextpdf.kernel.pdf.PdfReader(new ByteArrayInputStream(bytes.toByteArray())))) {
+                assertThat(pdf.getNumberOfPages()).isEqualTo(2);
+            }
+        } finally { server.stop(0); }
+    }
+
+    @Test
     void streamsPdfWithOnePagePerImage() throws Exception {
         PathDO first = new PathDO("25.03.15", "page-1.png", "605746", "00789508");
         PathDO second = new PathDO("25.03.15", "page-2.png", "605746", "00789508");

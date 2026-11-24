@@ -126,11 +126,24 @@ public class ArchiveExportJobController {
                 ? null
                 : "\"" + job.getSha256() + "\"";
 
+        String ifRange = request.getHeader(HttpHeaders.IF_RANGE);
+        // Export files are immutable once published. Only a matching strong validator
+        // permits a partial response; date/weak/unrecognized validators use full 200.
+        if (ifRange != null && (etag == null || !etag.equals(ifRange.trim()))) {
+            rangeHeader = null;
+        }
         if (rangeHeader == null || rangeHeader.isBlank()) {
             recordDownloadIfWritable(id);
             StreamingResponseBody body = output -> {
                 try (InputStream input = Files.newInputStream(file)) {
-                    input.transferTo(output);
+                    byte[] buffer = new byte[BUFFER_SIZE];
+                    long remaining = total;
+                    while (remaining > 0) {
+                        int read = input.read(buffer, 0, (int) Math.min(buffer.length, remaining));
+                        if (read < 0) throw new java.io.EOFException("Export file changed during transfer");
+                        output.write(buffer, 0, read);
+                        remaining -= read;
+                    }
                 }
             };
             ResponseEntity.BodyBuilder builder = baseHeaders(
@@ -160,7 +173,7 @@ public class ArchiveExportJobController {
                 while (remaining > 0) {
                     int read = input.read(buffer, 0, (int) Math.min(buffer.length, remaining));
                     if (read < 0) {
-                        break;
+                        throw new java.io.EOFException("Export file changed during transfer");
                     }
                     output.write(buffer, 0, read);
                     remaining -= read;
@@ -183,7 +196,7 @@ public class ArchiveExportJobController {
         try {
             jobRepository.recordDownload(id);
         } catch (RuntimeException exception) {
-            logger.warn("记录导出下载次数失败，不影响文件下载: job={}, reason={}", id, exception.getMessage());
+            logger.warn("记录导出下载次数失败，不影响文件下载: errorType={}", exception.getClass().getSimpleName());
         }
     }
 

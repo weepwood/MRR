@@ -47,8 +47,15 @@ export default defineFakeRoute([
   },
   {
     url: '/api/v1/classification/jobs/:id/suggestions',
-    // This batch intentionally produces no rule-based suggestions.
-    response: ({ params }) => store.job(String(params.id)) ? demoOk([]) : demoError(404, 'OCR 任务不存在'),
+    response: ({ params, query }) => {
+      const suggestions = store.suggestions(String(params.id))
+      return suggestions ? demoOk(suggestions.filter(row => row.id > Number(query.after || 0)).slice(0, 50)) : demoError(404, 'OCR 任务不存在')
+    },
+  },
+  {
+    url: '/api/v1/classification/suggestions/:id/review',
+    method: 'post',
+    response: ({ params, body }) => store.review(Number(params.id), body),
   },
   {
     url: '/api/v1/medical-record-types',

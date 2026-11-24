@@ -106,6 +106,33 @@ const networkSources = computed(() => Object.entries(overview.value?.networkRunt
   ...source,
   nodes: [...source.nodes].sort((a, b) => (circuitPriority[a.state] ?? 5) - (circuitPriority[b.state] ?? 5) || a.ordinal - b.ordinal),
 })).sort((a, b) => (circuitPriority[a.nodes[0]?.state] ?? 5) - (circuitPriority[b.nodes[0]?.state] ?? 5) || b.waiting - a.waiting))
+const storageHistory = computed(() => {
+  const sources = [
+    { kind: 'NAS', nodes: overview.value?.nasRuntime?.nodes || [] },
+    ...networkSources.value,
+  ]
+  const nodes = sources.flatMap(source => source.nodes.map(node => ({ kind: source.kind, ...node })))
+  const totals = nodes.reduce((acc, node) => ({
+    opened: acc.opened + (node.history?.opened ?? 0),
+    recovered: acc.recovered + (node.history?.recovered ?? 0),
+    probes: acc.probes + (node.history?.probes ?? 0),
+  }), { opened: 0, recovered: 0, probes: 0 })
+  const events = nodes.flatMap(node => (node.history?.events || []).map(event => ({ ...event, kind: node.kind, ordinal: node.ordinal })))
+    .sort((a, b) => b.at.localeCompare(a.at) || b.sequence - a.sequence)
+  const end = Date.parse(overview.value?.generatedAt || '')
+  const buckets = Array.from({ length: 6 }, (_, i) => {
+    const from = end - (6 - i) * 300000
+    const to = from + 300000
+    const items = events.filter((event) => {
+      const time = Date.parse(event.at)
+      return time >= from && (i === 5 ? time <= to : time < to)
+    })
+    return { label: `${30 - i * 5}–${25 - i * 5} 分钟前`, opened: items.filter(event => event.type === 'OPENED').length, recovered: items.filter(event => event.type === 'RECOVERED').length }
+  })
+  return { ...totals, events: events.slice(0, 12), buckets, available: nodes.some(node => typeof node.history?.opened === 'number') }
+})
+const storageEventLabels: Record<string, string> = { OPENED: '进入熔断', PROBE_STARTED: '开始半开探针', METADATA_ONLY: '仅元数据成功', RECOVERED: '节点恢复' }
+const storageEventAdvice: Record<string, string> = { OPENED: '检查源站、网络和实际占用；不要强制释放未关闭资源。', PROBE_STARTED: '等待探针实际结果，避免重复回源。', METADATA_ONLY: '仍需验证正文读取，不能据此判定恢复。', RECOVERED: '继续观察许可和后续读取，确认现场恢复。' }
 const overviewChecks = computed(() => overview.value?.readiness.checks || [])
 const indexCapacity = computed(() => overviewChecks.value.find(check => check.code === 'scan-code-key-indexes')?.details)
 function capacityValue(key: string, bytes = false) {
@@ -558,7 +585,11 @@ onMounted(async () => {
             </MrrSectionCard>
 
             <MrrSectionCard v-if="overview.nasRuntime" title="NAS 节点运行状态" description="本进程被动观测 · 不主动探测网络或文件">
-              <p>全局许可 {{ overview.nasRuntime.inUse }} / {{ overview.nasRuntime.limit }}</p>
+              <p>
+                全局许可 {{ overview.nasRuntime.inUse }} / {{ overview.nasRuntime.limit }}<template v-if="overview.nasRuntime.waiting !== undefined">
+                  · 等待约 {{ overview.nasRuntime.waiting }}
+                </template>
+              </p>
               <AppEmpty v-if="!overview.nasRuntime.nodes.length" description="未配置 NAS 节点" />
               <div v-else class="issue-list">
                 <div v-for="node in overview.nasRuntime.nodes" :key="node.ordinal" class="issue-row">
@@ -613,6 +644,43 @@ onMounted(async () => {
               <el-button v-if="canManage" text type="primary" @click="selectTab('diagnostics')">
                 查看体检
               </el-button>
+            </MrrSectionCard>
+
+            <MrrSectionCard v-if="storageHistory.available" title="存储异常事件" description="进程内累计计数与最近事件 · 重启清空，非持久审计">
+              <div class="mrr-metric-grid">
+                <MrrMetricCard label="进入熔断次数" compact-value :value="storageHistory.opened" />
+                <MrrMetricCard label="半开探针次数" compact-value :value="storageHistory.probes" />
+                <MrrMetricCard label="恢复次数" compact-value :value="storageHistory.recovered" />
+              </div>
+              <div v-if="storageHistory.events.length" class="storage-trend">
+                <p class="overview-hint">
+                  最近 30 分钟已保留事件（每 5 分钟，非完整统计）
+                </p>
+                <div v-for="bucket in storageHistory.buckets" :key="bucket.label" class="storage-trend-row">
+                  <span>{{ bucket.label }}</span>
+                  <el-tag type="danger" effect="plain">
+                    熔断 {{ bucket.opened }}
+                  </el-tag>
+                  <el-tag type="success" effect="plain">
+                    恢复 {{ bucket.recovered }}
+                  </el-tag>
+                </div>
+              </div>
+              <AppEmpty v-if="!storageHistory.events.length" description="本进程暂无熔断事件" />
+              <div v-else class="issue-list">
+                <div v-for="event in storageHistory.events" :key="`${event.kind}-${event.ordinal}-${event.sequence}`" class="issue-row">
+                  <div>
+                    <strong>{{ event.kind }} 节点 {{ event.ordinal }} · {{ storageEventLabels[event.type] }}</strong>
+                    <p>{{ formatTime(event.at) }} · {{ storageEventAdvice[event.type] }}</p>
+                  </div>
+                  <el-tag :type="event.type === 'OPENED' ? 'danger' : event.type === 'RECOVERED' ? 'success' : 'warning'">
+                    {{ storageEventLabels[event.type] }}
+                  </el-tag>
+                </div>
+              </div>
+              <p class="overview-hint">
+                每节点保留最近 16 条，合计展示最近 12 条。累计次数不是故障率；重启前记录和未采样事件不可恢复。
+              </p>
             </MrrSectionCard>
 
             <div class="two-column-layout">
@@ -1304,5 +1372,21 @@ onMounted(async () => {
   display: flex;
   flex-wrap: wrap;
   gap: 6px;
+}
+
+.storage-trend {
+  display: grid;
+  gap: 6px;
+}
+
+.storage-trend-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+
+  > span:first-child {
+    min-width: 100px;
+  }
 }
 </style>

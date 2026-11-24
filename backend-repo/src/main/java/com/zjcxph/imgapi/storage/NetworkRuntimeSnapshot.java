@@ -15,7 +15,8 @@ final class NetworkRuntimeSnapshot {
         var nodes = new ArrayList<Map<String, Object>>();
         for (int i = 0; i < keys.size(); i++) {
             var circuit = circuits.get(keys.get(i));
-            nodes.add(Map.of("ordinal", i + 1, "state", circuit == null ? "UNOBSERVED" : circuit.state()));
+            nodes.add(Map.of("ordinal", i + 1, "state", circuit == null ? "UNOBSERVED" : circuit.state(),
+                    "history", circuit == null ? Map.of() : circuit.history()));
         }
         return Map.of("inUse", guard.inUse(), "limit", guard.limit(), "waiting", guard.waiting(),
                 "nodes", List.copyOf(nodes));

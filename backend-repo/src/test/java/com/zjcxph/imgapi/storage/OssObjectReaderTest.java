@@ -115,6 +115,69 @@ class OssObjectReaderTest {
     }
 
     @Test
+    void repeatedActualPoolExhaustionAndAbortKeepsConnectionsReusable() throws Exception {
+        var workers = java.util.concurrent.Executors.newFixedThreadPool(6);
+        var server = com.sun.net.httpserver.HttpServer.create(new java.net.InetSocketAddress("127.0.0.1", 0), 0);
+        server.setExecutor(workers);
+        var accepted = new java.util.concurrent.atomic.AtomicInteger();
+        var release = new java.util.concurrent.atomic.AtomicReference<>(new java.util.concurrent.CountDownLatch(1));
+        int rounds = Integer.getInteger("mrr.oss.pool.recovery.rounds", 12);
+        assertThat(rounds).isBetween(1, 600);
+        server.createContext("/test-bucket/slow", exchange -> {
+            accepted.incrementAndGet();
+            var roundRelease = release.get();
+            try (exchange) {
+                exchange.sendResponseHeaders(200, 100);
+                exchange.getResponseBody().write(1);
+                exchange.getResponseBody().flush();
+                try { roundRelease.await(10, java.util.concurrent.TimeUnit.SECONDS); }
+                catch (InterruptedException e) { Thread.currentThread().interrupt(); }
+            }
+        });
+        server.createContext("/test-bucket/fast", exchange -> {
+            accepted.incrementAndGet();
+            try (exchange) {
+                exchange.sendResponseHeaders(200, 1);
+                exchange.getResponseBody().write(7);
+            }
+        });
+        server.start();
+        var client = S3Client.builder()
+                .endpointOverride(java.net.URI.create("http://127.0.0.1:" + server.getAddress().getPort()))
+                .region(software.amazon.awssdk.regions.Region.US_EAST_1)
+                .credentialsProvider(software.amazon.awssdk.auth.credentials.StaticCredentialsProvider.create(
+                        software.amazon.awssdk.auth.credentials.AwsBasicCredentials.create("synthetic-key", "synthetic-secret")))
+                .serviceConfiguration(software.amazon.awssdk.services.s3.S3Configuration.builder().pathStyleAccessEnabled(true).build())
+                .overrideConfiguration(c -> c.retryPolicy(software.amazon.awssdk.core.retry.RetryPolicy.none()))
+                .httpClientBuilder(software.amazon.awssdk.http.apache.ApacheHttpClient.builder()
+                        .maxConnections(2).connectionAcquisitionTimeout(java.time.Duration.ofMillis(150))
+                        .socketTimeout(java.time.Duration.ofSeconds(5)))
+                .build();
+        var reader = readerWith(client);
+        try {
+            for (int i = 0; i < rounds; i++) {
+                release.set(new java.util.concurrent.CountDownLatch(1));
+                int before = accepted.get();
+                try (var first = reader.open("slow"); var second = reader.open("slow")) {
+                    assertThat(first.read()).isEqualTo(1);
+                    assertThat(second.read()).isEqualTo(1);
+                    assertThatThrownBy(() -> reader.open("fast")).isInstanceOf(java.io.IOException.class);
+                    assertThat(accepted.get()).isEqualTo(before + 2);
+                    first.close();
+                    try (var fast = reader.open("fast")) { assertThat(fast.readAllBytes()).containsExactly((byte)7); }
+                    assertThat(accepted.get()).isEqualTo(before + 3);
+                } finally { release.get().countDown(); }
+            }
+            assertThat(accepted.get()).isEqualTo(rounds * 3);
+        } finally {
+            release.get().countDown();
+            reader.close();
+            server.stop(0);
+            workers.shutdownNow();
+        }
+    }
+
+    @Test
     void actualSdkPoolSaturationRecoversAfterPartialResponseAbort() throws Exception {
         var release = new java.util.concurrent.CountDownLatch(1);
         var workers = java.util.concurrent.Executors.newFixedThreadPool(4);

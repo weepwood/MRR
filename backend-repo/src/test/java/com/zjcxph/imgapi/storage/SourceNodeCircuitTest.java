@@ -56,6 +56,26 @@ class SourceNodeCircuitTest {
     }
 
     @Test
+    void historyIsBoundedAndReportsActualTransitionsNotReadPolling() throws Exception {
+        var now = new AtomicLong();
+        var circuit = new SourceNodeCircuit(1, Duration.ofSeconds(30), now::get);
+        for (int i = 0; i < 20; i++) {
+            circuit.finish(circuit.begin(), SourceNodeCircuit.Outcome.BODY_FAILURE);
+            now.addAndGet(Duration.ofSeconds(30).toNanos());
+            circuit.state(); circuit.state();
+            circuit.finish(circuit.begin(), SourceNodeCircuit.Outcome.SUCCESS);
+        }
+        // Existing circuit can recover, but had no transition evidence available before this change.
+        var snapshot = circuit.history();
+        org.assertj.core.api.Assertions.assertThat(snapshot.get("opened")).isEqualTo(20L);
+        org.assertj.core.api.Assertions.assertThat(snapshot.get("recovered")).isEqualTo(20L);
+        var events = (java.util.List<?>) snapshot.get("events");
+        org.assertj.core.api.Assertions.assertThat(events).hasSize(16);
+        org.assertj.core.api.Assertions.assertThat(events.getLast().toString()).contains("RECOVERED");
+        org.assertj.core.api.Assertions.assertThat(circuit.history()).isEqualTo(snapshot);
+    }
+
+    @Test
     void neutralFailuresDoNotTripAndSuccessResetsTimeoutCount() throws Exception {
         var now = new AtomicLong();
         var circuit = new SourceNodeCircuit(3, Duration.ofSeconds(30), now::get);

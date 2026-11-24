@@ -146,6 +146,7 @@ final class NasOperationIsolation implements AutoCloseable {
     }
 
     String circuitState(String node) { return circuits.get(node).state(); }
+    Map<String, Object> circuitHistory(String node) { return circuits.get(node).history(); }
 
     @Override public void close() {
         // Do not cancel/release native operations that may still hold actual source permits.

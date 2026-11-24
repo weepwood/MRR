@@ -144,6 +144,17 @@ class ImageControllerTest {
     }
 
     @Test
+    void legacyPathWithoutActiveRecordMustNotReadStorage() throws Exception {
+        // The old route can read bytes even without an active database record.
+        org.mockito.Mockito.lenient().when(imageStorage.size(any(PathDO.class))).thenReturn(5L);
+        org.mockito.Mockito.lenient().when(imageStorage.open(any(PathDO.class))).thenReturn(
+                new ByteArrayInputStream("image".getBytes(StandardCharsets.UTF_8)));
+        var result = imageController.getImage("123", "456", "25.03.15", "synthetic.jpg");
+        assertThat(result.getStatusCode()).isEqualTo(HttpStatus.NOT_FOUND);
+        verifyNoInteractions(imageStorage);
+    }
+
+    @Test
     void getImage_success() throws Exception {
         when(imageStorage.size(any(PathDO.class))).thenReturn(5L);
         when(imageStorage.open(any(PathDO.class))).thenReturn(

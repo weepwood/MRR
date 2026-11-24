@@ -71,10 +71,16 @@ final class SourcePermitGuard {
         }
     }
 
+    static final class CapacityException extends IOException {
+        CapacityException() {
+            super("图片来源并发已满，请稍后重试");
+        }
+    }
+
     private void acquire() throws IOException {
         try {
             if (!semaphore.tryAcquire(timeout.toMillis(), TimeUnit.MILLISECONDS)) {
-                throw new IOException("图片来源并发已满，请稍后重试");
+                throw new CapacityException();
             }
         } catch (InterruptedException exception) {
             Thread.currentThread().interrupt();

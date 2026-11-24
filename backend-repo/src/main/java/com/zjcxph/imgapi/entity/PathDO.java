@@ -19,6 +19,12 @@ public class PathDO {
     public PathDO() {
     }
 
+    public static PathDO fromScan(Scan scan) {
+        return new PathDO(scan.getId(), scan.getFolder(), scan.getFilename(),
+                scan.getBrxh(), scan.getBah(), scan.getSjh(), scan.getSourceType(),
+                scan.getSourceNode(), scan.getSourceRef(), scan.getOssUrl(), scan.getFileSize());
+    }
+
     public PathDO(String folder, String filename, String brxh, String bah) {
         this.folder = folder;
         this.filename = filename;

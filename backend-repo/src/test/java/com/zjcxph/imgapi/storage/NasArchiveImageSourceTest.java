@@ -2,6 +2,9 @@ package com.zjcxph.imgapi.storage;
 
 import com.zjcxph.imgapi.config.ArchiveImageSourceProperties;
 import com.zjcxph.imgapi.entity.PathDO;
+import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
+import java.util.List;
+import java.time.Duration;
 import org.junit.jupiter.api.Assumptions;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
@@ -44,6 +47,35 @@ class NasArchiveImageSourceTest {
         assertThatThrownBy(() -> source.open(image))
                 .isInstanceOf(InvalidImagePathException.class)
                 .hasMessageContaining("符号链接越过");
+    }
+
+    @Test
+    void diagnosticClosesNasStreamAndReleasesPermitForNextRead() throws Exception {
+        Path root = Files.createDirectory(tempDir.resolve("diagnostic-nas"));
+        Files.writeString(root.resolve("page.jpg"), "synthetic");
+        ArchiveImageSourceProperties properties = new ArchiveImageSourceProperties();
+        properties.setNasMaxConcurrency(1);
+        properties.setAcquireTimeout(Duration.ofMillis(100));
+        var node = new ArchiveImageSourceProperties.NasNode();
+        node.setRoot(root.toString());
+        properties.setNasNodes(Map.of("synthetic-node", node));
+        PathDO image = new PathDO();
+        image.setSourceType("NAS");
+        image.setSourceNode("synthetic-node");
+        image.setSourceRef("page.jpg");
+        var source = new NasArchiveImageSource(properties);
+        var storage = new ResolvedImageStorage(new ArchiveImageSourceResolver(List.of(source)), new SimpleMeterRegistry());
+
+        var probe = storage.probe(image);
+        assertThat(probe.available()).isTrue();
+        assertThat(probe.selectedSource()).isEqualTo("NAS");
+        assertThat(probe.toString()).doesNotContain(root.toString(), "synthetic-node", "page.jpg");
+        try (var stream = source.open(image)) {
+            assertThat(stream.readAllBytes()).isEqualTo("synthetic".getBytes(StandardCharsets.UTF_8));
+        }
+        Files.delete(root.resolve("page.jpg"));
+        assertThat(storage.probe(image).attempts()).containsExactly(
+                new ResolvedImageStorage.SourceAttempt("NAS", false, "NOT_FOUND"));
     }
 
     @Test

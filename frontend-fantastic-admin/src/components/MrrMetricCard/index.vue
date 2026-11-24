@@ -13,6 +13,7 @@ const props = withDefaults(defineProps<{
   valueTone?: MetricValueTone
   compactValue?: boolean
   scope?: MetricScope
+  anchor?: string
 }>(), {
   tone: 'blue',
   valueTone: 'default',
@@ -24,6 +25,7 @@ const hasIcon = computed(() => Boolean(props.icon))
 const cardClass = computed(() => [
   props.tone === 'blue' ? '' : `mrr-metric-card--${props.tone}`,
   hasIcon.value ? '' : 'mrr-metric-card--no-icon',
+  props.anchor ? 'mrr-metric-card--anchor' : '',
 ])
 
 /*
@@ -42,10 +44,26 @@ const valueClass = computed(() => [
   props.valueTone === 'default' ? '' : `mrr-metric-card__value--${props.valueTone}`,
   updateRevision.value > 0 ? 'is-updated' : '',
 ])
+function navigateAnchor(event: MouseEvent) {
+  if (!props.anchor?.startsWith('#')) { return }
+  const target = document.getElementById(props.anchor.slice(1))
+  if (!target) { return }
+  event.preventDefault()
+  target.focus({ preventScroll: true })
+  const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches
+  target.scrollIntoView({ behavior: reducedMotion ? 'auto' : 'smooth', block: 'start' })
+}
 </script>
 
 <template>
   <el-card shadow="never" class="mrr-metric-card" :class="cardClass">
+    <a
+      v-if="props.anchor"
+      :href="props.anchor"
+      :aria-label="`查看${props.label}明细`"
+      class="mrr-metric-card__anchor"
+      @click="navigateAnchor"
+    />
     <div v-if="hasIcon" class="mrr-metric-card__icon" aria-hidden="true">
       <FaIcon :name="props.icon ?? ''" />
     </div>
@@ -69,3 +87,23 @@ const valueClass = computed(() => [
     </div>
   </el-card>
 </template>
+
+<style scoped>
+.mrr-metric-card--anchor {
+  position: relative;
+}
+
+.mrr-metric-card__anchor {
+  position: absolute;
+  z-index: 1;
+  inset: 0;
+  color: inherit;
+  text-decoration: none;
+  border-radius: inherit;
+}
+
+.mrr-metric-card__anchor:hover,
+.mrr-metric-card__anchor:focus-visible {
+  box-shadow: inset 0 0 0 2px var(--mrr-primary);
+}
+</style>

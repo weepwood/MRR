@@ -23,6 +23,8 @@ import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
@@ -36,6 +38,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.Executor;
 import java.util.concurrent.RejectedExecutionException;
+import java.util.concurrent.atomic.AtomicLong;
 
 @Service
 public class MigrationServiceImpl implements MigrationService {
@@ -63,10 +66,15 @@ public class MigrationServiceImpl implements MigrationService {
 
     private final Object statisticsCacheLock = new Object();
     private final Object folderCacheLock = new Object();
-    private volatile MigrationStatisticsDTO cachedStatistics;
-    private volatile long statisticsCachedAt;
-    private volatile List<Map<String, Object>> cachedPendingFolders;
-    private volatile long foldersCachedAt;
+    private final AtomicLong summaryGeneration = new AtomicLong();
+    private volatile SummarySnapshot<MigrationStatisticsDTO> cachedStatistics;
+    private volatile SummarySnapshot<List<Map<String, Object>>> cachedPendingFolders;
+
+    private record SummarySnapshot<T>(T value, long loadedAt, long generation) {
+        boolean usable(long now, long currentGeneration, long ttlMillis) {
+            return generation == currentGeneration && now >= loadedAt && now - loadedAt < ttlMillis;
+        }
+    }
 
     public MigrationServiceImpl(OssService ossService,
                                 ScanMapper scanMapper,
@@ -255,16 +263,17 @@ public class MigrationServiceImpl implements MigrationService {
     @Override
     public MigrationStatisticsDTO getStatistics() {
         long now = System.currentTimeMillis();
-        MigrationStatisticsDTO cached = cachedStatistics;
-        if (cached != null && now - statisticsCachedAt < STATISTICS_CACHE_MILLIS) {
-            return cached;
+        SummarySnapshot<MigrationStatisticsDTO> cached = cachedStatistics;
+        if (cached != null && cached.usable(now, summaryGeneration.get(), STATISTICS_CACHE_MILLIS)) {
+            return cached.value();
         }
 
         synchronized (statisticsCacheLock) {
             now = System.currentTimeMillis();
             cached = cachedStatistics;
-            if (cached != null && now - statisticsCachedAt < STATISTICS_CACHE_MILLIS) {
-                return cached;
+            long generation = summaryGeneration.get();
+            if (cached != null && cached.usable(now, generation, STATISTICS_CACHE_MILLIS)) {
+                return cached.value();
             }
 
             Map<String, Object> counts = scanMapper.countMigrationStats();
@@ -290,8 +299,7 @@ public class MigrationServiceImpl implements MigrationService {
                 statistics.setPercentage(Math.round(migratedTotal * 10000.0 / total) / 100.0);
             }
 
-            cachedStatistics = statistics;
-            statisticsCachedAt = now;
+            cachedStatistics = new SummarySnapshot<>(statistics, now, generation);
             return statistics;
         }
     }
@@ -383,20 +391,21 @@ public class MigrationServiceImpl implements MigrationService {
     @Override
     public List<Map<String, Object>> getPendingFolders() {
         long now = System.currentTimeMillis();
-        List<Map<String, Object>> cached = cachedPendingFolders;
-        if (cached != null && now - foldersCachedAt < FOLDER_CACHE_MILLIS) {
-            return cached;
+        SummarySnapshot<List<Map<String, Object>>> cached = cachedPendingFolders;
+        if (cached != null && cached.usable(now, summaryGeneration.get(), FOLDER_CACHE_MILLIS)) {
+            return cached.value();
         }
         synchronized (folderCacheLock) {
             now = System.currentTimeMillis();
             cached = cachedPendingFolders;
-            if (cached != null && now - foldersCachedAt < FOLDER_CACHE_MILLIS) {
-                return cached;
+            long generation = summaryGeneration.get();
+            if (cached != null && cached.usable(now, generation, FOLDER_CACHE_MILLIS)) {
+                return cached.value();
             }
             List<Map<String, Object>> folders = scanMapper.findPendingFolders();
-            cachedPendingFolders = folders == null ? List.of() : List.copyOf(folders);
-            foldersCachedAt = now;
-            return cachedPendingFolders;
+            List<Map<String, Object>> result = folders == null ? List.of() : List.copyOf(folders);
+            cachedPendingFolders = new SummarySnapshot<>(result, now, generation);
+            return result;
         }
     }
 
@@ -541,7 +550,16 @@ public class MigrationServiceImpl implements MigrationService {
             throw new IllegalArgumentException("单次最多重置 " + MAX_MANUAL_RETRY_IDS + " 条记录");
         }
         int updated = scanMapper.resetMigrationFailures(new ArrayList<>(uniqueIds));
-        invalidateSummaryCaches();
+        if (TransactionSynchronizationManager.isSynchronizationActive()) {
+            TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+                @Override
+                public void afterCommit() {
+                    invalidateSummaryCaches();
+                }
+            });
+        } else {
+            invalidateSummaryCaches();
+        }
         return updated;
     }
 
@@ -903,10 +921,10 @@ public class MigrationServiceImpl implements MigrationService {
     }
 
     private void invalidateSummaryCaches() {
-        cachedStatistics = null;
-        statisticsCachedAt = 0;
-        cachedPendingFolders = null;
-        foldersCachedAt = 0;
+        // A query that began before invalidation may finish later, but its
+        // snapshot carries the previous generation and can no longer be reused.
+        // Do not make migration writes wait on the potentially slow read locks.
+        summaryGeneration.incrementAndGet();
     }
 
     private void logMigration(Integer scanId,

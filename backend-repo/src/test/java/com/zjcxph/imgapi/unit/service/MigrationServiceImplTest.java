@@ -29,7 +29,12 @@ import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Executor;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
+import org.springframework.transaction.support.TransactionSynchronization;
 import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.atomic.AtomicReference;
 
@@ -394,6 +399,79 @@ class MigrationServiceImplTest {
         assertThat(first.getPendingCount()).isEqualTo(1);
         assertThat(second).isSameAs(first);
         verify(scanMapper, times(1)).countMigrationStats();
+    }
+
+    @Test
+    void invalidationDuringStatisticsLoadCannotRepublishOldGeneration() throws Exception {
+        CountDownLatch entered = new CountDownLatch(1);
+        CountDownLatch release = new CountDownLatch(1);
+        when(scanMapper.countMigrationStats()).thenAnswer(invocation -> {
+            entered.countDown();
+            if (!release.await(5, TimeUnit.SECONDS)) throw new AssertionError("load not released");
+            return stats(2, 0, 0, 1, 0, 0, 1);
+        }).thenReturn(stats(2, 0, 0, 0, 0, 0, 2));
+        when(scanMapper.resetMigrationFailures(List.of(1))).thenReturn(1);
+        try (var executor = Executors.newSingleThreadExecutor()) {
+            var old = executor.submit(migrationService::getStatistics);
+            try {
+                assertThat(entered.await(5, TimeUnit.SECONDS)).isTrue();
+                assertThat(migrationService.retryFailedScans(List.of(1))).isEqualTo(1);
+            } finally {
+                release.countDown();
+            }
+            assertThat(old.get(5, TimeUnit.SECONDS).getPendingCount()).isEqualTo(1);
+            var fresh = migrationService.getStatistics();
+            assertThat(fresh.getPendingCount()).isEqualTo(2);
+            assertThat(migrationService.getStatistics()).isSameAs(fresh);
+            verify(scanMapper, times(2)).countMigrationStats();
+        }
+    }
+
+    @Test
+    void invalidationDuringFolderLoadCannotRepublishOldGeneration() throws Exception {
+        CountDownLatch entered = new CountDownLatch(1);
+        CountDownLatch release = new CountDownLatch(1);
+        List<Map<String, Object>> previous = List.of(Map.of("folder", "synthetic", "count", 1L));
+        List<Map<String, Object>> next = List.of(Map.of("folder", "synthetic", "count", 2L));
+        when(scanMapper.findPendingFolders()).thenAnswer(invocation -> {
+            entered.countDown();
+            if (!release.await(5, TimeUnit.SECONDS)) throw new AssertionError("load not released");
+            return previous;
+        }).thenReturn(next);
+        when(scanMapper.resetMigrationFailures(List.of(1))).thenReturn(1);
+        try (var executor = Executors.newSingleThreadExecutor()) {
+            var old = executor.submit(migrationService::getPendingFolders);
+            try {
+                assertThat(entered.await(5, TimeUnit.SECONDS)).isTrue();
+                assertThat(migrationService.retryFailedScans(List.of(1))).isEqualTo(1);
+            } finally {
+                release.countDown();
+            }
+            assertThat(old.get(5, TimeUnit.SECONDS)).isEqualTo(previous);
+            var fresh = migrationService.getPendingFolders();
+            assertThat(fresh).isEqualTo(next);
+            assertThat(migrationService.getPendingFolders()).isSameAs(fresh);
+            verify(scanMapper, times(2)).findPendingFolders();
+        }
+    }
+
+    @Test
+    void retryInvalidatesOnlyAfterCommit() {
+        when(scanMapper.countMigrationStats())
+                .thenReturn(stats(2, 0, 0, 1, 0, 0, 1), stats(2, 0, 0, 0, 0, 0, 2));
+        when(scanMapper.resetMigrationFailures(List.of(1))).thenReturn(1);
+        var previous = migrationService.getStatistics();
+        TransactionSynchronizationManager.initSynchronization();
+        try {
+            migrationService.retryFailedScans(List.of(1));
+            assertThat(migrationService.getStatistics()).isSameAs(previous);
+            TransactionSynchronizationManager.getSynchronizations()
+                    .forEach(TransactionSynchronization::afterCommit);
+        } finally {
+            TransactionSynchronizationManager.clearSynchronization();
+        }
+        assertThat(migrationService.getStatistics().getPendingCount()).isEqualTo(2);
+        verify(scanMapper, times(2)).countMigrationStats();
     }
 
     @Test

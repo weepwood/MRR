@@ -207,6 +207,15 @@
 
 - #785已合并b7980728，head2c6dff9e，governance45440104179、quality45440104187、deploy-pages-demo45440104039通过，933前端单测/138文件。
 
+## 03 pg_trgm 隔离评估（2026-11-25）
+
+- #99/#350 P2，分支 `perf/99-trgm-lab`，worktree `/Volumes/data/Project/MRR-worktrees/99-trgm-lab`。复用合成PG16脚本新增 --trgm，仅新建隔离库构建 BAH/SJH GIN，不改Flyway、生产DDL或查询预算。记录计划实际索引名、共享块、容量、构建时间、5秒超时；1000行插入在事务中回滚，实际总行数不变。10万及100万实跑均结束、实例已停止。详见专题 [GIN隔离实验](synthetic-trgm-benchmark-2026-11-25.md)。
+- 3000万独立原工具运行：`/Volumes/data/Project/MRR-worktrees/mrr-scan-lab-3a6p6oh4`，日志 `/tmp/mrr-synthetic-30m-r1.log`，启动shell PID2140，2400秒总预算、15秒多键、10万/批；本轮尚未结束，不能宣称实际3000万、索引或尾延迟通过。不要并发重复启动；下一轮先读report.json并核查pg_ctl状态。#781已合并38ed106c，1169单测/148 PG16通过。
+
+- #785已合并b7980728，head2c6dff9e，governance45440104179、quality45440104187、deploy-pages-demo45440104039通过，933前端单测/138文件。
+
+- #782 已合并437f428a，head68116d01、governance45441171525、quality45441171863，1175单测/148 PG16全部通过，Development通过。
+
 ## 每轮交接模板
 
 - 更新时间、任务、风险、目标及非目标：

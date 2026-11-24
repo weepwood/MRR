@@ -68,6 +68,50 @@ class OssObjectReaderTest {
     }
 
     @Test
+    void realLoopbackSdkAbortDoesNotWaitForRemainingBody() throws Exception {
+        var release = new java.util.concurrent.CountDownLatch(1);
+        var workers = java.util.concurrent.Executors.newCachedThreadPool();
+        var server = com.sun.net.httpserver.HttpServer.create(new java.net.InetSocketAddress("127.0.0.1", 0), 0);
+        server.setExecutor(workers);
+        server.createContext("/synthetic-bucket/slow", exchange -> {
+            try (exchange) {
+                exchange.sendResponseHeaders(200, 100);
+                exchange.getResponseBody().write(1);
+                exchange.getResponseBody().flush();
+                try { release.await(8, java.util.concurrent.TimeUnit.SECONDS); }
+                catch (InterruptedException e) { Thread.currentThread().interrupt(); }
+            }
+        });
+        server.createContext("/synthetic-bucket/fast", exchange -> {
+            try (exchange) {
+                exchange.sendResponseHeaders(200, 1);
+                exchange.getResponseBody().write(7);
+            }
+        });
+        server.start();
+        var properties = new OssProperties();
+        properties.setEndpoint("http://127.0.0.1:" + server.getAddress().getPort());
+        properties.setBucket("synthetic-bucket");
+        properties.setRegion("us-east-1");
+        properties.setPathStyleAccess(true);
+        properties.setAccessKeyId("synthetic-test-key");
+        properties.setAccessKeySecret("synthetic-test-secret");
+        var reader = new OssObjectReader(properties);
+        try {
+            var result = workers.submit(() -> {
+                try (var slow = reader.open("slow")) { assertThat(slow.read()).isEqualTo(1); }
+                try (var fast = reader.open("fast")) { return fast.readAllBytes(); }
+            });
+            assertThat(result.get(5, java.util.concurrent.TimeUnit.SECONDS)).containsExactly((byte)7);
+        } finally {
+            release.countDown();
+            reader.close();
+            server.stop(0);
+            workers.shutdownNow();
+        }
+    }
+
+    @Test
     void wrapsRemoteFailureWithoutExposingEndpointInMessage() throws Exception {
         S3Client client = mock(S3Client.class);
         OssObjectReader reader = readerWith(client);

@@ -51,7 +51,7 @@ public class HttpArchiveImageSource implements ArchiveImageSource {
             applyAuth(node, request);
             try {
                 HttpResponse<InputStream> response = client(image.getSourceNode(), node).send(
-                        request.build(), HttpResponse.BodyHandlers.ofInputStream());
+                        request.build(), TimedHttpBody.handler(orDefault(node.getReadTimeout(), Duration.ofSeconds(60))));
                 if (response.statusCode() < 200 || response.statusCode() >= 300) {
                     response.body().close();
                     throw new SourceHttpStatusException("HTTP", response.statusCode());

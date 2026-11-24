@@ -162,6 +162,17 @@
     background: var(--mrr-card);
   }
 
+  /* 首页「置顶」徽标：color-mix 失效时淡底退到中性面，文字仍是前景色（可读） */
+  .pin-badge {
+    background: var(--mrr-muted);
+  }
+
+  /* 登录品牌区 kicker / 副标题：主色向前景的混色退到前景色本身（明暗主题下均 ≥ 4.5:1） */
+  .login-page .brand-heading > span,
+  .login-page .brand-heading small {
+    color: var(--mrr-foreground);
+  }
+
   .login-page .environment-badge[aria-expanded="true"] {
     border-color: var(--mrr-border-strong);
   }

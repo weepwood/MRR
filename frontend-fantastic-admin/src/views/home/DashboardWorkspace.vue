@@ -1123,7 +1123,10 @@ watch(storageKey, loadPreferences, { immediate: true })
   padding: 2px var(--mrr-space-2);
   font-size: var(--mrr-font-size-xs);
   font-weight: 650;
-  color: var(--widget-accent);
+
+  /* 用户可自定义主色，主色直接压在主色淡底上会跌破 4.5:1（默认主题实测 4.49:1）；
+     文字改用前景色，科室/组件身份仍由淡底与图标承载 */
+  color: var(--mrr-foreground);
   background: color-mix(in srgb, var(--widget-accent) 10%, var(--mrr-card));
   border-radius: var(--mrr-radius-pill);
 }

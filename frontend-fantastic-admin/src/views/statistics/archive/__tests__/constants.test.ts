@@ -19,6 +19,13 @@ describe('archive image source resolution', () => {
       .toBe('https://oss/image.jpg?signature=1&_=123')
   })
 
+  it('keeps inline and object image URLs intact during refresh', () => {
+    const inline = 'data:image/svg+xml;charset=utf-8,%3Csvg%2F%3E'
+    const blob = 'blob:https://example.test/123'
+    expect(resolveImageUrl({ img_url: inline }, 42, '/proxy')).toBe(inline)
+    expect(resolveImageUrl({ ossUrl: blob }, 42, '/proxy')).toBe(blob)
+  })
+
   it('resolves content gateway URLs against the production root base URL', () => {
     expect(resolveImageUrl({ img_url: '/api/v1/img/content/5' }, undefined, '/'))
       .toBe('/api/v1/img/content/5')

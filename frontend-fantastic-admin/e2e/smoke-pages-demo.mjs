@@ -87,6 +87,38 @@ async function smokePagesDemo() {
       }
     }
 
+    const archiveAssets = await page.evaluate(async () => {
+      const get = path => fetch(`/proxy/api/v1/${path}`).then(response => response.json())
+      const [legacy, shared, patient, missing, noShelf] = await Promise.all([
+        get('img/search?bah=00800001'),
+        get('img/search?sjh=90000001'),
+        get('search/patient/26070000'),
+        get('img/search?sjh=99999999'),
+        get('img/search?bah=26070000'),
+      ])
+      const decode = async (src) => {
+        const image = new Image()
+        image.src = src
+        try {
+          await image.decode()
+          return image.naturalWidth > 0
+        }
+        catch {
+          return false
+        }
+      }
+      const loaded = await Promise.all([...legacy.data, ...shared.data].map(item => decode(item.img_url)))
+      return { legacy, shared, patient, missing, noShelf, loaded }
+    })
+    assert.equal(archiveAssets.legacy.data.length, 14)
+    assert.equal(archiveAssets.shared.data.length, 1)
+    assert.equal(archiveAssets.shared.data[0].id, allScans[0].id)
+    assert.equal(archiveAssets.patient.data[0].name, allPatients[0].name)
+    assert.equal(archiveAssets.patient.data[0].admissionTime, allPatients[0].admissiontime)
+    assert.deepEqual(archiveAssets.missing.data, [])
+    assert.equal(archiveAssets.noShelf.meta?.reasonCode, 'NEEDS_SJH')
+    assert.ok(archiveAssets.loaded.every(Boolean), '档案袋影像必须在真实 Pages 浏览器中成功解码')
+
     const blocked = await page.evaluate(async () => {
       const path = '/proxy/api/v1/pages-smoke-unmocked'
       const fetchBlocked = await fetch(path, { method: 'POST', body: 'synthetic-demo-only' }).then(() => false, () => true)

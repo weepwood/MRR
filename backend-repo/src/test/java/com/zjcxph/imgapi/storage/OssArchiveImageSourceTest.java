@@ -104,6 +104,29 @@ class OssArchiveImageSourceTest {
         assertThat(source.supports(image)).isFalse();
     }
 
+    @Test
+    void repeatedNetworkTimeoutsOpenCircuitButMissingObjectsDoNot() throws Exception {
+        var reader = mock(OssObjectReader.class);
+        var source = new OssArchiveImageSource(reader, new ArchiveImageSourceProperties(), ossProperties());
+        var image = new PathDO("24.04.07", "0013.jpg", "666666", "00789124");
+        image.setSourceType("OSS");
+        image.setSourceRef(ACTUAL_OBJECT_KEY);
+        when(reader.open(ACTUAL_OBJECT_KEY)).thenThrow(new java.io.IOException("missing",
+                software.amazon.awssdk.services.s3.model.S3Exception.builder().statusCode(404).build()));
+        for (int i = 0; i < 4; i++) {
+            org.assertj.core.api.Assertions.assertThatThrownBy(() -> source.open(image))
+                    .isInstanceOf(java.io.IOException.class).hasMessage("missing");
+        }
+        when(reader.open(ACTUAL_OBJECT_KEY)).thenThrow(new java.net.SocketTimeoutException("synthetic timeout"));
+        for (int i = 0; i < 3; i++) {
+            org.assertj.core.api.Assertions.assertThatThrownBy(() -> source.open(image))
+                    .isInstanceOf(java.net.SocketTimeoutException.class);
+        }
+        org.assertj.core.api.Assertions.assertThatThrownBy(() -> source.open(image))
+                .isInstanceOf(java.io.IOException.class).hasMessageContaining("temporarily unavailable");
+        verify(reader, org.mockito.Mockito.times(7)).open(ACTUAL_OBJECT_KEY);
+    }
+
     private OssProperties ossProperties() {
         OssProperties properties = new OssProperties();
         properties.setEndpoint("oss-cn-hangzhou.aliyuncs.com");

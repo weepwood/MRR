@@ -76,6 +76,7 @@ interface SummaryCard {
   note: string
   tone: MetricTone
   icon: string
+  anchor?: string
 }
 
 const summaryCards = computed<SummaryCard[]>(() => [
@@ -106,6 +107,7 @@ const summaryCards = computed<SummaryCard[]>(() => [
     note: latestRun.value?.completed_at ? `最近检查 ${formatDate(latestRun.value.completed_at)}` : '尚未执行检查',
     tone: criticalIssues.value > 0 ? 'danger' : 'green',
     icon: 'i-lucide:triangle-alert',
+    anchor: '#monitor-issues',
   },
   {
     label: '数据库大小',
@@ -359,6 +361,7 @@ onUnmounted(pause)
         :note="item.note"
         :tone="item.tone"
         :icon="item.icon"
+        :anchor="item.anchor"
       />
     </section>
 
@@ -491,7 +494,7 @@ onUnmounted(pause)
     </MrrSectionCard>
 
     <div class="monitor-grid monitor-grid--details">
-      <MrrSectionCard class="monitor-card" title="异常样本" description="最多显示最近 100 条">
+      <MrrSectionCard id="monitor-issues" tabindex="-1" class="monitor-card" title="异常样本" description="最多显示最近 100 条">
         <el-table :data="qualityIssues" stripe border max-height="460" empty-text="没有异常样本">
           <el-table-column prop="severity" label="级别" width="100">
             <template #default="scope">
@@ -551,6 +554,10 @@ onUnmounted(pause)
   min-width: 0;
   height: 100%;
   border-radius: var(--mrr-radius-card);
+}
+
+#monitor-issues {
+  scroll-margin-top: 80px;
 }
 
 .progress-grid {

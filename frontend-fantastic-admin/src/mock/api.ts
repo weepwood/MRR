@@ -210,6 +210,24 @@ function statisticsRows() {
   }))
 }
 
+function filteredStatistics(query: Record<string, QueryValue>) {
+  const keyword = normalize(firstQuery(query.keyword))
+  const bah = normalize(firstQuery(query.bah))
+  const sjh = normalize(firstQuery(query.sjh))
+  const type = normalize(firstQuery(query.type))
+  const startDate = normalize(firstQuery(query.startDate))
+  const endDate = normalize(firstQuery(query.endDate))
+  return statisticsRows().filter((item) => {
+    if (keyword && !normalize(`${item.bah} ${item.sjh} ${item.type} ${item.openerNo}`).includes(keyword)) { return false }
+    if (bah && !normalize(item.bah).includes(bah)) { return false }
+    if (sjh && !normalize(item.sjh).includes(sjh)) { return false }
+    if (type && normalize(item.type) !== type) { return false }
+    if (startDate && item.date < startDate) { return false }
+    if (endDate && item.date > endDate) { return false }
+    return true
+  })
+}
+
 function statisticsSummary() {
   const rows = statisticsRows()
   const grouped = new Map<string, { type: string, recordCount: number, totalPages: number }>()
@@ -230,9 +248,9 @@ function statisticsSummary() {
   }
 }
 
-function dateSummary() {
+function dateSummary(rows = statisticsRows()) {
   const grouped = new Map<string, { date: string, recordCount: number, totalPages: number }>()
-  statisticsRows().forEach((row) => {
+  rows.forEach((row) => {
     const current = grouped.get(row.date) ?? { date: row.date, recordCount: 0, totalPages: 0 }
     current.recordCount += 1
     current.totalPages += row.pages
@@ -609,25 +627,11 @@ export default defineFakeRoute([
   {
     url: '/api/v1/statistics',
     response: ({ query }) => {
-      const source = statisticsRows()
-      const keyword = normalize(firstQuery(query.keyword))
-      const bah = normalize(firstQuery(query.bah))
-      const sjh = normalize(firstQuery(query.sjh))
-      const type = normalize(firstQuery(query.type))
-      const startDate = normalize(firstQuery(query.startDate))
-      const endDate = normalize(firstQuery(query.endDate))
+      const filtered = filteredStatistics(query)
       const sortBy = firstQuery(query.sortBy) || 'date'
       const sortOrder = firstQuery(query.sortOrder) || 'desc'
-      const filtered = source.filter((item) => {
-        if (keyword && !normalize(`${item.bah} ${item.sjh} ${item.type} ${item.openerNo}`).includes(keyword)) { return false }
-        if (bah && !normalize(item.bah).includes(bah)) { return false }
-        if (sjh && !normalize(item.sjh).includes(sjh)) { return false }
-        if (type && normalize(item.type) !== type) { return false }
-        if (startDate && item.date < startDate) { return false }
-        if (endDate && item.date > endDate) { return false }
-        return true
-      })
       filtered.sort((a, b) => {
+        if (sortBy === 'pages') { return sortOrder === 'asc' ? a.pages - b.pages : b.pages - a.pages }
         const left = String(a[sortBy as keyof typeof a] ?? '')
         const right = String(b[sortBy as keyof typeof b] ?? '')
         return sortOrder === 'asc' ? left.localeCompare(right) : right.localeCompare(left)
@@ -684,12 +688,11 @@ export default defineFakeRoute([
     response: ({ query }) => {
       const startDate = normalize(firstQuery(query.startDate))
       const endDate = normalize(firstQuery(query.endDate))
-      const rows = dateSummary().filter((item) => {
-        if (startDate && item.date < startDate) { return false }
-        if (endDate && item.date > endDate) { return false }
-        return true
-      })
-      return ok(rows)
+      return ok(dateSummary(filteredStatistics({
+        type: query.type,
+        startDate: startDate || (endDate ? `${endDate.slice(0, 4)}-01-01` : undefined),
+        endDate: endDate || (startDate ? demoClock.date() : undefined),
+      })))
     },
   },
   {
@@ -706,9 +709,9 @@ export default defineFakeRoute([
       'content-type': 'text/csv; charset=utf-8',
       'content-disposition': 'attachment; filename="mock-statistics.csv"',
     },
-    response: () => {
+    response: ({ query }) => {
       const header = 'bah,sjh,type,pages,date,openerNo'
-      const rows = statisticsRows().slice(0, 20).map(item =>
+      const rows = filteredStatistics(query).map(item =>
         [item.bah, item.sjh, item.type, item.pages, item.date, item.openerNo].join(','),
       )
       return `\uFEFF${[header, ...rows].join('\n')}`

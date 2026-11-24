@@ -56,6 +56,7 @@ function overview(): OperationsOverview {
     }
   }
   return {
+    imageDeliveryMode: 'gateway',
     generatedAt: new Date().toISOString(),
     readiness: readiness(),
     maintenance: { enabled: maintenance.enabled },
@@ -97,6 +98,19 @@ function permissionMatrix(): PermissionMatrix {
 }
 
 export default defineFakeRoute([
+  {
+    url: '/api/v1/operations/access-log-partition/status',
+    response: () => demoOk({
+      phase: 'COPYING',
+      partitionCount: 4,
+      defaultPartitionHasRows: false,
+      rowsCopied: 0,
+      copyLag: 0,
+      copyEnabled: false,
+      legacyTablePresent: false,
+      updatedAt: hoursAgo(1),
+    }),
+  },
   { url: '/api/v1/operations/overview', response: () => demoOk(overview()) },
   { url: '/api/v1/operations/readiness', response: () => demoOk(readiness()) },
   { url: '/api/v1/operations/readiness/refresh', method: 'POST', response: () => demoOk(readiness()) },

@@ -28,6 +28,14 @@ describe('mrrMetricCard', () => {
     expect(wrapper.find('.mrr-metric-card__note').text()).toBe('口径说明')
   })
 
+  it('仅在传入锚点时提供可聚焦链接，默认卡片保持不变', () => {
+    expect(mountCard().find('a').exists()).toBe(false)
+    const wrapper = mountCard({ anchor: '#monitor-issues' })
+    expect(wrapper.get('a').attributes('href')).toBe('#monitor-issues')
+    expect(wrapper.get('a').attributes('aria-label')).toBe('查看指标名称明细')
+    expect(wrapper.find('.mrr-metric-card__value').text()).toBe('42')
+  })
+
   it('无图标时不渲染图标区并占用整行', () => {
     const wrapper = mountCard()
     expect(wrapper.find('.mrr-metric-card__icon').exists()).toBe(false)

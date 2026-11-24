@@ -251,6 +251,31 @@ class ScanServiceCacheTest {
         verify(scanMapper, times(3)).findById(1);
     }
 
+    @Test
+    void blockedKeyDoesNotBlockAnotherKey() throws Exception {
+        var entered = new CountDownLatch(1);
+        var release = new CountDownLatch(1);
+        var a = new Scan(); a.setId(1);
+        var b = new Scan(); b.setId(2);
+        when(scanMapper.findById(1)).thenAnswer(call -> {
+            entered.countDown();
+            if (!release.await(5, TimeUnit.SECONDS)) throw new AssertionError("not released");
+            return a;
+        });
+        when(scanMapper.findById(2)).thenReturn(b);
+        var executor = Executors.newFixedThreadPool(2);
+        try {
+            var first = executor.submit(() -> scanService.findById(1));
+            assertThat(entered.await(5, TimeUnit.SECONDS)).isTrue();
+            assertThat(executor.submit(() -> scanService.findById(2)).get(2, TimeUnit.SECONDS)).isSameAs(b);
+            release.countDown();
+            assertThat(first.get(5, TimeUnit.SECONDS)).isSameAs(a);
+        } finally {
+            release.countDown();
+            executor.shutdownNow();
+        }
+    }
+
     @Configuration
     @Import(CacheConfig.class)
     static class TestConfig {

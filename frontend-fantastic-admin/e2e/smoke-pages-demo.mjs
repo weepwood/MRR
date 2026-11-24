@@ -164,6 +164,21 @@ async function smokePagesDemo() {
     assert.equal(writes.after.data.migratedCount, writes.before.data.migratedCount + 1)
     assert.equal(writes.after.data.failedCount, writes.before.data.failedCount - 1)
 
+    const journal = await page.evaluate(async () => {
+      const get = path => fetch(`/proxy/api/v1/oss/migration/${path}`).then(response => response.json())
+      const [canonical, legacy, failed] = await Promise.all([
+        get('management/logs?scanId=1&status=success&page=1&size=20'),
+        get('logs?scanId=1&status=success&page=1&size=20'),
+        get('management/logs?scanId=13&status=failed&page=1&size=20'),
+      ])
+      return { canonical, legacy, failed }
+    })
+    assert.deepEqual(journal.canonical.data, journal.legacy.data)
+    assert.equal(journal.canonical.data.total, 1)
+    assert.equal(journal.canonical.data.list[0].ossUrl, writes.scan.data.ossUrl)
+    assert.equal(journal.failed.data.total, 1)
+    assert.equal(journal.failed.data.list[0].migrationStatus, 'failed')
+
     const blocked = await page.evaluate(async () => {
       const path = '/proxy/api/v1/pages-smoke-unmocked'
       const fetchBlocked = await fetch(path, { method: 'POST', body: 'synthetic-demo-only' }).then(() => false, () => true)

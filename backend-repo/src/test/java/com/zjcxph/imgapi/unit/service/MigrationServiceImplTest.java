@@ -2,6 +2,7 @@ package com.zjcxph.imgapi.unit.service;
 
 import com.github.benmanes.caffeine.cache.Caffeine;
 import com.zjcxph.imgapi.config.CacheConfig;
+import com.zjcxph.imgapi.config.GenerationAwareScanCache;
 import com.zjcxph.imgapi.dto.req.MigrationJobRequest;
 import com.zjcxph.imgapi.dto.resp.ArchiveLookupResult;
 import com.zjcxph.imgapi.dto.resp.MigrationReadinessDTO;
@@ -24,6 +25,7 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.cache.CacheManager;
+import org.springframework.cache.Cache;
 import org.springframework.cache.caffeine.CaffeineCache;
 
 import java.io.FileNotFoundException;
@@ -345,9 +347,11 @@ class MigrationServiceImplTest {
         scan.setArchiveId(42L);
         Scan other = legacyScan(8, "00789518", "605749", "12345679");
         other.setArchiveId(43L);
-        Map<String, CaffeineCache> caches = new HashMap<>();
+        Map<String, GenerationAwareScanCache> caches = new HashMap<>();
+        Map<String, Cache> pendingLookups = new HashMap<>();
         for (String name : CacheConfig.SCAN_QUERY_CACHES) {
-            CaffeineCache cache = new CaffeineCache(name, Caffeine.newBuilder().maximumSize(1000).build());
+            GenerationAwareScanCache cache = new GenerationAwareScanCache(name, Caffeine.newBuilder().maximumSize(1000).build());
+            pendingLookups.put(name, cache.lookupView());
             caches.put(name, cache);
             when(cacheManager.getCache(name)).thenReturn(cache);
             if (name.equals(CacheConfig.SCAN_BY_ID)) {
@@ -382,12 +386,27 @@ class MigrationServiceImplTest {
             TransactionSynchronizationManager.clearSynchronization();
         }
         for (String name : CacheConfig.SCAN_QUERY_CACHES) {
-            CaffeineCache cache = caches.get(name);
+            GenerationAwareScanCache cache = caches.get(name);
+            Object key = name.equals(CacheConfig.SCAN_BY_ID) ? 3 : "00789510:789510";
+            Scan fresh = legacyScan(3, "00789510", "605748", null);
+            fresh.setArchiveId(42L);
+            fresh.setOssUrl("synthetic-object");
+            Object staleValue = name.equals(CacheConfig.SCAN_BY_ID) ? scan
+                    : name.startsWith("scanLookup") ? ArchiveLookupResult.fastPath(List.of(scan), ArchiveLookupResult.Strategy.ARCHIVE_ID_EXACT, 42L)
+                    : List.of(scan);
+            Object freshValue = name.equals(CacheConfig.SCAN_BY_ID) ? fresh
+                    : name.startsWith("scanLookup") ? ArchiveLookupResult.fastPath(List.of(fresh), ArchiveLookupResult.Strategy.ARCHIVE_ID_EXACT, 42L)
+                    : List.of(fresh);
+            assertThat(cache.get(key)).isNull();
+            // A pre-commit query cannot populate an empty key, or replace a fresh value.
+            pendingLookups.get(name).put(key, staleValue);
+            assertThat(cache.get(key)).isNull();
+            cache.lookupView().put(key, freshValue);
+            pendingLookups.get(name).put(key, staleValue);
+            assertThat(cache.get(key).get()).isSameAs(freshValue);
             if (name.equals(CacheConfig.SCAN_BY_ID)) {
-                assertThat(cache.get(3)).isNull();
                 assertThat(cache.get(8)).isNotNull();
             } else {
-                assertThat(cache.get("00789510:789510")).isNull();
                 assertThat(cache.get("789510:789510")).isNull();
                 assertThat(cache.get("unrelated")).isNotNull();
             }

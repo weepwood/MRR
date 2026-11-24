@@ -1,6 +1,7 @@
 package com.zjcxph.imgapi.service.impl;
 
 import com.zjcxph.imgapi.config.CacheConfig;
+import com.zjcxph.imgapi.config.GenerationAwareScanCache;
 import com.zjcxph.imgapi.dto.req.MigrationJobRequest;
 import com.zjcxph.imgapi.dto.resp.ArchiveLookupResult;
 import com.zjcxph.imgapi.dto.resp.MigrationReadinessDTO;
@@ -955,6 +956,8 @@ public class MigrationServiceImpl implements MigrationService {
                 if (cache == null) continue;
                 if (CacheConfig.SCAN_BY_ID.equals(name)) {
                     cache.evict(scanId);
+                } else if (cache instanceof GenerationAwareScanCache scanCache) {
+                    scanCache.invalidateMatching(value -> containsMigratedScan(value, scanId, archiveId));
                 } else if (cache instanceof CaffeineCache caffeine) {
                     var entries = caffeine.getNativeCache().asMap();
                     entries.forEach((key, value) -> {

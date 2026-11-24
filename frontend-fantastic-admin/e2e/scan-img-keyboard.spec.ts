@@ -40,7 +40,7 @@ async function submitIdCard(page: Page, idCard: string) {
   expect(request.method()).toBe('POST')
   expect(new URL(request.url()).search).toBe('')
   expect(request.postDataJSON()).toEqual({ idCard })
-  expect(new URL(page.url()).pathname).toBe('/idcard')
+  await expect(page).toHaveURL(/\/idcard$/)
   expect(page.url()).not.toContain(idCard)
 }
 
@@ -150,7 +150,7 @@ test('旧明文深链仍兼容POST，正常查询刷新与返回清除临时查�
   await expect(page.getByText('查询出 3 份住院病案')).toBeVisible()
   await page.getByRole('button', { name: '返回查询', exact: true }).click()
   await expect(page.getByPlaceholder('请输入18位身份证号')).toHaveValue('')
-  expect(new URL(page.url()).pathname).toBe('/idcard')
+  await expect(page).toHaveURL(/\/idcard$/)
   expect(lookups).toBe(1)
 
   await submitIdCard(page, ID_CARD)

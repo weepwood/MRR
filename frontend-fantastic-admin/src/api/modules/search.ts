@@ -25,9 +25,9 @@ export interface IdCardArchiveSearchResponse {
   cases: IdCardArchiveCase[]
 }
 
-/** GET /api/v1/search/getBAHByID/{idCard} — 根据身份证号获取BAH（旧接口） */
+/** POST /api/v1/search/getBAHByID — 身份证原文仅进入请求体 */
 export function getBAHByIdCard(idCard: string) {
-  return getRequest<PatientSearchRecord>(`/api/v1/search/getBAHByID/${idCard}`)
+  return postRequest<PatientSearchRecord[]>('/api/v1/search/getBAHByID', { idCard })
 }
 
 /** GET /api/v1/search/getBAHByEncryptID — 根据加密身份证获取BAH */

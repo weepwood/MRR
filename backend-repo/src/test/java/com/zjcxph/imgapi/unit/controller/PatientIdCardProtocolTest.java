@@ -53,6 +53,35 @@ class PatientIdCardProtocolTest {
     }
 
     @Test
+    void realAuthorizationInterceptorProtectsBothProtocols() throws Exception {
+        var guarded = MockMvcBuilders.standaloneSetup(new PatientController(mapper,
+                mock(PatientImportService.class), mock(PatientAnalyticsService.class)))
+                .addInterceptors(new com.zjcxph.imgapi.interceptors.AuthorizationInterceptor()).build();
+        var denied = new com.zjcxph.imgapi.common.AuthSession();
+        denied.setRoleCode("OPERATOR");
+        denied.setPermissions(List.of("search:read"));
+        var allowed = new com.zjcxph.imgapi.common.AuthSession();
+        allowed.setRoleCode("OPERATOR");
+        allowed.setPermissions(List.of("record:read"));
+        String synthetic = "000000000000000000";
+        String body = "{\"idCard\":\"" + synthetic + "\"}";
+        guarded.perform(post("/api/v1/patients/idcard").contentType(MediaType.APPLICATION_JSON).content(body))
+                .andExpect(status().isUnauthorized());
+        guarded.perform(post("/api/v1/patients/idcard").contentType(MediaType.APPLICATION_JSON).content(body)
+                        .requestAttr(com.zjcxph.imgapi.interceptors.AuthorizationInterceptor.AUTH_SESSION_ATTRIBUTE, denied))
+                .andExpect(status().isForbidden());
+        guarded.perform(get("/api/v1/patients/idcard/" + synthetic)
+                        .requestAttr(com.zjcxph.imgapi.interceptors.AuthorizationInterceptor.AUTH_SESSION_ATTRIBUTE, denied))
+                .andExpect(status().isForbidden());
+        verifyNoInteractions(mapper);
+        when(mapper.findBAHByIDCard(synthetic)).thenReturn(List.of(new Patient()));
+        guarded.perform(post("/api/v1/patients/idcard").contentType(MediaType.APPLICATION_JSON).content(body)
+                        .requestAttr(com.zjcxph.imgapi.interceptors.AuthorizationInterceptor.AUTH_SESSION_ATTRIBUTE, allowed))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.data.length()").value(1));
+        verify(mapper).findBAHByIDCard(synthetic);
+    }
+
+    @Test
     void invalidPostNeverQueriesPatients() throws Exception {
         mvc.perform(post("/api/v1/patients/idcard")
                         .contentType(MediaType.APPLICATION_JSON)

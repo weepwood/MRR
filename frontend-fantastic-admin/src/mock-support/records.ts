@@ -29,6 +29,12 @@ const departments = ['心内科', '神经内科', '普外科', '骨科', '呼吸
 const operators = ['scanner-01', 'scanner-02', 'scanner-03', 'scanner-04']
 const names = ['演示患者甲', '演示患者乙', '演示患者丙', '演示患者丁', '演示患者戊', '演示患者己']
 
+// Keep the first 12 archives in the recent window; distribute the rest over
+// more than a year so date filters and year comparisons have real sample data.
+function archiveAge(index: number) {
+  return index < 12 ? index : 12 + (index - 12) * 20
+}
+
 // Keep all identifiers synthetic and deterministic. Each archive belongs to
 // one patient record; both scans use that record's BAH and BRXH.
 export function createDemoRecords(clock = demoClock) {
@@ -38,7 +44,7 @@ export function createDemoRecords(clock = demoClock) {
     idCard: `00000020000101${String(index + 101).padStart(4, '0')}`,
     bah: String(26070000 + index).padStart(8, '0'),
     name: names[index % names.length],
-    admissiontime: clock.dateTime(index + 3, 2),
+    admissiontime: clock.dateTime(archiveAge(index) + 3, 2),
     department: departments[index % departments.length],
   }))
 
@@ -47,7 +53,8 @@ export function createDemoRecords(clock = demoClock) {
       const index = patientIndex * 2 + offset
       const id = index + 1
       const btype = MEDICAL_RECORD_TYPE_CODES[index % MEDICAL_RECORD_TYPE_CODES.length]
-      const uploadDate = clock.dateTime(patientIndex, 1, offset * 15)
+      const age = archiveAge(patientIndex)
+      const uploadDate = clock.dateTime(age, 1, offset * 15)
       const monthFolder = uploadDate.slice(0, 7).replace('-', '/')
       const uploaded = id % 16 !== 0
       const waiting = id % 8 === 0 && uploaded
@@ -72,8 +79,8 @@ export function createDemoRecords(clock = demoClock) {
         migrationStatus: migrated ? (index % 5 === 0 ? 'verified' : 'migrated') : waiting ? 'waiting_sjh' : failed ? 'failed' : retry ? 'retry_wait' : 'not_migrated',
         migrationAttempts: failed || retry ? 1 : 0,
         migrationErrorCode: waiting ? 'MISSING_SJH' : failed ? 'SOURCE_NOT_FOUND' : retry ? 'SOURCE_TIMEOUT' : undefined,
-        migrationNextRetryAt: retry ? clock.iso(0, 1) : null,
-        migratedAt: migrated ? clock.dateTime(patientIndex, 0, offset * 15) : undefined,
+        migrationNextRetryAt: retry ? clock.iso(0, id % 2 === 0 ? -2 : 1) : null,
+        migratedAt: migrated ? clock.dateTime(age, 0, offset * 15) : undefined,
       }
     }),
   )

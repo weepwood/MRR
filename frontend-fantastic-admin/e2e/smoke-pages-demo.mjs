@@ -87,6 +87,36 @@ async function smokePagesDemo() {
       }
     }
 
+    // A historical year and type must produce the same rows in details,
+    // daily aggregates and the actual downloadable CSV.
+    const historical = await page.evaluate(async () => {
+      const req = path => fetch(`/proxy/api/v1/statistics${path}`)
+      const get = path => req(path).then(response => response.json())
+      const all = await get('?page=1&size=100&sortBy=pages&sortOrder=asc')
+      const year = [...new Set(all.data.list.map(row => row.date.slice(0, 4)))].sort()[0]
+      const type = all.data.list.find(row => row.date.startsWith(year)).type
+      const query = new URLSearchParams({ startDate: `${year}-01-01`, endDate: `${year}-12-31`, type })
+      const [list, days, csv, empty, allCsv] = await Promise.all([
+        get(`?page=1&size=100&${query}`),
+        get(`/date-summary/condition?${query}`),
+        req(`/export/csv?${query}`).then(response => response.text()),
+        get('?page=1&size=100&startDate=1900-01-01&endDate=1900-12-31'),
+        req('/export/csv').then(response => response.text()),
+      ])
+      return { all, year, type, list, days, csv, empty, allCsv }
+    })
+    const historicalRows = historical.list.data.list
+    assert.ok(new Set(historical.all.data.list.map(row => row.date.slice(0, 4))).size >= 2)
+    assert.ok(historical.all.data.list.every((row, index, rows) => index === 0 || rows[index - 1].pages <= row.pages))
+    assert.ok(historicalRows.length > 0)
+    assert.ok(historicalRows.every(row => row.date.startsWith(historical.year) && row.type === historical.type))
+    assert.equal(historical.days.data.reduce((sum, row) => sum + row.recordCount, 0), historicalRows.length)
+    assert.equal(historical.days.data.reduce((sum, row) => sum + row.totalPages, 0), historicalRows.reduce((sum, row) => sum + row.pages, 0))
+    const csvRows = historical.csv.trim().split('\n').slice(1)
+    assert.deepEqual(csvRows.map(line => line.split(',')[1]).sort(), historicalRows.map(row => row.sjh).sort())
+    assert.equal(historical.allCsv.trim().split('\n').length - 1, allScans.length)
+    assert.equal(historical.empty.data.total, 0)
+
     const migration = await page.evaluate(async () => {
       const get = path => fetch(`/proxy/api/v1/oss/migration/${path}`).then(response => response.json())
       const [stats, pending, waiting, folders, readiness] = await Promise.all([

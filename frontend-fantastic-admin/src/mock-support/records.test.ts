@@ -19,6 +19,31 @@ describe('shared synthetic records', () => {
     }
   })
 
+  it('covers recent and historical dates across calendar years and preserves chronological relationships', () => {
+    const clock = createDemoClock(new Date(2026, 10, 24, 12))
+    const { patients, scans } = createDemoRecords(clock)
+    expect(scans.filter(scan => scan.uploadDate.slice(0, 10) >= clock.date(7)).length).toBeGreaterThan(0)
+    expect(scans.some(scan => scan.uploadDate.slice(0, 10) < clock.date(365))).toBe(true)
+    expect(new Set(scans.map(scan => scan.uploadDate.slice(0, 7))).size).toBeGreaterThanOrEqual(12)
+    expect(new Set(scans.map(scan => scan.uploadDate.slice(0, 4))).size).toBeGreaterThanOrEqual(2)
+    for (const scan of scans) {
+      expect(scan.uploadDate >= patients.find(patient => patient.bah === scan.bah)!.admissiontime).toBe(true)
+      if (scan.migratedAt) {
+        expect(scan.migratedAt >= scan.uploadDate).toBe(true)
+      }
+      expect(scan.folder).toContain(scan.uploadDate.slice(0, 7).replace('-', '/'))
+    }
+  })
+
+  it('includes both due and deferred retries without changing scan identities', () => {
+    const reference = new Date(2026, 10, 24, 12)
+    const { scans } = createDemoRecords(createDemoClock(reference))
+    const retries = scans.filter(scan => scan.migrationStatus === 'retry_wait')
+    expect(retries.some(scan => Date.parse(scan.migrationNextRetryAt!) <= reference.getTime())).toBe(true)
+    expect(retries.some(scan => Date.parse(scan.migrationNextRetryAt!) > reference.getTime())).toBe(true)
+    expect(scans.find(scan => scan.id === 7)?.migrationNextRetryAt).toBe(createDemoClock(reference).iso(0, 1))
+  })
+
   it('preserves identifiers across dates and isolates separately generated datasets', () => {
     const first = createDemoRecords(createDemoClock(new Date(2026, 10, 24, 12)))
     const second = createDemoRecords(createDemoClock(new Date(2027, 0, 1, 12)))

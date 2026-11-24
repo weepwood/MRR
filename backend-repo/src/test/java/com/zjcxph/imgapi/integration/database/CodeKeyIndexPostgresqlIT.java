@@ -44,6 +44,7 @@ class CodeKeyIndexPostgresqlIT extends PostgresqlIntegrationTestSupport {
         try {
             jdbc.execute(guard());
             for (String line:sql().lines().filter(row->row.startsWith("CREATE INDEX CONCURRENTLY")).toList()) jdbc.execute(line);
+            jdbc.execute(guard()); // Correct existing indexes must allow an idempotent rerun.
             assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM pg_index i JOIN pg_class c ON c.oid=i.indexrelid WHERE c.relname IN ('idx_mr_scan_bah_numeric_cursor','idx_mr_scan_sjh_numeric_cursor') AND indisvalid AND indisready",Long.class)).isEqualTo(2);
         } finally { drop(); }
     }
@@ -54,6 +55,28 @@ class CodeKeyIndexPostgresqlIT extends PostgresqlIntegrationTestSupport {
             assertThatThrownBy(()->jdbc.execute(guard())).hasMessageContaining("Invalid governance index exists");
         } finally { drop();jdbc.update("DELETE FROM app.mr_scan WHERE filename IN ('synthetic-index-a','synthetic-index-b')"); }
     }
+    @Test void validButWrongDefinitionStopsBeforeConcurrentCreation() throws Exception {
+        try {
+            jdbc.execute("CREATE INDEX idx_mr_scan_bah_numeric_cursor ON app.mr_scan (bah, id)");
+            assertThatThrownBy(() -> jdbc.execute(guard())).hasMessageContaining("Invalid governance index exists");
+            assertThat(jdbc.queryForObject("SELECT to_regclass('app.idx_mr_scan_sjh_numeric_cursor') IS NULL", Boolean.class)).isTrue();
+        } finally { drop(); }
+    }
+
+    @Test void partialIndexStopsEvenWithMatchingKeys() throws Exception {
+        try {
+            jdbc.execute("CREATE INDEX idx_mr_scan_bah_numeric_cursor ON app.mr_scan (app.numeric_code_key(bah), id) WHERE uploadflag <> 0");
+            assertThatThrownBy(() -> jdbc.execute(guard())).hasMessageContaining("Invalid governance index exists");
+        } finally { drop(); }
+    }
+
+    @Test void sameNamedNonIndexRelationCannotBeSilentlySkipped() throws Exception {
+        try {
+            jdbc.execute("CREATE TABLE app.idx_mr_scan_bah_numeric_cursor (id integer)");
+            assertThatThrownBy(() -> jdbc.execute(guard())).hasMessageContaining("Invalid governance index exists");
+        } finally { jdbc.execute("DROP TABLE IF EXISTS app.idx_mr_scan_bah_numeric_cursor"); }
+    }
+
     private void drop() {
         jdbc.execute("DROP INDEX CONCURRENTLY IF EXISTS app.idx_mr_scan_bah_numeric_cursor");
         jdbc.execute("DROP INDEX CONCURRENTLY IF EXISTS app.idx_mr_scan_sjh_numeric_cursor");

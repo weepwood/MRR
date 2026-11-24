@@ -223,12 +223,25 @@
 
 - #784 已合并c3590798，head4bcc7e8d、governance45442058698、quality45442058011，scope/pr-gate通过，其他按范围跳过。
 
+## 03 兼容游标真实PG16与MVC契约（2026-11-25）
+
+- #99/#350 P2，仅补验收，分支 `test/99-legacy-cursor-http-contract`，独立worktree。真实PG16新增 legacyContains 游标锁等待取消（SQLSTATE 57014、原连接恢复），及真实Mapper+Service+Controller standalone MVC JSON契约：默认精确/显式包含、前导零、两页ID、hasMore/nextCursorId/size、无total。未修改权限规则、SQL超时、生产数据库或接口。
+- 本地复用隔离基准临时副本增加测试类选择（副本已删除），`mrr-scan-lab-fuaf38hd` 实际9单测/26 PG16零失败/错误/跳过，报告server_stopped=true，pg_ctl确认停止；原始flyway-and-mapper.log保留。MVC契约不代表完整认证链或真实浏览器直连后端。#785已合并b7980728，933前端测试/138文件，演示Pages通过。医院副本端到端尚未验收。独立revert，无生产操作。
+
+- #782 已合并437f428a，head68116d01、governance45441171525、quality45441171863，1175单测/148 PG16全部通过，Development通过。
+
+- #784 已合并c3590798，head4bcc7e8d、governance45442058698、quality45442058011，scope/pr-gate通过，其他按范围跳过。
+
+- #787 已合并ee5cd8d2，head a05e4ec9、governance45442340980、quality45442341293，1176单测零失败/错误/跳过，PG16按范围跳过。
+
 ## 03 三千万级完整隔离基准证据（2026-11-25）
 
 - #99/#350 P2，`docs/99-thirty-million-evidence`，独立worktree。mrr-scan-lab-3a6p6oh4 实际COUNT确认30000000/300000，造数1442.415秒，索引144.977秒，两个902MB valid/ready；同页通过、真实8并发多键325796事务、P99 1.028ms、零失败。旧兼容COUNT前后均5秒超时，报告complete_with_legacy_timeouts，server_stopped=true，pg_ctl确认停止。详见[完整基准报告](synthetic-scan-benchmark-2026-11-24.md)。原始日志保留，勿重复启动。
 - #785已合并b7980728（933前端测试/138文件，演示Pages成功）；#782已合并437f428a（1175单测/148真实PG16）；#784已合并c3590798（scope/pr-gate通过，其他按范围跳过）。#786和#787在最新main同步后仍待CI。已确认#780/#781/#783/#785/#782/#784合并树等价、干净和上游一致，归档本地报告至`/Volumes/data/Project/MRR-worktrees/merged-evidence-2026-11-25`后正常移除其专属worktree与本地分支，远端分支保留。未做生产操作或正式发布。
 
 - #787 已合并ee5cd8d2，head a05e4ec9、governance45442340980、quality45442341293，1176单测零失败/错误/跳过，PG16按范围跳过。
+
+- #786 已合并07c06e32，head e0c41350，governance45442917009、quality45442917470通过，1176单测/150真实PG16零失败。
 
 ## 每轮交接模板
 

@@ -29,11 +29,15 @@ def main():
     parser.add_argument("--batch", type=int, default=100_000)
     parser.add_argument("--max-seconds", type=int, default=1800)
     parser.add_argument("--java-home", type=Path, required=True)
+    parser.add_argument("--sample-seconds", type=int, default=5)
+    parser.add_argument("--multikey", action="store_true")
     args = parser.parse_args()
     if not 10_000 <= args.rows <= MAX_ROWS or not 1000 <= args.batch <= 100_000:
         parser.error("rows must be 10,000..30,000,000; batch 1,000..100,000")
     if not 60 <= args.max_seconds <= 7200:
         parser.error("max-seconds must be 60..7200")
+    if not 1 <= args.sample_seconds <= 60:
+        parser.error("sample-seconds must be 1..60")
     parent = args.lab_parent.resolve(strict=True)
     if not parent.is_dir():
         parser.error("lab-parent must be an existing directory")
@@ -122,6 +126,7 @@ def main():
                 FROM generate_series({lo},{hi}) n
                 JOIN app.mr_archive a ON a.id=(n-1)/{PAGES}+1
             """)
+            report["seeded_rows"] = hi
             print(f"Seeded {hi}/{args.rows}", flush=True)
         report["seed_seconds"] = round(time.monotonic() - t, 3)
         sql("ANALYZE app.mr_scan; ANALYZE app.mr_archive")
@@ -147,9 +152,20 @@ def main():
             for name, query in cases.items():
                 for sample in ("first", "repeat"):
                     key = f"{phase}-{name}-{sample}"
-                    result = run([*psql, "-At", "-c",
-                        "BEGIN READ ONLY; SET LOCAL statement_timeout='5s'; SET LOCAL lock_timeout='1s'; "
-                        "EXPLAIN (ANALYZE,BUFFERS,SETTINGS,FORMAT JSON) " + query + "; ROLLBACK;"])
+                    log = key + ".log"
+                    try:
+                        result = run([*psql, "-At", "-c",
+                            "BEGIN READ ONLY; SET LOCAL statement_timeout='5s'; SET LOCAL lock_timeout='1s'; "
+                            "EXPLAIN (ANALYZE,BUFFERS,SETTINGS,FORMAT JSON) " + query + "; ROLLBACK;"], log=log)
+                    except RuntimeError:
+                        # Only the explicitly optional compatibility COUNT can be recorded as timed out.
+                        # Keep the budget, never reinterpret a failed query as a zero-row result.
+                        evidence = (lab / log).read_text() if (lab / log).exists() else ""
+                        if name != "legacy_count" or "canceling statement due to statement timeout" not in evidence:
+                            raise
+                        report["plans"][key] = {"status": "statement_timeout", "budget_ms": 5000}
+                        report.setdefault("legacy_timeouts", []).append(key)
+                        break
                     # -q suppresses transaction status lines, so isolate the JSON array.
                     plan = json.loads(result[result.index("["):result.rindex("]")+1])[0]
                     (lab / (key + ".json")).write_text(json.dumps(plan, indent=2))
@@ -182,7 +198,41 @@ def main():
             if not failures or int(failures[1]) or not tps or not latency:
                 raise RuntimeError("pgbench incomplete or failed transactions")
             report["pgbench"][str(clients)] = {"tps": float(tps[1]), "mean_ms": float(latency[1]), "failures": 0}
-        report["status"] = "complete"
+        if args.multikey:
+            # Uniform keys across the entire synthetic archive range, no real identifiers.
+            workload = lab / "multikey.sql"
+            workload.write_text(
+                f"\\set archive random(1, {archive_count})\n"
+                "SELECT * FROM app.mr_scan WHERE app.numeric_code_key(sjh) = "
+                "(20000000 + :archive)::text AND id>0 ORDER BY id LIMIT 51;\n"
+            )
+            report["multikey"] = {}
+            for clients in (1, 8):
+                prefix = lab / f"multi-{clients}"
+                output = run([pg / "pgbench", *connect, "-n", "-M", "prepared",
+                    "-c", str(clients), "-j", str(min(clients, 4)), "-T", str(args.sample_seconds),
+                    "-l", "--log-prefix=" + str(prefix), "-f", workload, "imgapi"],
+                    log=f"multikey-{clients}.log")
+                failed = re.search(r"number of failed transactions: (\d+)", output)
+                done = re.search(r"number of transactions actually processed: (\d+)", output)
+                tps = re.search(r"tps = ([0-9.]+)", output)
+                if not failed or int(failed[1]) or not done or not tps:
+                    raise RuntimeError("multikey benchmark failed")
+                samples = []
+                for log in sorted(lab.glob(prefix.name + ".*")):
+                    for line in log.read_text().splitlines():
+                        fields = line.split()
+                        if len(fields) < 6 or not fields[2].isdigit():
+                            raise RuntimeError("unexpected pgbench transaction log")
+                        samples.append(int(fields[2]))
+                if len(samples) != int(done[1]) or not samples:
+                    raise RuntimeError("transaction log count mismatch")
+                samples.sort()
+                report["multikey"][str(clients)] = {
+                    "transactions": len(samples), "tps": float(tps[1]), "failed": 0,
+                    **{f"p{p}_ms": samples[math.ceil(len(samples)*p/100)-1]/1000 for p in (50,95,99)}
+                }
+        report["status"] = "complete_with_legacy_timeouts" if report.get("legacy_timeouts") else "complete"
     finally:
         if started or (data / "postmaster.pid").is_file():
             # Stop only the exact cluster this invocation created, including a partially failed startup.
@@ -198,7 +248,7 @@ def main():
             pwfile.unlink()
         (lab / "report.json").write_text(json.dumps(report, indent=2))
         print(json.dumps(report, indent=2), flush=True)
-    if report["status"] != "complete":
+    if report["status"] not in ("complete", "complete_with_legacy_timeouts"):
         raise RuntimeError("lab did not complete cleanly")
 
 

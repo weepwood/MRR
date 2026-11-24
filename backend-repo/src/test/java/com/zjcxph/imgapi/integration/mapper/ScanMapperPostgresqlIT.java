@@ -51,6 +51,29 @@ class ScanMapperPostgresqlIT extends PostgresqlIntegrationTestSupport {
     @Autowired
     private MigrationJobMapper migrationJobMapper;
 
+    @Autowired
+    private com.zjcxph.imgapi.mapper.ImageContentMapper imageContentMapper;
+
+    @Test
+    void legacyImageLookupIsExactActiveAndBounded() {
+        jdbcTemplate.update("""
+                INSERT INTO app.mr_scan(bah,brxh,filename,folder,uploadflag)
+                VALUES ('000123','456','legacy.jpg','synthetic',1),
+                       ('000123','456','legacy.jpg','synthetic',0),
+                       ('123','456','legacy.jpg','synthetic',1),
+                       ('000123','789','legacy.jpg','synthetic',1)
+                """);
+        assertThat(imageContentMapper.findActiveLegacyCandidates("000123","456","synthetic","legacy.jpg"))
+                .hasSize(1).allSatisfy(scan -> assertThat(scan.getUploadFlag()).isEqualTo(1));
+        assertThat(imageContentMapper.findActiveLegacyCandidates("00123","456","synthetic","legacy.jpg")).isEmpty();
+        jdbcTemplate.update("""
+                INSERT INTO app.mr_scan(bah,brxh,filename,folder,uploadflag)
+                VALUES ('000123','456','legacy.jpg','synthetic',1),
+                       ('000123','456','legacy.jpg','synthetic',1)
+                """);
+        assertThat(imageContentMapper.findActiveLegacyCandidates("000123","456","synthetic","legacy.jpg")).hasSize(2);
+    }
+
     @Test
     void activeIdLookupExcludesSoftDeletedRowsEvenWhenOssKeyExists() {
         Integer active = jdbcTemplate.queryForObject("""

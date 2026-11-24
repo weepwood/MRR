@@ -49,6 +49,40 @@ public class ImageContentServiceImpl implements ImageContentService {
             throw new BusinessException(404, "影像不存在或已删除");
         }
 
+        return openScan(scan);
+    }
+
+    @Override
+    public ImageContent openLegacy(String bah, String brxh, String folder, String filename) {
+        bah = legacySegment(bah);
+        brxh = legacySegment(brxh);
+        folder = legacySegment(folder);
+        filename = legacySegment(filename);
+        if (folder.length() < 5 || MedicalRecordCodeUtils.requiresSjhForBah(bah)) {
+            throw new BusinessException(400, "旧影像路径参数不完整，请使用影像 ID");
+        }
+        var matches = imageContentMapper.findActiveLegacyCandidates(bah, brxh, folder, filename);
+        if (matches.isEmpty()) {
+            throw new BusinessException(404, "影像不存在或已删除");
+        }
+        if (matches.size() != 1) {
+            throw new BusinessException(409, "旧影像路径匹配多个有效记录，请使用影像 ID");
+        }
+        return openScan(matches.getFirst());
+    }
+
+    private static String legacySegment(String value) {
+        String normalized = MedicalRecordCodeUtils.normalize(value);
+        if (normalized == null || normalized.length() > 255 || normalized.equals(".") || normalized.equals("..")
+                || normalized.contains("/") || normalized.contains("\\") || normalized.contains(":")
+                || normalized.chars().anyMatch(Character::isISOControl)) {
+            throw new BusinessException(400, "影像路径参数无效");
+        }
+        return normalized;
+    }
+
+    private ImageContent openScan(Scan scan) {
+        Integer scanId = scan.getId();
         PathDO path = PathDO.fromScan(scan);
         try {
             InputStream stream = imageStorage.open(path);
@@ -86,7 +120,7 @@ public class ImageContentServiceImpl implements ImageContentService {
             return new BusinessException(404, "影像文件不存在");
         }
 
-        logger.error("读取受控影像内容失败: scanId={}", scanId, failure);
+        logger.error("读取受控影像内容失败: scanId={}, errorType={}", scanId, failure.getClass().getSimpleName());
         return new BusinessException(503, "影像来源暂不可用");
     }
 

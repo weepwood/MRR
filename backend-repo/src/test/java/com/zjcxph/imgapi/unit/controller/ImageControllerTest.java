@@ -54,6 +54,9 @@ class ImageControllerTest {
     private ImageStorage imageStorage;
 
     @Mock
+    private com.zjcxph.imgapi.service.ImageContentService imageContentService;
+
+    @Mock
     private OssService ossService;
 
     @Mock
@@ -144,74 +147,50 @@ class ImageControllerTest {
     }
 
     @Test
-    void legacyPathWithoutActiveRecordMustNotReadStorage() throws Exception {
-        // The old route can read bytes even without an active database record.
-        org.mockito.Mockito.lenient().when(imageStorage.size(any(PathDO.class))).thenReturn(5L);
-        org.mockito.Mockito.lenient().when(imageStorage.open(any(PathDO.class))).thenReturn(
-                new ByteArrayInputStream("image".getBytes(StandardCharsets.UTF_8)));
-        var result = imageController.getImage("123", "456", "25.03.15", "synthetic.jpg");
+    void legacyPathWithoutActiveRecordMustNotReadStorage() {
+        var mapper = org.mockito.Mockito.mock(com.zjcxph.imgapi.mapper.ImageContentMapper.class);
+        var service = new com.zjcxph.imgapi.service.impl.ImageContentServiceImpl(mapper, imageStorage);
+        var controller = new ImageController(scanService, archiveExportService, service, imageUrlService, archiveAccessService);
+        when(mapper.findActiveLegacyCandidates("123", "456", "25.03.15", "synthetic.jpg")).thenReturn(List.of());
+        var result = controller.getImage("123", "456", "25.03.15", "synthetic.jpg");
         assertThat(result.getStatusCode()).isEqualTo(HttpStatus.NOT_FOUND);
         verifyNoInteractions(imageStorage);
     }
 
     @Test
     void getImage_success() throws Exception {
-        when(imageStorage.size(any(PathDO.class))).thenReturn(5L);
-        when(imageStorage.open(any(PathDO.class))).thenReturn(
-                new ByteArrayInputStream("image".getBytes(StandardCharsets.UTF_8))
-        );
-
-        ResponseEntity<?> result = imageController.getImage(
-                "00789508", "605746", "25.03.15", "test.jpg");
-
+        when(imageContentService.openLegacy("00789508", "605746", "25.03.15", "test.jpg")).thenReturn(
+                new com.zjcxph.imgapi.service.ImageContentService.ImageContent(
+                        new ByteArrayInputStream("image".getBytes(StandardCharsets.UTF_8)), "test.jpg",
+                        org.springframework.http.MediaType.IMAGE_JPEG, 5L));
+        var result = imageController.getImage("00789508", "605746", "25.03.15", "test.jpg");
         assertThat(result.getStatusCode()).isEqualTo(HttpStatus.OK);
-        assertThat(result.getHeaders().getCacheControl()).contains("private", "no-store").doesNotContain("public");
-        assertThat(result.getHeaders().getContentLength()).isEqualTo(5L);
-        assertThat(result.getHeaders().getContentType()).isNotNull();
+        assertThat(result.getHeaders().getCacheControl()).contains("private", "no-store");
+        assertThat(result.getHeaders().getContentType()).isEqualTo(org.springframework.http.MediaType.IMAGE_JPEG);
+        var out = new java.io.ByteArrayOutputStream();
+        ((StreamingResponseBody) result.getBody()).writeTo(out);
+        assertThat(out.toString(StandardCharsets.UTF_8)).isEqualTo("image");
+        verifyNoInteractions(imageStorage);
     }
 
     @Test
-    void getImage_pathTraversalBlocked() throws Exception {
-        when(imageStorage.size(any(PathDO.class)))
-                .thenThrow(new InvalidImagePathException("filename 包含非法路径字符"));
-
-        ResponseEntity<?> result = imageController.getImage(
-                "00789508", "605746", "25.03.15", "../../etc/passwd");
-
-        assertThat(result.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
+    void getImage_pathTraversalBlocked() {
+        var mapper = org.mockito.Mockito.mock(com.zjcxph.imgapi.mapper.ImageContentMapper.class);
+        var service = new com.zjcxph.imgapi.service.impl.ImageContentServiceImpl(mapper, imageStorage);
+        var controller = new ImageController(scanService, archiveExportService, service, imageUrlService, archiveAccessService);
+        assertThat(controller.getImage("00789508", "605746", "25.03.15", "../../etc/passwd").getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
+        assertThat(controller.getImage(null, "605746", "25.03.15", "test.jpg").getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
+        assertThat(controller.getImage("00789508", "605746", "12.3", "test.jpg").getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
+        assertThat(controller.getImage("10000000", "605746", "25.03.15", "test.jpg").getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
+        verifyNoInteractions(mapper, imageStorage);
     }
 
     @Test
-    void getImage_nullParameterBlocked() throws Exception {
-        when(imageStorage.size(any(PathDO.class)))
-                .thenThrow(new InvalidImagePathException("bah 不能为空"));
-
-        ResponseEntity<?> result = imageController.getImage(
-                null, "605746", "25.03.15", "test.jpg");
-
-        assertThat(result.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
-    }
-
-    @Test
-    void getImage_shortFolderBlocked() throws Exception {
-        when(imageStorage.size(any(PathDO.class)))
-                .thenThrow(new InvalidImagePathException("folder 长度不足 5 位"));
-
-        ResponseEntity<?> result = imageController.getImage(
-                "00789508", "605746", "12.3", "test.jpg");
-
-        assertThat(result.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
-    }
-
-    @Test
-    void getImage_notFound() throws Exception {
-        when(imageStorage.size(any(PathDO.class)))
-                .thenThrow(new FileNotFoundException("missing"));
-
-        ResponseEntity<?> result = imageController.getImage(
-                "00789508", "605746", "25.03.15", "notexist.jpg");
-
-        assertThat(result.getStatusCode()).isEqualTo(HttpStatus.NOT_FOUND);
+    void getImage_notFound() {
+        when(imageContentService.openLegacy("00789508", "605746", "25.03.15", "notexist.jpg"))
+                .thenThrow(new com.zjcxph.imgapi.exception.BusinessException(404, "影像不存在或已删除"));
+        assertThat(imageController.getImage("00789508", "605746", "25.03.15", "notexist.jpg").getStatusCode())
+                .isEqualTo(HttpStatus.NOT_FOUND);
     }
 
     @Test

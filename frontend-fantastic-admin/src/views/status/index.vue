@@ -23,6 +23,7 @@ defineOptions({ name: 'PublicSystemStatusPage' })
 
 const router = useRouter()
 const homeHref = router.resolve('/').href
+const demoStatus = import.meta.env.VITE_APP_MOCK === 'true' || import.meta.env.MODE === 'pages' || import.meta.env.MODE === 'mock'
 const HISTORY_DAYS = 90
 const summary = ref<SystemStatusSummary | null>(null)
 const daily = ref<DailySystemAvailability[]>([])
@@ -277,6 +278,8 @@ useVisibleInterval(refreshCurrentStatus, 60_000)
           刷新状态
         </button>
       </header>
+
+      <p v-if="demoStatus" class="inline-warning">演示数据：以下状态为合成记录，不代表实际服务健康状况。</p>
 
       <section v-if="loading" class="state-panel loading-panel" aria-busy="true">
         <span class="loading-dot" />

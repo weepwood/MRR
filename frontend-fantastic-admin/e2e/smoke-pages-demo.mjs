@@ -143,7 +143,8 @@ async function smokePagesDemo() {
     await monitorPage.getByText('mr_scan', { exact: true }).first().waitFor({ timeout: 20_000 })
 
     const statusFrame = monitorPage.locator('iframe[title="MRR 服务可用性状态"]')
-    assert.match(await statusFrame.getAttribute('src') || '', /\/MRR\/#\/status$/)
+    const frameUrl = await statusFrame.evaluate(element => element.src)
+    assert.equal(frameUrl, `${appUrl}#/status`, '状态 iframe 必须解析到 Pages 子路径')
     const status = monitorPage.frameLocator('iframe[title="MRR 服务可用性状态"]')
     await status.getByRole('heading', { name: '所有服务正常运行' }).waitFor({ timeout: 25_000 })
     assert.equal(await status.locator('.day-cell').count(), 90, '状态页须渲染90天合成记录')

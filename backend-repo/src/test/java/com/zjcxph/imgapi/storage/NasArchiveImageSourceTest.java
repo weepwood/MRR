@@ -10,6 +10,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
 import java.io.IOException;
+import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -229,6 +230,7 @@ class NasArchiveImageSourceTest {
             }
             assertThatThrownBy(() -> source.open(bad)).isInstanceOf(SourceNodeCircuit.CircuitOpen.class);
             assertThat(opens.get()).isEqualTo(3);
+            assertThat(source.runtimeSnapshot().toString()).contains("state=OPEN").doesNotContain("bad", "good");
             clock.addAndGet(Duration.ofSeconds(30).toNanos());
             // A successful metadata-only half-open probe cannot heal the body failure.
             assertThat(source.size(bad)).isEqualTo(9);
@@ -242,6 +244,50 @@ class NasArchiveImageSourceTest {
             assertThat(opens.get()).isEqualTo(5);
             try (var input = source.open(good)) { assertThat(input.read()).isEqualTo(7); }
         } finally { source.shutdown(); }
+    }
+
+    @Test
+    void oneNodeCannotConsumeAllBodyPermitsAndHealthyNodeRemainsAvailable() throws Exception {
+        var properties = new ArchiveImageSourceProperties();
+        properties.setNasMaxConcurrency(2);
+        properties.setAcquireTimeout(Duration.ofMillis(100));
+        properties.setNasOpenTimeout(Duration.ofSeconds(1));
+        properties.setNasBodyTimeout(Duration.ofMillis(100));
+        var node = new ArchiveImageSourceProperties.NasNode();
+        node.setRoot(tempDir.toString());
+        properties.setNasNodes(Map.of("bad", node, "good", node));
+        var opens = new java.util.concurrent.atomic.AtomicInteger();
+        var release = new java.util.concurrent.CountDownLatch(1);
+        var closed = new java.util.concurrent.CountDownLatch(1);
+        var source = new NasArchiveImageSource(properties) {
+            @Override InputStream openFile(PathDO image) {
+                if ("good".equals(image.getSourceNode())) return new java.io.ByteArrayInputStream(new byte[]{7});
+                opens.incrementAndGet();
+                return new InputStream() {
+                    @Override public int read() {
+                        while (release.getCount() > 0) {
+                            try { release.await(); } catch (InterruptedException ignored) {}
+                        }
+                        return 1;
+                    }
+                    @Override public void close() { closed.countDown(); }
+                };
+            }
+        };
+        var bad = new PathDO(); bad.setSourceType("NAS"); bad.setSourceNode("bad");
+        var good = new PathDO(); good.setSourceType("NAS"); good.setSourceNode("good");
+        try (var stream = source.open(bad)) {
+            assertThatThrownBy(stream::read).isInstanceOf(java.net.SocketTimeoutException.class);
+            assertThatThrownBy(() -> { try (var unexpected = source.open(bad)) {} })
+                    .isInstanceOf(SourcePermitGuard.CapacityException.class);
+            assertThat(opens.get()).isEqualTo(1);
+            assertThat(source.runtimeSnapshot().get("inUse")).isEqualTo(1);
+            assertThat(source.runtimeSnapshot().toString()).contains("ordinal=1").doesNotContain("bad", "good", tempDir.toString());
+            try (var healthy = source.open(good)) { assertThat(healthy.read()).isEqualTo(7); }
+            release.countDown();
+            assertThat(closed.await(2, java.util.concurrent.TimeUnit.SECONDS)).isTrue();
+            try (var recovered = source.open(bad)) { assertThat(recovered.read()).isEqualTo(1); }
+        } finally { release.countDown(); source.shutdown(); }
     }
 
     @Test

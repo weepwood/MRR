@@ -123,7 +123,6 @@ test('维护模式确认保留非空校验，按 Esc 退出确认不发送写请
   expect(disables).toBe(1)
 })
 
-
 test('shows configured delivery mode and read-only partition status, labels stale on failure', async ({ page }) => {
   await page.route(overviewUrl, route => route.fulfill({
     json: { code: 200, data: { ...snapshot('READ_WRITE'), imageDeliveryMode: 'gateway' } },
@@ -137,8 +136,13 @@ test('shows configured delivery mode and read-only partition status, labels stal
       return
     }
     await route.fulfill({ json: { code: 200, data: {
-      phase: 'COPYING', partitionCount: 4, rowsCopied: 1200, copyLag: 42,
-      copyEnabled: false, defaultPartitionHasRows: true, legacyTablePresent: false,
+      phase: 'COPYING',
+      partitionCount: 4,
+      rowsCopied: 1200,
+      copyLag: 42,
+      copyEnabled: false,
+      defaultPartitionHasRows: true,
+      legacyTablePresent: false,
       updatedAt: snapshotTime,
     } } })
   })
@@ -155,4 +159,15 @@ test('shows configured delivery mode and read-only partition status, labels stal
   await expect(card.getByText('刷新失败，以下为上次分区状态')).toBeVisible()
   await expect(card.getByText('1,200', { exact: true })).toBeVisible()
   await expect(card.getByRole('button', { name: /切换|回退|启动复制|放弃/ })).toHaveCount(0)
+})
+
+test('NAS 节点熔断和实际许可状态可见但不显示源地址', async ({ page }) => {
+  const data = { ...snapshot('READ_WRITE'), nasRuntime: { inUse: 1, limit: 2, nodes: [{ ordinal: 1, state: 'OPEN', inUse: 1, limit: 1 }, { ordinal: 2, state: 'HALF_OPEN_ACTIVE', inUse: 0, limit: 1 }] } }
+  await page.route(overviewUrl, route => route.fulfill({ json: { code: 200, data } }))
+  await page.goto('/operations-center')
+  const dashboard = page.locator('.overview-dashboard')
+  await expect(dashboard.getByText('NAS 节点运行状态', { exact: true })).toBeVisible()
+  await expect(dashboard.getByText('全局许可 1 / 2')).toBeVisible()
+  await expect(dashboard.getByText('熔断冷却')).toBeVisible()
+  await expect(dashboard.getByText('探针进行中')).toBeVisible()
 })

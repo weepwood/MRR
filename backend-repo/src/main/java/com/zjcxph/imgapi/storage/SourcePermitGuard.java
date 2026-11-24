@@ -21,10 +21,12 @@ final class SourcePermitGuard {
     }
 
     private final Semaphore semaphore;
+    private final int limit;
     private final Duration timeout;
 
     SourcePermitGuard(int maxConcurrency, Duration timeout) {
-        this.semaphore = new Semaphore(Math.max(1, maxConcurrency), true);
+        this.limit = Math.max(1, maxConcurrency);
+        this.semaphore = new Semaphore(limit, true);
         this.timeout = timeout == null || timeout.isNegative() || timeout.isZero()
                 ? Duration.ofSeconds(30)
                 : timeout;
@@ -75,6 +77,9 @@ final class SourcePermitGuard {
             semaphore.release();
         }
     }
+
+    int limit() { return limit; }
+    int inUse() { return limit - semaphore.availablePermits(); }
 
     static final class CapacityException extends IOException {
         CapacityException() {

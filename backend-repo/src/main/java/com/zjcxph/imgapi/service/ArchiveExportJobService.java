@@ -212,6 +212,11 @@ public class ArchiveExportJobService {
         return file;
     }
 
+    public ArchiveExportTempFileManager.DownloadLease openDownload(AuthSession session, String id) throws IOException {
+        Path file = requireDownloadFile(session, id);
+        return tempFileManager.openDownload(file.toString(), session.getId());
+    }
+
     public ArchiveExportJob requireOwned(AuthSession session, String id) {
         requireSession(session);
         ArchiveExportJob job = repository.findById(id)

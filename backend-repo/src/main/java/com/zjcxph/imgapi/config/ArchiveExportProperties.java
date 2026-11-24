@@ -17,6 +17,8 @@ public class ArchiveExportProperties {
     private Duration retention = Duration.ofHours(24);
     private Duration cleanupInterval = Duration.ofMinutes(15);
     private Duration recoveryInterval = Duration.ofSeconds(1);
+    private int maxConcurrentDownloads = 8;
+    private int maxConcurrentDownloadsPerUser = 2;
     private int workerCoreSize = 1;
     private int workerMaxSize = 2;
     private int workerQueueCapacity = 20;

@@ -33,6 +33,9 @@ public class ArchiveExportTempFileManager {
     private final AtomicLong cleanupFailures = new AtomicLong();
     private final ArchiveExportProperties properties;
     private final Map<String, Long> reservations = new HashMap<>();
+    private final Map<Path, Integer> activeDownloads = new HashMap<>();
+    private final Map<Long, Integer> userDownloads = new HashMap<>();
+    private int downloadCount;
     private Path root;
 
     public ArchiveExportTempFileManager(ArchiveExportProperties properties) {
@@ -54,6 +57,10 @@ public class ArchiveExportTempFileManager {
         if (properties.getMaxFileBytes() <= 0 || properties.getMaxTotalBytes() <= 0
                 || properties.getMaxFileBytes() > properties.getMaxTotalBytes()) {
             throw new IOException("导出临时文件配额配置不正确");
+        }
+        if (properties.getMaxConcurrentDownloads() <= 0 || properties.getMaxConcurrentDownloadsPerUser() <= 0
+                || properties.getMaxConcurrentDownloadsPerUser() > properties.getMaxConcurrentDownloads()) {
+            throw new IOException("导出并发下载配额配置不正确");
         }
         Path configuredRoot = Path.of(properties.getTempDirectory()).toAbsolutePath().normalize();
         Files.createDirectories(configuredRoot);
@@ -117,13 +124,70 @@ public class ArchiveExportTempFileManager {
         return realPath;
     }
 
-    public boolean deleteManagedFile(String filePath) {
+    public synchronized DownloadLease openDownload(String filePath, long userId) throws IOException {
+        if (downloadCount >= properties.getMaxConcurrentDownloads()
+                || userDownloads.getOrDefault(userId, 0) >= properties.getMaxConcurrentDownloadsPerUser()) {
+            throw new BusinessException(429, "导出并发下载数量已达上限，请稍后重试");
+        }
+        Path path = requireManagedFile(filePath);
+        if (!root.equals(path.getParent())) throw new IOException("导出文件不在受控目录");
+        var channel = java.nio.channels.FileChannel.open(path, StandardOpenOption.READ, LinkOption.NOFOLLOW_LINKS);
+        try {
+            long length = channel.size();
+            if (length > properties.getMaxFileBytes()) {
+                throw new BusinessException(413, "导出文件超过当前单文件配额，请减少选页并分批导出");
+            }
+            activeDownloads.merge(path, 1, Integer::sum);
+            userDownloads.merge(userId, 1, Integer::sum);
+            downloadCount++;
+            return new DownloadLease(path, userId, channel, length);
+        } catch (IOException | RuntimeException failure) {
+            try { channel.close(); } catch (IOException closeFailure) { failure.addSuppressed(closeFailure); }
+            throw failure;
+        }
+    }
+
+    private synchronized void releaseDownload(Path path, long userId) {
+        activeDownloads.computeIfPresent(path, (key, count) -> count == 1 ? null : count - 1);
+        userDownloads.computeIfPresent(userId, (key, count) -> count == 1 ? null : count - 1);
+        downloadCount--;
+    }
+
+    public final class DownloadLease implements AutoCloseable {
+        private final Path path;
+        private final long userId;
+        private final java.nio.channels.FileChannel channel;
+        private final long length;
+        private final java.util.concurrent.atomic.AtomicBoolean closed = new java.util.concurrent.atomic.AtomicBoolean();
+
+        private DownloadLease(Path path, long userId, java.nio.channels.FileChannel channel, long length) {
+            this.path = path;
+            this.userId = userId;
+            this.channel = channel;
+            this.length = length;
+        }
+
+        public long length() { return length; }
+        public void seek(long offset) throws IOException { channel.position(offset); }
+        public int read(byte[] buffer, int offset, int count) throws IOException {
+            return channel.read(java.nio.ByteBuffer.wrap(buffer, offset, count));
+        }
+
+        @Override public void close() throws IOException {
+            if (!closed.compareAndSet(false, true)) return;
+            try { channel.close(); }
+            finally { releaseDownload(path, userId); }
+        }
+    }
+
+    public synchronized boolean deleteManagedFile(String filePath) {
         if (filePath == null || filePath.isBlank()) {
             return true;
         }
         try {
             Path path = Path.of(filePath).toAbsolutePath().normalize();
             if (root.equals(path.getParent()) && !Files.isSymbolicLink(path)) {
+                if (activeDownloads.containsKey(path)) return false;
                 Files.deleteIfExists(path);
                 return true;
             }

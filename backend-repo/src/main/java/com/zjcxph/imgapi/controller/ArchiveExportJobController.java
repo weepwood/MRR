@@ -32,11 +32,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.servlet.mvc.method.annotation.StreamingResponseBody;
 
-import java.io.InputStream;
-import java.io.RandomAccessFile;
 import java.nio.charset.StandardCharsets;
-import java.nio.file.Files;
-import java.nio.file.Path;
 import java.util.Locale;
 
 @RestController
@@ -113,80 +109,58 @@ public class ArchiveExportJobController {
         AuthSession session = session(request);
         ArchiveExportJob job = jobService.requireOwned(session, id);
         requireJobPermission(session, job);
-        Path file = jobService.requireDownloadFile(session, id);
-        long total = Files.size(file);
         MediaType contentType = "PDF".equals(job.getFormat())
-                ? MediaType.APPLICATION_PDF
-                : MediaType.APPLICATION_OCTET_STREAM;
+                ? MediaType.APPLICATION_PDF : MediaType.APPLICATION_OCTET_STREAM;
         String disposition = ContentDisposition.attachment()
-                .filename(job.getFileName(), StandardCharsets.UTF_8)
-                .build()
-                .toString();
+                .filename(job.getFileName(), StandardCharsets.UTF_8).build().toString();
         String etag = job.getSha256() == null || job.getSha256().isBlank()
-                ? null
-                : "\"" + job.getSha256() + "\"";
-
+                ? null : "\"" + job.getSha256() + "\"";
         String ifRange = request.getHeader(HttpHeaders.IF_RANGE);
-        // Export files are immutable once published. Only a matching strong validator
-        // permits a partial response; date/weak/unrecognized validators use full 200.
-        if (ifRange != null && (etag == null || !etag.equals(ifRange.trim()))) {
-            rangeHeader = null;
-        }
-        if (rangeHeader == null || rangeHeader.isBlank()) {
-            recordDownloadIfWritable(id);
+        if (ifRange != null && (etag == null || !etag.equals(ifRange.trim()))) rangeHeader = null;
+
+        var lease = jobService.openDownload(session, id);
+        boolean handedOff = false;
+        try {
+            long total = lease.length();
+            HttpByteRange range = null;
+            if (rangeHeader != null && !rangeHeader.isBlank()) {
+                try {
+                    range = HttpByteRange.parse(rangeHeader, total);
+                } catch (IllegalArgumentException exception) {
+                    return ResponseEntity.status(HttpStatus.REQUESTED_RANGE_NOT_SATISFIABLE)
+                            .header(HttpHeaders.ACCEPT_RANGES, "bytes")
+                            .header(HttpHeaders.CACHE_CONTROL, PRIVATE_NO_STORE)
+                            .header(HttpHeaders.CONTENT_RANGE, "bytes */" + total)
+                            .<StreamingResponseBody>build();
+                }
+            }
+            long offset = range == null ? 0 : range.start();
+            long length = range == null ? total : range.length();
             StreamingResponseBody body = output -> {
-                try (InputStream input = Files.newInputStream(file)) {
+                try (lease) {
+                    lease.seek(offset);
                     byte[] buffer = new byte[BUFFER_SIZE];
-                    long remaining = total;
+                    long remaining = length;
                     while (remaining > 0) {
-                        int read = input.read(buffer, 0, (int) Math.min(buffer.length, remaining));
+                        int read = lease.read(buffer, 0, (int) Math.min(buffer.length, remaining));
                         if (read < 0) throw new java.io.EOFException("Export file changed during transfer");
                         output.write(buffer, 0, read);
                         remaining -= read;
                     }
                 }
             };
-            ResponseEntity.BodyBuilder builder = baseHeaders(
-                    ResponseEntity.ok(), disposition, job, etag);
-            return builder.contentType(contentType)
-                    .contentLength(total)
-                    .body(body);
+            var builder = baseHeaders(range == null ? ResponseEntity.ok()
+                    : ResponseEntity.status(HttpStatus.PARTIAL_CONTENT), disposition, job, etag);
+            if (range != null) builder.header(HttpHeaders.CONTENT_RANGE,
+                    "bytes " + range.start() + "-" + range.end() + "/" + total);
+            recordDownloadIfWritable(id);
+            var response = builder.contentType(contentType).contentLength(length)
+                    .body(PendingImageStream.wrap(request, lease, body, () -> {}));
+            handedOff = true;
+            return response;
+        } finally {
+            if (!handedOff) lease.close();
         }
-
-        final HttpByteRange range;
-        try {
-            range = HttpByteRange.parse(rangeHeader, total);
-        } catch (IllegalArgumentException exception) {
-            return ResponseEntity.status(HttpStatus.REQUESTED_RANGE_NOT_SATISFIABLE)
-                    .header(HttpHeaders.ACCEPT_RANGES, "bytes")
-                    .header(HttpHeaders.CACHE_CONTROL, PRIVATE_NO_STORE)
-                    .header(HttpHeaders.CONTENT_RANGE, "bytes */" + total)
-                    .<StreamingResponseBody>build();
-        }
-
-        recordDownloadIfWritable(id);
-        StreamingResponseBody body = output -> {
-            try (RandomAccessFile input = new RandomAccessFile(file.toFile(), "r")) {
-                input.seek(range.start());
-                byte[] buffer = new byte[BUFFER_SIZE];
-                long remaining = range.length();
-                while (remaining > 0) {
-                    int read = input.read(buffer, 0, (int) Math.min(buffer.length, remaining));
-                    if (read < 0) {
-                        throw new java.io.EOFException("Export file changed during transfer");
-                    }
-                    output.write(buffer, 0, read);
-                    remaining -= read;
-                }
-            }
-        };
-        ResponseEntity.BodyBuilder builder = baseHeaders(
-                ResponseEntity.status(HttpStatus.PARTIAL_CONTENT), disposition, job, etag)
-                .header(HttpHeaders.CONTENT_RANGE,
-                        "bytes " + range.start() + "-" + range.end() + "/" + total);
-        return builder.contentType(contentType)
-                .contentLength(range.length())
-                .body(body);
     }
 
     private void recordDownloadIfWritable(String id) {

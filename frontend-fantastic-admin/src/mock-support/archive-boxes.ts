@@ -1,5 +1,5 @@
 import type { MockScanRecord } from './records'
-import type { ArchiveBoxGroup, ArchiveBoxRecord, ArchiveBoxRecordPayload, ArchiveBoxStatus } from '@/api/modules/archive-boxes'
+import type { ArchiveBoxGroup, ArchiveBoxRecord, ArchiveBoxStatus } from '@/api/modules/archive-boxes'
 
 const statuses: ArchiveBoxStatus[] = ['NORMAL', 'MISSING', 'MISPLACED', 'CONFLICT', 'OTHER']
 
@@ -63,7 +63,8 @@ export function createArchiveBoxStore(scans: readonly MockScanRecord[]) {
     return [...grouped.values()].sort((a, b) => a.boxNo.localeCompare(b.boxNo))
   }
 
-  function save(payload: ArchiveBoxRecordPayload, id?: number) {
+  function save(payload: Record<string, unknown>, id?: number) {
+    if (!payload || typeof payload !== 'object' || Array.isArray(payload)) { throw new Error('装箱记录不能为空') }
     const current = id === undefined ? undefined : records.find(row => row.id === id)
     if (id !== undefined && !current) { throw new Error('未找到装箱记录') }
     const bah = code(payload?.bah)

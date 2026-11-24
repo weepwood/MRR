@@ -152,9 +152,20 @@ def main():
             for name, query in cases.items():
                 for sample in ("first", "repeat"):
                     key = f"{phase}-{name}-{sample}"
-                    result = run([*psql, "-At", "-c",
-                        "BEGIN READ ONLY; SET LOCAL statement_timeout='5s'; SET LOCAL lock_timeout='1s'; "
-                        "EXPLAIN (ANALYZE,BUFFERS,SETTINGS,FORMAT JSON) " + query + "; ROLLBACK;"])
+                    log = key + ".log"
+                    try:
+                        result = run([*psql, "-At", "-c",
+                            "BEGIN READ ONLY; SET LOCAL statement_timeout='5s'; SET LOCAL lock_timeout='1s'; "
+                            "EXPLAIN (ANALYZE,BUFFERS,SETTINGS,FORMAT JSON) " + query + "; ROLLBACK;"], log=log)
+                    except RuntimeError:
+                        # Only the explicitly optional compatibility COUNT can be recorded as timed out.
+                        # Keep the budget, never reinterpret a failed query as a zero-row result.
+                        evidence = (lab / log).read_text() if (lab / log).exists() else ""
+                        if name != "legacy_count" or "canceling statement due to statement timeout" not in evidence:
+                            raise
+                        report["plans"][key] = {"status": "statement_timeout", "budget_ms": 5000}
+                        report.setdefault("legacy_timeouts", []).append(key)
+                        break
                     # -q suppresses transaction status lines, so isolate the JSON array.
                     plan = json.loads(result[result.index("["):result.rindex("]")+1])[0]
                     (lab / (key + ".json")).write_text(json.dumps(plan, indent=2))
@@ -221,7 +232,7 @@ def main():
                     "transactions": len(samples), "tps": float(tps[1]), "failed": 0,
                     **{f"p{p}_ms": samples[math.ceil(len(samples)*p/100)-1]/1000 for p in (50,95,99)}
                 }
-        report["status"] = "complete"
+        report["status"] = "complete_with_legacy_timeouts" if report.get("legacy_timeouts") else "complete"
     finally:
         if started or (data / "postmaster.pid").is_file():
             # Stop only the exact cluster this invocation created, including a partially failed startup.
@@ -237,7 +248,7 @@ def main():
             pwfile.unlink()
         (lab / "report.json").write_text(json.dumps(report, indent=2))
         print(json.dumps(report, indent=2), flush=True)
-    if report["status"] != "complete":
+    if report["status"] not in ("complete", "complete_with_legacy_timeouts"):
         raise RuntimeError("lab did not complete cleanly")
 
 

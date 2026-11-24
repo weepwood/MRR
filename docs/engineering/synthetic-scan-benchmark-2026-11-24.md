@@ -46,3 +46,9 @@ python3 scripts/benchmark_synthetic_scan.py --pg-bin /opt/homebrew/opt/postgresq
 | 8 | 230263 | 46051.58 | 0.107 | 0.315 | 0.981 | 0 |
 
 实际1000万尝试（100000/批，--max-seconds 360，--multikey --sample-seconds 10），PG16.16独立集群 mrr-scan-lab-cpyqt5ff；报告 status=incomplete、seeded_rows=7900000、plans={}、server_stopped=true；pg_ctl status确认未运行。最后确认批次790万，下一批超时，不声称精确最终行数或千万行验收。未运行该规模索引/计划/多键测试，3000万未启动。磁盘余量444GiB，未触碰保留阈值；实验停止、目录和证据保留。下一轮按实际造数速率为1000万预留更长独立执行窗口，完成后再评估3000万；不减少真实schema/约束、不放宽生产门禁。百万级历史证据与本轮10万多键冒烟独立成立。
+
+## 1000万第二次实测（2026-11-25）
+
+PG16.16，独立集群 mrr-scan-lab-jp9vfwfe，原脚本900秒总预算、10万/批、--multikey --sample-seconds 15。实际10000000扫描/100000主档，写入372.8秒，COUNT确认，ANALYZE完成；扫描表及已有索引5919105024字节。实际索引构建前查询（执行时间，不含规划）：archive 0.587/0.038ms（99条，10共享块）；BAH游标4.202/1.747ms（51条，112块）；SJH游标2.022/2.010ms（51条，122块）。兼容模糊COUNT实际5秒statement_timeout，服务日志确认 canceling statement due to statement timeout；脚本原先中断，报告incomplete、server_stopped=true，pg_ctl status确认停止。索引构建、同页及多键在这个规模未执行，3000万未启动。
+
+后续工具仅允许可选兼容COUNT的明确语句超时记录为 statement_timeout（5秒），保留失败日志，继续独立精确查询及索引；其他错误立即失败，报告 complete_with_legacy_timeouts 与 complete 区别。不得据此声称千万级完整验收；需重新运行并保留超时证据。未修改生产查询、索引、语句预算或Flyway。

@@ -4,6 +4,7 @@ import org.springframework.http.MediaType;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.time.Duration;
 
 public interface ImageContentService {
 
@@ -20,11 +21,17 @@ public interface ImageContentService {
             String filename,
             MediaType mediaType,
             Long contentLength,
-            String auditTarget
+            String auditTarget,
+            Duration transferBudget
     ) implements AutoCloseable {
 
         public ImageContent(InputStream inputStream, String filename, MediaType mediaType, Long contentLength) {
             this(inputStream, filename, mediaType, contentLength, null);
+        }
+
+        public ImageContent(InputStream inputStream, String filename, MediaType mediaType, Long contentLength,
+                            String auditTarget) {
+            this(inputStream, filename, mediaType, contentLength, auditTarget, Duration.ofSeconds(120));
         }
 
         @Override

@@ -1,6 +1,8 @@
 package com.zjcxph.imgapi.service.impl;
 
+import com.zjcxph.imgapi.config.CacheConfig;
 import com.zjcxph.imgapi.dto.req.MigrationJobRequest;
+import com.zjcxph.imgapi.dto.resp.ArchiveLookupResult;
 import com.zjcxph.imgapi.dto.resp.MigrationReadinessDTO;
 import com.zjcxph.imgapi.dto.resp.MigrationStatisticsDTO;
 import com.zjcxph.imgapi.dto.resp.OssUploadResult;
@@ -20,6 +22,9 @@ import jakarta.annotation.PostConstruct;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.cache.Cache;
+import org.springframework.cache.CacheManager;
+import org.springframework.cache.caffeine.CaffeineCache;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -35,6 +40,7 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.Executor;
 import java.util.concurrent.RejectedExecutionException;
@@ -63,6 +69,7 @@ public class MigrationServiceImpl implements MigrationService {
     private final MigrationJobMapper migrationJobMapper;
     private final MigrationSourceResolver sourceResolver;
     private final Executor migrationTaskExecutor;
+    private final CacheManager cacheManager;
 
     private final Object statisticsCacheLock = new Object();
     private final Object folderCacheLock = new Object();
@@ -81,13 +88,15 @@ public class MigrationServiceImpl implements MigrationService {
                                 ImageMigrationLogMapper migrationLogMapper,
                                 MigrationJobMapper migrationJobMapper,
                                 MigrationSourceResolver sourceResolver,
-                                @Qualifier("migrationTaskExecutor") Executor migrationTaskExecutor) {
+                                @Qualifier("migrationTaskExecutor") Executor migrationTaskExecutor,
+                                CacheManager cacheManager) {
         this.ossService = ossService;
         this.scanMapper = scanMapper;
         this.migrationLogMapper = migrationLogMapper;
         this.migrationJobMapper = migrationJobMapper;
         this.sourceResolver = sourceResolver;
         this.migrationTaskExecutor = migrationTaskExecutor;
+        this.cacheManager = cacheManager;
     }
 
     @PostConstruct
@@ -189,7 +198,10 @@ public class MigrationServiceImpl implements MigrationService {
                 ossService.uploadFile(sourcePath, ossKey, md5);
             }
 
-            scanMapper.updateOssInfo(scanId, ossKey, fileSize, md5, "migrated");
+            int updated = scanMapper.updateOssInfo(scanId, ossKey, fileSize, md5, "migrated");
+            if (updated > 0) {
+                invalidateScanSourceCachesAfterCommit(scanId, scan.getArchiveId());
+            }
             logMigration(scanId, sourceDescription, ossKey, "success", null, fileSize, md5);
 
             OssUploadResult result = new OssUploadResult();
@@ -918,6 +930,57 @@ public class MigrationServiceImpl implements MigrationService {
         }
         String message = error.getMessage().trim();
         return message.length() > 1000 ? message.substring(0, 1000) : message;
+    }
+
+    private void invalidateScanSourceCachesAfterCommit(Integer scanId, Long archiveId) {
+        if (TransactionSynchronizationManager.isSynchronizationActive()) {
+            TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+                @Override
+                public void afterCommit() {
+                    invalidateScanSourceCaches(scanId, archiveId);
+                }
+            });
+        } else {
+            invalidateScanSourceCaches(scanId, archiveId);
+        }
+    }
+
+    private void invalidateScanSourceCaches(Integer scanId, Long archiveId) {
+        // Migration bypasses ScanServiceImpl's cache eviction annotations.
+        // Inspect the existing bounded caches by their actual result rather than
+        // guessing the raw/normalized BAH/SJH aliases used to query an archive.
+        for (String name : CacheConfig.SCAN_QUERY_CACHES) {
+            Cache cache = cacheManager.getCache(name);
+            if (cache == null) continue;
+            if (CacheConfig.SCAN_BY_ID.equals(name)) {
+                cache.evict(scanId);
+            } else if (cache instanceof CaffeineCache caffeine) {
+                var entries = caffeine.getNativeCache().asMap();
+                entries.forEach((key, value) -> {
+                    if (containsMigratedScan(value, scanId, archiveId)) {
+                        entries.remove(key, value);
+                    }
+                });
+            } else {
+                // A different provider has no portable entry enumeration.
+                cache.clear();
+            }
+        }
+    }
+
+    private boolean containsMigratedScan(Object value, Integer scanId, Long archiveId) {
+        List<?> scans;
+        if (value instanceof ArchiveLookupResult lookup) {
+            if (archiveId != null && Objects.equals(archiveId, lookup.archiveId())) return true;
+            scans = lookup.scans();
+        } else if (value instanceof List<?> list) {
+            scans = list;
+        } else {
+            return false;
+        }
+        return scans.stream().anyMatch(item -> item instanceof Scan cached
+                && (Objects.equals(scanId, cached.getId())
+                    || (archiveId != null && Objects.equals(archiveId, cached.getArchiveId()))));
     }
 
     private void invalidateSummaryCaches() {

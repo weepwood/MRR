@@ -1,6 +1,10 @@
 package com.zjcxph.imgapi.unit.service;
 
+import com.github.benmanes.caffeine.cache.Caffeine;
+import com.zjcxph.imgapi.config.CacheConfig;
+import com.zjcxph.imgapi.config.GenerationAwareScanCache;
 import com.zjcxph.imgapi.dto.req.MigrationJobRequest;
+import com.zjcxph.imgapi.dto.resp.ArchiveLookupResult;
 import com.zjcxph.imgapi.dto.resp.MigrationReadinessDTO;
 import com.zjcxph.imgapi.dto.resp.MigrationStatisticsDTO;
 import com.zjcxph.imgapi.dto.resp.OssUploadResult;
@@ -20,6 +24,9 @@ import org.junit.jupiter.api.io.TempDir;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.cache.CacheManager;
+import org.springframework.cache.Cache;
+import org.springframework.cache.caffeine.CaffeineCache;
 
 import java.io.FileNotFoundException;
 import java.math.BigDecimal;
@@ -51,6 +58,7 @@ import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -69,6 +77,9 @@ class MigrationServiceImplTest {
     private MigrationSourceResolver sourceResolver;
     @Mock
     private Executor migrationTaskExecutor;
+
+    @Mock
+    private CacheManager cacheManager;
 
     @InjectMocks
     private MigrationServiceImpl migrationService;
@@ -331,6 +342,165 @@ class MigrationServiceImplTest {
     }
 
     @Test
+    void successfulMigrationInvalidatesAllAffectedCacheAliasesOnlyAfterCommit() throws Exception {
+        Scan scan = legacyScan(3, "00789510", "605748", null);
+        scan.setArchiveId(42L);
+        Scan other = legacyScan(8, "00789518", "605749", "12345679");
+        other.setArchiveId(43L);
+        Map<String, GenerationAwareScanCache> caches = new HashMap<>();
+        Map<String, Cache> pendingLookups = new HashMap<>();
+        for (String name : CacheConfig.SCAN_QUERY_CACHES) {
+            GenerationAwareScanCache cache = new GenerationAwareScanCache(name, Caffeine.newBuilder().maximumSize(1000).build());
+            pendingLookups.put(name, cache.lookupView());
+            caches.put(name, cache);
+            when(cacheManager.getCache(name)).thenReturn(cache);
+            if (name.equals(CacheConfig.SCAN_BY_ID)) {
+                cache.put(3, scan);
+                cache.put(8, other);
+            } else {
+                Object affected = name.startsWith("scanLookup")
+                        ? ArchiveLookupResult.fastPath(List.of(scan), ArchiveLookupResult.Strategy.ARCHIVE_ID_EXACT, 42L)
+                        : List.of(scan);
+                Object unaffected = name.startsWith("scanLookup")
+                        ? ArchiveLookupResult.fastPath(List.of(other), ArchiveLookupResult.Strategy.ARCHIVE_ID_EXACT, 43L)
+                        : List.of(other);
+                cache.put("00789510:789510", affected);
+                cache.put("789510:789510", affected);
+                cache.put("unrelated", unaffected);
+            }
+        }
+        Path file = createFile("3.jpg", new byte[]{7, 8, 9});
+        when(scanMapper.findById(3)).thenReturn(scan);
+        when(sourceResolver.resolve(scan)).thenReturn(resolved(file));
+        when(ossService.calculateMd5(file.toString())).thenReturn("0123456789abcdef0123456789abcdef");
+        when(ossService.getFileSize(file.toString())).thenReturn(3L);
+        when(scanMapper.updateOssInfo(eq(3), anyString(), eq(3L), anyString(), eq("migrated"))).thenReturn(1);
+
+        TransactionSynchronizationManager.initSynchronization();
+        try {
+            assertThat(migrationService.uploadSingleScan(3).getStatus()).isEqualTo("success");
+            assertThat(caches.get(CacheConfig.SCAN_BY_ID).get(3)).isNotNull();
+            assertThat(caches.get(CacheConfig.SCAN_LOOKUP_BY_CODE).get("00789510:789510")).isNotNull();
+            TransactionSynchronizationManager.getSynchronizations().forEach(TransactionSynchronization::afterCommit);
+        } finally {
+            TransactionSynchronizationManager.clearSynchronization();
+        }
+        for (String name : CacheConfig.SCAN_QUERY_CACHES) {
+            GenerationAwareScanCache cache = caches.get(name);
+            Object key = name.equals(CacheConfig.SCAN_BY_ID) ? 3 : "00789510:789510";
+            Scan fresh = legacyScan(3, "00789510", "605748", null);
+            fresh.setArchiveId(42L);
+            fresh.setOssUrl("synthetic-object");
+            Object staleValue = name.equals(CacheConfig.SCAN_BY_ID) ? scan
+                    : name.startsWith("scanLookup") ? ArchiveLookupResult.fastPath(List.of(scan), ArchiveLookupResult.Strategy.ARCHIVE_ID_EXACT, 42L)
+                    : List.of(scan);
+            Object freshValue = name.equals(CacheConfig.SCAN_BY_ID) ? fresh
+                    : name.startsWith("scanLookup") ? ArchiveLookupResult.fastPath(List.of(fresh), ArchiveLookupResult.Strategy.ARCHIVE_ID_EXACT, 42L)
+                    : List.of(fresh);
+            assertThat(cache.get(key)).isNull();
+            // A pre-commit query cannot populate an empty key, or replace a fresh value.
+            pendingLookups.get(name).put(key, staleValue);
+            assertThat(cache.get(key)).isNull();
+            cache.lookupView().put(key, freshValue);
+            pendingLookups.get(name).put(key, staleValue);
+            assertThat(cache.get(key).get()).isSameAs(freshValue);
+            if (name.equals(CacheConfig.SCAN_BY_ID)) {
+                assertThat(cache.get(8)).isNotNull();
+            } else {
+                assertThat(cache.get("789510:789510")).isNull();
+                assertThat(cache.get("unrelated")).isNotNull();
+            }
+        }
+        verify(cacheManager, never()).getCache("ossSignedUrl");
+    }
+
+    @Test
+    void successfulMigrationWithoutTransactionInvalidatesSingleRecordImmediately() throws Exception {
+        Scan scan = legacyScan(3, "00789510", "605748", null);
+        CaffeineCache cache = new CaffeineCache(CacheConfig.SCAN_BY_ID, Caffeine.newBuilder().build());
+        cache.put(3, scan);
+        when(cacheManager.getCache(anyString())).thenAnswer(invocation ->
+                Map.of(CacheConfig.SCAN_BY_ID, cache).get(invocation.getArgument(0, String.class)));
+        Path file = createFile("3.jpg", new byte[]{7, 8, 9});
+        when(scanMapper.findById(3)).thenReturn(scan);
+        when(sourceResolver.resolve(scan)).thenReturn(resolved(file));
+        when(ossService.calculateMd5(file.toString())).thenReturn("0123456789abcdef0123456789abcdef");
+        when(ossService.getFileSize(file.toString())).thenReturn(3L);
+        when(scanMapper.updateOssInfo(eq(3), anyString(), eq(3L), anyString(), eq("migrated"))).thenReturn(1);
+        assertThat(migrationService.uploadSingleScan(3).getStatus()).isEqualTo("success");
+        assertThat(cache.get(3)).isNull();
+    }
+
+    @Test
+    void cacheFailureDoesNotRetrySuccessfulMigrationAndStillEvictsOtherCaches() throws Exception {
+        prepareSuccessfulMigration(1);
+        CaffeineCache cache = new CaffeineCache(CacheConfig.SCAN_BY_ID, Caffeine.newBuilder().build());
+        cache.put(3, legacyScan(3, "00789510", "605748", null));
+        when(cacheManager.getCache(anyString())).thenAnswer(invocation -> {
+            String name = invocation.getArgument(0);
+            if (CacheConfig.SCAN_BY_BAH.equals(name)) throw new IllegalStateException("cache unavailable");
+            return CacheConfig.SCAN_BY_ID.equals(name) ? cache : null;
+        });
+
+        assertThat(migrationService.uploadSingleScan(3).getStatus()).isEqualTo("success");
+        assertThat(cache.get(3)).isNull();
+        verify(scanMapper, never()).markMigrationRetryWait(eq(3), anyString(), any());
+    }
+
+    @Test
+    void afterCommitCacheFailureDoesNotEscapeCallbackOrStopOtherEvictions() throws Exception {
+        prepareSuccessfulMigration(1);
+        CaffeineCache cache = new CaffeineCache(CacheConfig.SCAN_BY_ID, Caffeine.newBuilder().build());
+        cache.put(3, legacyScan(3, "00789510", "605748", null));
+        when(cacheManager.getCache(anyString())).thenAnswer(invocation -> {
+            String name = invocation.getArgument(0);
+            if (CacheConfig.SCAN_BY_BAH.equals(name)) throw new IllegalStateException("cache unavailable");
+            return CacheConfig.SCAN_BY_ID.equals(name) ? cache : null;
+        });
+        TransactionSynchronizationManager.initSynchronization();
+        try {
+            assertThat(migrationService.uploadSingleScan(3).getStatus()).isEqualTo("success");
+            assertThat(cache.get(3)).isNotNull();
+            TransactionSynchronizationManager.getSynchronizations().forEach(TransactionSynchronization::afterCommit);
+            assertThat(cache.get(3)).isNull();
+        } finally {
+            TransactionSynchronizationManager.clearSynchronization();
+        }
+        verify(scanMapper, never()).markMigrationRetryWait(eq(3), anyString(), any());
+    }
+
+    @Test
+    void rolledBackMigrationDoesNotEvictScanCaches() throws Exception {
+        prepareSuccessfulMigration(1);
+        TransactionSynchronizationManager.initSynchronization();
+        try {
+            assertThat(migrationService.uploadSingleScan(3).getStatus()).isEqualTo("success");
+            TransactionSynchronizationManager.getSynchronizations().forEach(
+                    synchronization -> synchronization.afterCompletion(TransactionSynchronization.STATUS_ROLLED_BACK));
+        } finally {
+            TransactionSynchronizationManager.clearSynchronization();
+        }
+        verifyNoInteractions(cacheManager);
+    }
+
+    @Test
+    void unchangedMigrationRowPreservesExistingResultWithoutEviction() throws Exception {
+        prepareSuccessfulMigration(0);
+        assertThat(migrationService.uploadSingleScan(3).getStatus()).isEqualTo("success");
+        verifyNoInteractions(cacheManager);
+    }
+
+    private void prepareSuccessfulMigration(int updated) throws Exception {
+        Scan scan = legacyScan(3, "00789510", "605748", null);
+        Path file = createFile("3.jpg", new byte[]{7, 8, 9});
+        when(scanMapper.findById(3)).thenReturn(scan);
+        when(sourceResolver.resolve(scan)).thenReturn(resolved(file));
+        when(ossService.calculateMd5(file.toString())).thenReturn("0123456789abcdef0123456789abcdef");
+        when(ossService.getFileSize(file.toString())).thenReturn(3L);
+        when(scanMapper.updateOssInfo(eq(3), anyString(), eq(3L), anyString(), eq("migrated"))).thenReturn(updated);
+    }
+
+    @Test
     @DisplayName("原子领取失败时不重复读取和上传")
     void skippedWhenAtomicClaimFails() throws Exception {
         Scan scan = legacyScan(4, "00789511", "605749", null);
@@ -343,6 +513,7 @@ class MigrationServiceImplTest {
 
         assertThat(result.getStatus()).isEqualTo("skipped");
         assertThat(result.getOssUrl()).isEqualTo("medical-records/existing.jpg");
+        verifyNoInteractions(cacheManager);
         verify(sourceResolver, never()).resolve(any());
         verify(ossService, never()).uploadFile(anyString(), anyString(), anyString());
     }

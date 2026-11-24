@@ -16,6 +16,10 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Import;
 
 import java.util.List;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
+import org.springframework.cache.CacheManager;
 
 import static com.zjcxph.imgapi.dto.resp.ArchiveLookupResult.Strategy.ARCHIVE_ID_EXACT;
 import static org.assertj.core.api.Assertions.assertThat;
@@ -107,6 +111,68 @@ class ScanServiceCacheTest {
         scanService.getImageListByCode("00789508", "789508", "00000123", "123");
 
         verify(scanMapper, times(2)).findByCode("00789508", "789508", "00000123", "123");
+    }
+
+    @Test
+    void inFlightIdLookupCannotRepopulateAfterEviction() throws Exception {
+        Scan old = new Scan();
+        old.setId(1);
+        Scan fresh = new Scan();
+        fresh.setId(1);
+        fresh.setOssUrl("synthetic-object");
+        CountDownLatch started = new CountDownLatch(1);
+        CountDownLatch release = new CountDownLatch(1);
+        when(scanMapper.findById(1)).thenAnswer(invocation -> {
+            started.countDown();
+            if (!release.await(5, TimeUnit.SECONDS)) throw new AssertionError("query not released");
+            return old;
+        }).thenReturn(fresh);
+        var cache = context.getBean(CacheManager.class).getCache(CacheConfig.SCAN_BY_ID);
+        var executor = Executors.newSingleThreadExecutor();
+        try {
+            var pending = executor.submit(() -> scanService.findById(1));
+            assertThat(started.await(5, TimeUnit.SECONDS)).isTrue();
+            cache.evict(1);
+            release.countDown();
+            assertThat(pending.get(5, TimeUnit.SECONDS)).isSameAs(old);
+            assertThat(scanService.findById(1)).isSameAs(fresh);
+            assertThat(scanService.findById(1)).isSameAs(fresh);
+            verify(scanMapper, times(2)).findById(1);
+        } finally {
+            release.countDown();
+            executor.shutdownNow();
+        }
+    }
+
+    @Test
+    void inFlightArchiveLookupCannotRepopulateAfterClear() throws Exception {
+        Scan old = new Scan();
+        old.setId(1);
+        Scan fresh = new Scan();
+        fresh.setId(1);
+        fresh.setOssUrl("synthetic-object");
+        CountDownLatch started = new CountDownLatch(1);
+        CountDownLatch release = new CountDownLatch(1);
+        when(scanMapper.findByCode("1", "1", "2", "2")).thenAnswer(invocation -> {
+            started.countDown();
+            if (!release.await(5, TimeUnit.SECONDS)) throw new AssertionError("query not released");
+            return List.of(old);
+        }).thenReturn(List.of(fresh));
+        var cache = context.getBean(CacheManager.class).getCache(CacheConfig.SCAN_BY_CODE);
+        var executor = Executors.newSingleThreadExecutor();
+        try {
+            var pending = executor.submit(() -> scanService.getImageListByCode("1", "1", "2", "2"));
+            assertThat(started.await(5, TimeUnit.SECONDS)).isTrue();
+            cache.clear();
+            release.countDown();
+            assertThat(pending.get(5, TimeUnit.SECONDS)).containsExactly(old);
+            assertThat(scanService.getImageListByCode("1", "1", "2", "2")).containsExactly(fresh);
+            assertThat(scanService.getImageListByCode("1", "1", "2", "2")).containsExactly(fresh);
+            verify(scanMapper, times(2)).findByCode("1", "1", "2", "2");
+        } finally {
+            release.countDown();
+            executor.shutdownNow();
+        }
     }
 
     @Configuration

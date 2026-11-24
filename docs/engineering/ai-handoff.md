@@ -223,6 +223,17 @@
 
 - #784 已合并c3590798，head4bcc7e8d、governance45442058698、quality45442058011，scope/pr-gate通过，其他按范围跳过。
 
+## 03 兼容游标真实PG16与MVC契约（2026-11-25）
+
+- #99/#350 P2，仅补验收，分支 `test/99-legacy-cursor-http-contract`，独立worktree。真实PG16新增 legacyContains 游标锁等待取消（SQLSTATE 57014、原连接恢复），及真实Mapper+Service+Controller standalone MVC JSON契约：默认精确/显式包含、前导零、两页ID、hasMore/nextCursorId/size、无total。未修改权限规则、SQL超时、生产数据库或接口。
+- 本地复用隔离基准临时副本增加测试类选择（副本已删除），`mrr-scan-lab-fuaf38hd` 实际9单测/26 PG16零失败/错误/跳过，报告server_stopped=true，pg_ctl确认停止；原始flyway-and-mapper.log保留。MVC契约不代表完整认证链或真实浏览器直连后端。#785已合并b7980728，933前端测试/138文件，演示Pages通过。医院副本端到端尚未验收。独立revert，无生产操作。
+
+- #782 已合并437f428a，head68116d01、governance45441171525、quality45441171863，1175单测/148 PG16全部通过，Development通过。
+
+- #784 已合并c3590798，head4bcc7e8d、governance45442058698、quality45442058011，scope/pr-gate通过，其他按范围跳过。
+
+- #787 已合并ee5cd8d2，head a05e4ec9、governance45442340980、quality45442341293，1176单测零失败/错误/跳过，PG16按范围跳过。
+
 ## 每轮交接模板
 
 - 更新时间、任务、风险、目标及非目标：

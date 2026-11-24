@@ -321,6 +321,9 @@
 ## 08 V1.1 文件完整性第一增量（2026-11-25）
 
 - #144/#230/#636 P1，RC1 24152bee保持冻结（#350最终验收PASS；现场仍BLOCKED），独立worktree feat/144-v1.1-integrity。[实现边界、验证与剩余](v1.1-file-integrity-increment.md)。单图真实正文有界校验及双权限POST、运维UI和Mock，20定向+2 Chromium含预热通过。持久化病案Manifest及后台任务尚未实现；最新CI待核对，不合入冻结main。
+## 08 V1.1 数据质量修复前置及历史欠账（2026-11-25）
+
+- #166/#469/#729 P1，独立worktree fix/166-v1.1-repair-preview；[现状、测试及历史Issue审计](v1.1-quality-repair-increment.md)。修复预览当前值核对、禁止过时/失效/冲突候选、抽屉代次隔离及失败重试、Mock补齐。23后端/2 Chromium含预热通过；仍只读，工单审批及事务执行待专项。RC1 24152bee冻结不变，最新CI待核对。
 
 ## 每轮交接模板
 

@@ -15,6 +15,7 @@ const apiMocks = vi.hoisted(() => ({
 }))
 
 vi.mock('@/api/modules/data-relations', () => apiMocks)
+vi.mock('@/store/modules/user', () => ({ useUserStore: () => ({ token: 'synthetic-session' }) }))
 vi.mock('element-plus', () => ({
   ElMessage: {
     error: vi.fn(),

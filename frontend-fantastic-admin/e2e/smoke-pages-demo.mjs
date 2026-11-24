@@ -260,6 +260,34 @@ async function smokePagesDemo() {
     assert.equal(execution.next.data.entries.length, 1)
     assert.notEqual(execution.root.data.entries[0].key, execution.next.data.entries[0].key)
 
+    const boxes = await page.evaluate(async () => {
+      const request = (path, method = 'GET', body) => fetch(`/proxy/api/v1/archive-box-records${path}`, {
+        method, ...(body ? { headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) } : {}),
+      }).then(response => response.json())
+      const before = await request('/summary')
+      const rows = await request('?page=1&size=100')
+      const created = await request('', 'POST', { bah: '99999990', sjh: '99999991', status: 'MISSING' })
+      const duplicate = await request('', 'POST', { sjh: '99999991', status: 'NORMAL', boxNo: 'DEMO-NEW' })
+      const id = created.data.id
+      const moved = await request(`/${id}`, 'PUT', { bah: '99999990', sjh: '99999991', status: 'NORMAL', boxNo: 'DEMO-NEW' })
+      const lookup = await request('/record/99999991')
+      const group = await request('/boxes?keyword=DEMO-NEW')
+      const detail = await request('/box/DEMO-NEW')
+      await request(`/${id}`, 'DELETE')
+      const missing = await request(`/${id}`)
+      const after = await request('/summary')
+      return { before, rows, created, duplicate, moved, lookup, group, detail, missing, after }
+    })
+    assert.ok(boxes.rows.data.list.length > 0)
+    assert.ok(boxes.rows.data.list.every(row => allScans.some(scan => scan.bah === row.bah && scan.sjh === row.sjh)))
+    assert.equal(boxes.duplicate.code, 400)
+    assert.equal(boxes.moved.data.status, 'NORMAL')
+    assert.equal(boxes.lookup.data[0].id, boxes.created.data.id)
+    assert.equal(boxes.group.data.list[0].recordCount, 1)
+    assert.equal(boxes.detail.data[0].id, boxes.created.data.id)
+    assert.equal(boxes.missing.code, 404)
+    assert.deepEqual(boxes.before.data, boxes.after.data)
+
     const ocr = await page.evaluate(async () => {
       const request = (path, body) => fetch(`/proxy/api/v1/${path}`, body === undefined ? undefined : {
         method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body),

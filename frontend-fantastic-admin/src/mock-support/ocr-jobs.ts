@@ -60,7 +60,7 @@ export function createOcrStore(scans: readonly MockScanRecord[]) {
     advance(now)
     const key = body?.idempotencyKey
     const selected = body?.scanId
-    if (!Number.isSafeInteger(archiveId) || archiveId <= 0 || typeof key !== 'string' || !/^[A-Za-z0-9._:-]{1,128}$/.test(key)
+    if (!Number.isSafeInteger(archiveId) || archiveId <= 0 || typeof key !== 'string' || !/^[\w.:-]{1,128}$/.test(key)
       || (selected !== undefined && (typeof selected !== 'number' || !Number.isSafeInteger(selected) || selected <= 0))) {
       return { code: 400, message: 'OCR 任务参数无效' }
     }

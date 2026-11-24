@@ -276,6 +276,55 @@ class ScanServiceCacheTest {
         }
     }
 
+    @Test
+    void concurrentFailureIsBroadcastOnceAndNextLoadRecovers() throws Exception {
+        int concurrency = 8;
+        var ready = new CountDownLatch(concurrency);
+        var entered = new CountDownLatch(1);
+        var release = new CountDownLatch(1);
+        var calls = new java.util.concurrent.atomic.AtomicInteger();
+        var threads = new java.util.concurrent.CopyOnWriteArrayList<Thread>();
+        var failure = new IllegalStateException("synthetic failure");
+        var fresh = new Scan(); fresh.setId(1);
+        when(scanMapper.findById(1)).thenAnswer(call -> {
+            if (calls.incrementAndGet() == 1) {
+                entered.countDown();
+                if (!release.await(5, TimeUnit.SECONDS)) throw new AssertionError("not released");
+                throw failure;
+            }
+            return fresh;
+        });
+        var executor = Executors.newFixedThreadPool(concurrency);
+        try {
+            var tasks = new java.util.ArrayList<java.util.concurrent.Future<Scan>>();
+            for (int i = 0; i < concurrency; i++) tasks.add(executor.submit(() -> {
+                threads.add(Thread.currentThread());
+                ready.countDown();
+                return scanService.findById(1);
+            }));
+            assertThat(ready.await(5, TimeUnit.SECONDS)).isTrue();
+            assertThat(entered.await(5, TimeUnit.SECONDS)).isTrue();
+            long deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(2);
+            while (threads.stream().anyMatch(t -> t.getState() != Thread.State.WAITING
+                    && t.getState() != Thread.State.TIMED_WAITING) && System.nanoTime() < deadline) {
+                Thread.sleep(5);
+            }
+            assertThat(threads).allMatch(t -> t.getState() == Thread.State.WAITING
+                    || t.getState() == Thread.State.TIMED_WAITING);
+            release.countDown();
+            for (var task : tasks) {
+                org.assertj.core.api.Assertions.assertThatThrownBy(() -> task.get(5, TimeUnit.SECONDS))
+                        .isInstanceOf(java.util.concurrent.ExecutionException.class).hasCause(failure);
+            }
+            assertThat(calls.get()).isEqualTo(1);
+            assertThat(scanService.findById(1)).isSameAs(fresh);
+            assertThat(calls.get()).isEqualTo(2);
+        } finally {
+            release.countDown();
+            executor.shutdownNow();
+        }
+    }
+
     @Configuration
     @Import(CacheConfig.class)
     static class TestConfig {

@@ -6,7 +6,7 @@ MRR 使用入口与应用访问日志共同追溯以下问题，运行日志及�
 
 - 谁在什么时间访问了系统；
 - 请求来自哪个客户端 IP 和页面来源；
-- 实际访问了哪个 URI，对应哪个 Spring MVC 接口模板；
+- 入口访问的固定路由类别，以及应用 Spring MVC 接口模板；
 - 使用了哪些获准留存的业务定位摘要和普通参数；敏感原文不进入日志副本；
 - 请求是否成功、耗时多久、是否发生异常；
 - 后端未启动、维护模式或代理超时时，入口请求是否真实发生过。
@@ -36,7 +36,7 @@ logs/nginx/access-audit.jsonl
 - `origin`
 - `user_agent`
 
-入口日志不记录 Query String，避免外部票据、Token 或签名明文落盘。
+入口 access.log 和 access-audit.jsonl 不记录原始 URI 或 Query String。`uri` 仅为固定路由类别，未知路径统一为 `[route omitted]`；具体业务请求以应用的接口模板和 Request ID 关联。原生 Nginx error.log 仍可能包含请求行，必须限制 ACL、保留期与访问审批，不得将原始日志提交仓库或上传 CI。升级现场先备份配置，在隔离环境执行 `nginx -t` 并用合成路径检查两种入口日志和错误日志，再批准 reload。历史日志不会由本变更自动删除。
 
 ### 2.2 Spring Boot 业务审计
 
@@ -51,7 +51,7 @@ app.access_log
 - `request_id`：与响应头 `X-Request-Id` 对应；
 - `username`：登录用户或外部档案访问用户；
 - `client_ip`；
-- `request_uri`：真实请求路径；
+- `request_uri`：脱敏接口模板（无匹配为 UNKNOWN）；
 - `endpoint_template`：接口模板；
 - `query_string`：业务查询参数；
 - `request_body`：文本请求体；
@@ -95,7 +95,7 @@ ORDER BY access_time DESC;
 
 ### 3.3 查询某个病案号或业务参数
 
-日志管理页面的“关键字”可搜索已脱敏的 Query String、Request Body、审计目标、真实 URI、接口模板和 Request ID；匹配1至18位纯数字的查询会按当前审计密钥补充HMAC检索条件。密钥缺失、轮换或早期未留存摘要的数据可能无法通过编号匹配。
+日志管理页面的“关键字”可搜索已脱敏的 Query String、Request Body、审计目标、脱敏路由、接口模板和 Request ID；匹配1至18位纯数字的查询会按当前审计密钥补充HMAC检索条件。密钥缺失、轮换或早期未留存摘要的数据可能无法通过编号匹配。
 
 不要使用患者原文 `LIKE` 查询作为日志必须保存敏感原文的依据。优先使用可信 Request ID 关联一次请求；已隐藏的身份证或其他字段不能从日志恢复。
 

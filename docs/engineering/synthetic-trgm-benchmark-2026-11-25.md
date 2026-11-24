@@ -43,3 +43,32 @@ COUNT计划根节点返回1是聚合结果行数，不是匹配记录数。无�
 策略：默认保持精确编号、兼容包含仍显式选择，不自动改写用户谓词；不新增同步COUNT，使用size+1/hasMore，有界3秒并保留失败重试。高频短词提示缩小范围，不静默丢弃结果；旧客户端COUNT仍保持原语义和超时，不用估算总数冒充精确总数。未来若需精确总数，单独评估受限、明确触发及可取消的异步方案，未实施。GIN仅是选择性查询候选，继续在医院等量副本评估数据分布、写入峰值与维护成本后审批，不进入Flyway或自动生产DDL。
 
 原始日志、执行计划和报告：`/Volumes/data/Project/MRR-worktrees/mrr-scan-lab-ktu3x8xp`，总日志 `/tmp/mrr-trgm-3m-r2.log`；失败首次 `mrr-scan-lab-ztej_h6b`（已停止），万行冒烟 /tmp/mrr-trgm-selectivity-smoke.log。原三千万独立精确基准不重复。
+
+
+## 独立10万行提交写入成本实验（2026-11-25）
+
+复用新建隔离PG16.16工具 --trgm-write，仅造数与实际精确表达式索引后执行新写入实验，不重复已确认查询测量。A1无GIN/B1有GIN/B2有GIN/A2移除GIN，1/8客户端，每客户端200次事务，客户端行ID范围不重叠，更新原BAH的前导零（保持比较键）或删除再插入同一合成记录，每组前VACUUM ANALYZE。真实提交、16组共14400事务、零失败、每轮确认100000行未变化。WAL为集群LSN增量，可能含后台活动；未严格控制缓存、随机种子、checkpoint、autovacuum及其他本机开发负载，不是生产吞吐或长期GIN pending list开销。
+
+| 轮次 | 客户端 | 操作 | TPS | P95 ms | WAL bytes |
+| --- | ---: | --- | ---: | ---: | ---: |
+| A1 | 1 | update | 3297.3 | 0.631 | 286856 |
+| A1 | 1 | delete_reinsert | 2456.8 | 0.671 | 274184 |
+| A1 | 8 | update | 17064.1 | 0.761 | 2283400 |
+| A1 | 8 | delete_reinsert | 17857.9 | 0.807 | 2254224 |
+| B1 | 1 | update | 4353.3 | 0.257 | 386592 |
+| B1 | 1 | delete_reinsert | 2712.2 | 0.721 | 391960 |
+| B1 | 8 | update | 16159.0 | 0.803 | 3115040 |
+| B1 | 8 | delete_reinsert | 14723.6 | 0.818 | 3133296 |
+| B2 | 1 | update | 3125.2 | 0.702 | 376648 |
+| B2 | 1 | delete_reinsert | 4166.9 | 0.253 | 388440 |
+| B2 | 8 | update | 22663.9 | 0.498 | 3129416 |
+| B2 | 8 | delete_reinsert | 19422.9 | 0.548 | 3114840 |
+| A2 | 1 | update | 5150.5 | 0.243 | 269656 |
+| A2 | 1 | delete_reinsert | 4789.7 | 0.249 | 277816 |
+| A2 | 8 | update | 10591.7 | 1.427 | 2231728 |
+| A2 | 8 | delete_reinsert | 14385.6 | 0.818 | 2264552 |
+
+
+8客户端update无GIN 2283400/2231728 bytes，有GIN3115040/3129416；delete+reinsert无GIN2254224/2264552，有GIN3133296/3114840，WAL增加约38–39%（该实验条件）。TPS/P95两轮波动明显，不能宣称稳定吞吐下降或上升；保留默认精确游标、显式模糊无同步COUNT，不强制稀疏游标采用GIN或重写谓词。GIN仍只作为医院等量副本选择性专项候选，不部署生产；长时间写入、真实混合读写及pending list另行审批测量。
+
+原始报告及逐事务日志：`/Volumes/data/Project/MRR-worktrees/mrr-scan-lab-9xi2ubwn`，`/tmp/mrr-gin-write-cost.log`，实际pg_ctl确认停止。

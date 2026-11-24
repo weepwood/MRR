@@ -32,7 +32,10 @@ def main():
     parser.add_argument("--sample-seconds", type=int, default=5)
     parser.add_argument("--multikey", action="store_true")
     parser.add_argument("--trgm", action="store_true", help="Measure optional GIN indexes only in this disposable lab")
+    parser.add_argument("--trgm-write", action="store_true", help="Run only committed GIN update/delete+reinsert cost comparisons in the disposable lab")
     args = parser.parse_args()
+    if args.trgm_write and (args.trgm or args.multikey):
+        parser.error("--trgm-write is a separate workload")
     if not 10_000 <= args.rows <= MAX_ROWS or not 1000 <= args.batch <= 100_000:
         parser.error("rows must be 10,000..30,000,000; batch 1,000..100,000")
     if not 60 <= args.max_seconds <= 7200:
@@ -136,6 +139,39 @@ def main():
             raise RuntimeError("seed row count mismatch")
         report["archive_rows"] = archive_count
         report["before_bytes"] = int(sql("SELECT pg_total_relation_size('app.mr_scan')"))
+        if args.trgm_write:
+            # Equal committed transaction counts, disjoint per-client rows; no existing cluster/DSN.
+            run([*psql, "-f", backend / "scripts/build-code-key-indexes.sql"], log="write-code-indexes.log")
+            report["write"] = []
+            for phase, enabled in (("A1", False), ("B1", True), ("B2", True), ("A2", False)):
+                if phase == "B1":
+                    sql("CREATE INDEX lab_bah_trgm ON app.mr_scan USING gin(bah public.gin_trgm_ops); CREATE INDEX lab_sjh_trgm ON app.mr_scan USING gin(sjh public.gin_trgm_ops)")
+                if phase == "A2":
+                    sql("DROP INDEX app.lab_bah_trgm; DROP INDEX app.lab_sjh_trgm")
+                for clients in (1, 8):
+                    for operation in ("update", "delete_reinsert"):
+                        sql("VACUUM (ANALYZE) app.mr_scan")
+                        if shutil.disk_usage(parent).free < reserve:
+                            raise RuntimeError("disk reserve reached")
+                        workload = lab / f"write-{operation}.sql"
+                        stmt = ("UPDATE app.mr_scan SET bah=CASE WHEN left(bah,1)='0' THEN ltrim(bah,'0') ELSE '0'||bah END WHERE id=:rowid;" if operation == "update" else
+                            "WITH removed AS (DELETE FROM app.mr_scan WHERE id=:rowid RETURNING id,archive_id,bah,sjh,brxh,filename,folder,pages,uploadflag,file_size) INSERT INTO app.mr_scan(id,archive_id,bah,sjh,brxh,filename,folder,pages,uploadflag,file_size) SELECT * FROM removed;")
+                        workload.write_text(f"\\set rowid random(1,{args.rows//clients}) + :client_id * {args.rows//clients}\n" + stmt + "\n")
+                        before = int(sql("SELECT pg_current_wal_insert_lsn()-'0/0'::pg_lsn"))
+                        prefix = lab / f"write-{phase}-{clients}-{operation}"
+                        output = run([pg/"pgbench", *connect, "-n", "-M","prepared","-c",str(clients),"-j",str(min(clients,4)),"-t","200","-l","--log-prefix="+str(prefix),"-f",workload,"imgapi"],log=prefix.name+".log")
+                        after = int(sql("SELECT pg_current_wal_insert_lsn()-'0/0'::pg_lsn"))
+                        failed=re.search(r"number of failed transactions: (\d+)",output)
+                        done=re.search(r"number of transactions actually processed: (\d+)",output)
+                        tps=re.search(r"tps = ([0-9.]+)",output)
+                        samples=sorted(int(line.split()[2]) for f in lab.glob(prefix.name+".*") if f.suffix != ".log" for line in f.read_text().splitlines())
+                        if not failed or int(failed[1]) or not done or int(done[1])!=clients*200 or len(samples)!=clients*200 or not tps:
+                            raise RuntimeError("incomplete committed write workload")
+                        report["write"].append({"phase":phase,"gin":enabled,"clients":clients,"operation":operation,"transactions":len(samples),"tps":float(tps[1]),"p95_ms":samples[math.ceil(len(samples)*.95)-1]/1000,"wal_bytes":after-before})
+                if int(sql("SELECT count(*) FROM app.mr_scan")) != args.rows:
+                    raise RuntimeError("write workload changed cardinality")
+            report["status"]="complete"
+            return
         # Existing production-style predicates; no forced planner settings.
         archive = min(55, archive_count)
         bah = sql(f"SELECT bah FROM app.mr_archive WHERE id={archive}")
@@ -318,6 +354,8 @@ def main():
             pwfile.unlink()
         (lab / "report.json").write_text(json.dumps(report, indent=2))
         print(json.dumps(report, indent=2), flush=True)
+        if args.trgm_write and not report.get("server_stopped"):
+            raise RuntimeError("write lab did not stop cleanly")
     if report["status"] not in ("complete", "complete_with_legacy_timeouts"):
         raise RuntimeError("lab did not complete cleanly")
 

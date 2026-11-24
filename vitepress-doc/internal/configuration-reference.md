@@ -86,15 +86,9 @@ Spring Boot 常见优先级从高到低为：
 
 `gateway` 要求前端与 API 同源。Windows 正式部署可在 `mrr-backend.xml` 中增加 `<env name="ARCHIVE_IMAGE_DELIVERY_MODE" value="gateway" />` 后重跑安装脚本；改回 `direct` 并重启即回退。稳定运行后应让影像源 Nginx 节点只对 MRR 服务器开放。
 
-## 加密身份证查询
+## 身份证查询
 
-| 配置 | 默认值 | 说明 |
-| --- | --- | --- |
-| `aes.id-card-query.timestamp-tolerance-seconds` | `300` | `GET /api/v1/search/getBAHByEncryptID` 允许的时间戳偏差（秒）。超窗直接拒绝，用于限制密文重放 |
-
-设 `0` 或负数会关闭该校验，仅作为临时兼容调用方时钟偏差的逃生阀；长期关闭等同于放弃重放防护。
-
-> 后端不再内置任何默认 AES 密钥。历史实现中存在一个 32 字符的硬编码兜底密钥，密钥漏配时会静默生效；现在密钥为空即拒绝解密（fail-closed）。
+旧 AES-CBC 查询协议已退役，旧时间戳容差与兼容开关不再控制 SearchController。登录用户使用现有 POST 查询，外部系统使用 HMAC Ticket；现有 AES 密钥仍供不透明 URL Token 等现行机制使用，升级时不要删除或轮换已有密钥。
 
 ## 服务端口
 

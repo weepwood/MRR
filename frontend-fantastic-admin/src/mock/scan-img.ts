@@ -180,9 +180,10 @@ export default defineFakeRoute([
     },
   },
   {
-    url: '/api/v1/search/getBAHByID/:idCard',
-    response: ({ params }) => {
-      const idCard = String(params.idCard)
+    url: '/api/v1/search/getBAHByID',
+    method: 'POST',
+    response: ({ body }) => {
+      const idCard = String(body?.idCard ?? '')
       if (idCard === MOCK_SCAN_IMG_ID_CARD) {
         return ok(records)
       }

@@ -32,7 +32,12 @@ function typeButton(page: Page, label: RegExp) {
 }
 
 async function openPage(page: Page) {
+  const lookup = page.waitForRequest(request => new URL(request.url()).pathname.endsWith('/api/v1/search/getBAHByID'))
   await page.goto(`/idcard/${ID_CARD}`)
+  const request = await lookup
+  expect(request.method()).toBe('POST')
+  expect(new URL(request.url()).search).toBe('')
+  expect(request.postDataJSON()).toEqual({ idCard: ID_CARD })
   await expect(page.getByText('查询出 3 份住院病案')).toBeVisible()
   // 首个区间内病案自动选中并加载
   await expect(record(page, '00800001')).toHaveAttribute('aria-current', 'true')

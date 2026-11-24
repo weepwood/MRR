@@ -16,7 +16,6 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.test.util.ReflectionTestUtils;
 
-import java.time.Instant;
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -75,87 +74,12 @@ class SearchControllerTest {
         }
     }
 
-    @Nested
-    @DisplayName("getBAHByEncryptID")
-    class GetBAHByEncryptID {
-
-        @Test
-        @DisplayName("时间戳超出窗口时拒绝，且不回显内部异常信息")
-        void rejectsStaleTimestamp() {
-            String stale = String.valueOf(Instant.now().minusSeconds(3600).getEpochSecond());
-
-            Result<List<Patient>> r = controller.getBAHByEncryptID("bad-encrypted", "user", "iv", stale);
-
-            assertThat(r.getCode()).isEqualTo(400);
-            assertThat(r.getMessage()).isEqualTo("加密身份证查询参数无效");
-        }
-
-        @Test
-        @DisplayName("非数字时间戳被拒绝，不再进入解密")
-        void rejectsNonNumericTimestamp() {
-            Result<List<Patient>> r = controller.getBAHByEncryptID("bad-encrypted", "user", "iv", "ts");
-
-            assertThat(r.getCode()).isEqualTo(400);
-            assertThat(r.getMessage()).isEqualTo("加密身份证查询参数无效");
-        }
-
-        @Test
-        @DisplayName("时间戳在窗口内时进入解密，失败信息为通用文案")
-        void decryptFailsWithGenericMessage() {
-            String fresh = String.valueOf(Instant.now().getEpochSecond());
-
-            Result<List<Patient>> r = controller.getBAHByEncryptID("bad-encrypted", "user", "iv", fresh);
-
-            assertThat(r.getCode()).isEqualTo(400);
-            assertThat(r.getMessage()).isEqualTo("加密身份证查询失败");
-        }
-
-        @Test
-        @DisplayName("容差配置为 0 时关闭窗口校验")
-        void toleratesDisabledWindow() {
-            ReflectionTestUtils.setField(controller, "timestampToleranceSeconds", 0);
-
-            Result<List<Patient>> r = controller.getBAHByEncryptID("bad-encrypted", "user", "iv", "0");
-
-            assertThat(r.getCode()).isEqualTo(400);
-            assertThat(r.getMessage()).isEqualTo("加密身份证查询失败");
-        }
-    }
-
-    @Nested
-    @DisplayName("getBAHByEncryptIDLegacy")
-    class GetBAHByEncryptIDLegacy {
-
-        @Test
-        @DisplayName("默认停用：不进入解密、不查库，返回 410 并指路新接口")
-        void disabledByDefault() {
-            Result<List<Patient>> r = controller.getBAHByEncryptIDLegacy("any-cipher", "user", "iv");
-
-            assertThat(r.getCode()).isEqualTo(410);
-            assertThat(r.getMessage()).contains("已停用").contains("getBAHByEncryptID");
-            verifyNoInteractions(searchService);
-        }
-
-        @Test
-        @DisplayName("显式关闭开关时同样拒绝")
-        void rejectsWhenExplicitlyDisabled() {
-            ReflectionTestUtils.setField(controller, "legacyEncryptIdEnabled", false);
-
-            Result<List<Patient>> r = controller.getBAHByEncryptIDLegacy("any-cipher", "user", "iv");
-
-            assertThat(r.getCode()).isEqualTo(410);
-            verifyNoInteractions(searchService);
-        }
-
-        @Test
-        @DisplayName("开启后仍可服务旧调用方，解密失败走通用文案")
-        void worksWhenExplicitlyEnabled() {
-            ReflectionTestUtils.setField(controller, "legacyEncryptIdEnabled", true);
-
-            Result<List<Patient>> r = controller.getBAHByEncryptIDLegacy("bad-encrypted", "user", "iv");
-
-            assertThat(r.getCode()).isEqualTo(400);
-            assertThat(r.getMessage()).isEqualTo("加密身份证查询失败");
-        }
+    @Test
+    @DisplayName("旧身份证协议不访问查询服务")
+    void retiredProtocolDoesNotQuery() {
+        Result<List<Patient>> result = controller.retiredIdCardLookup();
+        assertThat(result.getCode()).isEqualTo(410);
+        assertThat(result.getMessage()).contains("POST").contains("HMAC Ticket");
+        verifyNoInteractions(searchService);
     }
 }

@@ -1,8 +1,16 @@
 import { describe, expect, it } from 'vitest'
 import { createDemoClock } from './clock'
-import { createDemoRecords } from './records'
+import { createDemoRecords, matchesLegacyScan } from './records'
 
 describe('shared synthetic records', () => {
+  it('matches legacy partial identifiers, zeros, wildcards and numeric filters', () => {
+    const row = { ...createDemoRecords().scans[0], bah: '001234', btype: 0 }
+    expect(matchesLegacyScan(row, { bah: '000123', btype: 0 })).toBe(true)
+    expect(matchesLegacyScan(row, { bah: '12_4', btype: 0 })).toBe(true)
+    expect(matchesLegacyScan(row, { bah: '000123', btype: 1 })).toBe(false)
+    expect(matchesLegacyScan(row, { bah: '12.4' })).toBe(false)
+  })
+
   it('keeps one patient identity per archive and unique scan identifiers', () => {
     const { patients, scans } = createDemoRecords(createDemoClock(new Date(2027, 0, 1, 0, 5)))
     expect(patients).toHaveLength(32)

@@ -3,7 +3,7 @@ import type { ScanRecord } from '@/api/types'
 import type { MetricTone } from '@/components/MrrMetricCard/types'
 import type { MrrTableAction } from '@/components/MrrTableActions/types'
 import { Download } from 'lucide-vue-next'
-import { computed, onMounted, reactive, ref } from 'vue'
+import { computed, onBeforeUnmount, onMounted, reactive, ref } from 'vue'
 import { batchDownloadRecords, getScanCursor } from '@/api/modules/records'
 import AppEmpty from '@/components/AppEmpty/index.vue'
 import AppError from '@/components/AppError/index.vue'
@@ -62,7 +62,7 @@ const list = ref<ScanRecord[]>([])
 const loading = ref(false)
 const pageNum = ref(1)
 const pageSize = ref(20)
-const query = reactive({ bah: '', brxh: '', sjh: '', openerNo: '', btype: '' })
+const query = reactive({ bah: '', brxh: '', sjh: '', openerNo: '', btype: '', legacyContains: false })
 const appliedQuery = ref({ ...query })
 const unapplied = computed(() => JSON.stringify(query) !== JSON.stringify(appliedQuery.value))
 const appliedSummary = computed(() => {
@@ -85,9 +85,15 @@ async function loadData() {
   list.value = []
   selectedRows.value = []
   error.value = ''
+  hasMore.value = false
+  nextCursor.value = undefined
   try {
     const submitted = appliedQuery.value
-    const res = await getScanCursor({ bah: submitted.bah.trim() || undefined, sjh: submitted.sjh.trim() || undefined, brxh: submitted.brxh.trim() || undefined, openerNo: submitted.openerNo.trim() || undefined, btype: submitted.btype ? Number(submitted.btype) : undefined }, cursors.value[pageNum.value - 1] || 0, pageSize.value)
+    const filters = { bah: submitted.bah.trim() || undefined, sjh: submitted.sjh.trim() || undefined, brxh: submitted.brxh.trim() || undefined, openerNo: submitted.openerNo.trim() || undefined, btype: submitted.btype ? Number(submitted.btype) : undefined }
+    const cursor = cursors.value[pageNum.value - 1] || 0
+    const res = submitted.legacyContains
+      ? await getScanCursor(filters, cursor, pageSize.value, true)
+      : await getScanCursor(filters, cursor, pageSize.value)
     if (current !== version) { return }
     if (!Array.isArray(res.data?.list)) { throw new Error('记录响应格式异常，请重试') }
     list.value = res.data.list
@@ -109,14 +115,15 @@ function reloadFirstBatch() {
   void loadData()
 }
 function handleSearch() { appliedQuery.value = { ...query }; reloadFirstBatch() }
-function resetFilters() { Object.assign(query, { bah: '', brxh: '', sjh: '', openerNo: '', btype: '' }); handleSearch() }
+function resetFilters() { Object.assign(query, { bah: '', brxh: '', sjh: '', openerNo: '', btype: '', legacyContains: false }); handleSearch() }
 function nextPage() {
-  if (!hasMore.value || nextCursor.value == null) { return } cursors.value[pageNum.value] = nextCursor.value; pageNum.value++; void loadData()
+  if (loading.value || !hasMore.value || nextCursor.value == null) { return } cursors.value[pageNum.value] = nextCursor.value; pageNum.value++; void loadData()
 }
 function previousPage() {
-  if (pageNum.value <= 1) { return } pageNum.value--; void loadData()
+  if (loading.value || pageNum.value <= 1) { return } pageNum.value--; void loadData()
 }
 onMounted(loadData)
+onBeforeUnmount(() => { version++ })
 
 const summaryCards = computed(() => [
   {
@@ -193,7 +200,7 @@ function typeLabel(value: unknown) {
       size="compact"
       title="记录管理"
       eyebrow="Scan Records"
-      description="按完整编号检索扫描记录，结果分批加载、显示批次位置与已加载数量，不做总数估算；病案号、上架号兼容原始前导零。"
+      description="默认按完整编号检索，也可选择兼容包含查询；结果分批加载，不做同步总数统计。"
     />
 
     <!-- 三项都是当前批次的状态量，用紧凑摘要即可；原来三张 110px 高的指标卡把结果表推到首屏以下。 -->
@@ -226,6 +233,13 @@ function typeLabel(value: unknown) {
               <el-option v-for="item in typeOptions" :key="item.value" :label="item.label" :value="item.value" />
             </el-select>
           </div>
+          <div class="mrr-filter-field records-filter__field">
+            <label for="records-legacy-contains">匹配方式</label>
+            <label class="records-legacy-option">
+              <input id="records-legacy-contains" v-model="query.legacyContains" type="checkbox" aria-label="兼容包含查询">
+              兼容包含
+            </label>
+          </div>
           <template #actions>
             <MrrFilterActionButton type="primary" action="search" :pending="loading" :busy="loading" @click="handleSearch">
               查询
@@ -240,6 +254,7 @@ function typeLabel(value: unknown) {
       <template #toolbar>
         <div class="records-query-context" aria-live="polite">
           <p><strong>已提交条件：</strong>{{ appliedSummary }}</p>
+          <p>匹配方式：{{ appliedQuery.legacyContains ? '兼容包含（较短关键词可能超时）' : '精确编号' }}</p>
           <p v-if="unapplied" class="records-query-context__pending">
             筛选条件已修改，点击“查询”后生效；翻批仍使用已提交条件。
           </p>
@@ -390,6 +405,14 @@ function typeLabel(value: unknown) {
 /* 标签排版与操作区底边对齐由 MrrFilterBar 的 labelled 模式统一提供，这里只保留列宽。 */
 .records-filter__field {
   flex: 1 1 150px;
+}
+
+.records-legacy-option {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  min-height: 32px;
+  white-space: nowrap;
 }
 
 .records-query-context {

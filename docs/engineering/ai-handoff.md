@@ -186,10 +186,20 @@
 
 - #780已合并039307d3，head947b937d，quality45438121029，1171单测/148 PG16零失败/错误/跳过，Development通过。
 
+## 03 前端兼容游标及模拟场景修复（2026-11-25）
+
+- #99/#350 P2，`feat/99-records-compatible-cursor`，worktree `/Volumes/data/Project/MRR-worktrees/99-records-compatible-cursor`。#781 已合并38ed106c，1169单测/148真实PG16通过。eca7435a 实际RED 6项1失败；f5a4ae57 接入 legacyContains 显式选择、提交条件快照、游标重置及加载保护，默认精确、旧模式条件不混用，不新增COUNT。记录页原已使用游标。演示数据补充SQL LIKE及前导零语义。
+- 51fb751d 修复 Node 模拟模块直接读取不存在的 import.meta.env.MODE；真实 bundle-import 原TypeError，修复后六模块全部加载成功，保持认证不变。固定Node24.15.0，实际 Chromium 7项（含预热）全部通过，覆盖兼容查询、翻页、条件变化、窄屏双主题。定向Vitest、类型及lint实际通过。最初Node26与固定Node24浏览器均失败，定位修复后重跑通过。依赖安装恢复corepack并保留原Git hooks检查。无生产变更；独立revert。最新PR CI待验收。
+- #780 已合并039307d3（1171单测/148 PG16），#783 已合并92750126（文档范围scope/pr-gate通过，其他跳过）。30m实验另有独立日志，尚不可视作验收通过。
+
+- #785 首次治理45439870682因PR正文缺少六个标准章节失败，已修正正文并以本次文档提交触发重新验收；未修改门禁。
+
 ## 03 pg_trgm 隔离评估（2026-11-25）
 
 - #99/#350 P2，分支 `perf/99-trgm-lab`，worktree `/Volumes/data/Project/MRR-worktrees/99-trgm-lab`。复用合成PG16脚本新增 --trgm，仅新建隔离库构建 BAH/SJH GIN，不改Flyway、生产DDL或查询预算。记录计划实际索引名、共享块、容量、构建时间、5秒超时；1000行插入在事务中回滚，实际总行数不变。10万及100万实跑均结束、实例已停止。详见专题 [GIN隔离实验](synthetic-trgm-benchmark-2026-11-25.md)。
 - 3000万独立原工具运行：`/Volumes/data/Project/MRR-worktrees/mrr-scan-lab-3a6p6oh4`，日志 `/tmp/mrr-synthetic-30m-r1.log`，启动shell PID2140，2400秒总预算、15秒多键、10万/批；本轮尚未结束，不能宣称实际3000万、索引或尾延迟通过。不要并发重复启动；下一轮先读report.json并核查pg_ctl状态。#781已合并38ed106c，1169单测/148 PG16通过。
+
+- #785已合并b7980728，head2c6dff9e，governance45440104179、quality45440104187、deploy-pages-demo45440104039通过，933前端单测/138文件。
 
 ## 每轮交接模板
 

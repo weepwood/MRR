@@ -35,9 +35,10 @@ export function writeScenario(storage: ScenarioStorage | undefined, value: unkno
 }
 
 export function pagesScenarioStorage() {
-  if (import.meta.env.MODE !== 'pages' || String(import.meta.env.VITE_BUILD_MOCK) !== 'true') { return undefined }
+  // Node-side fake-server bundles do not receive Vite's browser environment.
+  if (typeof window === 'undefined' || import.meta.env?.MODE !== 'pages' || String(import.meta.env?.VITE_BUILD_MOCK) !== 'true') { return undefined }
   try {
-    return typeof window === 'undefined' ? undefined : window.localStorage
+    return window.localStorage
   }
   catch {
     return undefined

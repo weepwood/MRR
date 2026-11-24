@@ -25,6 +25,7 @@ public class HttpArchiveImageSource implements ArchiveImageSource {
 
     private final ArchiveImageSourceProperties properties;
     private final SourcePermitGuard permitGuard;
+    private final java.util.concurrent.ConcurrentHashMap<String, NetworkSourceCircuit> circuits = new java.util.concurrent.ConcurrentHashMap<>();
     private final ConcurrentHashMap<String, HttpClient> clients = new ConcurrentHashMap<>();
 
     public HttpArchiveImageSource(ArchiveImageSourceProperties properties) {
@@ -43,8 +44,8 @@ public class HttpArchiveImageSource implements ArchiveImageSource {
 
     @Override
     public InputStream open(PathDO image) throws IOException {
-        return permitGuard.open(() -> {
-            ArchiveImageSourceProperties.HttpNode node = requireNode(image);
+        ArchiveImageSourceProperties.HttpNode node = requireNode(image);
+        return circuits.computeIfAbsent(image.getSourceNode(), ignored -> new NetworkSourceCircuit()).open(() -> permitGuard.open(() -> {
             HttpRequest.Builder request = HttpRequest.newBuilder(resolveUri(node, image))
                     .timeout(SourceOpenBudget.limit(orDefault(node.getReadTimeout(), Duration.ofSeconds(60))))
                     .GET();
@@ -62,7 +63,7 @@ public class HttpArchiveImageSource implements ArchiveImageSource {
                 Thread.currentThread().interrupt();
                 throw new IOException("HTTP 图片读取被中断", exception);
             }
-        });
+        }));
     }
 
     @Override
@@ -70,8 +71,8 @@ public class HttpArchiveImageSource implements ArchiveImageSource {
         if (image.getFileSize() != null && image.getFileSize() >= 0) {
             return image.getFileSize();
         }
-        return permitGuard.call(() -> {
-            ArchiveImageSourceProperties.HttpNode node = requireNode(image);
+        ArchiveImageSourceProperties.HttpNode node = requireNode(image);
+        return circuits.computeIfAbsent(image.getSourceNode(), ignored -> new NetworkSourceCircuit()).size(() -> permitGuard.call(() -> {
             HttpRequest.Builder request = HttpRequest.newBuilder(resolveUri(node, image))
                     .timeout(SourceOpenBudget.limit(orDefault(node.getReadTimeout(), Duration.ofSeconds(60))))
                     .method("HEAD", HttpRequest.BodyPublishers.noBody());
@@ -79,15 +80,16 @@ public class HttpArchiveImageSource implements ArchiveImageSource {
             try {
                 HttpResponse<Void> response = client(image.getSourceNode(), node).send(
                         request.build(), HttpResponse.BodyHandlers.discarding());
-                if (response.statusCode() < 200 || response.statusCode() >= 400) {
-                    return -1L;
+                if (response.statusCode() == 502 || response.statusCode() == 503 || response.statusCode() == 504) {
+                    throw new SourceHttpStatusException("HTTP", response.statusCode());
                 }
+                if (response.statusCode() < 200 || response.statusCode() >= 300) return -1L;
                 return response.headers().firstValueAsLong("Content-Length").orElse(-1L);
             } catch (InterruptedException exception) {
                 Thread.currentThread().interrupt();
                 throw new IOException("HTTP 图片大小查询被中断", exception);
             }
-        });
+        }));
     }
 
     @Override

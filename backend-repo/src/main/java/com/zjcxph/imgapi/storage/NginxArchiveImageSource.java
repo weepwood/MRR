@@ -36,6 +36,7 @@ public class NginxArchiveImageSource implements ArchiveImageSource {
     private final ImageProperties imageProperties;
     private final ArchiveImageSourceProperties sourceProperties;
     private final SourcePermitGuard permitGuard;
+    private final java.util.concurrent.ConcurrentHashMap<String, NetworkSourceCircuit> circuits = new java.util.concurrent.ConcurrentHashMap<>();
     private final HttpClient client;
 
     @Autowired
@@ -85,8 +86,9 @@ public class NginxArchiveImageSource implements ArchiveImageSource {
 
     @Override
     public InputStream open(PathDO image) throws IOException {
-        return permitGuard.open(() -> {
-            HttpRequest.Builder request = HttpRequest.newBuilder(requireUri(image))
+        URI uri = requireUri(image);
+        return circuits.computeIfAbsent(authority(uri), ignored -> new NetworkSourceCircuit()).open(() -> permitGuard.open(() -> {
+            HttpRequest.Builder request = HttpRequest.newBuilder(uri)
                     .timeout(SourceOpenBudget.limit(orDefault(sourceProperties.getNginxReadTimeout(), Duration.ofSeconds(60))))
                     .header("Accept", "image/*,application/octet-stream;q=0.8")
                     .GET();
@@ -104,7 +106,7 @@ public class NginxArchiveImageSource implements ArchiveImageSource {
                 Thread.currentThread().interrupt();
                 throw new IOException("Nginx 图片读取被中断", exception);
             }
-        });
+        }));
     }
 
     @Override
@@ -112,23 +114,25 @@ public class NginxArchiveImageSource implements ArchiveImageSource {
         if (image.getFileSize() != null && image.getFileSize() >= 0) {
             return image.getFileSize();
         }
-        return permitGuard.call(() -> {
-            HttpRequest.Builder request = HttpRequest.newBuilder(requireUri(image))
+        URI uri = requireUri(image);
+        return circuits.computeIfAbsent(authority(uri), ignored -> new NetworkSourceCircuit()).size(() -> permitGuard.call(() -> {
+            HttpRequest.Builder request = HttpRequest.newBuilder(uri)
                     .timeout(SourceOpenBudget.limit(orDefault(sourceProperties.getNginxReadTimeout(), Duration.ofSeconds(60))))
                     .method("HEAD", HttpRequest.BodyPublishers.noBody());
             applyBasicAuth(request);
             try {
                 HttpResponse<Void> response = client.send(
                         request.build(), HttpResponse.BodyHandlers.discarding());
-                if (response.statusCode() < 200 || response.statusCode() >= 300) {
-                    return -1L;
+                if (response.statusCode() == 502 || response.statusCode() == 503 || response.statusCode() == 504) {
+                    throw new SourceHttpStatusException("Nginx", response.statusCode());
                 }
+                if (response.statusCode() < 200 || response.statusCode() >= 300) return -1L;
                 return response.headers().firstValueAsLong("Content-Length").orElse(-1L);
             } catch (InterruptedException exception) {
                 Thread.currentThread().interrupt();
                 throw new IOException("Nginx 图片大小查询被中断", exception);
             }
-        });
+        }));
     }
 
     @Override

@@ -20,6 +20,7 @@ public class OssArchiveImageSource implements ArchiveImageSource {
     private final ArchiveImageSourceProperties properties;
     private final OssProperties ossProperties;
     private final SourcePermitGuard permitGuard;
+    private final NetworkSourceCircuit circuit = new NetworkSourceCircuit();
 
     public OssArchiveImageSource(OssObjectReader objectReader,
                                  ArchiveImageSourceProperties properties,
@@ -48,7 +49,7 @@ public class OssArchiveImageSource implements ArchiveImageSource {
     @Override
     public InputStream open(PathDO image) throws IOException {
         String key = requireObjectKey(image);
-        return permitGuard.open(() -> objectReader.open(key));
+        return circuit.open(() -> permitGuard.open(() -> objectReader.open(key)));
     }
 
     @Override
@@ -57,7 +58,7 @@ public class OssArchiveImageSource implements ArchiveImageSource {
             return image.getFileSize();
         }
         String key = requireObjectKey(image);
-        return permitGuard.call(() -> objectReader.size(key));
+        return circuit.size(() -> permitGuard.call(() -> objectReader.size(key)));
     }
 
     @Override

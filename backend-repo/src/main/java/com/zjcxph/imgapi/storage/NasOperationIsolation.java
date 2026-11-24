@@ -19,7 +19,7 @@ import java.util.stream.Collectors;
 final class NasOperationIsolation implements AutoCloseable {
     private final ThreadPoolExecutor workers;
     private final Map<String, Semaphore> nodeSlots;
-    private final Map<String, NasNodeCircuit> circuits;
+    private final Map<String, SourceNodeCircuit> circuits;
 
     @FunctionalInterface
     interface Operation<T> {
@@ -32,7 +32,7 @@ final class NasOperationIsolation implements AutoCloseable {
         nodeSlots = nodes.stream().collect(Collectors.toUnmodifiableMap(
                 node -> node, node -> new Semaphore(nodeLimit)));
         circuits = nodes.stream().collect(Collectors.toUnmodifiableMap(
-                node -> node, node -> new NasNodeCircuit(3, Duration.ofSeconds(30), System::nanoTime)));
+                node -> node, node -> new SourceNodeCircuit(3, Duration.ofSeconds(30), System::nanoTime)));
         workers = new ThreadPoolExecutor(limit, limit, 30, TimeUnit.SECONDS,
                 new ArrayBlockingQueue<>(limit), runnable -> {
                     Thread thread = new Thread(runnable, "mrr-nas-open");
@@ -50,8 +50,8 @@ final class NasOperationIsolation implements AutoCloseable {
         long deadline = System.nanoTime() + nanos;
         Semaphore slots = nodeSlots.get(node);
         if (slots == null || !slots.tryAcquire()) throw new SourcePermitGuard.CapacityException();
-        NasNodeCircuit circuit = circuits.get(node);
-        NasNodeCircuit.Attempt attempt;
+        SourceNodeCircuit circuit = circuits.get(node);
+        SourceNodeCircuit.Attempt attempt;
         try {
             attempt = circuit.begin();
         } catch (IOException rejected) {
@@ -92,28 +92,28 @@ final class NasOperationIsolation implements AutoCloseable {
             });
         } catch (RejectedExecutionException rejected) {
             releaseSlot.run();
-            circuit.finish(attempt, NasNodeCircuit.Outcome.NEUTRAL);
+            circuit.finish(attempt, SourceNodeCircuit.Outcome.NEUTRAL);
             throw new SourcePermitGuard.CapacityException();
         }
-        NasNodeCircuit.Outcome outcome = NasNodeCircuit.Outcome.NEUTRAL;
+        SourceNodeCircuit.Outcome outcome = SourceNodeCircuit.Outcome.NEUTRAL;
         try {
             T value = result.get(Math.max(0, deadline - System.nanoTime()), TimeUnit.NANOSECONDS);
             if (deadline - System.nanoTime() <= 0) {
-                if (nativeStarted.get()) outcome = NasNodeCircuit.Outcome.NATIVE_TIMEOUT;
+                if (nativeStarted.get()) outcome = SourceNodeCircuit.Outcome.SOURCE_FAILURE;
                 throw new SocketTimeoutException("NAS operation timed out");
             }
             claimed.complete(true);
-            outcome = NasNodeCircuit.Outcome.SUCCESS;
+            outcome = SourceNodeCircuit.Outcome.SUCCESS;
             return value;
         } catch (TimeoutException timeoutFailure) {
-            if (nativeStarted.get()) outcome = NasNodeCircuit.Outcome.NATIVE_TIMEOUT;
+            if (nativeStarted.get()) outcome = SourceNodeCircuit.Outcome.SOURCE_FAILURE;
             throw new SocketTimeoutException("NAS operation timed out");
         } catch (InterruptedException interrupted) {
             Thread.currentThread().interrupt();
             throw new IOException("NAS operation interrupted", interrupted);
         } catch (ExecutionException failure) {
             if (failure.getCause() instanceof SocketTimeoutException && nativeStarted.get()) {
-                outcome = NasNodeCircuit.Outcome.NATIVE_TIMEOUT;
+                outcome = SourceNodeCircuit.Outcome.SOURCE_FAILURE;
             }
             if (failure.getCause() instanceof IOException io) throw io;
             if (failure.getCause() instanceof RuntimeException runtime) throw runtime;
@@ -123,7 +123,7 @@ final class NasOperationIsolation implements AutoCloseable {
             circuit.finish(attempt, outcome);
             // A successful caller owns the already-opened stream; its source permit
             // remains held by the stream, not by the now-finished NAS open operation.
-            if (outcome == NasNodeCircuit.Outcome.SUCCESS) releaseSlot.run();
+            if (outcome == SourceNodeCircuit.Outcome.SUCCESS) releaseSlot.run();
         }
     }
 

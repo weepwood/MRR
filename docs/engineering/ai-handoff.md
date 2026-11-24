@@ -172,12 +172,21 @@
 - #99/#350 P1，分支 `perf/99-legacy-cursor`，worktree `/Volumes/data/Project/MRR-worktrees/99-legacy-cursor`。4c90d9d9实际RED 18项1失败（精确游标忽略文件名条件）。现有 /api/v1/scan/cursor/condition 增加显式 legacyContains=true，复用旧LIKE及全部筛选谓词、id游标、size+1、不执行COUNT，3秒Mapper语句超时不变；默认精确游标仍为精确编号，遇不支持的非空筛选明确400。旧OFFSET/COUNT接口及其结果语义不变。未修改Flyway或生产索引。
 - 实际51项定向零失败/错误/跳过；新增真实PG16包含/前导零/附加筛选、同页OFFSET等价测试，待CI执行。尚未迁移前端或验证千万级模糊游标的稀疏结果性能，不能声称解决旧COUNT瓶颈；后续隔离库评估pg_trgm。main 6454b5a4，#778已合并，1164单测/147 PG16通过。独立revert，无生产操作。
 
+## 09 下载并发配额与临时文件租约（2026-11-25）
+
+- #171/#519/#523/#524/#350 P1，`fix/230-export-download-leases`，worktree `/Volumes/data/Project/MRR-worktrees/230-export-download-leases`。78d3a240修正macOS路径夹具后实际RED 2项1失败（第三次并发请求未拒绝）；17737864引入ArchiveExportTempFileManager实际FileChannel租约，默认全局8/每用户2（ARCHIVE_EXPORT_MAX_CONCURRENT_DOWNLOADS、ARCHIVE_EXPORT_MAX_CONCURRENT_DOWNLOADS_PER_USER），受现有单文件配额、权限和过期约束；活跃租约阻止过期清理，持实际句柄的长度/Range；429拒绝、416/异步拒绝/客户端写入失败释放，一次性close；复用PendingImageStream所有权拦截。
+- 本地43项、9a5969ac新增全局跨用户与异步拒绝后44项零失败/错误/跳过；同步 #776 正式main 913acd6e，最新CI待验收。当前配额为单进程、仅异步导出下载入口，不覆盖其他同步下载接口；默认数值需现场负载评估，真实Windows删除语义、Tomcat慢客户端写阻塞及多实例不在本次已验收范围。独立revert，无生产变更。#776 head4a7a6959、governance45433259307、quality45433259445，1162单测/146 PG16通过。
+
+- #781已合并38ed106c，head c5a95683，quality45436736527，1169单测及148 PG16零失败/错误/跳过。
+
 ## 04.3 NAS正文原生操作隔离（2026-11-25）
 
 - #230/#350 P1，分支 `fix/230-nas-body-isolation`，worktree `/Volumes/data/Project/MRR-worktrees/230-nas-body-isolation`。8ae21669实际RED 5项1错误：模拟不响应中断的原生正文read阻塞调用方；b9e5ff15 每个已许可的NAS流一个串行原生I/O所有者，16KiB私有缓冲，读取/seek/close独立等待预算，超时不取消原生任务或提前释放许可，排队一次真实close；保留真实长度与Range seek。新增 ARCHIVE_IMAGE_SOURCE_NAS_BODY_TIMEOUT 默认PT30S。实际36项联合零失败/错误/跳过，覆盖迟到读取、许可持有/恢复、Range、网关及ZIP/PDF。同步#779正式main 8f598234，最新CI待验收。
 - #779已合并8f598234，head e29c6297，governance45435859334、quality45435859775，1166单测零失败/错误/跳过，PG16按范围跳过。原生正文仍可能永久挂起，实际许可保持直到真实关闭；不声称OS硬取消、Windows/NAS现场测试或Tomcat慢客户端硬截止。正文故障计入节点熔断仍需单独验证；独立revert，无生产变更。
 
 - 追加实际14项定向回归全部通过：模拟原生close忽略中断，超时后重复关闭一次、许可在实际close前不释放；真实嵌入Tomcat+Spring MVC+loopback TCP客户端停止读后RST，流真实关闭、失败审计、下一请求成功；实际AWS SDK Apache 2连接池饱和，第三请求未到源站，部分响应abort后恢复。仅测试配置，非生产50连接池、非真实NAS、非持续静默客户端硬截止。#781已合并38ed106c（1169单测/148 PG16）。最新CI待验收。
+
+- #780已合并039307d3，head947b937d，quality45438121029，1171单测/148 PG16零失败/错误/跳过，Development通过。
 
 ## 每轮交接模板
 

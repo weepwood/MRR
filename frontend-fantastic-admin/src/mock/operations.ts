@@ -42,6 +42,7 @@ function readiness(): ReadinessSnapshot {
     checks: [
       { code: 'database', name: '数据库连接', passed: true, severity: 'CRITICAL', message: '演示：连接正常', details: { simulated: true } },
       { code: 'storage', name: '影像存储', passed: true, severity: 'CRITICAL', message: '演示：样例存储可用', details: { simulated: true } },
+      { code: 'scan-code-key-indexes', name: '病案影像查询索引', passed: true, severity: 'WARNING', message: '演示：索引就绪', details: { state: 'READY', estimatedRows: 30000000, totalBytes: 20015456256, twoIndexReferenceBytes: 1892573184 } },
       { code: 'backup', name: '最近备份', passed: false, severity: 'WARNING', message: '演示：等待备份验收', details: { simulated: true } },
     ],
   }

@@ -90,7 +90,7 @@ public class OperationsCenterService {
                     "severity", check.get("severity"),
                     "passed", passed,
                     "message", passed ? "符合就绪条件" : "未通过就绪检查",
-                    "details", Map.of()
+                    "details", safeOverviewDetails(check)
             );
         }).toList();
         return Map.of(
@@ -103,6 +103,19 @@ public class OperationsCenterService {
                 "checks", checks,
                 "maintenance", Map.of("enabled", readiness.get("maintenanceReadOnly"))
         );
+    }
+
+    private Map<String, Object> safeOverviewDetails(Map<String, Object> check) {
+        if (!"scan-code-key-indexes".equals(check.get("code")) || !(check.get("details") instanceof Map<?, ?> raw)) return Map.of();
+        Map<String, Object> safe = new LinkedHashMap<>();
+        if (raw.get("state") instanceof String state && List.of("READY", "MISSING", "BELOW_THRESHOLD").contains(state)) safe.put("state", state);
+        for (String key : List.of("estimatedRows", "minimumRows", "totalBytes", "heapBytes", "indexBytes", "twoIndexReferenceBytes")) {
+            if (raw.get(key) instanceof Number value && value.longValue() >= 0) safe.put(key, value.longValue());
+        }
+        for (String key : List.of("present", "missing", "invalid")) {
+            if (raw.get(key) instanceof List<?> names) safe.put(key, names.stream().filter(DeploymentReadinessService.SCAN_CODE_KEY_INDEXES::contains).toList());
+        }
+        return Map.copyOf(safe);
     }
 
     public Map<String, Object> readiness() {

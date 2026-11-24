@@ -50,6 +50,20 @@ class OperationsOverviewTest {
     }
 
     @Test
+    void overviewExposesOnlyWhitelistedIndexCapacityEvidence() {
+        when(readiness.getSnapshot()).thenReturn(Map.of(
+                "ready", true, "readOnly", false, "checkedAt", "2026-11-02T01:00:00Z",
+                "checks", List.of(Map.of("code", "scan-code-key-indexes", "name", "索引", "severity", "WARNING",
+                        "passed", true, "message", "synthetic private",
+                        "details", Map.of("state", "READY", "estimatedRows", 30000000L,
+                                "totalBytes", 20015456256L, "twoIndexReferenceBytes", 1892573184L,
+                                "path", "synthetic private path")))));
+        var result = service.overview();
+        assertThat(result.toString()).contains("estimatedRows=30000000", "totalBytes=20015456256",
+                "twoIndexReferenceBytes=1892573184", "state=READY").doesNotContain("synthetic private");
+    }
+
+    @Test
     void unavailableCountsAreDistinguishedFromSuccessfulZero() {
         var failure = new DataAccessResourceFailureException("synthetic database failure");
         when(jdbc.queryForList(anyString())).thenThrow(failure);

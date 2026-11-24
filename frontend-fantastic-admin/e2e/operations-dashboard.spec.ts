@@ -161,6 +161,18 @@ test('shows configured delivery mode and read-only partition status, labels stal
   await expect(card.getByRole('button', { name: /切换|回退|启动复制|放弃/ })).toHaveCount(0)
 })
 
+test('索引容量展示区分估算、真实容量与服务器剩余空间', async ({ page }) => {
+  const data = snapshot('READ_WRITE')
+  data.readiness.checks.push({ code: 'scan-code-key-indexes', name: '病案影像查询索引', passed: true, severity: 'WARNING', message: '符合就绪条件', ...{ details: { state: 'READY', estimatedRows: 30000000, totalBytes: 20015456256 } } })
+  await page.route(overviewUrl, route => route.fulfill({ json: { code: 200, data } }))
+  await page.goto('/operations-center')
+  const dashboard = page.locator('.overview-dashboard')
+  await expect(dashboard.getByText('编号索引与容量', { exact: true })).toBeVisible()
+  await expect(dashboard.getByText('30,000,000', { exact: true })).toBeVisible()
+  await expect(dashboard.getByText('未取得', { exact: true })).toBeVisible()
+  await expect(dashboard.getByText('容量参考按三千万合成实测换算', { exact: false })).toBeVisible()
+})
+
 test('NAS 节点熔断和实际许可状态可见但不显示源地址', async ({ page }) => {
   const data = { ...snapshot('READ_WRITE'), nasRuntime: { inUse: 1, limit: 2, nodes: [{ ordinal: 1, state: 'OPEN', inUse: 1, limit: 1 }, { ordinal: 2, state: 'HALF_OPEN_ACTIVE', inUse: 0, limit: 1 }] } }
   await page.route(overviewUrl, route => route.fulfill({ json: { code: 200, data } }))

@@ -19,12 +19,20 @@ import java.util.stream.Collectors;
 final class NasOperationIsolation implements AutoCloseable {
     private final ThreadPoolExecutor workers;
     private final Map<String, Semaphore> nodeSlots;
+    private final Map<String, NasNodeCircuit> circuits;
+
+    @FunctionalInterface
+    interface Operation<T> {
+        T run(Runnable markNativeStarted) throws IOException;
+    }
 
     NasOperationIsolation(int concurrency, java.util.Set<String> nodes) {
         int limit = Math.max(1, concurrency);
         int nodeLimit = Math.max(1, limit / Math.max(1, nodes.size()));
         nodeSlots = nodes.stream().collect(Collectors.toUnmodifiableMap(
                 node -> node, node -> new Semaphore(nodeLimit)));
+        circuits = nodes.stream().collect(Collectors.toUnmodifiableMap(
+                node -> node, node -> new NasNodeCircuit(3, Duration.ofSeconds(30), System::nanoTime)));
         workers = new ThreadPoolExecutor(limit, limit, 30, TimeUnit.SECONDS,
                 new ArrayBlockingQueue<>(limit), runnable -> {
                     Thread thread = new Thread(runnable, "mrr-nas-open");
@@ -34,14 +42,23 @@ final class NasOperationIsolation implements AutoCloseable {
         workers.allowCoreThreadTimeOut(true);
     }
 
-    <T> T call(String node, Duration configuredTimeout, SourcePermitGuard.IoSupplier<T> operation,
+    <T> T call(String node, Duration configuredTimeout, Operation<T> operation,
                Consumer<T> discard) throws IOException {
         Duration timeout = SourceOpenBudget.limit(configuredTimeout == null || configuredTimeout.isNegative()
                 || configuredTimeout.isZero() ? Duration.ofSeconds(30) : configuredTimeout);
-        long nanos = Math.min(timeout.toNanos(), Duration.ofHours(1).toNanos());
+        long nanos = timeout.compareTo(Duration.ofHours(1)) > 0 ? Duration.ofHours(1).toNanos() : timeout.toNanos();
         long deadline = System.nanoTime() + nanos;
         Semaphore slots = nodeSlots.get(node);
         if (slots == null || !slots.tryAcquire()) throw new SourcePermitGuard.CapacityException();
+        NasNodeCircuit circuit = circuits.get(node);
+        NasNodeCircuit.Attempt attempt;
+        try {
+            attempt = circuit.begin();
+        } catch (IOException rejected) {
+            slots.release();
+            throw rejected;
+        }
+        var nativeStarted = new java.util.concurrent.atomic.AtomicBoolean();
         var result = new CompletableFuture<T>();
         var claimed = new CompletableFuture<Boolean>();
         try {
@@ -53,7 +70,7 @@ final class NasOperationIsolation implements AutoCloseable {
                         return;
                     }
                     try (var budget = SourceOpenBudget.start(Duration.ofNanos(remaining))) {
-                        T value = operation.get();
+                        T value = operation.run(() -> nativeStarted.set(true));
                         result.complete(value);
                         // Only the worker discards a late result; the caller never blocks on its close.
                         if (!claimed.join()) discard.accept(value);
@@ -66,23 +83,31 @@ final class NasOperationIsolation implements AutoCloseable {
             });
         } catch (RejectedExecutionException rejected) {
             slots.release();
+            circuit.finish(attempt, NasNodeCircuit.Outcome.NEUTRAL);
             throw new SourcePermitGuard.CapacityException();
         }
+        NasNodeCircuit.Outcome outcome = NasNodeCircuit.Outcome.NEUTRAL;
         try {
             T value = result.get(Math.max(0, deadline - System.nanoTime()), TimeUnit.NANOSECONDS);
             claimed.complete(true);
+            outcome = NasNodeCircuit.Outcome.SUCCESS;
             return value;
         } catch (TimeoutException timeoutFailure) {
+            if (nativeStarted.get()) outcome = NasNodeCircuit.Outcome.NATIVE_TIMEOUT;
             throw new SocketTimeoutException("NAS operation timed out");
         } catch (InterruptedException interrupted) {
             Thread.currentThread().interrupt();
             throw new IOException("NAS operation interrupted", interrupted);
         } catch (ExecutionException failure) {
+            if (failure.getCause() instanceof SocketTimeoutException && nativeStarted.get()) {
+                outcome = NasNodeCircuit.Outcome.NATIVE_TIMEOUT;
+            }
             if (failure.getCause() instanceof IOException io) throw io;
             if (failure.getCause() instanceof RuntimeException runtime) throw runtime;
             throw new IOException("NAS operation failed", failure.getCause());
         } finally {
             claimed.complete(false);
+            circuit.finish(attempt, outcome);
         }
     }
 

@@ -123,6 +123,11 @@
 - #230/#350 P1，分支 `fix/230-image-transfer-budget`，worktree `/Volumes/data/Project/MRR-worktrees/230-image-transfer-budget`，56d2ccc4 实际RED 5项/1失败（超过截止时间返回的字节仍写出）；4c60fc59 采用单调时钟及16KiB逐块读写、前后预算/中断检查，默认 `ARCHIVE_IMAGE_SOURCE_TRANSFER_BUDGET=PT120S`，从构造响应起含异步等待。d04011ce 同步 main 20d29651 保留打开/正文两项配置，最终35项零失败/错误/跳过；外部失败审计与流关闭保留。所有网关含旧路径复用现有协议。
 - 预算为协作式截止，不能强行结束已阻塞的原生读、网络写或close；已提交的响应不能改写为新HTTP错误。未完成真实Tomcat/Windows/NAS/OSS中断、连接池及大文件压力验收。无权限、来源顺序或生产配置变更，独立revert。#770已合并20d29651，最新165c0558，governance45426949813、quality45426949942，1150单测、146 PG16均零失败/错误/跳过。
 
+## 03 同键并发回源合并（2026-11-24）
+
+- #99/#350 P1，`perf/99-scan-single-flight`，worktree `/Volumes/data/Project/MRR-worktrees/99-scan-single-flight`。#771已合并 e17d87e1，head d1b2cbe6，governance45428334878、quality45428335084，1151单测零失败，PG16按范围跳过，CI实测冷键8次/热键0次回源。fb40719e实际RED 9项1失败，预期1实际8；cd38d173复用GenerationAwareScanCache同代际同键加载，最多1000个在途登记（满后按普通查询执行）、数据库查询不持有全局锁；五个原注解使用自定义同步加载，空/空列表/零条ArchiveLookupResult不缓存，异常通知等待者并移除登记，旧代际不加入新请求或回填。未更改缓存键、TTL、签名缓存及DB语义。
+- 实际53项定向通过（ScanServiceCacheTest、MigrationServiceImplTest、ScanServiceArchiveLookupTest、ArchiveExportSummaryServiceTest），模拟Mapper冷并发8→1、热0；新代际不等待旧阻塞加载、异常/空结果后重查均通过。非真实端到端吞吐；等待者受首请求实际SQL耗时约束，不声称独立硬超时。同步main dae8bef7，最新CI待验收；独立revert，无生产变更。
+
 ## 每轮交接模板
 
 - 更新时间、任务、风险、目标及非目标：

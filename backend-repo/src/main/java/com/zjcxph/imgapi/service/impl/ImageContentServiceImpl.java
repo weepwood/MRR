@@ -1,6 +1,8 @@
 package com.zjcxph.imgapi.service.impl;
 
 import com.zjcxph.imgapi.entity.PathDO;
+import com.zjcxph.imgapi.config.ArchiveImageSourceProperties;
+import org.springframework.beans.factory.annotation.Autowired;
 import com.zjcxph.imgapi.entity.Scan;
 import com.zjcxph.imgapi.exception.BusinessException;
 import com.zjcxph.imgapi.exception.OssErrorType;
@@ -33,10 +35,18 @@ public class ImageContentServiceImpl implements ImageContentService {
 
     private final ImageContentMapper imageContentMapper;
     private final ImageStorage imageStorage;
+    private final ArchiveImageSourceProperties properties;
 
     public ImageContentServiceImpl(ImageContentMapper imageContentMapper, ImageStorage imageStorage) {
+        this(imageContentMapper, imageStorage, new ArchiveImageSourceProperties());
+    }
+
+    @Autowired
+    public ImageContentServiceImpl(ImageContentMapper imageContentMapper, ImageStorage imageStorage,
+                                   ArchiveImageSourceProperties properties) {
         this.imageContentMapper = imageContentMapper;
         this.imageStorage = imageStorage;
+        this.properties = properties;
     }
 
     @Override
@@ -92,7 +102,7 @@ public class ImageContentServiceImpl implements ImageContentService {
                     .orElse(MediaType.APPLICATION_OCTET_STREAM);
             Long contentLength = stream instanceof ImageReadStream opened && opened.length() >= 0
                     ? opened.length() : null;
-            return new ImageContent(stream, filename, mediaType, contentLength, auditTarget(scan));
+            return new ImageContent(stream, filename, mediaType, contentLength, auditTarget(scan), properties.getTransferBudget());
         } catch (IOException exception) {
             throw mapReadFailure(scanId, exception);
         }

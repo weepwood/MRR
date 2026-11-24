@@ -48,7 +48,7 @@ class ScanCodeKeyIndexReadinessCheckTest {
         when(jdbcTemplate.queryForList(contains("idx_mr_scan_bah_numeric_cursor")))
                 .thenReturn(indexes);
         when(jdbcTemplate.queryForList(contains("reltuples")))
-                .thenReturn(List.of(Map.of("estimated_rows", estimatedRows)));
+                .thenReturn(List.of(Map.of("estimated_rows", estimatedRows, "total_bytes", 20015456256L, "heap_bytes", 15000000000L, "index_bytes", 5000000000L)));
         return jdbcTemplate;
     }
 
@@ -78,6 +78,8 @@ class ScanCodeKeyIndexReadinessCheckTest {
                 details.get("missing")
         );
         assertEquals(LARGE_TABLE_ROWS, details.get("estimatedRows"));
+        assertEquals(1892573184L, details.get("twoIndexReferenceBytes"));
+        assertEquals(20015456256L, details.get("totalBytes"));
         assertEquals("scripts/build-code-key-indexes.sql", details.get("script"));
     }
 
@@ -128,6 +130,15 @@ class ScanCodeKeyIndexReadinessCheckTest {
 
         assertTrue((Boolean) check.get("passed"), "小规模表全表扫描代价可接受，不应产生噪音告警");
         assertEquals("BELOW_THRESHOLD", detailsOf(check).get("state"));
+    }
+
+    @Test
+    void unknownStatisticsDoNotMasqueradeAsAnEmptyTable() {
+        Map<String, Object> check = service(jdbcWithIndexes(List.of(), -1L)).checkScanCodeKeyIndexes();
+        assertFalse((Boolean) check.get("passed"));
+        assertFalse(detailsOf(check).containsKey("estimatedRows"));
+        assertFalse(detailsOf(check).containsKey("twoIndexReferenceBytes"));
+        assertTrue(String.valueOf(check.get("message")).contains("未知"));
     }
 
     @Test

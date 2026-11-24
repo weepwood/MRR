@@ -314,8 +314,10 @@ public class DeploymentReadinessService {
                     .filter(name -> !valid.contains(name) && !invalid.contains(name))
                     .toList();
 
-            long estimatedRows = estimatedScanRows();
-            boolean needed = estimatedRows >= scanIndexMinimumRows;
+            Map<String, Object> capacity = scanCapacity();
+            boolean estimateKnown = capacity.get("estimated_rows") instanceof Number n && n.longValue() >= 0;
+            long estimatedRows = estimateKnown ? ((Number) capacity.get("estimated_rows")).longValue() : 0L;
+            boolean needed = !estimateKnown || estimatedRows >= scanIndexMinimumRows;
             boolean passed = (missing.isEmpty() && invalid.isEmpty()) || !needed;
             String state = !missing.isEmpty() || !invalid.isEmpty()
                     ? (needed ? "MISSING" : "BELOW_THRESHOLD")
@@ -326,6 +328,8 @@ public class DeploymentReadinessService {
                 message = "病案影像表的编号查询索引已就绪";
             } else if (passed) {
                 message = "病案影像表规模较小（约 " + estimatedRows + " 行），暂不需要编号查询索引";
+            } else if (!estimateKnown) {
+                message = "病案影像表统计行数未知，编号查询索引缺失或不符合预期";
             } else {
                 message = "病案影像表约 " + estimatedRows + " 行，但编号查询索引缺失或不符合预期，"
                         + "按病案号/上架号查询可能发生大范围扫描";
@@ -337,11 +341,19 @@ public class DeploymentReadinessService {
             details.put("present", List.copyOf(valid));
             details.put("missing", List.copyOf(missing));
             details.put("invalid", List.copyOf(invalid));
-            details.put("estimatedRows", estimatedRows);
+            if (estimateKnown) {
+                details.put("estimatedRows", estimatedRows);
+                details.put("twoIndexReferenceBytes", java.math.BigDecimal.valueOf(estimatedRows)
+                        .multiply(java.math.BigDecimal.valueOf(1892573184L))
+                        .divide(java.math.BigDecimal.valueOf(30000000L), 0, java.math.RoundingMode.CEILING).longValueExact());
+            }
+            for (String[] field : List.of(new String[]{"total_bytes", "totalBytes"}, new String[]{"heap_bytes", "heapBytes"}, new String[]{"index_bytes", "indexBytes"})) {
+                if (capacity.get(field[0]) instanceof Number bytes && bytes.longValue() >= 0) details.put(field[1], bytes.longValue());
+            }
             details.put("minimumRows", scanIndexMinimumRows);
             details.put("script", SCAN_CODE_KEY_INDEX_SCRIPT);
 
-            logScanIndexStateChange(state, missing, invalid, estimatedRows);
+            logScanIndexStateChange(state, missing, invalid, estimateKnown ? estimatedRows : null);
             return check("scan-code-key-indexes", "病案影像查询索引", passed, "WARNING", message, details);
         } catch (Exception exception) {
             return failed("scan-code-key-indexes", "病案影像查询索引", "WARNING", exception);
@@ -354,21 +366,19 @@ public class DeploymentReadinessService {
      * <p>使用 {@code pg_class.reltuples}（统计信息里的估计值）而不是 {@code count(*)}：
      * 这张表约三千万行，精确计数本身就是一次全表扫描，绝不能放进每 30 秒执行一次的就绪检查。</p>
      */
-    private long estimatedScanRows() {
+    private Map<String, Object> scanCapacity() {
         List<Map<String, Object>> rows = jdbcTemplate.queryForList("""
-                SELECT COALESCE(c.reltuples, 0)::bigint AS estimated_rows
+                SELECT c.reltuples::bigint AS estimated_rows, pg_total_relation_size(c.oid) AS total_bytes,
+                       pg_relation_size(c.oid) AS heap_bytes, pg_indexes_size(c.oid) AS index_bytes
                 FROM pg_class c
                 JOIN pg_namespace n ON n.oid = c.relnamespace
                 WHERE n.nspname = 'app' AND c.relname = 'mr_scan'
                 """);
-        if (rows.isEmpty()) {
-            return 0L;
-        }
-        Object value = rows.get(0).get("estimated_rows");
-        return value instanceof Number number ? Math.max(0L, number.longValue()) : 0L;
+        if (rows.isEmpty()) throw new IllegalStateException("Scan relation catalog unavailable");
+        return rows.getFirst();
     }
 
-    private void logScanIndexStateChange(String state, List<String> missing, List<String> invalid, long estimatedRows) {
+    private void logScanIndexStateChange(String state, List<String> missing, List<String> invalid, Long estimatedRows) {
         if (state.equals(lastScanIndexState)) {
             return;
         }
@@ -377,7 +387,7 @@ public class DeploymentReadinessService {
             logger.warn(
                     "病案影像表约 {} 行但编号查询索引缺失或不符合预期（缺失={}，无效={}），"
                             + "按病案号查询可能发生大范围扫描；请在批准的窗口执行 {}",
-                    estimatedRows, missing, invalid, SCAN_CODE_KEY_INDEX_SCRIPT);
+                    estimatedRows == null ? "未知" : estimatedRows, missing, invalid, SCAN_CODE_KEY_INDEX_SCRIPT);
         } else if ("READY".equals(state)) {
             logger.info("病案影像表编号查询索引已就绪");
         }

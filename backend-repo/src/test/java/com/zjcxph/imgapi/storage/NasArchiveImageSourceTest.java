@@ -132,6 +132,115 @@ class NasArchiveImageSourceTest {
     }
 
     @Test
+    void blockedBodyReturnsBeforeNativeReadAndKeepsPermitUntilLateClose() throws Exception {
+        var properties = new ArchiveImageSourceProperties();
+        properties.setNasMaxConcurrency(1);
+        properties.setAcquireTimeout(Duration.ofMillis(100));
+        properties.setNasOpenTimeout(Duration.ofMillis(200));
+        properties.setNasBodyTimeout(Duration.ofMillis(200));
+        var node = new ArchiveImageSourceProperties.NasNode();
+        node.setRoot(tempDir.toString());
+        properties.setNasNodes(Map.of("synthetic", node));
+        var entered = new java.util.concurrent.CountDownLatch(1);
+        var release = new java.util.concurrent.CountDownLatch(1);
+        var closed = new java.util.concurrent.CountDownLatch(1);
+        var opens = new java.util.concurrent.atomic.AtomicInteger();
+        var source = new NasArchiveImageSource(properties) {
+            @Override java.io.InputStream openFile(PathDO image) {
+                if (opens.incrementAndGet() > 1) return new java.io.ByteArrayInputStream(new byte[]{7});
+                return new java.io.InputStream() {
+                    @Override public int read() { throw new UnsupportedOperationException(); }
+                    @Override public int read(byte[] bytes, int offset, int count) {
+                        entered.countDown();
+                        while (release.getCount() > 0) {
+                            try { release.await(); } catch (InterruptedException ignored) {}
+                        }
+                        bytes[offset] = 9;
+                        return 1;
+                    }
+                    @Override public void close() { closed.countDown(); }
+                };
+            }
+        };
+        var image = new PathDO(); image.setSourceType("NAS"); image.setSourceNode("synthetic");
+        var executor = java.util.concurrent.Executors.newSingleThreadExecutor();
+        byte[] buffer = {0};
+        try (var input = source.open(image)) {
+            var pending = executor.submit(() -> {
+                try { input.read(buffer); return false; }
+                catch (java.net.SocketTimeoutException expected) { return true; }
+            });
+            try {
+                assertThat(entered.await(2, java.util.concurrent.TimeUnit.SECONDS)).isTrue();
+                assertThat(pending.get(2, java.util.concurrent.TimeUnit.SECONDS)).isTrue();
+                input.close();
+                assertThatThrownBy(() -> source.open(image)).isInstanceOf(IOException.class);
+                assertThat(buffer).containsExactly((byte)0);
+            } finally { release.countDown(); }
+            assertThat(closed.await(2, java.util.concurrent.TimeUnit.SECONDS)).isTrue();
+            assertThat(buffer).containsExactly((byte)0);
+            try (var next = source.open(image)) { assertThat(next.read()).isEqualTo(7); }
+        } finally {
+            release.countDown();
+            executor.shutdownNow();
+            source.shutdown();
+        }
+    }
+
+    @Test
+    void blockedNativeCloseRetainsPermitAndRecoversAfterActualCompletion() throws Exception {
+        var properties = new ArchiveImageSourceProperties();
+        properties.setNasMaxConcurrency(1);
+        properties.setAcquireTimeout(Duration.ofMillis(100));
+        properties.setNasOpenTimeout(Duration.ofMillis(300));
+        properties.setNasBodyTimeout(Duration.ofMillis(150));
+        var node = new ArchiveImageSourceProperties.NasNode();
+        node.setRoot(tempDir.toString());
+        properties.setNasNodes(Map.of("synthetic", node));
+        var entered = new java.util.concurrent.CountDownLatch(1);
+        var release = new java.util.concurrent.CountDownLatch(1);
+        var closed = new java.util.concurrent.CountDownLatch(1);
+        var opens = new java.util.concurrent.atomic.AtomicInteger();
+        var closes = new java.util.concurrent.atomic.AtomicInteger();
+        var source = new NasArchiveImageSource(properties) {
+            @Override java.io.InputStream openFile(PathDO image) {
+                if (opens.incrementAndGet() > 1) return new java.io.ByteArrayInputStream(new byte[]{7});
+                return new java.io.ByteArrayInputStream(new byte[]{1}) {
+                    @Override public void close() {
+                        closes.incrementAndGet();
+                        entered.countDown();
+                        while (release.getCount() > 0) {
+                            try { release.await(); } catch (InterruptedException ignored) {}
+                        }
+                        closed.countDown();
+                    }
+                };
+            }
+        };
+        var image = new PathDO(); image.setSourceType("NAS"); image.setSourceNode("synthetic");
+        var executor = java.util.concurrent.Executors.newSingleThreadExecutor();
+        try (var input = source.open(image)) {
+            assertThat(input.read()).isEqualTo(1);
+            var pending = executor.submit(() -> {
+                try { input.close(); return false; }
+                catch (java.net.SocketTimeoutException expected) { return true; }
+            });
+            assertThat(entered.await(2, java.util.concurrent.TimeUnit.SECONDS)).isTrue();
+            assertThat(pending.get(2, java.util.concurrent.TimeUnit.SECONDS)).isTrue();
+            input.close();
+            assertThat(closes.get()).isEqualTo(1);
+            assertThatThrownBy(() -> source.open(image)).isInstanceOf(IOException.class);
+            release.countDown();
+            assertThat(closed.await(2, java.util.concurrent.TimeUnit.SECONDS)).isTrue();
+            try (var next = source.open(image)) { assertThat(next.read()).isEqualTo(7); }
+        } finally {
+            release.countDown();
+            executor.shutdownNow();
+            source.shutdown();
+        }
+    }
+
+    @Test
     void readsHighBahFromSjhDirectoryWhenSourceRefIsAbsent() throws Exception {
         Path root = Files.createDirectory(tempDir.resolve("high-bah-root"));
         Path file = Files.createDirectories(

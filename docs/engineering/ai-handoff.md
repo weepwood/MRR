@@ -194,10 +194,25 @@
 
 - #785 首次治理45439870682因PR正文缺少六个标准章节失败，已修正正文并以本次文档提交触发重新验收；未修改门禁。
 
+## 04.3 NAS正文原生操作隔离（2026-11-25）
+
+- #230/#350 P1，分支 `fix/230-nas-body-isolation`，worktree `/Volumes/data/Project/MRR-worktrees/230-nas-body-isolation`。8ae21669实际RED 5项1错误：模拟不响应中断的原生正文read阻塞调用方；b9e5ff15 每个已许可的NAS流一个串行原生I/O所有者，16KiB私有缓冲，读取/seek/close独立等待预算，超时不取消原生任务或提前释放许可，排队一次真实close；保留真实长度与Range seek。新增 ARCHIVE_IMAGE_SOURCE_NAS_BODY_TIMEOUT 默认PT30S。实际36项联合零失败/错误/跳过，覆盖迟到读取、许可持有/恢复、Range、网关及ZIP/PDF。同步#779正式main 8f598234，最新CI待验收。
+- #779已合并8f598234，head e29c6297，governance45435859334、quality45435859775，1166单测零失败/错误/跳过，PG16按范围跳过。原生正文仍可能永久挂起，实际许可保持直到真实关闭；不声称OS硬取消、Windows/NAS现场测试或Tomcat慢客户端硬截止。正文故障计入节点熔断仍需单独验证；独立revert，无生产变更。
+
+- 追加实际14项定向回归全部通过：模拟原生close忽略中断，超时后重复关闭一次、许可在实际close前不释放；真实嵌入Tomcat+Spring MVC+loopback TCP客户端停止读后RST，流真实关闭、失败审计、下一请求成功；实际AWS SDK Apache 2连接池饱和，第三请求未到源站，部分响应abort后恢复。仅测试配置，非生产50连接池、非真实NAS、非持续静默客户端硬截止。#781已合并38ed106c（1169单测/148 PG16）。最新CI待验收。
+
+- #780已合并039307d3，head947b937d，quality45438121029，1171单测/148 PG16零失败/错误/跳过，Development通过。
+
+- #782 head27423c60，quality45439948011后端真实1175项1失败：ControllerAccessPolicyTest扫描到测试探针Probe#stream。测试改为仅在独立MVC上下文显式注册RequestMapping，不修改生产权限规则或扫描器。修复后本地16项（含完整Controller访问策略检查、真实Tomcat、NAS、OSS、节点状态）零失败/错误/跳过；新CI待验证。
+
+- #785已合并b7980728，head2c6dff9e，governance45440104179、quality45440104187、deploy-pages-demo45440104039通过，933前端单测/138文件。
+
 ## 03 兼容游标真实PG16与MVC契约（2026-11-25）
 
 - #99/#350 P2，仅补验收，分支 `test/99-legacy-cursor-http-contract`，独立worktree。真实PG16新增 legacyContains 游标锁等待取消（SQLSTATE 57014、原连接恢复），及真实Mapper+Service+Controller standalone MVC JSON契约：默认精确/显式包含、前导零、两页ID、hasMore/nextCursorId/size、无total。未修改权限规则、SQL超时、生产数据库或接口。
 - 本地复用隔离基准临时副本增加测试类选择（副本已删除），`mrr-scan-lab-fuaf38hd` 实际9单测/26 PG16零失败/错误/跳过，报告server_stopped=true，pg_ctl确认停止；原始flyway-and-mapper.log保留。MVC契约不代表完整认证链或真实浏览器直连后端。#785已合并b7980728，933前端测试/138文件，演示Pages通过。医院副本端到端尚未验收。独立revert，无生产操作。
+
+- #782 已合并437f428a，head68116d01、governance45441171525、quality45441171863，1175单测/148 PG16全部通过，Development通过。
 
 ## 每轮交接模板
 

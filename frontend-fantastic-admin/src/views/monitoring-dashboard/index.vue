@@ -6,6 +6,8 @@ import MonitoringPage from '@/views/monitoring/index.vue'
 
 defineOptions({ name: 'MonitoringDashboardPage' })
 
+const router = useRouter()
+const statusHref = router.resolve({ name: 'publicStatus' }).href
 const statusFrameKey = ref(0)
 
 function reloadStatusFrame() {
@@ -13,7 +15,7 @@ function reloadStatusFrame() {
 }
 
 function openStatusPage() {
-  window.open('/status', '_blank', 'noopener,noreferrer')
+  window.open(statusHref, '_blank', 'noopener,noreferrer')
 }
 </script>
 
@@ -42,7 +44,7 @@ function openStatusPage() {
         <iframe
           :key="statusFrameKey"
           class="embedded-status-frame"
-          src="/status"
+          :src="statusHref"
           title="MRR 服务可用性状态"
           loading="lazy"
         />

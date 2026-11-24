@@ -95,8 +95,8 @@ function navigateAnchor(event: MouseEvent) {
 
 .mrr-metric-card__anchor {
   position: absolute;
-  z-index: 1;
   inset: 0;
+  z-index: 1;
   color: inherit;
   text-decoration: none;
   border-radius: inherit;

@@ -116,18 +116,21 @@ class OssObjectReaderTest {
 
     @Test
     void repeatedActualPoolExhaustionAndAbortKeepsConnectionsReusable() throws Exception {
-        var workers = java.util.concurrent.Executors.newCachedThreadPool();
+        var workers = java.util.concurrent.Executors.newFixedThreadPool(6);
         var server = com.sun.net.httpserver.HttpServer.create(new java.net.InetSocketAddress("127.0.0.1", 0), 0);
         server.setExecutor(workers);
         var accepted = new java.util.concurrent.atomic.AtomicInteger();
-        var release = new java.util.concurrent.CountDownLatch(1);
+        var release = new java.util.concurrent.atomic.AtomicReference<>(new java.util.concurrent.CountDownLatch(1));
+        int rounds = Integer.getInteger("mrr.oss.pool.recovery.rounds", 12);
+        assertThat(rounds).isBetween(1, 600);
         server.createContext("/test-bucket/slow", exchange -> {
             accepted.incrementAndGet();
+            var roundRelease = release.get();
             try (exchange) {
                 exchange.sendResponseHeaders(200, 100);
                 exchange.getResponseBody().write(1);
                 exchange.getResponseBody().flush();
-                try { release.await(30, java.util.concurrent.TimeUnit.SECONDS); }
+                try { roundRelease.await(10, java.util.concurrent.TimeUnit.SECONDS); }
                 catch (InterruptedException e) { Thread.currentThread().interrupt(); }
             }
         });
@@ -152,7 +155,8 @@ class OssObjectReaderTest {
                 .build();
         var reader = readerWith(client);
         try {
-            for (int i = 0; i < 12; i++) {
+            for (int i = 0; i < rounds; i++) {
+                release.set(new java.util.concurrent.CountDownLatch(1));
                 int before = accepted.get();
                 try (var first = reader.open("slow"); var second = reader.open("slow")) {
                     assertThat(first.read()).isEqualTo(1);
@@ -162,10 +166,11 @@ class OssObjectReaderTest {
                     first.close();
                     try (var fast = reader.open("fast")) { assertThat(fast.readAllBytes()).containsExactly((byte)7); }
                     assertThat(accepted.get()).isEqualTo(before + 3);
-                }
+                } finally { release.get().countDown(); }
             }
+            assertThat(accepted.get()).isEqualTo(rounds * 3);
         } finally {
-            release.countDown();
+            release.get().countDown();
             reader.close();
             server.stop(0);
             workers.shutdownNow();

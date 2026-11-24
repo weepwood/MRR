@@ -4,6 +4,7 @@ import com.github.benmanes.caffeine.cache.Caffeine;
 import com.github.benmanes.caffeine.cache.Ticker;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.cache.CacheManager;
+import org.springframework.cache.interceptor.CacheResolver;
 import org.springframework.cache.caffeine.CaffeineCache;
 import org.springframework.cache.annotation.EnableCaching;
 import org.springframework.cache.support.SimpleCacheManager;
@@ -76,8 +77,19 @@ public class CacheConfig {
         return cacheManager;
     }
 
+    /** Only the five non-sync scan lookup annotations use this resolver. */
+    @Bean
+    public CacheResolver scanQueryCacheResolver(CacheManager cacheManager) {
+        return context -> context.getOperation().getCacheNames().stream().map(name -> {
+            if (cacheManager.getCache(name) instanceof GenerationAwareScanCache cache) {
+                return cache.lookupView();
+            }
+            throw new IllegalStateException("Missing generation-aware scan cache: " + name);
+        }).toList();
+    }
+
     private CaffeineCache buildCache(String name, long duration, TimeUnit timeUnit) {
-        return new CaffeineCache(name, Caffeine.newBuilder()
+        return new GenerationAwareScanCache(name, Caffeine.newBuilder()
                 .initialCapacity(INITIAL_CAPACITY)
                 .maximumSize(MAXIMUM_SIZE)
                 .expireAfterWrite(duration, timeUnit)

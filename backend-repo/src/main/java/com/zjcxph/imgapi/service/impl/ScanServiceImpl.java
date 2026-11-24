@@ -51,7 +51,7 @@ public class ScanServiceImpl implements ScanService {
 
     @Override
     @Cacheable(
-            value = "scanLookupByBah",
+            value = "scanLookupByBah", cacheResolver = "scanQueryCacheResolver",
             key = "#normalizedCode + ':' + #searchCode",
             unless = "#result == null || #result.resultCount() == 0"
     )
@@ -67,7 +67,7 @@ public class ScanServiceImpl implements ScanService {
 
     @Override
     @Cacheable(
-            value = "scanLookupByCode",
+            value = "scanLookupByCode", cacheResolver = "scanQueryCacheResolver",
             key = "#normalizedBah + ':' + #bahSearchCode + ':' + #normalizedSjh + ':' + #sjhSearchCode",
             unless = "#result == null || #result.resultCount() == 0"
     )
@@ -92,7 +92,7 @@ public class ScanServiceImpl implements ScanService {
     }
 
     @Override
-    @Cacheable(value = "scanByBah", key = "#normalizedCode + ':' + #searchCode", unless = "#result == null || #result.isEmpty()")
+    @Cacheable(value = "scanByBah", cacheResolver = "scanQueryCacheResolver", key = "#normalizedCode + ':' + #searchCode", unless = "#result == null || #result.isEmpty()")
     public List<Scan> getImageListByBAH(String normalizedCode, String searchCode) {
         return performLookup(
                 normalizedCode,
@@ -105,7 +105,7 @@ public class ScanServiceImpl implements ScanService {
 
     @Override
     @Cacheable(
-            value = "scanByCode",
+            value = "scanByCode", cacheResolver = "scanQueryCacheResolver",
             key = "#normalizedBah + ':' + #bahSearchCode + ':' + #normalizedSjh + ':' + #sjhSearchCode",
             unless = "#result == null || #result.isEmpty()"
     )
@@ -236,7 +236,7 @@ public class ScanServiceImpl implements ScanService {
     }
 
     @Override
-    @Cacheable(value = "scanById", key = "#id", unless = "#result == null")
+    @Cacheable(value = "scanById", cacheResolver = "scanQueryCacheResolver", key = "#id", unless = "#result == null")
     public Scan findById(Integer id) {
         return scanMapper.findById(id);
     }

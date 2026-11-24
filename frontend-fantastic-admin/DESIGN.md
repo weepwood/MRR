@@ -814,3 +814,11 @@ Element Plus `el-button` 与 reka-ui `FaButton`（`.fa-button-control`）**尺�
 - 现在删除 showQuerySuccessNotice、通知堆叠（restackQueryNotices/activeQueryNotices 等约 60 行）与 minDataLoadingDuration 补时逻辑；查询失败仍走原有 error 态与 AppError 通道，按钮忙态只反映真实的请求在途时间。
 - 新增 E2E `users-query-feedback.spec.ts`：先热身一轮（固定 mock 编译与首次响应抖动，并等旧实现可能弹出的 toast 完全离场）后，忙态周期用页面内 MutationObserver 记录 `aria-busy` 翻转边沿（`performance.now`，测量不含 Playwright 协议往返——CI 慢环境下协议往返可 >100ms，会污染紧上界断言），断言 < 310ms（旧实现 320ms 下限必然超过）；toast 断言按文案收窄为「不出现含『查询成功』的 ElMessage」，从点击起 1.5s 轮询捕获（旧实现的 3.2s toast 在忙态翻回 false 前必已弹出，该窗口是回归检测窗口）。两组断言均先在旧实现上确认 RED（借 ui-polish worktree 的 mock 服务器复用验证，toast 捕获实测成立），实现删除后转 GREEN。
 
+
+**2026-11-24（逐页优化 · 第 13 批：术语、空态与表面一致性）**
+
+- 术语文案：记录管理页头描述删除实现层词汇「游标读取」，改为「结果分批加载、显示批次位置与已加载数量，不做总数估算」（措辞与页面实况一致：批次号 + 每批条数 + 当前批记录数，无字面「区间」）；UI 组件演示页 PatternExamples 同步改为一致措辞，不再传播旧术语；OCR 批次表「续跑游标」列改为「续跑起点」；统计表「CID」列标注业务含义「设备 ID（CID）」（依据 `vitepress-doc/internal/data-import/mr-statistics.md` 的字段映射，cid = 设备 ID）。
+- OCR 批次空表改用共享空态 AppEmpty（compact），不再显示 el-table 默认「暂无数据」（§5.1「成功但为空」契约）；空态文案指向同页上方的创建入口。
+- 监控页缓存命中率指标值缺失时不再残留「-%」（指标卡 note 与 PostgreSQL 明细两处），统一走 `formatPercent`：缺失显示「-」，避免被误读为「0% 且格式坏了」。
+- 用户管理对话框表面统一：创建/审核注册/编辑此前使用 `mrr-vscode-glass` + `mrr-vscode-overlay`（`--mrr-popover` 表面 + 自定遮罩色），重置密码/禁用/临时凭据为全站默认对话框表面——同页两种质感。glass-surface.css 明确该效果仅限外观设置面板/导航搜索等既有入口、不扩展到业务表面，故移除这三处专属类，全页 6 个对话框回全站统一表面。
+- 范围说明：统计页「年份下拉与日期范围双控件合并」「监控『严重数据异常』指标卡跳转异常样本」属于交互结构改动，不在本 P3 批次内，另行立 Issue。

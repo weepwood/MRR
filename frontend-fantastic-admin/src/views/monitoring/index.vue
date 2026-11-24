@@ -108,7 +108,7 @@ const summaryCards = computed<SummaryCard[]>(() => [
   {
     label: '数据库大小',
     value: formatBytes(databaseOverview.value.database?.size_bytes),
-    note: `缓存命中率 ${databaseOverview.value.transactions?.cache_hit_ratio ?? '-'}%`,
+    note: `缓存命中率 ${formatPercent(databaseOverview.value.transactions?.cache_hit_ratio)}`,
     tone: 'violet',
     icon: 'i-lucide:hard-drive',
   },
@@ -116,6 +116,14 @@ const summaryCards = computed<SummaryCard[]>(() => [
 
 function formatNumber(value: unknown) {
   return new Intl.NumberFormat('zh-CN').format(Number(value || 0))
+}
+
+/*
+ * 百分比指标（如缓存命中率）：值缺失时显示「-」而不是「-%」——
+ * 残留的单位符号会让操作员误读为「0% 且格式坏了」。
+ */
+function formatPercent(value: unknown) {
+  return value == null ? '-' : `${value}%`
 }
 
 function formatBytes(value: unknown) {
@@ -361,7 +369,7 @@ onUnmounted(pause)
             {{ databaseOverview.transactions?.deadlocks ?? 0 }}
           </el-descriptions-item>
           <el-descriptions-item label="缓存命中率">
-            {{ databaseOverview.transactions?.cache_hit_ratio ?? '-' }}%
+            {{ formatPercent(databaseOverview.transactions?.cache_hit_ratio) }}
           </el-descriptions-item>
         </el-descriptions>
 

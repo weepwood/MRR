@@ -9,8 +9,8 @@ const settingsStore = useSettingsStore()
 
 /* ---------- 页头尺寸 ---------- */
 const longDescription = ref(false)
-const shortText = '按完整编号检索扫描记录，采用游标读取。'
-const longText = '按完整编号检索扫描记录，采用游标读取；病案号、上架号兼容原始前导零。结果按批次返回，本批数量不代表全库总数。'
+const shortText = '按完整编号检索扫描记录，结果分批加载。'
+const longText = '按完整编号检索扫描记录，结果分批加载、显示批次位置与已加载数量，不做总数估算；病案号、上架号兼容原始前导零。'
 const defaultHeader = ref<HTMLElement>()
 const compactHeader = ref<HTMLElement>()
 const headerHeights = ref({ default: 0, compact: 0 })

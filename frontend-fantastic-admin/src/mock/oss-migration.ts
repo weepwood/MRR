@@ -1,7 +1,7 @@
 import type { MockScanRecord } from '../mock-support/records'
 import type { MigrationJob } from '@/api/modules/oss'
 import { defineFakeRoute } from 'vite-plugin-fake-server/client'
-import { migrationSnapshot } from '../mock-support/migration'
+import { migrationSnapshot, resetDemoFailures, uploadDemoScans } from '../mock-support/migration'
 import { demoRecords } from '../mock-support/records'
 import { boundedInt, demoError, demoPage } from '../mock-support/response'
 
@@ -317,40 +317,41 @@ export default defineFakeRoute([
     url: '/api/v1/oss/migration/retry',
     method: 'post',
     response: ({ body }) => {
-      const payload = (body ?? {}) as { scanIds?: unknown }
-      return ok({
-        updated: Array.isArray(payload.scanIds) ? payload.scanIds.length : 0,
-      }, '失败记录已重置')
+      if (jobs.some(job => ['pending', 'running', 'cancelling'].includes(job.status ?? ''))) {
+        return demoError(409, '演示迁移任务运行期间不能重置失败记录')
+      }
+      const ids = (body as { scanIds?: unknown } | undefined)?.scanIds
+      if (!Array.isArray(ids) || !ids.length || ids.length > 500 || !ids.every(id => Number.isSafeInteger(id) && id > 0)) {
+        return demoError(400, '请输入有效的演示扫描编号（最多500条）')
+      }
+      return ok({ updated: resetDemoFailures(demoRecords.scans, ids) }, '失败记录已重置')
     },
   },
   {
     url: '/api/v1/oss/upload',
     method: 'post',
     response: ({ body }) => {
-      const scanIds = ((body ?? {}) as { scanIds?: number[] }).scanIds ?? []
-      return ok({
-        results: scanIds.map(scanId => ({
-          scanId,
-          status: scanId % 7 === 0 ? 'retry_wait' : 'success',
-          errorMessage: scanId % 7 === 0 ? 'Nginx 连接超时' : undefined,
-        })),
-        total: scanIds.length,
-        success: scanIds.filter(scanId => scanId % 7 !== 0).length,
-        failed: scanIds.filter(scanId => scanId % 7 === 0).length,
-        waitingSjh: 0,
-      }, '上传完成')
+      if (jobs.some(job => ['pending', 'running', 'cancelling'].includes(job.status ?? ''))) {
+        return demoError(409, '演示迁移任务运行期间不能手动上传')
+      }
+      const ids = (body as { scanIds?: unknown } | undefined)?.scanIds
+      if (!Array.isArray(ids) || !ids.length || ids.length > 500 || !ids.every(id => Number.isSafeInteger(id) && id > 0)) {
+        return demoError(400, '请输入有效的演示扫描编号（最多500条）')
+      }
+      return ok(uploadDemoScans(demoRecords.scans, ids), '上传完成')
     },
   },
   {
     url: '/api/v1/oss/upload/bah/:bah',
     method: 'post',
-    response: ({ params }) => ok({
-      bah: (params as Record<string, string>).bah,
-      results: [{ scanId: 1, status: 'success' }],
-      total: 1,
-      success: 1,
-      failed: 0,
-      waitingSjh: 0,
-    }, '上传完成'),
+    response: ({ params }) => {
+      if (jobs.some(job => ['pending', 'running', 'cancelling'].includes(job.status ?? ''))) {
+        return demoError(409, '演示迁移任务运行期间不能手动上传')
+      }
+      const bah = String(params.bah).trim()
+      const ids = demoRecords.scans.filter(scan => scan.bah === bah && scan.uploadFlag).map(scan => scan.id)
+      if (!ids.length) { return demoError(404, '未找到可上传的演示病案记录') }
+      return ok({ bah, ...uploadDemoScans(demoRecords.scans, ids) }, '上传完成')
+    },
   },
 ])

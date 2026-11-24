@@ -1,5 +1,6 @@
-import { MEDICAL_RECORD_TYPE_CODES } from '@/constants/medical-record-types'
+import { getMedicalRecordTypeLabel, MEDICAL_RECORD_TYPE_CODES } from '@/constants/medical-record-types'
 import { demoClock } from './clock'
+import { pageSvg } from './image'
 
 export interface MockScanRecord {
   id: number
@@ -21,6 +22,7 @@ export interface MockScanRecord {
   migrationAttempts?: number
   migrationErrorCode?: string
   migrationNextRetryAt?: string | null
+  migrationUpdatedAt?: string
 }
 
 const departments = ['心内科', '神经内科', '普外科', '骨科', '呼吸内科', '消化内科']
@@ -64,7 +66,7 @@ export function createDemoRecords(clock = demoClock) {
         uploadDate,
         uploadFlag: uploaded ? 1 : 0,
         folder: `/mock/archive/${monthFolder}/${patient.bah}`,
-        ossUrl: migrated ? `https://example.invalid/mock/${id}.jpg` : undefined,
+        ossUrl: migrated ? pageSvg(patient.bah, id, getMedicalRecordTypeLabel(btype)) : undefined,
         fileSize: 512_000 + index * 31_337,
         checksumMd5: `mock-md5-${String(id).padStart(4, '0')}`,
         migrationStatus: migrated ? (index % 5 === 0 ? 'verified' : 'migrated') : waiting ? 'waiting_sjh' : failed ? 'failed' : retry ? 'retry_wait' : 'not_migrated',

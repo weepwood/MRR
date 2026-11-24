@@ -899,6 +899,11 @@ export default defineFakeRoute([
   },
   {
     url: '/api/v1/oss/url/:scanId',
-    response: ({ params }) => ok(`https://example.invalid/mock/${params.scanId}.jpg`),
+    response: ({ params }) => {
+      const scan = scans.find(item => item.id === Number(params.scanId))
+      return scan?.ossUrl
+        ? ok({ scanId: scan.id, ossUrl: scan.ossUrl })
+        : { code: 404, message: '该演示记录未迁移到 OSS', data: null }
+    },
   },
 ])

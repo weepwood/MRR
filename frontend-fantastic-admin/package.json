@@ -14,6 +14,8 @@
   "scripts": {
     "dev": "vite",
     "dev:mock": "vite --mode mock",
+    "mock:check": "node scripts/mock-coverage.mjs",
+    "mock:check:test": "node --test scripts/mock-coverage.test.mjs",
     "build": "vue-tsc -b && vite build",
     "build:test": "vue-tsc -b && vite build --mode test",
     "build:mock": "vue-tsc -b && vite build --mode mock",

@@ -87,6 +87,13 @@
 - #230 P1 分支 `fix/230-gateway-pending-stream`（专属 worktree `/Volumes/data/Project/MRR-worktrees/230-gateway-pending-stream`），从 main 3bc4a36c 建立。异步调度拒绝前已打开上游影像流，原回调未运行导致资源泄漏。e6967007 实际 RED 4项/1失败；a204eed7 采用 Spring MVC CallableProcessingInterceptor 与原 try-with-resources 所有权交接，完成/超时/错误时仅关闭尚未被任务领取的流；外部未启动任务记录一次 FAILED 审计，晚到任务不再读流。GREEN 14项，扩展26项均零失败/错误/跳过。最新 P1 CI 待核验。
 - 保留既有权限、票据、审计、来源顺序和 direct 默认配置。已开始的任务仍负责关闭源，不提前释放许可。真实 Tomcat 客户端断开、现场并发和大文件 Range 未验收；当前网关为全量200流，不伪造206。遗留 OSS 管理签名URL及直连页面需区分管理端与受控病案下发，单独核对兼容。回滚独立 revert。
 
+## 04.3 受控影像来源诊断
+
+- #230/#636 P1 分支 `fix/230-controlled-source-diagnostics`，worktree `/Volumes/data/Project/MRR-worktrees/230-controlled-source-diagnostics`。6b6edf25 实际 RED 1项/1失败：旧 direct HEAD 跟随重定向，访问跳转目标。修复拒绝3xx并区分权限拒绝、不存在、超时、繁忙、HTTP失败；保留 direct 模式兼容，不自动切换。
+- gateway 诊断复用 ImageContentMapper.findActiveById（软删除/不存在不探测）、PathDO.fromScan、ResolvedImageStorage 的实际有序候选、现有认证和并发许可；每个尝试返回固定来源与错误分类，选中流立即关闭，不签发 URL、不额外 HEAD。OSS SDK 状态、Nginx 403、NAS 文件与许可、超时、脱敏及诊断权限专项实际 GREEN 21项，扩展37项零失败/错误/跳过。
+- 探测范围 OPEN_AND_CLOSE，只证明流可打开关闭，不验证完整内容或真实网络吞吐；源适配器现有超时和许可保持，NAS 文件系统及 SDK 关闭可能阻塞/读取剩余数据，尚无统一硬截止时间。无真实病案/生产源访问，不声称现场验证。最新 CI 待核验；回滚独立 revert，不改配置、数据、来源优先级或权限。
+- #763 已合并 8c68eca9；最新 head 8ee2307a，governance 45420699666、quality 45420061742 实际1129单测、144 PostgreSQL16.16集成，零失败/错误/跳过。#765 已合并 c0b0f51e，head c36379a8，governance 45421013514、quality 45421013440 实际1131单测零失败/错误/跳过，PG16按范围跳过（无数据库改动）。两项均为 AI 自审非独立审批。现场吞吐、真实 Tomcat 断开、Range、旧直连管理端兼容和来源网络隔离仍未完成。
+
 ## 每轮交接模板
 
 - 更新时间、任务、风险、目标及非目标：

@@ -145,6 +145,45 @@ class ImageContentControllerTest {
         }
     }
 
+    @Test
+    void servesSingleRangeFromRealNasFileWithStaleDatabaseLength() throws Exception {
+        var root = java.nio.file.Files.createTempDirectory("mrr-range-test");
+        var file = root.resolve("synthetic.jpg");
+        java.nio.file.Files.write(file, new byte[]{0, 1, 2, 3, 4, 5});
+        var properties = new com.zjcxph.imgapi.config.ArchiveImageSourceProperties();
+        properties.setNasMaxConcurrency(1);
+        properties.setAcquireTimeout(java.time.Duration.ofMillis(100));
+        var node = new com.zjcxph.imgapi.config.ArchiveImageSourceProperties.NasNode();
+        node.setRoot(root.toString());
+        properties.setNasNodes(java.util.Map.of("test", node));
+        var path = new com.zjcxph.imgapi.entity.PathDO();
+        path.setSourceType("NAS");
+        path.setSourceNode("test");
+        path.setSourceRef("synthetic.jpg");
+        var source = new com.zjcxph.imgapi.storage.NasArchiveImageSource(properties);
+        MockHttpServletRequest request = new MockHttpServletRequest("GET", "/api/v1/img/content/16");
+        request.addHeader("Range", "bytes=2-4");
+        RequestContextHolder.setRequestAttributes(new ServletRequestAttributes(request));
+        try (var stream = source.open(path)) {
+            when(imageContentService.open(16)).thenReturn(new ImageContentService.ImageContent(
+                    stream, "synthetic.jpg", MediaType.IMAGE_JPEG, 999L));
+            var response = controller.getContent(16);
+            assertThat(response.getStatusCode().value()).isEqualTo(206);
+            assertThat(response.getHeaders().getFirst("Content-Range")).isEqualTo("bytes 2-4/6");
+            assertThat(response.getHeaders().getContentLength()).isEqualTo(3);
+            var out = new ByteArrayOutputStream();
+            response.getBody().writeTo(out);
+            assertThat(out.toByteArray()).containsExactly((byte) 2, (byte) 3, (byte) 4);
+            try (var next = source.open(path)) {
+                assertThat(next.read()).isZero();
+            }
+        } finally {
+            RequestContextHolder.resetRequestAttributes();
+            java.nio.file.Files.deleteIfExists(file);
+            java.nio.file.Files.deleteIfExists(root);
+        }
+    }
+
     private static final class TrackingInputStream extends ByteArrayInputStream {
         private boolean closed;
 

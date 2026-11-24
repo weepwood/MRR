@@ -67,6 +67,19 @@ class ReadOnlyDegradationInterceptorTest {
     }
 
     @Test
+    void patientIdCardPostRemainsReadOnlyWithoutAllowingOtherPatientWrites() throws Exception {
+        when(readinessService.isReadOnly()).thenReturn(true);
+        when(maintenanceModeService.isEnabled()).thenReturn(true);
+        when(readinessService.getSnapshot()).thenReturn(Map.of());
+        assertTrue(interceptor.preHandle(new MockHttpServletRequest("POST", "/api/v1/patients/idcard"),
+                new MockHttpServletResponse(), new Object()));
+        var response = new MockHttpServletResponse();
+        assertFalse(interceptor.preHandle(new MockHttpServletRequest("POST", "/api/v1/patients/import"),
+                response, new Object()));
+        assertEquals(503, response.getStatus());
+    }
+
+    @Test
     void externalArchiveTicketRemainsAvailableInReadOnlyMode() throws Exception {
         when(readinessService.isReadOnly()).thenReturn(true);
         MockHttpServletRequest request = new MockHttpServletRequest(

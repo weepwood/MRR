@@ -744,8 +744,9 @@ export default defineFakeRoute([
     response: ({ params }) => ok(patients.filter(item => item.bah === String(params.bah))),
   },
   {
-    url: '/api/v1/patients/idcard/:idCard',
-    response: ({ params }) => ok(patients.filter(item => item.idCard === String(params.idCard))),
+    url: '/api/v1/patients/idcard',
+    method: 'POST',
+    response: ({ body }) => ok(patients.filter(item => item.idCard === String(body?.idCard ?? ''))),
   },
   {
     url: '/api/v1/logs/search',

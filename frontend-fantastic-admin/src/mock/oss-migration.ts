@@ -1,5 +1,8 @@
 import type { MigrationJob } from '@/api/modules/oss'
+import type { MockScanRecord } from '../mock-support/records'
 import { defineFakeRoute } from 'vite-plugin-fake-server/client'
+import { migrationSnapshot } from '../mock-support/migration'
+import { demoRecords } from '../mock-support/records'
 import { boundedInt, demoError, demoPage } from '../mock-support/response'
 
 function ok<T>(data: T, message = '操作成功') {
@@ -11,26 +14,9 @@ function ok<T>(data: T, message = '操作成功') {
   }
 }
 
-const pendingRecords = Array.from({ length: 18 }, (_, index) => ({
-  id: index + 1,
-  bah: `00789${String(index + 100).padStart(3, '0')}`,
-  sjh: `0012${String(index + 3400).padStart(4, '0')}`,
-  folder: index < 10 ? '25.03.15' : '25.03.16',
-  filename: `${String(index + 1).padStart(4, '0')}.jpg`,
-  migrationStatus: index % 5 === 0 ? 'retry_wait' : 'not_migrated',
-  migrationAttempts: index % 5 === 0 ? 1 : 0,
-  migrationNextRetryAt: index % 5 === 0 ? new Date(Date.now() - 60_000).toISOString() : null,
-}))
-
-const waitingRecords = Array.from({ length: 8 }, (_, index) => ({
-  id: 100 + index,
-  bah: `00888${String(index + 100).padStart(3, '0')}`,
-  sjh: index % 2 === 0 ? '' : '12A',
-  folder: '25.03.15',
-  filename: `${String(index + 21).padStart(4, '0')}.jpg`,
-  migrationStatus: 'waiting_sjh',
-  migrationErrorCode: 'MISSING_SJH',
-}))
+function snapshot() {
+  return migrationSnapshot(demoRecords.scans)
+}
 
 const jobs: MigrationJob[] = [
   {
@@ -167,8 +153,8 @@ function browserPage(query: Record<string, unknown>) {
   }
 }
 
-function filteredRecords(records: typeof pendingRecords | typeof waitingRecords, query: Record<string, unknown>) {
-  const limit = Math.max(1, Math.min(Number(query.limit || 100), 500))
+function filteredRecords(records: MockScanRecord[], query: Record<string, unknown>) {
+  const limit = boundedInt(query.limit, 100, 500)
   const filtered = records.filter((item) => {
     return (!query.folder || item.folder === query.folder)
       && (!query.bah || item.bah === query.bah)
@@ -211,57 +197,55 @@ export default defineFakeRoute([
   },
   {
     url: '/api/v1/oss/migration/statistics',
-    response: () => ok({
-      totalCount: 100,
-      migratedCount: 52,
-      pendingCount: 18,
-      waitingSjhCount: 8,
-      failedCount: 4,
-      retryWaitCount: 6,
-      migratingCount: 12,
-      percentage: 52,
-    }),
+    response: () => ok(snapshot().statistics),
   },
   {
     url: '/api/v1/oss/migration/readiness',
-    response: () => ok({
-      ready: true,
-      ossConfigured: true,
-      sourcePathConfigured: true,
-      sourcePathReadable: true,
-      noActiveJob: !jobs.some(job => ['pending', 'running', 'cancelling'].includes(job.status ?? '')),
-      pendingCount: 18,
-      sampleSize: 18,
-      sampleReadableCount: 17,
-      sampleMissingCount: 1,
-      sampleInvalidCount: 0,
-      recommendedMode: 'pilot',
-      recommendedAction: '演示：先创建小批量模拟迁移任务，不访问真实存储',
-      warnings: ['模拟数据中保留 1 条缺失文件，用于展示失败处理提示'],
-    }),
+    response: ({ query }) => {
+      const state = snapshot()
+      const activeJob = jobs.find(job => ['pending', 'running', 'cancelling'].includes(job.status ?? ''))
+      const sample = state.pending.slice(0, boundedInt(query?.sampleSize, 100, 200))
+      const warnings: string[] = []
+      if (state.waiting.length) { warnings.push(`演示：${state.waiting.length} 条记录等待合法上架号`) }
+      if (activeJob) { warnings.push('已有演示迁移任务，请先完成或取消') }
+      if (!sample.length) { warnings.push('当前没有可领取的演示记录') }
+      return ok({
+        ready: !activeJob && sample.length > 0,
+        ossConfigured: true,
+        sourcePathConfigured: true,
+        sourcePathReadable: true,
+        noActiveJob: !activeJob,
+        activeJob,
+        pendingCount: state.pending.length,
+        sampleSize: sample.length,
+        sampleReadableCount: sample.length,
+        sampleMissingCount: 0,
+        sampleInvalidCount: 0,
+        recommendedMode: state.statistics.migratedCount ? 'batch' : 'pilot',
+        recommendedAction: '演示：限定数量的模拟迁移，不访问真实存储',
+        warnings,
+      })
+    },
   },
   {
     url: '/api/v1/oss/migration/pending',
     response: ({ query }) => {
-      const filtered = pendingRecords.filter(item => !query?.folder || item.folder === query.folder)
+      const filtered = snapshot().pending.filter(item => !query?.folder || item.folder === query.folder)
       const limit = boundedInt(query?.limit, 100, 500)
       return ok({ list: filtered.slice(0, limit), total: filtered.length, limit })
     },
   },
   {
     url: '/api/v1/oss/migration/pending-folders',
-    response: () => ok([
-      { folder: '25.03.15', cnt: 10 },
-      { folder: '25.03.16', cnt: 8 },
-    ]),
+    response: () => ok(snapshot().folders),
   },
   {
     url: '/api/v1/oss/migration/management/pending',
-    response: ({ query }) => ok(filteredRecords(pendingRecords, (query ?? {}) as Record<string, unknown>)),
+    response: ({ query }) => ok(filteredRecords(snapshot().pending, (query ?? {}) as Record<string, unknown>)),
   },
   {
     url: '/api/v1/oss/migration/management/waiting-sjh',
-    response: ({ query }) => ok(filteredRecords(waitingRecords, (query ?? {}) as Record<string, unknown>)),
+    response: ({ query }) => ok(filteredRecords(snapshot().waiting, (query ?? {}) as Record<string, unknown>)),
   },
   {
     url: '/api/v1/oss/migration/jobs',

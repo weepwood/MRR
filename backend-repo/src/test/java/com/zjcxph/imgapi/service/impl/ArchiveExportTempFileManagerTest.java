@@ -74,6 +74,28 @@ class ArchiveExportTempFileManagerTest {
         assertThat(Path.of(properties.getTempDirectory())).isDirectory();
     }
 
+    @Test
+    void globalDownloadQuotaIsSharedAndReleasedExactlyOnce() throws Exception {
+        var props = properties(20, 10);
+        props.setMaxConcurrentDownloads(2);
+        props.setMaxConcurrentDownloadsPerUser(1);
+        var manager = new ArchiveExportTempFileManager(props);
+        manager.initialize();
+        Path file = Files.write(tempDir.resolve("synthetic.zip"), new byte[]{1,2}).toRealPath();
+        try (var first = manager.openDownload(file.toString(), 1L);
+             var second = manager.openDownload(file.toString(), 2L)) {
+            assertThatThrownBy(() -> manager.openDownload(file.toString(), 3L)).isInstanceOf(BusinessException.class);
+            assertThat(manager.deleteManagedFile(file.toString())).isFalse();
+            first.close();
+            first.close();
+            try (var third = manager.openDownload(file.toString(), 3L)) {
+                assertThat(third.length()).isEqualTo(2L);
+                assertThatThrownBy(() -> manager.openDownload(file.toString(), 4L)).isInstanceOf(BusinessException.class);
+            }
+        }
+        assertThat(manager.deleteManagedFile(file.toString())).isTrue();
+    }
+
     private ArchiveExportProperties properties(long maxTotalBytes, long maxFileBytes) {
         ArchiveExportProperties properties = new ArchiveExportProperties();
         properties.setTempDirectory(tempDir.toString());

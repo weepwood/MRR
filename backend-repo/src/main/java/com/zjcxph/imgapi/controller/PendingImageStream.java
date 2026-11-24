@@ -1,6 +1,5 @@
 package com.zjcxph.imgapi.controller;
 
-import com.zjcxph.imgapi.service.ImageContentService.ImageContent;
 import jakarta.servlet.http.HttpServletRequest;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -19,15 +18,15 @@ final class PendingImageStream {
 
     private PendingImageStream() {}
 
-    static StreamingResponseBody wrap(HttpServletRequest request, ImageContent content,
+    static StreamingResponseBody wrap(HttpServletRequest request, AutoCloseable content,
                                       StreamingResponseBody body, Runnable abandonedAudit) {
         AtomicBoolean claimed = new AtomicBoolean();
         Runnable closePending = () -> {
             if (!claimed.compareAndSet(false, true)) return;
             try {
                 content.close();
-            } catch (IOException | RuntimeException exception) {
-                logger.warn("Abandoned image stream close failed: errorType={}", exception.getClass().getSimpleName());
+            } catch (Exception exception) {
+                logger.warn("Abandoned streaming resource close failed: errorType={}", exception.getClass().getSimpleName());
             } finally {
                 try {
                     abandonedAudit.run();
@@ -64,7 +63,7 @@ final class PendingImageStream {
         }
         return output -> {
             if (!claimed.compareAndSet(false, true)) {
-                throw new IOException("Image stream is no longer available");
+                throw new IOException("Streaming resource is no longer available");
             }
             // Once streaming starts, only the body's existing try-with-resources owns the source.
             body.writeTo(output);

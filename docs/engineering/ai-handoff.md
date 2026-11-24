@@ -255,6 +255,11 @@
 
 - #789已合并ff8b541a，head05c9b20a，governance45445428184、quality45445428182通过，1177单测零失败，PG16按范围跳过。
 
+## 03 GIN提交更新删除并发成本（2026-11-25）
+
+- #99/#350 P2，`perf/99-gin-write-cost` 独立worktree，新增 --trgm-write 仅在新建隔离PG16运行固定事务ABBA对照、实际提交更新/删除重插、WAL增量、TPS与P95，不重复精确/GIN查询基准。mrr-scan-lab-9xi2ubwn 实际100000行、16组14400事务零失败，逐轮COUNT一致、报告complete、pg_ctl停止。8客户端有GIN WAL约多38–39%，TPS/P95波动，非生产吞吐。详见[GIN隔离实验](synthetic-trgm-benchmark-2026-11-25.md)。保留既有语义、不强制planner、不改生产DDL；最新CI待验收。
+- #790已合并c825539d（1177单测），#791已合并2d82ce80（governance45446800153、quality45446800105成功，其他按范围跳过）。
+
 ## 每轮交接模板
 
 - 更新时间、任务、风险、目标及非目标：

@@ -45,7 +45,7 @@ class CiGateTest(unittest.TestCase):
             previous = Path.cwd()
             try:
                 os.chdir(root)
-                with patch.object(sys, 'argv', ['ci_gate', 'scope', '--mode', 'integration',
+                with patch.object(sys, 'argv', ['ci_gate', 'scope', '--mode', 'main',
                                                '--runs', str(runs), '--output', str(output)]):
                     main()
             finally:

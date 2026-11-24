@@ -24,27 +24,31 @@ PR 的 frontend job 并行执行类型检查与全量单测，任一失败即失
 
 PR 上的集成 job 只在前端确有改动时执行前端检查与构建（`integration_frontend`）；仅后端身份/导入类改动不再重复构建未改动的前端。main 集成与完整发布验收始终构建并嵌入前端。
 
-Pages 演示工作流在 PR 上按改动范围选择：仅修改前端样式文件（CSS/SCSS/Sass/Less/PCSS）或 Markdown 时跳过 Pages 构建与 Chromium 冒烟；混有任何前端行为、组件、配置或测试代码时保留完整演示冒烟。`VERSION`、`release-baseline.json` 和 Pages workflow 本身也保留冒烟，因为它们会影响演示构建或验证流程。范围输出缺失或非法时继续运行冒烟；范围 job 自身失败仍会使 workflow 失败。main push 与手动调度仍始终构建、冒烟并按原条件部署。
+Pages 演示工作流在 PR 上按改动范围选择：普通页面、组件、样式、非关键源码与 Markdown 不再额外构建演示站；前端关键流程、浏览器用例、构建配置、Mock 数据、`VERSION`、`release-baseline.json` 或 Pages workflow 变化继续执行演示冒烟。范围输出缺失或非法时继续运行冒烟；范围 job 自身失败仍会使 workflow 失败。main push 与手动调度仍按原触发条件构建、冒烟和部署。此优化不改变 PR 的前端全量单测、类型或 lint 门禁。
 
 Service 保守进入 PostgreSQL 范围，因为仅凭路径无法证明没有事务或 SQL 影响。风险选择不读取作者的 P3 标签来减少检查。未运行的测试不能作为成功证据。
 
 复用 `frontend_test_scope.py`、`backend_test_scope.py`；`ci_gate.py` 统一编排两者和 Windows/真实链路范围。git diff 关闭重命名折叠，删除、重命名前后的路径均参与分类。`pr-gate` 使用 always() 检查每个实际选中的 job，失败、取消、输出缺失或意外跳过均拒绝。整个必需 workflow 不使用顶层 paths 过滤。
 
-普通 PR 不运行 Mock Playwright 或真实浏览器 E2E。关键前端流程仍执行类型检查、变更 lint 和前端全量单测；后端高风险路径保留 PostgreSQL 集成测试。main 合并后的应用集成执行真实 JWT/PostgreSQL/JAR 浏览器联调；完整发布候选执行全量 Mock E2E、真实联调与 Windows 恢复验收。
+普通 PR 不运行完整 Mock Playwright 或真实浏览器 E2E。关键前端流程仍执行类型检查、变更 lint 和前端全量单测；后端高风险路径保留 PostgreSQL 集成测试。main 对选中的应用集成执行真实 JWT/PostgreSQL/JAR 浏览器联调；普通前端展示层的重复集成延后到手动或发布验收。完整发布候选执行全量 Mock E2E、真实联调与 Windows 恢复验收。
 
 P3 PR 可省略 AI 参与报告，正文保留变更、关联原因、风险、验证与回滚。P0/P1 必须关联 Issue/提案并记录独立审查；隐私和历史迁移硬门禁不减。
 
-## main 集成验证
+## main 按风险去重与手动集成（#717）
 
-main push 执行同一 quality-gate，查询此前成功的 main push run，比较该 SHA 至当前提交的累计差异。前一次取消、失败不能当作已验收基线；没有可用历史或历史不是当前祖先时验证整棵树。
+main push 执行同一 quality-gate，使用 `--mode main` 查询此前成功的 main push run，比较该 SHA 至当前提交的累计差异。前一次取消、失败不能当作已验收基线；没有可用历史或历史不是当前祖先时验证整棵树。成功的轻量 run 仅证明该范围内门禁通过，不证明完整应用集成。
 
-应用变化在同一 runner 上构建生产前端、运行后端 PostgreSQL 测试并做真实联调，不通过 Artifact 来回搬运应用。复用 windows-release-package 的 full=false 模式，只执行应用验证，不组装 ZIP、不构建文档、不下载 Windows 运行时。前端通过既有 embed 工具嵌入 JAR，浏览器直接访问后端提供的生产资源。文档变化不触发应用构建。
+仅当累计变化限于前端 `src/views/`、`src/components/`、`src/ui/`、`src/assets/`、`src/layouts/` 展示层和 Markdown，且不匹配现有关键流程、构建或后端/Windows/工具链范围时，main 只运行仓库不变量与门禁，不重复 PR 的前端单测，也不无条件启动后端 PG16。Pages 仍正常构建与冒烟。API、Store、路由、工具函数、构建依赖、后端和混合未知路径不走该快路径。选择依据为路径和风险规则，不使用作者标签或旧 SHA 的测试结果。此规则接受普通展示层组合回归延至完整候选的取舍，不能把未跑的检查标作已通过。
 
-同一 main 分支取消旧运行，集中验证最新提交。这些检查不成为其他 PR 的合并前置；正式发布 admission 要求本次固定 SHA 的 main push 集成已经成功。
+选中的应用变化在同一 runner 上构建生产前端、运行后端 PostgreSQL 测试并做真实联调，不通过 Artifact 来回搬运应用。复用 windows-release-package 的 full=false 模式，只执行应用验证，不组装 ZIP、不构建文档、不下载 Windows 运行时。前端通过既有 embed 工具嵌入 JAR，浏览器直接访问后端提供的生产资源。文档变化不触发应用构建。
+
+同一 main 分支取消旧运行，集中验证最新提交。这些检查不成为其他 PR 的合并前置。正式发布 admission 仍要求本次固定 SHA 的 main push quality-gate 成功（可能是轻量范围），并在 Release 中独立执行完整候选验收，不能以轻量检查代替。手动运行 quality-gate 使用 `--mode integration` 检查整棵树，不读取轻量 push 的历史基线；需要完整发布包、覆盖率或全部 E2E 时使用 Release dry-run。
+
+本次不修改 `strict=true`、governance/pr-gate 或独立审查要求。strict 仍可能要求并行 PR 同步最新 main 并重新验证；单人维护可减少同时开放的相互依赖 PR，不能复用未验证的新合并树的旧状态。后续若需改远程保护，单独提出风险变更并读回确认。
 
 ## 正式发布
 
-1. 功能与版本说明通过 PR 合并 main，等待该提交的 main 集成成功。
+1. 功能与版本说明通过 PR 合并 main，等待该提交的 main quality-gate 成功（按实际风险范围）。
 2. Actions 选择 `Release`（文件名暂保留 release-on-version-bump.yml），ref 选择 main。
 3. 首次验收保留 dry_run=true；完整候选构建与 Windows 恢复都会运行，但不会创建 tag/Release。
 4. 正式发布设 dry_run=false。开始时固定 github.sha；中途 main 前进不改变本次提交。

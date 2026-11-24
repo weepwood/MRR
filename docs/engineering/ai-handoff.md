@@ -139,6 +139,11 @@
 - #230/#350 P1，分支 `fix/230-http-body-idle-timeout`，worktree `/Volumes/data/Project/MRR-worktrees/230-http-body-idle-timeout`。e5dc75a0 实际RED 2项1错误：loopback HTTP 返回响应头及首字节后停发，原BodyHandlers.ofInputStream读取不能在3秒内完成。7e4668bd 用JDK BodySubscriber单次需求、2项有界事件队列、空闲读取超时，复用各节点既有readTimeout，取消subscription，不新增每读工作线程；保留实际长度、资源许可、认证和来源顺序。24项回归通过。
 - 增加真实AWS SDK loopback S3协议响应首字节后停发、部分读取关闭abort、下一对象在5秒内读取，非生产凭据/服务；扩展28项零失败/错误/跳过，原始测试 /tmp/mrr-http-oss-final.log。仅证明本机HTTP/SDK路径，并非真实Nginx/NAS/OSS多节点连接池压力或正文网络写硬截止。网络来源按节点熔断待#773合并后复用其状态逻辑，避免建立第二套机制。同步main dae8bef7，最新CI待验收；独立revert，无生产改动。
 
+## 04.3 网络节点熔断复用（2026-11-25）
+
+- #230/#350 P1，`fix/230-network-source-circuit`，worktree `/Volumes/data/Project/MRR-worktrees/230-network-source-circuit`。eba877bd 修正夹具后实际RED 6项1失败，重复OSS超时第四次仍回源；4b54789d 将NasNodeCircuit泛化为SourceNodeCircuit，HTTP按配置节点、Nginx按已验证authority、OSS按单配置endpoint/bucket各自状态，3次源故障/30秒冷却/单探针；保留NAS原隔离。只计明确连接/读超时、连接拒绝、SDK调用超时及502/503/504、声明长度提前EOF；401/403/404、许可饱和、本地预算耗尽、取消/提前close中性；完整正文或成功HEAD才确认恢复。无新增依赖或公开节点地址。
+- 本地29项及新增真实HTTP两节点503后拒绝第四次/健康节点仍读取的30项联合回归通过；同步 #775 正式合并 main 5612d503 并解决测试冲突，b85653db，最新CI待验收。#775 head f7b8e0a1，governance45432184945、quality45432184906，1159单测零失败/错误/跳过、PG16按范围跳过。未验收现场多节点、连接池压力、原生NAS正文/慢客户端硬阻塞，独立revert，不改生产。
+
 ## 每轮交接模板
 
 - 更新时间、任务、风险、目标及非目标：

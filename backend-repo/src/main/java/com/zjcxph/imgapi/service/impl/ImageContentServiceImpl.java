@@ -8,6 +8,7 @@ import com.zjcxph.imgapi.exception.OssOperationException;
 import com.zjcxph.imgapi.mapper.ImageContentMapper;
 import com.zjcxph.imgapi.service.ImageContentService;
 import com.zjcxph.imgapi.storage.ImageStorage;
+import com.zjcxph.imgapi.storage.ImageReadStream;
 import com.zjcxph.imgapi.storage.InvalidImagePathException;
 import com.zjcxph.imgapi.utils.MedicalRecordCodeUtils;
 import org.slf4j.Logger;
@@ -89,9 +90,8 @@ public class ImageContentServiceImpl implements ImageContentService {
             String filename = safeFilename(scan);
             MediaType mediaType = MediaTypeFactory.getMediaType(filename)
                     .orElse(MediaType.APPLICATION_OCTET_STREAM);
-            Long contentLength = scan.getFileSize() != null && scan.getFileSize() > 0
-                    ? scan.getFileSize()
-                    : null;
+            Long contentLength = stream instanceof ImageReadStream opened && opened.length() >= 0
+                    ? opened.length() : null;
             return new ImageContent(stream, filename, mediaType, contentLength, auditTarget(scan));
         } catch (IOException exception) {
             throw mapReadFailure(scanId, exception);

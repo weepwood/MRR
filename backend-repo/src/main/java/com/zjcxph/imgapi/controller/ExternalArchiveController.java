@@ -244,41 +244,13 @@ public class ExternalArchiveController {
         String userAgent = request.getHeader("User-Agent");
         String currentRequestId = requestId(request);
 
-        StreamingResponseBody body = outputStream -> {
-            try (content) {
-                content.inputStream().transferTo(outputStream);
-                externalArchiveAccessService.recordAudit(
+        return ImageContentResponse.create(request, content,
+                () -> externalArchiveAccessService.recordAudit(
                         grant, scan.getBah(), scan.getSjh(), "IMAGE_VIEW", id,
-                        clientIp, userAgent, currentRequestId, "SUCCESS", null
-                );
-            } catch (IOException | RuntimeException exception) {
-                externalArchiveAccessService.recordAudit(
+                        clientIp, userAgent, currentRequestId, "SUCCESS", null),
+                () -> externalArchiveAccessService.recordAudit(
                         grant, scan.getBah(), scan.getSjh(), "IMAGE_VIEW", id,
-                        clientIp, userAgent, currentRequestId, "FAILED", null
-                );
-                throw exception;
-            }
-        };
-
-        HttpHeaders headers = new HttpHeaders();
-        headers.setContentType(content.mediaType());
-        headers.setContentDisposition(ContentDisposition.inline()
-                .filename(content.filename(), StandardCharsets.UTF_8)
-                .build());
-        headers.setCacheControl("private, no-store");
-        headers.setPragma("no-cache");
-        headers.set("X-Content-Type-Options", "nosniff");
-        headers.set("Referrer-Policy", "no-referrer");
-        if (content.contentLength() != null && content.contentLength() > 0) {
-            headers.setContentLength(content.contentLength());
-        }
-
-        return ResponseEntity.ok()
-                .headers(headers)
-                .body(PendingImageStream.wrap(request, content, body, () ->
-                        externalArchiveAccessService.recordAudit(
-                                grant, scan.getBah(), scan.getSjh(), "IMAGE_VIEW", id,
-                                clientIp, userAgent, currentRequestId, "FAILED", null)));
+                        clientIp, userAgent, currentRequestId, "FAILED", null));
     }
 
     @PostMapping("/api/v1/external/archive/logout")

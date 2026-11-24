@@ -98,7 +98,8 @@ public class NginxArchiveImageSource implements ArchiveImageSource {
                     response.body().close();
                     throw new SourceHttpStatusException("Nginx", response.statusCode());
                 }
-                return response.body();
+                return ImageReadStream.withLength(response.body(),
+                        ImageReadStream.httpLength(response.headers()));
             } catch (InterruptedException exception) {
                 Thread.currentThread().interrupt();
                 throw new IOException("Nginx 图片读取被中断", exception);

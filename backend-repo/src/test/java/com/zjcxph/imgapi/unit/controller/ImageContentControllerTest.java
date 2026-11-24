@@ -145,6 +145,116 @@ class ImageContentControllerTest {
         }
     }
 
+    @Test
+    void servesSingleRangeFromRealNasFileWithStaleDatabaseLength() throws Exception {
+        var root = java.nio.file.Files.createTempDirectory("mrr-range-test");
+        var file = root.resolve("synthetic.jpg");
+        java.nio.file.Files.write(file, new byte[]{0, 1, 2, 3, 4, 5});
+        var properties = new com.zjcxph.imgapi.config.ArchiveImageSourceProperties();
+        properties.setNasMaxConcurrency(1);
+        properties.setAcquireTimeout(java.time.Duration.ofMillis(100));
+        var node = new com.zjcxph.imgapi.config.ArchiveImageSourceProperties.NasNode();
+        node.setRoot(root.toString());
+        properties.setNasNodes(java.util.Map.of("test", node));
+        var path = new com.zjcxph.imgapi.entity.PathDO();
+        path.setSourceType("NAS");
+        path.setSourceNode("test");
+        path.setSourceRef("synthetic.jpg");
+        var source = new com.zjcxph.imgapi.storage.NasArchiveImageSource(properties);
+        MockHttpServletRequest request = new MockHttpServletRequest("GET", "/api/v1/img/content/16");
+        request.addHeader("Range", "bytes=2-4");
+        RequestContextHolder.setRequestAttributes(new ServletRequestAttributes(request));
+        try (var stream = source.open(path)) {
+            when(imageContentService.open(16)).thenReturn(new ImageContentService.ImageContent(
+                    stream, "synthetic.jpg", MediaType.IMAGE_JPEG, 999L));
+            var response = controller.getContent(16);
+            assertThat(response.getStatusCode().value()).isEqualTo(206);
+            assertThat(response.getHeaders().getFirst("Content-Range")).isEqualTo("bytes 2-4/6");
+            assertThat(response.getHeaders().getContentLength()).isEqualTo(3);
+            var out = new ByteArrayOutputStream();
+            response.getBody().writeTo(out);
+            assertThat(out.toByteArray()).containsExactly((byte) 2, (byte) 3, (byte) 4);
+            try (var next = source.open(path)) {
+                assertThat(next.read()).isZero();
+            }
+        } finally {
+            RequestContextHolder.resetRequestAttributes();
+            java.nio.file.Files.deleteIfExists(file);
+            java.nio.file.Files.deleteIfExists(root);
+        }
+    }
+
+    @Test
+    void handlesUnsatisfiableRangeAndIfRangeWithoutLeakingPermit() throws Exception {
+        var root = java.nio.file.Files.createTempDirectory("mrr-range-boundaries");
+        var file = root.resolve("synthetic.jpg");
+        java.nio.file.Files.write(file, new byte[]{0, 1, 2, 3, 4, 5});
+        var properties = new com.zjcxph.imgapi.config.ArchiveImageSourceProperties();
+        properties.setNasMaxConcurrency(1);
+        properties.setAcquireTimeout(java.time.Duration.ofMillis(100));
+        var node = new com.zjcxph.imgapi.config.ArchiveImageSourceProperties.NasNode();
+        node.setRoot(root.toString());
+        properties.setNasNodes(java.util.Map.of("test", node));
+        var path = new com.zjcxph.imgapi.entity.PathDO();
+        path.setSourceType("NAS");
+        path.setSourceNode("test");
+        path.setSourceRef("synthetic.jpg");
+        var source = new com.zjcxph.imgapi.storage.NasArchiveImageSource(properties);
+        try {
+            // No body task runs for 416; the source must nevertheless release its permit.
+            var request = new MockHttpServletRequest("GET", "/api/v1/img/content/16");
+            request.addHeader("Range", "bytes=99-100");
+            RequestContextHolder.setRequestAttributes(new ServletRequestAttributes(request));
+            when(imageContentService.open(16)).thenReturn(new ImageContentService.ImageContent(
+                    source.open(path), "synthetic.jpg", MediaType.IMAGE_JPEG, 999L));
+            var rejected = controller.getContent(16);
+            assertThat(rejected.getStatusCode().value()).isEqualTo(416);
+            assertThat(rejected.getHeaders().getFirst("Content-Range")).isEqualTo("bytes */6");
+            assertThat(rejected.getBody()).isNull();
+
+            request = new MockHttpServletRequest("GET", "/api/v1/img/content/17");
+            request.addHeader("Range", "bytes=2-4");
+            request.addHeader("If-Range", "\"unverified\"");
+            RequestContextHolder.setRequestAttributes(new ServletRequestAttributes(request));
+            when(imageContentService.open(17)).thenReturn(new ImageContentService.ImageContent(
+                    source.open(path), "synthetic.jpg", MediaType.IMAGE_JPEG, 999L));
+            var full = controller.getContent(17);
+            assertThat(full.getStatusCode().value()).isEqualTo(200);
+            assertThat(full.getHeaders().getContentLength()).isEqualTo(6);
+            var out = new ByteArrayOutputStream();
+            full.getBody().writeTo(out);
+            assertThat(out.toByteArray()).containsExactly((byte) 0, (byte) 1, (byte) 2, (byte) 3, (byte) 4, (byte) 5);
+        } finally {
+            RequestContextHolder.resetRequestAttributes();
+            java.nio.file.Files.deleteIfExists(file);
+            java.nio.file.Files.deleteIfExists(root);
+        }
+    }
+
+    @Test
+    void ignoresRangeForNonSeekableSourceAndClosesWhenClientWriteFails() throws Exception {
+        var request = new MockHttpServletRequest("GET", "/api/v1/img/content/18");
+        request.addHeader("Range", "bytes=2-4");
+        RequestContextHolder.setRequestAttributes(new ServletRequestAttributes(request));
+        var stream = new TrackingInputStream(new byte[]{0, 1, 2, 3, 4, 5});
+        try {
+            when(imageContentService.open(18)).thenReturn(new ImageContentService.ImageContent(
+                    stream, "synthetic.jpg", MediaType.IMAGE_JPEG, null));
+            var response = controller.getContent(18);
+            assertThat(response.getStatusCode().value()).isEqualTo(200);
+            assertThat(response.getHeaders().getFirst("Accept-Ranges")).isEqualTo("none");
+            assertThat(response.getHeaders().getContentLength()).isEqualTo(-1);
+            assertThatThrownBy(() -> response.getBody().writeTo(new java.io.OutputStream() {
+                @Override public void write(int value) throws IOException {
+                    throw new IOException("synthetic client disconnected");
+                }
+            })).isInstanceOf(IOException.class);
+            assertThat(stream.isClosed()).isTrue();
+        } finally {
+            RequestContextHolder.resetRequestAttributes();
+        }
+    }
+
     private static final class TrackingInputStream extends ByteArrayInputStream {
         private boolean closed;
 

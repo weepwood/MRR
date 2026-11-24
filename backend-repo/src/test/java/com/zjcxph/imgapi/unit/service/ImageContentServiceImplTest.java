@@ -62,7 +62,7 @@ class ImageContentServiceImplTest {
         assertThat(content.inputStream()).isSameAs(stream);
         assertThat(content.filename()).isEqualTo("病案首页-01.jpg");
         assertThat(content.mediaType()).isEqualTo(MediaType.IMAGE_JPEG);
-        assertThat(content.contentLength()).isEqualTo(1234L);
+        assertThat(content.contentLength()).isNull(); // database size is not proof of actual opened source length
         assertThat(content.auditTarget()).isEqualTo("10000001:12345678");
 
         ArgumentCaptor<PathDO> pathCaptor = ArgumentCaptor.forClass(PathDO.class);

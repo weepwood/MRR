@@ -76,7 +76,11 @@ class ArchiveExportJobDownloadTest {
         var file = directory.resolve("synthetic.zip");
         Files.write(file, new byte[]{1,2,3,4});
         when(service.requireOwned(session, "job")).thenReturn(job);
-        when(service.requireDownloadFile(session, "job")).thenReturn(file);
+        var props = new com.zjcxph.imgapi.config.ArchiveExportProperties();
+        props.setTempDirectory(directory.toString());
+        var files = new com.zjcxph.imgapi.service.impl.ArchiveExportTempFileManager(props);
+        files.initialize();
+        when(service.openDownload(session, "job")).thenAnswer(call -> files.openDownload(file.toRealPath().toString(), 1L));
         var request = new MockHttpServletRequest("GET", "/download");
         request.setAttribute(AuthorizationInterceptor.AUTH_SESSION_ATTRIBUTE, session);
         request.addHeader("If-Range", "\"" + "b".repeat(64) + "\"");

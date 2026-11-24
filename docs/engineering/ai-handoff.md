@@ -154,6 +154,12 @@
 
 - 新版本1万行多键冒烟完整完成（mrr-scan-lab-8tud2a6t），实例停止；未实际触发超时分支，千万级仍需再次完整复验。#776已合并913acd6e，head4a7a6959，governance45433259307、quality45433259445，1162单测/146 PG16零失败。
 
+## 03 缓存多键并发实库回归（2026-11-25）
+
+- #99/#350 P1，`test/99-scan-cache-concurrency`，worktree `/Volumes/data/Project/MRR-worktrees/99-scan-cache-concurrency`。#774 已合并 f2056cdd，head6345e19a、governance45430947318、quality45430948538，1157单测/146 PG16均通过，CI冷8→1、热0。新增不同键独立加载回归，本地ScanServiceCacheTest 11项零失败/错误/跳过（8等待者共享一次异常、下一次加载恢复通过）；新增真实PG16 MyBatis+Spring Cache 两键16线程/64请求、两轮共128次、实际导入提交后更新可见的测试。本地单独PG16启动命令被工具安全检查拦截，未绕过，新集成用例待CI真实执行，不能宣称已通过。仅测试，独立revert，无生产操作。
+
+- 原head 2c50e95c，quality45433926281，1161单测及147真实PG16零失败/错误/跳过；新实库并发用例在CI执行通过，主线变更后再次验证。#777合并21c8b960。
+
 ## 每轮交接模板
 
 - 更新时间、任务、风险、目标及非目标：

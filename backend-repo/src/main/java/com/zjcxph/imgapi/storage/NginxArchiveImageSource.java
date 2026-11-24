@@ -93,7 +93,7 @@ public class NginxArchiveImageSource implements ArchiveImageSource {
             applyBasicAuth(request);
             try {
                 HttpResponse<InputStream> response = client.send(
-                        request.build(), HttpResponse.BodyHandlers.ofInputStream());
+                        request.build(), TimedHttpBody.handler(orDefault(sourceProperties.getNginxReadTimeout(), Duration.ofSeconds(60))));
                 if (response.statusCode() < 200 || response.statusCode() >= 300) {
                     response.body().close();
                     throw new SourceHttpStatusException("Nginx", response.statusCode());

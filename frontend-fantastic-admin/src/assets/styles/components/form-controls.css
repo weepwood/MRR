@@ -118,7 +118,6 @@
 .fa-input-control::placeholder,
 .fa-select-trigger[data-placeholder] {
   color: var(--mrr-muted-foreground);
-  opacity: 0.78;
 }
 
 .fa-input-control:hover:not(:disabled),

@@ -437,7 +437,9 @@ async function smokePagesDemo() {
     await scenarioPage.goto(`${appUrl}#/`)
     const control = scenarioPage.getByRole('region', { name: '演示场景控制' })
     await control.waitFor({ timeout: 20000 })
-    await control.getByRole('combobox').click()
+    // Element Plus overlays its readonly combobox input with the selected label.
+    // Click the visible label, which is the actual pointer target.
+    await control.getByText('默认综合场景', { exact: true }).click()
     await scenarioPage.getByRole('option', { name: 'OSS 迁移积压' }).click()
     await control.getByRole('button', { name: '应用场景' }).click()
     await Promise.all([

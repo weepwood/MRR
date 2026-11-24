@@ -48,15 +48,13 @@ OpenAPI YAML：/v3/api-docs.yaml
 
 Windows 正式部署的新版 Nginx 模板通过 `auth_request` 调用 `/api/v1/documentation/access`，分别验证 `/docs/` 和 `/docs/internal/` 的文档会话范围。未携带有效会话时跳转到 `/help?docsAuth=required`，权限不足时返回 403。升级定制部署时先备份 `nginx.conf`，再手动合并新版文档鉴权配置。运行 `mrrctl.ps1 doctor` 检查缺失指令提示，然后分别验证两类文档的未登录跳转、权限拒绝和正常访问。
 
-## 加密身份证查询的时间戳约束
+## 身份证查询协议退役
 
-`GET /api/v1/search/getBAHByEncryptID` 的 `timestamp` 不只是密钥派生材料，还参与**新鲜度校验**：请求时间与服务器时间的偏差超过 `aes.id-card-query.timestamp-tolerance-seconds`（默认 300 秒）时直接用 400 拒绝，以限制密文被无限期重放。该参数接受秒或毫秒时间戳。
-
-- 关闭校验（`0` 或负数）仅用于临时兼容调用方时钟偏差，属于运维逃生阀，不应长期开启；
-- 校验只读取时间戳，不改变密钥派生输入，因此对调用方的加密实现**零影响**；
-- 解密或查询失败统一返回 `加密身份证查询失败`，不回显内部异常信息，避免形成区分性的错误响应；
-- 包含 `idCard` 的查询串、请求体与**请求路径参数**都会在写入 `app.access_log` 前做 SHA-256 脱敏。
-  注意 `GET /api/v1/search/getBAHByID/{idCard}`（已弃用）会把身份证号带入 URL，因而也会出现在浏览器历史、`Referer` 与 Nginx 的 `access.log` 中——新接入方应使用 POST 版本或加密查询。
+- 登录用户使用 `POST /api/v1/search/getBAHByID` 或 `POST /api/v1/search/archive-cases`，由原有 `search:read` 权限保护。
+- 外部 HIS/EMR 使用现有 HMAC Ticket，参见外部调阅文档；不要再实现客户端 AES-CBC 协议。
+- 旧 `GET /api/v1/search/getBAHByEncryptID`、`getBAHByEncryptIDLegacy`、`getBAHByID/{idCard}` 在通过原有鉴权后返回 HTTP 410，不读取患者数据。未认证仍按原规则拒绝。
+- 原有不透明 URL Token 恢复入口不变。扫描页 API 已转 POST；历史浏览器路由和患者管理域另行治理，不允许新接入方使用明文身份证 URL。
+- 已安装的旧调用方需在升级前盘点、迁移和联调；不得通过关闭时间戳校验重新开启退役接口。
 
 ## 认证与权限
 

@@ -1,4 +1,4 @@
-import type { BAHRecord, EncryptIDSearchParams } from '../types'
+import type { BAHRecord } from '../types'
 import { getRequest, postRequest } from '../index'
 
 export interface PatientSearchRecord extends BAHRecord {
@@ -25,14 +25,9 @@ export interface IdCardArchiveSearchResponse {
   cases: IdCardArchiveCase[]
 }
 
-/** GET /api/v1/search/getBAHByID/{idCard} — 根据身份证号获取BAH（旧接口） */
+/** POST /api/v1/search/getBAHByID — 根据身份证号查询病案，原文不进入 API URL */
 export function getBAHByIdCard(idCard: string) {
-  return getRequest<PatientSearchRecord>(`/api/v1/search/getBAHByID/${idCard}`)
-}
-
-/** GET /api/v1/search/getBAHByEncryptID — 根据加密身份证获取BAH */
-export function getBAHByEncryptID(params: EncryptIDSearchParams) {
-  return getRequest<PatientSearchRecord>('/api/v1/search/getBAHByEncryptID', { params })
+  return postRequest<PatientSearchRecord[]>('/api/v1/search/getBAHByID', { idCard })
 }
 
 /** POST /api/v1/search/archive-cases — 查询身份证对应全部影像档案并生成 URL 令牌 */

@@ -202,3 +202,17 @@ test('网络影像来源异常优先并区分应用许可和SDK采样', async ({
   await page.getByRole('button', { name: '刷新看板' }).click()
   await expect(page.getByText('较上次成功快照，熔断或半开数量变化：NGINX')).toBeVisible()
 })
+
+test('存储异常事件展示有界累计及恢复建议', async ({ page }) => {
+  const data = { ...snapshot('READ_WRITE'), nasRuntime: { inUse: 1, limit: 2, waiting: 1, nodes: [{ ordinal: 1, state: 'OPEN', inUse: 1, limit: 1, history: { opened: 20, recovered: 19, probes: 19, events: [{ sequence: 59, type: 'OPENED', at: '2026-11-02T00:59:00Z' }] } }] } }
+  await page.route(overviewUrl, route => route.fulfill({ json: { code: 200, data } }))
+  await page.goto('/operations-center')
+  const dashboard = page.locator('.overview-dashboard')
+  await expect(dashboard.getByText('存储异常事件', { exact: true })).toBeVisible()
+  await expect(dashboard.getByText('进入熔断次数', { exact: true })).toBeVisible()
+  await expect(dashboard.getByText('最近 30 分钟已保留事件', { exact: false })).toBeVisible()
+  await expect(dashboard.locator('.storage-trend-row').last()).toContainText('熔断 1')
+  await expect(dashboard.getByText('NAS 节点 1 · 进入熔断')).toBeVisible()
+  await expect(dashboard.getByText('不要强制释放未关闭资源', { exact: false })).toBeVisible()
+  await expect(dashboard.getByText('重启清空', { exact: false })).toBeVisible()
+})

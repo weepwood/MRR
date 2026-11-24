@@ -68,9 +68,10 @@ public class NasArchiveImageSource implements ArchiveImageSource {
             String name = names.get(i);
             var guard = nodePermits.get(name);
             nodes.add(java.util.Map.of("ordinal", i + 1, "state", isolation.circuitState(name),
-                    "inUse", guard.inUse(), "limit", guard.limit()));
+                    "inUse", guard.inUse(), "limit", guard.limit(), "waiting", guard.waiting(),
+                    "history", isolation.circuitHistory(name)));
         }
-        return java.util.Map.of("inUse", permitGuard.inUse(), "limit", permitGuard.limit(),
+        return java.util.Map.of("inUse", permitGuard.inUse(), "limit", permitGuard.limit(), "waiting", permitGuard.waiting(),
                 "nodes", java.util.List.copyOf(nodes));
     }
 

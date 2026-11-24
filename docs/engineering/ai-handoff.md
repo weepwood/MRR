@@ -288,6 +288,12 @@
 - 运维总览增加网络来源分组、异常优先排序、相邻成功快照熔断/半开数量变化（非历史审计）、未采样与过期提示、已有权限控制下的日志/体检入口；保留容量/NAS卡片与演示Mock。8路真实线程半开仅一胜、FIFO许可取消不泄漏、两NAS节点持续原生替身阻塞时第三节点可用且实际关闭后才归还，真实loopback OSS采样及HTTP正文回归通过。原39/40/43定向逐步通过，合并主线后55项后端定向含Controller策略/容量/脱敏零失败错误跳过，类型/lint/hooks及联合Chromium8项含预热通过。日志 /tmp/mrr-network-meta-red.log、/tmp/mrr-network-runtime-unified-backend.log、/tmp/mrr-network-runtime-unified.log。独立revert；无生产配置、数据库、迁移、门禁变更；真实医院NAS/Windows/Nginx/OSS、长期池压力与实际网络故障仍须验收。无重复大型数据库实验。
 - #793已合并52c50d38，1178单测/150 PG16/933前端，治理45448123145、质量45448123245、演示45448123155通过。#794已合并3e921b01，head5111a69f，解决三个冲突保留双方卡片/测试，联合Chromium7项含预热；1180单测/150 PG16/933前端，治理45449527872、质量45449528367、演示45449526515通过。新分支同步3e921b01后最新CI待验收。
 
+## 04.3 存储进程内异常历史及重复连接池耗尽恢复（2026-11-25）
+
+- #230/#350 P2可观测性、P1资源专项回归，`feat/230-storage-event-history` 独立worktree。测试先定义history契约，旧实现testCompile因缺少history失败（非运行时RED）；复用SourceNodeCircuit，在既有真实状态变化记录OPENED/PROBE_STARTED/METADATA_ONLY/RECOVERED，单节点16条环形历史及进程累计计数，不新增表、不主动探测、不改变状态机阈值、权限或生产配置。NAS补齐估算等待许可；总览聚合最近12条与快照前30分钟每5分钟已保留的熔断/恢复计数，明确非完整统计、非故障率、重启清空；脱敏序号和静态排障建议，不含路径/凭据，不自动重置熔断。计数/时间为进程内观察，不等同现场健康或持久审计。
+- 初次GREEN 34项；实际loopback AWS SDK Apache池2连接、12轮每轮两占用/一次获取超时不回源/abort释放/下一请求成功，固定测试客户端无重试（生产策略未改），首次编译API错误已修正。最终46项后端定向零失败错误跳过，含既有多NAS竞争/实际关闭、权限策略；类型/lint及最终独立Chromium9项含预热通过。日志 /tmp/mrr-storage-history-red.log、/tmp/mrr-storage-history-pressure-r2.log、/tmp/mrr-storage-history-browser-final.log。12轮是有界重复压力，不是长时间生产soak，现场50连接、Windows/NAS真实压力、资源耗尽与恢复证据仍待。
+- #795已合并6ac73ed4，1184单测/150 PG16/933前端；治理45450605471、质量45450605334、演示45450605080通过。#796发布准备矩阵另PR；不重复数据库实验，不改VERSION或正式发布。独立revert，最新CI待验收。
+
 ## 每轮交接模板
 
 - 更新时间、任务、风险、目标及非目标：

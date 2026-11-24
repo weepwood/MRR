@@ -159,17 +159,25 @@ export interface OperationsQuickLink {
   path: string
 }
 
+export interface CircuitHistory {
+  opened?: number
+  recovered?: number
+  probes?: number
+  events?: { sequence: number, type: 'OPENED' | 'PROBE_STARTED' | 'METADATA_ONLY' | 'RECOVERED', at: string }[]
+}
+
 export interface NasRuntime {
+  waiting?: number
   inUse: number
   limit: number
-  nodes: { ordinal: number, state: 'CLOSED' | 'OPEN' | 'HALF_OPEN_READY' | 'HALF_OPEN_ACTIVE', inUse: number, limit: number }[]
+  nodes: { ordinal: number, state: 'CLOSED' | 'OPEN' | 'HALF_OPEN_READY' | 'HALF_OPEN_ACTIVE', inUse: number, limit: number, waiting?: number, history?: CircuitHistory }[]
 }
 
 export interface NetworkRuntime {
   inUse: number
   limit: number
   waiting: number
-  nodes: { ordinal: number, state: NasRuntime['nodes'][number]['state'] | 'UNOBSERVED' }[]
+  nodes: { ordinal: number, state: NasRuntime['nodes'][number]['state'] | 'UNOBSERVED', history?: CircuitHistory }[]
   poolSample?: Partial<{ sampledAt: string, leased: number, available: number, pending: number, max: number }>
 }
 

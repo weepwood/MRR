@@ -27,6 +27,7 @@ final class NetworkSourceCircuit {
     }
 
     String state() { return circuit.state(); }
+    java.util.Map<String, Object> history() { return circuit.history(); }
 
     InputStream open(SourcePermitGuard.InputStreamSupplier operation) throws IOException {
         var attempt = circuit.begin();

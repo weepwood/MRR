@@ -59,7 +59,7 @@ function overview(): OperationsOverview {
   return {
     imageDeliveryMode: 'gateway',
     networkRuntime: {
-      HTTP: { inUse: 1, limit: 8, waiting: 0, nodes: [{ ordinal: 1, state: 'OPEN' }] },
+      HTTP: { inUse: 1, limit: 8, waiting: 0, nodes: [{ ordinal: 1, state: 'OPEN', history: { opened: 1, recovered: 0, probes: 0, events: [{ sequence: 1, type: 'OPENED', at: '2026-11-25T00:00:00Z' }] } }] },
       NGINX: { inUse: 0, limit: 8, waiting: 0, nodes: [{ ordinal: 1, state: 'UNOBSERVED' }] },
       OSS: { inUse: 0, limit: 8, waiting: 0, nodes: [{ ordinal: 1, state: 'CLOSED' }], poolSample: {} },
     },

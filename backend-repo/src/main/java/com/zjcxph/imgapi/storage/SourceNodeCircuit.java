@@ -17,6 +17,20 @@ final class SourceNodeCircuit {
     private boolean open;
     private boolean probing;
     private boolean bodyRecoveryRequired;
+    private static final int HISTORY_LIMIT = 16;
+    private final java.util.ArrayDeque<java.util.Map<String, Object>> events = new java.util.ArrayDeque<>();
+    private long opened, recovered, probes, sequence;
+
+    private void event(String type) {
+        if (events.size() == HISTORY_LIMIT) events.removeFirst();
+        events.addLast(java.util.Map.of("sequence", ++sequence, "type", type,
+                "at", java.time.Instant.now().toString()));
+    }
+
+    synchronized java.util.Map<String, Object> history() {
+        return java.util.Map.of("opened", opened, "recovered", recovered, "probes", probes,
+                "events", java.util.List.copyOf(events));
+    }
 
     SourceNodeCircuit(int threshold, Duration cooldown, LongSupplier clock) {
         this.threshold = Math.max(1, threshold);
@@ -35,6 +49,8 @@ final class SourceNodeCircuit {
         if (!open) return new Attempt(generation, false);
         if (probing || retryAt - clock.getAsLong() > 0) throw new CircuitOpen();
         probing = true;
+        probes++;
+        event("PROBE_STARTED");
         return new Attempt(generation, true);
     }
 
@@ -47,6 +63,7 @@ final class SourceNodeCircuit {
             if (attempt.halfOpen()) {
                 probing = false;
                 generation++;
+                event("METADATA_ONLY");
             }
             return;
         }
@@ -55,6 +72,8 @@ final class SourceNodeCircuit {
             probing = false;
             if (success) {
                 open = false;
+                recovered++;
+                event("RECOVERED");
                 timeouts = 0;
                 bodyRecoveryRequired = false;
                 generation++;
@@ -73,6 +92,8 @@ final class SourceNodeCircuit {
     private void trip() {
         generation++;
         open = true;
+        opened++;
+        event("OPENED");
         probing = false;
         retryAt = clock.getAsLong() + cooldown;
     }

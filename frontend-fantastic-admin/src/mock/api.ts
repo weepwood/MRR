@@ -501,6 +501,19 @@ const systemProperties = {
 
 export default defineFakeRoute([
   {
+    url: '/api/v1/operations/access-log-partition/status',
+    response: () => ok({
+      phase: 'COPYING',
+      partitionCount: 4,
+      defaultPartitionHasRows: false,
+      rowsCopied: 0,
+      copyLag: 0,
+      copyEnabled: false,
+      legacyTablePresent: false,
+      updatedAt: mockTimestamp,
+    }),
+  },
+  {
     url: '/api/v1/auth/login',
     method: 'POST',
     response: ({ body }) => ok({

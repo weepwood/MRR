@@ -122,3 +122,35 @@ test('维护模式确认保留非空校验，按 Esc 退出确认不发送写请
   await expect(page.getByText('主动维护模式未启用')).toBeVisible()
   expect(disables).toBe(1)
 })
+
+
+test('shows configured delivery mode and read-only partition status, labels stale on failure', async ({ page }) => {
+  await page.route(overviewUrl, route => route.fulfill({
+    json: { code: 200, data: { ...snapshot('READ_WRITE'), imageDeliveryMode: 'gateway' } },
+  }))
+  let calls = 0
+  await page.route('**/api/v1/operations/access-log-partition/status', async (route) => {
+    expect(route.request().method()).toBe('GET')
+    calls++
+    if (calls > 1) {
+      await route.fulfill({ status: 503, json: { code: 503, message: '模拟状态失败' } })
+      return
+    }
+    await route.fulfill({ json: { code: 200, data: {
+      phase: 'COPYING', partitionCount: 4, rowsCopied: 1200, copyLag: 42,
+      copyEnabled: false, defaultPartitionHasRows: true, legacyTablePresent: false,
+      updatedAt: snapshotTime,
+    } } })
+  })
+  await page.goto('/operations-center')
+  const card = page.locator('.delivery-status-card')
+  await expect(card.getByText('受控网关', { exact: true })).toBeVisible()
+  await expect(card.getByText('复制中', { exact: true })).toBeVisible()
+  await expect(card.getByText('1,200', { exact: true })).toBeVisible()
+  await expect(card.getByText('42', { exact: true })).toBeVisible()
+  await expect(card.getByText('有数据', { exact: true })).toBeVisible()
+  await card.getByRole('button', { name: '刷新分区状态' }).click()
+  await expect(card.getByText('刷新失败，以下为上次分区状态')).toBeVisible()
+  await expect(card.getByText('1,200', { exact: true })).toBeVisible()
+  await expect(card.getByRole('button', { name: /切换|回退|启动复制|放弃/ })).toHaveCount(0)
+})

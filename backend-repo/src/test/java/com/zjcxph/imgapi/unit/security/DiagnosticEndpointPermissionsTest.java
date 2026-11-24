@@ -66,7 +66,7 @@ class DiagnosticEndpointPermissionsTest {
         var service = mock(OperationsCenterService.class);
         var controller = new OperationsDiagnosticsController(mock(OperationsDiagnosticsService.class),
                 service, mock(ImageSourceDiagnosticsService.class), mock(IntegrityDiagnosticsService.class),
-                mock(MaintenanceModeService.class));
+                mock(MaintenanceModeService.class), new ImageDeliveryProperties());
         var overview = new HandlerMethod(controller, OperationsDiagnosticsController.class.getMethod("overview"));
         var diagnostic = new HandlerMethod(controller, OperationsDiagnosticsController.class.getMethod("runDiagnostics"));
         var authorization = new AuthorizationInterceptor();
@@ -96,11 +96,14 @@ class DiagnosticEndpointPermissionsTest {
     void overviewExposesOnlyConfiguredImageModeNotSourceAddresses() {
         var service = mock(OperationsCenterService.class);
         when(service.overview()).thenReturn(java.util.Map.of("generatedAt", "synthetic"));
+        var properties = new ImageDeliveryProperties();
         var controller = new OperationsDiagnosticsController(mock(OperationsDiagnosticsService.class),
                 service, mock(ImageSourceDiagnosticsService.class), mock(IntegrityDiagnosticsService.class),
-                mock(MaintenanceModeService.class));
+                mock(MaintenanceModeService.class), properties);
         assertThat(controller.overview().getData()).containsEntry("imageDeliveryMode", "direct");
-        assertThat(controller.overview().getData()).doesNotContainKeys("sourceUrl", "secret", "cookie");
+        properties.setMode(ImageDeliveryProperties.Mode.GATEWAY);
+        assertThat(controller.overview().getData()).containsEntry("imageDeliveryMode", "gateway")
+                .doesNotContainKeys("sourceUrl", "secret", "cookie");
     }
 
     private MockHttpServletRequest request(List<String> permissions) {

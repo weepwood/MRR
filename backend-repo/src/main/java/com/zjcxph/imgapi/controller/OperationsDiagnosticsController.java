@@ -2,6 +2,7 @@ package com.zjcxph.imgapi.controller;
 
 import com.zjcxph.imgapi.annotation.RequirePermissions;
 import com.zjcxph.imgapi.common.Result;
+import com.zjcxph.imgapi.config.ImageDeliveryProperties;
 import com.zjcxph.imgapi.service.ImageSourceDiagnosticsService;
 import com.zjcxph.imgapi.service.IntegrityDiagnosticsService;
 import com.zjcxph.imgapi.service.MaintenanceModeService;
@@ -18,6 +19,8 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
+import java.util.LinkedHashMap;
+import java.util.Locale;
 import java.util.Map;
 
 @RestController
@@ -31,25 +34,30 @@ public class OperationsDiagnosticsController {
     private final ImageSourceDiagnosticsService imageSourceDiagnosticsService;
     private final IntegrityDiagnosticsService integrityDiagnosticsService;
     private final MaintenanceModeService maintenanceModeService;
+    private final ImageDeliveryProperties imageDeliveryProperties;
 
     public OperationsDiagnosticsController(
             OperationsDiagnosticsService diagnosticsService,
             OperationsCenterService operationsCenterService,
             ImageSourceDiagnosticsService imageSourceDiagnosticsService,
             IntegrityDiagnosticsService integrityDiagnosticsService,
-            MaintenanceModeService maintenanceModeService
+            MaintenanceModeService maintenanceModeService,
+            ImageDeliveryProperties imageDeliveryProperties
     ) {
         this.diagnosticsService = diagnosticsService;
         this.operationsCenterService = operationsCenterService;
         this.imageSourceDiagnosticsService = imageSourceDiagnosticsService;
         this.integrityDiagnosticsService = integrityDiagnosticsService;
         this.maintenanceModeService = maintenanceModeService;
+        this.imageDeliveryProperties = imageDeliveryProperties;
     }
 
     @GetMapping("/overview")
     @Operation(summary = "获取运维总览、运行模式、任务和错误摘要")
     public Result<Map<String, Object>> overview() {
-        return Result.success(operationsCenterService.overview());
+        Map<String, Object> snapshot = new LinkedHashMap<>(operationsCenterService.overview());
+        snapshot.put("imageDeliveryMode", imageDeliveryProperties.getMode().name().toLowerCase(Locale.ROOT));
+        return Result.success(snapshot);
     }
 
     @PostMapping("/diagnostics/run")

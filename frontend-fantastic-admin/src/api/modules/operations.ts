@@ -160,6 +160,7 @@ export interface OperationsQuickLink {
 }
 
 export interface OperationsOverview {
+  imageDeliveryMode?: 'direct' | 'gateway'
   generatedAt: string
   readiness: ReadinessSnapshot
   maintenance: Pick<MaintenanceStatus, 'enabled'>
@@ -306,4 +307,23 @@ export function getDeploymentReadiness(refresh = false) {
     ? postRequest<ReadinessSnapshot>('/api/v1/operations/readiness/refresh')
     : getRequest<ReadinessSnapshot>('/api/v1/operations/readiness')
   return unwrap(request, '部署就绪检查')
+}
+
+export interface AccessLogPartitionStatus {
+  phase?: 'COPYING' | 'READY' | 'CUTOVER' | 'ABORTED' | null
+  partitionCount?: number
+  defaultPartitionHasRows?: boolean
+  rowsCopied?: number | null
+  copyLag?: number | null
+  copyEnabled?: boolean
+  legacyTablePresent?: boolean
+  updatedAt?: string | null
+}
+
+/** Read-only status; never invokes partition transition operations. */
+export function getAccessLogPartitionStatus() {
+  return unwrap(
+    getRequest<AccessLogPartitionStatus>('/api/v1/operations/access-log-partition/status'),
+    '访问日志分区状态查询',
+  )
 }

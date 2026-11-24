@@ -328,6 +328,19 @@
 
 - #116/#92 P1，独立worktree fix/116-v1.1-availability-retention；[持续清理边界和实际PG16证据](v1.1-availability-retention.md)。独立每小时1000条到期已关闭监控区间，5s超时、SKIP LOCKED，不影响心跳，不涉及医疗事实。实际7项（6单测+1 PG16.16）通过，1000/1/0批次及3条保留，隔离库已停止。最新CI待验收，RC1 24152bee冻结不变。
 
+## 08 V1.1 独立集成与持久化病案观察（2026-11-25）
+
+- RC1 main 固定 24152bee64f3fabcc337af49ecaa6f0280b09f7c；独立 integration/v1.1 worktree /Volumes/data/Project/MRR-worktrees/v1.1-integration。#801/#802/#803 最终 pr-gate SUCCESS，#802 修复用户会话 store 测试隔离（93a02bcf，7项本地 Vitest）；保留原提交集成至 d21f7671。不向 main 合并，不发布。
+- #144 P1：14f61b00 新增 V20261125100000（仅V1.1更新兼容基线），持久化版本、页码/扫描ID游标、扫描ID上界、汇总/异常记录、全局单活任务及带租约恢复，使用已有索引与单图正文校验。默认关闭 app.archive-manifest.enabled，维护/只读停止后台校验，双权限接口、可信会话操作者、no-store，不变更医疗事实。每轮1图、最多5000图、异常100条分页；过期租约不可提交。COMPLETED 仅指有界枚举结束，不代表全部校验通过或严格快照；并发新增/删除/页码变化仍可能影响覆盖，禁止以此自动归档。没有复制3000万行明细；完整清单导出、保留策略、现场大病案验收与UI仍待。
+- 测试先行：test-compile RED（缺新repository）；实际新建隔离 PG16.16、48迁移、4集成（2 Manifest、历史保留、空库Flyway）通过并停止；34后端定向及后续11项服务/授权测试通过（有重复权限用例），日志 /tmp/mrr-v11-manifest-red.log、/tmp/mrr-v11-manifest-pg-green.log、/tmp/mrr-v11-manifest-service.log。release_baseline 与 engineering docs 通过。未跑全量 CI、医院库或真实存储；不重复性能基准。回滚先关闭调度，保留新表及审计，采用前向修复，不删生产数据、不修改既有迁移。
+
+## 08 V1.1 受控关联修复与工作台接线（2026-11-25）
+
+- d7c115e8 已推送：新增 V20261125101000、修复工单与同事务事件审计；仅支持成功检查样本 SCAN_ARCHIVE_LINK_MISSING_ESTIMATED 的单条缺失扫描关联，默认关闭 app.data-quality.repair-enabled。双管理权限、真实会话身份、提交人与审批人分离、24小时审批时限、锁内复查源和目标指纹及唯一候选；原审批人显式执行，复验、取消和条件补偿，不自动写入。主档 SHARE NOWAIT 表锁保证候选域不出现幻读，可能与正常写入冲突；真实医院并发压力待验证。补偿只允许源/目标事实与执行后版本仍一致、无SJH且既有解析触发器不会重新关联的情况；禁止绕过触发器。已验证工单保留独占扫描约束，后续同一记录再次缺失需设计显式归档/重开流程。审计失败真实PG16保存点回滚，未做独立多连接锁竞争及完整Spring事务代理链验收。
+- PG16.16 隔离库 /tmp/mrr-v11-repair-pg.JgZhcC：空库49条迁移成功；最终12单测+7集成（5工单+2 Manifest）均零失败、零跳过，数据库已停止；日志 /tmp/mrr-v11-repair-pg-final.log。权限拒绝、过期、重复候选、变化拒绝、执行/复验、补偿禁止与许可、审计失败回滚均在合成记录上验证。未运行真实医疗数据修复。兼容基线只更新集成分支。
+- 1bcb89b5 已推送：复用 MrrSectionCard/Element Plus 的 Manifest 卡片、异常分页、状态与显式刷新/启停、账号/病案切换清理及安全SJH影像入口；合成关系/病案详情/Manifest Mock 与异常详情补齐，严格Mock覆盖新增 data-relations,archive-manifest。9项前端单测、vue-tsc、ESLint/stylelint、严格Mock与5工具测试通过；未做真实浏览器及截图验收。演示只展示未校验样例，写操作拒绝。修复审批列表/事件查看/工作台交互未接入，OCR其他演示欠账与无用依赖审计未执行；不要声称已完成。
+- 下一批优先：运维持久化历史指标及故障趋势、固定且默认关闭的 Windows nginx.exe -t 校验（复用 deploy/windows/mrrctl.ps1 固定路径与参数，不开放任意命令），完整修复工单列表与审计审核UI，Manifest 严格快照/分段与保留策略，真实浏览器/锁竞争专项，OCR与历史Issue及依赖审计。冻结 main 与正式版本身份不变；新迁移采用安全前向修复，禁止擅自发布。
+
 ## 每轮交接模板
 
 - 更新时间、任务、风险、目标及非目标：

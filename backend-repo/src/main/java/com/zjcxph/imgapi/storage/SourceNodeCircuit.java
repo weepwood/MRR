@@ -6,7 +6,7 @@ import java.util.function.LongSupplier;
 
 /** A node-scoped circuit for observed source failures, not file-specific or permission failures. */
 final class SourceNodeCircuit {
-    enum Outcome { SUCCESS, SOURCE_FAILURE, NEUTRAL }
+    enum Outcome { SUCCESS, METADATA_SUCCESS, SOURCE_FAILURE, BODY_FAILURE, NEUTRAL }
     record Attempt(long generation, boolean halfOpen) {}
     private final int threshold;
     private final long cooldown;
@@ -16,6 +16,7 @@ final class SourceNodeCircuit {
     private long retryAt;
     private boolean open;
     private boolean probing;
+    private boolean bodyRecoveryRequired;
 
     SourceNodeCircuit(int threshold, Duration cooldown, LongSupplier clock) {
         this.threshold = Math.max(1, threshold);
@@ -33,19 +34,32 @@ final class SourceNodeCircuit {
 
     synchronized void finish(Attempt attempt, Outcome outcome) {
         if (attempt.generation() != generation) return;
+        if (outcome == Outcome.BODY_FAILURE) bodyRecoveryRequired = true;
+        if (outcome == Outcome.METADATA_SUCCESS && bodyRecoveryRequired) {
+            // Metadata alone cannot clear observed body failures. A successful half-open
+            // metadata probe frees the single probe for a real body read immediately.
+            if (attempt.halfOpen()) {
+                probing = false;
+                generation++;
+            }
+            return;
+        }
+        boolean success = outcome == Outcome.SUCCESS || outcome == Outcome.METADATA_SUCCESS;
         if (attempt.halfOpen()) {
             probing = false;
-            if (outcome == Outcome.SUCCESS) {
+            if (success) {
                 open = false;
                 timeouts = 0;
+                bodyRecoveryRequired = false;
                 generation++;
             } else {
-                // Even a neutral probe cannot establish recovery. Try again after cooldown.
                 trip();
             }
-        } else if (outcome == Outcome.SUCCESS) {
+        } else if (success) {
             timeouts = 0;
-        } else if (outcome == Outcome.SOURCE_FAILURE && ++timeouts >= threshold) {
+            bodyRecoveryRequired = false;
+        } else if ((outcome == Outcome.SOURCE_FAILURE || outcome == Outcome.BODY_FAILURE)
+                && ++timeouts >= threshold) {
             trip();
         }
     }

@@ -3,7 +3,6 @@ import type { StatisticsRecord } from '@/api/types'
 import type { MrrBarSeries, MrrLineSeries } from '@/types/chart'
 import { ElMessage } from 'element-plus'
 import {
-  CalendarDays as Calendar,
   Download,
   RefreshCw as Refresh,
 } from 'lucide-vue-next'
@@ -81,8 +80,7 @@ const currentPage = ref(1)
 const pageSize = ref(100)
 const listSearchKeyword = ref('')
 const listSearchType = ref('')
-const listSearchYear = ref('')
-const listSearchDateRange = ref<string[]>([])
+const listSearchDateRange = ref<string[] | null>([])
 const tableSort = ref({ prop: 'date', order: 'descending' })
 let listRequestId = 0
 const loadedFilters = ref<StatisticsFilterParams>()
@@ -143,20 +141,15 @@ const typeOptions = computed(() => Array.from(new Set(
     .map(item => String(item.type || '').trim())
     .filter(Boolean),
 )))
-const yearOptions = computed(() => {
-  const years = new Set<string>()
-  for (const item of sortedDateData.value) {
-    const year = extractYear(item.date)
-    if (year) {
-      years.add(year)
+const yearShortcuts = computed(() => {
+  const currentYear = new Date().getFullYear()
+  return Array.from({ length: 3 }, (_, index) => {
+    const year = currentYear - index
+    return {
+      text: `${year} 年`,
+      value: () => [new Date(year, 0, 1), new Date(year, 11, 31)],
     }
-  }
-
-  if (!years.size) {
-    years.add(String(new Date().getFullYear()))
-  }
-
-  return [...years].sort((left, right) => Number(right) - Number(left))
+  })
 })
 
 function formatDate(dateStr?: string) {
@@ -179,13 +172,6 @@ function formatNumber(value: number, maximumFractionDigits = 0) {
   return Number(value || 0).toLocaleString('zh-CN', { maximumFractionDigits })
 }
 
-function extractYear(dateStr?: string) {
-  if (!dateStr) {
-    return ''
-  }
-  return dateStr.trim().match(/^(\d{4})[-/.]/)?.[1] ?? ''
-}
-
 function getBackendSortOrder(order: string) {
   return order === 'ascending' ? 'asc' : 'desc'
 }
@@ -198,26 +184,11 @@ function buildStatisticsFilters(): StatisticsFilterParams {
   if (listSearchType.value) {
     params.type = listSearchType.value
   }
-  if (listSearchDateRange.value.length === 2) {
+  if (listSearchDateRange.value?.length === 2) {
     params.startDate = listSearchDateRange.value[0]
     params.endDate = listSearchDateRange.value[1]
   }
   return params
-}
-
-function syncYearFromDateRange() {
-  if (listSearchDateRange.value.length !== 2) {
-    listSearchYear.value = ''
-    return
-  }
-
-  const [startDate, endDate] = listSearchDateRange.value
-  const year = extractYear(startDate)
-  listSearchYear.value = year
-    && startDate === `${year}-01-01`
-    && endDate === `${year}-12-31`
-    ? year
-    : ''
 }
 
 async function loadOverview() {
@@ -289,22 +260,13 @@ function handleListSearch() {
   loadStatisticsList()
 }
 
-function handleYearChange(year: string) {
-  listSearchDateRange.value = year
-    ? [`${year}-01-01`, `${year}-12-31`]
-    : []
-  handleListSearch()
-}
-
 function handleDateRangeChange() {
-  syncYearFromDateRange()
   handleListSearch()
 }
 
 function resetListSearch() {
   listSearchKeyword.value = ''
   listSearchType.value = ''
-  listSearchYear.value = ''
   listSearchDateRange.value = []
   currentPage.value = 1
   loadStatisticsList()
@@ -325,7 +287,8 @@ async function handleExportTable() {
   if (!filters || !canExportList.value || exportLoading.value) {
     return
   }
-  const scope = listSearchYear.value || 'all'
+  const year = filters.startDate?.slice(0, 4)
+  const scope = year && filters.startDate === `${year}-01-01` && filters.endDate === `${year}-12-31` ? year : 'all'
   exportLoading.value = true
   try {
     const response = await exportStatisticsCsv(filters)
@@ -488,27 +451,11 @@ onMounted(refreshAll)
               :value="item"
             />
           </el-select>
-          <el-select
-            v-model="listSearchYear"
-            placeholder="全部年份"
-            clearable
-            class="search-year"
-            @change="handleYearChange"
-          >
-            <template #prefix>
-              <el-icon><Calendar /></el-icon>
-            </template>
-            <el-option
-              v-for="year in yearOptions"
-              :key="year"
-              :label="`${year} 年`"
-              :value="year"
-            />
-          </el-select>
           <el-date-picker
             v-model="listSearchDateRange"
             type="daterange"
             :popper-options="rangePickerPopperOptions"
+            :shortcuts="yearShortcuts"
             range-separator="至"
             start-placeholder="开始日期"
             end-placeholder="结束日期"
@@ -567,14 +514,13 @@ onMounted(refreshAll)
  * 此前自写的灰底搜索条、居中分页与 15px 卡头，与其他列表页的留白、对齐和分页位置都不一致。
  */
 
-/* 字段宽度：关键词与日期可伸展，类型 / 年份固定宽，与筛选栏 embedded 的拉伸上限配合。 */
+/* 字段宽度：关键词与日期可伸展，类型固定宽，与筛选栏 embedded 的拉伸上限配合。 */
 .search-keyword {
   flex: 1 1 220px;
   min-width: 180px;
 }
 
-.search-type,
-.search-year {
+.search-type {
   flex: 0 1 180px;
   width: 180px;
 }
@@ -587,7 +533,6 @@ onMounted(refreshAll)
 @media (max-width: 760px) {
   .search-keyword,
   .search-type,
-  .search-year,
   .search-date {
     flex: 1 1 100%;
     width: 100%;

@@ -2,7 +2,8 @@
 -- psql -X -v ON_ERROR_STOP=1 -v archive_id=1 -v code=123 -f inspect-query-plans.sql
 -- 可选：-v deep_offset=100000 -v after_id=123456 -v analyze_legacy=1
 -- analyze_legacy=1 才执行兼容查询、深分页及精确 COUNT；默认仅 EXPLAIN。
--- after_id 必须由相同精确条件和 offset 的上一条结果确定，不能把任意 id 当作等价页。
+-- after_id 仅用于独立游标探测，不能作为等价页证据。
+-- 可选 compare_exact=1（默认 BAH，compare_sjh=1 改为 SJH）自动验证同页后执行对比。
 -- 计划可能包含筛选值，仅在院内保存，脱敏后共享。超时即停止，不自动重试或放宽预算。
 \if :{?deep_offset}
 \else
@@ -15,6 +16,16 @@
 \if :{?analyze_legacy}
 \else
 \set analyze_legacy 0
+\endif
+
+\set ON_ERROR_STOP on
+\if :{?compare_exact}
+\else
+\set compare_exact 0
+\endif
+\if :{?compare_sjh}
+\else
+\set compare_sjh 0
 \endif
 
 BEGIN READ ONLY;
@@ -36,9 +47,12 @@ JOIN pg_class i ON i.oid=x.indexrelid
 JOIN pg_namespace n ON n.oid=t.relnamespace
 WHERE n.nspname='app' AND t.relname IN ('mr_scan','mr_archive')
 ORDER BY t.relname,i.relname;
-\echo '=== current archive and exact cursor plans ==='
+\echo '=== bounded archive probe, actual archive plan and independent cursor probes (not equivalent-page evidence) ==='
 EXPLAIN (ANALYZE,BUFFERS,SETTINGS,FORMAT JSON)
-SELECT id,pages FROM app.mr_scan WHERE archive_id=:'archive_id'::bigint AND uploadflag<>0 ORDER BY pages,id LIMIT 1001;
+SELECT * FROM app.mr_scan WHERE archive_id=:'archive_id'::bigint AND uploadflag<>0 ORDER BY pages,id LIMIT 1001;
+-- Actual archive Mapper has no LIMIT: plan only, do not execute an unbounded result.
+EXPLAIN (SETTINGS,FORMAT JSON)
+SELECT * FROM app.mr_scan WHERE archive_id=:'archive_id'::bigint AND uploadflag<>0 ORDER BY pages,id;
 EXPLAIN (ANALYZE,BUFFERS,SETTINGS,FORMAT JSON)
 SELECT * FROM app.mr_scan WHERE app.numeric_code_key(bah)=app.numeric_code_key(:'code') AND id>:'after_id'::integer ORDER BY id LIMIT 51;
 EXPLAIN (ANALYZE,BUFFERS,SETTINGS,FORMAT JSON)
@@ -59,7 +73,7 @@ EXPLAIN (SETTINGS,FORMAT JSON)
 SELECT count(*) FROM app.mr_scan WHERE bah LIKE '%' || :'code' || '%';
 EXPLAIN (SETTINGS,FORMAT JSON)
 SELECT count(*) FROM app.mr_scan;
-\echo '=== same exact predicate: OFFSET for comparison ==='
+\echo '=== exact predicate OFFSET planned cost only (not equivalent-page evidence) ==='
 EXPLAIN (SETTINGS,FORMAT JSON)
 SELECT * FROM app.mr_scan WHERE app.numeric_code_key(bah)=app.numeric_code_key(:'code') ORDER BY id LIMIT 51 OFFSET :'deep_offset'::integer;
 ROLLBACK;
@@ -79,11 +93,53 @@ SET LOCAL lock_timeout='1s';
 EXPLAIN (ANALYZE,BUFFERS,SETTINGS,FORMAT JSON)
 SELECT count(*) FROM app.mr_scan WHERE bah LIKE '%' || :'code' || '%';
 ROLLBACK;
-BEGIN READ ONLY;
+\endif
+
+\if :compare_exact
+\if :compare_sjh
+\set comparison_column sjh
+\else
+\set comparison_column bah
+\endif
+BEGIN ISOLATION LEVEL REPEATABLE READ READ ONLY;
 SET LOCAL statement_timeout='3s';
 SET LOCAL lock_timeout='1s';
-\echo '=== opt-in actual exact predicate OFFSET ==='
+-- BEGIN EXACT PAGE EVIDENCE SQL
+WITH boundary AS MATERIALIZED (
+    SELECT id FROM app.mr_scan
+    WHERE id>0 AND app.numeric_code_key(:"comparison_column")=app.numeric_code_key(:'code')
+      AND :'deep_offset'::integer>0
+    ORDER BY id LIMIT 1 OFFSET GREATEST(:'deep_offset'::integer-1,0)
+), offset_page AS MATERIALIZED (
+    SELECT id FROM app.mr_scan
+    WHERE id>0 AND app.numeric_code_key(:"comparison_column")=app.numeric_code_key(:'code')
+    ORDER BY id LIMIT 51 OFFSET :'deep_offset'::integer
+), cursor_page AS MATERIALIZED (
+    SELECT id FROM app.mr_scan
+    WHERE id>COALESCE((SELECT id FROM boundary),0)
+      AND app.numeric_code_key(:"comparison_column")=app.numeric_code_key(:'code')
+    ORDER BY id LIMIT 51
+)
+SELECT (:'deep_offset'::integer=0 OR EXISTS (SELECT 1 FROM boundary))
+       AND EXISTS (SELECT 1 FROM offset_page)
+       AND ARRAY(SELECT id FROM offset_page ORDER BY id)=ARRAY(SELECT id FROM cursor_page ORDER BY id) AS comparable,
+       COALESCE((SELECT id FROM boundary),0) AS matched_after_id
+-- END EXACT PAGE EVIDENCE SQL
+\gset comparison_
+\if :comparison_comparable
+\echo '=== SAME_PAGE_VERIFIED: exact predicate OFFSET (warm snapshot) ==='
 EXPLAIN (ANALYZE,BUFFERS,SETTINGS,FORMAT JSON)
-SELECT * FROM app.mr_scan WHERE app.numeric_code_key(bah)=app.numeric_code_key(:'code') ORDER BY id LIMIT 51 OFFSET :'deep_offset'::integer;
+SELECT * FROM app.mr_scan
+WHERE id>0 AND app.numeric_code_key(:"comparison_column")=app.numeric_code_key(:'code')
+ORDER BY id LIMIT 51 OFFSET :'deep_offset'::integer;
+\echo '=== SAME_PAGE_VERIFIED: exact predicate cursor (warm snapshot) ==='
+EXPLAIN (ANALYZE,BUFFERS,SETTINGS,FORMAT JSON)
+SELECT * FROM app.mr_scan
+WHERE id>:'comparison_matched_after_id'::integer
+  AND app.numeric_code_key(:"comparison_column")=app.numeric_code_key(:'code')
+ORDER BY id LIMIT 51;
+\else
+\echo 'NOT_COMPARABLE: missing boundary or empty/different page; no performance comparison'
+\endif
 ROLLBACK;
 \endif

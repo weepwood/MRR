@@ -53,7 +53,7 @@ public class ScanServiceImpl implements ScanService {
     @Cacheable(
             value = "scanLookupByBah", cacheResolver = "scanQueryCacheResolver",
             key = "#normalizedCode + ':' + #searchCode",
-            unless = "#result == null || #result.resultCount() == 0"
+            sync = true
     )
     public ArchiveLookupResult getImageLookupByBAH(String normalizedCode, String searchCode) {
         return performLookup(
@@ -69,7 +69,7 @@ public class ScanServiceImpl implements ScanService {
     @Cacheable(
             value = "scanLookupByCode", cacheResolver = "scanQueryCacheResolver",
             key = "#normalizedBah + ':' + #bahSearchCode + ':' + #normalizedSjh + ':' + #sjhSearchCode",
-            unless = "#result == null || #result.resultCount() == 0"
+            sync = true
     )
     public ArchiveLookupResult getImageLookupByCode(
             String normalizedBah,
@@ -92,7 +92,7 @@ public class ScanServiceImpl implements ScanService {
     }
 
     @Override
-    @Cacheable(value = "scanByBah", cacheResolver = "scanQueryCacheResolver", key = "#normalizedCode + ':' + #searchCode", unless = "#result == null || #result.isEmpty()")
+    @Cacheable(value = "scanByBah", cacheResolver = "scanQueryCacheResolver", key = "#normalizedCode + ':' + #searchCode", sync = true)
     public List<Scan> getImageListByBAH(String normalizedCode, String searchCode) {
         return performLookup(
                 normalizedCode,
@@ -107,7 +107,7 @@ public class ScanServiceImpl implements ScanService {
     @Cacheable(
             value = "scanByCode", cacheResolver = "scanQueryCacheResolver",
             key = "#normalizedBah + ':' + #bahSearchCode + ':' + #normalizedSjh + ':' + #sjhSearchCode",
-            unless = "#result == null || #result.isEmpty()"
+            sync = true
     )
     public List<Scan> getImageListByCode(
             String normalizedBah,
@@ -236,7 +236,7 @@ public class ScanServiceImpl implements ScanService {
     }
 
     @Override
-    @Cacheable(value = "scanById", cacheResolver = "scanQueryCacheResolver", key = "#id", unless = "#result == null")
+    @Cacheable(value = "scanById", cacheResolver = "scanQueryCacheResolver", key = "#id", sync = true)
     public Scan findById(Integer id) {
         return scanMapper.findById(id);
     }

@@ -77,7 +77,7 @@ public class CacheConfig {
         return cacheManager;
     }
 
-    /** Only the five non-sync scan lookup annotations use this resolver. */
+    /** Only the five scan lookup annotations use this generation-aware loader. */
     @Bean
     public CacheResolver scanQueryCacheResolver(CacheManager cacheManager) {
         return context -> context.getOperation().getCacheNames().stream().map(name -> {

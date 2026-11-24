@@ -58,17 +58,18 @@ final class ImageContentResponse {
         }
 
         HttpByteRange selected = range;
+        long deadline = System.nanoTime() + budgetNanos(content.transferBudget());
         StreamingResponseBody body = output -> {
             try (content) {
+                checkBudget(deadline);
                 if (selected != null) {
                     opened.seek(selected.start());
-                    copyExactly(opened, output, selected.length());
-                } else if (opened != null && length != null) {
-                    // A concurrently grown file cannot exceed the advertised representation length.
-                    copyExactly(opened, output, length);
+                    copy(opened, output, selected.length(), deadline);
                 } else {
-                    content.inputStream().transferTo(output);
+                    // A concurrently grown file cannot exceed the advertised representation length.
+                    copy(content.inputStream(), output, length == null ? -1 : length, deadline);
                 }
+                checkBudget(deadline);
             } catch (IOException | RuntimeException failure) {
                 failureAudit.run();
                 throw failure;
@@ -79,14 +80,36 @@ final class ImageContentResponse {
                 .headers(headers).body(PendingImageStream.wrap(request, content, body, failureAudit));
     }
 
-    private static void copyExactly(java.io.InputStream input, java.io.OutputStream output, long length) throws IOException {
+    private static long budgetNanos(java.time.Duration configured) {
+        var duration = configured == null || configured.isZero() || configured.isNegative()
+                ? java.time.Duration.ofSeconds(120) : configured;
+        return duration.compareTo(java.time.Duration.ofHours(1)) > 0
+                ? java.time.Duration.ofHours(1).toNanos() : duration.toNanos();
+    }
+
+    private static void checkBudget(long deadline) throws IOException {
+        if (Thread.currentThread().isInterrupted()) throw new java.io.InterruptedIOException("Image transfer interrupted");
+        if (deadline - System.nanoTime() <= 0) throw new java.net.SocketTimeoutException("Image transfer budget exhausted");
+    }
+
+    private static void copy(java.io.InputStream input, java.io.OutputStream output, long length, long deadline)
+            throws IOException {
         byte[] buffer = new byte[16 * 1024];
         long remaining = length;
-        while (remaining > 0) {
-            int read = input.read(buffer, 0, (int) Math.min(buffer.length, remaining));
-            if (read < 0) throw new EOFException("Image changed during transfer");
-            output.write(buffer, 0, read);
-            remaining -= read;
+        while (remaining != 0) {
+            checkBudget(deadline);
+            int count = remaining < 0 ? buffer.length : (int) Math.min(buffer.length, remaining);
+            int read = input.read(buffer, 0, count);
+            checkBudget(deadline); // do not write bytes that arrive after the deadline
+            if (read < 0) {
+                if (remaining > 0) throw new EOFException("Image changed during transfer");
+                return;
+            }
+            if (read > 0) {
+                output.write(buffer, 0, read);
+                checkBudget(deadline);
+                if (remaining > 0) remaining -= read;
+            }
         }
     }
 

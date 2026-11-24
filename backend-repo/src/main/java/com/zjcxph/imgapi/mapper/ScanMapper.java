@@ -146,6 +146,7 @@ public interface ScanMapper {
     List<Scan> findAll(@Param("limit") int limit);
 
     @Select("SELECT * FROM mr_scan WHERE id > #{afterId} ORDER BY id LIMIT #{limit}")
+    @Options(timeout = 3)
     List<Scan> findAfterId(@Param("afterId") int afterId, @Param("limit") int limit);
 
     @Select("SELECT * FROM mr_scan WHERE id = #{id}")

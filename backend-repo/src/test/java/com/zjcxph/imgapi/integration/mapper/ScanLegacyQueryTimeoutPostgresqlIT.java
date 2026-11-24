@@ -35,7 +35,7 @@ class ScanLegacyQueryTimeoutPostgresqlIT extends PostgresqlIntegrationTestSuppor
     @Autowired DataSource dataSource;
     @Autowired SqlSessionFactory sessions;
 
-    enum LegacyRead { LIST, PAGE, CONDITION, CONDITION_PAGE, COUNT }
+    enum LegacyRead { LIST, PAGE, CONDITION, CONDITION_PAGE, COUNT, CURSOR, CONDITION_CURSOR }
 
     @ParameterizedTest(name = "{0} cancels its statement and recovers after lock release")
     @EnumSource(LegacyRead.class)
@@ -94,6 +94,8 @@ class ScanLegacyQueryTimeoutPostgresqlIT extends PostgresqlIntegrationTestSuppor
             case CONDITION -> mapper.findByCondition(new ScanRequest(), 1);
             case CONDITION_PAGE -> mapper.findByConditionWithPagination(new ScanRequest(), 0, 1);
             case COUNT -> mapper.countByCondition(new ScanRequest());
+            case CURSOR -> mapper.findAfterId(0, 1);
+            case CONDITION_CURSOR -> mapper.findByConditionAfterId(new ScanRequest(), 0, 1);
         }
     }
 }

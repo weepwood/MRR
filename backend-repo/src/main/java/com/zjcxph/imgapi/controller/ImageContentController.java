@@ -59,9 +59,11 @@ public class ImageContentController {
             headers.setContentLength(content.contentLength());
         }
 
+        var request = RequestContextHolder.getRequestAttributes() instanceof ServletRequestAttributes attributes
+                ? attributes.getRequest() : null;
         return ResponseEntity.ok()
                 .headers(headers)
-                .body(body);
+                .body(PendingImageStream.wrap(request, content, body, () -> {}));
     }
 
     /** 让逐图访问审计与档案袋列表审计使用同一口径的目标，便于在影像访问审计中按病案检索。 */

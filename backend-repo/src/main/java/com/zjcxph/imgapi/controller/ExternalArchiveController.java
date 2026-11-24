@@ -275,7 +275,10 @@ public class ExternalArchiveController {
 
         return ResponseEntity.ok()
                 .headers(headers)
-                .body(body);
+                .body(PendingImageStream.wrap(request, content, body, () ->
+                        externalArchiveAccessService.recordAudit(
+                                grant, scan.getBah(), scan.getSjh(), "IMAGE_VIEW", id,
+                                clientIp, userAgent, currentRequestId, "FAILED", null)));
     }
 
     @PostMapping("/api/v1/external/archive/logout")

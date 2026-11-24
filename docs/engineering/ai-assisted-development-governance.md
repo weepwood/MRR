@@ -181,6 +181,7 @@ CI 不能可靠判断：
 CI 按 [分层 CI 与发布验收](ci-tiered-verification.md) 执行。普通 PR 只对改动范围进行必要检查；
 数据库、权限等高风险路径仍在合并前验证；完整覆盖率、生产候选包和 Windows 恢复在创建 tag 前验收。
 分支保护迁移后仅要求 governance/pr-gate 两个稳定状态，不能用减少状态名称来伪造测试成功。
+2026-11-24 维护者确认采用宽松同步策略（strict=false、dismiss_stale_reviews=false）；P2/P3 独立 PR 不强制跟随无关 main 更新。P0/P1 仍主动同步最新 main、验证实际合并树并独立审查最新 SHA；旧审批不能代替复核。遇到相关 main 变更重新验证，不依赖旧状态放行。目标及证据见 [分支保护实施记录](main-branch-protection.md)。
 
 ## 10. Git 分支与 worktree 管理
 

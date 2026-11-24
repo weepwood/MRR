@@ -36,7 +36,7 @@ class ArchiveExportJobDownloadTest {
         var job = new ArchiveExportJob();
         job.setId("synthetic-job"); job.setOwnerUserId(1L); job.setStatus("SUCCESS");
         job.setFormat("ZIP"); job.setFileName("synthetic.zip");
-        var file = Files.write(directory.resolve("synthetic.zip"), new byte[]{1,2,3,4});
+        var file = Files.write(directory.resolve("synthetic.zip"), new byte[]{1,2,3,4}).toRealPath();
         job.setFilePath(file.toString());
         when(repository.findById(job.getId())).thenReturn(java.util.Optional.of(job));
         java.util.function.Supplier<MockHttpServletRequest> requests = () -> {

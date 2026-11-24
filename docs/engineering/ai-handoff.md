@@ -186,6 +186,14 @@
 
 - #780已合并039307d3，head947b937d，quality45438121029，1171单测/148 PG16零失败/错误/跳过，Development通过。
 
+## 03 前端兼容游标及模拟场景修复（2026-11-25）
+
+- #99/#350 P2，`feat/99-records-compatible-cursor`，worktree `/Volumes/data/Project/MRR-worktrees/99-records-compatible-cursor`。#781 已合并38ed106c，1169单测/148真实PG16通过。eca7435a 实际RED 6项1失败；f5a4ae57 接入 legacyContains 显式选择、提交条件快照、游标重置及加载保护，默认精确、旧模式条件不混用，不新增COUNT。记录页原已使用游标。演示数据补充SQL LIKE及前导零语义。
+- 51fb751d 修复 Node 模拟模块直接读取不存在的 import.meta.env.MODE；真实 bundle-import 原TypeError，修复后六模块全部加载成功，保持认证不变。固定Node24.15.0，实际 Chromium 7项（含预热）全部通过，覆盖兼容查询、翻页、条件变化、窄屏双主题。定向Vitest、类型及lint实际通过。最初Node26与固定Node24浏览器均失败，定位修复后重跑通过。依赖安装恢复corepack并保留原Git hooks检查。无生产变更；独立revert。最新PR CI待验收。
+- #780 已合并039307d3（1171单测/148 PG16），#783 已合并92750126（文档范围scope/pr-gate通过，其他跳过）。30m实验另有独立日志，尚不可视作验收通过。
+
+- #785 首次治理45439870682因PR正文缺少六个标准章节失败，已修正正文并以本次文档提交触发重新验收；未修改门禁。
+
 ## 04.3 NAS正文原生操作隔离（2026-11-25）
 
 - #230/#350 P1，分支 `fix/230-nas-body-isolation`，worktree `/Volumes/data/Project/MRR-worktrees/230-nas-body-isolation`。8ae21669实际RED 5项1错误：模拟不响应中断的原生正文read阻塞调用方；b9e5ff15 每个已许可的NAS流一个串行原生I/O所有者，16KiB私有缓冲，读取/seek/close独立等待预算，超时不取消原生任务或提前释放许可，排队一次真实close；保留真实长度与Range seek。新增 ARCHIVE_IMAGE_SOURCE_NAS_BODY_TIMEOUT 默认PT30S。实际36项联合零失败/错误/跳过，覆盖迟到读取、许可持有/恢复、Range、网关及ZIP/PDF。同步#779正式main 8f598234，最新CI待验收。
@@ -196,6 +204,8 @@
 - #780已合并039307d3，head947b937d，quality45438121029，1171单测/148 PG16零失败/错误/跳过，Development通过。
 
 - #782 head27423c60，quality45439948011后端真实1175项1失败：ControllerAccessPolicyTest扫描到测试探针Probe#stream。测试改为仅在独立MVC上下文显式注册RequestMapping，不修改生产权限规则或扫描器。修复后本地16项（含完整Controller访问策略检查、真实Tomcat、NAS、OSS、节点状态）零失败/错误/跳过；新CI待验证。
+
+- #785已合并b7980728，head2c6dff9e，governance45440104179、quality45440104187、deploy-pages-demo45440104039通过，933前端单测/138文件。
 
 ## 每轮交接模板
 

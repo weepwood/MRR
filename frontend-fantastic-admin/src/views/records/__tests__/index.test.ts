@@ -119,6 +119,28 @@ describe('扫描记录查询', () => {
     expect(wrapper.find('.app-empty').exists()).toBe(false)
   })
 
+  it('显式兼容模式在提交时重置游标，翻批和重试保持已提交模式', async () => {
+    const wrapper = mountPage()
+    await flushPromises()
+    await wrapper.get('#records-legacy-contains').setValue(true)
+    await button(wrapper, '下一批').trigger('click')
+    await flushPromises()
+    expect(getScanCursor).toHaveBeenLastCalledWith(expect.anything(), 42, 20)
+    await wrapper.get('#records-bah').setValue('00123')
+    await button(wrapper, '查询').trigger('click')
+    await flushPromises()
+    expect(getScanCursor).toHaveBeenLastCalledWith(expect.objectContaining({ bah: '00123' }), 0, 20, true)
+    expect(wrapper.text()).toContain('兼容包含')
+    getScanCursor.mockRejectedValueOnce(new Error('查询超时'))
+    await button(wrapper, '下一批').trigger('click')
+    await flushPromises()
+    expect(wrapper.get('.app-error').text()).toContain('查询超时')
+    await button(wrapper, '重试').trigger('click')
+    await flushPromises()
+    expect(getScanCursor).toHaveBeenLastCalledWith(expect.objectContaining({ bah: '00123' }), 42, 20, true)
+    expect(wrapper.find('.test-table').exists()).toBe(true)
+  })
+
   it('请求失败展示错误而不是空结果，并支持重试', async () => {
     getScanCursor.mockRejectedValueOnce(new Error('读取失败'))
     const wrapper = mountPage()

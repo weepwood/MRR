@@ -8,8 +8,8 @@
 | --- | --- | --- |
 | 主线集成 | #795 head 01f1d635；治理45450605471、质量45450605334、演示45450605080通过；1184单测/150 PG16/933前端单测 | 待最终SHA |
 | 发布基线及工具 | VERSION 0.9.0；release_baseline.py validate、17项release工具单测通过 | 待最终SHA |
-| 完整候选预演 | [45451701999](https://github.com/weepwood/MRR/actions/runs/45451701999)，dry_run=true，SHA 6ac73ed4；identity 已通过，完整候选/恢复截至初始记录未完成 | PENDING |
-| 覆盖率 | 保留 quality 下原门禁；用本次完整工作流实际单元/combined报告 | PENDING |
+| 完整候选预演 | [45451701999](https://github.com/weepwood/MRR/actions/runs/45451701999)，dry_run=true，SHA 6ac73ed4；identity、candidate、Windows recovery、complete、summary成功；publish按dry-run跳过 | 旧SHA PASS，最终RC PENDING |
+| 覆盖率 | 旧SHA覆盖率原门禁全部通过，详见下文 | 最终RC PENDING |
 | 真实浏览器与Chrome86 | #795 Chromium运维联合8项含预热；全站、Chrome86现场及减少动效不能以Mock代替 | PENDING |
 | 三千万精确检索 | 已有[实测报告](synthetic-scan-benchmark-2026-11-24.md)，旧包含COUNT前后5秒超时；不重复造数 | 合成证据存在；现场BLOCKED |
 | 模糊GIN | [三百万选择性及ABBA提交写入报告](synthetic-trgm-benchmark-2026-11-25.md)，默认精确游标、不部署GIN | 现场评估待审批 |
@@ -17,7 +17,7 @@
 | 访问权限、撤销、历史协议 | 既有授权/审计与PG16回归；#712/#722尚未合并 | 现场调用方清单及安全迁移BLOCKED |
 | 存储网关及导出 | #782/#789/#793/#795 隔离、熔断、Range/许可恢复本地/CI证据；真实医院Nginx/NAS/OSS、慢客户端及长期压力未验收 | BLOCKED |
 | 日志/数据质量/分区 | 保留既有检查及迁移；采样/COUNT已设10秒超时，access_log分区现场切换及回退不自动执行 | 现场BLOCKED |
-| Windows实际恢复 | 既有工作流必须运行 windows-database-recovery；Mac无pwsh或现场 Windows | PENDING（CI）/BLOCKED（医院） |
+| Windows实际恢复 | 旧SHA真实Windows PS5.1/PG16.15恢复通过；Mac无现场Windows | 最终RC PENDING / 医院BLOCKED |
 | 候选制品身份 | ZIP/JAR/checksum/manifest 对应最终版本、SHA、run、attempt；dry-run制品不授权发布 | PENDING |
 | 正式发布与医院启用 | 维护者审批、医院负责人批准适用范围及回滚；未收到 | BLOCKED |
 
@@ -46,3 +46,23 @@
 ## 交接与停止条件
 
 任何候选失败、未结束、制品身份不符、现场授权/容量不足、隐私协议迁移未知均不标记为已发布；记录实际阻塞并修复后重新绑定最终SHA。新监控PR可能改变主线，当前dry-run只代表6ac73ed4，不作为后续SHA的正式发布通过证据。
+
+
+## 2026-11-25 完整预演实际收口
+
+[45451701999](https://github.com/weepwood/MRR/actions/runs/45451701999)，attempt 1，固定 SHA `6ac73ed4bf142206904ab6e72004177083b61020`，VERSION 0.9.0。实际 identity/build/recovery/complete/summary 成功，publish 跳过（dry_run=true）。候选日志 job 138650328982，Windows recovery job 138661558795。1184 后端单测、150 PG16、138前端测试文件933用例，零失败；266 Mock浏览器及2真实候选浏览器通过。真实Windows PowerShell 5.1.26100.33822、pg_dump 16.15，backup/verify/empty restore/content/Flyway通过；拒绝覆盖、缺少显式opt-in和非空恢复，合成备份清理。不是医院现场Windows验收。
+
+| 后端指标 | 门禁 | 单元 | 单元+集成 |
+| --- | ---: | ---: | ---: |
+| 指令 | 50.16% | 64.68% | 72.94% |
+| 分支 | 41.89% | 52.16% | 56.92% |
+| 行 | 53.11% | 66.98% | 73.72% |
+| 复杂度 | 35.82% | 44.89% | 49.18% |
+| 方法 | 58.43% | 69.18% | 76.43% |
+| 类 | 69.48% | 78.30% | 87.09% |
+
+前端行/语句34.40%、函数73.89%、分支82.23%，既有0.50pp回归门禁通过。未改覆盖率基线。原始计数见候选job日志（显示百分比已四舍五入）。
+
+Artifact 14949697348，`release-candidate-45451701999-1-6ac73ed4bf142206904ab6e72004177083b61020`，外层SHA256 `c965d83eac47bd71e8342d66c7e371aeb551ca248927213c186366a09a5de2f3`，Windows下载日志匹配；Desktop Commander下载到 `/Volumes/data/Project/MRR-worktrees/release-evidence-45451701999`，实际调用 verify_manifest(jar_only=True) 核对source_sha/run_id/run_attempt/版本/大小/哈希。JAR 98999965字节，SHA256 `ce98bba93df6b24a31a21b6603bcb74457c8e327f4a1329d043116ebfda73b8d`。构建阶段完整ZIP/JAR/校验文件身份已核验，dry-run只上传JAR和manifest，因此ZIP与单独sha256文件不能本地复验；manifest中的ZIP233605997字节、SHA256 `258a0bb62bcba63771b68b419d60f466480b9f430a58df61910fd7374c92822f`仅为构建记录。无Tag/Release。
+
+#797 已合并 d361a71a（head dedb67e5，governance45453120191/quality45452978903/demo45452978484通过，1186后端/933前端，PG16按范围跳过）；当前主线已经不是预演SHA。冻结非必要功能，兼容POST专项尚未合并，不得宣称RC最终SHA已冻结。最终版本变更与发布说明同一PR，经批准并合入后固定完整SHA；只运行已有dry-run验证，不能以此自动发布。若需完整制品下载，可用既有 Windows release package workflow full=true, retain_candidate=true 独立构建留存；这不会发布，但不得将不同run的恢复结果当成同一制品证据。最终正式流程仍须同一run绑定完整制品与恢复。

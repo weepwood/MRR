@@ -301,6 +301,11 @@
 
 - 额外真实loopback固定6线程/每轮释放服务端闩锁，400轮1200实际到达源站请求、400次池耗尽未回源、400次abort后成功，专项1项零失败、70.39秒，/tmp/mrr-storage-pool-400.log；日常默认12轮，参数限制1–600。非小时级生产soak。#796已合并5173b548，治理45452425799、质量45452425774通过，文档范围其他跳过。同步后CI待验收。
 
+## 07 发布预演实际通过与候选冻结边界（2026-11-25）
+
+- #350 P2文档，`docs/350-v1-dry-run-evidence`，独立worktree。[V1验收矩阵](v1-release-readiness-2026-11-25.md)追加实际dry-run45451701999 attempt1，SHA6ac73ed4，identity/candidate/recovery/complete/summary成功，publish跳过。1184单测/150 PG16/933前端/266 Mock浏览器/2真实候选浏览器；覆盖率全门禁通过，Windows PS5.1/PG16.15真实空库恢复通过。下载JAR/manifest，verify_manifest jar_only=true 实际身份/哈希一致，完整ZIP/独立sha文件未保留；不得伪称下载校验。#797已合并d361a71a，1186后端/933前端，PG16按范围跳过，最新门禁通过。当前非最终RC，保留VERSION0.9.0，不创建Tag/Release，兼容POST专项与院内验收仍待。
+- 准备RC说明草稿，正式版本文件变更留待兼容专项收口，不提前绑定旧SHA；现场调用者迁移、等量副本与Windows/NAS实际运行仍为BLOCKED。工程文档、release工具与基线校验，不放宽门禁。
+
 ## 每轮交接模板
 
 - 更新时间、任务、风险、目标及非目标：

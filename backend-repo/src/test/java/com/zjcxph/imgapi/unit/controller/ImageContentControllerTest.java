@@ -13,6 +13,10 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.mock.web.MockHttpServletRequest;
+import org.springframework.mock.web.MockHttpServletResponse;
+import org.springframework.core.task.AsyncTaskExecutor;
+import org.springframework.core.task.TaskRejectedException;
+import org.springframework.web.context.request.async.WebAsyncUtils;
 import org.springframework.web.context.request.RequestContextHolder;
 import org.springframework.web.context.request.ServletRequestAttributes;
 import org.springframework.web.servlet.mvc.method.annotation.StreamingResponseBody;
@@ -106,6 +110,36 @@ class ImageContentControllerTest {
         ResponseEntity<StreamingResponseBody> response = controller.getContent(13);
 
         assertThat(response.getHeaders().getFirst(HttpHeaders.CONTENT_LENGTH)).isNull();
+    }
+
+    @Test
+    void rejectedAsyncStreamingClosesUnclaimedSource() throws Exception {
+        MockHttpServletRequest request = new MockHttpServletRequest("GET", "/api/v1/img/content/15");
+        request.setAsyncSupported(true);
+        RequestContextHolder.setRequestAttributes(new ServletRequestAttributes(request));
+        TrackingInputStream input = new TrackingInputStream(new byte[]{1});
+        when(imageContentService.open(15)).thenReturn(new ImageContentService.ImageContent(
+                input, "image.jpg", MediaType.IMAGE_JPEG, 1L));
+        try {
+            var response = controller.getContent(15);
+            var manager = WebAsyncUtils.getAsyncManager(request);
+            manager.setAsyncWebRequest(WebAsyncUtils.createAsyncWebRequest(request, new MockHttpServletResponse()));
+            manager.setTaskExecutor(new AsyncTaskExecutor() {
+                @Override
+                public void execute(Runnable task) {
+                    throw new TaskRejectedException("synthetic rejection");
+                }
+            });
+            manager.startCallableProcessing(() -> {
+                response.getBody().writeTo(new ByteArrayOutputStream());
+                return null;
+            });
+            assertThat(manager.getConcurrentResult()).isInstanceOf(TaskRejectedException.class);
+            request.getAsyncContext().complete();
+            assertThat(input.isClosed()).isTrue();
+        } finally {
+            RequestContextHolder.resetRequestAttributes();
+        }
     }
 
     private static final class TrackingInputStream extends ByteArrayInputStream {

@@ -113,6 +113,20 @@ powershell.exe -NoProfile -File deploy/windows/database-recovery.ps1 -Action Res
 
 #759 已合并 676b6dd，governance 45410672727、quality 45410673024；1118 单测、143 PG16集成（构建专项6项）均零失败、错误与跳过。
 
+### 三千万级编号索引部署与容量预检（03.3.4）
+
+依据独立PG16.16实测：3000万行、两个索引各902MB，扫描表及索引总量18122883072→20015456256字节，净增1892573184字节，构建144.977秒；这不是现场峰值磁盘/WAL或耗时上界。先在批准的等量副本执行只读预检：
+
+```powershell
+psql -X --dbname 'service=replica' --file backend-repo/scripts/inspect-code-key-index-capacity.sql
+```
+
+预检使用系统目录估算行数、不执行全表COUNT，列出实际表/索引容量、表空间、配置的默认/临时表空间、维护内存和现有同名关系状态。two_index_reference_bytes 是按合成实测净增线性换算的两索引参考量（估算行数过期、编号长度/分布不同会偏差），不是余量或上限。仅在院内记录。先核对 PG16、统计新鲜度、实际表空间/默认索引表空间/临时目录/pg_wal及归档所在卷；在 Windows 主机对对应卷用 Get-Volume 或 Get-PSDrive 确认实际可用空间。远程客户端磁盘、pg_database_size 或 pg_tablespace_size 不能证明服务器卷余量。
+
+维护计划要求分卷预留：副本测得的新增索引最终容量 + 并发构建期间临时排序峰值 + WAL/归档峰值 + 正常业务增长与应急余量；相同卷上的需求合计。没有现场峰值实测时先按保守预算审批，不把902MB直接当作可用空间门禁。检查长事务/复制积压/备份、确认无其他索引构建。保留构建前目录快照和已有索引身份；只在批准的维护窗口执行原 build-code-key-indexes.sql（禁止事务封装、禁止自动执行）。原脚本5秒锁等待、2小时语句预算及同名错误定义拒绝保持不变；实时检查 pg_stat_progress_create_index、卷余量、WAL/归档、复制延迟与业务P95，达到现场批准的停止阈值立即停止后续构建，人工评估当前DDL。
+
+构建后核对两个索引 valid/ready/live 与定义（原脚本和应用就绪检查）、同页计划及端到端分位数。若只完成第一个，保留已成功索引，检查另一个状态后重跑；失败留下无效索引不能视为就绪。回滚前对比构建前快照、确认该对象确为本次创建且无额外依赖；已有索引不得删除。仅对已确认对象单独执行 `DROP INDEX CONCURRENTLY app.idx_mr_scan_bah_numeric_cursor;` 或 SJH 对应命令，禁止 CASCADE、禁止盲目按名称删除同名冲突，批准窗口内执行。回滚后复查目录、查询兼容及应用就绪；无索引可能性能退化但不改变数据。正式生产操作另行批准，不自动执行此处命令。
+
 ### 同页查询计划证据（03.4）
 
 inspect-query-plans.sql 新增显式 compare_exact=1；compare_sjh=1 使用 SJH，默认 BAH。独立游标探测的 after_id 不参与该比较。只读 REPEATABLE READ 同一快照，从精确条件的上一条 ID 自动求边界，并比较非空有序 ID 序列；只有 SAME_PAGE_VERIFIED 才执行两份 SELECT * LIMIT 51 的实际计划。NOT_COMPARABLE 或超时不得视为性能通过。编号精确比较不同于旧 LIKE，不得混算。验证先读取数据，两份计划受缓存与顺序影响，仅是热快照证据；不同轮次需控制缓存、顺序、负载并记录边界定位成本另计，不以一次计划宣称端到端加速。档案袋 bounded probe 使用实际投影 SELECT *，完整无 LIMIT Mapper 仅 EXPLAIN，不自动执行无界读取。原3s/5s、1s锁预算保留，计划留院内。

@@ -175,6 +175,42 @@ class ScanServiceCacheTest {
         }
     }
 
+    @Test
+    void recordsConcurrentColdMissAndWarmHitBaseline() throws Exception {
+        final int workers = 8;
+        var scan = new Scan();
+        scan.setId(1);
+        var started = new CountDownLatch(workers);
+        var release = new CountDownLatch(1);
+        var calls = new java.util.concurrent.atomic.AtomicInteger();
+        when(scanMapper.findById(1)).thenAnswer(invocation -> {
+            calls.incrementAndGet();
+            started.countDown();
+            if (!release.await(5, TimeUnit.SECONDS)) throw new AssertionError("cold miss not released");
+            return scan;
+        });
+        var executor = Executors.newFixedThreadPool(workers);
+        try {
+            var tasks = new java.util.ArrayList<java.util.concurrent.Future<Scan>>();
+            for (int i = 0; i < workers; i++) tasks.add(executor.submit(() -> scanService.findById(1)));
+            // Measure the current non-sync cache. Future coalescing is allowed to reduce loads.
+            started.await(1, TimeUnit.SECONDS);
+            release.countDown();
+            for (var task : tasks) assertThat(task.get(5, TimeUnit.SECONDS)).isSameAs(scan);
+            int coldLoads = calls.get();
+            assertThat(coldLoads).isBetween(1, workers);
+            tasks.clear();
+            for (int i = 0; i < workers; i++) tasks.add(executor.submit(() -> scanService.findById(1)));
+            for (var task : tasks) assertThat(task.get(5, TimeUnit.SECONDS)).isSameAs(scan);
+            assertThat(calls.get()).isEqualTo(coldLoads);
+            System.out.printf("SYNTHETIC_CACHE_BASELINE concurrency=%d cold_mapper_calls=%d warm_mapper_calls=%d%n",
+                    workers, coldLoads, calls.get() - coldLoads);
+        } finally {
+            release.countDown();
+            executor.shutdownNow();
+        }
+    }
+
     @Configuration
     @Import(CacheConfig.class)
     static class TestConfig {

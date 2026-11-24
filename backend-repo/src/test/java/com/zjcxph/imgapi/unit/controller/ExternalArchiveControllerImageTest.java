@@ -153,6 +153,43 @@ class ExternalArchiveControllerImageTest {
     }
 
     @Test
+    void transferBudgetRejectsBytesReturningAfterDeadlineAndAuditsFailure() throws Exception {
+        var grant = grant();
+        var scan = scan();
+        prepareRequestAndAuthorization(grant, scan);
+        var closed = new java.util.concurrent.atomic.AtomicBoolean();
+        var input = new InputStream() {
+            private boolean readOnce;
+            @Override public int read() throws IOException {
+                if (readOnce) return -1;
+                readOnce = true;
+                try { Thread.sleep(100); } catch (InterruptedException e) {
+                    Thread.currentThread().interrupt();
+                    throw new IOException(e);
+                }
+                return 1;
+            }
+            @Override public int read(byte[] bytes, int offset, int count) throws IOException {
+                int value = read();
+                if (value < 0) return -1;
+                bytes[offset] = (byte) value;
+                return 1;
+            }
+            @Override public void close() { closed.set(true); }
+        };
+        when(imageContentService.open(42)).thenReturn(new ImageContentService.ImageContent(
+                input, "synthetic.jpg", MediaType.IMAGE_JPEG, null, null, java.time.Duration.ofMillis(40)));
+        var response = controller.image(42, request);
+        var out = new ByteArrayOutputStream();
+        assertThatThrownBy(() -> response.getBody().writeTo(out))
+                .isInstanceOf(java.net.SocketTimeoutException.class);
+        assertThat(out.size()).isZero();
+        assertThat(closed).isTrue();
+        verify(externalArchiveAccessService).recordAudit(grant, "123456", "A-001", "IMAGE_VIEW", 42,
+                "10.0.0.8", "JUnit", "request-42", "FAILED", null);
+    }
+
+    @Test
     void externalSingleRangePreservesAuthorizationAndAuditsSuccessfulTransfer() throws Exception {
         var grant = grant();
         var scan = scan();

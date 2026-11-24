@@ -13,6 +13,7 @@ public class ArchiveImageSourceProperties {
 
     private boolean preferOss = true;
     private Duration acquireTimeout = Duration.ofSeconds(30);
+    private Duration transferBudget = Duration.ofSeconds(120);
     private Duration openBudget = Duration.ofSeconds(120);
     private int localMaxConcurrency = 16;
     private int nginxMaxConcurrency = 8;

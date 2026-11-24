@@ -216,10 +216,19 @@
 
 - #782 已合并437f428a，head68116d01、governance45441171525、quality45441171863，1175单测/148 PG16全部通过，Development通过。
 
+## 04.3 真实HTTP正文熔断与半开恢复验收（2026-11-25）
+
+- #230/#350 P1边界内的验证补充，`test/230-network-body-circuit-recovery`，独立worktree。NetworkSourceCircuit仅增加包内构造注入以使用测试时钟，生产默认3次/30秒/单调时钟完全不变。实际loopback HTTP返回首字节后停发、TimedHttpBody实际读取超时三次、SourcePermitGuard单许可释放，第四次拒绝未触达源站；模拟推进冷却时钟，半开单探针、响应头/部分正文不能恢复、完整正文后同节点恢复。定向6项零失败/错误/跳过，原始 /tmp/mrr-network-body-circuit.log。#782已合并437f428a，1175单测/148真实PG16通过。
+- 不声称NAS正文故障已联动节点熔断：NAS原有打开/size熔断与正文隔离仍分阶段。无现场NAS/Windows、Nginx、真实OSS或永久静默慢客户端硬截止结论。独立revert，不修改生产配置与权限，最新CI待验收。
+
+- #784 已合并c3590798，head4bcc7e8d、governance45442058698、quality45442058011，scope/pr-gate通过，其他按范围跳过。
+
 ## 03 三千万级完整隔离基准证据（2026-11-25）
 
 - #99/#350 P2，`docs/99-thirty-million-evidence`，独立worktree。mrr-scan-lab-3a6p6oh4 实际COUNT确认30000000/300000，造数1442.415秒，索引144.977秒，两个902MB valid/ready；同页通过、真实8并发多键325796事务、P99 1.028ms、零失败。旧兼容COUNT前后均5秒超时，报告complete_with_legacy_timeouts，server_stopped=true，pg_ctl确认停止。详见[完整基准报告](synthetic-scan-benchmark-2026-11-24.md)。原始日志保留，勿重复启动。
 - #785已合并b7980728（933前端测试/138文件，演示Pages成功）；#782已合并437f428a（1175单测/148真实PG16）；#784已合并c3590798（scope/pr-gate通过，其他按范围跳过）。#786和#787在最新main同步后仍待CI。已确认#780/#781/#783/#785/#782/#784合并树等价、干净和上游一致，归档本地报告至`/Volumes/data/Project/MRR-worktrees/merged-evidence-2026-11-25`后正常移除其专属worktree与本地分支，远端分支保留。未做生产操作或正式发布。
+
+- #787 已合并ee5cd8d2，head a05e4ec9、governance45442340980、quality45442341293，1176单测零失败/错误/跳过，PG16按范围跳过。
 
 ## 每轮交接模板
 

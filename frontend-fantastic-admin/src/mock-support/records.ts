@@ -18,6 +18,9 @@ export interface MockScanRecord {
   checksumMd5: string
   migrationStatus: string
   migratedAt?: string
+  migrationAttempts?: number
+  migrationErrorCode?: string
+  migrationNextRetryAt?: string | null
 }
 
 const departments = ['心内科', '神经内科', '普外科', '骨科', '呼吸内科', '消化内科']
@@ -44,23 +47,30 @@ export function createDemoRecords(clock = demoClock) {
       const btype = MEDICAL_RECORD_TYPE_CODES[index % MEDICAL_RECORD_TYPE_CODES.length]
       const uploadDate = clock.dateTime(patientIndex, 1, offset * 15)
       const monthFolder = uploadDate.slice(0, 7).replace('-', '/')
-      const migrated = index % 4 !== 0
+      const uploaded = id % 16 !== 0
+      const waiting = id % 8 === 0 && uploaded
+      const failed = id % 13 === 0 && uploaded && !waiting
+      const retry = id % 7 === 0 && uploaded && !waiting && !failed
+      const migrated = uploaded && !waiting && !failed && !retry && index % 4 !== 0
       return {
         id,
         brxh: patient.brxh,
         bah: patient.bah,
-        sjh: String(90000000 + id),
+        sjh: waiting ? `INVALID-${id}` : String(90000000 + id),
         filename: `${patient.bah}_${btype}_${id}.jpg`,
         btype,
         pages: 8 + (index * 7) % 83,
         openerNo: operators[index % operators.length],
         uploadDate,
-        uploadFlag: migrated ? 1 : 0,
+        uploadFlag: uploaded ? 1 : 0,
         folder: `/mock/archive/${monthFolder}/${patient.bah}`,
         ossUrl: migrated ? `https://example.invalid/mock/${id}.jpg` : undefined,
         fileSize: 512_000 + index * 31_337,
         checksumMd5: `mock-md5-${String(id).padStart(4, '0')}`,
-        migrationStatus: migrated ? (index % 5 === 0 ? 'verified' : 'migrated') : 'not_migrated',
+        migrationStatus: migrated ? (index % 5 === 0 ? 'verified' : 'migrated') : waiting ? 'waiting_sjh' : failed ? 'failed' : retry ? 'retry_wait' : 'not_migrated',
+        migrationAttempts: failed || retry ? 1 : 0,
+        migrationErrorCode: waiting ? 'MISSING_SJH' : failed ? 'SOURCE_NOT_FOUND' : retry ? 'SOURCE_TIMEOUT' : undefined,
+        migrationNextRetryAt: retry ? clock.iso(0, 1) : null,
         migratedAt: migrated ? clock.dateTime(patientIndex, 0, offset * 15) : undefined,
       }
     }),

@@ -30,7 +30,9 @@ test.describe('无后端 Mock 模式', () => {
 
   test('OSS 模拟接口只有一个实现且任务状态可以回读', async ({ request }) => {
     const stats = await (await request.get('/proxy/api/v1/oss/migration/statistics')).json()
-    expect(stats.data.waitingSjhCount).toBe(8)
+    const waiting = await (await request.get('/proxy/api/v1/oss/migration/management/waiting-sjh?limit=100')).json()
+    expect(stats.data.waitingSjhCount).toBe(waiting.data.returned)
+    expect(stats.data.waitingSjhCount).toBeGreaterThan(0)
     const upload = await (await request.post('/proxy/api/v1/oss/upload', { data: { scanIds: [1, 7] } })).json()
     expect(upload.data.results).toHaveLength(2)
     expect(upload.data.success).toBe(1)

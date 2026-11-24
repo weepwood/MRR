@@ -87,6 +87,26 @@ async function smokePagesDemo() {
       }
     }
 
+    const migration = await page.evaluate(async () => {
+      const get = path => fetch(`/proxy/api/v1/oss/migration/${path}`).then(response => response.json())
+      const [stats, pending, waiting, folders, readiness] = await Promise.all([
+        get('statistics'), get('pending?limit=100'), get('management/waiting-sjh?limit=100'),
+        get('pending-folders'), get('readiness?sampleSize=2'),
+      ])
+      return { stats, pending, waiting, folders, readiness }
+    })
+    assert.equal(migration.stats.data.totalCount, allScans.filter(scan => scan.uploadFlag !== 0).length)
+    assert.equal(migration.stats.data.migratedCount, allScans.filter(scan => scan.uploadFlag !== 0 && scan.ossUrl).length)
+    assert.equal(migration.stats.data.pendingCount, migration.pending.data.total)
+    assert.equal(migration.stats.data.waitingSjhCount, migration.waiting.data.returned)
+    assert.equal(migration.folders.data.reduce((sum, folder) => sum + folder.cnt, 0), migration.pending.data.total)
+    assert.equal(migration.readiness.data.pendingCount, migration.pending.data.total)
+    assert.equal(migration.readiness.data.sampleSize, Math.min(2, migration.pending.data.total))
+    for (const item of [...migration.pending.data.list, ...migration.waiting.data.list]) {
+      assert.equal(item.bah, scansById.get(item.id)?.bah)
+      assert.equal(item.sjh, scansById.get(item.id)?.sjh)
+    }
+
     const archiveAssets = await page.evaluate(async () => {
       const get = path => fetch(`/proxy/api/v1/${path}`).then(response => response.json())
       const [legacy, shared, patient, missing, noShelf] = await Promise.all([

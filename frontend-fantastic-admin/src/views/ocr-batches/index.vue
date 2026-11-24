@@ -10,7 +10,9 @@ import MrrPageHeader from '@/components/MrrPageHeader/index.vue'
 import MrrPageShell from '@/components/MrrPageShell/index.vue'
 import MrrSectionCard from '@/components/MrrSectionCard/index.vue'
 import MrrStatusTag from '@/components/MrrStatusTag/index.vue'
+import { actionDialog } from '@/ui/components/ActionDialog'
 import useAuth from '@/utils/composables/useAuth'
+import { getRequestErrorMessage } from '@/utils/request-error-message'
 import ClassificationReview from '../statistics/archive/components/ClassificationReview.vue'
 
 defineOptions({ name: 'OcrBatchesPage' })
@@ -75,10 +77,15 @@ watch(visibility, (value) => {
   if (value === 'visible') { void reload() }
 })
 watch(scope, () => { preview.value = null; form.idempotencyKey = '' })
+/*
+ * 统一操作包装。失败提示走仓库统一的中文映射（getRequestErrorMessage）：
+ * 服务端带中文 message 时原样透出（夜班排障需要线索），网络/超时/状态码
+ * 也有各自的中文文案——不把 axios 的 "Network Error" 这类英文原文丢给操作员。
+ */
 async function attempt(work: () => Promise<void>) {
   busy.value = true
   try { await work() }
-  catch { ElMessage.error('操作失败，请检查权限、任务状态和 OCR 配置') }
+  catch (error) { ElMessage.error(getRequestErrorMessage(error)) }
   finally { busy.value = false }
 }
 async function inspect() {
@@ -101,6 +108,23 @@ async function create() {
   })
 }
 async function action(id: string, value: 'pause' | 'resume' | 'cancel') {
+  /*
+   * 取消是不可逆操作：批次进入 CANCEL 流程后无法恢复执行，且按钮就排在
+   * 高频的暂停/续跑旁边。与档案袋导出取消一致，执行前必须确认。
+   */
+  if (value === 'cancel') {
+    try {
+      await actionDialog.confirm(
+        `取消后批次「${id}」停止处理，状态不可恢复为执行中；已完成的页保持不变。`,
+        '取消识别批次',
+        { type: 'warning', confirmButtonText: '取消批次', cancelButtonText: '保持运行' },
+      )
+    }
+    catch {
+      // 用户选择保持运行（关闭确认框、Esc、遮罩点击都视为放弃取消）
+      return
+    }
+  }
   await attempt(async () => { await actOnOcrBatch(id, value); await reload() })
 }
 async function children(id: string, next = false) {

@@ -33,10 +33,10 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <FaButton :variant="settingsStore.mode === 'pc' ? 'outline' : 'ghost'" :size="settingsStore.mode === 'pc' ? undefined : 'icon'" :class="{ 'mx-2 px-3': settingsStore.mode === 'pc' }" @click="openSearch">
+  <FaButton :variant="settingsStore.mode === 'pc' ? 'outline' : 'ghost'" :size="settingsStore.mode === 'pc' ? undefined : 'icon'" :class="{ 'mx-2 px-3 group': settingsStore.mode === 'pc' }" @click="openSearch">
     <FaIcon name="i-lucide:search" class="size-4" />
     <template v-if="settingsStore.mode === 'pc'">
-      <span class="text-sm text-muted-foreground/60 transition group-hover-text-muted-foreground">搜索</span>
+      <span class="text-sm text-muted-foreground transition group-hover-text-foreground">搜索</span>
       <FaKbd v-if="settingsStore.settings.navSearch.enableHotkeys" class="-me-1">
         {{ settingsStore.os === 'mac' ? '⌘' : 'Ctrl' }} K
       </FaKbd>

@@ -49,7 +49,13 @@ function toggleColorScheme(event: MouseEvent) {
 </script>
 
 <template>
-  <FaButton variant="ghost" size="icon" @click="toggleColorScheme">
+  <FaButton
+    variant="ghost"
+    size="icon"
+    :aria-label="settingsStore.currentColorScheme === 'dark' ? '切换为亮色主题' : '切换为暗色主题'"
+    :title="settingsStore.currentColorScheme === 'dark' ? '切换为亮色主题' : '切换为暗色主题'"
+    @click="toggleColorScheme"
+  >
     <FaIcon
       :name="{
         light: 'i-lucide:sun',

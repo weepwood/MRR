@@ -224,12 +224,34 @@ public class ScanServiceImpl implements ScanService {
 
     @Override
     public CursorPageResult<Scan> findByConditionAfterId(ScanRequest request, Integer afterId, int size) {
-        PaginationUtils.validatePageParams(1, size);
         ScanRequest prepared = prepareSearchRequest(request);
+        if (hasText(prepared.getFilename()) || hasText(prepared.getFolder())
+                || hasText(prepared.getUploadDate()) || prepared.getPages() != null) {
+            throw new BusinessException(400, "精确游标不支持这些条件，请使用兼容检索模式");
+        }
+        return filteredCursor(prepared, afterId, size, false);
+    }
+
+    @Override
+    public CursorPageResult<Scan> findLegacyConditionAfterId(ScanRequest request, Integer afterId, int size) {
+        return filteredCursor(prepareSearchRequest(request), afterId, size, true);
+    }
+
+    private boolean hasText(String value) { return value != null && !value.isEmpty(); }
+
+    private CursorPageResult<Scan> filteredCursor(ScanRequest prepared, Integer afterId, int size, boolean legacy) {
+        PaginationUtils.validatePageParams(1, size);
         for (String value : new String[]{prepared.getBah(), prepared.getSjh(), prepared.getBrxh(), prepared.getOpenerNo()}) {
             if (value != null && value.length() > 64) throw new BusinessException(400, "筛选条件不能超过64个字符");
         }
-        List<Scan> fetched = scanMapper.findByConditionAfterId(prepared, afterId == null ? 0 : Math.max(0, afterId), size + 1);
+        if (legacy && ((prepared.getFilename() != null && prepared.getFilename().length() > 255)
+                || (prepared.getFolder() != null && prepared.getFolder().length() > 255)
+                || (prepared.getUploadDate() != null && prepared.getUploadDate().length() > 32))) {
+            throw new BusinessException(400, "兼容筛选条件长度超限");
+        }
+        int cursor = afterId == null ? 0 : Math.max(0, afterId);
+        List<Scan> fetched = legacy ? scanMapper.findLegacyConditionAfterId(prepared, cursor, size + 1)
+                : scanMapper.findByConditionAfterId(prepared, cursor, size + 1);
         boolean more = fetched.size() > size;
         List<Scan> page = more ? List.copyOf(fetched.subList(0, size)) : fetched;
         return CursorPageResult.of(page, more && !page.isEmpty() ? page.getLast().getId().longValue() : null, more, size);

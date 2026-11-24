@@ -114,6 +114,30 @@ class ScanServiceImplTest {
         }
 
         @Test
+        void compatibilityCursorPreservesFiltersAndNeverCounts() {
+            var request = new ScanRequest();
+            request.setBah("000123"); request.setFilename("synthetic");
+            var second = new Scan(); second.setId(2);
+            when(scanMapper.findLegacyConditionAfterId(request, 0, 2)).thenReturn(List.of(mockScan, second));
+            var result = scanService.findLegacyConditionAfterId(request, 0, 1);
+            assertThat(request.getBah()).isEqualTo("123");
+            assertThat(result.getList()).containsExactly(mockScan);
+            assertThat(result.isHasMore()).isTrue();
+            assertThat(result.getNextCursorId()).isEqualTo(1L);
+            verify(scanMapper).findLegacyConditionAfterId(request, 0, 2);
+            org.mockito.Mockito.verifyNoMoreInteractions(scanMapper);
+        }
+
+        @Test
+        void exactCursorRejectsUnsupportedFiltersRatherThanSilentlyIgnoringThem() {
+            ScanRequest request = new ScanRequest();
+            request.setFilename("synthetic.jpg");
+            assertThatThrownBy(() -> scanService.findByConditionAfterId(request, 0, 20))
+                    .isInstanceOf(com.zjcxph.imgapi.exception.BusinessException.class);
+            org.mockito.Mockito.verifyNoInteractions(scanMapper);
+        }
+
+        @Test
         void findAfterId_lastPage() {
             when(scanMapper.findAfterId(10, 3)).thenReturn(List.of(mockScan));
 

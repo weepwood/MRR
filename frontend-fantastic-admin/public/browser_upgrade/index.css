@@ -37,7 +37,7 @@
   font-weight: 700;
   line-height: 1;
   color: #fff;
-  background: #ea580c;
+  background: #c2410c;
   border-radius: 50%;
 }
 
@@ -97,13 +97,13 @@
 .browser-compat-button-primary {
   font-weight: 600;
   color: #fff;
-  background: #ea580c;
-  border-color: #ea580c;
+  background: #c2410c;
+  border-color: #c2410c;
 }
 
 .browser-compat-button-primary:hover,
 .browser-compat-button-primary:focus-visible {
-  background: #c2410c;
+  background: #9a3412;
 }
 
 @media (max-width: 640px) {

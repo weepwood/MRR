@@ -1,6 +1,6 @@
-import type { MigrationJob, MigrationJobPayload } from '@/api/modules/oss'
-import type { MockScanRecord } from './records'
 import type { createMigrationJournal } from './migration-journal'
+import type { MockScanRecord } from './records'
+import type { MigrationJob, MigrationJobPayload } from '@/api/modules/oss'
 import { migrationSnapshot } from './migration'
 import { demoMigrationJournal } from './migration-journal'
 import { demoRecords } from './records'

@@ -4,7 +4,7 @@
 
 ## PR 快速验证
 
-最终 main 仅要求两个 GitHub Actions App（15368）绑定状态：`governance`、`pr-gate`。继续 strict=true、管理员受限、解决审查对话、线性历史、禁止强推和删除。P0/P1 的独立审查要求继续执行。
+main 仅要求两个 GitHub Actions App（15368）绑定状态：`governance`、`pr-gate`。2026-11-24 维护者确认关闭 strict 与 stale approval，仓库目标按 [分支保护实施记录](main-branch-protection.md) 同步；此前 strict=true 仅是历史策略。管理员受限、解决审查对话、线性历史、禁止强推和删除保持不变。P0/P1 主动同步最新 main、验证实际合并树并独立审查最新 SHA；普通独立 P2/P3 不因无关主线更新强制重测。后续 CI 去重不会取消这两项门禁。
 
 `quality-gate.yml` 的 scope job 一次计算完整改动范围，并执行版本/迁移基线、focused test 和活跃主分支引用检查。CI/脚本/基线变化额外执行仓库 Python 测试。范围计算或静态检查失败都阻断。
 
@@ -44,7 +44,7 @@ main push 执行同一 quality-gate，使用 `--mode main` 查询此前成功的
 
 同一 main 分支取消旧运行，集中验证最新提交。这些检查不成为其他 PR 的合并前置。正式发布 admission 仍要求本次固定 SHA 的 main push quality-gate 成功（可能是轻量范围），并在 Release 中独立执行完整候选验收，不能以轻量检查代替。手动运行 quality-gate 使用 `--mode integration` 检查整棵树，不读取轻量 push 的历史基线；需要完整发布包、覆盖率或全部 E2E 时使用 Release dry-run。
 
-本次不修改 `strict=true`、governance/pr-gate 或独立审查要求。strict 仍可能要求并行 PR 同步最新 main 并重新验证；单人维护可减少同时开放的相互依赖 PR，不能复用未验证的新合并树的旧状态。后续若需改远程保护，单独提出风险变更并读回确认。
+本次不修改远程分支保护、governance/pr-gate 或独立审查要求。维护者已确认采用宽松同步策略，目标配置及脚本由 #719/#720 单独同步；高风险或存在相关依赖变化的 PR 仍主动同步最新 main 并验证实际合并树，不能复用未验证的新合并树的旧状态。
 
 ## 正式发布
 

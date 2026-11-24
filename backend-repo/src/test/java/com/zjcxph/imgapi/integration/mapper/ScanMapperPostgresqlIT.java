@@ -52,6 +52,20 @@ class ScanMapperPostgresqlIT extends PostgresqlIntegrationTestSupport {
     private MigrationJobMapper migrationJobMapper;
 
     @Test
+    void activeIdLookupExcludesSoftDeletedRowsEvenWhenOssKeyExists() {
+        Integer active = jdbcTemplate.queryForObject("""
+                INSERT INTO app.mr_scan(bah,filename,folder,uploadflag,oss_url)
+                VALUES ('123','url-active.jpg','synthetic',1,'synthetic-active') RETURNING id
+                """, Integer.class);
+        Integer deleted = jdbcTemplate.queryForObject("""
+                INSERT INTO app.mr_scan(bah,filename,folder,uploadflag,oss_url)
+                VALUES ('123','url-deleted.jpg','synthetic',0,'synthetic-deleted') RETURNING id
+                """, Integer.class);
+        assertThat(scanMapper.findActiveByIds(List.of(active, deleted))).extracting(Scan::getId).containsExactly(active);
+        assertThat(scanMapper.findActiveByIds(List.of(deleted))).isEmpty();
+    }
+
+    @Test
     void filteredCursorUsesWholeNumericKeyAndNeverMatchesPartialIdentifier() {
         jdbcTemplate.update("INSERT INTO app.mr_scan(bah,filename,folder,uploadflag,pages) VALUES ('00123','cursor-a.jpg','synthetic',1,1),('1234','cursor-b.jpg','synthetic',1,2)");
         ScanRequest request = new ScanRequest(); request.setBah("123");

@@ -346,9 +346,18 @@ class MigrationServiceImplTest {
         Scan scan = legacyScan(3, "00789510", "605748", null);
         scan.setUploadFlag(0);
         scan.setOssUrl("synthetic-object");
-        lenient().when(scanMapper.findById(3)).thenReturn(scan);
+        when(scanMapper.findActiveByIds(List.of(3))).thenReturn(List.of());
         assertThat(migrationService.getOssSignedUrl(3)).isNull();
         verify(ossService, never()).generatePresignedUrl(anyString());
+    }
+
+    @Test
+    void activeMigratedScanStillReceivesOssSignedUrl() {
+        Scan scan = legacyScan(3, "00789510", "605748", null);
+        scan.setOssUrl("synthetic-object");
+        when(scanMapper.findActiveByIds(List.of(3))).thenReturn(List.of(scan));
+        assertThat(migrationService.getOssSignedUrl(3)).isEqualTo("https://signed.example/image");
+        verify(ossService).generatePresignedUrl("synthetic-object");
     }
 
     @Test

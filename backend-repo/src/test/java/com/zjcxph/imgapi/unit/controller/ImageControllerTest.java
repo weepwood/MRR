@@ -38,7 +38,6 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.when;
-import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.verifyNoInteractions;
 
 @ExtendWith(MockitoExtension.class)
@@ -84,7 +83,7 @@ class ImageControllerTest {
     @Test
     void legacyOssEndpointUsesProtectedContentGatewayWithoutCreatingSignedStorageUrls() {
         mockScan.setOssUrl("synthetic/key");
-        when(scanService.findById(1)).thenReturn(mockScan);
+        when(scanService.findActiveByIds(List.of(1))).thenReturn(List.of(mockScan));
         var result = imageController.getOssImage(1);
         assertThat(result.getHeaders().getLocation()).hasToString("../content/1");
         assertThat(result.getHeaders().getCacheControl()).contains("private", "no-store");
@@ -206,7 +205,7 @@ class ImageControllerTest {
 
     @Test
     void getImageUrlUsesConfiguredDelivery() {
-        when(scanService.findById(1)).thenReturn(mockScan);
+        when(scanService.findActiveByIds(List.of(1))).thenReturn(List.of(mockScan));
         when(imageUrlService.buildDeliveryUrl(mockScan)).thenReturn("https://oss/signed-image");
 
         Result<String> result = imageController.getImageUrl(1);
@@ -218,11 +217,17 @@ class ImageControllerTest {
     @Test
     void deletedImageCannotReceiveDeliveryUrlOrLegacyGatewayRedirect() {
         mockScan.setUploadFlag(0);
-        lenient().when(scanService.findById(1)).thenReturn(mockScan);
-        lenient().when(imageUrlService.buildDeliveryUrl(mockScan)).thenReturn("https://example.invalid/signed");
+        when(scanService.findActiveByIds(List.of(1))).thenReturn(List.of());
         assertThat(imageController.getImageUrl(1).getCode()).isNotEqualTo(200);
         assertThat(imageController.getOssImage(1).getStatusCode()).isEqualTo(HttpStatus.NOT_FOUND);
         verifyNoInteractions(imageUrlService);
+    }
+
+    @Test
+    void invalidImageIdNeverQueriesOrBuildsUrl() {
+        assertThat(imageController.getImageUrl(0).getCode()).isNotEqualTo(200);
+        assertThat(imageController.getOssImage(-1).getStatusCode()).isEqualTo(HttpStatus.NOT_FOUND);
+        verifyNoInteractions(scanService, imageUrlService);
     }
 
     @Test

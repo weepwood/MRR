@@ -735,6 +735,13 @@ export default defineFakeRoute([
     response: ({ params }) => ok(patients.filter(item => item.bah === String(params.bah))),
   },
   {
+    url: '/api/v1/patients/idcard',
+    method: 'POST',
+    response: ({ body }) => /^\d{15}(?:\d{2}[0-9X])?$/i.test(String(body?.idCard ?? ''))
+      ? ok(patients.filter(item => item.idCard === String(body.idCard)))
+      : { code: 400, message: '身份证号格式不正确', data: null },
+  },
+  {
     url: '/api/v1/patients/idcard/:idCard',
     response: ({ params }) => ok(patients.filter(item => item.idCard === String(params.idCard))),
   },

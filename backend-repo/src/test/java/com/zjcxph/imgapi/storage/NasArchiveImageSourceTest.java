@@ -137,6 +137,7 @@ class NasArchiveImageSourceTest {
         properties.setNasMaxConcurrency(1);
         properties.setAcquireTimeout(Duration.ofMillis(100));
         properties.setNasOpenTimeout(Duration.ofMillis(200));
+        properties.setNasBodyTimeout(Duration.ofMillis(200));
         var node = new ArchiveImageSourceProperties.NasNode();
         node.setRoot(tempDir.toString());
         properties.setNasNodes(Map.of("synthetic", node));

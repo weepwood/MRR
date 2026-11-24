@@ -105,7 +105,13 @@
 
 - #230/#350 P1，分支 `fix/230-legacy-image-lookup`，worktree `/Volumes/data/Project/MRR-worktrees/230-legacy-image-lookup`。5b0fd20c 实际 RED 16项/1失败（无有效记录仍能打开影像）；548995b0 通过 ImageContentMapper 精确匹配 BAH/BRXH/folder/filename，利用现有索引，LIMIT 2、3秒查询超时，拒绝无有效记录404、歧义409及非法路径400。高位病案号无法由四段路径确认上架号时拒绝，不猜测病案。保持已有路由和权限，使用完整 Scan 记录及统一来源解析，绑定审计目标，不再直接拼接物理路径。
 - d2eec5f0 实际 RED 9项/1失败（网关模式仍返回 OSS 签名）；67f7e24c 网关模式旧单记录签名接口返回409，direct 模式保留原行为。管理端目录浏览、迁移日志等其他签名入口不在本批改动范围，须单独核验调用方和权限。
-- e4df1511 同步 #768 后复用 ImageContentResponse，统一真实长度、Range及关闭语义；最终定向43项零失败/错误/跳过，之前扩展45项通过。#769 原head 8f4c1fd0，quality 45425139606：1147单测通过、146 PG16中1失败；本地全新PG16.16实际复现16项1失败。JdbcTemplate写入绕过MyBatis事务内一级缓存；补充SQL实际候选数3的断言、清理测试会话缓存后仍严格要求LIMIT 2，PG16全部16项通过（0失败/错误/跳过），业务SQL不改。最新CI待验收。未进行真实旧客户端现场兼容验收，不关闭原路由；独立revert，不改数据库或生产配置。
+- e4df1511 同步 #768 后复用 ImageContentResponse，统一真实长度、Range及关闭语义；最终定向43项零失败/错误/跳过，之前扩展45项通过。#769 原head 8f4c1fd0，quality 45425139606：1147单测通过、146 PG16中1失败；本地全新PG16.16实际复现16项1失败。JdbcTemplate写入绕过MyBatis事务内一级缓存；补充SQL实际候选数3的断言、清理测试会话缓存后仍严格要求LIMIT 2，PG16全部16项通过（0失败/错误/跳过），业务SQL不改。已合并 #769：35bbae75，head be2269ac，governance 45426127129、quality 45426127420 成功，1147单测、146 PG16集成零失败/错误/跳过。未进行真实旧客户端现场兼容验收，不关闭原路由；独立revert，不改数据库或生产配置。
+
+## 04.3 来源超时与取消首批（2026-11-24）
+
+- #230/#636/#350 P1，分支 `fix/230-source-cancellation`，worktree `/Volumes/data/Project/MRR-worktrees/230-source-cancellation`。848bfb49 实际 RED 6项/2失败（取消后仍回源，未读OSS流关闭未abort）；9ddc4731 引入单次来源解析/open/size共享单调时钟预算，默认120秒（ARCHIVE_IMAGE_SOURCE_OPEN_BUDGET），约束许可等待、HTTP/Nginx请求及OSS API调用/attempt超时。取消保留线程中断并停止回源；过预算返回的迟到流立即关闭，许可随关闭释放。
+- OSS未读/部分读取关闭时abort，完整消费正常close，连接获取超时10秒；b54c3a44 同步 #768 解决 OssObjectReader 冲突，保留实际GET长度和取消包装。首轮30项、同步后联合49项零失败/错误/跳过；SDK关闭行为模拟验证、NAS迟到流为模拟，不是实际网络阻塞验收。
+- 预算不是流式正文传输、SDK关闭或原生文件系统调用的硬截止时间。NAS不可中断阻塞、真实连接池回收与断开、按节点熔断/半开及现场压测尚未完成，避免把404/权限失败当成全局来源故障。不变更来源优先级、权限、默认下发模式或生产配置。原head 8f1ff624：governance 45425159179、quality 45425159324 成功，1148单测、145 PG16集成零失败/错误/跳过；同步 #769 后须核验新CI；独立revert。
 
 ## 每轮交接模板
 

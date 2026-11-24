@@ -87,7 +87,7 @@ public class NginxArchiveImageSource implements ArchiveImageSource {
     public InputStream open(PathDO image) throws IOException {
         return permitGuard.open(() -> {
             HttpRequest.Builder request = HttpRequest.newBuilder(requireUri(image))
-                    .timeout(orDefault(sourceProperties.getNginxReadTimeout(), Duration.ofSeconds(60)))
+                    .timeout(SourceOpenBudget.limit(orDefault(sourceProperties.getNginxReadTimeout(), Duration.ofSeconds(60))))
                     .header("Accept", "image/*,application/octet-stream;q=0.8")
                     .GET();
             applyBasicAuth(request);
@@ -114,7 +114,7 @@ public class NginxArchiveImageSource implements ArchiveImageSource {
         }
         return permitGuard.call(() -> {
             HttpRequest.Builder request = HttpRequest.newBuilder(requireUri(image))
-                    .timeout(orDefault(sourceProperties.getNginxReadTimeout(), Duration.ofSeconds(60)))
+                    .timeout(SourceOpenBudget.limit(orDefault(sourceProperties.getNginxReadTimeout(), Duration.ofSeconds(60))))
                     .method("HEAD", HttpRequest.BodyPublishers.noBody());
             applyBasicAuth(request);
             try {

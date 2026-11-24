@@ -46,7 +46,7 @@ public class HttpArchiveImageSource implements ArchiveImageSource {
         return permitGuard.open(() -> {
             ArchiveImageSourceProperties.HttpNode node = requireNode(image);
             HttpRequest.Builder request = HttpRequest.newBuilder(resolveUri(node, image))
-                    .timeout(orDefault(node.getReadTimeout(), Duration.ofSeconds(60)))
+                    .timeout(SourceOpenBudget.limit(orDefault(node.getReadTimeout(), Duration.ofSeconds(60))))
                     .GET();
             applyAuth(node, request);
             try {
@@ -73,7 +73,7 @@ public class HttpArchiveImageSource implements ArchiveImageSource {
         return permitGuard.call(() -> {
             ArchiveImageSourceProperties.HttpNode node = requireNode(image);
             HttpRequest.Builder request = HttpRequest.newBuilder(resolveUri(node, image))
-                    .timeout(orDefault(node.getReadTimeout(), Duration.ofSeconds(60)))
+                    .timeout(SourceOpenBudget.limit(orDefault(node.getReadTimeout(), Duration.ofSeconds(60))))
                     .method("HEAD", HttpRequest.BodyPublishers.noBody());
             applyAuth(node, request);
             try {

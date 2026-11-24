@@ -82,6 +82,11 @@
 
 每批独立 PR、中文提交、按风险分级执行测试、AI 自审与最新 SHA 检查，持续更新专题文档与关联 Issue。P1 合并前同步最新 main；不得降低门禁或执行生产操作。历史轮次使用 GitHub API 独立分支；本地接续见上方专属 worktree 记录。
 
+## 04.2 统一影像网关专项
+
+- #230 P1 分支 `fix/230-gateway-pending-stream`（专属 worktree `/Volumes/data/Project/MRR-worktrees/230-gateway-pending-stream`），从 main 3bc4a36c 建立。异步调度拒绝前已打开上游影像流，原回调未运行导致资源泄漏。e6967007 实际 RED 4项/1失败；a204eed7 采用 Spring MVC CallableProcessingInterceptor 与原 try-with-resources 所有权交接，完成/超时/错误时仅关闭尚未被任务领取的流；外部未启动任务记录一次 FAILED 审计，晚到任务不再读流。GREEN 14项，扩展26项均零失败/错误/跳过。最新 P1 CI 待核验。
+- 保留既有权限、票据、审计、来源顺序和 direct 默认配置。已开始的任务仍负责关闭源，不提前释放许可。真实 Tomcat 客户端断开、现场并发和大文件 Range 未验收；当前网关为全量200流，不伪造206。遗留 OSS 管理签名URL及直连页面需区分管理端与受控病案下发，单独核对兼容。回滚独立 revert。
+
 ## 每轮交接模板
 
 - 更新时间、任务、风险、目标及非目标：

@@ -319,7 +319,12 @@ async function requestSignedUrl(entry: OssBrowserEntry, signal?: AbortSignal) {
 }
 
 async function loadInlinePreview(entry: OssBrowserEntry, kind: PreviewKind, signal: AbortSignal) {
-  const url = new URL(await requestSignedUrl(entry, signal), window.location.href)
+  const signedUrl = await requestSignedUrl(entry, signal)
+  // Only synthetic SVG images in a mock build may use a self-contained URL.
+  if (String(import.meta.env.VITE_BUILD_MOCK) === 'true' && kind === 'image' && signedUrl.startsWith('data:image/svg+xml;charset=utf-8,')) {
+    return signedUrl
+  }
+  const url = new URL(signedUrl, window.location.href)
   if (url.protocol !== 'https:' && url.protocol !== 'http:') {
     throw new Error('Unsupported preview URL')
   }

@@ -1,9 +1,12 @@
 package com.zjcxph.imgapi.service;
 
+import com.zjcxph.imgapi.exception.BusinessException;
 import com.zaxxer.hikari.HikariDataSource;
 import com.zaxxer.hikari.HikariPoolMXBean;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.dao.DataAccessException;
+import org.springframework.jdbc.core.ColumnMapRowMapper;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 
@@ -74,7 +77,7 @@ public class DatabaseMonitorService {
     public List<Map<String, Object>> getSlowQueries(int limit) {
         int safeLimit = Math.max(1, Math.min(limit, 100));
         try {
-            return jdbcTemplate.queryForList("""
+            return jdbcTemplate.query("""
                     SELECT queryid::text AS query_id,
                            calls,
                            ROUND(total_exec_time::numeric, 2) AS total_exec_time_ms,
@@ -84,16 +87,20 @@ public class DatabaseMonitorService {
                            shared_blks_read,
                            temp_blks_written,
                            wal_bytes,
-                           LEFT(REGEXP_REPLACE(query, '\\s+', ' ', 'g'), 500) AS query_template
+                           '[SQL 已隐藏]' AS query_template
                     FROM pg_stat_statements
                     WHERE dbid = (SELECT oid FROM pg_database WHERE datname = current_database())
                       AND query NOT ILIKE '%pg_stat_statements%'
                     ORDER BY total_exec_time DESC
                     LIMIT ?
-                    """, safeLimit);
-        } catch (Exception e) {
-            logger.warn("Unable to query pg_stat_statements: {}", e.getMessage());
-            return List.of();
+                    """, statement -> {
+                statement.setInt(1, safeLimit);
+                statement.setQueryTimeout(3);
+            }, new ColumnMapRowMapper());
+        } catch (DataAccessException e) {
+            // Do not expose SQL, database addresses or exception parameters.
+            throw new BusinessException(503, "慢查询统计暂不可用，请检查数据库监控扩展及采集状态",
+                    "SLOW_QUERY_STATS_UNAVAILABLE");
         }
     }
 

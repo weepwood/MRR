@@ -45,6 +45,48 @@ async function smokePagesDemo() {
     assert.equal(mockResponses.user?.data?.username, 'admin', '用户信息必须来自浏览器 Mock')
     assert.equal(mockResponses.scans?.data?.list?.length, 3, '扫描记录必须由浏览器 Mock 返回')
 
+    // Verify shared records through the actual static browser Mock.
+    const relations = await page.evaluate(async () => {
+      const get = path => fetch(`/proxy/api/v1/${path}`).then(response => response.json())
+      const [scans, patients, summary, logs] = await Promise.all([
+        get('scan/page?page=1&size=100'),
+        get('patients?page=1&size=100'),
+        get('statistics/summary'),
+        get('logs/audit/images?page=1&size=100'),
+      ])
+      const patient = patients.data.list[0]
+      const [byBah, byBrxh] = await Promise.all([
+        get(`patients/bah/${patient.bah}`),
+        get(`scan/brxh/${patient.brxh}`),
+      ])
+      return { scans, patients, summary, logs, byBah, byBrxh }
+    })
+    const allScans = relations.scans.data.list
+    const allPatients = relations.patients.data.list
+    assert.equal(allScans.length, 64)
+    assert.equal(allPatients.length, 32)
+    const patientsByBah = new Map(allPatients.map(patient => [patient.bah, patient]))
+    const scansById = new Map(allScans.map(scan => [scan.id, scan]))
+    for (const scan of allScans) {
+      const patient = patientsByBah.get(scan.bah)
+      assert.ok(patient, '每条扫描必须关联合成患者')
+      assert.equal(scan.brxh, patient.brxh)
+      assert.ok(scan.uploadDate >= patient.admissiontime)
+    }
+    assert.equal(relations.byBah.data[0].brxh, allPatients[0].brxh)
+    assert.equal(relations.byBrxh.data.length, 2)
+    assert.equal(relations.summary.data.total.totalRecords, allScans.length)
+    assert.equal(relations.summary.data.total.totalPages, allScans.reduce((sum, scan) => sum + scan.pages, 0))
+    assert.equal(relations.summary.data.uniqueBAHCount, allPatients.length)
+    for (const log of relations.logs.data.list) {
+      if (log.auditAction === 'VIEW_IMAGE' || log.auditAction === 'VIEW_OSS_IMAGE') {
+        const target = scansById.get(Number(log.requestUri.split('/').pop()))
+        assert.ok(target, '影像访问日志不得引用不存在的扫描 ID')
+        assert.equal(log.auditTarget, target.bah)
+        assert.ok(log.accessTime >= target.uploadDate)
+      }
+    }
+
     const blocked = await page.evaluate(async () => {
       const path = '/proxy/api/v1/pages-smoke-unmocked'
       const fetchBlocked = await fetch(path, { method: 'POST', body: 'synthetic-demo-only' }).then(() => false, () => true)

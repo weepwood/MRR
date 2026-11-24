@@ -2,6 +2,7 @@ package com.zjcxph.imgapi.controller;
 
 import com.zjcxph.imgapi.annotation.RequirePermissions;
 import com.zjcxph.imgapi.common.Result;
+import com.zjcxph.imgapi.config.ImageDeliveryProperties;
 import com.zjcxph.imgapi.dto.req.MigrationJobRequest;
 import com.zjcxph.imgapi.dto.req.MigrationRetryRequest;
 import com.zjcxph.imgapi.dto.req.OssUploadRequest;
@@ -47,10 +48,12 @@ public class OssController {
 
     private final MigrationService migrationService;
     private final OssService ossService;
+    private final ImageDeliveryProperties deliveryProperties;
 
-    public OssController(MigrationService migrationService, OssService ossService) {
+    public OssController(MigrationService migrationService, OssService ossService, ImageDeliveryProperties deliveryProperties) {
         this.migrationService = migrationService;
         this.ossService = ossService;
+        this.deliveryProperties = deliveryProperties;
     }
 
     @Operation(summary = "按 Scan ID 批量上传图片到 OSS")
@@ -101,6 +104,9 @@ public class OssController {
             @PathVariable
             @Parameter(description = "扫描记录 ID", example = "1")
             Integer scanId) {
+        if (deliveryProperties.isGateway()) {
+            return Result.fail(409, "网关模式请使用影像地址接口获取受控访问地址");
+        }
         try {
             String signedUrl = migrationService.getOssSignedUrl(scanId);
             if (signedUrl == null) {
@@ -111,7 +117,7 @@ public class OssController {
             response.put("ossUrl", signedUrl);
             return Result.success(response);
         } catch (Exception e) {
-            logger.error("获取 OSS URL 失败：scanId={}", scanId, e);
+            logger.warn("获取 OSS URL 失败：scanId={}, errorType={}", scanId, e.getClass().getSimpleName());
             return Result.fail("获取 OSS URL 失败");
         }
     }

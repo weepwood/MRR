@@ -50,7 +50,6 @@ class OssControllerTest {
     @Test
     void gatewayModeDoesNotIssueLegacyScanSignedUrl() {
         deliveryProperties.setMode(ImageDeliveryProperties.Mode.GATEWAY);
-        org.mockito.Mockito.lenient().when(migrationService.getOssSignedUrl(1)).thenReturn("https://signed.example/image");
         assertThat(controller.getOssUrl(1).getCode()).isEqualTo(409);
         org.mockito.Mockito.verifyNoInteractions(migrationService, ossService);
     }

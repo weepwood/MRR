@@ -143,7 +143,7 @@ test('节点切换失败保留原目录，权限被撤销后清空旧结果', as
   await expect(page.locator('.file-pane')).toContainText('样例目录')
 
   deny = true
-  await page.getByRole('button', { name: '刷新' }).click()
+  await page.getByRole('button', { name: '刷新', exact: true }).click()
   await expect(page.getByText('当前账号没有文件浏览权限。')).toBeVisible()
   await expect(page.locator('.file-pane')).not.toContainText('样例目录')
   await expect(page.getByRole('textbox', { name: '目录路径' })).toBeDisabled()

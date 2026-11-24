@@ -52,6 +52,46 @@ class RuntimeErrorSanitizerTest {
     }
 
     @Test
+    void shouldRedactSensitiveRelativeRequestTargetsWithoutLosingStatus() {
+        for (String path : new String[]{
+                "/idcard/synthetic-marker",
+                "/api/v1/search/getBAHByID/%30%30%30",
+                "/api/v1/patients/idcard/synthetic-marker?ticket=secret-marker",
+                "/api/v1/img/content/synthetic-marker",
+                "/api/v1/search/getBAHByEncryptID?encryptId=synthetic-marker",
+                "/api/v1/search/archive-cases?id=synthetic-marker",
+                "/archive?id=synthetic-marker",
+                "/api/v1/patients?keyword=synthetic-marker"}) {
+            String text = "Request rejected: " + path + " status=403";
+            for (String sanitized : new String[]{
+                    RuntimeErrorSanitizer.sanitizeSummary(text),
+                    RuntimeErrorSanitizer.sanitizeLogMessage(text),
+                    RuntimeErrorSanitizer.sanitizeStackTrace(text)}) {
+                assertFalse(sanitized.contains("synthetic-marker"), path);
+                assertFalse(sanitized.contains("%30%30%30"), path);
+                assertFalse(sanitized.contains("secret-marker"), path);
+                assertTrue(sanitized.contains("[REDACTED_PATH]"), path);
+                assertTrue(sanitized.contains("status=403"), path);
+                assertEquals(sanitized, RuntimeErrorSanitizer.sanitizeLogMessage(sanitized), path);
+            }
+        }
+    }
+
+    @Test
+    void shouldKeepFixedRouteTemplatesAndHideAbsoluteUrls() {
+        String route = "GET /api/v1/operations/overview status=200";
+        assertEquals(route, RuntimeErrorSanitizer.sanitizeLogMessage(route));
+        String full = "Request rejected: https://synthetic.invalid/idcard/synthetic-marker status=403";
+        for (String sanitized : new String[]{
+                RuntimeErrorSanitizer.sanitizeSummary(full),
+                RuntimeErrorSanitizer.sanitizeLogMessage(full)}) {
+            assertFalse(sanitized.contains("synthetic.invalid"));
+            assertFalse(sanitized.contains("synthetic-marker"));
+            assertTrue(sanitized.contains("status=403"));
+        }
+    }
+
+    @Test
     void shouldGenerateReadableErrorId() {
         assertTrue(RuntimeErrorSanitizer.newErrorId().matches("ERR-\\d{8}-[A-F0-9]{8}"));
     }

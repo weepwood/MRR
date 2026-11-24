@@ -24,6 +24,15 @@ public final class RuntimeErrorSanitizer {
                     + "\\s*[:=]\\s*)(\"[^\"]*\"|'[^']*'|[^,;\\s\\]}]+)"
     );
     private static final Pattern LONG_ID_NUMBER = Pattern.compile("(?<!\\d)\\d{15,18}[0-9Xx](?!\\d)");
+    /**
+     * 已知医疗敏感相对请求目标：完整隐藏动态路径及其查询串，覆盖编码后的参数。
+     * 不匹配普通固定运维路由；绝对 URL 仍由既有协议规则处理。
+     */
+    private static final Pattern SENSITIVE_REQUEST_TARGET = Pattern.compile(
+            "(?i)(?<![A-Za-z0-9_/])/(?:idcard/|api/v1/(?:search/getBAHByID/|patients/idcard/|img/content/)"
+                    + "|(?:archive|api/v1/(?:search/(?:getBAHByEncryptID(?:Legacy)?|archive-cases|getBAHByID)"
+                    + "|patients(?:/idcard)?))\\?)[^\\s\"<>]+"
+    );
     private static final Pattern ERROR_ID = Pattern.compile("(?i)ERR-\\d{8}-[A-F0-9]{8}");
     private static final Pattern UUID_VALUE = Pattern.compile(
             "(?i)\\b[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}\\b"
@@ -96,7 +105,8 @@ public final class RuntimeErrorSanitizer {
         if (value == null || value.isBlank()) {
             return "";
         }
-        String sanitized = BEARER_OR_JWT.matcher(value).replaceAll("[REDACTED_TOKEN]");
+        String sanitized = SENSITIVE_REQUEST_TARGET.matcher(value).replaceAll("[REDACTED_PATH]");
+        sanitized = BEARER_OR_JWT.matcher(sanitized).replaceAll("[REDACTED_TOKEN]");
         sanitized = LOG_SENSITIVE_ASSIGNMENT.matcher(sanitized).replaceAll("$1[REDACTED]");
         sanitized = ID_CARD.matcher(sanitized).replaceAll("[REDACTED_ID]");
         sanitized = MOBILE_NUMBER.matcher(sanitized).replaceAll("[REDACTED_PHONE]");
@@ -135,7 +145,8 @@ public final class RuntimeErrorSanitizer {
         if (value == null || value.isBlank()) {
             return "";
         }
-        String sanitized = BEARER_OR_JWT.matcher(value).replaceAll("[REDACTED_TOKEN]");
+        String sanitized = SENSITIVE_REQUEST_TARGET.matcher(value).replaceAll("[REDACTED_PATH]");
+        sanitized = BEARER_OR_JWT.matcher(sanitized).replaceAll("[REDACTED_TOKEN]");
         sanitized = SENSITIVE_ASSIGNMENT.matcher(sanitized).replaceAll("$1[REDACTED]");
         sanitized = LONG_ID_NUMBER.matcher(sanitized).replaceAll("[REDACTED_ID]");
         sanitized = sanitized.replaceAll("(?i)https?://[^\\s\"<>]+", "[REDACTED_URL]");

@@ -24,9 +24,10 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
-import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.RequestMethod;
+import org.springframework.web.servlet.mvc.method.RequestMappingInfo;
+import org.springframework.web.servlet.mvc.method.annotation.RequestMappingHandlerMapping;
 import org.springframework.web.context.support.AnnotationConfigWebApplicationContext;
 import org.springframework.web.servlet.DispatcherServlet;
 import org.springframework.web.servlet.config.annotation.AsyncSupportConfigurer;
@@ -56,6 +57,12 @@ class ImageContentTomcatTest {
         try {
             tomcat.start();
             var probe = mvc.getBean(Probe.class);
+            // Register only in this isolated MVC context; no annotated application controller
+            // enters the production component or access-policy scans.
+            var mapping = mvc.getBean(RequestMappingHandlerMapping.class);
+            mapping.registerMapping(RequestMappingInfo.paths("/synthetic").methods(RequestMethod.GET)
+                    .options(mapping.getBuilderConfiguration()).build(), probe,
+                    Probe.class.getDeclaredMethod("stream", HttpServletRequest.class, boolean.class));
             int port = connector.getLocalPort();
             try (var client = new Socket()) {
                 client.setReceiveBufferSize(1024);
@@ -99,7 +106,6 @@ class ImageContentTomcatTest {
         }
     }
 
-    @RestController
     static class Probe {
         final AtomicBoolean active = new AtomicBoolean();
         final CountDownLatch started = new CountDownLatch(1);
@@ -108,7 +114,6 @@ class ImageContentTomcatTest {
         final AtomicInteger readBytes = new AtomicInteger();
         final AtomicInteger closeCount = new AtomicInteger();
 
-        @GetMapping("/synthetic")
         ResponseEntity<StreamingResponseBody> stream(HttpServletRequest request,
                                                        @RequestParam(defaultValue="false") boolean large) {
             if (!active.compareAndSet(false, true)) return ResponseEntity.status(503).build();

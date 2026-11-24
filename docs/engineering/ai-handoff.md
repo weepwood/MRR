@@ -195,6 +195,8 @@
 
 - #780已合并039307d3，head947b937d，quality45438121029，1171单测/148 PG16零失败/错误/跳过，Development通过。
 
+- #782 head27423c60，quality45439948011后端真实1175项1失败：ControllerAccessPolicyTest扫描到测试探针Probe#stream。测试改为仅在独立MVC上下文显式注册RequestMapping，不修改生产权限规则或扫描器。修复后本地16项（含完整Controller访问策略检查、真实Tomcat、NAS、OSS、节点状态）零失败/错误/跳过；新CI待验证。
+
 ## 每轮交接模板
 
 - 更新时间、任务、风险、目标及非目标：

@@ -123,6 +123,12 @@
 - #230/#350 P1，分支 `fix/230-image-transfer-budget`，worktree `/Volumes/data/Project/MRR-worktrees/230-image-transfer-budget`，56d2ccc4 实际RED 5项/1失败（超过截止时间返回的字节仍写出）；4c60fc59 采用单调时钟及16KiB逐块读写、前后预算/中断检查，默认 `ARCHIVE_IMAGE_SOURCE_TRANSFER_BUDGET=PT120S`，从构造响应起含异步等待。d04011ce 同步 main 20d29651 保留打开/正文两项配置，最终35项零失败/错误/跳过；外部失败审计与流关闭保留。所有网关含旧路径复用现有协议。
 - 预算为协作式截止，不能强行结束已阻塞的原生读、网络写或close；已提交的响应不能改写为新HTTP错误。未完成真实Tomcat/Windows/NAS/OSS中断、连接池及大文件压力验收。无权限、来源顺序或生产配置变更，独立revert。#770已合并20d29651，最新165c0558，governance45426949813、quality45426949942，1150单测、146 PG16均零失败/错误/跳过。
 
+## 09 导出断点续传与逐块取消（2026-11-24）
+
+- #171/#519/#523/#524/#350 P1，分支 `fix/230-export-download-if-range`，worktree `/Volumes/data/Project/MRR-worktrees/230-export-download-if-range`。0fb988c7实际RED 1项1失败（旧If-Range仍返回206）；9981bc59 使用已有SHA256强ETag，不匹配/无法校验回退200，匹配仍206；完整和区间下载严格按声明长度输出，提前EOF报错，下载次数日志仅异常类型。保留任务归属、权限、过期及既有单文件配额。
+- a478aed7实际RED 11项1失败（PDF收到取消后读取5次，期望1）；5f0f639d 在既有readNBytes单图100MiB上限内逐块检查取消，保持输出大小限制。实际36项联合通过。b0a90bb0 新增真实本地临时NAS+loopback HTTP混合来源ZIP条目内容和PDF两页解析，扩展52项零失败/错误/跳过，覆盖任务策略、归属、恢复、失败及预检。并非真实医院混合源或并发下载配额验收；未强制中止已阻塞的原生读写。
+- #771已合并e17d87e1，#772已合并dae8bef7（1152单测/146 PG16），#773已合并8d7f2ece（1155单测/146 PG16）。本分支需同步最新main并复验后合并；独立revert，无生产改动。
+
 ## 每轮交接模板
 
 - 更新时间、任务、风险、目标及非目标：

@@ -124,6 +124,20 @@
   white-space: nowrap;
 }
 
+/* 口径徽标：区分「本页计数」与「系统总数」，避免扫读时看错口径。
+ * 徽标文字用 muted-foreground，在 surface-alt 上明暗主题均 ≥4.5:1；弱化档 --text-tertiary 会低于基线。 */
+.mrr-metric-card__scope {
+  display: inline-flex;
+  align-items: center;
+  padding: 1px 6px;
+  margin-left: var(--mrr-space-2);
+  font-size: var(--mrr-font-size-xs);
+  font-weight: 500;
+  color: var(--mrr-muted-foreground);
+  background: var(--surface-alt);
+  border-radius: var(--mrr-radius-pill);
+}
+
 .mrr-metric-card__value-row {
   display: flex;
   flex-wrap: wrap;

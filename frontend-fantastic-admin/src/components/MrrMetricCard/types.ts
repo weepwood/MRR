@@ -8,3 +8,9 @@
 export type MetricTone = 'blue' | 'green' | 'amber' | 'warning' | 'rose' | 'danger' | 'violet' | 'teal' | 'slate'
 
 export type MetricValueTone = 'default' | 'success' | 'warning' | 'danger'
+
+/**
+ * 指标口径：`page` 为当前页/当前筛选结果的计数，`total` 为系统级总数。
+ * 用户页等指标组常混用两种口径，页面数组必须显式标注，避免扫读时看错。
+ */
+export type MetricScope = 'page' | 'total'

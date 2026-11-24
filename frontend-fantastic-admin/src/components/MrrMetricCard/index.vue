@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import type { MetricTone, MetricValueTone } from './types'
+import type { MetricScope, MetricTone, MetricValueTone } from './types'
 
 defineOptions({ name: 'MrrMetricCard' })
 
@@ -12,6 +12,7 @@ const props = withDefaults(defineProps<{
   tone?: MetricTone
   valueTone?: MetricValueTone
   compactValue?: boolean
+  scope?: MetricScope
 }>(), {
   tone: 'blue',
   valueTone: 'default',
@@ -49,7 +50,10 @@ const valueClass = computed(() => [
       <FaIcon :name="props.icon ?? ''" />
     </div>
     <div class="mrr-metric-card__body">
-      <span class="mrr-metric-card__label">{{ props.label }}</span>
+      <span class="mrr-metric-card__label">
+        {{ props.label }}
+        <span v-if="props.scope" class="mrr-metric-card__scope" :data-scope="props.scope">{{ props.scope === 'page' ? '本页' : '全库' }}</span>
+      </span>
       <div class="mrr-metric-card__value-row">
         <strong :key="updateRevision" class="mrr-metric-card__value" :class="valueClass">
           {{ props.value }}

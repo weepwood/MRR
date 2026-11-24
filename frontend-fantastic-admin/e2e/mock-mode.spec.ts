@@ -28,6 +28,29 @@ test.describe('无后端 Mock 模式', () => {
     expect(analysis.data.slowEndpoints.length).toBeGreaterThan(0)
   })
 
+  test('OSS 模拟接口只有一个实现且任务状态可以回读', async ({ request }) => {
+    const stats = await (await request.get('/proxy/api/v1/oss/migration/statistics')).json()
+    const waiting = await (await request.get('/proxy/api/v1/oss/migration/management/waiting-sjh?limit=100')).json()
+    expect(stats.data.waitingSjhCount).toBe(waiting.data.returned)
+    expect(stats.data.waitingSjhCount).toBeGreaterThan(0)
+    const upload = await (await request.post('/proxy/api/v1/oss/upload', { data: { scanIds: [1, 7] } })).json()
+    expect(upload.data.results).toHaveLength(2)
+    expect(upload.data.success).toBe(1)
+    expect(upload.data.failed).toBe(1)
+    const job = await (await request.post('/proxy/api/v1/oss/migration/jobs', { data: { mode: 'pilot', limit: 5 } })).json()
+    expect(job.data.status).toBe('pending')
+    const id = job.data.id
+    const list = await (await request.get('/proxy/api/v1/oss/migration/jobs?page=1&size=1')).json()
+    expect(list.data.list).toHaveLength(1)
+    expect(list.data.list[0].id).toBe(id)
+    const cancelled = await (await request.post(`/proxy/api/v1/oss/migration/jobs/${id}/cancel`)).json()
+    expect(cancelled.data.status).toBe('cancelled')
+    const detail = await (await request.get(`/proxy/api/v1/oss/migration/jobs/${id}`)).json()
+    expect(detail.data.status).toBe('cancelled')
+    const missing = await (await request.get('/proxy/api/v1/oss/migration/jobs/999999')).json()
+    expect(missing.code).toBe(404)
+  })
+
   test('支持条件查询和内存写入', async ({ request }) => {
     const filteredResponse = await request.post('/proxy/api/v1/scan/page/condition?page=1&size=20', {
       data: { btype: 1 },
@@ -47,6 +70,21 @@ test.describe('无后端 Mock 模式', () => {
     expect(settingResponse.ok()).toBe(true)
     const setting = await settingResponse.json()
     expect(setting.data).toBe('enabled')
+  })
+
+  test('最近日期统计持续有数据且趋势日期不重复', async ({ request }) => {
+    const now = new Date()
+    const start = new Date(now)
+    start.setDate(start.getDate() - 7)
+    const format = (value: Date) => [value.getFullYear(), String(value.getMonth() + 1).padStart(2, '0'), String(value.getDate()).padStart(2, '0')].join('-')
+    const filtered = await (await request.get('/proxy/api/v1/statistics', {
+      params: { startDate: format(start), endDate: format(now), page: 1, size: 20 },
+    })).json()
+    expect(filtered.data.list.length).toBeGreaterThan(0)
+    expect(filtered.data.list.every((item: { date: string }) => item.date >= format(start) && item.date <= format(now))).toBe(true)
+    const analysis = await (await request.get('/proxy/api/v1/response-metrics/analysis?days=30')).json()
+    expect(analysis.data.trend).toHaveLength(30)
+    expect(new Set(analysis.data.trend.map((item: { bucket: string }) => item.bucket)).size).toBe(30)
   })
 
   test('影像档案袋保持可见并应用全局圆角', async ({ page }) => {

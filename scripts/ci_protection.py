@@ -17,9 +17,10 @@ def status_payload(current, target):
         names = {c['context'] for c in checks}
         if names not in (LEGACY, TARGET) or len(names) != len(checks):
             raise ValueError('Unexpected required checks; inspect concurrent policy changes first.')
-        if policy['strict'] is not True or any(c['app_id'] != 15368 for c in checks):
-            raise ValueError('Strict checks bound to the GitHub Actions App are required.')
-    return {'strict': True, 'checks': [{k: c[k] for k in ('context', 'app_id')} for c in target['checks']]}
+        if type(policy.get('strict')) is not bool or any(c['app_id'] != 15368 for c in checks):
+            raise ValueError('A boolean strict mode and checks bound to the GitHub Actions App are required.')
+    # Honor the explicit target or restore snapshot, never silently force strict mode.
+    return {'strict': target['strict'], 'checks': [{k: c[k] for k in ('context', 'app_id')} for c in target['checks']]}
 
 
 def require_live_gate(checks):

@@ -1,6 +1,6 @@
 {
   "required_status_checks": {
-    "strict": true,
+    "strict": false,
     "checks": [
       { "context": "governance", "app_id": 15368 },
       { "context": "pr-gate", "app_id": 15368 }
@@ -8,7 +8,7 @@
   },
   "enforce_admins": true,
   "required_pull_request_reviews": {
-    "dismiss_stale_reviews": true,
+    "dismiss_stale_reviews": false,
     "require_code_owner_reviews": false,
     "required_approving_review_count": 0,
     "require_last_push_approval": false

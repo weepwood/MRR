@@ -128,21 +128,6 @@ const logs = Array.from({ length: 72 }, (_, index) => {
   }
 })
 
-const migrationLogs = scans.slice(0, 36).map((item, index) => ({
-  id: index + 1,
-  scanId: item.id,
-  localPath: `${item.folder}/${item.filename}`,
-  ossUrl: item.ossUrl,
-  migrationStatus: item.migrationStatus === 'not_migrated' ? 'pending' : 'success',
-  errorMessage: '',
-  fileSize: item.fileSize,
-  checksumMd5: item.checksumMd5,
-  migratedAt: item.migratedAt,
-  verifiedAt: item.migrationStatus === 'verified' ? item.migratedAt : undefined,
-  createdAt: item.uploadDate,
-  updatedAt: item.migratedAt ?? item.uploadDate,
-}))
-
 function firstQuery(value: QueryValue) {
   return Array.isArray(value) ? value[0] : value
 }
@@ -880,14 +865,6 @@ export default defineFakeRoute([
     response: ({ params, body }) => {
       settings[decodeURIComponent(String(params.key))] = String(body.value ?? '')
       return ok(null, '设置保存成功')
-    },
-  },
-  {
-    url: '/api/v1/oss/migration/logs',
-    response: ({ query }) => {
-      const status = normalize(firstQuery(query.status))
-      const filtered = migrationLogs.filter(item => !status || normalize(item.migrationStatus) === status)
-      return ok(paginate(filtered, query.page, query.size))
     },
   },
   {

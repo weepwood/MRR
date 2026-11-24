@@ -121,7 +121,30 @@ export function compare(api, mock) {
     .map(([key, locations]) => ({ key, locations }))
   const duplicates = [...registered].filter(([, locations]) => locations.length > 1)
     .map(([key, locations]) => ({ key, locations }))
-  return { requested: requested.size, covered: requested.size - missing.length, missing, duplicates }
+  return { requested: requested.size, covered: requested.size - missing.length, missing, duplicates, routes: [...requested].map(([key, locations]) => ({ key, locations })) }
+}
+
+// Strict mode is scoped to completed API modules. Other historical gaps
+// remain visible in the report without blocking unrelated development.
+export function strictFailures(report, modules) {
+  const unknown = modules.filter(name => !report.modules.includes(name))
+  if (unknown.length) { return unknown.map(key => ({ mode: 'all', kind: 'unknown-module', key })) }
+  const selected = loc => modules.some(name => loc.file.endsWith(`/api/modules/${name}.ts`))
+  const failures = []
+  for (const mode of ['dev', 'pages']) {
+    const result = report[mode]
+    const keys = new Set(result.routes.filter(item => item.locations.some(selected)).map(item => item.key))
+    for (const item of result.missing) {
+      if (keys.has(item.key)) { failures.push({ mode, kind: 'missing', key: item.key }) }
+    }
+    for (const item of result.duplicates) {
+      if (keys.has(item.key)) { failures.push({ mode, kind: 'duplicate', key: item.key }) }
+    }
+  }
+  for (const loc of report.unresolved.filter(selected)) {
+    failures.push({ mode: 'all', kind: 'unresolved', key: `${loc.file}:${loc.line}` })
+  }
+  return failures
 }
 
 export function audit(root) {
@@ -164,18 +187,12 @@ function main() {
     console.log(report.limitations)
   }
   if (strict) {
-    const modules = new Set(strict.slice('--strict='.length).split(','))
-    const invalid = [...modules].filter(name => !report.modules.includes(name))
-    if (invalid.length) {
-      console.error(`Unknown API module: ${invalid.join(', ')}`)
-      process.exitCode = 1
-      return
+    const modules = [...new Set(strict.slice('--strict='.length).split(','))]
+    const failures = strictFailures(report, modules)
+    for (const failure of failures) {
+      console.error(`STRICT ${failure.mode} ${failure.kind}: ${failure.key}`)
     }
-    const selected = loc => [...modules].some(name => loc.file.endsWith(`/api/modules/${name}.ts`))
-    const missing = [report.dev, report.pages].flatMap(mode => mode.missing).some(item => item.locations.some(selected))
-    if (missing || report.unresolved.some(selected)) {
-      process.exitCode = 1
-    }
+    if (failures.length) { process.exitCode = 1 }
   }
 }
 

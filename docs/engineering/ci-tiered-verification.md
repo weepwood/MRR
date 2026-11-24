@@ -4,7 +4,7 @@
 
 ## PR 快速验证
 
-最终 main 仅要求两个 GitHub Actions App（15368）绑定状态：`governance`、`pr-gate`。继续 strict=true、管理员受限、解决审查对话、线性历史、禁止强推和删除。P0/P1 的独立审查要求继续执行。
+main 仅要求两个 GitHub Actions App（15368）绑定状态：`governance`、`pr-gate`。2026-11-24 维护者确认关闭 strict 与 stale approval，仓库目标按 [分支保护实施记录](main-branch-protection.md) 同步；此前 strict=true 仅是历史策略。管理员受限、解决审查对话、线性历史、禁止强推和删除保持不变。P0/P1 主动同步最新 main、验证实际合并树并独立审查最新 SHA；普通独立 P2/P3 不因无关主线更新强制重测。后续 CI 去重不会取消这两项门禁。
 
 `quality-gate.yml` 的 scope job 一次计算完整改动范围，并执行版本/迁移基线、focused test 和活跃主分支引用检查。CI/脚本/基线变化额外执行仓库 Python 测试。范围计算或静态检查失败都阻断。
 

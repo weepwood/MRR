@@ -9,7 +9,9 @@
 - governance
 - pr-gate
 
-来源固定为 GitHub Actions App（15368），strict=true。管理员同样受限，线性历史、解决对话、禁强推/删除继续生效。按路径选择的内部 job 不直接设为 required。
+来源固定为 GitHub Actions App（15368）。2026-11-24 维护者确认在 GitHub 页面手动取消“Require branches to be up to date before merging”与“Dismiss stale pull request approvals when new commits are pushed”；目标配置相应为 strict=false、dismiss_stale_reviews=false。管理员约束、强制 PR、线性历史、解决对话、禁强推/删除维持不变。按路径选择的内部 job 不直接设为 required。
+
+本次记录的是维护者确认和仓库目标，不冒充远程 API 读回（当前连接器读取 protection 返回 403）。历史 2026-10-27 的 strict=true 实施证据保留，不作为当前目标。P0/P1 主动同步最新 main 并验证实际合并树，旧审批不能替代独立审查最新 SHA；普通独立 P2/P3 不因无关 main 更新强制重跑。
 
 P0/P1 的独立审查义务不由批准人数 0 免除。完整发布验收必须先于正式 tag 和公开 Release。
 
@@ -23,11 +25,11 @@ python -m scripts.ci_protection --apply --snapshot "$env:TEMP\MRR-ci-protection-
 gh api repos/weepwood/MRR/branches/main/protection
 ```
 
-工具仅 PATCH required_status_checks，不覆盖其他保护。读回核对 strict、两个 App 绑定检查、enforce_admins、0 批准、对话解决、线性历史和禁强推/删除。迁移成功后才通过后续 PR 移除 legacy-gates 矩阵。
+工具仅 PATCH required_status_checks，不覆盖 review 设置或其他保护字段。目标 strict 必须是明确布尔值；apply 使用当前目标，restore 使用显式历史快照，不得无意恢复旧 strict。dismiss_stale_reviews 由维护者在 GitHub 页面设置，脚本不修改它。读回核对 strict、两个 App 绑定检查、enforce_admins、0 批准、对话解决、线性历史和禁强推/删除。原 #450 迁移矩阵已移除；本次同步目标与脚本，无需再次远程 apply。
 
 ## 回滚
 
-先通过 PR 恢复旧工作流及检查上下文，再执行：
+仅在维护者明确批准恢复历史配置时，先通过 PR 恢复快照所需的工作流及检查上下文，再执行：
 
 ```powershell
 python -m scripts.ci_protection --restore "$env:TEMP\MRR-ci-protection-before-450.json"

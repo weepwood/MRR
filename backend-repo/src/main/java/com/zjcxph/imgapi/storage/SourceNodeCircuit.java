@@ -4,9 +4,9 @@ import java.io.IOException;
 import java.time.Duration;
 import java.util.function.LongSupplier;
 
-/** A narrow circuit for observed native NAS timeouts, not file-specific or permission failures. */
-final class NasNodeCircuit {
-    enum Outcome { SUCCESS, NATIVE_TIMEOUT, NEUTRAL }
+/** A node-scoped circuit for observed source failures, not file-specific or permission failures. */
+final class SourceNodeCircuit {
+    enum Outcome { SUCCESS, SOURCE_FAILURE, NEUTRAL }
     record Attempt(long generation, boolean halfOpen) {}
     private final int threshold;
     private final long cooldown;
@@ -17,7 +17,7 @@ final class NasNodeCircuit {
     private boolean open;
     private boolean probing;
 
-    NasNodeCircuit(int threshold, Duration cooldown, LongSupplier clock) {
+    SourceNodeCircuit(int threshold, Duration cooldown, LongSupplier clock) {
         this.threshold = Math.max(1, threshold);
         this.cooldown = cooldown.compareTo(Duration.ofHours(1)) > 0
                 ? Duration.ofHours(1).toNanos() : Math.max(1, cooldown.toNanos());
@@ -45,7 +45,7 @@ final class NasNodeCircuit {
             }
         } else if (outcome == Outcome.SUCCESS) {
             timeouts = 0;
-        } else if (outcome == Outcome.NATIVE_TIMEOUT && ++timeouts >= threshold) {
+        } else if (outcome == Outcome.SOURCE_FAILURE && ++timeouts >= threshold) {
             trip();
         }
     }
@@ -58,6 +58,6 @@ final class NasNodeCircuit {
     }
 
     static final class CircuitOpen extends IOException {
-        CircuitOpen() { super("NAS node temporarily unavailable"); }
+        CircuitOpen() { super("Image source temporarily unavailable"); }
     }
 }

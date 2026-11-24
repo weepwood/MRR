@@ -74,4 +74,38 @@ export default {
     'node_modules/**/*',
     'dist*/**/*',
   ],
+  overrides: [
+    /*
+     * public/ 是不经构建转译、原样拷贝进 dist 的静态层（浏览器升级拦截页受众是
+     * Chromium <86）。lint-staged 的 `stylelint --cache --fix` 曾把
+     * top/right/bottom/left 四向 longhand 收敛为 inset，全屏浮层失去定位
+     * （见 scripts/verify-chrome86-build.mjs 门禁）。这里停用实测触发的改写
+     * 规则——shorthand 收敛 / color 现代记法 / 属性重排；其余格式类 autofix
+     * 无兼容风险，仍保持启用：
+     * - declaration-block-no-redundant-longhand-properties / shorthand-property-no-redundant-values：
+     *   shorthand 收敛（top/right/bottom/left → inset 等），直接破坏 Chrome 86 基线；
+     * - color-function-notation / color-function-alias-notation / alpha-value-notation /
+     *   hue-degree-notation / lightness-notation：强制现代颜色记法的 autofix
+     *   （rgba(...) → rgb(r g b / a%)、deg/percentage 归一）。注：Chrome 86 实际
+     *   支持 rgb() 空格斜杠记法，兼容性理由对当前基线并不成立；关停依据是
+     *   「public/ 静态首帧壳层一律不动」的原则——这个零转译层的任何改动都应
+     *   走人工审查，并落在 verify-chrome86-build 与 public-static-files.test
+     *   双门禁可核查的范围内；
+     * - order/properties-order（stylelint-config-recess-order）：
+     *   属性顺序自动重排，对静态层同样构成非必要改写。
+     */
+    {
+      files: ['public/**/*.css'],
+      rules: {
+        'declaration-block-no-redundant-longhand-properties': null,
+        'shorthand-property-no-redundant-values': null,
+        'color-function-alias-notation': null,
+        'color-function-notation': null,
+        'alpha-value-notation': null,
+        'hue-degree-notation': null,
+        'lightness-notation': null,
+        'order/properties-order': null,
+      },
+    },
+  ],
 }

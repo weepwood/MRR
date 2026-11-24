@@ -44,6 +44,26 @@ class ArchiveExportJobDownloadTest {
             request.setAttribute(AuthorizationInterceptor.AUTH_SESSION_ATTRIBUTE, session);
             return request;
         };
+        // Unsatisfiable requests and rejected async tasks must release the pending file lease.
+        assertThat(controller.download(job.getId(), "bytes=99-100", requests.get()).getStatusCode().value())
+                .isEqualTo(416);
+        var rejectedRequest = requests.get();
+        rejectedRequest.setAsyncSupported(true);
+        var rejected = controller.download(job.getId(), null, rejectedRequest);
+        var manager = org.springframework.web.context.request.async.WebAsyncUtils.getAsyncManager(rejectedRequest);
+        manager.setAsyncWebRequest(org.springframework.web.context.request.async.WebAsyncUtils.createAsyncWebRequest(
+                rejectedRequest, new org.springframework.mock.web.MockHttpServletResponse()));
+        manager.setTaskExecutor(new org.springframework.core.task.AsyncTaskExecutor() {
+            @Override public void execute(Runnable task) {
+                throw new org.springframework.core.task.TaskRejectedException("synthetic rejection");
+            }
+        });
+        manager.startCallableProcessing(() -> {
+            rejected.getBody().writeTo(new ByteArrayOutputStream());
+            return null;
+        });
+        assertThat(manager.getConcurrentResult()).isInstanceOf(org.springframework.core.task.TaskRejectedException.class);
+        rejectedRequest.getAsyncContext().complete();
         var first = controller.download(job.getId(), null, requests.get());
         var second = controller.download(job.getId(), "bytes=1-2", requests.get());
         org.assertj.core.api.Assertions.assertThatThrownBy(() -> controller.download(job.getId(), null, requests.get()))

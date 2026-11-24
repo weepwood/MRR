@@ -71,6 +71,13 @@ class ScanMapperPostgresqlIT extends PostgresqlIntegrationTestSupport {
                 VALUES ('000123','456','legacy.jpg','synthetic',1),
                        ('000123','456','legacy.jpg','synthetic',1)
                 """);
+        // JdbcTemplate writes bypass the MyBatis session's local cache inside @MybatisTest.
+        assertThat(jdbcTemplate.queryForObject("""
+                SELECT count(*) FROM app.mr_scan
+                WHERE bah='000123' AND brxh='456' AND folder='synthetic'
+                  AND filename='legacy.jpg' AND uploadflag != 0
+                """, Long.class)).isEqualTo(3L);
+        sqlSession.clearCache();
         assertThat(imageContentMapper.findActiveLegacyCandidates("000123","456","synthetic","legacy.jpg")).hasSize(2);
     }
 

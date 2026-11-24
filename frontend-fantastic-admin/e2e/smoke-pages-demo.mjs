@@ -139,6 +139,31 @@ async function smokePagesDemo() {
     assert.equal(archiveAssets.noShelf.meta?.reasonCode, 'NEEDS_SJH')
     assert.ok(archiveAssets.loaded.every(Boolean), '档案袋影像必须在真实 Pages 浏览器中成功解码')
 
+    const writes = await page.evaluate(async () => {
+      const req = (path, body) => fetch(`/proxy/api/v1/${path}`, body === undefined ? undefined : {
+        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body),
+      }).then(response => response.json())
+      const before = await req('oss/migration/statistics')
+      const upload = await req('oss/upload', { scanIds: [1, 1, 99999] })
+      const scan = await req('scan/1')
+      const failed = await req('scan/13')
+      const retry = await req('oss/migration/retry', { scanIds: [13, 13] })
+      const reset = await req('scan/13')
+      const after = await req('oss/migration/statistics')
+      const image = new Image()
+      image.src = scan.data.ossUrl
+      await image.decode()
+      return { before, upload, scan, failed, retry, reset, after, width: image.naturalWidth }
+    })
+    assert.deepEqual(writes.upload.data.results.map(item => item.status), ['success', 'skipped', 'failed'])
+    assert.equal(writes.scan.data.migrationStatus, 'migrated')
+    assert.ok(writes.width > 0)
+    assert.equal(writes.failed.data.migrationStatus, 'failed')
+    assert.equal(writes.retry.data.updated, 1)
+    assert.equal(writes.reset.data.migrationStatus, 'not_migrated')
+    assert.equal(writes.after.data.migratedCount, writes.before.data.migratedCount + 1)
+    assert.equal(writes.after.data.failedCount, writes.before.data.failedCount - 1)
+
     const blocked = await page.evaluate(async () => {
       const path = '/proxy/api/v1/pages-smoke-unmocked'
       const fetchBlocked = await fetch(path, { method: 'POST', body: 'synthetic-demo-only' }).then(() => false, () => true)

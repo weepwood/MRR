@@ -246,19 +246,26 @@ def main():
                 "rare_cursor": f"SELECT id FROM app.mr_scan WHERE bah LIKE '%{rare}%' AND id>{args.rows//2} ORDER BY id LIMIT 51",
                 "common_cursor": f"SELECT id FROM app.mr_scan WHERE bah LIKE '%00%' AND id>{args.rows//2} ORDER BY id LIMIT 51",
                 "sjh_count": f"SELECT count(*) FROM app.mr_scan WHERE sjh LIKE '%{sjh}%'",
+                "absent_count": "SELECT count(*) FROM app.mr_scan WHERE bah LIKE '%987654321012345%'",
+                "absent_cursor": f"SELECT id FROM app.mr_scan WHERE bah LIKE '%987654321012345%' AND id>{args.rows//2} ORDER BY id LIMIT 51",
+                "one_char_count": "SELECT count(*) FROM app.mr_scan WHERE bah LIKE '%0%'",
+                "three_char_count": "SELECT count(*) FROM app.mr_scan WHERE bah LIKE '%100%'",
+                "sjh_cursor": f"SELECT id FROM app.mr_scan WHERE sjh LIKE '%{sjh}%' AND id>0 ORDER BY id LIMIT 51",
+                "sjh_deep_cursor": f"SELECT id FROM app.mr_scan WHERE sjh LIKE '%{sjh}%' AND id>{args.rows*9//10} ORDER BY id LIMIT 51",
             }
             def trgm_measure(phase):
                 metrics = {}
                 for name, query in trgm_cases.items():
                     key = f"trgm-{phase}-{name}"
+                    budget = 3000 if "cursor" in name else 5000
                     try:
                         result = run([*psql, "-At", "-c",
-                            "BEGIN READ ONLY; SET LOCAL statement_timeout='5s'; SET LOCAL lock_timeout='1s'; "
+                            f"BEGIN READ ONLY; SET LOCAL statement_timeout='{budget}ms'; SET LOCAL lock_timeout='1s'; "
                             "EXPLAIN (ANALYZE,BUFFERS,FORMAT JSON) " + query + "; ROLLBACK;"], log=key+".log")
                     except RuntimeError:
                         if "canceling statement due to statement timeout" not in (lab / (key+".log")).read_text():
                             raise
-                        metrics[name] = {"status":"statement_timeout","budget_ms":5000}
+                        metrics[name] = {"status":"statement_timeout","budget_ms":budget}
                         report.setdefault("legacy_timeouts", []).append(key)
                         continue
                     plan = json.loads(result[result.index("["):result.rindex("]")+1])[0]
@@ -267,7 +274,8 @@ def main():
                         return ([node["Index Name"]] if "Index Name" in node else []) + [
                             item for child in node.get("Plans",[]) for item in indexes(child)]
                     metrics[name] = {"execution_ms":plan["Execution Time"],"indexes":indexes(plan["Plan"]),
-                        "shared_blocks":plan["Plan"].get("Shared Hit Blocks",0)+plan["Plan"].get("Shared Read Blocks",0)}
+                        "shared_blocks":plan["Plan"].get("Shared Hit Blocks",0)+plan["Plan"].get("Shared Read Blocks",0),
+                        "returned_rows":plan["Plan"]["Actual Rows"],"budget_ms":budget}
                 # Same synthetic 1000 inserts in a transaction that always rolls back.
                 insert = f"""BEGIN; SET LOCAL statement_timeout='30s';
                     EXPLAIN (ANALYZE,BUFFERS,FORMAT JSON)

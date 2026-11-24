@@ -269,6 +269,12 @@
 - #99/#350 P2，`perf/99-gin-write-cost` 独立worktree，新增 --trgm-write 仅在新建隔离PG16运行固定事务ABBA对照、实际提交更新/删除重插、WAL增量、TPS与P95，不重复精确/GIN查询基准。mrr-scan-lab-9xi2ubwn 实际100000行、16组14400事务零失败，逐轮COUNT一致、报告complete、pg_ctl停止。8客户端有GIN WAL约多38–39%，TPS/P95波动，非生产吞吐。详见[GIN隔离实验](synthetic-trgm-benchmark-2026-11-25.md)。保留既有语义、不强制planner、不改生产DDL；最新CI待验收。
 - #790已合并c825539d（1177单测），#791已合并2d82ce80（governance45446800153、quality45446800105成功，其他按范围跳过）。
 
+## 03 运维总览索引就绪与容量快照（2026-11-25）
+
+- #99/#350 P2，`feat/99-operations-capacity`，独立worktree。复用已有 DeploymentReadinessService 系统目录统计查询与 OperationsCenterService 总览；展示估算行数、表/索引容量及两索引参考量，未知统计不伪装为空表；仅白名单已知状态、数值及预期索引名进入总览，路径/异常不输出。不新增API/权限/DDL/COUNT，WARNING不触发自动只读。容量参考非服务器可用空间或峰值上限。
+- 真实RED 11项2失败，最终本地14项通过；独立PG16 mrr-scan-lab-o81rbd7l 9单测/24集成通过、pg_ctl停止（未知统计补充前）；类型/lint通过，Chromium单独复验6项含预热通过。首次并行工作区使用相同9000端口，新增卡片未找到，单独复验通过；不声称生产UI或服务器卷实测。#790/#791/#792已合并c825539d/2d82ce80/a62e19a7。独立revert，最新CI待验收。
+- #793 NAS隔离及看板另PR，存在同一总览Vue/Mock/测试文件，按依赖顺序同步并合并，勿覆盖另一专项。
+
 ## 每轮交接模板
 
 - 更新时间、任务、风险、目标及非目标：

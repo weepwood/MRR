@@ -25,6 +25,9 @@ import java.util.List;
 import java.util.Map;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @MybatisTest
 @ImportAutoConfiguration(FlywayAutoConfiguration.class)
@@ -114,6 +117,50 @@ class ScanMapperPostgresqlIT extends PostgresqlIntegrationTestSupport {
                 scanMapper.findByConditionWithPagination(request, 1, 2).stream().map(Scan::getId).toList());
         assertThat(next).extracting(Scan::getFilename).containsExactly("cursor-b.jpg");
         assertThat(scanMapper.countByCondition(request)).isEqualTo(2L);
+    }
+
+    @Test
+    void actualCursorJsonContractWithRealMapperAndService() throws Exception {
+        Integer first = jdbcTemplate.queryForObject("""
+                INSERT INTO app.mr_scan(bah,sjh,filename,folder,uploadflag)
+                VALUES ('00098765431','987654321','http-cursor-first.jpg','synthetic',1) RETURNING id
+                """, Integer.class);
+        Integer second = jdbcTemplate.queryForObject("""
+                INSERT INTO app.mr_scan(bah,sjh,filename,folder,uploadflag)
+                VALUES ('987654319','987654322','http-cursor-second.jpg','synthetic',1) RETURNING id
+                """, Integer.class);
+        var service = new com.zjcxph.imgapi.service.impl.ScanServiceImpl(scanMapper,
+                org.mockito.Mockito.mock(com.zjcxph.imgapi.service.ImageTypeService.class));
+        // Isolated MVC contract test, not a substitute for application permission tests.
+        var mvc = org.springframework.test.web.servlet.setup.MockMvcBuilders.standaloneSetup(
+                new com.zjcxph.imgapi.controller.ScanController(service,
+                        org.mockito.Mockito.mock(com.zjcxph.imgapi.service.ArchiveExportService.class))).build();
+        String url = "/api/v1/scan/cursor/condition";
+        String filters = "{\"bah\":\"00098765431\"}";
+        var exact = mvc.perform(post(url)
+                .param("afterId", "0").param("size", "1")
+                .contentType(org.springframework.http.MediaType.APPLICATION_JSON).content(filters));
+        exact.andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.list[0].id").value(first))
+                .andExpect(jsonPath("$.data.list[0].bah").value("00098765431"))
+                .andExpect(jsonPath("$.data.hasMore").value(false))
+                .andExpect(jsonPath("$.data.total").doesNotExist());
+        var legacy = mvc.perform(post(url)
+                .param("afterId", "0").param("size", "1").param("legacyContains", "true")
+                .contentType(org.springframework.http.MediaType.APPLICATION_JSON).content(filters));
+        legacy.andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.list[0].id").value(first))
+                .andExpect(jsonPath("$.data.nextCursorId").value(first))
+                .andExpect(jsonPath("$.data.hasMore").value(true))
+                .andExpect(jsonPath("$.data.size").value(1))
+                .andExpect(jsonPath("$.data.total").doesNotExist());
+        mvc.perform(post(url)
+                .param("afterId", first.toString()).param("size", "1").param("legacyContains", "true")
+                .contentType(org.springframework.http.MediaType.APPLICATION_JSON).content(filters))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.list[0].id").value(second))
+                .andExpect(jsonPath("$.data.hasMore").value(false))
+                .andExpect(jsonPath("$.data.nextCursorId").doesNotExist());
     }
 
     @Test

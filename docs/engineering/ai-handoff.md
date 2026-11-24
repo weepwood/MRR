@@ -123,6 +123,11 @@
 - #230/#350 P1，分支 `fix/230-image-transfer-budget`，worktree `/Volumes/data/Project/MRR-worktrees/230-image-transfer-budget`，56d2ccc4 实际RED 5项/1失败（超过截止时间返回的字节仍写出）；4c60fc59 采用单调时钟及16KiB逐块读写、前后预算/中断检查，默认 `ARCHIVE_IMAGE_SOURCE_TRANSFER_BUDGET=PT120S`，从构造响应起含异步等待。d04011ce 同步 main 20d29651 保留打开/正文两项配置，最终35项零失败/错误/跳过；外部失败审计与流关闭保留。所有网关含旧路径复用现有协议。
 - 预算为协作式截止，不能强行结束已阻塞的原生读、网络写或close；已提交的响应不能改写为新HTTP错误。未完成真实Tomcat/Windows/NAS/OSS中断、连接池及大文件压力验收。无权限、来源顺序或生产配置变更，独立revert。#770已合并20d29651，最新165c0558，governance45426949813、quality45426949942，1150单测、146 PG16均零失败/错误/跳过。
 
+## 04.3 HTTP/Nginx 正文停发及实际SDK中止（2026-11-24）
+
+- #230/#350 P1，分支 `fix/230-http-body-idle-timeout`，worktree `/Volumes/data/Project/MRR-worktrees/230-http-body-idle-timeout`。e5dc75a0 实际RED 2项1错误：loopback HTTP 返回响应头及首字节后停发，原BodyHandlers.ofInputStream读取不能在3秒内完成。7e4668bd 用JDK BodySubscriber单次需求、2项有界事件队列、空闲读取超时，复用各节点既有readTimeout，取消subscription，不新增每读工作线程；保留实际长度、资源许可、认证和来源顺序。24项回归通过。
+- 增加真实AWS SDK loopback S3协议响应首字节后停发、部分读取关闭abort、下一对象在5秒内读取，非生产凭据/服务；扩展28项零失败/错误/跳过，原始测试 /tmp/mrr-http-oss-final.log。仅证明本机HTTP/SDK路径，并非真实Nginx/NAS/OSS多节点连接池压力或正文网络写硬截止。网络来源按节点熔断待#773合并后复用其状态逻辑，避免建立第二套机制。同步main dae8bef7，最新CI待验收；独立revert，无生产改动。
+
 ## 每轮交接模板
 
 - 更新时间、任务、风险、目标及非目标：

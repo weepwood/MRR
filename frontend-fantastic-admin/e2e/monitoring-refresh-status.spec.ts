@@ -85,3 +85,16 @@ test('部分区域持续失败时可分辨各分区最后一次取得数据的�
   await expect(description).toContainText('上次完整刷新 12:03:00')
   await expect(alert).toHaveCount(0)
 })
+
+test('严重数据异常指标支持键盘跳转，不改变监控路由', async ({ page }) => {
+  await page.goto('/monitoring')
+  const url = page.url()
+  const link = page.getByRole('link', { name: '查看严重数据异常明细' })
+  await expect(link).toBeVisible()
+  await link.focus()
+  await page.keyboard.press('Enter')
+  const target = page.locator('#monitor-issues')
+  await expect(target).toBeFocused()
+  await expect(target.getByRole('heading', { name: '异常样本' })).toBeInViewport()
+  expect(page.url()).toBe(url)
+})

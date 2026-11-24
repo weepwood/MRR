@@ -184,6 +184,8 @@ public interface ScanMapper {
 
     List<Scan> findByConditionAfterId(@Param("request") ScanRequest request, @Param("afterId") int afterId, @Param("limit") int limit);
 
+    List<Scan> findLegacyConditionAfterId(@Param("request") ScanRequest request, @Param("afterId") int afterId, @Param("limit") int limit);
+
     long countByCondition(@Param("request") ScanRequest request);
 
     @Update("UPDATE mr_scan SET oss_url = #{ossUrl}, file_size = #{fileSize}, " +

@@ -209,7 +209,7 @@ npm run docs:build
 正式入口是 Actions 的 `Release`（`release-on-version-bump.yml`）。修改 `VERSION` 或人工推送标签均不会自动发布。版本、基线和版本说明先通过 PR 合并，再确认目标提交的 `quality-gate.yml` main push 运行成功。
 
 1. 记录最终 main 的完整 SHA，确认 `VERSION`、Maven revision、基线和 `release-notes/<VERSION>.md` 一致。
-2. 从 main 调度 `Release`，先保留 `dry_run=true`。工作流固定启动时的 SHA，执行完整候选验证和 Windows PostgreSQL 恢复演练，不创建标签或 Release。
+2. 从 main 调度 `Release`，先保留 `dry_run=true`。工作流固定启动时的 SHA，执行完整候选验证和 Windows PostgreSQL 恢复演练，不创建标签或 Release。需要对同一轮完整 ZIP、JAR、独立校验文件和身份清单复验时，同时选择 `retain_candidate=true`；默认关闭以维持日常预演体积。此选项只控制留存及 Windows 完整文件验证，不授权发布。
 3. 试发布成功后，在 main 仍指向同一 SHA 时调度 `dry_run=false`。正式运行会重新构建和完整验证，不能将上一轮试发布产物直接作为正式发布文件。
 4. 全部验证成功后，发布 job 校验候选身份，创建不可移动的 `v<VERSION>` 标签，上传草稿并核验全部资产的摘要，最后公开 Release。
 

@@ -9,6 +9,11 @@ on:
         type: boolean
         required: true
         default: true
+      retain_candidate:
+        description: Retain complete candidate files for verification (also on dry-run)
+        type: boolean
+        required: false
+        default: false
 
 permissions:
   contents: read
@@ -39,7 +44,7 @@ jobs:
     needs: identity
     uses: ./.github/workflows/release-validation.yml
     with:
-      retain_candidate: ${{ !inputs.dry_run }}
+      retain_candidate: ${{ !inputs.dry_run || inputs.retain_candidate }}
 
   publish:
     needs: [identity, qualify]

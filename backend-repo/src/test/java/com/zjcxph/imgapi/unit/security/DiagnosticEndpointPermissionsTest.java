@@ -164,6 +164,41 @@ class DiagnosticEndpointPermissionsTest {
         }
     }
 
+    @Test
+    void repairOrderRequiresDualManagePermissionsAndTrustedActor() throws Exception {
+        var service = mock(com.zjcxph.imgapi.service.DataQualityRepairOrderService.class);
+        var controller = new com.zjcxph.imgapi.controller.DataQualityRepairOrderController(service);
+        var authorization = new AuthorizationInterceptor();
+        String base = "/api/v1/system/data-quality/repair-orders";
+        for (String action : List.of("propose","approve","apply","verify","cancel","compensate")) {
+            var handler = new HandlerMethod(controller, controller.getClass().getMethod(
+                    action, long.class, jakarta.servlet.http.HttpServletResponse.class));
+            String path = action.equals("propose") ? base : base+"/9/"+action;
+            for (var permissions : List.of(List.of("system:manage"), List.of("record:manage"),List.of("system:manage","record:read"))) {
+                var response = new MockHttpServletResponse();
+                assertThat(authorization.preHandle(request("POST",path,permissions),response,handler)).isFalse();
+                assertThat(response.getStatus()).isEqualTo(403);
+            }
+            assertThat(authorization.preHandle(request("POST",path,List.of("system:manage","record:manage")),
+                    new MockHttpServletResponse(),handler)).isTrue();
+        }
+        assertThat(org.assertj.core.api.Assertions.catchThrowable(() ->
+                controller.apply(9L,new MockHttpServletResponse())))
+                .isInstanceOf(com.zjcxph.imgapi.exception.BusinessException.class);
+        verifyNoInteractions(service);
+        var session=new AuthSession();
+        session.setId(7L);
+        com.zjcxph.imgapi.utils.AuthContext.setCurrentUser(session);
+        try {
+            var response=new MockHttpServletResponse();
+            controller.apply(9L,response);
+            verify(service).apply(9L,7L);
+            assertThat(response.getHeader("Cache-Control")).isEqualTo("private, no-store");
+        } finally {
+            com.zjcxph.imgapi.utils.AuthContext.clear();
+        }
+    }
+
     private MockHttpServletRequest request(List<String> permissions) {
         return request("POST", "/api/v1/operations/query-diagnostics", permissions);
     }

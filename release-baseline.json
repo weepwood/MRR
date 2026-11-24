@@ -2,7 +2,7 @@
   "manifestSchemaVersion": 1,
   "database": {
     "minimumCompatibleMigration": "20260715113552",
-    "maximumCompatibleMigration": "20261125100000",
+    "maximumCompatibleMigration": "20261125101000",
     "backwardCompatibleWithPreviousApplication": false
   },
   "applicationRollback": {

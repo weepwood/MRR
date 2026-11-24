@@ -1,0 +1,115 @@
+package com.zjcxph.imgapi.integration.database;
+
+import com.zjcxph.imgapi.integration.PostgresqlIntegrationTestSupport;
+import com.zjcxph.imgapi.service.DataQualityRepairOrderService;
+import com.zjcxph.imgapi.service.DeploymentReadinessService;
+import com.zjcxph.imgapi.service.MaintenanceModeService;
+import com.zjcxph.imgapi.service.impl.DataQualityServiceImpl;
+import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
+import org.junit.jupiter.api.Test;
+import org.mybatis.spring.boot.test.autoconfigure.MybatisTest;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.autoconfigure.ImportAutoConfiguration;
+import org.springframework.boot.flyway.autoconfigure.FlywayAutoConfiguration;
+import org.springframework.boot.jdbc.test.autoconfigure.AutoConfigureTestDatabase;
+import org.springframework.jdbc.core.JdbcTemplate;
+import static org.assertj.core.api.Assertions.*;
+import static org.mockito.Mockito.mock;
+
+@MybatisTest
+@ImportAutoConfiguration(FlywayAutoConfiguration.class)
+@AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
+class DataQualityRepairOrderPostgresqlIT extends PostgresqlIntegrationTestSupport {
+    @Autowired JdbcTemplate jdbc;
+    @Autowired org.springframework.transaction.PlatformTransactionManager transactionManager;
+
+    @Test
+    void approvalRequiresSeparateActorAndRechecksCurrentCandidate() {
+        long issue = fixture();
+        var service = service(true);
+        long order = service.propose(issue, 11L).id();
+        assertThatThrownBy(() -> service.approve(order, 11L)).hasMessageContaining("不同");
+        assertThat(service.approve(order, 12L).status()).isEqualTo("APPROVED");
+        assertThat(service.get(order).approvedBy()).isEqualTo(12L);
+        assertThat(jdbc.queryForObject("SELECT count(*) FROM app.mrr_data_quality_repair_event WHERE order_id=?", Long.class, order)).isEqualTo(2L);
+        assertThat(jdbc.queryForObject("SELECT count(*) FROM app.mr_scan WHERE bah='7654321' AND archive_id IS NULL", Long.class)).isEqualTo(1L);
+    }
+
+    @Test
+    void staleSourceCannotBeApprovedAndDisabledCannotPropose() {
+        long issue = fixture();
+        assertThatThrownBy(() -> service(false).propose(issue, 11L)).hasMessageContaining("关闭");
+        var service = service(true);
+        long order = service.propose(issue, 11L).id();
+        jdbc.update("UPDATE app.mr_scan SET filename='changed.synthetic' WHERE bah='7654321'");
+        assertThatThrownBy(() -> service.approve(order, 12L)).hasMessageContaining("变化");
+        assertThat(service.get(order).status()).isEqualTo("PROPOSED");
+    }
+
+    @Test
+    void applyVerifyAndCompensationRespectExistingTrigger() {
+        var service = service(true);
+        long order = service.propose(fixture(), 11L).id();
+        assertThatThrownBy(() -> service.apply(order, 11L)).hasMessageContaining("状态");
+        var approved = service.approve(order, 12L);
+        assertThatThrownBy(() -> service.apply(order, 11L)).hasMessageContaining("审批人");
+        assertThat(service.apply(order, 12L).status()).isEqualTo("APPLIED");
+        assertThat(jdbc.queryForObject("SELECT archive_id FROM app.mr_scan WHERE id=?", Long.class, approved.scanId())).isEqualTo(approved.targetArchiveId());
+        assertThat(service.verify(order, 13L).status()).isEqualTo("VERIFIED");
+        assertThatThrownBy(() -> service.compensate(order, 12L)).hasMessageContaining("重新关联");
+        jdbc.update("INSERT INTO app.mr_archive(bah) VALUES ('7654321')");
+        assertThat(service.compensate(order, 12L).status()).isEqualTo("COMPENSATED");
+        assertThat(jdbc.queryForObject("SELECT archive_id FROM app.mr_scan WHERE id=?", Long.class, approved.scanId())).isNull();
+        assertThat(jdbc.queryForObject("SELECT count(*) FROM app.mrr_data_quality_repair_event WHERE order_id=?", Long.class, order)).isEqualTo(5L);
+    }
+
+    @Test
+    void failedAuditRollsBackMedicalLinkAndOrderTogether() {
+        var service = service(true);
+        var order = service.approve(service.propose(fixture(), 11L).id(),12L);
+        var failingJdbc = new JdbcTemplate(java.util.Objects.requireNonNull(jdbc.getDataSource())) {
+            @Override
+            public int update(String sql, Object... args) {
+                if (sql.contains("INSERT INTO app.mrr_data_quality_repair_event") && "APPLIED".equals(args[2]))
+                    throw new IllegalStateException("synthetic audit failure");
+                return super.update(sql,args);
+            }
+        };
+        var failing = new DataQualityRepairOrderService(failingJdbc,
+                new DataQualityServiceImpl(jdbc,new SimpleMeterRegistry()),
+                mock(DeploymentReadinessService.class),mock(MaintenanceModeService.class),true);
+        var tx = new org.springframework.transaction.support.TransactionTemplate(transactionManager);
+        tx.setPropagationBehavior(org.springframework.transaction.TransactionDefinition.PROPAGATION_NESTED);
+        assertThatThrownBy(() -> tx.execute(status -> failing.apply(order.id(),12L)))
+                .hasMessageContaining("synthetic audit failure");
+        assertThat(jdbc.queryForObject("SELECT archive_id FROM app.mr_scan WHERE id=?",Long.class,order.scanId())).isNull();
+        assertThat(service.get(order.id()).status()).isEqualTo("APPROVED");
+        assertThat(jdbc.queryForObject("SELECT count(*) FROM app.mrr_data_quality_repair_event WHERE order_id=?",Long.class,order.id())).isEqualTo(2L);
+    }
+
+    @Test
+    void approvedOrderRejectsNewAmbiguityAndExpiry() {
+        var service = service(true);
+        var order = service.approve(service.propose(fixture(),11L).id(),12L);
+        jdbc.update("INSERT INTO app.mr_archive(bah) VALUES ('7654321')");
+        assertThatThrownBy(() -> service.apply(order.id(),12L)).hasMessageContaining("不唯一");
+        jdbc.update("UPDATE app.mrr_data_quality_repair_order SET approved_at=clock_timestamp()-interval '25 hours' WHERE id=?",order.id());
+        assertThatThrownBy(() -> service.apply(order.id(),12L)).hasMessageContaining("过期");
+        assertThat(jdbc.queryForObject("SELECT archive_id FROM app.mr_scan WHERE id=?",Long.class,order.scanId())).isNull();
+    }
+
+    private DataQualityRepairOrderService service(boolean enabled) {
+        return new DataQualityRepairOrderService(jdbc, new DataQualityServiceImpl(jdbc, new SimpleMeterRegistry()),
+                mock(DeploymentReadinessService.class), mock(MaintenanceModeService.class), enabled);
+    }
+
+    private long fixture() {
+        int scan = jdbc.queryForObject("INSERT INTO app.mr_scan(bah,filename,uploadflag) VALUES ('7654321','synthetic.png',1) RETURNING id", Integer.class);
+        jdbc.update("INSERT INTO app.mr_archive(bah) VALUES ('7654321')");
+        long run = jdbc.queryForObject("INSERT INTO app.mrr_data_quality_run(status,triggered_by) VALUES ('SUCCESS','test') RETURNING id", Long.class);
+        return jdbc.queryForObject("""
+            INSERT INTO app.mrr_data_quality_issue(run_id,check_code,check_name,severity,entity_type,entity_id,bah,detail)
+            VALUES (?,'SCAN_ARCHIVE_LINK_MISSING_ESTIMATED','synthetic','WARNING','mr_scan',?,'7654321','synthetic') RETURNING id
+            """, Long.class, run, Integer.toString(scan));
+    }
+}

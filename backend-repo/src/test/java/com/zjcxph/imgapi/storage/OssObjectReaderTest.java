@@ -54,6 +54,20 @@ class OssObjectReaderTest {
     }
 
     @Test
+    void abortsUnreadOssResponseInsteadOfDrainingIt() throws Exception {
+        S3Client client = mock(S3Client.class);
+        OssObjectReader reader = readerWith(client);
+        var response = mock(ResponseInputStream.class);
+        when(response.response()).thenReturn(GetObjectResponse.builder().contentLength(100L).build());
+        when(client.getObject(any(GetObjectRequest.class))).thenReturn(response);
+        try (var ignored = reader.open("synthetic-object")) {
+            // Diagnostic or rejected response closes before reading the object.
+        }
+        verify(response).abort();
+        org.mockito.Mockito.verify(response, org.mockito.Mockito.never()).close();
+    }
+
+    @Test
     void wrapsRemoteFailureWithoutExposingEndpointInMessage() throws Exception {
         S3Client client = mock(S3Client.class);
         OssObjectReader reader = readerWith(client);

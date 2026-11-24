@@ -31,10 +31,15 @@ public class OssObjectReader {
 
     public InputStream open(String objectKey) throws IOException {
         try {
-            var response = client().getObject(GetObjectRequest.builder()
-                    .bucket(properties.getBucket()).key(objectKey).build());
+            S3Client current = client();
+            Duration timeout = SourceOpenBudget.limit(Duration.ofSeconds(120));
+            var response = current.getObject(GetObjectRequest.builder()
+                    .bucket(properties.getBucket()).key(objectKey)
+                    .overrideConfiguration(config -> config.apiCallTimeout(timeout)
+                            .apiCallAttemptTimeout(timeout.compareTo(Duration.ofSeconds(60)) < 0 ? timeout : Duration.ofSeconds(60)))
+                    .build());
             Long length = response.response().contentLength();
-            return ImageReadStream.withLength(response, length == null ? -1L : length);
+            return ImageReadStream.withLength(new OssResponseStream(response), length == null ? -1L : length);
         } catch (RuntimeException exception) {
             throw new IOException("OSS 图片读取失败", exception);
         }
@@ -42,8 +47,13 @@ public class OssObjectReader {
 
     public long size(String objectKey) throws IOException {
         try {
-            return client().headObject(HeadObjectRequest.builder()
-                    .bucket(properties.getBucket()).key(objectKey).build()).contentLength();
+            S3Client current = client();
+            Duration timeout = SourceOpenBudget.limit(Duration.ofSeconds(120));
+            return current.headObject(HeadObjectRequest.builder()
+                    .bucket(properties.getBucket()).key(objectKey)
+                    .overrideConfiguration(config -> config.apiCallTimeout(timeout)
+                            .apiCallAttemptTimeout(timeout.compareTo(Duration.ofSeconds(60)) < 0 ? timeout : Duration.ofSeconds(60)))
+                    .build()).contentLength();
         } catch (RuntimeException exception) {
             throw new IOException("OSS 图片元数据读取失败", exception);
         }
@@ -81,6 +91,7 @@ public class OssObjectReader {
                         AwsBasicCredentials.create(accessKeyId, accessKeySecret)))
                 .httpClientBuilder(ApacheHttpClient.builder()
                         .connectionTimeout(Duration.ofSeconds(30))
+                        .connectionAcquisitionTimeout(Duration.ofSeconds(10))
                         .socketTimeout(Duration.ofSeconds(60))
                         .maxConnections(50))
                 .serviceConfiguration(S3Configuration.builder()

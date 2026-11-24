@@ -1,6 +1,8 @@
 package com.zjcxph.imgapi.storage;
 
 import com.zjcxph.imgapi.entity.PathDO;
+import com.zjcxph.imgapi.config.ArchiveImageSourceProperties;
+import org.springframework.beans.factory.annotation.Autowired;
 import com.zjcxph.imgapi.exception.OssOperationException;
 import software.amazon.awssdk.services.s3.model.S3Exception;
 import io.micrometer.core.instrument.Counter;
@@ -30,10 +32,18 @@ public class ResolvedImageStorage implements ImageStorage {
 
     private final ArchiveImageSourceResolver resolver;
     private final MeterRegistry meterRegistry;
+    private final ArchiveImageSourceProperties properties;
 
     public ResolvedImageStorage(ArchiveImageSourceResolver resolver, MeterRegistry meterRegistry) {
+        this(resolver, meterRegistry, new ArchiveImageSourceProperties());
+    }
+
+    @Autowired
+    public ResolvedImageStorage(ArchiveImageSourceResolver resolver, MeterRegistry meterRegistry,
+                                ArchiveImageSourceProperties properties) {
         this.resolver = resolver;
         this.meterRegistry = meterRegistry;
+        this.properties = properties;
     }
 
     @Override
@@ -59,13 +69,27 @@ public class ResolvedImageStorage implements ImageStorage {
     public record SourceProbe(List<SourceAttempt> attempts, String selectedSource, boolean available, String error) {}
 
     private InputStream open(PathDO image, Consumer<SourceAttempt> observation) throws IOException {
+        try (var budget = SourceOpenBudget.start(properties.getOpenBudget())) {
+            return openWithinBudget(image, observation);
+        }
+    }
+
+    private InputStream openWithinBudget(PathDO image, Consumer<SourceAttempt> observation) throws IOException {
+        SourceOpenBudget.check();
         List<ArchiveImageSource> candidates = resolver.resolveCandidates(image);
         List<Throwable> failures = new ArrayList<>();
         List<String> reasons = new ArrayList<>();
         for (ArchiveImageSource source : candidates) {
+            SourceOpenBudget.check();
             String sourceType = source.describeSource(image);
             try {
                 InputStream stream = source.open(image);
+                try {
+                    SourceOpenBudget.check();
+                } catch (IOException stop) {
+                    try { stream.close(); } catch (IOException | RuntimeException closeFailure) { stop.addSuppressed(closeFailure); }
+                    throw stop;
+                }
                 counter("mrr.archive.image.source.open", sourceType, "success").increment();
                 if (!failures.isEmpty()) {
                     counter("mrr.archive.image.source.fallback", sourceType, "success").increment();
@@ -79,6 +103,8 @@ public class ResolvedImageStorage implements ImageStorage {
                 if (observation != null) {
                     observation.accept(new SourceAttempt(safeSource(sourceType), false, classify(exception)));
                 }
+                stopIfCancelled(exception);
+                SourceOpenBudget.check();
             }
         }
         IOException failure = new IOException(
@@ -91,19 +117,30 @@ public class ResolvedImageStorage implements ImageStorage {
 
     @Override
     public long size(PathDO image) throws IOException {
+        try (var budget = SourceOpenBudget.start(properties.getOpenBudget())) {
+            return sizeWithinBudget(image);
+        }
+    }
+
+    private long sizeWithinBudget(PathDO image) throws IOException {
+        SourceOpenBudget.check();
         List<ArchiveImageSource> candidates = resolver.resolveCandidates(image);
         List<Throwable> failures = new ArrayList<>();
         List<String> reasons = new ArrayList<>();
         for (ArchiveImageSource source : candidates) {
+            SourceOpenBudget.check();
             String sourceType = source.describeSource(image);
             try {
                 long size = source.size(image);
+                SourceOpenBudget.check();
                 counter("mrr.archive.image.source.size", sourceType, "success").increment();
                 return size;
             } catch (IOException | RuntimeException exception) {
                 counter("mrr.archive.image.source.size", sourceType, "failure").increment();
                 failures.add(exception);
                 reasons.add(sourceType + ": " + safeReason(sourceType, exception));
+                stopIfCancelled(exception);
+                SourceOpenBudget.check();
             }
         }
         IOException failure = new IOException(
@@ -112,6 +149,18 @@ public class ResolvedImageStorage implements ImageStorage {
                         : "所有受控图片来源均无法获取文件大小（" + String.join("；", reasons) + "）");
         failures.forEach(failure::addSuppressed);
         throw failure;
+    }
+
+    private void stopIfCancelled(Throwable failure) throws IOException {
+        Set<Throwable> visited = Collections.newSetFromMap(new IdentityHashMap<>());
+        for (Throwable current = failure; current != null && visited.add(current); current = current.getCause()) {
+            if (current instanceof InterruptedException || current instanceof java.nio.channels.ClosedByInterruptException) {
+                Thread.currentThread().interrupt();
+                throw new IOException("影像来源操作已中断", failure);
+            }
+            if (current instanceof SourceOpenBudget.DeadlineExceeded deadline) throw deadline;
+        }
+        SourceOpenBudget.check();
     }
 
     private String safeSource(String source) {
@@ -125,6 +174,7 @@ public class ResolvedImageStorage implements ImageStorage {
             if (current instanceof SourceHttpStatusException http) return httpStatus(http.statusCode());
             if (current instanceof S3Exception s3) return httpStatus(s3.statusCode());
             if (current instanceof OssOperationException oss) return oss.getType().name();
+            if (current instanceof SourceOpenBudget.DeadlineExceeded) return "TIMEOUT";
             if (current instanceof HttpTimeoutException || current instanceof SocketTimeoutException
                     || current instanceof software.amazon.awssdk.core.exception.ApiCallTimeoutException
                     || current instanceof software.amazon.awssdk.core.exception.ApiCallAttemptTimeoutException) return "TIMEOUT";

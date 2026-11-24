@@ -1,10 +1,7 @@
 import { defineFakeRoute } from 'vite-plugin-fake-server/client'
 import { MEDICAL_RECORD_TYPES } from '@/constants/medical-record-types'
-import { createOcrStore } from '../mock-support/ocr-jobs'
-import { demoRecords } from '../mock-support/records'
+import { demoOcrStore as store } from '../mock-support/ocr-runtime'
 import { boundedInt, demoError, demoOk } from '../mock-support/response'
-
-const store = createOcrStore(demoRecords.scans)
 
 export default defineFakeRoute([
   {

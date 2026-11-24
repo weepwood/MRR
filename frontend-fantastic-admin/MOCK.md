@@ -78,3 +78,7 @@ Pages 产物用 CSP 阻止真实 API 连接。已模拟的请求在浏览器内�
 如需撤下已发布的站点，在 **Settings → Pages** 执行 **Unpublish site**，并撤销自动发布变更以避免重新发布。
 
 Nginx 文件浏览器在静态演示中提供样例目录，可预览并下载样例文本。真实存储与文件流请在内网联调环境验证。
+
+## 模拟接口覆盖审计（M1）
+
+`pnpm mock:check` 按 HTTP 方法及动态路径静态对照 `src/api/modules` 与 `src/mock`，分别报告本地与 Pages 匹配、缺失、重复、无法静态解析的位置；`pnpm mock:check --json` 生成结构化报告。它仅检查静态调用，不证明响应契约、业务状态、运行时匹配或所有直接网络请求。历史缺口先报告，避免阻塞无关日常修改；补齐某个模块后，可执行 `pnpm mock:check --strict=operations,database-monitoring,system-errors` 检查指定模块缺失及无法解析的调用。重复注册单独报告，逐步清理。不要添加万能成功响应。运行 `pnpm mock:check:test` 验证提取器边界。现有 `build:pages` 先执行提取器测试与报告，再正常构建；不改 CI 工作流和正式 `build`，历史缺口不阻断构建。后续将已补齐模块的严格验收接入现有 Pages 冒烟。演示始终只用合成数据并保留 CSP 网络隔离。

@@ -15,6 +15,20 @@ public class DataQualityRepairOrderController {
     private final DataQualityRepairOrderService service;
     public DataQualityRepairOrderController(DataQualityRepairOrderService service) { this.service = service; }
 
+    @GetMapping
+    public Result<DataQualityRepairOrderService.Workbench> list(@RequestParam(required=false) Long archiveId,
+            @RequestParam(required=false) Long issueId,@RequestParam(required=false) Long before,HttpServletResponse response) {
+        noStore(response);
+        return Result.success(service.list(archiveId,issueId,before,actor()));
+    }
+
+    @GetMapping("/{id}/events")
+    public Result<java.util.List<DataQualityRepairOrderService.Event>> events(@PathVariable long id,
+            @RequestParam(defaultValue="0") long after,HttpServletResponse response) {
+        noStore(response);
+        return Result.success(service.events(id,after));
+    }
+
     @GetMapping("/{id}")
     public Result<DataQualityRepairOrderService.Order> get(@PathVariable long id, HttpServletResponse response) {
         noStore(response);

@@ -1,5 +1,5 @@
-import type { MigrationJob } from '@/api/modules/oss'
 import type { MockScanRecord } from '../mock-support/records'
+import type { MigrationJob } from '@/api/modules/oss'
 import { defineFakeRoute } from 'vite-plugin-fake-server/client'
 import { migrationSnapshot } from '../mock-support/migration'
 import { demoRecords } from '../mock-support/records'

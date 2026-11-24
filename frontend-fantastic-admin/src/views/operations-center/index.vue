@@ -538,6 +538,22 @@ onMounted(async () => {
               </p>
             </MrrSectionCard>
 
+            <MrrSectionCard v-if="overview.nasRuntime" title="NAS 节点运行状态" description="本进程被动观测 · 不主动探测网络或文件">
+              <p>全局许可 {{ overview.nasRuntime.inUse }} / {{ overview.nasRuntime.limit }}</p>
+              <AppEmpty v-if="!overview.nasRuntime.nodes.length" description="未配置 NAS 节点" />
+              <div v-else class="issue-list">
+                <div v-for="node in overview.nasRuntime.nodes" :key="node.ordinal" class="issue-row">
+                  <div><strong>节点 {{ node.ordinal }}</strong><p>实际占用 {{ node.inUse }} / {{ node.limit }}</p></div>
+                  <el-tag :type="node.state === 'OPEN' ? 'danger' : node.state === 'CLOSED' ? 'info' : 'warning'">
+                    {{ ({ CLOSED: '未熔断', OPEN: '熔断冷却', HALF_OPEN_READY: '等待探针', HALF_OPEN_ACTIVE: '探针进行中' })[node.state] }}
+                  </el-tag>
+                </div>
+              </div>
+              <p class="overview-hint">
+                编号按配置键排序，不显示节点名或路径；未熔断不等于现场可用。
+              </p>
+            </MrrSectionCard>
+
             <div class="two-column-layout">
               <MrrSectionCard title="待处理问题" description="严重问题优先">
                 <AppEmpty

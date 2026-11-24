@@ -31,6 +31,7 @@ public class OperationsCenterService {
     private final MaintenanceModeService maintenanceModeService;
     private final IntegrityDiagnosticsService integrityDiagnosticsService;
     private final OperationsDiagnosticsService diagnosticsService;
+    private com.zjcxph.imgapi.storage.NasArchiveImageSource nasSource;
 
     public OperationsCenterService(
             JdbcTemplate jdbcTemplate,
@@ -46,6 +47,9 @@ public class OperationsCenterService {
         this.diagnosticsService = diagnosticsService;
     }
 
+    @org.springframework.beans.factory.annotation.Autowired
+    void setNasSource(com.zjcxph.imgapi.storage.NasArchiveImageSource source) { this.nasSource = source; }
+
     public Map<String, Object> overview() {
         Map<String, Object> readiness = overviewReadiness(effectiveReadiness(readinessService.getSnapshot()));
         Long recentErrors = recentServerErrorCount();
@@ -60,6 +64,7 @@ public class OperationsCenterService {
         // Older clients expect this object. Full operation details belong to the audit endpoint.
         result.put("latestOperation", Map.of());
         result.put("quickLinks", quickLinks());
+        if (nasSource != null) result.put("nasRuntime", nasSource.runtimeSnapshot());
         return Map.copyOf(result);
     }
 

@@ -25,6 +25,12 @@ final class SourceNodeCircuit {
         this.clock = clock;
     }
 
+    synchronized String state() {
+        if (!open) return "CLOSED";
+        if (probing) return "HALF_OPEN_ACTIVE";
+        return retryAt - clock.getAsLong() > 0 ? "OPEN" : "HALF_OPEN_READY";
+    }
+
     synchronized Attempt begin() throws IOException {
         if (!open) return new Attempt(generation, false);
         if (probing || retryAt - clock.getAsLong() > 0) throw new CircuitOpen();

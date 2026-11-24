@@ -172,3 +172,14 @@ test('索引容量展示区分估算、真实容量与服务器剩余空间', as
   await expect(dashboard.getByText('未取得', { exact: true })).toBeVisible()
   await expect(dashboard.getByText('容量参考按三千万合成实测换算', { exact: false })).toBeVisible()
 })
+
+test('NAS 节点熔断和实际许可状态可见但不显示源地址', async ({ page }) => {
+  const data = { ...snapshot('READ_WRITE'), nasRuntime: { inUse: 1, limit: 2, nodes: [{ ordinal: 1, state: 'OPEN', inUse: 1, limit: 1 }, { ordinal: 2, state: 'HALF_OPEN_ACTIVE', inUse: 0, limit: 1 }] } }
+  await page.route(overviewUrl, route => route.fulfill({ json: { code: 200, data } }))
+  await page.goto('/operations-center')
+  const dashboard = page.locator('.overview-dashboard')
+  await expect(dashboard.getByText('NAS 节点运行状态', { exact: true })).toBeVisible()
+  await expect(dashboard.getByText('全局许可 1 / 2')).toBeVisible()
+  await expect(dashboard.getByText('熔断冷却')).toBeVisible()
+  await expect(dashboard.getByText('探针进行中')).toBeVisible()
+})

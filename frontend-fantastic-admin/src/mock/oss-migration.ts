@@ -1,4 +1,6 @@
+import type { MigrationJob } from '@/api/modules/oss'
 import { defineFakeRoute } from 'vite-plugin-fake-server/client'
+import { boundedInt, demoError, demoPage } from '../mock-support/response'
 
 function ok<T>(data: T, message = '操作成功') {
   return {
@@ -30,7 +32,7 @@ const waitingRecords = Array.from({ length: 8 }, (_, index) => ({
   migrationErrorCode: 'MISSING_SJH',
 }))
 
-const jobs = [
+const jobs: MigrationJob[] = [
   {
     id: 12,
     status: 'completed',
@@ -57,6 +59,8 @@ const jobs = [
     completedAt: new Date(Date.now() - 82_000_000).toISOString(),
   },
 ]
+
+let nextJobId = 13
 
 const logs = [
   {
@@ -225,16 +229,24 @@ export default defineFakeRoute([
       ossConfigured: true,
       sourcePathConfigured: true,
       sourcePathReadable: true,
-      noActiveJob: true,
+      noActiveJob: !jobs.some(job => ['pending', 'running', 'cancelling'].includes(job.status ?? '')),
       pendingCount: 18,
       sampleSize: 18,
       sampleReadableCount: 17,
       sampleMissingCount: 1,
       sampleInvalidCount: 0,
       recommendedMode: 'pilot',
-      recommendedAction: '先迁移 100 至 500 张真实图片，核对访问、下载与日志后再扩大批次',
+      recommendedAction: '演示：先创建小批量模拟迁移任务，不访问真实存储',
       warnings: ['模拟数据中保留 1 条缺失文件，用于展示失败处理提示'],
     }),
+  },
+  {
+    url: '/api/v1/oss/migration/pending',
+    response: ({ query }) => {
+      const filtered = pendingRecords.filter(item => !query?.folder || item.folder === query.folder)
+      const limit = boundedInt(query?.limit, 100, 500)
+      return ok({ list: filtered.slice(0, limit), total: filtered.length, limit })
+    },
   },
   {
     url: '/api/v1/oss/migration/pending-folders',
@@ -254,49 +266,57 @@ export default defineFakeRoute([
   {
     url: '/api/v1/oss/migration/jobs',
     method: 'get',
-    response: ({ query }) => ok({
-      list: jobs,
-      total: jobs.length,
-      page: Number((query as Record<string, unknown>)?.page || 1),
-      size: Number((query as Record<string, unknown>)?.size || 20),
-      totalPages: 1,
-    }),
+    response: ({ query }) => ok(demoPage(jobs, query?.page, query?.size)),
   },
   {
     url: '/api/v1/oss/migration/jobs',
     method: 'post',
-    response: ({ body }) => ok({
-      id: 13,
-      status: 'pending',
-      ...(body as Record<string, unknown>),
-      totalCount: Number((body as Record<string, unknown>)?.limit || 500),
-      processedCount: 0,
-      failedCount: 0,
-      rate: 0,
-      createdBy: 'admin',
-      createdAt: new Date().toISOString(),
-    }, '迁移任务已创建'),
+    response: ({ body }) => {
+      const mode = String(body?.mode ?? '')
+      if (!['pilot', 'batch', 'full'].includes(mode)) {
+        return demoError(400, '无效的演示迁移模式')
+      }
+      const active = jobs.find(job => ['pending', 'running', 'cancelling'].includes(job.status ?? ''))
+      if (active) {
+        return ok({ ...active, reused: true })
+      }
+      const job: MigrationJob = {
+        id: nextJobId++,
+        status: 'pending',
+        mode,
+        scopeValue: String(body?.folder ?? '').slice(0, 100),
+        totalCount: boundedInt(body?.limit, 500, 10000),
+        processedCount: 0,
+        failedCount: 0,
+        rate: 0,
+        createdBy: 'admin',
+        createdAt: new Date().toISOString(),
+      }
+      jobs.unshift(job)
+      return ok(job, '演示迁移任务已创建')
+    },
   },
   {
     url: '/api/v1/oss/migration/jobs/:id/cancel',
     method: 'post',
-    response: ({ params }) => ok({
-      id: Number((params as Record<string, string>).id),
-      status: 'cancelling',
-      mode: 'pilot',
-      totalCount: 500,
-      processedCount: 120,
-      failedCount: 1,
-      rate: 24,
-      cancelRequested: true,
-    }, '已提交安全取消请求'),
+    response: ({ params }) => {
+      const job = jobs.find(item => item.id === Number(params.id))
+      if (!job) { return demoError(404, '演示任务不存在') }
+      if (job.status !== 'pending' && job.status !== 'running') {
+        return demoError(409, '演示任务当前不可取消')
+      }
+      job.status = 'cancelled'
+      job.cancelRequested = true
+      job.completedAt = new Date().toISOString()
+      return ok(job, '演示任务已取消')
+    },
   },
   {
     url: '/api/v1/oss/migration/jobs/:id',
-    response: ({ params }) => ok({
-      ...jobs[0],
-      id: Number((params as Record<string, string>).id),
-    }),
+    response: ({ params }) => {
+      const job = jobs.find(item => item.id === Number(params.id))
+      return job ? ok(job) : demoError(404, '演示任务不存在')
+    },
   },
   {
     url: '/api/v1/oss/migration/management/logs',
@@ -306,13 +326,7 @@ export default defineFakeRoute([
         return (!request.status || item.migrationStatus === request.status)
           && (!request.scanId || item.scanId === Number(request.scanId))
       })
-      return ok({
-        list: filtered,
-        total: filtered.length,
-        page: Number(request.page || 1),
-        size: Number(request.size || 20),
-        totalPages: 1,
-      })
+      return ok(demoPage(filtered, request.page, request.size))
     },
   },
   {

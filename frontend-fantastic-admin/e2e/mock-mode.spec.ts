@@ -28,6 +28,27 @@ test.describe('无后端 Mock 模式', () => {
     expect(analysis.data.slowEndpoints.length).toBeGreaterThan(0)
   })
 
+  test('OSS 模拟接口只有一个实现且任务状态可以回读', async ({ request }) => {
+    const stats = await (await request.get('/proxy/api/v1/oss/migration/statistics')).json()
+    expect(stats.data.waitingSjhCount).toBe(8)
+    const upload = await (await request.post('/proxy/api/v1/oss/upload', { data: { scanIds: [1, 7] } })).json()
+    expect(upload.data.results).toHaveLength(2)
+    expect(upload.data.success).toBe(1)
+    expect(upload.data.failed).toBe(1)
+    const job = await (await request.post('/proxy/api/v1/oss/migration/jobs', { data: { mode: 'pilot', limit: 5 } })).json()
+    expect(job.data.status).toBe('pending')
+    const id = job.data.id
+    const list = await (await request.get('/proxy/api/v1/oss/migration/jobs?page=1&size=1')).json()
+    expect(list.data.list).toHaveLength(1)
+    expect(list.data.list[0].id).toBe(id)
+    const cancelled = await (await request.post(`/proxy/api/v1/oss/migration/jobs/${id}/cancel`)).json()
+    expect(cancelled.data.status).toBe('cancelled')
+    const detail = await (await request.get(`/proxy/api/v1/oss/migration/jobs/${id}`)).json()
+    expect(detail.data.status).toBe('cancelled')
+    const missing = await (await request.get('/proxy/api/v1/oss/migration/jobs/999999')).json()
+    expect(missing.code).toBe(404)
+  })
+
   test('支持条件查询和内存写入', async ({ request }) => {
     const filteredResponse = await request.post('/proxy/api/v1/scan/page/condition?page=1&size=20', {
       data: { btype: 1 },

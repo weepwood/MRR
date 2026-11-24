@@ -4,7 +4,7 @@
 
 ## PR 快速验证
 
-main 仅要求两个 GitHub Actions App（15368）绑定状态：`governance`、`pr-gate`。2026-11-24 维护者确认关闭 strict 与 stale approval，仓库目标按 [分支保护实施记录](main-branch-protection.md) 同步；此前 strict=true 仅是历史策略。管理员受限、解决审查对话、线性历史、禁止强推和删除保持不变。P0/P1 主动同步最新 main、验证实际合并树并独立审查最新 SHA；普通独立 P2/P3 不因无关主线更新强制重测。后续 CI 去重不会取消这两项门禁。
+main 仅要求两个 GitHub Actions App（15368）绑定状态：`governance`、`pr-gate`。2026-11-24 维护者确认关闭 strict 与 stale approval，仓库目标按 [分支保护实施记录](main-branch-protection.md) 同步；此前 strict=true 仅是历史策略。管理员受限、解决审查对话、线性历史、禁止强推和删除保持不变。P0/P1 主动同步最新 main、验证实际合并树并按 AGENTS.md 5.5 审查最新 SHA；普通独立 P2/P3 不因无关主线更新强制重测。后续 CI 去重不会取消这两项门禁。
 
 `quality-gate.yml` 的 scope job 一次计算完整改动范围，并执行版本/迁移基线、focused test 和活跃主分支引用检查。CI/脚本/基线变化额外执行仓库 Python 测试。范围计算或静态检查失败都阻断。
 
@@ -32,7 +32,7 @@ Service 保守进入 PostgreSQL 范围，因为仅凭路径无法证明没有事
 
 普通 PR 不运行完整 Mock Playwright 或真实浏览器 E2E。关键前端流程仍执行类型检查、变更 lint 和前端全量单测；后端高风险路径保留 PostgreSQL 集成测试。main 对选中的应用集成执行真实 JWT/PostgreSQL/JAR 浏览器联调；普通前端展示层的重复集成延后到手动或发布验收。完整发布候选执行全量 Mock E2E、真实联调与 Windows 恢复验收。
 
-P3 PR 可省略 AI 参与报告，正文保留变更、关联原因、风险、验证与回滚。P0/P1 必须关联 Issue/提案并记录独立审查；隐私和历史迁移硬门禁不减。
+P3 PR 可省略 AI 参与报告，正文保留变更、关联原因、风险、验证与回滚。P0/P1 必须关联 Issue/提案并记录符合 AGENTS.md 5.5 的证据化审查；隐私和历史迁移硬门禁不减。
 
 ## main 按风险去重与手动集成（#717）
 
@@ -44,7 +44,7 @@ main push 执行同一 quality-gate，使用 `--mode main` 查询此前成功的
 
 同一 main 分支取消旧运行，集中验证最新提交。这些检查不成为其他 PR 的合并前置。正式发布 admission 仍要求本次固定 SHA 的 main push quality-gate 成功（可能是轻量范围），并在 Release 中独立执行完整候选验收，不能以轻量检查代替。手动运行 quality-gate 使用 `--mode integration` 检查整棵树，不读取轻量 push 的历史基线；需要完整发布包、覆盖率或全部 E2E 时使用 Release dry-run。
 
-本次不修改远程分支保护、governance/pr-gate 或独立审查要求。维护者已确认采用宽松同步策略，目标配置及脚本由 #719/#720 单独同步；高风险或存在相关依赖变化的 PR 仍主动同步最新 main 并验证实际合并树，不能复用未验证的新合并树的旧状态。
+本次不修改远程分支保护或 governance/pr-gate。#720 已合入宽松同步目标及脚本；根据维护者 2026-11-24 自主审查授权，同步 AGENTS.md 5.5 及治理文档：优先独立审查，不能取得时允许记录真实的 AI 自审证据，不等待额外人工审批；不减少必需验证。高风险或存在相关依赖变化的 PR 仍主动同步最新 main 并验证实际合并树，不能复用未验证的新合并树的旧状态。
 
 ## 正式发布
 

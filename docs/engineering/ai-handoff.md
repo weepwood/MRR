@@ -86,6 +86,7 @@
 
 - #230 P1 分支 `fix/230-gateway-pending-stream`（专属 worktree `/Volumes/data/Project/MRR-worktrees/230-gateway-pending-stream`），从 main 3bc4a36c 建立。异步调度拒绝前已打开上游影像流，原回调未运行导致资源泄漏。e6967007 实际 RED 4项/1失败；a204eed7 采用 Spring MVC CallableProcessingInterceptor 与原 try-with-resources 所有权交接，完成/超时/错误时仅关闭尚未被任务领取的流；外部未启动任务记录一次 FAILED 审计，晚到任务不再读流。GREEN 14项，扩展26项均零失败/错误/跳过。最新 P1 CI 待核验。
 - 保留既有权限、票据、审计、来源顺序和 direct 默认配置。已开始的任务仍负责关闭源，不提前释放许可。真实 Tomcat 客户端断开、现场并发和大文件 Range 未验收；当前网关为全量200流，不伪造206。遗留 OSS 管理签名URL及直连页面需区分管理端与受控病案下发，单独核对兼容。回滚独立 revert。
+- #230 P1 分支 `fix/230-active-legacy-image-urls`，worktree `/Volumes/data/Project/MRR-worktrees/230-active-legacy-image-urls`。fb6836af 实际 RED 40项/2失败：软删除影像仍返回普通URL和OSS签名。修复复用 ScanService/ScanMapper.findActiveByIds，不读缓存的无过滤记录；普通URL、旧OSS跳转和单记录签名拒绝删除/不存在/非法ID，有效记录保留原行为。扩展66项全部通过；新增实际 PG16 有效/删除记录查询测试，最新CI待执行。遗留四段路径 `/api/v1/img/image/{BAH}/{BRXH}/{FOLDER}/{FILENAME}` 仍使用路径参数，开发者兼容允许名单依赖此入口；不得在没有调用方证据时直接关闭，下一步设计有界有效记录定位/受控退役及日志脱敏。OSS目录浏览/迁移日志签名与普通调阅分开核对。影像网关当前流式200，不支持Range；导出文件的 HttpByteRange 依赖可随机访问文件，不直接复用到未验证的多来源流。后续应按实际所选来源长度和能力支持单区间、416/If-Range、断开关闭及鉴权审计，不做无界跳读或虚假206。回滚独立 revert。
 
 ## 每轮交接模板
 

@@ -139,6 +139,10 @@
 - #230/#350 P1，分支 `fix/230-http-body-idle-timeout`，worktree `/Volumes/data/Project/MRR-worktrees/230-http-body-idle-timeout`。e5dc75a0 实际RED 2项1错误：loopback HTTP 返回响应头及首字节后停发，原BodyHandlers.ofInputStream读取不能在3秒内完成。7e4668bd 用JDK BodySubscriber单次需求、2项有界事件队列、空闲读取超时，复用各节点既有readTimeout，取消subscription，不新增每读工作线程；保留实际长度、资源许可、认证和来源顺序。24项回归通过。
 - 增加真实AWS SDK loopback S3协议响应首字节后停发、部分读取关闭abort、下一对象在5秒内读取，非生产凭据/服务；扩展28项零失败/错误/跳过，原始测试 /tmp/mrr-http-oss-final.log。仅证明本机HTTP/SDK路径，并非真实Nginx/NAS/OSS多节点连接池压力或正文网络写硬截止。网络来源按节点熔断待#773合并后复用其状态逻辑，避免建立第二套机制。同步main dae8bef7，最新CI待验收；独立revert，无生产改动。
 
+## 03 缓存多键并发实库回归（2026-11-25）
+
+- #99/#350 P1，`test/99-scan-cache-concurrency`，worktree `/Volumes/data/Project/MRR-worktrees/99-scan-cache-concurrency`。#774 已合并 f2056cdd，head6345e19a、governance45430947318、quality45430948538，1157单测/146 PG16均通过，CI冷8→1、热0。新增不同键独立加载回归，本地ScanServiceCacheTest 10项零失败/错误/跳过；新增真实PG16 MyBatis+Spring Cache 两键16线程/64请求、两轮共128次、实际导入提交后更新可见的测试。本地单独PG16启动命令被工具安全检查拦截，未绕过，新集成用例待CI真实执行，不能宣称已通过。仅测试，独立revert，无生产操作。
+
 ## 每轮交接模板
 
 - 更新时间、任务、风险、目标及非目标：

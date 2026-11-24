@@ -4,6 +4,7 @@ import { useDocumentVisibility, useIntervalFn } from '@vueuse/core'
 import { ElMessage } from 'element-plus'
 import { computed, onMounted, reactive, ref, watch } from 'vue'
 import { actOnOcrBatch, createOcrBatch, listOcrBatches, listOcrBatchJobs, previewOcrBatch, previewOcrRollback, rollbackOcrBatchPage } from '@/api/modules/ocr-batches'
+import AppEmpty from '@/components/AppEmpty/index.vue'
 import MrrDataTablePanel from '@/components/MrrDataTablePanel/index.vue'
 import MrrPageHeader from '@/components/MrrPageHeader/index.vue'
 import MrrPageShell from '@/components/MrrPageShell/index.vue'
@@ -209,6 +210,10 @@ async function skipRollbackPage() {
       </template>
 
       <el-table :data="batches">
+        <!-- 成功但为空走共享空态（DESIGN.md §5.1），不用 el-table 默认「暂无数据」 -->
+        <template #empty>
+          <AppEmpty size="compact" description="暂无批次记录，可在上方创建" />
+        </template>
         <el-table-column prop="id" label="批次" min-width="200" show-overflow-tooltip>
           <template #default="{ row }">
             <span class="ocr-batches__mono">{{ row.id }}</span>
@@ -234,7 +239,7 @@ async function skipRollbackPage() {
         </el-table-column>
         <el-table-column prop="autoAppliedCount" label="自动归类" min-width="90" align="right" />
         <el-table-column prop="reviewRequiredCount" label="待审核建议" min-width="104" align="right" />
-        <el-table-column prop="cursorId" label="续跑游标" min-width="110">
+        <el-table-column prop="cursorId" label="续跑起点" min-width="110">
           <template #default="{ row }">
             <span class="ocr-batches__mono">{{ row.cursorId }}</span>
           </template>

@@ -542,7 +542,7 @@ onMounted(refreshAll)
         <el-table-column prop="type" label="类型" width="100" />
         <el-table-column prop="pages" label="页数" width="80" sortable="custom" />
         <el-table-column prop="openerNo" label="操作员" width="100" />
-        <el-table-column prop="cid" label="CID" min-width="120" show-overflow-tooltip />
+        <el-table-column prop="cid" label="设备 ID（CID）" min-width="120" show-overflow-tooltip />
       </el-table>
 
       <template v-if="!listError" #pagination>

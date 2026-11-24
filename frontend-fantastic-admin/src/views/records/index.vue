@@ -193,7 +193,7 @@ function typeLabel(value: unknown) {
       size="compact"
       title="记录管理"
       eyebrow="Scan Records"
-      description="按完整编号检索扫描记录，采用游标读取；病案号、上架号兼容原始前导零。"
+      description="按完整编号检索扫描记录，结果分批加载、显示批次位置与已加载数量，不做总数估算；病案号、上架号兼容原始前导零。"
     />
 
     <!-- 三项都是当前批次的状态量，用紧凑摘要即可；原来三张 110px 高的指标卡把结果表推到首屏以下。 -->

@@ -178,6 +178,7 @@ public class ResolvedImageStorage implements ImageStorage {
             if (current instanceof HttpTimeoutException || current instanceof SocketTimeoutException
                     || current instanceof software.amazon.awssdk.core.exception.ApiCallTimeoutException
                     || current instanceof software.amazon.awssdk.core.exception.ApiCallAttemptTimeoutException) return "TIMEOUT";
+            if (current instanceof NasNodeCircuit.CircuitOpen) return "SOURCE_CIRCUIT_OPEN";
             if (current instanceof SourcePermitGuard.CapacityException) return "SOURCE_BUSY";
             if (current instanceof InterruptedException) return "INTERRUPTED";
             if (current instanceof InvalidImagePathException) return "INVALID_PATH";

@@ -123,6 +123,12 @@
 - #230/#350 P1，分支 `fix/230-image-transfer-budget`，worktree `/Volumes/data/Project/MRR-worktrees/230-image-transfer-budget`，56d2ccc4 实际RED 5项/1失败（超过截止时间返回的字节仍写出）；4c60fc59 采用单调时钟及16KiB逐块读写、前后预算/中断检查，默认 `ARCHIVE_IMAGE_SOURCE_TRANSFER_BUDGET=PT120S`，从构造响应起含异步等待。d04011ce 同步 main 20d29651 保留打开/正文两项配置，最终35项零失败/错误/跳过；外部失败审计与流关闭保留。所有网关含旧路径复用现有协议。
 - 预算为协作式截止，不能强行结束已阻塞的原生读、网络写或close；已提交的响应不能改写为新HTTP错误。未完成真实Tomcat/Windows/NAS/OSS中断、连接池及大文件压力验收。无权限、来源顺序或生产配置变更，独立revert。#770已合并20d29651，最新165c0558，governance45426949813、quality45426949942，1150单测、146 PG16均零失败/错误/跳过。
 
+## 04.3 NAS原生打开隔离与节点熔断（2026-11-24）
+
+- #230/#350 P1，分支 `fix/230-nas-open-isolation`，worktree `/Volumes/data/Project/MRR-worktrees/230-nas-open-isolation`。25a46204 实际RED 4项1错误（等待原生模拟阻塞的请求未及时返回）；cfaa8930 有界独立线程池与每配置节点槽位，默认 `ARCHIVE_IMAGE_SOURCE_NAS_OPEN_TIMEOUT=PT30S` 且受打开共享预算约束，取消/超时后迟到结果由工作线程关闭，源许可不提前释放。全局工作线程上限沿用nasMaxConcurrency，节点槽位按配置节点数分配（至少1）；节点数超过全局工作线程数时不能保证每个健康节点有独立线程。
+- ce29e67f 仅对NAS实际进入原生调用后的超时计数，默认3次超时/30秒冷却/单探针半开；成功恢复，旧代际不改变新状态，文件缺失、访问拒绝、未开始I/O的排队或许可饱和不触发熔断，半开中性结果不证明恢复。状态局限于本进程配置节点，重启清零，固定安全分类，不泄露根目录。
+- 同步main 20d29651 后联合34项出现2错误，其中真实原因是成功交接后节点槽位释放竞争，另一个为Mockito连带未完成stub；b70abe57 以一次性释放及调用方成功移交同步处理，保留原资源许可，最终34项零失败/错误/跳过。首轮26项与熔断28项通过。真实Windows/NAS native阻塞、正文read/write/close不可中断、更多节点并发、网络源熔断尚未验收，不承诺操作系统硬取消。独立revert，无生产配置、来源顺序或权限修改。#770已合并20d29651，最新165c0558，1150单测/146 PG16通过；本PR最新CI待核验。
+
 ## 04.3 HTTP/Nginx 正文停发及实际SDK中止（2026-11-24）
 
 - #230/#350 P1，分支 `fix/230-http-body-idle-timeout`，worktree `/Volumes/data/Project/MRR-worktrees/230-http-body-idle-timeout`。e5dc75a0 实际RED 2项1错误：loopback HTTP 返回响应头及首字节后停发，原BodyHandlers.ofInputStream读取不能在3秒内完成。7e4668bd 用JDK BodySubscriber单次需求、2项有界事件队列、空闲读取超时，复用各节点既有readTimeout，取消subscription，不新增每读工作线程；保留实际长度、资源许可、认证和来源顺序。24项回归通过。

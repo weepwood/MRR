@@ -188,6 +188,47 @@ class NasArchiveImageSourceTest {
     }
 
     @Test
+    void consecutiveBodyFailuresTripNodeDespiteSuccessfulOpensAndPreserveHealthyNode() throws Exception {
+        var properties = new ArchiveImageSourceProperties();
+        properties.setNasMaxConcurrency(2);
+        properties.setAcquireTimeout(Duration.ofMillis(200));
+        properties.setNasOpenTimeout(Duration.ofSeconds(1));
+        properties.setNasBodyTimeout(Duration.ofMillis(200));
+        var node = new ArchiveImageSourceProperties.NasNode();
+        node.setRoot(tempDir.toString());
+        properties.setNasNodes(Map.of("bad", node, "good", node));
+        var opens = new java.util.concurrent.atomic.AtomicInteger();
+        var closes = new java.util.concurrent.atomic.AtomicInteger();
+        var source = new NasArchiveImageSource(properties) {
+            @Override java.io.InputStream openFile(PathDO image) {
+                if ("good".equals(image.getSourceNode())) return new java.io.ByteArrayInputStream(new byte[]{7});
+                opens.incrementAndGet();
+                return new java.io.InputStream() {
+                    @Override public int read() throws IOException {
+                        throw new java.net.SocketTimeoutException("synthetic native body timeout");
+                    }
+                    @Override public void close() { closes.incrementAndGet(); }
+                };
+            }
+        };
+        var bad = new PathDO(); bad.setSourceType("NAS"); bad.setSourceNode("bad");
+        var good = new PathDO(); good.setSourceType("NAS"); good.setSourceNode("good");
+        try {
+            for (int i = 0; i < 3; i++) {
+                try (var input = source.open(bad)) {
+                    assertThatThrownBy(input::read).isInstanceOf(java.net.SocketTimeoutException.class);
+                }
+                long until = System.nanoTime() + Duration.ofSeconds(2).toNanos();
+                while (closes.get() <= i && System.nanoTime() < until) Thread.sleep(5);
+                assertThat(closes.get()).isEqualTo(i+1);
+            }
+            assertThatThrownBy(() -> source.open(bad)).isInstanceOf(SourceNodeCircuit.CircuitOpen.class);
+            assertThat(opens.get()).isEqualTo(3);
+            try (var input = source.open(good)) { assertThat(input.read()).isEqualTo(7); }
+        } finally { source.shutdown(); }
+    }
+
+    @Test
     void blockedNativeCloseRetainsPermitAndRecoversAfterActualCompletion() throws Exception {
         var properties = new ArchiveImageSourceProperties();
         properties.setNasMaxConcurrency(1);

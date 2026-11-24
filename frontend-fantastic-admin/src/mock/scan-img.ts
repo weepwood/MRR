@@ -13,8 +13,8 @@ import { demoRecords } from '../mock-support/records'
  *
  * 可访问区间由页面写死为 [00787327, 00855320]（views/scan-img/index.vue）。
  *
- * 用法：pnpm dev:mock 后打开 /idcard/000000200001010001（pages 模式为 /#/idcard/...）；
- * 打开 /idcard/000000200001010002 可验证无病案空态。
+ * 用法：pnpm dev:mock 后打开 /idcard，在表单输入合成号码 000000200001010001；
+ * 输入合成号码 000000200001010002 可验证无病案空态；旧深链保留兼容。
  *
  * 档案袋：打开 /archive?bah=00800001（14 张、4 个类型，可全屏看图、改分类、收藏）；
  * 共享扫描记录（如 SJH 90000001）也可查询档案袋；未知编号返回空结果。
@@ -185,6 +185,15 @@ export default defineFakeRoute([
       }
       item.favorite = Boolean(body?.favorite)
       return ok('ok')
+    },
+  },
+  {
+    url: '/api/v1/search/getBAHByID',
+    method: 'POST',
+    response: ({ body }) => {
+      const idCard = String(body?.idCard ?? '')
+      if (!/^\d{15}(?:\d{2}[0-9X])?$/i.test(idCard)) { return { code: 400, message: '身份证号格式不正确', data: null } }
+      return ok(idCard === MOCK_SCAN_IMG_ID_CARD ? records : [])
     },
   },
   {

@@ -2,6 +2,7 @@ package com.zjcxph.imgapi.controller;
 
 import com.zjcxph.imgapi.annotation.RequirePermissions;
 import com.zjcxph.imgapi.common.Result;
+import com.zjcxph.imgapi.dto.req.IdCardQueryRequest;
 import com.zjcxph.imgapi.dto.resp.PageResult;
 import com.zjcxph.imgapi.dto.resp.PatientAnalyticsSummary;
 import com.zjcxph.imgapi.dto.resp.PatientImportResult;
@@ -17,16 +18,20 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.servlet.http.HttpServletResponse;
+import jakarta.validation.Valid;
 import org.apache.poi.ss.usermodel.Row;
 import org.apache.poi.ss.usermodel.Sheet;
 import org.apache.poi.xssf.streaming.SXSSFWorkbook;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.MediaType;
+import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
@@ -158,10 +163,20 @@ public class PatientController {
         return Result.<List<Patient>>success().data(patients);
     }
 
-    @Operation(summary = "根据身份证号查询患者信息")
+    @Deprecated
+    @Operation(summary = "旧身份证路径查询已退役")
     @GetMapping("/idcard/{idCard}")
-    public Result<List<Patient>> getByIdCard(@PathVariable String idCard) {
-        List<Patient> patients = searchMapper.findBAHByIDCard(idCard);
+    @ResponseStatus(HttpStatus.GONE)
+    public Result<List<Patient>> retiredIdCardLookup() {
+        return Result.fail(410, "旧身份证路径查询已停用，请使用 POST /api/v1/patients/idcard");
+    }
+
+    @Operation(summary = "根据身份证号查询患者信息（请求体）")
+    @PostMapping("/idcard")
+    public Result<List<Patient>> getByIdCard(@Valid @RequestBody IdCardQueryRequest request,
+                                            HttpServletResponse response) {
+        response.setHeader("Cache-Control", "private, no-store");
+        List<Patient> patients = searchMapper.findBAHByIDCard(request.getIdCard());
         return Result.<List<Patient>>success().data(patients);
     }
 

@@ -41,7 +41,9 @@ export function createOcrBatchStore(scans: readonly MockScanRecord[], ocr: Retur
     for (const work of batches) {
       const { batch } = work
       if (!['RUNNING', 'PAUSED'].includes(batch.status)) { continue }
-      const children = work.children.map(id => ocr.job(id, now)).filter(job => job !== undefined)
+      const children = work.children
+        .map(id => ocr.job(id, now))
+        .filter(job => job !== undefined)
       batch.processedCount = children.reduce((sum, job) => sum + job.processedCount, 0)
       batch.successCount = children.reduce((sum, job) => sum + job.ocrSuccessCount, 0)
       batch.failedCount = children.reduce((sum, job) => sum + job.failedCount, 0)

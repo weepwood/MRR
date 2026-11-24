@@ -16,7 +16,15 @@ import software.amazon.awssdk.services.s3.model.S3Exception;
 
 /** Reuse the same circuit state machine as NAS; account for the actual network body lifecycle. */
 final class NetworkSourceCircuit {
-    private final SourceNodeCircuit circuit = new SourceNodeCircuit(3, Duration.ofSeconds(30), System::nanoTime);
+    private final SourceNodeCircuit circuit;
+
+    NetworkSourceCircuit() {
+        this(new SourceNodeCircuit(3, Duration.ofSeconds(30), System::nanoTime));
+    }
+
+    NetworkSourceCircuit(SourceNodeCircuit circuit) {
+        this.circuit = java.util.Objects.requireNonNull(circuit);
+    }
 
     InputStream open(SourcePermitGuard.InputStreamSupplier operation) throws IOException {
         var attempt = circuit.begin();

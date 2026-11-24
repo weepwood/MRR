@@ -33,3 +33,11 @@
 ## 2026-11-24：扫描游标预算补齐
 
 关联 #99、#350，P1。main e0ea092，分支 perf/99-scan-cursor-budget，无本地 worktree（GitHub API 专属分支）。调查确认旧五个语句和条件游标已有显式3秒时限，无条件 findAfterId 尚无。保留谓词、排序、LIMIT、请求参数、结果及权限；仅添加 @Options(timeout = 3)。不新增索引，不改变全局超时、Flyway 或生产配置。测试先提交 f9b2a68，RED 未实际执行；扩展既有配置测试和真实 PG16 锁等待参数化测试，覆盖两类游标、57014、释放锁后同连接恢复。最新 CI 待验收。独立 revert 将恢复无条件游标旧时限语义。此批控制阻塞资源占用，并非等量性能提速证据，三千万行实测仍由 #350 完成。
+
+#756 最终验收：合并 f836ff3，head 2e36613，governance 45407989735、quality 45407989745 成功；实际 PostgreSQL16 136项，失败0、错误0、跳过0，其中 ScanLegacyQueryTimeoutPostgresqlIT 7项全部通过。未执行等量医院负载或正式发布。
+
+## 2026-11-24：03.2 非空短末页精确计数
+
+关联 #99、#350，P1，基线 f836ff3，分支 perf/99-scan-last-page-count。现有 ScanController 两条旧 OFFSET 入口只在短首页避免 COUNT，查询与 count 的条件一致（无条件列表与空 ScanRequest；条件列表与相同 ScanRequest）。非空短后续页证明该 SELECT 快照中的总数为 offset+rows；空后续页无法证明精确总数，满页也必须 COUNT。使用 long 计算偏移量，在访问现有 int Mapper 前拒绝超出 int 范围的请求，避免整数回绕；使用原 IllegalArgumentException → 400 机制。其他分页模块与现有工具不改。保持权限、响应形状、原 LIKE/编号语义、排序、3秒预算、历史迁移及缓存；不假设跨请求稳定快照，不伪造精确计数，不限制合法深页的实际可表示范围。
+
+测试先提交 7492b24，RED 未实际执行。控制器单测覆盖两条非空短末页、满页和空后续页、溢出拒绝且无数据库访问；真实 PG16 插入合成记录验证有条件末页与同谓词 COUNT 一致并证明空后续页不能推导总数。最新 CI 待核验，独立 revert，无数据库结构或生产配置变化，无本地 worktree。等量性能及实际减少 COUNT 次数仍需 #350 现场证据。

@@ -188,7 +188,7 @@ public class ScanController {
             @RequestParam(defaultValue = "10") int size) {
         PaginationUtils.validatePageParams(page, size);
         List<Scan> scans = scanService.findAllWithPagination(page, size);
-        long total = scanService.countByCondition(new ScanRequest());
+        long total = totalForLegacyPage(scans, new ScanRequest(), page, size);
         return Result.success(PageResult.of(scans, total, page, size));
     }
 
@@ -213,8 +213,18 @@ public class ScanController {
             @RequestBody ScanRequest request) {
         PaginationUtils.validatePageParams(page, size);
         List<Scan> scans = scanService.findByConditionWithPagination(request, page, size);
-        long total = scanService.countByCondition(request);
+        long total = totalForLegacyPage(scans, request, page, size);
         return Result.success(PageResult.of(scans, total, page, size));
+    }
+
+    /**
+     * Only a short first page establishes the exact total from that SELECT's
+     * snapshot. A full page or any later page still needs the legacy count.
+     */
+    private long totalForLegacyPage(List<Scan> scans, ScanRequest request, int page, int size) {
+        return page == 1 && scans.size() < size
+                ? scans.size()
+                : scanService.countByCondition(request);
     }
 
     @Operation(summary = "批量下载病案图片（ZIP，流式传输）")

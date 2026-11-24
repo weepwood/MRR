@@ -287,7 +287,8 @@ async function handleExportTable() {
   if (!filters || !canExportList.value || exportLoading.value) {
     return
   }
-  const scope = listSearchYear.value || 'all'
+  const year = filters.startDate?.slice(0, 4)
+  const scope = year && filters.startDate === `${year}-01-01` && filters.endDate === `${year}-12-31` ? year : 'all'
   exportLoading.value = true
   try {
     const response = await exportStatisticsCsv(filters)

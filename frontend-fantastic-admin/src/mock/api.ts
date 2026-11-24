@@ -2,7 +2,7 @@ import type { MockScanRecord } from '../mock-support/records'
 import { defineFakeRoute } from 'vite-plugin-fake-server/client'
 import { MEDICAL_RECORD_TYPES } from '@/constants/medical-record-types'
 import { demoClock } from '../mock-support/clock'
-import { demoRecords } from '../mock-support/records'
+import { demoRecords, matchesLegacyScan } from '../mock-support/records'
 
 type QueryValue = string | string[] | undefined
 
@@ -546,12 +546,15 @@ export default defineFakeRoute([
     response: ({ query, body }) => {
       const key = (value: unknown) => String(value ?? '').trim().replace(/^0+(?=\d)/, '')
       const size = Math.max(1, Math.min(Number(query.size) || 20, 1000))
+      const legacy = String(query.legacyContains) === 'true'
       const found = scans.filter(row => Number(row.id) > Number(query.afterId || 0)
-        && (!body?.bah || key(row.bah) === key(body.bah))
-        && (!body?.sjh || key(row.sjh) === key(body.sjh))
-        && (!body?.brxh || row.brxh === body.brxh)
-        && (!body?.openerNo || row.openerNo === body.openerNo)
-        && (body?.btype == null || row.btype === Number(body.btype)))
+        && (legacy
+          ? matchesLegacyScan(row, body ?? {})
+          : ((!body?.bah || key(row.bah) === key(body.bah))
+            && (!body?.sjh || key(row.sjh) === key(body.sjh))
+            && (!body?.brxh || row.brxh === body.brxh)
+            && (!body?.openerNo || row.openerNo === body.openerNo)
+            && (body?.btype == null || row.btype === Number(body.btype)))))
         .sort((a, b) => Number(a.id) - Number(b.id))
       const list = found.slice(0, size)
       return ok({ list, hasMore: found.length > size, nextCursorId: found.length > size ? Number(list[list.length - 1]?.id) : undefined, size })

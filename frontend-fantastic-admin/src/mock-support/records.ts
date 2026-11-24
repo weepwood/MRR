@@ -95,3 +95,35 @@ export function createDemoRecords(clock = demoClock, scenario: DemoScenario = 's
 
 // One mutable dataset per demo module instance; production never imports it.
 export const demoRecords = createDemoRecords(demoClock, readScenario(pagesScenarioStorage()))
+
+/** Demo-only equivalent of the compatibility LIKE predicates for record cursors. */
+export function matchesLegacyScan(row: MockScanRecord, filters: Record<string, unknown>) {
+  const key = (value: unknown) => {
+    const term = String(value ?? '').trim()
+    return /^\d+$/.test(term) ? term.replace(/^0+(?=\d)/, '') : term
+  }
+  const contains = (value: string, term: string) => {
+    if (!term) { return true }
+    // SQL LIKE retains percent/underscore wildcards and backslash escapes.
+    const pattern = `%${term}%`
+    let regex = ''
+    for (let i = 0; i < pattern.length; i++) {
+      const char = pattern[i]
+      if (char === '\\' && i + 1 < pattern.length) {
+        regex += escapeRegex(pattern[++i])
+      }
+      else if (char === '%') { regex += '[\\s\\S]*' }
+      else if (char === '_') { regex += '[\\s\\S]' }
+      else { regex += escapeRegex(char) }
+    }
+    return new RegExp(`^${regex}$`, 'u').test(value)
+  }
+  return contains(row.bah, key(filters.bah))
+    && contains(row.sjh, key(filters.sjh))
+    && (['brxh', 'openerNo', 'filename', 'folder', 'uploadDate'] as const).every(field => contains(row[field], String(filters[field] ?? '')))
+    && (['btype', 'pages', 'uploadFlag'] as const).every(field => filters[field] == null || row[field] === Number(filters[field]))
+}
+
+function escapeRegex(char: string) {
+  return /[.*+?^$(){}|[\]\\]/.test(char) ? `\\${char}` : char
+}

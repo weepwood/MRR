@@ -99,7 +99,19 @@ class SystemAvailabilityServiceTest {
         verify(repository).insertOpen(eq("DOWN"), eq(inferredDownAt), any(), eq("服务心跳中断"));
         verify(repository).close(eq(11L), any());
         verify(repository).insertOpen(eq("UP"), any(), any(), isNull());
-        verify(repository).deleteEndedBefore(any());
+        verify(repository, org.mockito.Mockito.never()).deleteEndedBefore(any());
+    }
+
+    @Test
+    void longRunningServiceHasIndependentBoundedRetentionAndRecoversFromCleanupFailure() {
+        var service = createService();
+        org.mockito.Mockito.when(repository.deleteEndedBefore(any()))
+                .thenThrow(new org.springframework.dao.QueryTimeoutException("synthetic timeout"))
+                .thenReturn(3);
+        service.cleanupHistory();
+        service.cleanupHistory();
+        verify(repository, org.mockito.Mockito.times(2)).deleteEndedBefore(any());
+        org.mockito.Mockito.verifyNoInteractions(jdbcTemplate);
     }
 
     @Test

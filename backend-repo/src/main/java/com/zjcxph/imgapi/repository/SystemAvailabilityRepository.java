@@ -67,11 +67,22 @@ public class SystemAvailabilityRepository {
                 """, toDatabaseTime(heartbeatAt), reason, id);
     }
 
-    public void deleteEndedBefore(Instant cutoff) {
-        jdbcTemplate.update("""
+    /** One bounded batch of expired closed monitoring periods; never deletes an open period. */
+    public int deleteEndedBefore(Instant cutoff) {
+        return jdbcTemplate.update("""
                 DELETE FROM app.system_availability_period
-                WHERE ended_at IS NOT NULL AND ended_at < ?
-                """, toDatabaseTime(cutoff));
+                WHERE id IN (
+                    SELECT id FROM app.system_availability_period
+                    WHERE ended_at IS NOT NULL AND ended_at < ?
+                    ORDER BY started_at ASC, id ASC
+                    LIMIT 1000 FOR UPDATE SKIP LOCKED
+                )
+                AND ended_at IS NOT NULL AND ended_at < ?
+                """, statement -> {
+            statement.setQueryTimeout(5);
+            statement.setObject(1, toDatabaseTime(cutoff));
+            statement.setObject(2, toDatabaseTime(cutoff));
+        });
     }
 
     private static Period mapPeriod(ResultSet resultSet, int rowNumber) throws SQLException {

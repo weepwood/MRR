@@ -78,7 +78,7 @@ public class SystemAvailabilityService {
         }
 
         try {
-            runHeartbeatCycle(true);
+            runHeartbeatCycle();
             logger.info("System availability history initialized");
         } catch (Exception exception) {
             logger.warn("Unable to initialize system availability history: {}", exception.getMessage());
@@ -96,7 +96,7 @@ public class SystemAvailabilityService {
         }
 
         try {
-            runHeartbeatCycle(false);
+            runHeartbeatCycle();
         } catch (Exception exception) {
             // 数据库不可用时无法即时写入 DOWN；恢复后会根据最后心跳缺口补录停机区间。
             logger.warn("Unable to persist system availability heartbeat: {}", exception.getMessage());
@@ -227,13 +227,23 @@ public class SystemAvailabilityService {
         );
     }
 
-    private void runHeartbeatCycle(boolean cleanupOldPeriods) {
+    /** Separate autocommit maintenance statement; a failed cleanup cannot roll back a heartbeat. */
+    @Scheduled(fixedDelayString = "${app.status.retention-cleanup-interval-ms:3600000}",
+            initialDelayString = "${app.status.retention-cleanup-initial-delay-ms:300000}")
+    public void cleanupHistory() {
+        if (!enabled) return;
+        try {
+            int deleted = repository.deleteEndedBefore(Instant.now().minus(retentionDays, ChronoUnit.DAYS));
+            logger.info("Availability history retention batch completed: deleted={}", deleted);
+        } catch (Exception failure) {
+            logger.warn("Availability history retention batch failed: {}", failure.getClass().getSimpleName());
+        }
+    }
+
+    private void runHeartbeatCycle() {
         Instant now = Instant.now();
         reconcileHeartbeatGap(now);
         recordCurrentStatus(now, checkCurrentStatus());
-        if (cleanupOldPeriods) {
-            repository.deleteEndedBefore(now.minus(retentionDays, ChronoUnit.DAYS));
-        }
     }
 
     private void reconcileHeartbeatGap(Instant now) {

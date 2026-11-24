@@ -2,7 +2,7 @@ import type { Locator, Page } from '@playwright/test'
 import { expect, test } from '@playwright/test'
 
 /**
- * 影像查询页（/idcard/:idCard）的键盘可达性。
+ * 影像查询页（/idcard，身份证仅在当前页面内存）的键盘可达性。
  *
  * 数据来自 src/mock/scan-img.ts 的合成病案：
  * - 00800001（区间内，14 张，自动选中）、00800002（区间内，6 张）、00900001（区间外）；
@@ -31,13 +31,21 @@ function typeButton(page: Page, label: RegExp) {
   return page.locator('.type-list').getByRole('button', { name: label })
 }
 
-async function openPage(page: Page) {
+async function submitIdCard(page: Page, idCard: string) {
+  await page.goto('/idcard')
+  await page.getByPlaceholder('请输入18位身份证号').fill(idCard)
   const lookup = page.waitForRequest(request => new URL(request.url()).pathname.endsWith('/api/v1/search/getBAHByID'))
-  await page.goto(`/idcard/${ID_CARD}`)
+  await page.getByRole('button', { name: '查询病案', exact: true }).click()
   const request = await lookup
   expect(request.method()).toBe('POST')
   expect(new URL(request.url()).search).toBe('')
-  expect(request.postDataJSON()).toEqual({ idCard: ID_CARD })
+  expect(request.postDataJSON()).toEqual({ idCard })
+  expect(new URL(page.url()).pathname).toBe('/idcard')
+  expect(page.url()).not.toContain(idCard)
+}
+
+async function openPage(page: Page) {
+  await submitIdCard(page, ID_CARD)
   await expect(page.getByText('查询出 3 份住院病案')).toBeVisible()
   // 首个区间内病案自动选中并加载
   await expect(record(page, '00800001')).toHaveAttribute('aria-current', 'true')
@@ -123,8 +131,32 @@ for (const mode of ['缩略图', '列表'] as const) {
 }
 
 test('无病案时显示空态，不渲染可聚焦的病案项', async ({ page }) => {
-  await page.goto(`/idcard/${EMPTY_ID_CARD}`)
+  await submitIdCard(page, EMPTY_ID_CARD)
   await expect(page.getByText('未查询到相关住院记录')).toBeVisible()
   await expect(page.locator('.id-result-item')).toHaveCount(0)
   await expect(page.getByText('请先选择左侧病案')).toBeVisible()
+})
+
+test('旧明文路径不再发起查询，刷新与返回均清除临时查询', async ({ page }) => {
+  let lookups = 0
+  page.on('request', (request) => {
+    if (new URL(request.url()).pathname.includes('/api/v1/search/getBAHByID')) {
+      lookups++
+    }
+  })
+  await page.goto(`/idcard/${ID_CARD}?legacy=synthetic`)
+  await expect(page.getByPlaceholder('请输入18位身份证号')).toHaveValue('')
+  expect(new URL(page.url()).pathname).toBe('/idcard')
+  expect(new URL(page.url()).search).toBe('')
+  expect(lookups).toBe(0)
+
+  await submitIdCard(page, ID_CARD)
+  await expect(page.getByText('查询出 3 份住院病案')).toBeVisible()
+  await page.getByRole('button', { name: '返回查询', exact: true }).click()
+  await expect(page.getByPlaceholder('请输入18位身份证号')).toHaveValue('')
+  await submitIdCard(page, ID_CARD)
+  await expect(page.getByText('查询出 3 份住院病案')).toBeVisible()
+  await page.reload()
+  await expect(page.getByPlaceholder('请输入18位身份证号')).toHaveValue('')
+  expect(lookups).toBe(2)
 })

@@ -628,3 +628,9 @@
 ## V1.2 浮层与候选收口（2026-11-26）
 
 - 基于06ffcef8，仅调整公共Select入退场过渡，重复复现前5/9（4失败）、修复后13/13，最终累计62/62 Chromium，260组截图无所测容器溢出，84/84样式、生产构建与Chrome86静态门禁通过；WebKit 10/10业务用例通过。无真实医疗数据、后端及部署变更。Firefox所需版本已安装到外置盘独立缓存，但10项均在启动时报Could not find profile folder，独立临时目录与persistent profile最小复现仍失败，不记为产品回归或通过。使用现有Linux跨浏览器专项workflow，补齐本批相关测试范围。单一草稿PR用于远端验证，不合并、不更新生产main及V1.1。后续读取实际CI状态、修复阻塞后核对合并tree与在线版本身份；Chrome86真实终端及完整正式候选仍未验收。日志见业务视觉审查。回滚本次修复可独立revert；临时配置、合成认证fixture和浏览器缓存不入Git。
+
+## V1.2 本地验收优先（2026-11-26）
+
+- 维护者明确要求先在本地持续开发并检查实际页面，按反馈调整，只有收到整理/合并 PR 的明确指令时才推送累计改动并进行合并。现有 #850 保持草稿，远端候选 91083764，main 与 V1.1 冻结；不主动发布预览站。工作区 /Volumes/data/Project/MRR-worktrees/v1.2-table-gallery-contract。
+- 本地用户预览：frontend-fantastic-admin 目录执行 `VITE_APP_DEMO_MODE=true VITE_BUILD_MOCK=true VITE_OPEN_PROXY=false pnpm exec vite --mode mock --host 127.0.0.1 --port 9037 --strictPort`。本轮 PID 23293（仅本次会话记录，重启需重新核验）。实际 Chromium 检查 /ui-components、/logs、/audit-images 成功，观测到 /proxy/ 请求均为本地 9037；已打开本机浏览器组件展厅。开发模式使用 history 路由，不使用 Pages 的 #/ 路由。用户预览端口固定，后续自动化使用不同端口及隔离会话，不关闭其他应用，不使用真实医疗数据。
+- 保留原有风险分级、本地证据、成熟公共组件、中文提交及 AGENTS.md 更新；累计改动待维护者授权后统一进入 #850（届时核验分支和最新门禁），不得宣称本地未推送改动已通过远端 CI。

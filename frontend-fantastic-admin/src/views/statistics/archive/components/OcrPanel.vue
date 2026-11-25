@@ -199,7 +199,7 @@ watch(() => job.value?.status, (status) => {
 .ocr-inline { min-width: 0; padding: 12px; border: 1px solid var(--el-border-color-light); border-radius: var(--el-border-radius-base); }
 .ocr-inline-heading { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; justify-content: space-between; }
 .ocr-inline .ocr-compare { grid-template-columns: 1fr; }
-.ocr-inline textarea { min-height: 240px; }
+.ocr-inline .ocr-compare textarea { height: clamp(240px, 42vh, 420px); min-height: 240px; resize: vertical; }
 .ocr-actions { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin: 16px 0; }
 .ocr-compare { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-top: 16px; }
 .ocr-compare img { align-self: start; width: 100%; height: auto; object-fit: contain; }

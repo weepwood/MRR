@@ -2,6 +2,7 @@ import fs from 'node:fs'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { describe, expect, it } from 'vitest'
+import { readElementPlusCss } from './read-element-plus-css'
 
 /*
  * Chrome 86 的 color-mix 回退契约。
@@ -118,7 +119,7 @@ describe('chrome 86 color-mix 回退契约', () => {
   })
 
   it('表格表头与行悬停底色由变量级重设兜底', () => {
-    const css = read('assets/styles/element-plus-overrides.css')
+    const css = readElementPlusCss()
     expect(css).toMatch(/--el-table-header-bg-color:\s*color-mix\(/)
     expect(css).toMatch(/@supports not \(color: color-mix\([^)]*\)\) \{[^@]*--el-table-header-bg-color:\s*var\(--mrr-muted\)/)
   })

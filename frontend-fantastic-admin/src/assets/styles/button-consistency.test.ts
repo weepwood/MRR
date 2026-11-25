@@ -2,13 +2,14 @@ import fs from 'node:fs'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { describe, expect, it } from 'vitest'
+import { readElementPlusCss } from './read-element-plus-css'
 
 const styleDir = path.dirname(fileURLToPath(import.meta.url))
 const read = (...segments: string[]) => fs.readFileSync(path.join(styleDir, ...segments), 'utf8')
 const stripComments = (css: string) => css.replace(/\/\*[\s\S]*?\*\//g, '')
 
 const tokensCss = read('tokens.css')
-const elementPlusCss = stripComments(read('element-plus-overrides.css'))
+const elementPlusCss = stripComments(readElementPlusCss())
 const formControlsCss = stripComments(read('components/form-controls.css'))
 const themeCss = stripComments(read('themes/warm-flat.css'))
 /** 取出某个选择器块里的声明文本（只看第一层，够用即可）。 */

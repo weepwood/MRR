@@ -1,0 +1,449 @@
+/* ===== Checkbox, radio and switch ===== */
+.el-checkbox__inner,
+.el-radio__inner {
+  border-color: var(--mrr-input);
+  box-shadow: none;
+}
+
+/* 跟随全局圆角：默认档仍是 4px，滑块拉到 0 时与其他控件一起变成直角。 */
+.el-checkbox__inner {
+  border-radius: max(0px, calc(var(--mrr-radius-sm) - 2px));
+}
+
+.el-checkbox__input.is-checked .el-checkbox__inner,
+.el-checkbox__input.is-indeterminate .el-checkbox__inner,
+.el-radio__input.is-checked .el-radio__inner {
+  background: var(--mrr-primary);
+  border-color: var(--mrr-primary);
+}
+
+.el-checkbox__input.is-focus .el-checkbox__inner,
+.el-radio__input.is-focus .el-radio__inner {
+  border-color: var(--mrr-ring);
+  box-shadow: var(--mrr-focus-ring);
+}
+
+.el-switch__core {
+  background: var(--mrr-input);
+  border-color: transparent;
+  box-shadow: none;
+}
+
+.el-switch.is-checked .el-switch__core {
+  background: var(--mrr-primary);
+}
+
+/* ===== Dialogs, forms and tabs ===== */
+body .el-dialog {
+  overflow: hidden;
+  color: var(--mrr-card-foreground);
+  background: var(--mrr-card);
+  border: 1px solid var(--mrr-border);
+  border-radius: var(--mrr-radius-dialog);
+  box-shadow: var(--mrr-shadow-dialog);
+}
+
+.el-dialog__header {
+  padding: 20px 24px 16px;
+  margin-right: 0;
+  border-bottom: 1px solid var(--mrr-border);
+}
+
+/* 17px 不在字号阶梯上；对话框标题与分区标题同档，正文 13–14px 之上只高一级。 */
+.el-dialog__title {
+  font-size: var(--mrr-font-size-lg);
+  font-weight: 650;
+  color: var(--mrr-card-foreground);
+  letter-spacing: -0.01em;
+}
+
+/*
+ * ===== 表面圆角 =====
+ *
+ * 这里显式列出 Element Plus 的「表面型」组件，替代原先 surface-radius.css 里
+ * `[class~="card"] / [class$="-panel"] / …` 的通配兜底。
+ *
+ * 两个关键点：
+ * 1. 选择器前置 `body`：Element Plus 的组件样式由 unplugin 按需注入，加载顺序
+ *    晚于本文件，同权重时会被它覆盖（实测 .el-card 会退回 4px）。前置元素选择器
+ *    把权重提到 (0,1,1)，不依赖顺序，也就不需要 !important。
+ * 2. 卡片用 --mrr-radius-card，表格式块级组件用 --mrr-radius-md，与兜底层原先
+ *    的实际渲染值一致，改造前后视觉不变。
+ */
+body .el-card {
+  border-radius: var(--mrr-radius-card);
+}
+
+body .el-table,
+body .el-alert,
+body .el-descriptions,
+body .el-collapse {
+  border-radius: var(--mrr-radius-md);
+}
+
+/* 分段选择器统一胶囊形态：EP 默认选中指示只有 2px 圆角，宽选项（如「工作区布局」）下呈方形 */
+body .el-segmented,
+body .el-segmented .el-segmented__item-selected {
+  border-radius: 999px;
+}
+
+/* 需要按外层圆角裁剪内部背景、表头或图表内容的表面。 */
+body .el-card,
+body .el-table,
+body .el-descriptions,
+body .el-collapse {
+  overflow: hidden;
+}
+
+body .el-table__inner-wrapper,
+body .el-descriptions__body,
+body .el-descriptions__table {
+  border-radius: inherit;
+}
+
+.el-dialog__body {
+  padding: 20px 24px;
+}
+
+.el-dialog__footer {
+  padding: 16px 24px;
+  background: color-mix(in srgb, var(--mrr-muted) 42%, var(--mrr-card));
+  border-top: 1px solid var(--mrr-border);
+}
+
+.el-form-item__label {
+  padding-bottom: 6px;
+  font-size: var(--mrr-field-font-size);
+  font-weight: 500;
+  line-height: 1.35;
+  color: var(--mrr-foreground);
+}
+
+.el-form-item__error {
+  padding-top: 5px;
+  font-size: var(--mrr-font-size-xs);
+  line-height: 1.4;
+  color: var(--mrr-destructive);
+}
+
+.el-tabs__item {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--mrr-muted-foreground);
+}
+
+.el-tabs__item:hover,
+.el-tabs__item.is-active {
+  color: var(--mrr-foreground);
+}
+
+.el-tabs__active-bar {
+  background: var(--mrr-primary);
+}
+
+@media (max-width: 640px) {
+  /*
+   * 窄屏弹窗定位。
+   *
+   * 不能用固定 `margin-inline`：各页面用 `width="min(900px, 92vw)"` 指定宽度，
+   * 而 `vw` 含垂直滚动条宽度，容器实际可用宽度比 `100vw` 少约 10px。此时
+   * 「92vw + 左右各 12px」会超出容器，弹窗内出现 4px 横向滚动条。
+   * 改为 auto 居中：宽度被 `max-width` 约束时也只会变小，不会溢出。
+   */
+  .el-dialog {
+    max-width: calc(100vw - 24px);
+    margin-inline: auto;
+  }
+}
+
+/*
+ * Chrome 86 回退：Element Plus 桥接层的分层实色底。
+ *
+ * 表格表头与行悬停走的是自定义属性（--el-table-header-bg-color 等），这些属性本身
+ * 在 86 能解析，但取值里的 color-mix() 在计算值阶段失效，最终 background 取 unset：
+ * 46px 大表会失去表头分区、逐行核对时容易串行。这里做变量级重设，改一处即生效。
+ * plain 按钮的悬停填充同理——失效后既无底色也无边框变化，等于没有悬停反馈。
+ */
+@supports not (color: color-mix(in srgb, #000 50%, #fff)) {
+  /* 卡头底色是标题与正文的分界，丢了会和内容连成一片。 */
+  body .el-card__header {
+    background: var(--mrr-card);
+  }
+
+  body .el-table {
+    --el-table-header-bg-color: var(--mrr-muted);
+    --el-table-row-hover-bg-color: var(--mrr-muted);
+  }
+
+  .el-button--danger:not(.is-link):not(.is-text):not(.is-plain):not(.is-disabled):hover {
+    background: var(--mrr-tone-danger-soft);
+  }
+
+  body .el-button--primary.is-plain {
+    border-color: var(--mrr-primary);
+  }
+
+  body .el-button--primary.is-plain:not(.is-disabled):hover {
+    background: var(--mrr-tone-primary-soft);
+    border-color: var(--mrr-primary);
+  }
+
+  body .el-button--danger.is-plain {
+    border-color: var(--mrr-destructive);
+  }
+
+  body .el-button--danger.is-plain:not(.is-disabled):hover {
+    border-color: var(--mrr-destructive);
+  }
+
+  .el-dialog__footer {
+    background: var(--mrr-card);
+  }
+
+  .el-button--danger:focus-visible {
+    border-color: var(--mrr-destructive);
+  }
+}
+
+/*
+ * 圆角桥接：Element Plus 的按需样式可能在全局样式之后注入。
+ * 通过控件级变量与更具体的选择器保持尺寸变体，同时保留组合控件的接缝。
+ * 不在内部内容节点（如 el-tag__content）画背景或圆角。
+ */
+body .el-input,
+body .el-textarea {
+  --el-input-border-radius: var(--mrr-control-radius);
+}
+
+body .el-input--small {
+  --el-input-border-radius: var(--mrr-radius-sm);
+}
+
+body .el-input--large {
+  --el-input-border-radius: var(--mrr-radius-lg);
+}
+
+body .el-input .el-input__wrapper,
+body .el-textarea .el-textarea__inner,
+body .el-select .el-select__wrapper,
+body .el-date-editor.el-input__wrapper {
+  border-radius: var(--mrr-control-radius);
+}
+
+body .el-input--small .el-input__wrapper,
+body .el-select--small .el-select__wrapper,
+body .el-date-editor.el-range-editor--small {
+  border-radius: var(--mrr-radius-sm);
+}
+
+body .el-input--large .el-input__wrapper,
+body .el-select--large .el-select__wrapper,
+body .el-date-editor.el-range-editor--large {
+  border-radius: var(--mrr-radius-lg);
+}
+
+/* 拼接输入框的内部相邻边必须为直角，外缘由 EP 读取同一输入圆角变量。 */
+body .el-input-group--prepend > .el-input__wrapper {
+  border-top-left-radius: 0;
+  border-bottom-left-radius: 0;
+}
+
+body .el-input-group--append > .el-input__wrapper {
+  border-top-right-radius: 0;
+  border-bottom-right-radius: 0;
+}
+
+body .el-input-number {
+  --el-border-radius-base: var(--mrr-control-radius);
+
+  border-radius: var(--el-border-radius-base);
+}
+
+body .el-input-number--small {
+  --el-border-radius-base: var(--mrr-radius-sm);
+}
+
+body .el-input-number--large {
+  --el-border-radius-base: var(--mrr-radius-lg);
+}
+
+body .el-radio-group {
+  --el-border-radius-base: var(--mrr-control-radius);
+}
+
+body .el-radio-button--small {
+  --el-border-radius-base: var(--mrr-radius-sm);
+}
+
+body .el-radio-button--large {
+  --el-border-radius-base: var(--mrr-radius-lg);
+}
+
+body .el-tag {
+  --el-tag-border-radius: var(--mrr-radius-sm);
+
+  border-radius: var(--el-tag-border-radius);
+}
+
+/* 胶囊和正圆是明确的几何变体，不跟随矩形控件圆角。 */
+body .el-tag.is-round {
+  border-radius: var(--el-tag-border-radius-rounded);
+}
+
+body .el-button.is-round {
+  border-radius: var(--mrr-radius-pill);
+}
+
+body .el-button.is-circle {
+  border-radius: 50%;
+}
+
+body .el-checkbox {
+  --el-checkbox-border-radius: min(4px, var(--mrr-radius-sm));
+}
+
+body .el-checkbox .el-checkbox__inner {
+  border-radius: var(--el-checkbox-border-radius);
+}
+
+/* 其他直接使用 Element Plus 局部固定圆角的控件。 */
+body .el-pagination {
+  --el-pagination-border-radius: var(--mrr-radius-sm);
+}
+
+body .el-pagination .btn-prev,
+body .el-pagination .btn-next,
+body .el-pagination .el-pager li {
+  border-radius: var(--mrr-radius-sm);
+}
+
+body .el-message-box {
+  border-radius: var(--mrr-radius-dialog);
+}
+
+/* 卡片式页签按方向保留与内容区相邻的直角。 */
+body .el-tabs--card > .el-tabs__header .el-tabs__nav {
+  border-radius: var(--mrr-control-radius) var(--mrr-control-radius) 0 0;
+}
+
+body .el-tabs--left.el-tabs--card > .el-tabs__header .el-tabs__nav {
+  border-radius: var(--mrr-control-radius) 0 0 var(--mrr-control-radius);
+}
+
+body .el-tabs--right.el-tabs--card > .el-tabs__header .el-tabs__nav {
+  border-radius: 0 var(--mrr-control-radius) var(--mrr-control-radius) 0;
+}
+
+body .el-tabs--bottom.el-tabs--card > .el-tabs__header .el-tabs__nav {
+  border-radius: 0 0 var(--mrr-control-radius) var(--mrr-control-radius);
+}
+
+/* 按钮组保留相邻边为直角，即使使用 round 变体也是如此。 */
+body .el-button-group > .el-button:first-child:not(:last-child) {
+  border-top-right-radius: 0;
+  border-bottom-right-radius: 0;
+}
+
+body .el-button-group > .el-button:last-child:not(:first-child) {
+  border-top-left-radius: 0;
+  border-bottom-left-radius: 0;
+}
+
+body .el-button-group > .el-button:not(:first-child):not(:last-child) {
+  border-radius: 0;
+}
+
+/*
+ * 全屏看图：先把背后的页面虚化再压暗，图片从背景里浮出来。
+ * Element Plus 默认是 #000 半透明遮罩，这里改成「模糊 + 半透明黑」并补一点投影。
+ *
+ * 虚化必须挂在 wrapper 上，不能挂在 mask 上：打开时 Element 用
+ * `.viewer-fade-enter-active` 给 wrapper 做 opacity 0→1 的淡入，而 opacity < 1
+ * 的祖先会成为 backdrop root —— 挂在里面的 mask 采样到的背景是空的，
+ * 于是淡入的 300ms 里只有「图已全屏、背景还是清晰的」，等动画结束才突然糊掉。
+ * 挂在 wrapper 自己身上没有中间 backdrop root，第一帧就能拿到真实背景。
+ * 同时把淡入缩短到 120ms，观感上是「和图片一起淡入」，不会再有先清晰后糊的跳变。
+ *
+ * backdrop-filter 自 Chrome 76 起可用（基线 86 命中），老内核走下方 @supports 回退，
+ * 退回更实的遮罩，避免出现「背景没虚化、只剩 58% 黑」的半成品观感。
+ * 注：项目里毛玻璃已在浮层表面整体下线（见 glass-surface.css），这里是唯一例外——
+ * 全屏看图需要把背后页面推远，才让影像成为视觉焦点。
+ */
+body .el-image-viewer__wrapper {
+  --el-transition-duration: 120ms;
+
+  backdrop-filter: blur(10px);
+}
+
+body .el-image-viewer__mask {
+  background: rgb(0 0 0 / 58%);
+  opacity: 1;
+}
+
+/*
+ * 图片层（canvas）铺满整个视口，会把空白处的点击全部吃掉，
+ * 遮罩上的 hide-on-click-modal 永远收不到事件。事件只透传下去、图片自己仍接收，
+ * 点击图片之外的空白就能关闭全屏（拖拽和缩放仍然只作用在图上是安全的）。
+ */
+body .el-image-viewer__canvas {
+  pointer-events: none;
+}
+
+body .el-image-viewer__img {
+  pointer-events: auto;
+  box-shadow: 0 20px 56px rgb(0 0 0 / 42%);
+}
+
+/*
+ * 操作控件（缩放条、左右翻页、关闭、页码）Element 默认是「深灰底 + 白图标」。
+ * 这套配色只在纯黑遮罩上成立，一到浅色主题就像贴了块深色补丁 —— 与页面里
+ * 所有浮层（工具条、下拉、对话框）的语言都不一致。
+ * 改成跟随主题的浮层卡片：亮色主题是白色玻璃 + 深色图标，暗色主题自动反转为
+ * 深色玻璃 + 浅色图标。遮罩仍保持半透明黑 —— 看图要压暗背景才有对比，与控件无关。
+ * 透明度走 `hsl(var(--card) / 92%)`（而非 color-mix），基线 Chrome 86 可直接解析。
+ */
+body .el-image-viewer__actions,
+body .el-image-viewer__prev,
+body .el-image-viewer__next,
+body .el-image-viewer__close {
+  color: var(--text-primary);
+  background-color: hsl(var(--card) / 92%);
+  border: 1px solid var(--divider);
+  box-shadow: var(--mrr-shadow-md);
+  opacity: 1;
+}
+
+body .el-image-viewer__actions__inner {
+  color: inherit;
+}
+
+body .el-image-viewer__prev:hover,
+body .el-image-viewer__next:hover,
+body .el-image-viewer__close:hover {
+  background-color: hsl(var(--card));
+  border-color: var(--mrr-primary);
+}
+
+body .el-image-viewer__prev:focus-visible,
+body .el-image-viewer__next:focus-visible,
+body .el-image-viewer__close:focus-visible {
+  outline: 2px solid var(--mrr-ring);
+  outline-offset: 2px;
+}
+
+/*
+ * 页码由使用方通过 toolbar 插槽画进胶囊内部（见 PreviewPanel），
+ * 不再用 Element 那个 bottom: 90px 的独立漂浮节点。
+ * 这里只统一胶囊内图标与页码之间的分隔线颜色。
+ */
+body .el-image-viewer__actions__divider {
+  width: 1px;
+  height: 18px;
+  background-color: var(--divider);
+}
+
+@supports not (backdrop-filter: blur(4px)) {
+  body .el-image-viewer__mask {
+    background: rgb(0 0 0 / 78%);
+  }
+}

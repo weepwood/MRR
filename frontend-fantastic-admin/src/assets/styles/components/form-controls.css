@@ -316,6 +316,7 @@ body .el-button.mrr-button-secondary.is-text.is-disabled:focus {
   color: hsl(var(--muted-foreground));
   background: hsl(var(--muted));
   border-radius: 10px;
+  transform: none !important;
 }
 
 /* Segments fit the declared width (or wrap in the category grid); the
@@ -327,10 +328,6 @@ body .el-button.mrr-button-secondary.is-text.is-disabled:focus {
 .mrr-segmented-tabs > .el-tabs__header .el-tabs__nav-prev,
 .mrr-segmented-tabs > .el-tabs__header .el-tabs__nav-next {
   display: none;
-}
-
-.mrr-segmented-tabs > .el-tabs__header .el-tabs__nav {
-  transform: none !important;
 }
 
 .mrr-segmented-tabs > .el-tabs__header .el-tabs__item {

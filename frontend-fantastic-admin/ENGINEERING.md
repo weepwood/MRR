@@ -514,7 +514,7 @@ const canBatch = computed(() => authAll(['record:read', 'record:download']))
 
 判定规则：会话未验证（`isSessionVerified`）一律拒绝；`ADMIN` 角色直通；`settings.app.enablePermission` 关闭时放行；其余按 `src/utils/permission.ts` 的权限继承表判定。`auth()` 传数组为「满足任一」，`authAll()` 要求全部满足。
 
-页面级拦截在 `src/App.vue`：`isAuth` 先经 `canRenderArchiveRoute(...)` 放行外部调阅 / 遗留档案路由，否则执行 `route.matched.every(item => auth(item.meta.auth ?? ''))`，不满足时渲染 `FaNotAllowed`；菜单过滤在 `store/modules/menu.ts`。`src/ui/components/FaAuth/` 组件存在但目前没有被页面引用。
+页面级拦截在 `src/App.vue`：`isAuth` 先经 `canRenderArchiveRoute(...)` 放行外部调阅 / 遗留档案路由，否则执行 `route.matched.every(item => auth(item.meta.auth ?? ''))`，不满足时渲染 `FaNotAllowed`；菜单过滤在 `store/modules/menu.ts`。无调用的历史 FaAuth 包装已删除；权限仍由现有路由守卫与业务权限判断负责。
 
 前端只负责可见性，**后端是唯一授权边界**；`auth()` 的结果不得作为跳过服务端鉴权的依据。
 

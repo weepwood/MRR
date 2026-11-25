@@ -2,11 +2,12 @@ import fs from 'node:fs'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { describe, expect, it } from 'vitest'
+import { readElementPlusCss } from './read-element-plus-css'
 
 const root = path.dirname(fileURLToPath(import.meta.url))
 const read = (name: string) => fs.readFileSync(path.join(root, name), 'utf8').replace(/\/\*[\s\S]*?\*\//g, '')
 const tokens = read('tokens.css')
-const bridge = read('element-plus-overrides.css')
+const bridge = readElementPlusCss()
 const controls = read('components/form-controls.css')
 const warm = read('themes/warm-flat.css')
 

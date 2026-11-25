@@ -13,6 +13,14 @@ function sources(dir: string): string[] {
 }
 
 describe('唯一基础控件归属', () => {
+  it('无调用的历史辅助组件不再恢复', () => {
+    for (const component of ['FaAuth', 'FaFixedActionBar', 'FaPageHeader', 'FaPasswordStrength', 'FaSearchBar']) {
+      expect(fs.existsSync(path.join(root, 'ui/components', component))).toBe(false)
+    }
+    const legacy = sources(root).filter(file => /\bFa(?:Auth|FixedActionBar|PageHeader|PasswordStrength|SearchBar)\b/.test(fs.readFileSync(file, 'utf8')))
+    expect(legacy.map(file => path.relative(root, file))).toEqual([])
+  })
+
   it('无业务调用的旧通知与上传预览链不恢复', () => {
     for (const component of ['FaNotification', 'FaFileUpload', 'FaImageUpload', 'FaImagePreview']) {
       expect(fs.existsSync(path.join(root, 'ui/components', component))).toBe(false)

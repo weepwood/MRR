@@ -1,0 +1,237 @@
+/* ===== Cards, tables, tags and pagination ===== */
+.el-card {
+  color: var(--mrr-card-foreground);
+  background: var(--mrr-card);
+  border: 1px solid var(--mrr-border);
+  border-radius: var(--mrr-radius-card);
+  box-shadow: none;
+}
+
+/*
+ * 新旧卡片同口径：旧页面直接使用 el-card，新页面使用 MrrSectionCard。
+ * 卡头留白、底色与 MrrSectionCard 对齐（后者用更高优先级的作用域选择器，不受影响），
+ * 页面自己用 :deep(.el-card__header) 定制的卡头仍以页面为准。
+ */
+body .el-card {
+  --el-card-padding: var(--mrr-card-inset);
+}
+
+body .el-card__header {
+  padding: var(--mrr-space-4) var(--mrr-card-inset);
+  background: color-mix(in srgb, var(--mrr-muted) 18%, var(--mrr-card));
+  border-bottom-color: var(--mrr-border);
+}
+
+/*
+ * 空态同口径：旧页面的 el-empty（默认 160px 插图、40px 上下留白）与 AppEmpty 的
+ * 48px 图标 + 48px 留白差距明显，同一张表格在两个页面上空态高度能差出近百像素。
+ * 显式传入 :image-size 的调用仍以调用方为准。
+ */
+body .el-empty {
+  --el-empty-padding: 48px var(--mrr-space-4);
+  --el-empty-image-width: 88px;
+  --el-empty-description-margin-top: var(--mrr-space-3);
+  --el-empty-bottom-margin-top: var(--mrr-space-4);
+}
+
+body .el-empty__description p {
+  font-size: var(--mrr-font-size-sm);
+  color: var(--mrr-muted-foreground);
+}
+
+/* 按需加载的 Element Plus 及暗色样式晚于全局入口，桥接需保持更高优先级。 */
+body .el-table {
+  --el-table-bg-color: var(--mrr-card);
+  --el-table-tr-bg-color: var(--mrr-card);
+  --el-table-header-bg-color: color-mix(in srgb, var(--mrr-muted) 64%, var(--mrr-card));
+  --el-table-row-hover-bg-color: color-mix(in srgb, var(--mrr-muted) 72%, var(--mrr-card));
+  --el-table-border-color: var(--mrr-border);
+
+  font-size: var(--mrr-font-size-sm);
+
+  /* 等宽数字：页数、条数、耗时逐行上下对齐，扫读一列数字时不再左右跳动。 */
+  font-variant-numeric: tabular-nums;
+  color: var(--mrr-card-foreground);
+  background: var(--mrr-card);
+}
+
+/*
+ * 圆角表格的外框。
+ *
+ * Element Plus 用绝对定位的矩形线段拼出 `el-table--border` 外框：顶边是
+ * .el-table__inner-wrapper::after、底边是 ::before、左右是本元素的
+ * ::before/::after，固定列另有 border-*-patch。圆角表格走 overflow: hidden
+ * 的圆角裁切路径，这些直线段的两端在四角圆弧区域被裁掉，表现为四角边框
+ * 缺一截，且全局圆角（--radius）越大越明显。
+ *
+ * 解法是改由元素自身 border 绘制外框——自身 border 天然跟随 border-radius
+ * 弯曲——矩形线段与贴边的单元格边框全部退场，避免四角缺边或与外框叠成
+ * 2px。这里只依赖 border 与 display，不涉及 color-mix，Chrome 86 可用。
+ */
+body .el-table--border {
+  border: 1px solid var(--el-table-border-color);
+}
+
+/* Element Plus 默认 .el-table--fit 会清掉元素的 bottom/right border，这里恢复。 */
+body .el-table--border.el-table--fit {
+  border-right: 1px solid var(--el-table-border-color);
+  border-bottom: 1px solid var(--el-table-border-color);
+}
+
+body .el-table--border::before,
+body .el-table--border::after,
+body .el-table--border .el-table__inner-wrapper::before,
+body .el-table--border .el-table__inner-wrapper::after {
+  display: none;
+}
+
+/*
+ * 最后一行的下边框与外框相邻，交给外框绘制，避免叠成 2px。
+ * 有 footer 时例外：body 与 footer 的分隔线正是 body 末行 td 的
+ * border-bottom（footer 单元格没有 border-top），不能用外框替代，
+ * 用 :not(.has-footer) 保留它（简单选择器的 :not() Chrome 86 可用）。
+ */
+body .el-table--border:not(.has-footer) .el-table__body-wrapper tr:last-child td.el-table__cell,
+body .el-table--border .el-table__footer-wrapper tr:last-child td.el-table__cell {
+  border-bottom: 0;
+}
+
+/* 固定列布局的边框补丁是同样的矩形线段，外框已由元素 border 覆盖。 */
+body .el-table--border .el-table__border-left-patch,
+body .el-table--border .el-table__border-right-patch,
+body .el-table--border .el-table__border-bottom-patch {
+  display: none;
+}
+
+/* 滚动条占位列的右边框与外框相邻，同样交给外框绘制。 */
+body .el-table--border .el-table__cell.gutter {
+  border-right: 0;
+}
+
+body .el-table--border .el-table__header-wrapper tr > th.el-table__cell:last-child,
+body .el-table--border.el-table--scrollable-y .el-table__header-wrapper tr > th.el-table__cell:nth-last-child(2),
+body .el-table--border .el-table__body-wrapper tr > td.el-table__cell:last-child,
+body .el-table--border .el-table__footer-wrapper tr > td.el-table__cell:last-child,
+body .el-table--border .el-table__fixed-right .el-table__fixed-header-wrapper tr > th.el-table__cell:last-child,
+body .el-table--border .el-table__fixed-right .el-table__fixed-body-wrapper tr > td.el-table__cell:last-child,
+body .el-table--border .el-table__fixed-right .el-table__fixed-footer-wrapper tr > td.el-table__cell:last-child {
+  border-right: 0;
+}
+
+.el-table th.el-table__cell {
+  height: var(--mrr-table-header-height);
+  padding-block: 7px;
+  font-size: var(--mrr-font-size-xs);
+
+  /* 表头与数据的区分原本只靠底色；加一档字重，浅底失效（Chrome 86 / 投屏）时仍能分清表头。 */
+  font-weight: 600;
+  color: var(--mrr-muted-foreground);
+  letter-spacing: 0.01em;
+  background: var(--el-table-header-bg-color);
+}
+
+.el-table td.el-table__cell {
+  height: var(--mrr-table-row-height);
+  padding-block: 6px;
+}
+
+.el-table--enable-row-hover .el-table__body tr:hover > td.el-table__cell {
+  background: var(--el-table-row-hover-bg-color);
+}
+
+.el-table__empty-block {
+  min-height: 220px;
+}
+
+body .el-pagination {
+  --el-pagination-button-height: var(--mrr-control-height);
+  --el-pagination-button-width: var(--mrr-control-height);
+
+  flex-wrap: wrap;
+  gap: var(--mrr-space-2);
+  min-width: 0;
+  font-size: 13px;
+  white-space: normal;
+}
+
+/* 同一分页契约覆盖共享数据面板与既有页面，导航箭头不与页码分散。 */
+@media (max-width: 760px) {
+  body .el-pagination {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    width: 100%;
+  }
+
+  .el-pagination .el-pagination__total {
+    grid-row: 1;
+    grid-column: 1 / 3;
+    justify-self: start;
+  }
+
+  .el-pagination .el-pagination__sizes {
+    grid-row: 1;
+    grid-column: 2 / 4;
+    justify-self: end;
+    margin-left: 0;
+  }
+
+  .el-pagination .btn-prev {
+    grid-row: 2;
+    grid-column: 1;
+  }
+
+  .el-pagination .el-pager {
+    display: flex;
+    flex-wrap: wrap;
+    grid-row: 2;
+    grid-column: 2;
+    justify-content: center;
+    min-width: 0;
+  }
+
+  .el-pagination .btn-next {
+    grid-row: 2;
+    grid-column: 3;
+  }
+
+  .el-pagination .el-pagination__jump {
+    grid-row: 3;
+    grid-column: 1 / -1;
+    justify-self: start;
+    margin-left: 0;
+  }
+}
+
+.el-pagination button,
+.el-pagination .el-pager li {
+  color: var(--mrr-muted-foreground);
+  background: transparent;
+  border-radius: var(--mrr-radius-sm);
+}
+
+.el-pagination button:not(:disabled):hover,
+.el-pagination .el-pager li:hover {
+  color: var(--mrr-foreground);
+  background: var(--mrr-accent);
+}
+
+/*
+ * 当前页：主色浅底 + 主色深字 + 1px 内描边，不再用实心主色块。
+ * 实心色块在列表底部与「查询」「保存」等主按钮抢注意力；
+ * 当前页只是位置指示，与导航选中态（浅底 + 深字）同一语汇。
+ * 三个令牌均有 Chrome 86 静态回退（browser-compatibility.css）。
+ */
+.el-pagination .el-pager li.is-active {
+  font-weight: 600;
+  color: var(--mrr-navigation-active-foreground);
+  background: var(--mrr-tone-primary-soft);
+  box-shadow: inset 0 0 0 1px var(--mrr-tone-primary-border);
+}
+
+.el-tag {
+  min-height: 24px;
+  padding-inline: 8px;
+  font-size: 12px;
+  font-weight: 500;
+  border-radius: var(--mrr-radius-sm);
+}

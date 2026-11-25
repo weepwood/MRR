@@ -1,0 +1,103 @@
+/* Account menu keeps its original information header and action geometry. */
+.mrr-account-dropdown {
+  display: contents;
+}
+
+body .el-dropdown__popper.mrr-account-menu {
+  box-sizing: border-box;
+  width: 248px;
+  max-width: calc(100vw - 24px);
+  font-size: 14px;
+  color: hsl(var(--popover-foreground));
+  background: hsl(var(--popover));
+  border: 1px solid var(--mrr-border);
+  border-radius: var(--mrr-radius-lg);
+  box-shadow: 0 4px 6px -1px rgb(0 0 0 / 10%), 0 2px 4px -2px rgb(0 0 0 / 10%);
+}
+
+body .mrr-account-menu .el-dropdown-menu {
+  padding: 6px;
+  margin: 0;
+  color: inherit;
+  background: transparent;
+}
+
+.mrr-account-label {
+  list-style: none;
+}
+
+.mrr-account-separator {
+  height: 1px;
+  margin: 4px 8px;
+  list-style: none;
+  background: var(--mrr-border);
+}
+
+body .mrr-account-menu .el-dropdown-menu__item {
+  gap: 10px;
+  height: 36px;
+  min-height: 36px;
+  padding: 0 10px;
+  margin: 2px 0;
+  line-height: 20px;
+  color: hsl(var(--popover-foreground));
+  border-radius: var(--mrr-radius-sm);
+}
+
+body .mrr-account-menu .el-dropdown-menu__item.account-logout,
+body .mrr-account-menu .el-dropdown-menu__item.account-logout:not(.is-disabled):focus,
+body .mrr-account-menu .el-dropdown-menu__item.account-logout:not(.is-disabled):hover {
+  color: var(--color-danger);
+}
+
+/* Pointer anchored tab menu, sharing the same dropdown engine. */
+.mrr-context-anchor {
+  display: contents;
+}
+
+body .el-dropdown__popper.mrr-context-menu {
+  box-sizing: border-box;
+  min-width: 128px;
+  font-size: 14px;
+  color: hsl(var(--popover-foreground));
+  background: hsl(var(--popover));
+  border: 1px solid var(--mrr-border);
+  border-radius: calc(var(--radius) - 2px);
+  box-shadow: 0 4px 6px -1px rgb(0 0 0 / 10%), 0 2px 4px -2px rgb(0 0 0 / 10%);
+}
+
+body .mrr-context-menu .el-dropdown-menu {
+  padding: 4px;
+  margin: 0;
+  background: transparent;
+}
+
+body .mrr-context-menu .el-dropdown-menu__item {
+  gap: 8px;
+  height: 32px;
+  min-height: 32px;
+  padding: 6px 8px;
+  margin: 0;
+  font-size: 14px;
+  line-height: 20px;
+  color: hsl(var(--popover-foreground));
+  border-radius: calc(var(--radius) - 4px);
+}
+
+body .mrr-context-menu .el-dropdown-menu__item.is-disabled {
+  color: hsl(var(--popover-foreground));
+  opacity: 0.5;
+}
+
+.mrr-context-separator {
+  height: 1px;
+  margin: 4px -4px;
+  list-style: none;
+  background: hsl(var(--border));
+}
+
+/* The explicit gap already accounts for the icon; avoid EP's extra 5px. */
+body .mrr-account-menu .el-dropdown-menu__item i,
+body .mrr-context-menu .el-dropdown-menu__item i {
+  margin-right: 0;
+}

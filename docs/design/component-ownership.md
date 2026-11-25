@@ -81,6 +81,13 @@ FaIcon、FaKbd、FaPinInput、FaScrollArea、FaSmartFixedBlock、FaPasswordStren
 - 账户schema与样式12文件72/72、vue-tsc、ESLint、Stylelint通过。联合Chromium首轮37/38（含预热），唯一失败是模拟登录无Token响应的提示仅放外层，而原表单按ApiResult.data读取；修正测试响应层级，不修改认证业务、不放宽断言，定向复验2/2（24.6秒，含预热）。覆盖实际Mock登录失败/恢复/成功、请求体、记住用户名且不保存密码、密码切换、原匿名注册提交/两阶段返回焦点/数据保留、原动效与认证存储隔离。日志 /tmp/mrr-v12-account-{before,after,unit,tsc,final,recovery-final}.log。未重新执行整套38项；无真实医院/跨浏览器现场验收。
 - 复现 e2e/account-control-visual.spec.ts，旧版使用 MRR_ACCOUNT_VISUAL_CAPTURE=true、MRR_ACCOUNT_VISUAL_EVIDENCE=/tmp/独立目录 并限定 -g '账户表单迁移视觉'，新版仅传 EVIDENCE；默认CI检查实际唯一实现、主题、尺寸、行为，不依赖Mac固定截图。先保持原有组件生命周期和语义，再考虑剩余账户修改密码、找回密码、复选、布局/全局工具栏及重复组件清理。
 
+## 复选框与个人设置修改密码（2026-11-25）
+
+- #839已合并968bc901，原head ec0dd83b tree一致，159文件1064/1064与Pages定向7/7。迁移3处FaCheckbox（登录1、展厅2），删除组件目录、自动声明，源码守护禁止回流。登录保留16px圆形、8px间隙、14px标签及局部配色，不影响其他业务复选框。
+- 原VeeValidate checkbox componentField与ElCheckbox原生change/model更新语义不完全一致，实际测试发现勾选抵消。改为明确布尔值的modelValue/setValue，保留原字段校验和存储，不修改认证逻辑。浏览器针对真实可见标签点击、原生键盘、选中和禁用测试，避免直接点击Element Plus零尺寸input。
+- 个人设置3输入、1按钮统一ElInput/ElButton，保留表单schema、原密码/新密码合同、成功注销。Mock失败/成功、错误反馈、回退可用性及Token清理纳入验收；未触及真实账号。
+- 视觉基线20组：四主题×两宽度×两复选状态16组，个人设置桌面4组。原基线采集5/5；首次对照发现1.5px垂直偏移和标签盒模型差异，按原页面尺寸修复，不放宽1px门禁。联合测试曾因旧input定位方式与布尔绑定差异失败；最终联合34/34含预热（1.0m），20对截图所测几何最大0px、计算样式无差，RGB任一通道差>8中位0.113720%、最大2.019011%；非全页或跨平台像素相等。日志 /tmp/mrr-v12-password-{before,after,after2,final,retest,retest2,exact-final,unit,final-tsc}.log，证据目录 /tmp/mrr-v12-password-visual-ec0。73/73单测、vue-tsc、ESLint、Stylelint通过。改密增加覆盖校验及请求生命周期的提交锁，Mock首请求挂起时再次Enter仍仅一请求，失败释放后允许主动重试，成功退出并清除Token。一次历史测试出现2请求，未确认唯一根因；最终专项通过。注册阶段已切换但旧locator.press重试卸载节点超时，改为断言真实焦点后page.keyboard.press，保留联系方式焦点及返回数据断言。日志 /tmp/mrr-v12-password-closure.log。未执行医院现场或全站跨浏览器。无路由找回密码暂保留，滑块和其余基础控件后续集中迁移。
+
 ## 逐文件原始引用清单
 
 | 源文件（相对 src/） | Fa 标签 | Element Plus 标签 |

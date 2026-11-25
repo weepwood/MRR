@@ -13,6 +13,12 @@ function sources(dir: string): string[] {
 }
 
 describe('唯一基础控件归属', () => {
+  it('复选框已全量迁移，不恢复旧实现或直接导入', () => {
+    expect(fs.existsSync(path.join(root, 'ui/components/FaCheckbox'))).toBe(false)
+    const legacy = sources(root).filter(file => /\bFaCheckbox\b|\.fa-checkbox\b/.test(fs.readFileSync(file, 'utf8')))
+    expect(legacy.map(file => path.relative(root, file))).toEqual([])
+  })
+
   it('开关已经迁移到 Element Plus，不能恢复旧实现或旧样式锚点', () => {
     expect(fs.existsSync(path.join(root, 'ui/components/FaSwitch'))).toBe(false)
     const legacy = sources(root).filter(file => /\bFaSwitch\b|\.fa-switch\b/.test(fs.readFileSync(file, 'utf8')))

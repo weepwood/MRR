@@ -164,12 +164,12 @@ const onSubmit = form.handleSubmit(async (values) => {
 
         <div class="form-options">
           <div class="remember-control">
-            <FormField v-slot="{ componentField }" type="checkbox" name="remember">
+            <FormField v-slot="{ value, setValue, handleBlur }" name="remember">
               <FormItem>
                 <FormControl>
-                  <FaCheckbox v-bind="componentField">
+                  <el-checkbox class="remember-checkbox" name="remember" :model-value="value" @update:model-value="val => setValue(val === true)" @blur="handleBlur">
                     记住用户名
-                  </FaCheckbox>
+                  </el-checkbox>
                 </FormControl>
               </FormItem>
             </FormField>
@@ -420,6 +420,54 @@ const onSubmit = form.handleSubmit(async (values) => {
 .remember-control {
   display: grid;
   gap: var(--mrr-space-1);
+}
+
+/* Preserve the existing compact, rounded login checkbox; business checkboxes
+ * continue to use the shared default appearance. */
+.remember-checkbox {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  width: fit-content;
+  height: 20px;
+  margin: 0;
+  font-weight: 400;
+  color: var(--mrr-muted-foreground);
+}
+
+.remember-control .remember-checkbox :deep(.el-checkbox__inner) {
+  width: 16px;
+  height: 16px;
+  font-size: 12px;
+  font-weight: 400;
+  color: var(--mrr-muted-foreground);
+  background: transparent;
+  border-color: hsl(var(--primary));
+  border-radius: 8px;
+}
+
+.remember-control .remember-checkbox :deep(.is-checked .el-checkbox__inner) {
+  color: hsl(var(--primary-foreground));
+  background: hsl(var(--primary));
+  border-color: hsl(var(--primary));
+}
+
+.remember-checkbox :deep(.el-checkbox__inner::after) {
+  border-color: hsl(var(--primary-foreground));
+}
+
+.remember-checkbox :deep(.el-checkbox__input) {
+  display: flex;
+  align-items: center;
+  line-height: 1;
+}
+
+.remember-checkbox :deep(.el-checkbox__label) {
+  padding-left: 0;
+  font-size: 14px;
+  font-weight: 400;
+  line-height: 20px;
+  color: var(--mrr-muted-foreground);
 }
 
 /*

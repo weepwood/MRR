@@ -105,22 +105,22 @@ const approvableRoles = computed(() => {
 const summaryCards = computed(() => [
   {
     label: '待审核', value: users.value.filter(item => normalizeStatus(item.status) === 'pending').length,
-    note: '当前页等待管理员处理的注册申请', tone: 'violet' as MetricTone,
+    tone: 'violet' as MetricTone,
     icon: 'i-lucide:user-round-check', scope: 'page' as MetricScope,
   },
   {
     label: '已启用', value: users.value.filter(item => normalizeStatus(item.status) === 'active').length,
-    note: `当前条件共 ${total.value.toLocaleString('zh-CN')} 个账号`, tone: 'green' as MetricTone,
+    tone: 'green' as MetricTone,
     icon: 'i-lucide:circle-check', scope: 'page' as MetricScope,
   },
   {
     label: '已拒绝', value: users.value.filter(item => normalizeStatus(item.status) === 'rejected').length,
-    note: '当前页审核未通过的申请', tone: 'danger' as MetricTone,
+    tone: 'danger' as MetricTone,
     icon: 'i-lucide:user-round-x', scope: 'page' as MetricScope,
   },
   {
     label: '已禁用', value: users.value.filter(item => normalizeStatus(item.status) === 'disabled').length,
-    note: '当前页已停止登录的账号', tone: 'blue' as MetricTone,
+    tone: 'blue' as MetricTone,
     icon: 'i-lucide:circle-stop', scope: 'page' as MetricScope,
   },
 ])

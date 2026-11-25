@@ -69,6 +69,29 @@ describe('病案工作台 OCR 身份隔离', () => {
     wrapper.unmount()
   })
 
+  it('外置工具栏仅在明确打开且有权限时读取OCR，收起释放状态', async () => {
+    api.getOcrFact.mockResolvedValue({ data: { scanId: 11, archiveId: 1, status: 'SUCCEEDED', text: '合成原文' } })
+    api.getOcrJobs.mockResolvedValue({ data: [] })
+    const wrapper = panel()
+    await wrapper.setProps({ inline: true, externalTrigger: true })
+    expect(wrapper.find('button').exists()).toBe(false)
+    expect(api.getOcrFact).not.toHaveBeenCalled()
+    ;(wrapper.vm as any).togglePanel()
+    await flushPromises()
+    expect(wrapper.emitted('openChange')?.at(-1)).toEqual([true])
+    expect(wrapper.get('textarea').element.value).toBe('合成原文')
+    ;(wrapper.vm as any).togglePanel()
+    await flushPromises()
+    expect(wrapper.emitted('openChange')?.at(-1)).toEqual([false])
+    expect(wrapper.find('textarea').exists()).toBe(false)
+    permissions.read = false
+    await flushPromises()
+    ;(wrapper.vm as any).togglePanel()
+    await flushPromises()
+    expect(api.getOcrFact).toHaveBeenCalledTimes(1)
+    wrapper.unmount()
+  })
+
   it('任务身份不一致时禁止继续发起识别，文本权限撤销立即隐藏内容', async () => {
     api.getOcrFact.mockResolvedValue({ data: { scanId: 11, archiveId: 1, status: 'SUCCEEDED', text: '合成原文' } })
     api.getOcrJobs.mockResolvedValue({ data: [{ id: 'task', archiveId: 1 }] })

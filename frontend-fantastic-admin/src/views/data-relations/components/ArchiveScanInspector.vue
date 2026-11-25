@@ -1,9 +1,12 @@
 <script setup lang="ts">
 import type { ArchiveScanCursor } from '@/api/modules/data-relations'
+import { useElementSize } from '@vueuse/core'
+import { ChevronLeft, ChevronRight, FileText, Maximize2, Minimize2, RefreshCw, X } from 'lucide-vue-next'
 import { computed, nextTick, onBeforeUnmount, ref, watch } from 'vue'
 import { getArchiveScanPage } from '@/api/modules/data-relations'
 import AppEmpty from '@/components/AppEmpty/index.vue'
 import AppError from '@/components/AppError/index.vue'
+import MrrResizeHandle from '@/components/MrrResizeHandle/index.vue'
 import MrrScanContentDialog from '@/components/MrrScanContentDialog/index.vue'
 import MrrSectionCard from '@/components/MrrSectionCard/index.vue'
 import { hasPermission } from '@/utils/session'
@@ -25,11 +28,37 @@ const crossing = ref(false)
 const selectedIndex = computed(() => rows.value.findIndex(row => Number(row.id) === selectedId.value))
 const selected = computed(() => rows.value[selectedIndex.value])
 const focusMode = ref(false)
-const listRegion = ref<HTMLElement>()
+const ocrOpen = ref(false)
+const ocrPanel = ref<InstanceType<typeof OcrPanel>>()
 const canRead = computed(() => hasPermission('system:read') && hasPermission('record:read'))
 const canOcr = computed(() => canRead.value && hasPermission('ocr:read'))
+const listRegion = ref<HTMLElement>()
+const inspector = ref<HTMLElement>()
+const review = ref<HTMLElement>()
+const { width: inspectorWidth } = useElementSize(inspector)
+const { width: reviewWidth } = useElementSize(review)
+const listWidth = ref(168)
+const ocrWidth = ref(320)
+const listMax = computed(() => Math.max(130, Math.min(280, Math.floor(inspectorWidth.value - 332))))
+const ocrMax = computed(() => Math.max(260, Math.min(480, Math.floor(reviewWidth.value - 332))))
+const splitList = computed(() => inspectorWidth.value >= 500)
+const splitOcr = computed(() => canOcr.value && ocrOpen.value && !focusMode.value && reviewWidth.value >= 620)
+const listTarget = computed({
+  get: () => Math.min(listWidth.value, listMax.value),
+  set: (value) => { listWidth.value = value },
+})
+const ocrTarget = computed({
+  get: () => Math.min(ocrWidth.value, ocrMax.value),
+  set: (value) => { ocrWidth.value = value },
+})
 
+function toggleFocus() {
+  focusMode.value = !focusMode.value
+  if (focusMode.value) { ocrOpen.value = false }
+}
+watch(canOcr, (allowed) => { if (!allowed) { ocrOpen.value = false } }, { flush: 'sync' })
 function clear() {
+  ocrOpen.value = false
   selectedId.value = null
   focusMode.value = false
 }
@@ -87,6 +116,8 @@ function reset() {
   failed.value = false
   crossing.value = false
   retryIntent = undefined
+  listWidth.value = 168
+  ocrWidth.value = 320
 }
 async function load(index = 0, intent?: NavigationIntent) {
   if (!canRead.value || busy.value || index < 0 || index >= cursors.value.length) { return }
@@ -156,18 +187,18 @@ onBeforeUnmount(reset)
 </script>
 
 <template>
-  <MrrSectionCard v-if="canRead" title="影像核对" description="按页码和影像 ID 分页读取当前有效影像，每页最多 50 条；实时列表并非固定快照。">
-    <div class="scan-inspector" :class="{ 'scan-inspector--focus': focusMode }">
-      <div>
+  <MrrSectionCard v-if="canRead" body-padding="compact" title="影像核对" description="按页码和影像 ID 分页读取当前有效影像，每页最多 50 条；实时列表并非固定快照。">
+    <div ref="inspector" class="scan-inspector" :class="{ 'scan-inspector--split': splitList, 'scan-inspector--focus': focusMode }" :style="{ '--scan-list-width': `${listTarget}px` }">
+      <div :id="`scan-list-pane-${archiveId}`" class="scan-list-pane">
         <div class="scan-pagination">
-          <el-button size="small" :disabled="busy || page === 0" @click="load(page - 1)">
+          <el-button size="small" :icon="ChevronLeft" :disabled="busy || page === 0" @click="load(page - 1)">
             上一页
           </el-button>
           <span>第 {{ page + 1 }} 组</span>
-          <el-button size="small" :disabled="busy || !nextCursor" @click="load(page + 1)">
+          <el-button size="small" :icon="ChevronRight" :disabled="busy || !nextCursor" @click="load(page + 1)">
             下一页
           </el-button>
-          <el-button size="small" :disabled="busy" @click="reset(); load()">
+          <el-button size="small" :icon="RefreshCw" :disabled="busy" @click="reset(); load()">
             刷新列表
           </el-button>
         </div>
@@ -184,29 +215,36 @@ onBeforeUnmount(reset)
           <AppEmpty v-if="!rows.length" size="compact" description="暂无可核对的有效影像" />
         </div>
       </div>
+      <MrrResizeHandle v-if="splitList" v-model="listTarget" :min="130" :max="listMax" :default-width="168" label="调整影像列表宽度" :controls="`scan-list-pane-${archiveId}`" />
       <div class="scan-main">
         <template v-if="selected && selectedId !== null">
           <div class="scan-toolbar">
             <strong>影像 #{{ selectedId }} · 第 {{ selected.pages ?? '—' }} 页</strong>
             <div class="scan-actions">
               <span class="scan-position">第 {{ page + 1 }} 组 · {{ selectedIndex + 1 }} / {{ rows.length }}</span>
-              <el-button size="small" :disabled="selectedIndex <= 0 && page === 0" @click="navigateImage(-1)">
+              <el-button size="small" :icon="ChevronLeft" :disabled="selectedIndex <= 0 && page === 0" @click="navigateImage(-1)">
                 上一张
               </el-button>
-              <el-button size="small" :disabled="selectedIndex >= rows.length - 1 && !nextCursor" @click="navigateImage(1)">
+              <el-button size="small" :icon="ChevronRight" :disabled="selectedIndex >= rows.length - 1 && !nextCursor" @click="navigateImage(1)">
                 下一张
               </el-button>
-              <el-button size="small" :aria-pressed="focusMode" @click="focusMode = !focusMode">
+              <el-button size="small" :icon="focusMode ? Minimize2 : Maximize2" :aria-pressed="focusMode" @click="toggleFocus()">
                 {{ focusMode ? '恢复布局' : '专注原图' }}
               </el-button>
-              <el-button size="small" @click="clear">
+              <el-button v-if="canOcr && !focusMode" size="small" :icon="FileText" :aria-expanded="ocrOpen" :aria-controls="`scan-ocr-pane-${archiveId}`" @click="ocrPanel?.togglePanel()">
+                {{ ocrOpen ? '收起 OCR' : '识别文字' }}
+              </el-button>
+              <el-button size="small" :icon="X" @click="clear">
                 关闭原图
               </el-button>
             </div>
           </div>
-          <div class="scan-review" :class="{ 'scan-review--ocr': canOcr && !focusMode }">
-            <MrrScanContentDialog :scan-id="selectedId" inline @close="clear" />
-            <OcrPanel v-if="canOcr && !focusMode" :scan-id="selectedId" :expected-archive-id="archiveId" :unclassified="selected.btype != null && Number(selected.btype) === 0" inline />
+          <div ref="review" class="scan-review" :class="{ 'scan-review--ocr': splitOcr }" :style="{ '--scan-ocr-width': `${ocrTarget}px` }">
+            <MrrScanContentDialog :scan-id="selectedId" :focused="focusMode" inline @close="clear" />
+            <MrrResizeHandle v-if="splitOcr" v-model="ocrTarget" side="right" :min="260" :max="ocrMax" :default-width="320" label="调整 OCR 检查器宽度" :controls="`scan-ocr-pane-${archiveId}`" />
+            <div v-if="canOcr && !focusMode" v-show="ocrOpen" :id="`scan-ocr-pane-${archiveId}`" class="scan-ocr-pane">
+              <OcrPanel ref="ocrPanel" :scan-id="selectedId" :expected-archive-id="archiveId" :unclassified="selected.btype != null && Number(selected.btype) === 0" external-trigger inline @open-change="ocrOpen = $event" />
+            </div>
           </div>
           <p class="scan-note">
             类型：{{ selected.btype ?? '未知' }} · 迁移：{{ selected.migrationStatus ?? '未知' }}
@@ -224,8 +262,18 @@ onBeforeUnmount(reset)
 <style scoped>
 .scan-inspector {
   display: grid;
-  grid-template-columns: minmax(130px, 168px) minmax(0, 1fr);
+  grid-template-columns: minmax(0, 1fr);
   gap: var(--mrr-space-3);
+  min-width: 0;
+}
+
+.scan-inspector--split {
+  grid-template-columns: var(--scan-list-width) 12px minmax(0, 1fr);
+  gap: 0;
+}
+
+.scan-list-pane,
+.scan-ocr-pane {
   min-width: 0;
 }
 
@@ -245,7 +293,8 @@ onBeforeUnmount(reset)
 }
 
 .scan-review--ocr {
-  grid-template-columns: repeat(auto-fit, minmax(min(100%, 300px), 1fr));
+  grid-template-columns: minmax(0, 1fr) 12px var(--scan-ocr-width);
+  gap: 0;
 }
 
 .scan-inspector--focus .scan-review {
@@ -310,22 +359,15 @@ onBeforeUnmount(reset)
 .scan-note,
 .scan-list-note {
   margin-top: var(--mrr-space-2);
-  font-size: 12px;
+  font-size: var(--mrr-font-size-xs);
 }
 
-@media (max-width: 1280px) {
-  .scan-review--ocr {
-    grid-template-columns: minmax(0, 1fr);
-  }
+.scan-pagination :deep(.el-button + .el-button),
+.scan-actions :deep(.el-button + .el-button) {
+  margin-left: 0;
 }
 
-@media (max-width: 760px) {
-  .scan-inspector {
-    grid-template-columns: minmax(0, 1fr);
-  }
-
-  .scan-list {
-    max-height: 180px;
-  }
+.scan-inspector:not(.scan-inspector--split) .scan-list {
+  max-height: 180px;
 }
 </style>

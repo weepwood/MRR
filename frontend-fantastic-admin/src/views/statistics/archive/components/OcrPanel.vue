@@ -8,7 +8,8 @@ import useAuth from '@/utils/composables/useAuth'
 import { useOcrJob } from '../composables/useOcrJob'
 import ClassificationReview from './ClassificationReview.vue'
 
-const props = defineProps<{ scanId: number, imageUrl?: string, unclassified: boolean, expectedArchiveId?: number, inline?: boolean }>()
+const props = defineProps<{ scanId: number, imageUrl?: string, unclassified: boolean, expectedArchiveId?: number, inline?: boolean, externalTrigger?: boolean }>()
+const emit = defineEmits<{ openChange: [open: boolean] }>()
 const { auth } = useAuth()
 const { job, error: pollingError, tracking, follow, stop } = useOcrJob()
 const open = ref(false)
@@ -94,7 +95,12 @@ async function cancel() {
   finally { if (action === actionGeneration) { cancelBusy.value = false } }
 }
 
+function togglePanel() {
+  if (canRead.value) { open.value = !open.value }
+}
+defineExpose({ togglePanel })
 watch(open, (value) => {
+  emit('openChange', value)
   if (value) {
     if (auth('ocr:read')) { void load(true) }
   }
@@ -136,7 +142,7 @@ watch(() => job.value?.status, (status) => {
 
 <template>
   <el-config-provider v-if="canRead" :z-index="Z_INDEX.ocrDrawer">
-    <el-button v-if="auth('ocr:read') && (!inline || !open)" size="small" @click="open = true">
+    <el-button v-if="auth('ocr:read') && (!inline || (!externalTrigger && !open))" size="small" @click="open = true">
       识别文字
     </el-button>
     <component :is="inline ? 'section' : ElDrawer" v-if="!inline || open" v-bind="inline ? { 'aria-label': '影像文字识别', 'class': 'ocr-inline' } : { modelValue: open, title: '影像文字识别', size: 'min(960px, 95vw)', appendToBody: true }" @update:model-value="open = $event">

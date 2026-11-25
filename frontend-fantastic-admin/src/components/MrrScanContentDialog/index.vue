@@ -1,11 +1,12 @@
 <script setup lang="ts">
 import { ElDialog } from 'element-plus'
+import { Maximize, Minus, Plus, RotateCcw, RotateCw, Scan, StretchHorizontal } from 'lucide-vue-next'
 import { computed, nextTick, onBeforeUnmount, ref, watch } from 'vue'
 import { getReviewImage } from '@/api/modules/classification'
 import AppError from '@/components/AppError/index.vue'
 import AppLoading from '@/components/AppLoading/index.vue'
 
-const props = withDefaults(defineProps<{ scanId: number | null, inline?: boolean }>(), { inline: false })
+const props = withDefaults(defineProps<{ scanId: number | null, inline?: boolean, focused?: boolean }>(), { inline: false })
 const emit = defineEmits<{ close: [] }>()
 const source = ref('')
 const loading = ref(false)
@@ -239,31 +240,37 @@ onBeforeUnmount(() => { observer?.disconnect(); clear() })
   >
     <AppLoading v-if="loading" />
     <AppError v-else-if="failed" message="影像不可读或已变化，请重试" @retry="load()" />
-    <div v-else-if="source" class="scan-viewer">
+    <div v-else-if="source" class="scan-viewer" :class="{ 'scan-viewer--focused': focused }">
       <div class="scan-viewer-toolbar" role="group" aria-label="原图显示控制">
-        <el-button size="small" :disabled="!geometry || zoom <= 50" @click="changeZoom(-25)">
-          缩小
-        </el-button>
-        <span aria-live="polite" class="scan-viewer-percent">{{ zoom }}%</span>
-        <el-button size="small" :disabled="!geometry || zoom >= 300" @click="changeZoom(25)">
-          放大
-        </el-button>
-        <el-button size="small" :disabled="!geometry" @click="rotate()">
-          旋转 90°
-        </el-button>
-        <el-button size="small" :disabled="!geometry" @click="rotate(-90)">
-          逆时针旋转
-        </el-button>
-        <el-button size="small" :disabled="!geometry" :aria-pressed="viewMode === 'window'" @click="resetView">
-          适应窗口
-        </el-button>
-        <el-button size="small" :disabled="!geometry" :aria-pressed="viewMode === 'width'" @click="setViewMode('width')">
-          适应宽度
-        </el-button>
-        <el-button size="small" :disabled="!geometry" :aria-pressed="viewMode === 'actual'" @click="setViewMode('actual')">
-          实际大小
-        </el-button>
-        <span class="scan-viewer-angle">{{ rotation }}°</span>
+        <div class="scan-tool-group" role="group" aria-label="缩放">
+          <el-button size="small" :icon="Minus" :disabled="!geometry || zoom <= 50" @click="changeZoom(-25)">
+            缩小
+          </el-button>
+          <span aria-live="polite" class="scan-viewer-percent">{{ zoom }}%</span>
+          <el-button size="small" :icon="Plus" :disabled="!geometry || zoom >= 300" @click="changeZoom(25)">
+            放大
+          </el-button>
+        </div>
+        <div class="scan-tool-group" role="group" aria-label="旋转">
+          <el-button size="small" :icon="RotateCw" :disabled="!geometry" @click="rotate()">
+            旋转 90°
+          </el-button>
+          <el-button size="small" :icon="RotateCcw" :disabled="!geometry" @click="rotate(-90)">
+            逆时针旋转
+          </el-button>
+          <span class="scan-viewer-angle">{{ rotation }}°</span>
+        </div>
+        <div class="scan-tool-group" role="group" aria-label="显示模式">
+          <el-button size="small" :icon="Maximize" :disabled="!geometry" :aria-pressed="viewMode === 'window'" @click="resetView">
+            适应窗口
+          </el-button>
+          <el-button size="small" :icon="StretchHorizontal" :disabled="!geometry" :aria-pressed="viewMode === 'width'" @click="setViewMode('width')">
+            适应宽度
+          </el-button>
+          <el-button size="small" :icon="Scan" :disabled="!geometry" :aria-pressed="viewMode === 'actual'" @click="setViewMode('actual')">
+            实际大小
+          </el-button>
+        </div>
       </div>
       <div ref="viewport" class="scan-viewport" :class="{ 'is-pannable': viewMode !== 'window' || zoom > 100, 'is-dragging': dragging }" tabindex="0" role="region" aria-label="原图滚动查看区" @wheel="wheelZoom" @keydown="keyboardView" @pointerdown="beginPan" @pointermove="movePan" @pointerup="stopPan" @pointercancel="stopPan" @lostpointercapture="stopPan">
         <div class="scan-canvas" :style="geometry ? { minWidth: `${geometry.boxWidth + 24}px`, minHeight: `${geometry.boxHeight + 24}px` } : undefined">
@@ -282,6 +289,7 @@ onBeforeUnmount(() => { observer?.disconnect(); clear() })
 <style scoped>
 .scan-inline {
   display: grid;
+  grid-template-columns: minmax(0, 1fr);
   place-items: center stretch;
   min-width: 0;
   min-height: 240px;
@@ -302,6 +310,42 @@ onBeforeUnmount(() => { observer?.disconnect(); clear() })
   padding: var(--mrr-space-2);
   background: var(--el-fill-color-blank);
   border-bottom: 1px solid var(--el-border-color-light);
+}
+
+.scan-tool-group {
+  box-sizing: border-box;
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--mrr-space-1);
+  align-items: center;
+  min-width: 0;
+  max-width: 100%;
+  padding-inline-end: var(--mrr-space-2);
+  border-inline-end: 1px solid var(--mrr-border);
+}
+
+.scan-tool-group:last-child {
+  padding-inline-end: 0;
+  border-inline-end: 0;
+}
+
+/* Icon and label remain visible even when the nested workspace is very narrow. */
+.scan-tool-group :deep(.el-button) {
+  min-width: 0;
+  max-width: 100%;
+  height: auto;
+  min-height: 24px;
+  white-space: normal;
+}
+
+.scan-tool-group :deep(.el-button > span) {
+  min-width: 0;
+  overflow-wrap: anywhere;
+  white-space: normal;
+}
+
+.scan-tool-group :deep(.el-button .el-icon) {
+  flex-shrink: 0;
 }
 
 .scan-viewer-toolbar :deep(.el-button + .el-button) {
@@ -327,6 +371,10 @@ onBeforeUnmount(() => { observer?.disconnect(); clear() })
   height: clamp(240px, 54vh, 640px);
   overflow: auto;
   background: var(--el-fill-color-light);
+}
+
+.scan-viewer--focused .scan-viewport {
+  height: clamp(260px, 64vh, 820px);
 }
 
 .scan-viewport.is-pannable {
@@ -365,6 +413,7 @@ onBeforeUnmount(() => { observer?.disconnect(); clear() })
 .scan-viewer-hint {
   padding: var(--mrr-space-2);
   margin: 0;
+  overflow-wrap: anywhere;
 }
 
 .scan-content {

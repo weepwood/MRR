@@ -48,6 +48,15 @@ for (const item of pages) {
           const controlBox = await control.boundingBox()
           expect(labelBox!.y + labelBox!.height).toBeLessThanOrEqual(controlBox!.y + 1)
           await page.keyboard.press('Escape')
+          // A teleported select popper can still cover the next field during its
+          // leave transition. Wait for the actual collapsed and hidden state
+          // before testing the next label's native focus behavior.
+          if (await control.getAttribute('role') === 'combobox') {
+            await expect(control).toHaveAttribute('aria-expanded', 'false')
+            const popupId = await control.getAttribute('aria-controls')
+            expect(popupId).toBeTruthy()
+            await expect(page.locator(`[id="${popupId}"]`).locator('xpath=ancestor::*[contains(concat(" ",normalize-space(@class)," "), " el-select__popper ")][1]')).toBeHidden()
+          }
         }
         for (const locator of [form, page.locator('.el-pagination')]) {
           await expect.poll(() => locator.evaluate(element => element.scrollWidth <= element.clientWidth + 1)).toBe(true)
@@ -83,8 +92,13 @@ for (const item of pages) {
     await form.getByLabel('用户', { exact: true }).fill('synthetic-user')
     await page.locator('.el-select-dropdown__item').filter({ hasText: 'synthetic-user' }).first().click()
     const waitQuery = () => page.waitForRequest(request => request.method() === 'GET' && new URL(request.url()).pathname.endsWith(item.endpoint))
+    // Move focus explicitly from the teleported select popup back to the keyword.
+    // WebKit may keep the select's focus restoration queued after choosing a created option.
+    await expect(page.locator('.el-select-dropdown__item').filter({ hasText: 'synthetic-user' })).not.toBeVisible()
+    await keyword.click()
+    await expect(keyword).toBeFocused()
     const query = waitQuery()
-    await keyword.press('Enter')
+    await page.keyboard.press('Enter')
     expect(Object.fromEntries(new URL((await query).url()).searchParams)).toMatchObject({ keyword: 'synthetic-filter', username: 'synthetic-user', page: '1', size: '20' })
     await expect(page.getByText(item.empty, { exact: true })).toBeVisible()
     const reset = waitQuery()

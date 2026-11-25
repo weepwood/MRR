@@ -4,16 +4,22 @@ on:
   # Optional supplementary mock-backed check. The required quality gate already
   # runs frontend type, unit, build, and scoped E2E checks for pull requests.
   workflow_dispatch:
+    inputs:
+      cross_browser:
+        description: Run only the optional Firefox and WebKit qualification matrix
+        type: boolean
+        default: false
 
 permissions:
   contents: read
 
 concurrency:
-  group: frontend-mock-${{ github.workflow }}-${{ github.ref }}
+  group: frontend-mock-${{ github.workflow }}-${{ github.ref }}-${{ inputs.cross_browser }}
   cancel-in-progress: true
 
 jobs:
   standalone-frontend:
+    if: inputs.cross_browser != true
     runs-on: ubuntu-latest
     timeout-minutes: 30
     defaults:
@@ -96,3 +102,44 @@ jobs:
         run: |
           echo "::error::End-to-end tests failed. See the uploaded Playwright diagnostics artifact."
           exit 1
+
+  cross-browser:
+    if: inputs.cross_browser == true
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    defaults:
+      run:
+        working-directory: frontend-fantastic-admin
+    steps:
+      - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@v6
+        with:
+          version: 10.33.0
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: frontend-fantastic-admin/.node-version
+          cache: pnpm
+          cache-dependency-path: frontend-fantastic-admin/pnpm-lock.yaml
+      - run: pnpm install --frozen-lockfile
+      - name: Install locked Playwright engines
+        run: pnpm exec playwright install --with-deps chromium firefox webkit
+      - name: Firefox and WebKit candidate qualification
+        run: pnpm exec playwright test --config=playwright.cross-browser.config.ts --project=firefox --project=webkit
+      - name: Preserve cross-browser test results
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: cross-browser-results-${{ github.run_id }}
+          path: frontend-fantastic-admin/test-results-cross-browser/e2e-junit.xml
+          retention-days: 1
+          if-no-files-found: warn
+      - name: Preserve failed cross-browser diagnostics
+        if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: cross-browser-failure-${{ github.run_id }}
+          path: |
+            frontend-fantastic-admin/test-results-cross-browser
+            frontend-fantastic-admin/playwright-cross-browser-report
+          retention-days: 1
+          if-no-files-found: warn

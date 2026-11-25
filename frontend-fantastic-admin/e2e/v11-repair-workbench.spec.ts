@@ -1,6 +1,8 @@
 import { Buffer } from 'node:buffer'
 import { expect, test } from '@playwright/test'
 
+test.use({ actionTimeout: 10_000 })
+
 test('修复工单必须显式确认，审批执行复验和审计按服务器状态更新', async ({ page }) => {
   let status = 'PROPOSED'
   const changes: string[] = []
@@ -76,7 +78,9 @@ test('演示病案完整性显示固定成员与版本，写操作关闭', async
   await page.screenshot({ path: test.info().outputPath('manifest-workbench.png'), fullPage: true })
 })
 
-test('独立病案工作台可从菜单打开，直接查询且兼容旧数据治理入口', async ({ page }) => {
+test('独立病案工作台直接查询、影像核对及窄屏布局', async ({ page }) => {
+  // Multi-step workflow: keep the original per-action/assertion bounds.
+  test.setTimeout(90_000)
   const globalRequests: string[] = []
   page.on('request', (request) => {
     const path = new URL(request.url()).pathname
@@ -149,6 +153,17 @@ test('独立病案工作台可从菜单打开，直接查询且兼容旧数据�
   await page.setViewportSize({ width: 1440, height: 1000 })
   await page.getByRole('button', { name: '关闭原图' }).click()
   await expect(image).toHaveCount(0)
+})
+
+test('独立病案工作台可从菜单打开，且兼容旧数据治理入口', async ({ page }) => {
+  // Multi-step workflow: keep the original per-action/assertion bounds.
+  test.setTimeout(90_000)
+  await page.goto('/archive-workbench')
+  const search = page.getByRole('textbox', { name: '病案查询值', exact: true })
+  await expect(search).toBeVisible()
+  await search.fill('26070000')
+  await search.press('Enter')
+  await expect(page.getByText('病案主档 #1', { exact: true })).toBeVisible()
   await page.getByRole('link', { name: '数据关系工作台', exact: true }).last().click()
   await expect(page).toHaveURL(/data-relations$/)
   await expect(page.getByRole('tab', { name: '关系总览', exact: true })).toBeVisible()
@@ -159,7 +174,9 @@ test('独立病案工作台可从菜单打开，直接查询且兼容旧数据�
   await page.reload()
   await expect(search).toBeVisible()
   await page.goto('/data-relations')
+  await expect(page.getByRole('tab', { name: '关系总览', exact: true })).toBeVisible()
   const navigation = page.getByRole('navigation', { name: '次导航' })
+  await expect(navigation).toBeVisible()
   const business = navigation.getByRole('button', { name: '业务', exact: true })
   const entry = navigation.getByRole('link', { name: '病案工作台', exact: true })
   if (!await entry.isVisible()) {

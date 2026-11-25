@@ -59,6 +59,7 @@ function record(event: AuthTestHistoryEvent) {
         icon="i-lucide:shield-check"
         label="当前权限"
         :value="permissionCount"
+        note="后端按数据库当前权限实时校验"
       />
       <MrrMetricCard
         icon="i-lucide:link"

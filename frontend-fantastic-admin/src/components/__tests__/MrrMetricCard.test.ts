@@ -7,6 +7,7 @@ const stubs = {
     props: ['name'],
     template: '<i class="icon-stub" :data-icon="name" />',
   },
+  'MrrInfoTip': { props: ['label', 'content'], template: '<button :aria-label="label" :aria-description="content" />' },
   'el-card': {
     template: '<div class="mrr-metric-card-stub"><slot /></div>',
   },
@@ -21,11 +22,12 @@ function mountCard(props: Record<string, unknown> = {}, slots: Record<string, st
 }
 
 describe('mrrMetricCard', () => {
-  it('渲染标签、数值与说明', () => {
+  it('渲染标签、数值及独立说明入口', () => {
     const wrapper = mountCard({ note: '口径说明' })
     expect(wrapper.find('.mrr-metric-card__label').text()).toBe('指标名称')
     expect(wrapper.find('.mrr-metric-card__value').text()).toBe('42')
-    expect(wrapper.find('.mrr-metric-card__note').text()).toBe('口径说明')
+    expect(wrapper.get('button[aria-label="查看指标名称说明"]').attributes('aria-description')).toBe('口径说明')
+    expect(wrapper.find('.mrr-metric-card__note').exists()).toBe(false)
   })
 
   it('仅在传入锚点时提供可聚焦链接，默认卡片保持不变', () => {
@@ -59,14 +61,15 @@ describe('mrrMetricCard', () => {
     expect(wrapper.find('.mrr-metric-card__value').classes()).toContain('mrr-metric-card__value--compact')
   })
 
-  it('suffix 与 extra 插槽可独立渲染', () => {
-    const wrapper = mountCard({ suffix: 'ms' }, { extra: '<span class="extra-stub">进度</span>' })
+  it('单位保持独立，主操作与说明按钮互不嵌套', async () => {
+    const wrapper = mountCard({ suffix: 'ms', note: '口径', actionLabel: '查看详情' })
     expect(wrapper.find('.mrr-metric-card__suffix').text()).toBe('ms')
-    expect(wrapper.find('.mrr-metric-card__extra .extra-stub').exists()).toBe(true)
-  })
-
-  it('未提供 extra 插槽时不渲染附加区', () => {
-    expect(mountCard().find('.mrr-metric-card__extra').exists()).toBe(false)
+    expect(wrapper.findAll('button')).toHaveLength(2)
+    expect(wrapper.find('button button').exists()).toBe(false)
+    await wrapper.get('button[aria-label="查看详情"]').trigger('click')
+    expect(wrapper.emitted('activate')).toHaveLength(1)
+    await wrapper.get('button[aria-label="查看指标名称说明"]').trigger('click')
+    expect(wrapper.emitted('activate')).toHaveLength(1)
   })
 
   it('首屏不提示更新，数值变化后才追加 is-updated', async () => {
@@ -89,5 +92,6 @@ describe('mrrMetricCard', () => {
     const wrapper = mountCard()
     expect(wrapper.find('.mrr-metric-card__note').exists()).toBe(false)
     expect(wrapper.find('.mrr-metric-card__scope').exists()).toBe(false)
+    expect(wrapper.find('button').exists()).toBe(false)
   })
 })

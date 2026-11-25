@@ -1,45 +1,101 @@
 <script setup lang="ts">
-import { Info } from 'lucide-vue-next'
+import { onClickOutside, useEventListener } from '@vueuse/core'
 
 defineOptions({ name: 'MrrInfoTip' })
 
 /**
- * 标题旁的说明图标：悬停或键盘聚焦时显示补充说明。
- *
- * 此前权限管理、数据交换、认证测试台各写一份 `button.info-trigger` + 样式，
- * 颜色分别取 `--text-secondary` 与 Element Plus 变量，焦点环也不一致。
- * 说明文字较长或需要换行时使用默认插槽，否则用 `content`。
+ * Shared information trigger. Hover/focus opens, click pins the explanation
+ * for touch and mouse users; Escape, outside click or second click dismisses.
  */
-withDefaults(defineProps<{
-  /** 按钮的可访问名称，读屏只会读到它，必须说明「这是什么的说明」。 */
+const props = withDefaults(defineProps<{
   label: string
   content?: string
   placement?: 'top' | 'bottom' | 'left' | 'right'
 }>(), {
   placement: 'right',
 })
+const trigger = ref<HTMLElement>()
+const contentRef = ref<HTMLElement>()
+const visible = ref(false)
+const pinned = ref(false)
+let closeTimer: ReturnType<typeof setTimeout> | undefined
+function show() {
+  clearTimeout(closeTimer)
+  visible.value = true
+}
+function close() {
+  clearTimeout(closeTimer)
+  pinned.value = false
+  visible.value = false
+}
+function leave() {
+  clearTimeout(closeTimer)
+  if (!pinned.value && document.activeElement !== trigger.value) {
+    closeTimer = setTimeout(close, 180)
+  }
+}
+function activate() {
+  if (pinned.value) {
+    close()
+  }
+  else {
+    pinned.value = true
+    show()
+  }
+}
+function blur() {
+  if (!pinned.value) { leave() }
+}
+onClickOutside(trigger, close, { ignore: [contentRef] })
+useEventListener(document, 'keydown', (event) => {
+  if (event.key === 'Escape' && visible.value) { close() }
+})
+onBeforeUnmount(() => clearTimeout(closeTimer))
 </script>
 
 <template>
-  <el-tooltip :content="content" :placement="placement" :show-after="200">
-    <template v-if="$slots.default" #content>
-      <slot />
-    </template>
-    <button type="button" class="mrr-info-tip" :aria-label="label" data-corner="round">
-      <el-icon aria-hidden="true">
-        <Info />
-      </el-icon>
-    </button>
-  </el-tooltip>
+  <span class="mrr-info-tip-wrap">
+    <MrrTooltip :visible="visible" :placement="props.placement" :show-after="0" :enterable="true">
+      <template #content>
+        <div ref="contentRef" class="mrr-info-tip-content" @pointerenter="show" @pointerleave="leave">
+          <slot>{{ props.content }}</slot>
+        </div>
+      </template>
+      <button
+        ref="trigger"
+        type="button"
+        class="mrr-info-tip"
+        :aria-label="props.label"
+        :aria-description="props.content"
+        :aria-expanded="visible"
+        data-corner="round"
+        @pointerenter="show"
+        @pointerleave="leave"
+        @focus="show"
+        @blur="blur"
+        @click.stop="activate"
+      >
+        <FaIcon name="i-lucide:info" aria-hidden="true" />
+      </button>
+    </MrrTooltip>
+  </span>
 </template>
 
 <style scoped>
+.mrr-info-tip-wrap {
+  display: inline-flex;
+  flex: none;
+}
+
 .mrr-info-tip {
   display: inline-flex;
   flex-shrink: 0;
   align-items: center;
   justify-content: center;
-  padding: var(--mrr-space-1);
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  font-size: 16px;
   color: var(--mrr-muted-foreground);
   cursor: help;
   background: transparent;
@@ -57,5 +113,12 @@ withDefaults(defineProps<{
 .mrr-info-tip:focus-visible {
   outline: 2px solid var(--color-primary);
   outline-offset: 2px;
+}
+
+/* Tooltip is teleported; scoped selector still follows the actual slot node. */
+.mrr-info-tip-content {
+  max-width: min(320px, calc(100vw - 48px));
+  overflow-wrap: anywhere;
+  white-space: normal;
 }
 </style>

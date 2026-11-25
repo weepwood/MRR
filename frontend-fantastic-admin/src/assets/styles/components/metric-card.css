@@ -66,7 +66,6 @@
 
 .mrr-metric-card .el-card__body {
   position: relative;
-  z-index: 1;
   display: grid;
   grid-template-columns: 48px minmax(0, 1fr);
   gap: var(--mrr-space-4);
@@ -80,7 +79,7 @@
   place-items: center;
   width: 48px;
   height: 48px;
-  font-size: 24px;
+  font-size: 28px;
   color: var(--mrr-metric-accent);
 
   /* 与 tones.css 的 -soft（10%）/ -border（22%，混入 --mrr-border）同一配方，页头、分区卡、指标卡三处图标块不再各用一套比例。 */
@@ -97,14 +96,44 @@
   min-width: 0;
 }
 
-/* 值下方的附加内容（进度条、状态标签等），与 note 保持一致的节奏。 */
-.mrr-metric-card__extra {
-  margin-top: var(--mrr-space-3);
+/* Notes are independent tooltip triggers, not a third text row.
+ * Overlay actions remain separate native controls; info stays above the overlay. */
+.mrr-metric-card__heading {
+  display: flex;
+  gap: var(--mrr-space-1);
+  align-items: center;
+  min-width: 0;
+  min-height: 24px;
+  margin-bottom: var(--mrr-space-1);
+}
+
+.mrr-metric-card__info {
+  position: relative;
+  z-index: 3;
+  flex: none;
+  margin-inline-start: auto;
+}
+
+.mrr-metric-card__action-mark {
+  flex: none;
+  margin-inline-start: auto;
+  font-size: 16px;
+  color: var(--mrr-muted-foreground);
+}
+
+.mrr-metric-card__info + .mrr-metric-card__action-mark {
+  margin-inline-start: 0;
+}
+
+.mrr-metric-card--interactive:hover {
+  border-color: var(--mrr-border-strong);
+  box-shadow: var(--mrr-shadow-sm);
 }
 
 .mrr-metric-card__label {
   display: block;
-  margin: 0 0 4px;
+  min-width: 0;
+  margin: 0;
   font-size: 12px;
   font-weight: 550;
   line-height: 1.35;
@@ -162,15 +191,6 @@
 
 .mrr-metric-card__value--danger {
   color: var(--mrr-tone-danger);
-}
-
-.mrr-metric-card__note {
-  margin: 6px 0 0;
-  font-size: 12px;
-  line-height: 1.45;
-  color: var(--mrr-muted-foreground);
-  overflow-wrap: anywhere;
-  white-space: normal;
 }
 
 .mrr-metric-card--rose {

@@ -13,15 +13,18 @@ const props = withDefaults(defineProps<{
   valueTone?: MetricValueTone
   compactValue?: boolean
   anchor?: string
+  actionLabel?: string
 }>(), {
   tone: 'blue',
   valueTone: 'default',
   compactValue: false,
 })
 
+const emit = defineEmits<{ activate: [] }>()
+
 const cardClass = computed(() => [
   props.tone === 'blue' ? '' : `mrr-metric-card--${props.tone}`,
-  props.anchor ? 'mrr-metric-card--anchor' : '',
+  props.anchor || props.actionLabel ? 'mrr-metric-card--interactive' : '',
 ])
 
 /*
@@ -60,40 +63,49 @@ function navigateAnchor(event: MouseEvent) {
       class="mrr-metric-card__anchor"
       @click="navigateAnchor"
     />
+    <button
+      v-else-if="props.actionLabel"
+      type="button"
+      class="mrr-metric-card__anchor"
+      :title="props.actionLabel"
+      :aria-label="props.actionLabel"
+      @click="emit('activate')"
+    />
     <div class="mrr-metric-card__icon" aria-hidden="true">
       <FaIcon :name="props.icon" />
     </div>
     <div class="mrr-metric-card__body">
-      <span class="mrr-metric-card__label">
-        {{ props.label }}
-      </span>
+      <div class="mrr-metric-card__heading">
+        <span class="mrr-metric-card__label">{{ props.label }}</span>
+        <MrrInfoTip v-if="props.note" class="mrr-metric-card__info" :label="`查看${props.label}说明`" :content="props.note" placement="top" />
+        <FaIcon v-if="props.anchor || props.actionLabel" name="i-lucide:arrow-up-right" class="mrr-metric-card__action-mark" aria-hidden="true" />
+      </div>
       <div class="mrr-metric-card__value-row">
         <strong :key="updateRevision" class="mrr-metric-card__value" :class="valueClass">
           {{ props.value }}
         </strong>
         <span v-if="props.suffix" class="mrr-metric-card__suffix">{{ props.suffix }}</span>
       </div>
-      <p v-if="props.note" class="mrr-metric-card__note">
-        {{ props.note }}
-      </p>
-      <div v-if="$slots.extra" class="mrr-metric-card__extra">
-        <slot name="extra" />
-      </div>
     </div>
   </el-card>
 </template>
 
 <style scoped>
-.mrr-metric-card--anchor {
+.mrr-metric-card--interactive {
   position: relative;
 }
 
 .mrr-metric-card__anchor {
   position: absolute;
   inset: 0;
-  z-index: 1;
+  z-index: 2;
+  width: 100%;
+  padding: 0;
   color: inherit;
   text-decoration: none;
+  cursor: pointer;
+  background: transparent;
+  border: 0;
   border-radius: inherit;
 }
 

@@ -622,13 +622,9 @@ onMounted(async () => {
                 compact-value
                 :value="overview.recentServerErrorsAvailable ? formatNumber(overview.recentServerErrors) : '不可用'"
                 :value-tone="overview.recentServerErrorsAvailable && overview.recentServerErrors > 0 ? 'danger' : undefined"
-              >
-                <template v-if="canViewLogs" #extra>
-                  <el-button text type="primary" @click="navigate('/logs')">
-                    查看日志
-                  </el-button>
-                </template>
-              </MrrMetricCard>
+                :action-label="canViewLogs ? '查看日志' : undefined"
+                @activate="navigate('/logs')"
+              />
             </section>
 
             <OperationsHistoryCard v-if="activeTab === 'overview'" />

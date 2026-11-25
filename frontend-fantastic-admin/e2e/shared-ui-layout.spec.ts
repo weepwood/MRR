@@ -42,8 +42,12 @@ test('静态指标保持稳定，必要说明完整换行', async ({ page }) => 
   await expect(card).toHaveCSS('transform', 'none')
   await expect(page.locator('.mrr-metric-card__note')).toHaveCount(0)
   await page.goto('/data-relations')
-  await expect(page.locator('.mrr-metric-card__note').first()).toHaveCSS('white-space', 'normal')
-  await expectContained(page, '.mrr-metric-card__note')
+  await expect(page.locator('.mrr-metric-card__note')).toHaveCount(0)
+  const info = page.getByRole('button', { name: '查看关系健康度说明' })
+  await info.hover()
+  await expect(page.getByText('基于可用统计估算；未知项不计入', { exact: true })).toBeVisible()
+  await page.keyboard.press('Escape')
+  await expect(page.getByText('基于可用统计估算；未知项不计入', { exact: true })).not.toBeVisible()
 })
 
 test('主操作按钮通过键盘聚焦时显示统一焦点环', async ({ page }) => {

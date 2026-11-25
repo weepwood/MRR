@@ -351,16 +351,10 @@ function levelTagType(level: string) {
     </MrrPageHeader>
 
     <section class="mrr-metric-grid mrr-metric-grid--four" :aria-busy="overviewLoading" aria-label="运行错误概览">
-      <button type="button" class="metric-action" title="点击仅看 ERROR 错误组" @click="applyLevelFilter('ERROR')">
-        <MrrMetricCard icon="i-lucide:circle-x" label="ERROR 错误组" :value="overviewValue(overview.errorGroups)" value-tone="danger" />
-      </button>
-      <button type="button" class="metric-action" title="点击仅看 WARN 错误组" @click="applyLevelFilter('WARN')">
-        <MrrMetricCard icon="i-lucide:triangle-alert" label="WARN 错误组" :value="overviewValue(overview.warnGroups)" value-tone="warning" />
-      </button>
+      <MrrMetricCard icon="i-lucide:circle-x" label="ERROR 错误组" :value="overviewValue(overview.errorGroups)" value-tone="danger" action-label="点击仅看 ERROR 错误组" @activate="applyLevelFilter('ERROR')" />
+      <MrrMetricCard icon="i-lucide:triangle-alert" label="WARN 错误组" :value="overviewValue(overview.warnGroups)" value-tone="warning" action-label="点击仅看 WARN 错误组" @activate="applyLevelFilter('WARN')" />
       <MrrMetricCard icon="i-lucide:activity" label="近24小时活跃错误组" :value="overviewValue(overview.recentOccurrences)" note="按最后发生时间统计" />
-      <button type="button" class="metric-action" title="点击查看全部错误组" @click="resetFilters">
-        <MrrMetricCard icon="i-lucide:layers" label="累计错误组" :value="overviewValue(overview.totalGroups)" :note="overviewReady ? `累计 ${overview.totalOccurrences} 次` : undefined" />
-      </button>
+      <MrrMetricCard icon="i-lucide:layers" label="累计错误组" :value="overviewValue(overview.totalGroups)" :note="overviewReady ? `累计 ${overview.totalOccurrences} 次` : undefined" action-label="点击查看全部错误组" @activate="resetFilters" />
     </section>
     <div v-if="overviewError" class="overview-status">
       <span role="status">{{ overviewReady ? '概览刷新失败，显示上次成功的数据。' : '概览加载失败，不影响错误列表。' }}</span>
@@ -529,37 +523,6 @@ function levelTagType(level: string) {
   flex-wrap: wrap;
   gap: var(--mrr-space-2);
   margin-bottom: var(--mrr-space-3);
-}
-
-/* 指标卡与模块名都承担「点击筛选」交互，外观退成卡片但语义是按钮。 */
-.metric-action {
-  padding: 0;
-  font: inherit;
-  text-align: left;
-  cursor: pointer;
-  background: transparent;
-  border: 0;
-
-  /* 与内部指标卡同半径，焦点轮廓才会贴合卡片外形（原用 md，比卡片小一档，四角露出缝）。 */
-  border-radius: var(--mrr-radius-card);
-}
-
-.metric-action:focus-visible {
-  outline: 2px solid var(--el-color-primary);
-  outline-offset: 2px;
-}
-
-/*
- * 可点击的指标卡要有悬停反馈（DESIGN.md §2.7：可点击卡片悬停升一档阴影并加深描边，不靠位移）；
- * 原来三张能点、一张不能点，外观完全相同，用户无从分辨。
- */
-.metric-action :deep(.mrr-metric-card) {
-  transition: border-color var(--mrr-motion-feedback) var(--mrr-ease-out), box-shadow var(--mrr-motion-feedback) var(--mrr-ease-out);
-}
-
-.metric-action:hover :deep(.mrr-metric-card) {
-  border-color: var(--mrr-border-strong);
-  box-shadow: var(--mrr-shadow-sm);
 }
 
 .module-filter.el-button {

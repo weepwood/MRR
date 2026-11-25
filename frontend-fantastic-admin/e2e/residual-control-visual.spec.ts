@@ -66,7 +66,12 @@ for (const palette of ['mrr', 'gr8r'] as const) {
       // A drawer can be marked visible before its first transition frame.
       await expect.poll(() => panel.evaluate((el) => {
         const r = el.getBoundingClientRect()
-        return Math.abs(r.right - innerWidth)
+        // Linux uses a classic scrollbar; the fixed overlay follows the layout viewport.
+        // Measure the actual containing overlay instead of assuming an overlay scrollbar.
+        const overlay = el.closest('.el-overlay')
+        if (!overlay) { throw new Error('Missing drawer overlay') }
+        const edge = overlay.getBoundingClientRect().right
+        return Math.abs(r.right - edge)
       })).toBeLessThanOrEqual(1)
       for (const label of ['产品版本', '数据库兼容性', '前端工程信息', '主要运行时依赖（声明版本范围）']) {
         const text = panel.getByText(label, { exact: true })

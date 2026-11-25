@@ -119,7 +119,7 @@ async function handlePrevious() {
           <FormItem class="field-item">
             <RegisterFieldLabel html-for="register-account" label="用户名" status="必填" description="3–40 位，可使用字母、数字、点、下划线和短横线" />
             <FormControl>
-              <FaInput id="register-account" type="text" autocomplete="username" placeholder="例如 zhangsan" aria-required="true" :class="errors.length > 0 && 'border-destructive'" v-bind="componentField" />
+              <el-input id="register-account" type="text" autocomplete="username" placeholder="例如 zhangsan" aria-required="true" :class="{ 'account-field-invalid': errors.length > 0 }" :aria-invalid="errors.length > 0" v-bind="componentField" />
             </FormControl>
             <FormMessage class="field-message" />
           </FormItem>
@@ -129,7 +129,7 @@ async function handlePrevious() {
           <FormItem class="field-item">
             <RegisterFieldLabel html-for="register-display-name" label="显示名称" status="必填" description="建议填写真实姓名，便于管理员确认身份" />
             <FormControl>
-              <FaInput id="register-display-name" type="text" autocomplete="name" placeholder="例如 张三" aria-required="true" :class="errors.length > 0 && 'border-destructive'" v-bind="componentField" />
+              <el-input id="register-display-name" type="text" autocomplete="name" placeholder="例如 张三" aria-required="true" :class="{ 'account-field-invalid': errors.length > 0 }" :aria-invalid="errors.length > 0" v-bind="componentField" />
             </FormControl>
             <FormMessage class="field-message" />
           </FormItem>
@@ -145,7 +145,7 @@ async function handlePrevious() {
             />
             <FormControl>
               <div class="password-shell">
-                <FaInput id="register-password" :type="showPwd ? 'text' : 'password'" autocomplete="new-password" placeholder="6 到 64 位" aria-required="true" :class="errors.length > 0 && 'border-destructive'" v-bind="componentField" />
+                <el-input id="register-password" :type="showPwd ? 'text' : 'password'" autocomplete="new-password" placeholder="6 到 64 位" aria-required="true" :class="{ 'account-field-invalid': errors.length > 0 }" :aria-invalid="errors.length > 0" v-bind="componentField" />
                 <button type="button" class="password-toggle" :aria-label="showPwd ? '隐藏密码' : '显示密码'" @click="showPwd = !showPwd">
                   <Eye v-if="!showPwd" class="size-4" />
                   <EyeOff v-else class="size-4" />
@@ -161,7 +161,7 @@ async function handlePrevious() {
             <RegisterFieldLabel html-for="register-password-confirm" label="确认密码" status="必填" description="请与上方密码保持一致" />
             <FormControl>
               <div class="password-shell">
-                <FaInput id="register-password-confirm" :type="showCheckPwd ? 'text' : 'password'" autocomplete="new-password" placeholder="再次输入密码" aria-required="true" :class="errors.length > 0 && 'border-destructive'" v-bind="componentField" />
+                <el-input id="register-password-confirm" :type="showCheckPwd ? 'text' : 'password'" autocomplete="new-password" placeholder="再次输入密码" aria-required="true" :class="{ 'account-field-invalid': errors.length > 0 }" :aria-invalid="errors.length > 0" v-bind="componentField" />
                 <button type="button" class="password-toggle" :aria-label="showCheckPwd ? '隐藏密码' : '显示密码'" @click="showCheckPwd = !showCheckPwd">
                   <Eye v-if="!showCheckPwd" class="size-4" />
                   <EyeOff v-else class="size-4" />
@@ -179,7 +179,7 @@ async function handlePrevious() {
         <FormItem class="field-item">
           <RegisterFieldLabel html-for="register-contact" label="联系方式" status="选填" description="仅用于注册审核和账号问题联系" />
           <FormControl>
-            <FaInput id="register-contact" type="text" autocomplete="tel" placeholder="手机号、工号、科室内线等" :class="errors.length > 0 && 'border-destructive'" v-bind="componentField" />
+            <el-input id="register-contact" type="text" autocomplete="tel" placeholder="手机号、工号、科室内线等" :class="{ 'account-field-invalid': errors.length > 0 }" :aria-invalid="errors.length > 0" v-bind="componentField" />
           </FormControl>
           <FormMessage class="field-message" />
         </FormItem>
@@ -189,7 +189,7 @@ async function handlePrevious() {
         <FormItem class="field-item field-item--remark">
           <RegisterFieldLabel html-for="register-remark" label="申请说明" status="选填" description="最多 500 个字符" />
           <FormControl>
-            <FaTextarea id="register-remark" :rows="2" maxlength="500" show-word-limit placeholder="例如：肿瘤科医生，需要查阅本科室住院病案" :class="errors.length > 0 && 'border-destructive'" v-bind="componentField" />
+            <el-input id="register-remark" type="textarea" :rows="2" maxlength="500" placeholder="例如：肿瘤科医生，需要查阅本科室住院病案" :class="{ 'account-field-invalid': errors.length > 0 }" :aria-invalid="errors.length > 0" v-bind="componentField" />
           </FormControl>
           <FormMessage class="field-message" />
         </FormItem>
@@ -197,14 +197,14 @@ async function handlePrevious() {
     </section>
 
     <div class="form-actions" :class="{ 'form-actions--single': !isApplicationStep }">
-      <FaButton v-if="isApplicationStep" type="button" variant="outline" size="lg" @click="handlePrevious">
+      <el-button v-if="isApplicationStep" :auto-insert-space="false" native-type="button" size="large" @click="handlePrevious">
         <FaIcon name="i-lucide:arrow-left" />
         返回身份信息
-      </FaButton>
-      <FaButton :loading="loading" size="lg" type="submit">
+      </el-button>
+      <el-button :auto-insert-space="false" :loading="loading" size="large" native-type="submit" type="primary">
         <FaIcon v-if="!loading" :name="isApplicationStep ? 'i-lucide:send' : 'i-lucide:arrow-right'" />
         {{ isApplicationStep ? '提交注册' : '填写申请说明' }}
-      </FaButton>
+      </el-button>
     </div>
   </form>
 </template>
@@ -239,13 +239,14 @@ async function handlePrevious() {
 }
 .field-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--mrr-space-3); }
 .field-item { position: relative; display: grid; gap: var(--mrr-space-2); min-width: 0; padding-bottom: 18px; }
-.field-item :deep(.fa-input__wrapper), .field-item :deep(input), .field-item :deep(textarea) { width: 100%; }
-.field-item :deep(.fa-input__wrapper), .field-item :deep(input) { height: var(--auth-input-height, var(--mrr-input-height)); }
+.field-item :deep(.el-input), .field-item :deep(.el-textarea) { width: 100%; }
+.field-item :deep(.el-input__wrapper) { box-sizing: border-box; height: var(--auth-input-height, var(--mrr-input-height)); min-height: var(--auth-input-height, var(--mrr-input-height)); }
+.field-item :deep(.el-input__inner) { height: 100%; }
 .field-message { position: absolute; bottom: 0; font-size: 10px; }
 .field-item--remark { padding-bottom: 16px; }
 .field-item--remark :deep(textarea) { min-height: 64px; }
 .password-shell { position: relative; }
-.password-shell :deep(input) { padding-right: 42px; }
+.password-shell :deep(.el-input__wrapper) { padding-right: 42px; }
 .password-toggle { position: absolute; top: 50%; right: 12px; display: grid; padding: 4px; color: var(--mrr-muted-foreground); background: transparent; transform: translateY(-50%); place-items: center; }
 .form-actions { display: grid; flex-shrink: 0; grid-template-columns: minmax(0, 0.8fr) minmax(0, 1.2fr); gap: var(--mrr-space-3); margin-top: auto; }
 .form-actions--single { grid-template-columns: minmax(0, 1fr); }
@@ -253,9 +254,11 @@ async function handlePrevious() {
 /*
  * 登录/注册是同一块面板的两个面，主按钮必须同高、同一条基线：
  * 面板里的输入框用局部 --auth-input-height（38px），
- * 若只让登录页的提交按钮跟随、注册页留给 size="lg"（33px），
+ * 若只让登录页的提交按钮跟随、注册页留给 size="large"（33px），
  * 切换时两个主按钮的顶边就会差 5px（login-switch-spacing 用例会直接抓到）。
  */
+.form-actions :deep(.el-button + .el-button) { margin-left: 0; }
+
 .form-actions :deep(button) {
   width: 100%;
   height: var(--auth-input-height, var(--mrr-control-height));

@@ -73,6 +73,14 @@ FaIcon、FaKbd、FaPinInput、FaScrollArea、FaSmartFixedBlock、FaPasswordStren
 
 复现：同一环境分别在旧、新工作区运行 e2e/settings-control-visual.spec.ts（旧工作区复制该测试，勿改生产源码）；旧版使用 MRR_CONTROL_VISUAL_CAPTURE=true 和 MRR_CONTROL_VISUAL_EVIDENCE=/tmp/独立证据目录，指定 -g '外观设置控件迁移视觉契约'；新版仅提供同一 EVIDENCE 路径。无环境变量时 CI 验证唯一实现、宽度、间距、状态及业务交互；不以 Mac 的像素截图作为 Linux 固定快照。截图只含合成数据。下一批登录/注册须覆盖真实表单验证、密码切换和提交/错误/加载等行为，不能机械替换。
 
+## 登录与注册迁移（2026-11-25）
+
+- #838 已合并 `3c93d1f0`，实际开发基线 `a95f3906` 与该合并 tree 完全一致。登录2输入/1按钮、注册5输入/1文本域/3按钮（含按阶段出现的返回和提交）均直接采用 ElInput/ElButton；保留 FaCheckbox 记住用户名与专用图标，后续单独迁移复选框。VeeValidate/Zod、表单请求、身份、密码显示及两阶段字段保持不变。旧原生 textarea 的 show-word-limit 是无效 HTML 属性，为保留原视觉不启用额外计数器，仍限制 maxlength=500。没有将找回密码（无实际路由入口）或个人设置修改密码（尚无视觉基准）强行纳入本轮。
+- 原登录局部38px高度、图标/眼睛位置、按钮基线与原注册表单分区保持。将原字段外观定位迁至 Element Plus wrapper，避免重复边框，错误状态显式类及 aria-invalid，兼容不支持 :has 的浏览器；native-type=submit 保留原生提交。关闭迁移按钮自动双字间隔，避免默认 margin 叠加布局 gap。不改其他页面的按钮默认值。
+- 实测经典/暖色×明暗、1440/390、登录/身份/申请三状态共24对前后截图与计算样式，5/5含预热；几何最大差0px，所测字号/字重/圆角/底色/字色无差异。24对同尺寸截图，任一RGB通道差>8的像素比例中位0.096074%、最大1.113596%（暖色浅色390登录），已查看该对实际截图。证据目录 /tmp/mrr-v12-account-visual-a95。未宣称全部状态、像素或跨平台完全相同。
+- 账户schema与样式12文件72/72、vue-tsc、ESLint、Stylelint通过。联合Chromium首轮37/38（含预热），唯一失败是模拟登录无Token响应的提示仅放外层，而原表单按ApiResult.data读取；修正测试响应层级，不修改认证业务、不放宽断言，定向复验2/2（24.6秒，含预热）。覆盖实际Mock登录失败/恢复/成功、请求体、记住用户名且不保存密码、密码切换、原匿名注册提交/两阶段返回焦点/数据保留、原动效与认证存储隔离。日志 /tmp/mrr-v12-account-{before,after,unit,tsc,final,recovery-final}.log。未重新执行整套38项；无真实医院/跨浏览器现场验收。
+- 复现 e2e/account-control-visual.spec.ts，旧版使用 MRR_ACCOUNT_VISUAL_CAPTURE=true、MRR_ACCOUNT_VISUAL_EVIDENCE=/tmp/独立目录 并限定 -g '账户表单迁移视觉'，新版仅传 EVIDENCE；默认CI检查实际唯一实现、主题、尺寸、行为，不依赖Mac固定截图。先保持原有组件生命周期和语义，再考虑剩余账户修改密码、找回密码、复选、布局/全局工具栏及重复组件清理。
+
 ## 逐文件原始引用清单
 
 | 源文件（相对 src/） | Fa 标签 | Element Plus 标签 |

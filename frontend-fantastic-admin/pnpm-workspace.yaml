@@ -5,3 +5,5 @@ verifyDepsBeforeRun: prompt
 
 overrides:
   qs: ^6.16.0
+  node-plop>handlebars: 4.7.10
+  npm-run-all2>shell-quote: 1.12.0

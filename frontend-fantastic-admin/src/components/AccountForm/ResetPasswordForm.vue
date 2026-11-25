@@ -1,8 +1,8 @@
 <script setup lang="ts">
-import { toTypedSchema } from '@vee-validate/zod'
 import { useForm } from 'vee-validate'
 import * as z from 'zod'
 import { FormControl, FormField, FormItem, FormMessage } from '@/ui/shadcn/ui/form'
+import { toAccountSchema } from './account-schema'
 
 defineOptions({
   name: 'ResetPasswordForm',
@@ -20,7 +20,7 @@ const emits = defineEmits<{
 const loading = ref(false)
 
 const form = useForm({
-  validationSchema: toTypedSchema(z.object({
+  validationSchema: toAccountSchema(z.object({
     account: z.string().min(1, '请输入用户名'),
     captcha: z.string().min(6, '请输入验证码'),
     newPassword: z.string().min(1, '请输入新密码').min(6, '密码长度为6到64位').max(64, '密码长度为6到64位'),

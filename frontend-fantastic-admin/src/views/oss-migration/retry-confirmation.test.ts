@@ -38,7 +38,7 @@ async function setup() {
   return { wrapper, vm }
 }
 beforeEach(() => {
-  vi.clearAllMocks()
+  vi.resetAllMocks()
   confirm.mockResolvedValue(undefined)
   vi.mocked(api.getMigrationReadiness).mockResolvedValue({ data: {} } as Awaited<ReturnType<typeof api.getMigrationReadiness>>)
   vi.mocked(api.getMigrationJobs).mockResolvedValue({ data: { list: [] } } as Awaited<ReturnType<typeof api.getMigrationJobs>>)
@@ -203,7 +203,8 @@ describe('失败重置确认范围', () => {
     const request = deferred<Awaited<ReturnType<typeof api.retryMigrationScans>>>()
     vi.mocked(api.retryMigrationScans).mockReturnValueOnce(request.promise)
     const task = vm.handleRetryFailed()
-    await flushPromises()
+    await vi.waitFor(() => expect(api.retryMigrationScans).toHaveBeenCalledWith([1, 2]))
+    expect(vm.loading.retry).toBe(true)
     wrapper.unmount()
     request.reject(new Error('late private error'))
     await task

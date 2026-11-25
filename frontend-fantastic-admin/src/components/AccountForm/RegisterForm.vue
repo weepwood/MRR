@@ -1,6 +1,5 @@
 <script setup lang="ts">
 /* eslint-disable antfu/consistent-chaining, regexp/prefer-w, regexp/use-ignore-case */
-import { toTypedSchema } from '@vee-validate/zod'
 import { Eye, EyeOff } from 'lucide-vue-next'
 import { useForm } from 'vee-validate'
 import { nextTick } from 'vue'
@@ -8,6 +7,7 @@ import * as z from 'zod'
 import apiUser from '@/api/modules/user'
 import { FormControl, FormField, FormItem, FormMessage } from '@/ui/shadcn/ui/form'
 import { notify } from '@/utils/notification'
+import { toAccountSchema } from './account-schema'
 import RegisterFieldLabel from './RegisterFieldLabel.vue'
 
 defineOptions({ name: 'RegisterForm' })
@@ -31,7 +31,7 @@ function resolveMessage(payload: any, fallback: string): string {
 
 const form = useForm({
   keepValuesOnUnmount: true,
-  validationSchema: toTypedSchema(
+  validationSchema: toAccountSchema(
     z.object({
       account: z.string().trim()
         .min(3, '用户名长度应为 3 到 40 位')

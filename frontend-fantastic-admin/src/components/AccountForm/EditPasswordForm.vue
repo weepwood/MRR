@@ -1,9 +1,9 @@
 <script setup lang="ts">
-import { toTypedSchema } from '@vee-validate/zod'
 import { useForm } from 'vee-validate'
 import * as z from 'zod'
 import { FormControl, FormField, FormItem, FormMessage } from '@/ui/shadcn/ui/form'
 import { notify } from '@/utils/notification'
+import { toAccountSchema } from './account-schema'
 
 defineOptions({
   name: 'EditPasswordForm',
@@ -14,7 +14,7 @@ const userStore = useUserStore()
 const loading = ref(false)
 
 const form = useForm({
-  validationSchema: toTypedSchema(
+  validationSchema: toAccountSchema(
     z.object({
       password: z.string().min(1, '请输入原密码'),
       newPassword: z.string().min(6, '密码长度为 6 到 64 位').max(64, '密码长度为 6 到 64 位'),

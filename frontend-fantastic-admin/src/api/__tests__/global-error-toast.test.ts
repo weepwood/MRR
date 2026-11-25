@@ -1,5 +1,5 @@
 import { AxiosError, AxiosHeaders } from 'axios'
-import { describe, expect, it, vi } from 'vitest'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 import api from '../index'
 
 const { user, elMessageError } = vi.hoisted(() => ({
@@ -16,6 +16,8 @@ function dispatchUnhandledRejection(reason: unknown) {
 }
 
 describe('global request error toast', () => {
+  beforeEach(() => elMessageError.mockClear())
+
   it('guides the operator to pass the request id to the administrator', async () => {
     let captured: unknown
     const adapter = vi.fn((config) => {

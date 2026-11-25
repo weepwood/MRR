@@ -119,6 +119,24 @@ export default defineFakeRoute([
     }),
   },
   { url: '/api/v1/operations/overview', response: () => demoOk(overview()) },
+  { url: '/api/v1/operations/nginx', response: () => demoOk({ enabled: false, state: 'DISABLED', configBytes: null, configModifiedAt: null }) },
+  { url: '/api/v1/operations/nginx/check', method: 'POST', response: () => demoOk({ status: 'DISABLED', checkedAt: new Date().toISOString(), exitCode: null }) },
+  {
+    url: '/api/v1/operations/history',
+    response: ({ query }) => {
+      const hours = Number(query.hours ?? 24)
+      if (hours !== 24 && hours !== 168) { return demoError(400, '仅支持最近24小时或7天') }
+      const to = Date.now()
+      const from = to - hours * 3600000
+      const end = Math.floor(to / 300000) * 300000
+      const samples = Array.from({ length: hours * 12 }, (_, i) => {
+        const at = end - (hours * 12 - 1 - i) * 300000
+        const degraded = i % 96 >= 40 && i % 96 < 43
+        return { sampledAt: new Date(at).toISOString(), readinessCheckedAt: new Date(at - 15000).toISOString(), mode: degraded ? 'READ_ONLY_DEGRADED' : 'READ_WRITE', criticalFailures: degraded ? 1 : 0, heapUsedBytes: (180 + i % 90) * 1048576, heapMaxBytes: 512 * 1048576, scanTotalBytes: 20015456256, storageOpenNodes: degraded ? 1 : 0, storageWaiting: degraded ? 2 : 0 }
+      }).filter((_, i) => i % 71 !== 0)
+      return demoOk({ enabled: true, hours, bucketSeconds: 300, from: new Date(from).toISOString(), to: new Date(to).toISOString(), samples })
+    },
+  },
   { url: '/api/v1/operations/readiness', response: () => demoOk(readiness()) },
   { url: '/api/v1/operations/readiness/refresh', method: 'POST', response: () => demoOk(readiness()) },
   { url: '/api/v1/operations/maintenance', response: () => demoOk({ ...maintenance }) },

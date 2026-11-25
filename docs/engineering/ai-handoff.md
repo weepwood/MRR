@@ -358,6 +358,10 @@
 
 - #804 已合并 integration/v1.1 7bab1280，冻结 main 24152bee 不变；[入口、集成和验证](v1.1-workbench-entry.md)。后续集中分支 feat/v1.1-workbench-entry 吸收 Manifest 与患者统计原增量，保留旧分支，避免重复 PR；业务菜单 /archive-workbench，原权限不变。嵌入有界影像核对及现有 OCR，修复实际 Blob 契约和会话/身份隔离。本地 24 项单测及 10 Chromium（含预热）通过；最终门禁及合并以 GitHub 为准。
 
+## 08 V1.1 运维历史与本地 Nginx 检查（2026-11-25）
+
+- #805 已合并 integration/v1.1 ba1487ba，main 24152bee 冻结；独立分支 feat/v1.1-operations-history，详见 [运维历史及Nginx专项](v1.1-operations-history.md)。新增有界独立采样表、历史趋势与相邻观察时间线；固定本地 Windows Nginx 语法校验及元数据；两个特性默认关闭。不执行真实 Windows 生产命令。最终 PR/门禁以 GitHub 为准，真实医院验收仍独立。
+
 ## 每轮交接模板
 
 - 更新时间、任务、风险、目标及非目标：

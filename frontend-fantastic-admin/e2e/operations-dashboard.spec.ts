@@ -180,7 +180,7 @@ test('NAS 节点熔断和实际许可状态可见但不显示源地址', async (
   const dashboard = page.locator('.overview-dashboard')
   await expect(dashboard.getByText('NAS 节点运行状态', { exact: true })).toBeVisible()
   await expect(dashboard.getByText('全局许可 1 / 2')).toBeVisible()
-  await expect(dashboard.getByText('熔断冷却')).toBeVisible()
+  await expect(dashboard.getByText('熔断冷却', { exact: true })).toBeVisible()
   await expect(dashboard.getByText('探针进行中')).toBeVisible()
 })
 
@@ -236,4 +236,69 @@ test('单张正文校验使用明确ID并区分无基线与完整校验', async 
   await id.fill('2')
   await expect(page.getByText('可读，缺少有效校验基线')).toHaveCount(0)
   expect(requests).toBe(1)
+})
+
+test('持久运行历史展示相邻采样变化、缺口及七天范围', async ({ page }) => {
+  await page.goto('/operations-center')
+  await expect(page.getByRole('heading', { name: '运行历史与容量趋势' })).toBeVisible()
+  await expect(page.getByRole('img', { name: 'JVM 堆内存历史' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: '相邻采样状态变化' })).toBeVisible()
+  await expect(page.getByText('正常读写 → 自动降级', { exact: false }).first()).toBeVisible()
+  const response = page.waitForResponse(r => r.url().includes('/operations/history') && r.url().includes('hours=168'))
+  await page.getByText('7 天', { exact: true }).click()
+  const result = (await (await response).json()).data
+  expect(result.hours).toBe(168)
+  expect(result.samples.length).toBeLessThan(2017)
+  await expect(page.getByRole('img', { name: '扫描表容量历史' })).toBeVisible()
+  await page.setViewportSize({ width: 390, height: 844 })
+  await expect.poll(() => page.locator('.overview-dashboard').evaluate(element => element.scrollWidth <= element.clientWidth + 1)).toBe(true)
+  await page.screenshot({ path: test.info().outputPath('operations-history.png'), fullPage: true })
+})
+
+test('历史未启用时不展示伪造的零值图表', async ({ page }) => {
+  await page.route('**/api/v1/operations/history?*', route => route.fulfill({ json: { code: 200, data: {
+    enabled: false,
+    hours: 24,
+    bucketSeconds: 300,
+    from: '2026-11-01T00:00:00Z',
+    to: '2026-11-02T00:00:00Z',
+    samples: [],
+  } } }))
+  await page.goto('/operations-center')
+  await expect(page.getByText('持久历史采集尚未启用')).toBeVisible()
+  await expect(page.getByRole('img', { name: 'JVM 堆内存历史' })).toHaveCount(0)
+})
+
+test('Nginx 默认关闭时禁止校验，显式检查仅发送固定请求', async ({ page }) => {
+  let calls = 0
+  await page.route('**/api/v1/operations/nginx', route => route.fulfill({ json: { code: 200, data: {
+    enabled: false,
+    state: 'DISABLED',
+    configBytes: null,
+    configModifiedAt: null,
+  } } }))
+  await page.route('**/api/v1/operations/nginx/check', (route) => {
+    calls++
+    expect(route.request().method()).toBe('POST')
+    expect(route.request().postData()).toBeNull()
+    return route.fulfill({ json: { code: 200, data: { status: 'FAILED', checkedAt: snapshotTime, exitCode: 1 } } })
+  })
+  await page.goto('/operations-center')
+  await expect(page.getByText('配置检查未启用', { exact: true })).toBeVisible()
+  const check = page.getByRole('button', { name: '校验配置语法' })
+  await expect(check).toBeDisabled()
+  expect(calls).toBe(0)
+  await page.unroute('**/api/v1/operations/nginx')
+  await page.route('**/api/v1/operations/nginx', route => route.fulfill({ json: { code: 200, data: {
+    enabled: true,
+    state: 'AVAILABLE',
+    configBytes: 1234,
+    configModifiedAt: snapshotTime,
+  } } }))
+  await page.getByRole('button', { name: '刷新配置状态' }).click()
+  await expect(check).toBeEnabled()
+  await check.click()
+  await expect(page.getByText('配置语法校验失败', { exact: true })).toBeVisible()
+  await expect(page.getByText('退出码 1', { exact: false })).toBeVisible()
+  expect(calls).toBe(1)
 })

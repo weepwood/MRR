@@ -433,6 +433,16 @@ async function smokePagesDemo() {
     opsPage.on('pageerror', error => pageErrors.push(error.message))
     await opsPage.goto(`${appUrl}#/operations-center`)
     await opsPage.locator('.overview-dashboard').getByText('当前允许业务写入。').waitFor({ timeout: 20_000 })
+    await opsPage.getByRole('heading', { name: '运行历史与容量趋势' }).waitFor({ timeout: 20000 })
+    await opsPage.getByRole('img', { name: 'JVM 堆内存历史' }).waitFor({ timeout: 20000 })
+    await opsPage.getByText('配置检查未启用', { exact: true }).waitFor({ timeout: 20000 })
+    assert.equal(await opsPage.getByRole('button', { name: '校验配置语法' }).isDisabled(), true)
+    const history = await opsPage.evaluate(() => fetch('/proxy/api/v1/operations/history?hours=168').then(response => response.json()))
+    assert.equal(history.data.hours, 168)
+    assert.ok(history.data.samples.length > 0 && history.data.samples.length <= 2017)
+    const disabledCheck = await opsPage.evaluate(() => fetch('/proxy/api/v1/operations/nginx/check', { method: 'POST' }).then(response => response.json()))
+    assert.equal(disabledCheck.data.status, 'DISABLED')
+
     const simulated = await opsPage.evaluate(async () => {
       async function request(path, body) {
         const options = body === undefined ? undefined : {

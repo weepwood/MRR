@@ -366,3 +366,49 @@ export function getAccessLogPartitionStatus() {
     '访问日志分区状态查询',
   )
 }
+
+export interface OperationsHistorySample {
+  sampledAt: string
+  readinessCheckedAt: string
+  mode: ReadinessSnapshot['mode']
+  criticalFailures: number
+  heapUsedBytes: number
+  heapMaxBytes: number
+  scanTotalBytes: number | null
+  storageOpenNodes: number | null
+  storageWaiting: number | null
+}
+
+export interface OperationsHistory {
+  enabled: boolean
+  hours: number
+  bucketSeconds: number
+  from: string
+  to: string
+  samples: OperationsHistorySample[]
+}
+
+export function getOperationsHistory(hours: 24 | 168, signal?: AbortSignal) {
+  return unwrap(getRequest<OperationsHistory>('/api/v1/operations/history', { params: { hours }, signal, skipGlobalError: true }), '运维历史查询')
+}
+
+export interface NginxConfigStatus {
+  enabled: boolean
+  state: 'DISABLED' | 'UNSUPPORTED_PLATFORM' | 'NOT_CONFIGURED' | 'INSTALLATION_UNAVAILABLE' | 'AVAILABLE'
+  configBytes: number | null
+  configModifiedAt: string | null
+}
+
+export interface NginxConfigCheck {
+  status: 'DISABLED' | 'UNSUPPORTED_PLATFORM' | 'NOT_CONFIGURED' | 'BUSY' | 'PASSED' | 'FAILED' | 'TIMEOUT' | 'INTERRUPTED' | 'UNAVAILABLE'
+  checkedAt: string
+  exitCode: number | null
+}
+
+export function getNginxConfigStatus(signal?: AbortSignal) {
+  return unwrap(getRequest<NginxConfigStatus>('/api/v1/operations/nginx', { signal, skipGlobalError: true }), 'Nginx 配置状态')
+}
+
+export function checkNginxConfig(signal?: AbortSignal) {
+  return unwrap(postRequest<NginxConfigCheck>('/api/v1/operations/nginx/check', undefined, { signal, retry: false, skipGlobalError: true }), 'Nginx 配置校验')
+}

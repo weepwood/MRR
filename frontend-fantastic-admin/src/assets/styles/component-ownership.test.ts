@@ -13,6 +13,16 @@ function sources(dir: string): string[] {
 }
 
 describe('唯一基础控件归属', () => {
+  it('账户与标签页菜单不恢复旧实现', () => {
+    for (const component of ['FaDropdown', 'FaContextMenu']) {
+      expect(fs.existsSync(path.join(root, 'ui/components', component))).toBe(false)
+    }
+    const legacy = sources(root).filter(file => /\bFa(?:Dropdown|ContextMenu)\b/.test(fs.readFileSync(file, 'utf8')))
+    expect(legacy.map(file => path.relative(root, file))).toEqual([])
+    expect(fs.readFileSync(path.join(root, 'components/AccountButton/index.vue'), 'utf8')).toContain('<el-dropdown')
+    expect(fs.readFileSync(path.join(root, 'layouts/components/Topbar/Tabbar/index.vue'), 'utf8')).toContain('virtual-triggering')
+  })
+
   it('对话框和抽屉使用唯一底层实现', () => {
     for (const component of ['FaModal', 'FaDrawer']) {
       expect(fs.existsSync(path.join(root, 'ui/components', component))).toBe(false)

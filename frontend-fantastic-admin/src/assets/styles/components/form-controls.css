@@ -437,3 +437,38 @@ body .el-button.mrr-button-secondary.is-text.is-disabled:focus {
   width: var(--mrr-control-height);
   padding: 4px;
 }
+
+/* Inline actions inside content: use the same ElButton implementation without
+ * imposing toolbar height on a table cell or a sentence. */
+body .el-button.mrr-inline-action.is-link {
+  height: auto;
+  min-height: 0;
+  padding: 0;
+  font: inherit;
+  font-weight: var(--mrr-inline-action-weight, inherit);
+  line-height: inherit;
+  white-space: normal;
+  border: 0;
+  box-shadow: none;
+}
+
+/* Shared settings field geometry; values keep their local unit widths. */
+.mrr-settings-slider-control {
+  display: grid;
+  grid-template-columns: minmax(120px, 1fr) auto;
+  gap: var(--mrr-space-3);
+  align-items: center;
+  width: 100%;
+  min-width: 0;
+}
+
+.mrr-settings-slider-control .el-slider {
+  width: 100%;
+  min-width: 120px;
+}
+
+@media (max-width: 680px) {
+  .mrr-settings-slider-control {
+    grid-template-columns: minmax(100px, 1fr) auto;
+  }
+}

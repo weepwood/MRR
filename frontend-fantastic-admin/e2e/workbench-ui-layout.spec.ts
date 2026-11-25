@@ -1,4 +1,9 @@
 import { expect, test } from '@playwright/test'
+import { isolateLocalVisualSettings } from './helpers/local-visual-settings'
+
+test.beforeEach(async ({ page }) => {
+  await isolateLocalVisualSettings(page)
+})
 
 test.beforeEach(async ({ page }) => {
   await page.addInitScript(() => {

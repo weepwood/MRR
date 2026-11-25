@@ -331,14 +331,9 @@ onBeforeUnmount(clear)
           版本比较
         </h3>
         <div class="manifest-history">
-          <select v-model="compareBase" class="manifest-base-select" aria-label="完整性比较基准版本" :disabled="busy || comparing">
-            <option :value="undefined">
-              选择基准版本
-            </option>
-            <option v-for="version in compareOptions" :key="version.version" :value="version.version">
-              #{{ version.version }} · {{ formatDateTime(version.createdAt) }}
-            </option>
-          </select>
+          <el-select v-model="compareBase" class="manifest-base-select mrr-single-select" aria-label="完整性比较基准版本" placeholder="选择基准版本" clearable :value-on-clear="() => undefined" :disabled="busy || comparing">
+            <el-option v-for="version in compareOptions" :key="version.version" :value="version.version" :label="`#${version.version} · ${formatDateTime(version.createdAt)}`" />
+          </el-select>
           <el-button :disabled="busy || compareBase == null" :loading="comparing" @click="compareVersions">
             比较版本
           </el-button>
@@ -400,14 +395,10 @@ onBeforeUnmount(clear)
             异常明细
           </h3>
           <span class="manifest-note">已加载 {{ issues.length }} / {{ latest.anomalies }}</span>
-          <select v-model="issueStatus" class="manifest-base-select" aria-label="筛选已加载异常">
-            <option value="">
-              全部已加载异常
-            </option>
-            <option v-for="status in issueTypes" :key="status" :value="status">
-              {{ status }}
-            </option>
-          </select>
+          <el-select v-model="issueStatus" class="manifest-base-select mrr-single-select" aria-label="筛选已加载异常" placeholder="全部已加载异常" :empty-values="[null, undefined]">
+            <el-option value="" label="全部已加载异常" />
+            <el-option v-for="status in issueTypes" :key="status" :value="status" :label="status" />
+          </el-select>
         </div>
         <p v-if="issueStatus" class="manifest-note">
           仅筛选已加载的 {{ issues.length }} 条异常，当前 {{ visibleIssues.length }} 条；不是全量筛选。
@@ -459,18 +450,9 @@ onBeforeUnmount(clear)
 }
 
 .manifest-base-select {
-  flex: 1;
+  flex: 1 1 180px;
   min-width: 0;
-  padding: 0 var(--mrr-space-2);
-  color: var(--el-text-color-regular);
-  background: var(--el-fill-color-blank);
-  border: 1px solid var(--el-border-color);
-  border-radius: var(--el-border-radius-base);
-}
-
-.manifest-base-select:focus-visible {
-  outline: 2px solid var(--el-color-primary);
-  outline-offset: 2px;
+  max-width: 100%;
 }
 
 .manifest-compare {
@@ -501,7 +483,6 @@ onBeforeUnmount(clear)
 
 .manifest-issue-toolbar .manifest-base-select {
   flex: 0 1 220px;
-  min-height: 32px;
 }
 
 .manifest-progress-label {

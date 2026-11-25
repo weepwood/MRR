@@ -756,9 +756,9 @@ watch(selectedImageIndex, () => { ensureCurrentImageBlob() })
         <!-- 错误状态 -->
         <div v-if="errorMsg" class="error">
           <p>{{ errorMsg }}</p>
-          <button class="retry-btn" @click="retryLoad">
+          <el-button type="danger" class="retry-btn" :auto-insert-space="false" @click="retryLoad">
             重试
-          </button>
+          </el-button>
         </div>
       </div>
     </div>
@@ -1245,19 +1245,7 @@ watch(selectedImageIndex, () => { ensureCurrentImageBlob() })
 }
 
 .retry-btn {
-  height: var(--mrr-control-height);
-  padding: 0 20px;
   margin-top: var(--mrr-space-4);
-  color: var(--mrr-primary-foreground);
-  cursor: pointer;
-  background: var(--el-color-danger);
-  border: none;
-  border-radius: var(--mrr-control-radius);
-  transition: opacity var(--mrr-motion-feedback) var(--mrr-ease-out);
-}
-
-.retry-btn:hover {
-  opacity: 0.85;
 }
 
 /* ==================== 下载状态 ==================== */

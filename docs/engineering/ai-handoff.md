@@ -635,3 +635,9 @@
 - 本地用户预览：frontend-fantastic-admin 目录执行 `VITE_APP_DEMO_MODE=true VITE_BUILD_MOCK=true VITE_OPEN_PROXY=false pnpm exec vite --mode mock --host 127.0.0.1 --port 9037 --strictPort`。本轮 PID 23293（仅本次会话记录，重启需重新核验）。实际 Chromium 检查 /ui-components、/logs、/audit-images 成功，观测到 /proxy/ 请求均为本地 9037；已打开本机浏览器组件展厅。开发模式使用 history 路由，不使用 Pages 的 #/ 路由。用户预览端口固定，后续自动化使用不同端口及隔离会话，不关闭其他应用，不使用真实医疗数据。
 - 保留原有风险分级、本地证据、成熟公共组件、中文提交及 AGENTS.md 更新；累计改动待维护者授权后统一进入 #850（届时核验分支和最新门禁），不得宣称本地未推送改动已通过远端 CI。
 - 远端候选 91083764 的 Linux 完整跨浏览器验收 run 45665582083 最终 270 passed / 11 failed（21.6m），日志 /tmp/mrr-pr850-cross-failed.log；定向 WebKit 10/10 不代表完整矩阵通过。后续本地按失败具体断言与实际容器布局分类复现修复，不触发远端 CI，不降低门禁，用户预览继续运行。
+
+## V1.2 本地残余控件及样式归属（2026-11-26）
+
+- 基线 0161abbd，独立工作区 feat/v1.2-table-gallery-contract。71 个原生按钮/34 文件、475 个外部 EP 引用/60 文件/290 条 CSS 规则逐项审查，3 组相同选择器属性候选中合并两个滑块规则、保留不同密码字段内边距。详见 [本地控件归属审计](../design/local-ui-ownership-audit.md)。
+- 三处普通业务按钮与 Manifest 两个选择器、OCR 只读原文、导航搜索、追踪编号使用统一底层；版本号保持数值、支持清空，异常筛选只作用已加载成员。授权数据浏览复用公共查询反馈，保留分页、估算与权限；图标尺寸/间距令牌及滑块样式共享，展厅添加真实数值选择示例；专用 FA 不机械替换。运维取消维护恢复触发按钮焦点。
+- 原 11 个 Linux WebKit 失败在本机隔离基线 12/12（含预热）；共享 Mock 服务端 UI 设置可能跨用例影响，针对本地视觉契约隔离，不改生产优先级，未证明全部远端失败的根因。扩展首轮 WebKit 45/61（含预热），失败包含 Manifest 选择、焦点及 WebKit 不支持剪贴板权限。定向复验 WebKit 19/20、Chromium 11/12，唯一剩余版本比较通过等待真实可用状态和键盘展开修复，双引擎最终 3/3（含预热）。实际剪贴板验证仍由 Chromium 承担；不把跳过视为通过。最终样式与 Manifest 单测 94/94、设置测试 20/20（共114项）；类型、生产构建及 Chrome86 静态校验通过，存量容器查询/选择器/color-mix/动效提示仍保留，非实机结论。日志 /tmp/mrr-local-governance-*.log、/tmp/mrr-local-webkit-baseline.log。未执行全量 Linux/Firefox、真实 Chrome86 终端或本轮全部改动的像素对照；保留远端 #850 原草稿，不推送、不合并、不发布。

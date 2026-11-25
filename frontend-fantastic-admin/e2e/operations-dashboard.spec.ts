@@ -1,4 +1,5 @@
 import { expect, test } from '@playwright/test'
+import { isolateLocalVisualSettings } from './helpers/local-visual-settings'
 
 const overviewUrl = '**/api/v1/operations/overview'
 const snapshotTime = '2026-11-02T01:00:00Z'
@@ -239,6 +240,10 @@ test('单张正文校验使用明确ID并区分无基线与完整校验', async 
 })
 
 test('持久运行历史展示相邻采样变化、缺口及七天范围', async ({ page }) => {
+  await isolateLocalVisualSettings(page)
+  await page.addInitScript(() => localStorage.setItem('MRR-ADMIN:app-settings', JSON.stringify({
+    layout: { enableMobileAdaptation: true },
+  })))
   await page.goto('/operations-center')
   await expect(page.getByRole('heading', { name: '运行历史与容量趋势' })).toBeVisible()
   await expect(page.getByRole('img', { name: 'JVM 堆内存历史' })).toBeVisible()

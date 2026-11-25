@@ -1,5 +1,6 @@
 import { Buffer } from 'node:buffer'
 import { expect, test } from '@playwright/test'
+import { isolateLocalVisualSettings } from './helpers/local-visual-settings'
 
 test.use({ actionTimeout: 10_000 })
 
@@ -53,7 +54,12 @@ test('演示病案完整性显示固定成员与版本，写操作关闭', async
   await expect(page.getByText(/固定成员 2 \/ 2/)).toBeVisible()
   await expect(page.getByText('后台校验功能尚未启用')).toBeVisible()
   await expect(page.getByRole('button', { name: '开始校验', exact: true })).toHaveCount(0)
-  await page.getByRole('combobox', { name: '完整性比较基准版本' }).selectOption('1')
+  const compare = page.getByRole('combobox', { name: '完整性比较基准版本' })
+  await expect(compare).toBeEnabled()
+  await compare.focus()
+  await compare.press('Enter')
+  await expect(compare).toHaveAttribute('aria-expanded', 'true')
+  await page.getByRole('option', { name: /^#1 ·/ }).click()
   await page.getByRole('button', { name: '比较版本', exact: true }).click()
   await expect(page.getByText('新增成员', { exact: true })).toBeVisible()
   await expect(page.getByText('完整摘要不可比较', { exact: false })).toBeVisible()
@@ -232,6 +238,7 @@ test('异常人工决策明确确认并保留独立历史，不改变修复工�
 })
 
 test('真实深色主题独立工作台与原图查看器在桌面和窄屏内可用', async ({ page }) => {
+  await isolateLocalVisualSettings(page)
   await page.addInitScript(() => localStorage.setItem('MRR-ADMIN:app-settings', JSON.stringify({
     app: { colorScheme: 'dark', enableMotion: false, pageTitleStyle: 'card' },
     layout: { enableMobileAdaptation: true },

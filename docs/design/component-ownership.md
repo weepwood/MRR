@@ -287,3 +287,7 @@ FaIcon、FaKbd、FaPinInput、FaScrollArea、FaSmartFixedBlock、FaPasswordStren
 | `views/users/index.vue` | FaIcon × 3 | el-alert × 5, el-button × 16, el-checkbox × 1, el-dialog × 6, el-form × 4, el-form-item × 11, el-input × 5, el-input-number × 2, el-option × 6, el-pagination × 1, el-select × 6, el-table × 1, el-table-column × 8, el-tag × 1 |
 
 2026-11-26：#844 经 GitHub 合并接口成功 squash 至 2dff0e4b，验收 head f6934742 与合并 tree 一致；提示分支重放至新基线。此前 OPEN 为历史状态。
+
+## 本地残余控件与 CSS 审查（2026-11-26）
+
+详见[本地控件归属审计](local-ui-ownership-audit.md)：以 0161abbd 为基线的 71 处原生按钮、475 处外部 Element Plus 引用逐项分类；三处普通业务按钮、Manifest 两个选择器、OCR 文本域和两个输入字段改用统一底层，保留内容按钮及文件输入。共享图标令牌、设置滑块和行内命令样式，以及授权浏览查询反馈采用明确归属。不将所有 475 处引用视为冲突，不将剩余专用 FA 视为重复基础控件。实际验收边界见工程交接。

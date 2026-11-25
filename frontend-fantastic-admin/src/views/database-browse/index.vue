@@ -378,12 +378,12 @@ onMounted(loadTables)
           />
         </div>
         <div class="filter-actions">
-          <el-button type="primary" :loading="loading" :disabled="loading" @click="search">
+          <MrrFilterActionButton action="search" type="primary" feedback="request" :pending="loading" :busy="loading" :disabled="loading" @click="search">
             查询
-          </el-button>
-          <el-button :disabled="loading" @click="resetFilters">
+          </MrrFilterActionButton>
+          <MrrFilterActionButton action="reset" feedback="request" :busy="loading" :disabled="loading" @click="resetFilters">
             重置
-          </el-button>
+          </MrrFilterActionButton>
         </div>
       </div>
     </MrrSectionCard>
@@ -406,7 +406,9 @@ onMounted(loadTables)
           </template>
         </el-table-column>
         <template #empty>
-          <span class="empty-hint">{{ loading ? '正在读取数据…' : errorMessage && !page ? '查询未完成，请重试' : emptyText }}</span>
+          <AppLoading v-if="loading" type="table" :rows="3" />
+          <AppEmpty v-else-if="!errorMessage || page" size="compact" :description="emptyText" />
+          <span v-else class="empty-hint">查询未完成，请重试</span>
         </template>
       </el-table>
 

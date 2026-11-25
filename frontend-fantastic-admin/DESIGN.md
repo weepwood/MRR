@@ -352,6 +352,10 @@ Element Plus 是同类基础业务控件的唯一目标，禁止新增重复 Fa 
 
 公共临时通知由 ElMessage 渲染，新代码优先 `notify.success/warning/info/error`，默认 5000ms、重复分组、无关闭按钮；明确的常驻、关闭、偏移及不分组策略由调用方传参。已有直接 ElMessage 调用不强制改时长，不把持久任务结果或需确认的警告降为短暂提示。保持影像沉浸层上方的消息层级和请求错误去重合同。
 
+本地残余控件审查见[归属审计](../docs/design/local-ui-ownership-audit.md)。原生文件输入、内容型交互按钮（缩略图、可选卡片、导航等）不按标签机械替换；普通行内命令采用 ElButton + `mrr-inline-action`，不得引入工具栏固定高度。图标优先使用 Lucide 语义，FaIcon 仍为统一资源入口（`mrr-icon`）；普通控件图标尺寸及按钮间距分别取 `--mrr-control-icon-size` / `--mrr-button-icon-gap`，不强制覆盖独立空态、指标及 EP 内建图标。
+
+共享布局由对应公共组件或共享样式承担。设置滑块共用 `mrr-settings-slider-control`；局部字段单位宽度、复合字段及导航几何可以保留，需记录理由。服务端主题偏好优先级不因视觉测试修改；指定本地视觉状态的 Mock 用例须隔离共享 UI 配置，真实同步用例仍验证服务端行为。
+
 ### 4.2.1 字段控件的统一视觉契约
 
 - `--mrr-field-font-size`、`--mrr-field-padding-x(-sm/-lg)`、`--mrr-textarea-padding-y`、`--mrr-textarea-line-height`、`--mrr-textarea-min-height`、`--mrr-field-focus-bg`、`--mrr-field-shadow` 与既有输入高度/圆角/颜色令牌同源。Element Plus 在 element-plus-overrides.css 引用；主题仅改令牌，不重写同一字段选择器。默认文本域最小高度为未明确行数时的基准，显式 rows 尊重组件自身测量。
@@ -386,7 +390,7 @@ Element Plus 是同类基础业务控件的唯一目标，禁止新增重复 Fa 
 
 ### 4.6 对话框、抽屉与消息
 
-- 简短确认用 `actionDialog`；表单、预览或进度用页面内的 `el-dialog` / [FaModal](src/ui/components/FaModal/index.vue)；保留列表上下文的详情用 [FaDrawer](src/ui/components/FaDrawer/index.vue)。不叠加第二套遮罩、滚动锁或焦点管理。
+- 简短确认用 `actionDialog`；表单、预览或进度用页面内的 `el-dialog` 或 [MrrDialog](src/components/MrrDialog/index.vue)；保留列表上下文的详情用 [MrrDrawer](src/components/MrrDrawer/index.vue)。不叠加第二套遮罩、滚动锁或焦点管理。
 - 标题说明对象和操作，主按钮用具体动词，确认内容交代对象、范围与结果。
 - 关闭按钮、取消、Esc、遮罩点击、提交中关闭的行为要一致；有未保存内容时先确认丢弃策略。
 - 打开后焦点进入合适控件，关闭后回到触发入口。窄屏保留关闭与提交入口，正文独立滚动。

@@ -462,7 +462,8 @@ async function enableMaintenance() {
   }
 }
 
-async function disableMaintenance() {
+async function disableMaintenance(event: MouseEvent) {
+  const trigger = event.currentTarget instanceof HTMLElement ? event.currentTarget : null
   try {
     await actionDialog.confirm(
       '关闭主动维护模式不会绕过数据库、磁盘、Nginx 或 OSS 故障导致的自动降级。是否继续？',
@@ -471,6 +472,9 @@ async function disableMaintenance() {
     )
   }
   catch {
+    // Keep the initiating control reachable after Escape, including Safari mouse activation.
+    await nextTick()
+    if (trigger?.isConnected) { trigger.focus({ preventScroll: true }) }
     return
   }
   loading.maintenance = true

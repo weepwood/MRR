@@ -133,6 +133,8 @@
    * 13/14px 字号、11/14/16px 内边距的混合排版，看起来像两个系统拼起来。
    * 修改按钮字号或内边距只改这里；主题若要换密度，在主题文件里覆盖同名令牌。
    */
+  --mrr-control-icon-size: 16px;
+  --mrr-button-icon-gap: 6px;
   --mrr-button-font-size: 13px;
   --mrr-button-padding-x: 14px;
   --mrr-button-font-size-sm: 12px;

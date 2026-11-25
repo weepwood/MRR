@@ -1,5 +1,10 @@
 import type { Page } from '@playwright/test'
 import { expect, test } from '@playwright/test'
+import { isolateLocalVisualSettings } from './helpers/local-visual-settings'
+
+test.beforeEach(async ({ page }) => {
+  await isolateLocalVisualSettings(page)
+})
 
 async function openUsers(page: Page, colorScheme: 'light' | 'dark' = 'light', radius = 0.75) {
   await page.addInitScript(({ colorScheme, radius }) => {

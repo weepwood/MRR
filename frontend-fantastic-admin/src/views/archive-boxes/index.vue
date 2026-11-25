@@ -603,10 +603,10 @@ onMounted(refreshAll)
         <el-table v-else :data="boxes" stripe>
           <el-table-column label="箱号" min-width="220">
             <template #default="{ row }">
-              <button class="box-number-button" type="button" @click="openBox(row.boxNo)">
+              <el-button link :auto-insert-space="false" class="box-link mrr-inline-action" @click="openBox(row.boxNo)">
                 <span class="i-lucide:inbox" aria-hidden="true" />
                 {{ row.boxNo }}
-              </button>
+              </el-button>
             </template>
           </el-table-column>
           <el-table-column prop="recordCount" label="箱内病案" width="140" />
@@ -755,8 +755,7 @@ onMounted(refreshAll)
 }
 
 .record-code,
-.box-link,
-.box-number-button {
+.box-link {
   font-variant-numeric: tabular-nums;
   letter-spacing: 0.04em;
 }
@@ -771,33 +770,16 @@ onMounted(refreshAll)
 }
 
 .box-link {
+  --mrr-inline-action-weight: 600;
+
   padding: 0;
   font-weight: 600;
 }
 
-.box-number-button {
-  display: inline-flex;
-  gap: var(--mrr-space-2);
-  align-items: center;
-  padding: 0;
-  font: inherit;
-  font-weight: 600;
-  cursor: pointer;
-  background: transparent;
-  border: 0;
-}
-
-.box-link.el-button,
-.box-number-button {
+.box-link.el-button {
   color: var(--mrr-navigation-active-foreground);
   text-decoration: underline;
   text-underline-offset: 2px;
-}
-
-.box-number-button:focus-visible {
-  outline: 2px solid var(--el-color-primary);
-  outline-offset: 3px;
-  border-radius: max(0px, calc(var(--mrr-radius-sm) - 2px));
 }
 
 .form-grid {

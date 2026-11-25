@@ -92,13 +92,13 @@ async function copyTrace() {
     <div v-if="props.requestId" class="query-failure-trace">
       <span class="trace-label">追踪编号</span>
       <div class="trace-field">
-        <input
-          :value="props.requestId"
+        <el-input
+          :model-value="props.requestId"
           readonly
           aria-label="本次请求追踪编号"
           class="trace-input"
           @focus="selectTrace"
-        >
+        />
         <button
           type="button"
           class="trace-copy"
@@ -232,7 +232,6 @@ async function copyTrace() {
   flex: 1;
   min-width: 0;
   height: var(--mrr-input-height);
-  padding: 0;
   font-family: var(--mrr-font-mono);
   font-size: 12px;
   color: var(--text-primary);
@@ -240,8 +239,19 @@ async function copyTrace() {
   border: 0;
 }
 
-.trace-input:focus {
-  outline: none;
+.trace-input :deep(.el-input__wrapper) {
+  padding: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+.trace-input :deep(.el-input__inner) {
+  font: inherit;
+  color: inherit;
+}
+
+.trace-input :deep(.el-input__wrapper.is-focus) {
+  box-shadow: none;
 }
 
 .trace-copy {

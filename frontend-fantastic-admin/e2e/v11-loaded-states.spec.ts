@@ -1,4 +1,9 @@
 import { expect, test } from '@playwright/test'
+import { isolateLocalVisualSettings } from './helpers/local-visual-settings'
+
+test.beforeEach(async ({ page }) => {
+  await isolateLocalVisualSettings(page)
+})
 
 for (const theme of ['light', 'dark']) {
   test(`${theme} 数据表分页失败保持上次结果、重试与窄屏筛选`, async ({ page }) => {

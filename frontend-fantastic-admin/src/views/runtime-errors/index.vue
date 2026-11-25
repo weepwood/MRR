@@ -440,9 +440,9 @@ function levelTagType(level: string) {
         </el-table-column>
         <el-table-column prop="module" label="模块" min-width="120" show-overflow-tooltip>
           <template #default="{ row }">
-            <button type="button" class="module-filter" :title="`点击按模块 ${row.module} 筛选`" @click="filterByModule(row.module)">
+            <el-button link :auto-insert-space="false" class="module-filter mrr-inline-action" :title="`点击按模块 ${row.module} 筛选`" @click="filterByModule(row.module)">
               {{ row.module || '-' }}
-            </button>
+            </el-button>
           </template>
         </el-table-column>
         <el-table-column label="错误摘要" min-width="360" show-overflow-tooltip>
@@ -563,7 +563,7 @@ function levelTagType(level: string) {
   box-shadow: var(--mrr-shadow-sm);
 }
 
-.module-filter {
+.module-filter.el-button {
   padding: 0;
   font: inherit;
   color: var(--el-text-color-regular);

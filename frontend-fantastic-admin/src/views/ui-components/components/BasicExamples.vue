@@ -17,6 +17,7 @@ const note = ref('这里是可编辑的示例说明。')
 const nativeNote = ref('这里是可编辑的示例说明。')
 const source = ref('local')
 const nativeSource = ref('local')
+const version = ref<number>()
 const date = ref('2026-11-12')
 const count = ref(3)
 const checked = ref<boolean | 'indeterminate'>(true)
@@ -159,6 +160,13 @@ const options = [{ label: '本地示例', value: 'local' }, { label: '归档示�
       <label :for="`${id}-native-source`">原生来源</label>
       <el-select :id="`${id}-native-source`" v-model="nativeSource" class="example-full-width">
         <el-option v-for="option in options" :key="option.value" :label="option.label" :value="option.value" />
+      </el-select>
+    </div>
+    <div class="example-field">
+      <label :for="`${id}-version`">版本比较基准</label>
+      <el-select :id="`${id}-version`" v-model="version" class="example-full-width mrr-single-select" placeholder="选择基准版本">
+        <el-option :value="1" label="#1 · 合成历史版本" />
+        <el-option :value="2" label="#2 · 合成历史版本" />
       </el-select>
     </div>
     <div class="example-field">

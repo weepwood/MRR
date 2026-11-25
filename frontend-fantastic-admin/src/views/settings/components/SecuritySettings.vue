@@ -31,7 +31,7 @@ const settings = defineModel<EffectiveSystemSettings>({ required: true })
     </div>
     <div class="control-grid">
       <el-form-item label="水印透明度" data-settings-search-target="watermark-opacity" tabindex="-1">
-        <div class="slider-control">
+        <div class="mrr-settings-slider-control">
           <el-slider
             v-model="settings.archiveWatermarkOpacity"
             :min="5"
@@ -62,20 +62,10 @@ const settings = defineModel<EffectiveSystemSettings>({ required: true })
 .switch-row p { margin: 3px 0 0; font-size: var(--mrr-font-size-xs); line-height: 1.6; color: var(--mrr-muted-foreground); }
 .control-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--mrr-space-4); }
 
-.slider-control {
-  display: grid;
-  grid-template-columns: minmax(120px, 1fr) auto;
-  gap: var(--mrr-space-3);
-  align-items: center;
-  width: 100%;
-  min-width: 0;
-}
-.slider-control :deep(.el-slider) { width: 100%; min-width: 120px; }
 .slider-value { min-width: 40px; font-size: 12px; color: var(--mrr-muted-foreground); text-align: right; white-space: nowrap; }
 .number-control { display: flex; gap: var(--mrr-space-2); align-items: center; }
 
 @media (max-width: 680px) {
   .control-grid { grid-template-columns: 1fr; }
-  .slider-control { grid-template-columns: minmax(100px, 1fr) auto; }
 }
 </style>

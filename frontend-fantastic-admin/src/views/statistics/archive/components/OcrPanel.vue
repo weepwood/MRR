@@ -189,7 +189,7 @@ watch(() => job.value?.status, (status) => {
           <p v-if="fact?.processedAt" class="ocr-note">
             识别时间：{{ fact.processedAt }}
           </p>
-          <textarea v-if="canText" :value="fact?.text || ''" readonly aria-label="识别原文，可选择复制" />
+          <el-input v-if="canText" :model-value="fact?.text || ''" type="textarea" readonly resize="vertical" class="ocr-text mrr-readonly-field" aria-label="识别原文，可选择复制" />
           <p v-else>
             当前账号没有查看完整识别文字的权限。
           </p>
@@ -205,11 +205,11 @@ watch(() => job.value?.status, (status) => {
 .ocr-inline { min-width: 0; padding: 12px; border: 1px solid var(--el-border-color-light); border-radius: var(--el-border-radius-base); }
 .ocr-inline-heading { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; justify-content: space-between; }
 .ocr-inline .ocr-compare { grid-template-columns: 1fr; }
-.ocr-inline .ocr-compare textarea { height: clamp(240px, 42vh, 420px); min-height: 240px; resize: vertical; }
+.ocr-inline .ocr-compare .ocr-text :deep(.el-textarea__inner) { height: clamp(240px, 42vh, 420px); min-height: 240px; resize: vertical; }
 .ocr-actions { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin: 16px 0; }
 .ocr-compare { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-top: 16px; }
 .ocr-compare img { align-self: start; width: 100%; height: auto; object-fit: contain; }
-.ocr-compare textarea { box-sizing: border-box; width: 100%; min-height: 60vh; padding: 12px; color: var(--mrr-foreground); background: var(--mrr-card); border: 1px solid var(--mrr-border); }
+.ocr-compare .ocr-text :deep(.el-textarea__inner) { box-sizing: border-box; width: 100%; min-height: 60vh; padding: 12px; color: var(--mrr-foreground); background: var(--mrr-card); border: 1px solid var(--mrr-border); box-shadow: none; }
 
 @media (max-width: 700px) { .ocr-compare { grid-template-columns: 1fr; } }
 </style>

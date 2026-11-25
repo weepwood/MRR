@@ -6,7 +6,6 @@ import { expect, test } from '@playwright/test'
  * 这里守的是「出问题之后别再糊弄人」：文案要说清下一步怎么办、报错不能甩英文、
  * 诊断结果要按步骤读得懂（中文状态 + 样本表），而不是把 details 原样倒成 JSON。
  */
-test.use({ permissions: ['clipboard-read', 'clipboard-write'] })
 
 function emptyResult(reasonCode: string) {
   return {
@@ -79,7 +78,9 @@ test('从病案诊断追踪访问日志和运行错误，重置后恢复普通�
   await expect(page.getByText('暂无日志记录', { exact: true })).toBeVisible()
 })
 
-test('查询失败卡片给出下一步建议，追踪编号可一键复制', async ({ page }) => {
+test('查询失败卡片给出下一步建议，追踪编号可一键复制', async ({ page, context, browserName }) => {
+  test.skip(browserName !== 'chromium', '此用例验证真实系统剪贴板；其他浏览器执行独立追踪编号与诊断用例')
+  await context.grantPermissions(['clipboard-read', 'clipboard-write'])
   await page.route('**/api/v1/img/search?**', route => route.fulfill({
     status: 500,
     json: { code: 500, message: '', data: null, meta: { requestId: '0123456789abcdef', reasonCode: 'QUERY_FAILED' } },

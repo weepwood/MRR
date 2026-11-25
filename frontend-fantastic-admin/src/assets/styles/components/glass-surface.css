@@ -102,3 +102,12 @@ body .mrr-vscode-search [data-index] > a > div:last-child {
     border-radius: var(--mrr-radius-card);
   }
 }
+
+/* Navigation search is a compound, borderless field inside the dialog header.
+ * Element Plus owns focus and input behavior; the shell owns its outer surface. */
+body .mrr-vscode-search .mrr-nav-search-input .el-input__wrapper {
+  height: 100%;
+  padding: 0 0 0 16px;
+  background: transparent;
+  box-shadow: none;
+}

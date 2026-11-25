@@ -42,9 +42,11 @@ const roles = ref<AuthRole[]>([])
 const total = ref(0)
 const page = ref(1)
 const size = ref(20)
+const pageSizes = [10, 20, 50, 100] as const
+const nextPageSize = computed(() => pageSizes[(pageSizes.findIndex(value => value === size.value) + 1) % pageSizes.length]!)
 const paginationLayout = computed(() => total.value > size.value
-  ? 'total, sizes, prev, pager, next, jumper'
-  : 'total, sizes, prev, pager, next')
+  ? 'total, slot, prev, pager, next, jumper'
+  : 'total, slot, prev, pager, next')
 const filters = reactive({ keyword: '', roleCode: '', status: '' })
 
 const statusOptions = [
@@ -228,6 +230,13 @@ function handleSearch() {
   void loadData('search')
 }
 
+function cyclePageSize() {
+  if (loading.value || dataLoadingAction.value !== null) return
+  page.value = 1
+  size.value = nextPageSize.value
+  void loadData()
+}
+
 function handlePageChange() {
   if (loading.value || dataLoadingAction.value !== null) return
   void loadData()
@@ -279,7 +288,7 @@ function userActions(row: CredentialAwareUser): MrrTableAction[] {
         key: 'reset-password',
         label: '重置密码',
         icon: 'i-lucide:key-round',
-        tone: 'warning',
+        tone: 'default',
         placement: 'overflow',
         disabled: self,
         disabledReason: self ? '请通过个人设置修改自己的密码' : undefined,
@@ -667,7 +676,18 @@ onMounted(loadData)
       </el-table>
 
       <template #pagination>
-        <el-pagination v-model:current-page="page" v-model:page-size="size" :page-sizes="[10, 20, 50, 100]" :total="total" :layout="paginationLayout" @size-change="handleSearch" @current-change="handlePageChange" />
+        <el-pagination v-model:current-page="page" v-model:page-size="size" class="users-pagination" :total="total" :layout="paginationLayout" :disabled="loading" @current-change="handlePageChange">
+          <el-button
+            text
+            class="users-pagination__size"
+            :disabled="loading"
+            :aria-label="`当前每页 ${size} 条，点击切换为每页 ${nextPageSize} 条`"
+            :title="`切换为 ${nextPageSize} 条/页（10、20、50、100 循环）`"
+            @click="cyclePageSize"
+          >
+            {{ size }}条/页
+          </el-button>
+        </el-pagination>
       </template>
     </MrrDataTablePanel>
 
@@ -781,7 +801,37 @@ onMounted(loadData)
 .user-credential-normal, .user-status-quiet { padding-inline: 0; background: transparent; border-color: transparent; }
 .user-credential-normal { color: var(--mrr-muted-foreground); }
 .user-last-login { font-variant-numeric: tabular-nums; color: var(--mrr-muted-foreground); }
-.users-table-panel :deep(.el-pagination) { width: 100%; }
+
+/* Quiet pagination: keep Element Plus navigation and replace only the size selector.
+ * Smaller visual targets still have a 28px minimum pointer/keyboard footprint. */
+.users-table-panel :deep(.users-pagination.el-pagination) {
+  --el-pagination-button-width: 28px;
+  --el-pagination-button-height: 28px;
+
+  width: 100%;
+  gap: var(--mrr-space-1);
+}
+
+.users-pagination :deep(.btn-prev), .users-pagination :deep(.btn-next), .users-pagination :deep(.el-pager li) {
+  min-width: 28px;
+  height: 28px;
+  font-size: 12px;
+  line-height: 28px;
+}
+.users-pagination :deep(.btn-prev .el-icon), .users-pagination :deep(.btn-next .el-icon) { font-size: 12px; }
+
+.users-pagination .users-pagination__size.el-button {
+  min-height: 28px;
+  height: 28px;
+  padding: 0 var(--mrr-space-2);
+  margin-right: var(--mrr-space-2);
+  font-size: var(--mrr-font-size-xs);
+  font-weight: 400;
+  color: var(--mrr-muted-foreground);
+  border: 0;
+  box-shadow: none;
+}
+.users-pagination .users-pagination__size.el-button:not(.is-disabled):hover { color: var(--mrr-foreground); }
 .users-table-panel :deep(.el-pagination__total) { margin-inline-end: auto; color: var(--mrr-muted-foreground); }
 
 .application-info { display: grid; gap: 3px; min-width: 0; }
@@ -804,6 +854,8 @@ onMounted(loadData)
   .users-filter-bar :deep(.mrr-filter-bar__fields > .users-filter__select) { flex: 1 1 100%; width: 100%; max-width: 100%; min-width: 0; }
   .users-filter-bar :deep(.mrr-filter-bar__fields) { flex: 1 1 auto; grid-template-columns: minmax(0, 1fr); }
   .users-table-panel :deep(.el-pagination__total) { margin-inline-end: 0; }
+  .users-pagination .users-pagination__size.el-button { grid-row: 1; grid-column: 2 / 4; justify-self: end; margin-right: 0; }
+  .users-pagination :deep(.btn-prev), .users-pagination :deep(.btn-next), .users-pagination :deep(.el-pager li) { min-width: 32px; height: 32px; line-height: 32px; }
   .credential-actions { flex-direction: column; }
 }
 </style>

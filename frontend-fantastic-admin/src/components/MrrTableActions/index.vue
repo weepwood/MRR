@@ -97,6 +97,8 @@ defineExpose({ availableActions, inlineActions, overflowActions })
       trigger="click"
       placement="bottom-end"
       :teleported="true"
+      :popper-class="props.appearance === 'quiet' ? 'mrr-table-action-menu--quiet' : undefined"
+      :show-arrow="props.appearance !== 'quiet'"
       :disabled="panelLoading"
       :hide-on-click="true"
       @command="handleOverflowCommand"

@@ -111,3 +111,72 @@ test('用户列表单一计数、身份信息合并及筛选层级保持一致',
   await page.getByRole('dialog', { name: '创建用户' }).getByRole('button', { name: '取消' }).click()
   await expect(page.getByRole('dialog', { name: '创建用户' })).not.toBeVisible()
 })
+
+test('每页条数以文本轮换，回到第一页且只发一次查询', async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 })
+  await page.route('**/api/v1/auth/users?**', async (route) => {
+    const response = await route.fetch()
+    const body = await response.json()
+    body.data.total = 1000
+    await route.fulfill({ response, json: body })
+  })
+  await openUsers(page)
+  const footer = page.locator('.users-pagination')
+  const size = footer.locator('.users-pagination__size')
+  await expect(footer.locator('.el-pagination__sizes')).toHaveCount(0)
+  await expect(size).toHaveText('20条/页')
+  await footer.locator('.btn-next').click()
+  await expect(footer.locator('.el-pager .is-active')).toHaveText('2')
+  await expect(size).toBeEnabled()
+  const requests: string[] = []
+  page.on('request', (request) => {
+    if (request.method() === 'GET' && new URL(request.url()).pathname.endsWith('/auth/users')) { requests.push(request.url()) }
+  })
+  for (const [index, count] of [50, 100, 10, 20].entries()) {
+    const response = page.waitForResponse(r => new URL(r.url()).pathname.endsWith('/auth/users'))
+    if (index === 0) { await size.focus(); await size.press('Enter') }
+    else { await size.click() }
+    await response
+    await expect(size).toHaveText(`${count}条/页`)
+    await expect(size).toBeEnabled()
+    await expect(footer.locator('.el-pager .is-active')).toHaveText('1')
+    expect(requests).toHaveLength(index + 1)
+    expect(Object.fromEntries(new URL(requests[index]!).searchParams)).toMatchObject({ page: '1', size: String(count) })
+  }
+  await expect.poll(() => footer.locator('.el-pager .is-active').evaluate(el => el.getBoundingClientRect().height)).toBe(28)
+  await page.setViewportSize({ width: 375, height: 812 })
+  await expect.poll(() => footer.evaluate(el => el.scrollWidth <= el.clientWidth + 1)).toBe(true)
+  await expect(size).toBeVisible()
+  await expect.poll(() => footer.locator('.el-pager .is-active').evaluate(el => el.getBoundingClientRect().height)).toBe(32)
+})
+
+test('克制型用户操作菜单统一尺寸与危险语义，自身账号操作仍禁用', async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 })
+  await openUsers(page)
+  const row = page.getByRole('row').filter({ hasText: '扫描操作员' })
+  await row.getByRole('button', { name: '更多操作' }).click()
+  const menu = page.locator('.mrr-table-action-menu--quiet:visible')
+  await expect(menu).toBeVisible()
+  const reset = menu.getByRole('menuitem', { name: '重置密码' })
+  const disable = menu.getByRole('menuitem', { name: '禁用用户' })
+  await expect(reset).toBeVisible()
+  await expect(disable).toBeVisible()
+  await expect.poll(() => menu.locator('.el-dropdown-menu__item').evaluateAll(els => els.map(el => el.getBoundingClientRect().height))).toEqual([32, 32])
+  await expect.poll(() => menu.locator('.mrr-table-actions__menu-icon').evaluateAll(els => els.map(el => getComputedStyle(el).fontSize))).toEqual(['16px', '16px'])
+  await expect(menu.locator('.el-popper__arrow')).toHaveCount(0)
+  await expect(reset).not.toHaveClass(/menu-item--warning/)
+  await expect(disable).toHaveClass(/menu-item--danger/)
+  await disable.click()
+  const dialog = page.getByRole('dialog', { name: '禁用用户' })
+  await expect(dialog).toBeVisible()
+  await dialog.getByRole('button', { name: '取消', exact: true }).click()
+  await expect(dialog).not.toBeVisible()
+  await row.getByRole('button', { name: '更多操作' }).click()
+  await reset.click()
+  await expect(page.getByRole('dialog', { name: '重置用户密码', exact: true })).toBeVisible()
+  await page.keyboard.press('Escape')
+  await expect(page.getByRole('dialog', { name: '重置用户密码', exact: true })).not.toBeVisible()
+  await page.getByRole('row').filter({ hasText: '系统管理员' }).getByRole('button', { name: '更多操作' }).click()
+  await expect(menu.getByRole('menuitem', { name: '重置密码' })).toHaveClass(/is-disabled/)
+  await expect(menu.getByRole('menuitem', { name: '禁用用户' })).toHaveClass(/is-disabled/)
+})

@@ -698,3 +698,7 @@
 ## 用户列表无标题与查询布局稳定性（2026-11-26）
 
 基线 89743b87。根据维护者截图取消用户列表可见分区标题，保留 role=region / aria-label；MrrDataTablePanel title 改为可选，quiet headerless 恢复顶部16px/窄屏12px真实留白，保留外层圆角裁切、原生焦点环及浮层。删除 users 的全零隐藏规则，四卡持续占位；首次加载/失败显示—，查询在途保留上次成功数值，成功空结果显示0。未改查询参数、权限、计数口径或创建流程。Chromium/WebKit 19/19（含预热）覆盖首次、延迟查询、空结果、失败、恢复、焦点、选择器浮层及其他有标题分区；16/16公共组件单测与TypeScript通过。Chromium四主题×五宽度20/20，工具栏顶边搜索前后偏差≤1px，输入框距离顶部17px/窄屏13px（含边框），无工具栏溢出；实际空态截图 /tmp/mrr-users-stable-empty-*.png，日志 /tmp/mrr-users-stable-{browser,visual,unit,tsc}.log。其他页面的零值收纳规则暂保留，未运行全量CI、生产构建与Chrome86实机。保持9037，不推送、不创建PR、不合并、不发布。
+
+## 用户列表文本分页与操作菜单精修（2026-11-26）
+
+基线 b8a355ed。按维护者反馈，每页数量由 ElPagination sizes 下拉改为 slot 内文本按钮，保留10/20/50/100选项，点击或键盘激活循环切换、回到第一页、只发一次查询；桌面分页28px/箭头12px、窄屏32px。quiet 行操作通过共享 MrrTableActions popper class 和 menus.css 统一浮层，最小144px、行高32/36px、图标16px、正文13px、无尖角；重置密码中性，禁用用户危险色，禁用态统一弱化。保留原重置密码管理员密码校验、禁用确认、自身账号限制、响应式编辑收纳。分页 Chromium/WebKit 11/11（含预热），四主题五宽度20/20；菜单双引擎四主题双宽度16/16，25/25定向单测和TypeScript通过。联合浏览器首轮7通过/2失败（新增测试误写重置用户密码弹窗名称），修正定位后3/3（含预热），原禁用确认/403重试测试通过。真实截图 /tmp/mrr-quiet-menu-*.png 与 /tmp/mrr-pagination-text-*.png；日志 /tmp/mrr-pagination-text-{browser,visual,tsc}.log、/tmp/mrr-pagination-menu-{browser,recheck,visual2,unit,tsc}.log。未运行完整CI、生产构建及Chrome86实机。仅本地9037，未推送、合并或发布。

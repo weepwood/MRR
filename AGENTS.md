@@ -333,3 +333,5 @@ python scripts/release_baseline.py validate
 - 变更会删除、覆盖或批量修改医疗数据但没有恢复方案。
 
 此时应记录阻塞事实、最小复现和可选方案，创建或更新 Issue，而不是生成一个看似可运行的临时实现。
+
+2026-11-26：#844 经 GitHub 合并接口成功 squash 至 2dff0e4b，验收 head f6934742 与合并 tree 一致；提示分支重放至新基线。此前 OPEN 为历史状态。

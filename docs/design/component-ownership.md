@@ -255,3 +255,5 @@ FaIcon、FaKbd、FaPinInput、FaScrollArea、FaSmartFixedBlock、FaPasswordStren
 | `views/statistics/external-archive.vue` | — | el-button × 3, el-result × 3 |
 | `views/statistics/index.vue` | — | el-button × 2, el-date-picker × 1, el-input × 1, el-option × 2, el-pagination × 1, el-select × 1, el-table × 1, el-table-column × 7, el-tag × 1 |
 | `views/users/index.vue` | FaIcon × 3 | el-alert × 5, el-button × 16, el-checkbox × 1, el-dialog × 6, el-form × 4, el-form-item × 11, el-input × 5, el-input-number × 2, el-option × 6, el-pagination × 1, el-select × 6, el-table × 1, el-table-column × 8, el-tag × 1 |
+
+2026-11-26：#844 经 GitHub 合并接口成功 squash 至 2dff0e4b，验收 head f6934742 与合并 tree 一致；提示分支重放至新基线。此前 OPEN 为历史状态。

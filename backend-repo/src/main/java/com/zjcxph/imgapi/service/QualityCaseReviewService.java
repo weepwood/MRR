@@ -1,6 +1,7 @@
 package com.zjcxph.imgapi.service;
 
 import com.zjcxph.imgapi.exception.BusinessException;
+import com.zjcxph.imgapi.utils.MedicalRecordCodeUtils;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
@@ -67,6 +68,68 @@ public class QualityCaseReviewService {
         var e=evidence(issue);var row=find(e);
         return new Context(writable(),e.latest(),row!=null && Objects.equals(row.issueId(),Long.toString(issue)),row,
                 row==null?List.of():readEvents(Long.parseLong(row.id()),0));
+    }
+
+    public record Recheck(String caseId,int revision,String status,String observedAt) {}
+
+    /**
+     * A single statement observes the selected case, retained sample and live row.
+     * Never infer recovery from absence in a later sampling run. Do not change any state.
+     */
+    @Transactional(readOnly=true,timeout=5)
+    public Recheck recheck(long id) {
+        if(id<=0) throw new BusinessException(400,"无效案件");
+        var rows=jdbc.query("""
+                WITH c AS MATERIALIZED (
+                    SELECT * FROM app.mrr_quality_case_review WHERE id=?
+                ), source AS (
+                    SELECT s.id::bigint AS entity_id,s.archive_id,s.bah,s.sjh,
+                           s.uploadflag<>0 AS active
+                    FROM c JOIN app.mr_scan s ON c.entity_type='mr_scan' AND s.id=c.entity_id
+                    UNION ALL
+                    SELECT b.id,b.archive_id,b.bah,b.sjh,b.status='NORMAL'
+                    FROM c JOIN app.mr_archive_box_record b ON c.entity_type='mr_archive_box_record' AND b.id=c.entity_id
+                )
+                SELECT c.id,c.revision,clock_timestamp()::text AS observed,
+                       i.id IS NOT NULL AS evidence_present,i.bah AS old_bah,i.sjh AS old_sjh,
+                       s.entity_id IS NOT NULL AS source_present,s.active,s.archive_id,s.bah,s.sjh,
+                       matches.n,matches.matched_id,matches.matched_bah
+                FROM c
+                LEFT JOIN app.mrr_data_quality_issue i ON i.id=c.issue_id AND i.run_id=c.run_id
+                     AND i.entity_type=c.entity_type AND i.entity_id=c.entity_id::text AND i.check_code=c.check_code
+                LEFT JOIN source s ON true
+                LEFT JOIN LATERAL (
+                    SELECT count(*) AS n,min(id) AS matched_id,min(bah) AS matched_bah
+                    FROM (
+                        SELECT a.id,a.bah FROM app.mr_archive a
+                        WHERE s.archive_id IS NOT NULL AND s.active
+                        AND ((NULLIF(BTRIM(s.sjh),'') IS NULL
+                            AND app.numeric_code_key(a.bah)=app.numeric_code_key(s.bah))
+                            OR (NULLIF(BTRIM(s.sjh),'') IS NOT NULL
+                            AND app.numeric_code_key(a.sjh)=app.numeric_code_key(s.sjh)))
+                        LIMIT 2
+                    ) candidates
+                ) matches ON true
+                """,(rs,n)-> {
+            String bah=MedicalRecordCodeUtils.normalize(rs.getString("bah"));
+            String sjh=MedicalRecordCodeUtils.normalize(rs.getString("sjh"));
+            Long archive=rs.getObject("archive_id",Long.class);
+            String status;
+            if(!rs.getBoolean("evidence_present")) status="EVIDENCE_UNAVAILABLE";
+            else if(!rs.getBoolean("source_present")) status="RECORD_UNAVAILABLE";
+            else if(!rs.getBoolean("active")) status="OUT_OF_SCOPE";
+            else if(!Objects.equals(bah,MedicalRecordCodeUtils.normalize(rs.getString("old_bah")))
+                    || !Objects.equals(sjh,MedicalRecordCodeUtils.normalize(rs.getString("old_sjh")))) status="IDENTITY_CHANGED";
+            else if(archive==null) status="STILL_MISSING";
+            else if(bah==null || !bah.matches("[0-9]+") || (sjh!=null && !sjh.matches("[0-9]+"))
+                    || (MedicalRecordCodeUtils.requiresSjhForBah(bah) && (sjh==null || sjh.length()<4))
+                    || rs.getLong("n")!=1 || !archive.equals(rs.getObject("matched_id",Long.class))
+                    || !MedicalRecordCodeUtils.toSearchTerm(bah).equals(MedicalRecordCodeUtils.toSearchTerm(rs.getString("matched_bah"))))
+                status="LINK_UNCONFIRMED";
+            else status="LINK_PRESENT_VERIFIED";
+            return new Recheck(rs.getString("id"),rs.getInt("revision"),status,rs.getString("observed"));
+        },id);
+        return rows.stream().findFirst().orElseThrow(()->new BusinessException(404,"案件不存在"));
     }
 
     @Transactional(readOnly=true,timeout=5)

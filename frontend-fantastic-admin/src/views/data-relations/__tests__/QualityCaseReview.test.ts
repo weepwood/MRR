@@ -3,7 +3,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { reactive } from 'vue'
 import QualityCaseReview from '../components/QualityCaseReview.vue'
 
-const api = vi.hoisted(() => ({ getQualityReview: vi.fn(), listQualityReviews: vi.fn(), getQualityReviewEvents: vi.fn(), decideQualityReview: vi.fn() }))
+const api = vi.hoisted(() => ({ getQualityReview: vi.fn(), listQualityReviews: vi.fn(), getQualityReviewEvents: vi.fn(), decideQualityReview: vi.fn(), recheckQualityReview: vi.fn() }))
 const confirm = vi.hoisted(() => vi.fn())
 vi.mock('@/api/modules/quality-case-review', () => api)
 vi.mock('element-plus', () => ({ ElMessageBox: { confirm } }))
@@ -69,6 +69,23 @@ describe('异常人工决策', () => {
     session.allowed = false
     await flushPromises()
     expect(w.text()).toBe('')
+    w.unmount()
+  })
+  it('逐实体复验展示时点结果，不更改案件或提交决策，并拒绝过期版本', async () => {
+    api.getQualityReview.mockResolvedValue({ data: ctx() })
+    const w = panel(20)
+    await flushPromises()
+    api.recheckQualityReview.mockResolvedValueOnce({ data: { caseId: '1', revision: 1, status: 'LINK_PRESENT_VERIFIED', observedAt: '2026-11-25T00:00:00Z' } })
+    await button(w, '逐记录只读复验').trigger('click')
+    await flushPromises()
+    expect(w.text()).toContain('当前唯一关联已核对')
+    expect(w.text()).toContain('不关闭案件')
+    expect(api.decideQualityReview).not.toHaveBeenCalled()
+    api.recheckQualityReview.mockResolvedValueOnce({ data: { caseId: '1', revision: 2, status: 'LINK_PRESENT_VERIFIED', observedAt: '2026-11-25T00:00:00Z' } })
+    await button(w, '逐记录只读复验').trigger('click')
+    await flushPromises()
+    expect(w.text()).not.toContain('当前唯一关联已核对')
+    expect(w.text()).toContain('决策读取或保存失败')
     w.unmount()
   })
   it('案件历史列表可打开审计，样本清理后仍独立展示', async () => {

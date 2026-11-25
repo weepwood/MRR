@@ -217,6 +217,7 @@ export default defineFakeRoute([
   },
   { url: '/api/v1/system/data-quality/case-reviews', response: () => demoOk({ enabled: false, reviews: [] }) },
   { url: '/api/v1/system/data-quality/case-reviews/issue/:issueId', response: () => demoOk({ enabled: false, latest: false, reviewedThisSample: false, review: null, events: [] }) },
+  { url: '/api/v1/system/data-quality/case-reviews/:id/recheck', response: () => demoError(404, '演示无可复验案件') },
   { url: '/api/v1/system/data-quality/case-reviews/:id/events', response: () => demoError(404, '演示无人工决策历史') },
   { url: '/api/v1/system/data-quality/case-reviews/issue/:issueId', method: 'POST', response: () => demoError(503, '演示不写入真实决策') },
   { url: '/api/v1/system/data-quality/repair-orders', method: 'POST', response: () => demoError(503, '演示不执行真实修复') },

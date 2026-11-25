@@ -72,6 +72,47 @@ class QualityCaseReviewPostgresqlIT extends PostgresqlIntegrationTestSupport {
         assertThat(service(false).list(null).enabled()).isFalse();
     }
 
+    @Test void explicitReadOnlyRecheckDistinguishesEvidenceAndLiveLink() {
+        var service=service(true);
+        int scan=jdbc.queryForObject("INSERT INTO app.mr_scan(bah,uploadflag,filename) VALUES ('7654321',1,'synthetic.jpg') RETURNING id",Integer.class);
+        long batch=run(), sample=issue(batch,"mr_scan",scan,"SCAN_ARCHIVE_LINK_MISSING_ESTIMATED");
+        jdbc.update("UPDATE app.mrr_data_quality_issue SET bah='7654321' WHERE id=?",sample);
+        var review=service.decide(sample,0,"CONFIRM",11);
+        long id=Long.parseLong(review.id());
+        assertThat(service.recheck(id).status()).isEqualTo("STILL_MISSING");
+        run(); // A later successful run without this sample is not recovery.
+        assertThat(service.recheck(id).status()).isEqualTo("STILL_MISSING");
+        long archive=jdbc.queryForObject("INSERT INTO app.mr_archive(bah) VALUES ('7654321') RETURNING id",Long.class);
+        jdbc.update("UPDATE app.mr_scan SET archive_id=? WHERE id=?",archive,scan);
+        var observed=service(false).recheck(id);
+        assertThat(observed.status()).isEqualTo("LINK_PRESENT_VERIFIED");
+        assertThat(observed.revision()).isEqualTo(1);
+        assertThat(service.events(id,0)).hasSize(1);
+        assertThat(service.list(null).reviews()).containsExactly(review);
+        jdbc.update("INSERT INTO app.mr_archive(bah) VALUES ('7654321')");
+        assertThat(service.recheck(id).status()).isEqualTo("LINK_UNCONFIRMED");
+        jdbc.update("UPDATE app.mr_scan SET uploadflag=0 WHERE id=?",scan);
+        assertThat(service.recheck(id).status()).isEqualTo("OUT_OF_SCOPE");
+        jdbc.update("DELETE FROM app.mr_scan WHERE id=?",scan);
+        assertThat(service.recheck(id).status()).isEqualTo("RECORD_UNAVAILABLE");
+        jdbc.update("DELETE FROM app.mrr_data_quality_run WHERE id=?",batch);
+        assertThat(service.recheck(id).status()).isEqualTo("EVIDENCE_UNAVAILABLE");
+    }
+
+    @Test void boxRecheckRequiresNormalStatusAndUnchangedSampleCodes() {
+        var service=service(true);
+        long box=jdbc.queryForObject("INSERT INTO app.mr_archive_box_record(bah,box_no,status) VALUES ('654321','synthetic','NORMAL') RETURNING id",Long.class);
+        long sample=issue(run(),"mr_archive_box_record",box,"BOX_ARCHIVE_LINK_MISSING");
+        jdbc.update("UPDATE app.mrr_data_quality_issue SET bah='654321' WHERE id=?",sample);
+        long id=Long.parseLong(service.decide(sample,0,"IGNORE",11).id());
+        assertThat(service.recheck(id).status()).isEqualTo("STILL_MISSING");
+        jdbc.update("UPDATE app.mr_archive_box_record SET bah='654322' WHERE id=?",box);
+        assertThat(service.recheck(id).status()).isEqualTo("IDENTITY_CHANGED");
+        jdbc.update("UPDATE app.mr_archive_box_record SET status='MISPLACED' WHERE id=?",box);
+        assertThat(service.recheck(id).status()).isEqualTo("OUT_OF_SCOPE");
+        assertThat(service.events(id,0)).hasSize(1);
+    }
+
     @Test void auditFailureRollsBackDecisionInSameTransaction() {
         long issue=issue(run(),"mr_scan",123,"SCAN_ARCHIVE_LINK_MISSING_ESTIMATED");
         var bad=new JdbcTemplate(java.util.Objects.requireNonNull(jdbc.getDataSource())) {

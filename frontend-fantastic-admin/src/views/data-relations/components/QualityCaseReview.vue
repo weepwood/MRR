@@ -1,8 +1,8 @@
 <script setup lang="ts">
-import type { QualityReview, ReviewAction, ReviewContext, ReviewEvent } from '@/api/modules/quality-case-review'
+import type { QualityRecheck, QualityReview, ReviewAction, ReviewContext, ReviewEvent } from '@/api/modules/quality-case-review'
 import { ElMessageBox } from 'element-plus'
 import { computed, onBeforeUnmount, ref, watch } from 'vue'
-import { decideQualityReview, getQualityReview, getQualityReviewEvents, listQualityReviews } from '@/api/modules/quality-case-review'
+import { decideQualityReview, getQualityReview, getQualityReviewEvents, listQualityReviews, recheckQualityReview } from '@/api/modules/quality-case-review'
 import AppEmpty from '@/components/AppEmpty/index.vue'
 import AppError from '@/components/AppError/index.vue'
 import MrrSectionCard from '@/components/MrrSectionCard/index.vue'
@@ -16,9 +16,19 @@ const rows = ref<QualityReview[]>([])
 const selected = ref<QualityReview>()
 const events = ref<ReviewEvent[]>([])
 const busy = ref(false)
+const observation = ref<QualityRecheck>()
 const failed = ref(false)
 const more = ref(false)
 const labels: Record<string, string> = { OPEN: '重新待核对', CONFIRMED: '已确认样本', IGNORED: '暂缓处理' }
+const recheckLabels: Record<string, string> = {
+  STILL_MISSING: '当前仍缺少关联',
+  LINK_PRESENT_VERIFIED: '当前唯一关联已核对',
+  LINK_UNCONFIRMED: '当前关联无法确认',
+  IDENTITY_CHANGED: '当前编号与历史样本不同',
+  OUT_OF_SCOPE: '当前记录状态不在安全复验范围',
+  RECORD_UNAVAILABLE: '当前记录不存在',
+  EVIDENCE_UNAVAILABLE: '原样本证据不可用',
+}
 const actionLabels: Record<ReviewAction, string> = { CONFIRM: '确认异常', IGNORE: '暂缓处理', REOPEN: '重新打开' }
 let generation = 0
 let controller: AbortController | undefined
@@ -27,6 +37,7 @@ function reset() {
   generation++
   controller?.abort()
   controller = undefined
+  observation.value = undefined
   context.value = undefined
   rows.value = []
   selected.value = undefined
@@ -74,7 +85,7 @@ async function history(row: QualityReview, append = false) {
   controller = new AbortController()
   busy.value = true
   failed.value = false
-  if (!append) { events.value = [] }
+  if (!append) { events.value = []; observation.value = undefined }
   selected.value = row
   try {
     const { data } = await getQualityReviewEvents(row.id, append ? events.value.at(-1)?.revision : 0, controller.signal)
@@ -86,6 +97,26 @@ async function history(row: QualityReview, append = false) {
   finally {
     if (generation === current) { busy.value = false }
   }
+}
+async function recheck() {
+  const row = selected.value
+  if (!row || busy.value || !allowed.value) { return }
+  const current = ++generation
+  controller?.abort()
+  controller = new AbortController()
+  busy.value = true
+  failed.value = false
+  observation.value = undefined
+  try {
+    const { data } = await recheckQualityReview(row.id, controller.signal)
+    if (current !== generation) { return }
+    if (!data || data.caseId !== row.id || data.revision !== row.revision || !Object.hasOwn(recheckLabels, data.status)) {
+      throw new Error('Invalid or stale recheck')
+    }
+    observation.value = data
+  }
+  catch { if (current === generation) { failed.value = true } }
+  finally { if (current === generation) { busy.value = false } }
 }
 const canDecide = computed(() => allowed.value && !!context.value?.enabled && !!context.value.latest && !failed.value)
 async function decide(action: ReviewAction) {
@@ -99,6 +130,7 @@ async function decide(action: ReviewAction) {
     if (current !== generation || !allowed.value || props.issueId !== issue) { return }
     await decideQualityReview(issue, revision, action)
     if (current !== generation) { return }
+    observation.value = undefined
     busy.value = false
     await load()
   }
@@ -161,6 +193,14 @@ onBeforeUnmount(reset)
     </template>
     <section v-if="selected">
       <h4>案件 #{{ selected.id }} · {{ labels[selected.status] ?? selected.status }} · 版本 {{ selected.revision }}</h4>
+      <el-button :disabled="busy" @click="recheck">
+        逐记录只读复验
+      </el-button>
+      <div v-if="observation" class="review-observation" role="status">
+        <strong>{{ recheckLabels[observation.status] }}</strong>
+        <p>观察时间 {{ formatDateTime(observation.observedAt) }} · 案件版本 {{ observation.revision }}</p>
+        <p>仅为当前关联及保留样本的时点核对，不关闭案件，不代表其他异常已解决。</p>
+      </div>
       <el-timeline>
         <el-timeline-item v-for="event in events" :key="event.revision" :timestamp="formatDateTime(event.occurredAt)">
           {{ labels[event.status] ?? event.status }} · 样本 #{{ event.issueId }} · 操作者 #{{ event.actorId }} · v{{ event.revision }}
@@ -174,6 +214,13 @@ onBeforeUnmount(reset)
 </template>
 
 <style scoped>
+.review-observation {
+  padding: var(--mrr-space-2);
+  margin: var(--mrr-space-2) 0;
+  border: 1px solid var(--el-border-color-light);
+  border-radius: var(--el-border-radius-base);
+}
+
 .review-actions {
   display: flex;
   flex-wrap: wrap;

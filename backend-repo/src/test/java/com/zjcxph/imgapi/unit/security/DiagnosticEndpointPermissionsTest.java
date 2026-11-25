@@ -195,6 +195,26 @@ class DiagnosticEndpointPermissionsTest {
     }
 
     @Test
+    void qualityCaseRecheckRequiresBothManagementPermissionsAndNoStore() throws Exception {
+        var service=mock(QualityCaseReviewService.class);
+        var controller=new com.zjcxph.imgapi.controller.QualityCaseReviewController(service);
+        var handler=new HandlerMethod(controller,controller.getClass().getMethod("recheck",long.class,jakarta.servlet.http.HttpServletResponse.class));
+        var auth=new AuthorizationInterceptor();
+        String path="/api/v1/system/data-quality/case-reviews/7/recheck";
+        for(var permissions:List.of(List.<String>of(),List.of("system:manage"),List.of("record:manage"))) {
+            var response=new MockHttpServletResponse();
+            assertThat(auth.preHandle(request("GET",path,permissions),response,handler)).isFalse();
+            assertThat(response.getStatus()).isEqualTo(403);
+        }
+        assertThat(auth.preHandle(request("GET",path,List.of("system:manage","record:manage")),new MockHttpServletResponse(),handler)).isTrue();
+        verifyNoInteractions(service);
+        var response=new MockHttpServletResponse();
+        controller.recheck(7,response);
+        verify(service).recheck(7);
+        assertThat(response.getHeader("Cache-Control")).isEqualTo("private, no-store");
+    }
+
+    @Test
     void qualityCaseReviewRequiresBothManagementPermissions() throws Exception {
         var service=mock(QualityCaseReviewService.class);
         var controller=new com.zjcxph.imgapi.controller.QualityCaseReviewController(service);

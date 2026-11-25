@@ -22,6 +22,10 @@ public class QualityCaseReviewController {
     public Result<QualityCaseReviewService.Context> context(@PathVariable long issueId,HttpServletResponse response) {
         noStore(response);return Result.success(service.context(issueId));
     }
+    @GetMapping("/{id}/recheck")
+    public Result<QualityCaseReviewService.Recheck> recheck(@PathVariable long id,HttpServletResponse response) {
+        noStore(response);return Result.success(service.recheck(id));
+    }
     @GetMapping("/{id}/events")
     public Result<java.util.List<QualityCaseReviewService.Event>> events(@PathVariable long id,@RequestParam(defaultValue="0") int before,HttpServletResponse response) {
         noStore(response);return Result.success(service.events(id,before));

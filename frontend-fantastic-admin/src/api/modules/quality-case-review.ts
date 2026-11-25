@@ -42,3 +42,13 @@ export function getQualityReviewEvents(id: string, before = 0, signal?: AbortSig
 export function decideQualityReview(issueId: number, expectedRevision: number, action: ReviewAction) {
   return postRequest<QualityReview>(`${base}/issue/${issueId}`, undefined, { params: { expectedRevision, action }, retry: false, skipGlobalError: true })
 }
+
+export interface QualityRecheck {
+  caseId: string
+  revision: number
+  status: string
+  observedAt: string
+}
+export function recheckQualityReview(id: string, signal?: AbortSignal) {
+  return getRequest<QualityRecheck>(`${base}/${id}/recheck`, { signal, skipGlobalError: true })
+}

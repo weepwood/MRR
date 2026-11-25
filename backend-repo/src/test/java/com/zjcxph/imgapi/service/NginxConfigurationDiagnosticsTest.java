@@ -74,6 +74,65 @@ class NginxConfigurationDiagnosticsTest {
         verifyNoInteractions(launcher);
     }
 
+    @Test void versionOnlyRunsFixedFlagAndReturnsAllowlistedVersion() throws Exception {
+        var root=fixture();
+        var check=mock(NginxConfigurationDiagnostics.Launcher.class);
+        var launch=mock(NginxConfigurationDiagnostics.Launcher.class);
+        var proc=mock(Process.class);
+        when(proc.getOutputStream()).thenReturn(new ByteArrayOutputStream());
+        when(proc.getInputStream()).thenReturn(new java.io.ByteArrayInputStream("nginx version: nginx/1.28.0\r\n".getBytes(java.nio.charset.StandardCharsets.US_ASCII)));
+        when(proc.waitFor(5,TimeUnit.SECONDS)).thenReturn(true);
+        var prefix=root.resolve("runtime/nginx");
+        when(launch.start(List.of(prefix.resolve("nginx.exe").toString(),"-v"),prefix)).thenReturn(proc);
+        var service=new NginxConfigurationDiagnostics(true,true,root,check,launch);
+        assertThat(service.version().version()).isEqualTo("1.28.0");
+        verify(launch).start(List.of(prefix.resolve("nginx.exe").toString(),"-v"),prefix);
+        verifyNoInteractions(check);
+        when(proc.getInputStream()).thenReturn(new java.io.ByteArrayInputStream("nginx version: nginx/1.28.0 secret".getBytes()));
+        var invalid=service.version();
+        assertThat(invalid.state()).isEqualTo("OUTPUT_UNRECOGNIZED");
+        assertThat(invalid.version()).isNull();
+        when(proc.getInputStream()).thenReturn(new java.io.ByteArrayInputStream(new byte[1025]));
+        assertThat(service.version().state()).isEqualTo("OUTPUT_UNRECOGNIZED");
+        assertThat(new NginxConfigurationDiagnostics(false,true,root,check,launch).version().state()).isEqualTo("DISABLED");
+        verify(launch,times(3)).start(anyList(),any());
+    }
+
+    @Test void versionAndConfigCheckSharePermitUntilExit() throws Exception {
+        var root=fixture();
+        var launch=mock(NginxConfigurationDiagnostics.Launcher.class);
+        var check=mock(NginxConfigurationDiagnostics.Launcher.class);
+        var proc=mock(Process.class);
+        var exited=new CompletableFuture<Process>();
+        when(proc.getOutputStream()).thenReturn(new ByteArrayOutputStream());
+        when(proc.getInputStream()).thenReturn(new java.io.ByteArrayInputStream(new byte[0]));
+        when(proc.waitFor(5,TimeUnit.SECONDS)).thenReturn(false);
+        when(proc.isAlive()).thenReturn(true);
+        when(proc.onExit()).thenReturn(exited);
+        when(launch.start(anyList(),any())).thenReturn(proc);
+        var service=new NginxConfigurationDiagnostics(true,true,root,check,launch);
+        assertThat(service.version().state()).isEqualTo("TIMEOUT");
+        assertThat(service.check().status()).isEqualTo("BUSY");
+        verifyNoInteractions(check);
+        verify(proc).destroyForcibly();
+        exited.complete(proc);
+        assertThat(service.version().state()).isEqualTo("TIMEOUT");
+    }
+
+    @Test void listenerHintsBoundSizeAndNeverExposeAddressesOrIncludes() throws Exception {
+        var root=fixture();
+        var launch=mock(NginxConfigurationDiagnostics.Launcher.class);
+        var service=new NginxConfigurationDiagnostics(true,true,root,launch,launch);
+        var file=root.resolve("config/nginx/nginx.conf");
+        Files.writeString(file,"# listen 12;\n  listen 80 default_server;\nlisten 443; # comment\nlisten 443;\nlisten 127.0.0.1:1234;\nlisten 65536;\ninclude private-path;\nlisten $port;\n");
+        var hints=service.listenerHints();
+        assertThat(hints.state()).isEqualTo("TEXT_HINTS");
+        assertThat(hints.ports()).containsExactly(80,443);
+        Files.writeString(file,"x".repeat(65537));
+        assertThat(service.listenerHints().state()).isEqualTo("CONFIG_TOO_LARGE");
+        verifyNoInteractions(launch);
+    }
+
     private Path fixture() throws Exception {
         var root = directory.toRealPath();
         Files.createDirectories(root.resolve("runtime/nginx"));

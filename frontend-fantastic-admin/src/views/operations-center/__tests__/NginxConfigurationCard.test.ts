@@ -3,7 +3,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { reactive } from 'vue'
 import NginxConfigurationCard from '../components/NginxConfigurationCard.vue'
 
-const api = vi.hoisted(() => ({ getNginxConfigStatus: vi.fn(), checkNginxConfig: vi.fn() }))
+const api = vi.hoisted(() => ({ getNginxConfigStatus: vi.fn(), checkNginxConfig: vi.fn(), getNginxListenerHints: vi.fn(), readNginxVersion: vi.fn() }))
 vi.mock('@/api/modules/operations', () => api)
 const session = reactive({ token: 'synthetic', read: true, manage: true })
 vi.mock('@/utils/session', () => ({ hasPermission: (p: string) => p === 'system:read' ? session.read : session.manage }))
@@ -71,6 +71,29 @@ describe('nginx 受控配置检查', () => {
     expect(wrapper.text()).toBe('')
     wrapper.unmount()
   })
+  it('版本与监听提示仅明确请求，拒绝将提示当成实际监听', async () => {
+    api.getNginxConfigStatus.mockResolvedValue(available)
+    api.readNginxVersion.mockResolvedValue({ state: 'AVAILABLE', version: '1.28.0', observedAt: checkedAt })
+    api.getNginxListenerHints.mockResolvedValue({ state: 'TEXT_HINTS', ports: [80, 443], observedAt: checkedAt })
+    const wrapper = card()
+    await flushPromises()
+    expect(api.readNginxVersion).not.toHaveBeenCalled()
+    expect(api.getNginxListenerHints).not.toHaveBeenCalled()
+    await findButton(wrapper, '读取安装版本').trigger('click')
+    await flushPromises()
+    expect(wrapper.text()).toContain('安装程序版本 Nginx 1.28.0')
+    expect(wrapper.text()).toContain('不代表当前运行进程版本')
+    await findButton(wrapper, '核对监听配置文本').trigger('click')
+    await flushPromises()
+    expect(wrapper.text()).toContain('80、443')
+    expect(wrapper.text()).toContain('不是生效监听配置或端口状态')
+    session.manage = false
+    await flushPromises()
+    expect(findButton(wrapper, '读取安装版本')).toBeUndefined()
+    expect(wrapper.text()).not.toContain('1.28.0')
+    wrapper.unmount()
+  })
+
   it('状态请求失败可刷新，退出会话丢弃旧状态', async () => {
     api.getNginxConfigStatus.mockRejectedValueOnce(new Error('synthetic'))
     const wrapper = card()

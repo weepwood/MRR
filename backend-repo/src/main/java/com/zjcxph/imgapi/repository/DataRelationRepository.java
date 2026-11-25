@@ -255,6 +255,35 @@ public class DataRelationRepository {
         return summary;
     }
 
+    public record ScanCursor(Integer pages, int id) {}
+    public record ScanPage(long archiveId, List<Map<String,Object>> rows, ScanCursor nextCursor) {}
+
+    @org.springframework.transaction.annotation.Transactional(readOnly=true, timeout=5)
+    public ScanPage activeScanPage(long archiveId, Integer afterPage, Integer afterId, int limit) {
+        String select = """
+                SELECT id,archive_id AS "archiveId",pages,btype,uploadflag AS "uploadFlag",
+                       migration_status AS "migrationStatus"
+                FROM app.mr_scan WHERE archive_id=? AND uploadflag<>0
+                """;
+        var rows = new java.util.ArrayList<Map<String,Object>>();
+        int wanted=limit+1;
+        if (afterId==null || afterPage!=null) {
+            rows.addAll(afterId==null
+                ? jdbcTemplate.queryForList(select+" AND pages IS NOT NULL ORDER BY pages,id LIMIT ?",archiveId,wanted)
+                : jdbcTemplate.queryForList(select+" AND pages IS NOT NULL AND (pages,id)>(?,?) ORDER BY pages,id LIMIT ?",archiveId,afterPage,afterId,wanted));
+        }
+        if (rows.size()<wanted) {
+            int remaining=wanted-rows.size();
+            int nullAfter=afterId!=null && afterPage==null ? afterId : 0;
+            rows.addAll(jdbcTemplate.queryForList(select+" AND pages IS NULL AND id>? ORDER BY id LIMIT ?",archiveId,nullAfter,remaining));
+        }
+        boolean more=rows.size()>limit;
+        if(more) rows.removeLast();
+        var last=rows.isEmpty()?null:rows.getLast();
+        var cursor=more ? new ScanCursor((Integer)last.get("pages"),((Number)last.get("id")).intValue()) : null;
+        return new ScanPage(archiveId,List.copyOf(rows),cursor);
+    }
+
     public List<Map<String, Object>> scanSamples(long archiveId) {
         return jdbcTemplate.queryForList("""
                 SELECT id, archive_id AS "archiveId", bah, sjh, filename, btype, pages,

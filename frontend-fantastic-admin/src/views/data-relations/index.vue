@@ -640,7 +640,7 @@ onMounted(() => {
                 show-icon
               />
 
-              <ArchiveScanInspector v-if="archiveOnly && selectedArchive && hasPermission('record:read')" :key="`scan-${selectedArchive.id}`" :archive-id="selectedArchive.id" :samples="relationDetail.scanSamples" />
+              <ArchiveScanInspector v-if="archiveOnly && selectedArchive && hasPermission('record:read')" :key="`scan-${selectedArchive.id}`" :archive-id="selectedArchive.id" />
 
               <ArchiveManifestCard v-if="selectedArchive && hasPermission('system:read') && hasPermission('record:read')" :key="selectedArchive.id" :archive-id="selectedArchive.id" />
               <RepairOrderPanel v-if="selectedArchive && canRepair" :key="`repair-${selectedArchive.id}`" :archive-id="selectedArchive.id" />

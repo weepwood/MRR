@@ -22,4 +22,6 @@ public interface DataRelationService {
      * 获取一份病案在统计、患者、扫描、装箱和迁移数据中的关系详情。
      */
     Map<String, Object> getArchiveRelation(long archiveId);
+
+    com.zjcxph.imgapi.repository.DataRelationRepository.ScanPage activeScanPage(long archiveId,Integer afterPage,Integer afterId,int limit);
 }

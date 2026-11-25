@@ -174,3 +174,18 @@ export function getDataQualityRepairPreview(issueId: number) {
 export function runDataQualityChecks() {
   return postRequest<DataQualitySummary>('/api/v1/system/data-quality/run')
 }
+
+export interface ArchiveScanCursor { pages: number | null, id: number }
+export interface ArchiveScanPage {
+  archiveId: number
+  rows: Record<string, unknown>[]
+  nextCursor: ArchiveScanCursor | null
+}
+
+export function getArchiveScanPage(archiveId: number, cursor: ArchiveScanCursor | null, signal?: AbortSignal) {
+  return getRequest<ArchiveScanPage>(`/api/v1/system/data-relations/archives/${archiveId}/scans`, {
+    params: { limit: 50, afterPage: cursor?.pages ?? undefined, afterId: cursor?.id },
+    signal,
+    skipGlobalError: true,
+  })
+}

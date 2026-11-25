@@ -49,6 +49,18 @@
     --mrr-corner: round;
   }
 
+  /* Both modes use the same explicit painting rule for circular controls.
+   * Keep descendants and their pseudo-elements independent of the parent
+   * squircle paint path, including the slider's protruding thumb. */
+  :is(.el-switch, .el-slider),
+  :is(.el-switch, .el-slider) *,
+  :is(.el-switch, .el-slider) *::before,
+  :is(.el-switch, .el-slider) *::after {
+    --mrr-corner: round;
+
+    corner-shape: round;
+  }
+
   /* 2. 由正圆零件组成的复合控件。 */
   :root[data-radius-shape="squircle"] :is(
     .el-radio,

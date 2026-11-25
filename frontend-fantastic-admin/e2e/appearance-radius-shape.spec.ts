@@ -155,7 +155,17 @@ test.describe('界面外观 · 圆角曲线', () => {
       await control.scrollIntoViewIfNeeded()
       await page.mouse.move(0, 0)
       await page.evaluate(() => new Promise<void>(resolve => requestAnimationFrame(() => requestAnimationFrame(() => resolve()))))
-      return control.screenshot({ animations: 'disabled' })
+      // The compact slider root is only 8px high; its 20px thumb overflows.
+      // Include the entire visible control in an integer-aligned clip.
+      const clip = await control.evaluate((root) => {
+        const bounds = [root, ...root.querySelectorAll('.el-switch__core, .el-switch__action, .el-slider__runway, .el-slider__button')].map(node => node.getBoundingClientRect())
+        const x = Math.floor(Math.min(...bounds.map(b => b.left)) + window.scrollX)
+        const y = Math.floor(Math.min(...bounds.map(b => b.top)) + window.scrollY)
+        const right = Math.ceil(Math.max(...bounds.map(b => b.right)) + window.scrollX)
+        const bottom = Math.ceil(Math.max(...bounds.map(b => b.bottom)) + window.scrollY)
+        return { x, y, width: right - x, height: bottom - y }
+      })
+      return page.screenshot({ fullPage: true, clip, animations: 'disabled' })
     }
     const sqSwitch = await captureControl(switchEl)
     const sqSlider = await captureControl(sliderEl)

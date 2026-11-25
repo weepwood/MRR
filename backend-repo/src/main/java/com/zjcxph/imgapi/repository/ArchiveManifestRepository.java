@@ -37,7 +37,7 @@ public class ArchiveManifestRepository {
     public record Candidate(int id, Integer page, String fingerprint) {}
     public record Summary(long id, long archiveId, String status, int upperScanId,
                           int processed, int verified, int anomalies, int failures,
-                          String digestChain, String createdAt, String updatedAt, Integer snapshotCount) {}
+                          String digestChain, String createdAt, String updatedAt, Integer snapshotCount, int recoveryCount) {}
     public record Anomaly(int ordinal, int scanId, String status, long bytesRead,
                           String sha256, String checkedAt) {}
 
@@ -179,6 +179,31 @@ public class ArchiveManifestRepository {
                     lease_token=NULL, lease_until=NULL, updated_at=clock_timestamp()
                 WHERE id=? AND status='RUNNING' AND lease_token=? AND lease_until>clock_timestamp()
                 """, failure ? 1 : 0, failure ? 1 : 0, lease.id(), lease.token());
+    }
+
+    /** Resume only the latest failed fixed snapshot, with a bounded persistent audit trail.
+     * The existing global active unique index fences races against create or other recoveries.
+     */
+    @Transactional(timeout = 5)
+    public boolean resume(long archiveId, long version, long actorId) {
+        return jdbc.update("""
+                WITH resumed AS (
+                    UPDATE app.mrr_archive_manifest m SET status='PENDING', failures=0,
+                        recovery_count=recovery_count+1, updated_at=clock_timestamp()
+                    WHERE m.id=? AND m.archive_id=? AND m.status='FAILED'
+                      AND m.snapshot_count IS NOT NULL AND m.processed<m.snapshot_count AND m.recovery_count<3
+                      AND NOT EXISTS(SELECT 1 FROM app.mrr_archive_manifest newer WHERE newer.archive_id=m.archive_id AND newer.id>m.id)
+                      AND NOT EXISTS(SELECT 1 FROM app.mrr_archive_manifest active WHERE active.status IN ('PENDING','RUNNING'))
+                      AND m.snapshot_count=(SELECT count(*) FROM app.mrr_archive_manifest_member WHERE manifest_id=m.id)
+                      AND m.snapshot_count=(SELECT max(ordinal) FROM app.mrr_archive_manifest_member WHERE manifest_id=m.id)
+                      AND m.anomalies=(SELECT count(*) FROM app.mrr_archive_manifest_anomaly WHERE manifest_id=m.id)
+                      AND NOT EXISTS(SELECT 1 FROM app.mrr_archive_manifest_anomaly WHERE manifest_id=m.id AND ordinal>m.processed)
+                      AND m.recovery_count=(SELECT count(*) FROM app.mrr_archive_manifest_recovery WHERE manifest_id=m.id)
+                    RETURNING id,recovery_count,processed
+                )
+                INSERT INTO app.mrr_archive_manifest_recovery(manifest_id,attempt,actor_id,processed)
+                SELECT id,recovery_count,?,processed FROM resumed
+                """,version,archiveId,actorId)==1;
     }
 
     @Transactional(timeout = 5)
@@ -331,11 +356,11 @@ public class ArchiveManifestRepository {
         return jdbc.query("""
                 SELECT id, archive_id, status, upper_scan_id, processed, verified, anomalies, failures,
                     CASE WHEN status='COMPLETED' AND processed>0 THEN digest_chain END,
-                    created_at::text, updated_at::text, snapshot_count
+                    created_at::text, updated_at::text, snapshot_count, recovery_count
                 FROM app.mrr_archive_manifest
                 """ + clause, (rs,n) -> new Summary(rs.getLong(1),rs.getLong(2),rs.getString(3),
                 rs.getInt(4),rs.getInt(5),rs.getInt(6),rs.getInt(7),rs.getInt(8),
-                rs.getString(9),rs.getString(10),rs.getString(11),(Integer)rs.getObject(12)), args);
+                rs.getString(9),rs.getString(10),rs.getString(11),(Integer)rs.getObject(12),rs.getInt(13)), args);
     }
 
     @Transactional(readOnly = true, timeout = 5)

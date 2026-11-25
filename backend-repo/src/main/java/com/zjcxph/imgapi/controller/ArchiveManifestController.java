@@ -74,6 +74,14 @@ public class ArchiveManifestController {
         return Result.success(service.issues(version, after));
     }
 
+    @PostMapping("/{version}/resume")
+    @RequirePermissions({"system:manage", "record:read"})
+    public Result<ArchiveManifestService.Observation> resume(@PathVariable long version,
+            @RequestParam long archiveId,HttpServletResponse response) {
+        noStore(response);
+        return Result.success(service.resume(archiveId,version,actor()));
+    }
+
     @PostMapping("/{version}/cancel")
     @RequirePermissions({"system:manage", "record:read"})
     public Result<ArchiveManifestService.Observation> cancel(@PathVariable long version, HttpServletResponse response) {

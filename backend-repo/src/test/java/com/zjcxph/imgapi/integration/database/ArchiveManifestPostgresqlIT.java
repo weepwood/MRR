@@ -196,6 +196,49 @@ class ArchiveManifestPostgresqlIT extends PostgresqlIntegrationTestSupport {
         assertThat(repo.report(archive,job)).isEmpty();
     }
 
+    @Test
+    void failedFixedSnapshotResumesAtDurableCursorWithBoundedAuditAndFencing() {
+        long archive=archive();
+        int first=scan(archive,1,1), next=scan(archive,2,1);
+        var repo=new ArchiveManifestRepository(jdbc);
+        long version=repo.create(archive,7).orElseThrow();
+        var original=repo.claim(UUID.randomUUID()).orElseThrow();
+        assertThat(repo.next(original).orElseThrow().id()).isEqualTo(first);
+        assertThat(repo.advance(original,repo.next(original).orElseThrow(),"VERIFIED",12,"a".repeat(64))).isTrue();
+        for (int attempt=1;attempt<=3;attempt++) {
+            for(int i=0;i<3;i++) repo.retry(repo.claim(UUID.randomUUID()).orElseThrow(),true);
+            assertThat(repo.get(version).orElseThrow().status()).isEqualTo("FAILED");
+            assertThat(repo.resume(archive+1,version,8)).isFalse();
+            assertThat(repo.resume(archive,version,8)).isTrue();
+            assertThat(repo.get(version).orElseThrow().recoveryCount()).isEqualTo(attempt);
+            assertThat(repo.resume(archive,version,8)).isFalse();
+            assertThat(repo.advance(original,repo.next(original).orElseThrow(),"VERIFIED",12,"a".repeat(64))).isFalse();
+            var lease=repo.claim(UUID.randomUUID()).orElseThrow();
+            assertThat(lease.processed()).isEqualTo(1);
+            assertThat(repo.next(lease).orElseThrow().id()).isEqualTo(next);
+            repo.retry(lease,false);
+        }
+        for(int i=0;i<3;i++) repo.retry(repo.claim(UUID.randomUUID()).orElseThrow(),true);
+        assertThat(repo.resume(archive,version,8)).isFalse();
+        assertThat(jdbc.queryForObject("SELECT count(*) FROM app.mrr_archive_manifest_recovery WHERE manifest_id=? AND actor_id=8 AND processed=1",Long.class,version)).isEqualTo(3L);
+        assertThat(repo.get(version).orElseThrow().processed()).isEqualTo(1);
+    }
+
+    @Test
+    void incompleteOrOlderSnapshotCannotResume() {
+        long archive=archive();
+        scan(archive,1,1);scan(archive,2,1);
+        var repo=new ArchiveManifestRepository(jdbc);
+        long version=repo.create(archive,7).orElseThrow();
+        for(int i=0;i<3;i++) repo.retry(repo.claim(UUID.randomUUID()).orElseThrow(),true);
+        jdbc.update("DELETE FROM app.mrr_archive_manifest_member WHERE manifest_id=? AND ordinal=1",version);
+        assertThat(repo.resume(archive,version,8)).isFalse();
+        long newer=repo.create(archive,7).orElseThrow();
+        assertThat(repo.cancel(newer,7)).isTrue();
+        assertThat(repo.resume(archive,version,8)).isFalse();
+        assertThat(repo.resume(archive,newer,8)).isFalse();
+    }
+
     private long archive() {
         return jdbc.queryForObject("INSERT INTO app.mr_archive(bah) VALUES ('123456') RETURNING id", Long.class);
     }

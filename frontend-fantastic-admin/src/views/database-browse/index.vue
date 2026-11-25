@@ -1,13 +1,20 @@
 <script setup lang="ts">
 import type { DbBrowseColumnView, DbBrowsePage, DbBrowseTableSchema, DbBrowseTableSummary } from '@/api/modules/database-browse'
-import { computed, onMounted, reactive, ref } from 'vue'
+import { computed, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue'
 import { describeBrowseError, getBrowseRows, getBrowseSchema, getBrowseTables } from '@/api/modules/database-browse'
 import MrrPageHeader from '@/components/MrrPageHeader/index.vue'
 import MrrPageShell from '@/components/MrrPageShell/index.vue'
 import MrrSectionCard from '@/components/MrrSectionCard/index.vue'
+import { useUserStore } from '@/store/modules/user'
+import { hasPermission } from '@/utils/session'
 
 defineOptions({ name: 'DatabaseBrowsePage' })
 
+const userStore = useUserStore()
+const canBrowse = computed(() => hasPermission('system:db:browse'))
+let generation = 0
+let controller: AbortController | undefined
+const retryAction = ref<(() => Promise<void>)>()
 const loading = ref(false)
 const errorMessage = ref('')
 const featureDisabled = ref(false)
@@ -24,7 +31,7 @@ const filterableColumns = computed<DbBrowseColumnView[]>(
   () => (schema.value?.columns ?? []).filter(column => column.filterable),
 )
 const rows = computed(() => page.value?.rows ?? [])
-const columns = computed(() => page.value?.columns ?? [])
+const columns = computed(() => page.value?.columns ?? schema.value?.columns ?? [])
 
 const estimateText = computed(() => formatRowCount(page.value?.estimatedRows, page.value?.estimated ?? true))
 
@@ -88,18 +95,69 @@ function isFeatureDisabled(error: unknown): boolean {
   return describeBrowseError(error).featureDisabled
 }
 
-async function loadTables() {
+function cancelRequest() {
+  generation++
+  controller?.abort()
+  controller = undefined
+  loading.value = false
+  retryAction.value = undefined
+}
+
+function clearSelection() {
+  tableKey.value = ''
+  schema.value = undefined
+  page.value = undefined
+  cursorStack.value = []
+  pageIndex.value = 1
+  activeFilter.value = undefined
+  Object.keys(filterValues).forEach(name => delete filterValues[name])
+}
+
+function resetSession() {
+  cancelRequest()
+  clearSelection()
+  tables.value = []
+  errorMessage.value = ''
+  featureDisabled.value = false
+}
+
+function startRequest(retry: () => Promise<void>) {
+  cancelRequest()
+  const current = generation
+  const request = new AbortController()
+  controller = request
   loading.value = true
   errorMessage.value = ''
+  featureDisabled.value = false
+  retryAction.value = retry
+  return { signal: request.signal, isCurrent: () => current === generation && canBrowse.value }
+}
+
+function requestFailed(error: unknown) {
+  const status = (error as { response?: { status?: number }, code?: number } | null)?.response?.status
+  const failure = error as { code?: number, response?: { data?: { code?: number } }, payload?: { code?: number } } | null
+  const code = failure?.response?.data?.code ?? failure?.payload?.code ?? failure?.code
+  if (status === 401 || status === 403 || code === 401 || code === 403 || code === 3001 || isFeatureDisabled(error)) {
+    clearSelection()
+    tables.value = []
+    retryAction.value = loadTables
+  }
+  errorMessage.value = describeError(error)
+  featureDisabled.value = isFeatureDisabled(error)
+}
+
+async function loadTables() {
+  if (!canBrowse.value) { return }
+  const request = startRequest(loadTables)
   try {
-    tables.value = await getBrowseTables()
+    const result = await getBrowseTables(request.signal)
+    if (request.isCurrent()) { tables.value = result }
   }
   catch (error) {
-    errorMessage.value = describeError(error)
-    featureDisabled.value = isFeatureDisabled(error)
+    if (request.isCurrent()) { requestFailed(error) }
   }
   finally {
-    loading.value = false
+    if (request.isCurrent()) { loading.value = false; controller = undefined }
   }
 }
 
@@ -117,50 +175,58 @@ interface FetchTarget {
  * 一致状态，不会出现「页码显示第 2 页、表格还是第 1 页」。</p>
  */
 async function fetchRows(target: FetchTarget) {
-  if (!tableKey.value) { return }
-  loading.value = true
-  errorMessage.value = ''
+  const key = tableKey.value
+  if (!key || !canBrowse.value || !schema.value) { return }
+  if (schema.value.requireFilter && !target.filter) {
+    cancelRequest()
+    page.value = undefined
+    pageIndex.value = 1
+    cursorStack.value = []
+    activeFilter.value = undefined
+    errorMessage.value = ''
+    return
+  }
+  const request = startRequest(() => fetchRows(target))
   try {
-    const result = await getBrowseRows(tableKey.value, {
+    const result = await getBrowseRows(key, {
       page: target.page,
       size: pageSize.value,
       filter: target.filter,
       cursor: target.cursor,
-    })
+    }, request.signal)
+    if (!request.isCurrent()) { return }
+    if (!result || result.tableKey !== key || result.page !== target.page) { throw new Error('查询结果与当前数据表或页码不匹配') }
     page.value = result
     pageIndex.value = target.page
     cursorStack.value = target.stack
     activeFilter.value = target.filter
   }
   catch (error) {
-    errorMessage.value = describeError(error)
-    featureDisabled.value = isFeatureDisabled(error)
+    if (request.isCurrent()) { requestFailed(error) }
   }
   finally {
-    loading.value = false
+    if (request.isCurrent()) { loading.value = false; controller = undefined }
   }
 }
 
 async function selectTable(key: string) {
+  if (!canBrowse.value || !tables.value.some(item => item.tableKey === key)) { return }
+  clearSelection()
   tableKey.value = key
-  cursorStack.value = []
-  pageIndex.value = 1
-  activeFilter.value = undefined
-  page.value = undefined
-  schema.value = undefined
-  errorMessage.value = ''
-  Object.keys(filterValues).forEach(name => delete filterValues[name])
-  loading.value = true
+  const request = startRequest(() => selectTable(key))
   try {
-    schema.value = await getBrowseSchema(key)
+    const result = await getBrowseSchema(key, request.signal)
+    if (!request.isCurrent()) { return }
+    if (!result || result.tableKey !== key) { throw new Error('数据表结构与当前选择不匹配') }
+    schema.value = result
+    await fetchRows({ page: 1, stack: [], filter: undefined })
   }
   catch (error) {
-    errorMessage.value = describeError(error)
-    loading.value = false
-    return
+    if (request.isCurrent()) { requestFailed(error) }
   }
-  loading.value = false
-  await fetchRows({ page: 1, stack: [], filter: undefined })
+  finally {
+    if (request.isCurrent()) { loading.value = false; controller = undefined }
+  }
 }
 
 async function search() {
@@ -194,6 +260,11 @@ async function prevPage() {
   })
 }
 
+watch([() => userStore.token, canBrowse], () => {
+  resetSession()
+  if (canBrowse.value) { void loadTables() }
+}, { flush: 'sync' })
+onBeforeUnmount(resetSession)
 onMounted(loadTables)
 </script>
 
@@ -272,6 +343,11 @@ onMounted(loadTables)
         </div>
       </section>
 
+      <div v-if="errorMessage && !loading && retryAction" class="retry-row">
+        <el-button @click="retryAction()">
+          重试请求
+        </el-button>
+      </div>
       <div v-if="currentTable" class="table-meta">
         <div class="meta-line">
           <code class="meta-key">{{ currentTable.tableKey }}</code>
@@ -290,16 +366,19 @@ onMounted(loadTables)
 
       <div v-if="schema" class="filters">
         <div v-for="column in filterableColumns" :key="column.name" class="filter-item">
-          <span class="filter-label">{{ column.label }}</span>
+          <label class="filter-label" :for="`db-filter-${column.name}`">{{ column.label }}</label>
           <el-input
+            :id="`db-filter-${column.name}`"
             v-model="filterValues[column.name]"
+            :aria-label="column.label"
+            :disabled="loading"
             :placeholder="`输入${column.label}`"
             clearable
             @keyup.enter="search"
           />
         </div>
         <div class="filter-actions">
-          <el-button type="primary" :loading="loading" @click="search">
+          <el-button type="primary" :loading="loading" :disabled="loading" @click="search">
             查询
           </el-button>
           <el-button :disabled="loading" @click="resetFilters">
@@ -327,13 +406,14 @@ onMounted(loadTables)
           </template>
         </el-table-column>
         <template #empty>
-          <span class="empty-hint">{{ emptyText }}</span>
+          <span class="empty-hint">{{ loading ? '正在读取数据…' : errorMessage && !page ? '查询未完成，请重试' : emptyText }}</span>
         </template>
       </el-table>
 
       <div class="pager">
-        <span class="pager-note">
-          第 {{ pageIndex }} 页 · 本页 {{ rows.length }} 行 · 总行数 {{ estimateText }} · 耗时 {{ page?.tookMs ?? 0 }} ms
+        <span class="pager-note" role="status">
+          第 {{ pageIndex }} 页 · 本页 {{ rows.length }} 行 · 总行数 {{ estimateText }}<template v-if="page"> · 耗时 {{ page.tookMs }} ms</template>
+          <template v-if="errorMessage && page"> · 保留上次成功结果</template>
           <template v-if="page?.omittedColumnCount">
             · {{ page.omittedColumnCount }} 列未展示
           </template>
@@ -505,11 +585,17 @@ onMounted(loadTables)
   margin-top: var(--mrr-space-4);
 }
 
+.retry-row {
+  margin-top: var(--mrr-space-3);
+}
+
 .filter-item {
   display: flex;
+  flex: 1 1 180px;
   flex-direction: column;
   gap: var(--mrr-space-1);
-  min-width: 180px;
+  min-width: min(100%, 180px);
+  max-width: 100%;
 }
 
 .filter-label {

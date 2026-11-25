@@ -4,7 +4,7 @@ import type { LogRecord, PaginatedResult } from '@/api/types'
 import type { MrrTableAction } from '@/components/MrrTableActions/types'
 import { useMediaQuery } from '@vueuse/core'
 import { Copy as CopyIcon, RefreshCw as Refresh } from 'lucide-vue-next'
-import { computed, ref, watch } from 'vue'
+import { computed, onBeforeUnmount, onDeactivated, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { getLogById, searchSystemLogs } from '@/api/modules/logs'
 import AppEmpty from '@/components/AppEmpty/index.vue'
@@ -40,6 +40,12 @@ const canReadRuntimeErrors = computed(() => checkSessionPermission(
 const detailVisible = ref(false)
 const isNarrowScreen = useMediaQuery('(max-width: 760px)')
 const currentLog = ref<LogRecord | null>(null)
+const detailLoading = ref(false)
+const detailError = ref('')
+const detailTarget = ref<LogRecord | null>(null)
+const canReadLogs = computed(() => userStore.isSessionVerified && checkSessionPermission(userStore.profile.roleCode, userStore.permissions, 'log:read'))
+let detailGeneration = 0
+let detailController: AbortController | undefined
 const error = ref('')
 const lastRefreshedAt = ref('')
 
@@ -163,24 +169,61 @@ async function silentRefresh() {
 useVisibleInterval(silentRefresh, REFRESH_INTERVAL_MS)
 
 /** 失败请求可用 Request ID 到运行错误中心查找相关记录。 */
-function openRelatedErrors(row: LogRecord) {
-  const requestId = row.requestId
+function openRelatedErrors(row: LogRecord | null) {
+  const requestId = row?.requestId
   if (!canReadRuntimeErrors.value || !requestId) { return }
   detailVisible.value = false
   void router.push({ path: '/runtime-errors', query: { requestId } })
 }
 
+function clearDetail() {
+  detailGeneration++
+  detailController?.abort()
+  detailController = undefined
+  detailLoading.value = false
+  detailError.value = ''
+  detailTarget.value = null
+  currentLog.value = null
+}
+
+function closeDetail() {
+  detailVisible.value = false
+  clearDetail()
+}
+
+watch(detailVisible, (visible) => { if (!visible) clearDetail() }, { flush: 'sync' })
+watch([() => userStore.token, canReadLogs, () => route.path], closeDetail, { flush: 'sync' })
+onDeactivated(closeDetail)
+onBeforeUnmount(closeDetail)
+
 async function openDetail(row: LogRecord) {
+  if (!canReadLogs.value || route.path !== '/logs' || row.id == null) { return }
+  clearDetail()
+  const generation = detailGeneration
+  const controller = new AbortController()
+  detailController = controller
+  detailTarget.value = row
+  detailVisible.value = true
+  detailLoading.value = true
+  const isCurrent = () => generation === detailGeneration && detailVisible.value && canReadLogs.value && route.path === '/logs'
   try {
-    const response = await getLogById(row.id!)
-    currentLog.value = response.data || row
+    const response = await getLogById(row.id, controller.signal)
+    if (!isCurrent()) { return }
+    if (!response.data || String(response.data.id) !== String(row.id) || (row.requestId && response.data.requestId !== row.requestId)) {
+      throw new Error('Unexpected log identity')
+    }
+    currentLog.value = response.data
   }
   catch {
-    currentLog.value = row
+    if (isCurrent()) { detailError.value = '无法读取访问日志详情，请重试' }
   }
   finally {
-    detailVisible.value = true
+    if (isCurrent()) { detailLoading.value = false; detailController = undefined }
   }
+}
+
+function retryDetail() {
+  if (detailTarget.value) { void openDetail(detailTarget.value) }
 }
 
 function handleLogAction(action: string, row: LogRecord) {
@@ -363,7 +406,9 @@ function statusTagType(status: string | number) {
     </MrrDataTablePanel>
 
     <el-dialog v-model="detailVisible" title="接口访问审计详情" width="min(900px, 92vw)" class="log-detail">
-      <el-descriptions v-if="currentLog" :column="isNarrowScreen ? 1 : 2" border>
+      <AppLoading v-if="detailLoading" />
+      <AppError v-else-if="detailError" :message="detailError" @retry="retryDetail" />
+      <el-descriptions v-else-if="currentLog" :column="isNarrowScreen ? 1 : 2" border>
         <el-descriptions-item label="日志 ID">{{ currentLog.id || '-' }}</el-descriptions-item>
         <el-descriptions-item label="Request ID">
           <span class="detail-value">{{ currentLog.requestId || '-' }}</span>
@@ -436,6 +481,37 @@ function statusTagType(status: string | number) {
 .copy-link {
   margin-left: var(--mrr-space-1);
   vertical-align: middle;
+}
+
+/* Keep the close control accessible while long audit payloads scroll within the dialog. */
+:global(.log-detail.el-dialog) {
+  display: flex;
+  flex-direction: column;
+  max-height: calc(100vh - 48px);
+  margin-top: 24px;
+  margin-bottom: 24px;
+}
+
+:global(.log-detail .el-dialog__header) {
+  flex: 0 0 auto;
+}
+
+:global(.log-detail .el-dialog__body) {
+  min-height: 0;
+  overflow: auto;
+  overscroll-behavior: contain;
+}
+
+@media (max-width: 760px) {
+  :global(.log-detail.el-dialog) {
+    max-height: calc(100vh - 32px);
+    margin-top: 16px;
+    margin-bottom: 16px;
+  }
+
+  :global(.log-detail .el-descriptions__label) {
+    width: 38%;
+  }
 }
 
 :global(.log-detail .el-descriptions__table) {

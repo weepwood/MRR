@@ -8,7 +8,7 @@ const settingsStore = useSettingsStore()
 </script>
 
 <template>
-  <FaModal v-model="visible" title="快捷键介绍" :footer="false">
+  <MrrDialog v-model="visible" title="快捷键介绍" :footer="false">
     <div class="px-4">
       <div class="grid gap-4 sm-grid-cols-2">
         <div>
@@ -98,5 +98,5 @@ const settingsStore = useSettingsStore()
         </div>
       </div>
     </div>
-  </FaModal>
+  </MrrDialog>
 </template>

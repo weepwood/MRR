@@ -9,7 +9,7 @@ const shortCommit = computed(() => product.gitCommit === 'unknown' ? 'unknown' :
 </script>
 
 <template>
-  <FaDrawer v-model="visible" title="系统信息" :footer="false">
+  <MrrDrawer v-model="visible" title="系统信息" :footer="false">
     <FaDivider>
       产品版本
     </FaDivider>
@@ -80,5 +80,5 @@ const shortCommit = computed(() => product.gitCommit === 'unknown' ? 'unknown' :
         </div>
       </li>
     </ul>
-  </FaDrawer>
+  </MrrDrawer>
 </template>

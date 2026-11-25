@@ -82,12 +82,12 @@ function confirm(kind: string) {
     <p class="example-note" role="status">
       {{ message }}
     </p>
-    <FaModal v-model="modalOpen" title="对话框示例" description="预览标题、内容、操作与焦点。" show-cancel-button open-auto-focus class="gallery-demo-dialog" @confirm="confirm('对话框')">
+    <MrrDialog v-model="modalOpen" title="对话框示例" description="预览标题、内容、操作与焦点。" show-cancel-button class="gallery-demo-dialog" @confirm="confirm('对话框')">
       <p>这是一个真实的对话框组件。可以确认、取消，或按 Escape 关闭。</p>
-    </FaModal>
-    <FaDrawer v-model="drawerOpen" title="抽屉示例" description="查看侧边详情与底部操作。" show-cancel-button open-auto-focus content-class="gallery-demo-drawer" @confirm="confirm('抽屉')">
+    </MrrDialog>
+    <MrrDrawer v-model="drawerOpen" title="抽屉示例" description="查看侧边详情与底部操作。" show-cancel-button content-class="gallery-demo-drawer" @confirm="confirm('抽屉')">
       <p>这是合成的详情内容，用于验收抽屉的阅读和关闭体验。</p>
-    </FaDrawer>
+    </MrrDrawer>
   </div>
   <div v-else class="example-stack">
     <p class="example-note">

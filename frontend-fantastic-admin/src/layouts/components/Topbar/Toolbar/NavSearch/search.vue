@@ -201,7 +201,7 @@ function pageJump(path: listTypes['path'], link: listTypes['link']) {
 </script>
 
 <template>
-  <FaModal v-model="isShow" border :footer="settingsStore.mode === 'pc'" :closable="false" overlay-class="mrr-vscode-overlay mrr-vscode-search-overlay" class="mrr-vscode-glass mrr-vscode-search w-full lg-max-w-[40rem]" content-class="flex flex-col p-0 min-h-auto" header-class="p-0" footer-class="p-0" @opened="searchInputFocused = true">
+  <MrrDialog v-model="isShow" title="导航搜索" border :footer="settingsStore.mode === 'pc'" :closable="false" overlay-class="mrr-vscode-overlay mrr-vscode-search-overlay" class="mrr-vscode-glass mrr-vscode-search w-full lg-max-w-[40rem]" content-class="flex flex-col p-0 min-h-auto" header-class="p-0" footer-class="p-0" @opened="searchInputFocused = true">
     <template #header>
       <div class="h-12 flex flex-shrink-0 items-center">
         <div class="h-full w-20 flex-center flex-shrink-0 pl-4">
@@ -273,5 +273,5 @@ function pageJump(path: listTypes['path'], link: listTypes['link']) {
         </div>
       </template>
     </FaScrollArea>
-  </FaModal>
+  </MrrDialog>
 </template>

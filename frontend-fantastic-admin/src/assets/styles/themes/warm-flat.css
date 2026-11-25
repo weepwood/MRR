@@ -283,15 +283,15 @@ html[data-mrr-palette="gr8r"] body .el-dialog {
   box-shadow: var(--mrr-shadow-dialog);
 }
 
-html[data-mrr-palette="gr8r"] .el-dialog__header {
+html[data-mrr-palette="gr8r"] .el-dialog:not(.mrr-dialog-shell) > .el-dialog__header {
   padding: 16px 20px 12px;
 }
 
-html[data-mrr-palette="gr8r"] .el-dialog__body {
+html[data-mrr-palette="gr8r"] .el-dialog:not(.mrr-dialog-shell) > .el-dialog__body {
   padding: 16px 20px;
 }
 
-html[data-mrr-palette="gr8r"] .el-dialog__footer {
+html[data-mrr-palette="gr8r"] .el-dialog:not(.mrr-dialog-shell) > .el-dialog__footer {
   padding: 12px 20px;
 
   /* 跟随对话框自身的浮层表面：暗色浮层比卡面亮一档，用卡面色会在底部切出一条深色带。 */

@@ -1,11 +1,13 @@
 <script setup lang="ts">
 import ActionDialog from '@/ui/components/ActionDialog/index.vue'
+import { AUTH_STORAGE_KEYS } from '@/utils/auth-storage'
 import { archiveAccessMode, canRenderArchiveRoute } from '@/views/statistics/archive/access-mode'
 import Provider from './ui/provider/index.vue'
 
 const SystemInfo = defineAsyncComponent(() => import('@/ui/components/FaSystemInfo/index.vue'))
 const route = useRoute()
 const settingsStore = useSettingsStore()
+const userStore = useUserStore()
 const { auth } = useAuth()
 const systemInfoVisible = ref(false)
 let resizeFrame: number | undefined
@@ -59,13 +61,28 @@ function handleSystemInfoShortcut(event: KeyboardEvent) {
   }
 }
 
+function handleAuthStorageChange(event: StorageEvent) {
+  if (event.key !== AUTH_STORAGE_KEYS.token && event.key !== null) { return }
+  try {
+    if (event.storageArea !== window.localStorage) { return }
+    // Use the current value rather than a possibly queued/outdated event.
+    const storedToken = window.localStorage.getItem(AUTH_STORAGE_KEYS.token) ?? ''
+    void userStore.invalidateExternalSession(storedToken)
+  }
+  catch {
+    // Disabled storage keeps the existing in-memory session semantics.
+  }
+}
+
 onMounted(() => {
   syncViewportMode()
+  window.addEventListener('storage', handleAuthStorageChange)
   window.addEventListener('resize', handleResize, { passive: true })
   window.addEventListener('keydown', handleSystemInfoShortcut)
 })
 
 onBeforeUnmount(() => {
+  window.removeEventListener('storage', handleAuthStorageChange)
   window.removeEventListener('resize', handleResize)
   window.removeEventListener('keydown', handleSystemInfoShortcut)
   if (resizeFrame !== undefined) {

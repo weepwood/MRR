@@ -114,6 +114,21 @@ afterEach(() => {
 })
 
 describe('运行错误中心', () => {
+  it('服务端403静默刷新清除上次成功结果，普通网络失败保持结果', async () => {
+    const wrapper = openPage()
+    await flushPromises()
+    const state = setupState(wrapper)
+    expect((state.list as unknown[]).length).toBeGreaterThan(0)
+    api.searchSystemErrors.mockRejectedValueOnce(new Error('temporary network failure'))
+    await (state.loadData as (options: { silent: boolean }) => Promise<void>)({ silent: true })
+    expect((state.list as unknown[]).length).toBeGreaterThan(0)
+    api.searchSystemErrors.mockRejectedValueOnce(Object.assign(new Error('synthetic denied'), { response: { status: 403 } }))
+    await (state.loadData as (options: { silent: boolean }) => Promise<void>)({ silent: true })
+    expect(state.list).toEqual([])
+    expect(state.total).toBe(0)
+    expect(state.error).toBe('synthetic denied')
+  })
+
   it('首次进入追踪链接时直接检索 Request ID', async () => {
     routeState.route!.query = { requestId: 'req-from-logs-001' }
     const wrapper = openPage()

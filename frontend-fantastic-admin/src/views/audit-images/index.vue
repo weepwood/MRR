@@ -23,6 +23,7 @@ import { useTableActionLayout } from '@/composables/useTableActionLayout'
 import { useUserStore } from '@/store/modules/user'
 import { rangePickerPopperOptions } from '@/ui/provider/picker-options'
 import { checkSessionPermission } from '@/utils/permission'
+import { isSessionAccessDenied } from '@/utils/session-access-denied'
 import AuditAnalytics from './components/AuditAnalytics.vue'
 
 defineOptions({ name: 'ImageAuditPage' })
@@ -187,6 +188,7 @@ function auditIdentifiers(row?: LogRecord | null): AuditIdentifiers {
 }
 
 const {
+  clearResults,
   list,
   total,
   loading,
@@ -207,6 +209,11 @@ const {
       return await searchImageAuditLogs({ ...buildAuditParams(filters), page, size }, userStore.token)
     }
     catch (err: any) {
+      if (isCurrent() && isSessionAccessDenied(err)) {
+        clearResults()
+        error.value = err?.message || '访问权限不足，请重试'
+        return undefined
+      }
       if (isCurrent()) error.value = err?.message || '加载失败'
       return { list: [], total: 0, page: 1, size: 20 }
     }
@@ -266,6 +273,12 @@ async function loadAnalytics() {
   }
   catch (err: unknown) {
     if (!isCurrent()) return
+    if (isSessionAccessDenied(err)) {
+      clearResults()
+      error.value = err instanceof Error ? err.message : '访问权限不足，请重试'
+      analyticsError.value = error.value
+      return
+    }
     analytics.value = createEmptyAnalytics()
     analyticsError.value = err instanceof Error ? err.message : '分析数据加载失败'
   }

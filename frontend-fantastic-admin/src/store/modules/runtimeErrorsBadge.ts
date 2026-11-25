@@ -1,5 +1,5 @@
 import { getSystemErrorOverview } from '@/api/modules/system-errors'
-import { checkPermission } from '@/utils/permission'
+import { checkSessionPermission } from '@/utils/permission'
 
 /**
  * 运行错误中心菜单角标：轮询 overview 拿"近 24 小时活跃 ERROR 错误组数"。
@@ -16,17 +16,30 @@ export const useRuntimeErrorsBadgeStore = defineStore(
     const started = ref(false)
     let timer: ReturnType<typeof setInterval> | undefined
     let lastRefreshAt = 0
+    let generation = 0
+    const userStore = useUserStore()
+    const allowed = computed(() => userStore.isSessionVerified && checkSessionPermission(userStore.profile?.roleCode, userStore.permissions, 'system:error:read'))
+    function invalidate() {
+      generation++
+      recentErrorGroups.value = 0
+    }
+    watch([() => userStore.token, () => userStore.sessionEpoch, allowed], () => {
+      invalidate()
+      if (started.value && allowed.value && !document.hidden) { void refresh() }
+    }, { flush: 'sync' })
 
     async function refresh() {
       lastRefreshAt = Date.now()
-      const userStore = useUserStore()
-      if (!checkPermission(userStore.permissions, 'system:error:read')) { return }
+      const current = ++generation
+      if (!allowed.value) { invalidate(); return }
       try {
-        const response = await getSystemErrorOverview()
-        recentErrorGroups.value = response.data?.recentErrorGroups ?? 0
+        const response = await getSystemErrorOverview(userStore.token)
+        if (current === generation && allowed.value) { recentErrorGroups.value = response.data?.recentErrorGroups ?? 0 }
       }
-      catch {
-        // 拉取失败保留旧值，下个周期重试；角标展示不要求强一致。
+      catch (error: unknown) {
+        const failure = error as { response?: { status?: number }, code?: number } | null
+        if (current === generation && (failure?.response?.status === 403 || failure?.code === 403)) { invalidate() }
+        // 普通网络失败保留旧值，下个周期重试。
       }
     }
 
@@ -60,7 +73,7 @@ export const useRuntimeErrorsBadgeStore = defineStore(
       }
       document.removeEventListener('visibilitychange', handleVisibilityChange)
       started.value = false
-      recentErrorGroups.value = 0
+      invalidate()
     }
 
     return { recentErrorGroups, refresh, start, stop }

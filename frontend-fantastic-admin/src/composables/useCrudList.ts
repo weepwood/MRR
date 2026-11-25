@@ -144,6 +144,7 @@ export function useCrudList<T, Q extends Record<string, any>>(opts: CrudListOpti
   }
 
   return {
+    clearResults,
     list,
     total,
     pageNum,

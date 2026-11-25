@@ -78,10 +78,10 @@ test.describe('登录状态迁移与自愈', () => {
 
   test('401 会清理新旧认证键但保留记住用户名和业务偏好', async ({ page }) => {
     await installLegacySession(page, {
-      token: 'expired-token',
-      profile: JSON.stringify({ username: 'doctor' }),
-      permissions: '[]',
-      login_account: 'doctor',
+      'token': 'expired-token',
+      'profile': JSON.stringify({ username: 'doctor' }),
+      'permissions': '[]',
+      'login_account': 'doctor',
       'mrr:archive:preference': 'keep-me',
     })
     await page.route('**/api/v1/auth/me', async (route) => {
@@ -111,9 +111,9 @@ test.describe('登录状态迁移与自愈', () => {
 
   test('认证服务 503 时保留候选 Token 并进入可恢复登录状态', async ({ page }) => {
     await installLegacySession(page, {
-      token: 'candidate-token',
-      profile: JSON.stringify({ username: 'doctor', mustChangePassword: true }),
-      permissions: JSON.stringify(['stale:permission']),
+      'token': 'candidate-token',
+      'profile': JSON.stringify({ username: 'doctor', mustChangePassword: true }),
+      'permissions': JSON.stringify(['stale:permission']),
       'mrr:archive:preference': 'keep-me',
     })
     await page.route('**/api/v1/auth/me', async (route) => {
@@ -138,3 +138,27 @@ test.describe('登录状态迁移与自愈', () => {
     expect(state.businessPreference).toBe('keep-me')
   })
 })
+
+for (const replacement of ['synthetic-b', '']) {
+  test(`另一标签页${replacement ? '更换账号' : '退出'}后当前页失效且不覆盖共享存储`, async ({ page, context }) => {
+    await context.route('**/api/v1/public/status/developer-mode', route => route.fulfill({ json: { code: 200, data: { enabled: false, accessMode: 'DISABLED' } } }))
+    await context.route('**/api/v1/auth/me', route => route.fulfill({ json: { code: 200, data: { username: 'synthetic-a', roleCode: 'OPERATOR', permissions: ['log:read'], status: 'active', mustChangePassword: false } } }))
+    await installLegacySession(page, { token: 'synthetic-a', profile: '{}', permissions: '[]' })
+    await page.goto('/logs')
+    await expect(page.getByRole('heading', { name: '日志管理' })).toBeVisible()
+    const other = await context.newPage()
+    try {
+      await other.goto('/login')
+      await other.evaluate((value) => {
+        if (value) {
+          localStorage.setItem('mrr:auth:token', value)
+        }
+        else { localStorage.removeItem('mrr:auth:token') }
+      }, replacement)
+      await expect(page).toHaveURL(/\/login/)
+      await expect(page.getByRole('heading', { name: '日志管理' })).toHaveCount(0)
+      await expect.poll(() => other.evaluate(() => localStorage.getItem('mrr:auth:token'))).toBe(replacement || null)
+    }
+    finally { await other.close() }
+  })
+}

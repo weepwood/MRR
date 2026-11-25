@@ -2,7 +2,7 @@ import axios, { AxiosError, AxiosHeaders } from 'axios'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import api, { revokeAuthSession } from '../index'
 
-const { user } = vi.hoisted(() => ({ user: { isLogin: true, isSessionVerified: true, token: 'synthetic-a', requestLogout: vi.fn() } }))
+const { user } = vi.hoisted(() => ({ user: { isLogin: true, isSessionVerified: true, token: 'synthetic-a', sessionEpoch: 0, requestLogout: vi.fn() } }))
 vi.mock('@/store/modules/user', () => ({ useUserStore: () => user }))
 
 describe('session-bound history requests', () => {
@@ -86,4 +86,43 @@ it('revokes captured token without reading replacement account token', async () 
     timeout: 5000,
     headers: { Authorization: 'Bearer synthetic-a' },
   }))
+})
+
+describe('ordinary dispatched request session identity', () => {
+  beforeEach(() => {
+    Object.assign(user, { token: 'synthetic-a', sessionEpoch: 1, isLogin: true, isSessionVerified: true })
+    user.requestLogout.mockClear()
+  })
+
+  it.each([401, 428, 200])('late ordinary response %s cannot affect the replacement session', async (status) => {
+    let finish!: () => void
+    const adapter = vi.fn(config => new Promise((resolve, reject) => {
+      finish = () => {
+        const response = { config, status, statusText: 'synthetic', headers: new AxiosHeaders(), data: { code: status, data: [] } }
+        if (status === 200) {
+          resolve(response)
+        }
+        else { reject(new AxiosError('synthetic', 'ERR_BAD_REQUEST', config, {}, response)) }
+      }
+    }))
+    const request = api.get('/api/v1/logs/search', { adapter, skipResponseMetrics: true })
+    await vi.waitFor(() => expect(adapter).toHaveBeenCalledOnce())
+    user.token = 'synthetic-b'
+    user.sessionEpoch++
+    finish()
+    await expect(request).rejects.toMatchObject({ code: 'ERR_CANCELED' })
+    expect(user.requestLogout).not.toHaveBeenCalled()
+  })
+
+  it('same token with a new session epoch rejects the old success', async () => {
+    let finish!: () => void
+    const adapter = vi.fn(config => new Promise((resolve) => {
+      finish = () => resolve({ config, status: 200, statusText: 'OK', headers: new AxiosHeaders(), data: { code: 200, data: [] } })
+    }))
+    const request = api.get('/api/v1/logs/search', { adapter, skipResponseMetrics: true })
+    await vi.waitFor(() => expect(adapter).toHaveBeenCalledOnce())
+    user.sessionEpoch++
+    finish()
+    await expect(request).rejects.toMatchObject({ code: 'ERR_CANCELED' })
+  })
 })

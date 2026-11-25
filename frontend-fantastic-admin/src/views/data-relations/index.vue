@@ -28,6 +28,7 @@ import AppEmpty from '@/components/AppEmpty/index.vue'
 import AppError from '@/components/AppError/index.vue'
 import AppLoading from '@/components/AppLoading/index.vue'
 import MrrFilterActionButton from '@/components/MrrFilterActionButton/index.vue'
+import MrrResizeHandle from '@/components/MrrResizeHandle/index.vue'
 import MrrSectionCard from '@/components/MrrSectionCard/index.vue'
 import MrrStatusTag from '@/components/MrrStatusTag/index.vue'
 import MrrTableActions from '@/components/MrrTableActions/index.vue'
@@ -54,44 +55,7 @@ const overview = ref<DataRelationOverview | null>(null)
 const qualitySummary = ref<DataQualitySummary | null>(null)
 const issues = ref<DataQualityIssue[]>([])
 const railWidth = ref(260)
-const railDragging = ref(false)
-const railDivider = ref<HTMLElement>()
-let railDrag: { pointerId: number, x: number, width: number } | undefined
-function setRailWidth(width: number) {
-  railWidth.value = Math.round(Math.max(220, Math.min(360, width)))
-}
-function endRailDrag(event?: PointerEvent) {
-  if (event && railDrag?.pointerId !== event.pointerId) return
-  const active = railDrag
-  railDrag = undefined
-  railDragging.value = false
-  if (active && railDivider.value?.hasPointerCapture(active.pointerId)) railDivider.value.releasePointerCapture(active.pointerId)
-}
-function beginRailDrag(event: PointerEvent) {
-  const divider = railDivider.value
-  const rail = divider?.previousElementSibling
-  if (!divider || !rail || event.button !== 0 || railDrag) return
-  event.preventDefault()
-  divider.focus({ preventScroll: true })
-  divider.setPointerCapture(event.pointerId)
-  railDrag = { pointerId: event.pointerId, x: event.clientX, width: rail.getBoundingClientRect().width }
-  railDragging.value = true
-}
-function moveRailDrag(event: PointerEvent) {
-  if (!railDrag || railDrag.pointerId !== event.pointerId) return
-  if (event.pointerType === 'mouse' && !(event.buttons & 1)) { endRailDrag(event); return }
-  if (!railDivider.value?.getClientRects().length) { endRailDrag(event); return }
-  setRailWidth(railDrag.width + event.clientX - railDrag.x)
-}
-function keyboardRail(event: KeyboardEvent) {
-  if (event.ctrlKey || event.altKey || event.metaKey) return
-  const changes: Record<string, number> = { ArrowLeft: railWidth.value - 10, ArrowRight: railWidth.value + 10, Home: 220, End: 360, Enter: 260 }
-  const next = changes[event.key]
-  if (typeof next !== 'number') return
-  event.preventDefault()
-  endRailDrag()
-  setRailWidth(next)
-}
+const railDivider = ref<InstanceType<typeof MrrResizeHandle>>()
 
 const searchType = ref('BAH')
 const searchValue = ref('')
@@ -171,7 +135,7 @@ function resetPage() {
   activeTab.value = props.archiveOnly ? 'archive' : 'overview'
   searchValue.value = ''
   searchType.value = 'BAH'
-  endRailDrag()
+  railDivider.value?.cancel()
   railWidth.value = 260
   issueSeverity.value = 'ALL'
 }
@@ -181,7 +145,7 @@ watch(() => props.archiveOnly, () => {
   if (!props.archiveOnly) void loadDashboard()
 }, { flush: 'sync' })
 onBeforeUnmount(() => {
-  endRailDrag()
+  railDivider.value?.cancel()
   invalidatePreview()
   invalidateArchiveSearch()
   ++overviewVersion
@@ -646,9 +610,7 @@ onMounted(() => {
             </MrrSectionCard>
           </div>
 
-          <div v-if="archiveOnly" ref="railDivider" class="archive-rail-divider" :class="{ 'is-dragging': railDragging }" role="separator" tabindex="0" aria-label="调整检索栏宽度" aria-orientation="vertical" aria-controls="archive-search-pane" :aria-valuenow="railWidth" :aria-valuemin="220" :aria-valuemax="360" :aria-valuetext="`目标宽度 ${railWidth} 像素`" title="拖动调整检索栏；双击或 Enter 复位，方向键调整" @pointerdown="beginRailDrag" @pointermove="moveRailDrag" @pointerup="endRailDrag" @pointercancel="endRailDrag" @lostpointercapture="endRailDrag" @keydown="keyboardRail" @dblclick="setRailWidth(260)">
-            <span aria-hidden="true" />
-          </div>
+          <MrrResizeHandle v-if="archiveOnly" ref="railDivider" v-model="railWidth" class="archive-rail-divider" :min="220" :max="360" :default-width="260" label="调整检索栏宽度" controls="archive-search-pane" />
 
           <MrrSectionCard v-if="!archiveOnly && searchResults.length" class="section-card" title="病案主档候选" description="精确匹配优先；仅前导零差异标记为格式差异（FORMAT_ONLY）">
             <el-table :data="searchResults" highlight-current-row @row-click="openArchive">
@@ -1129,32 +1091,6 @@ p {
 
 .archive-search-rail:not(.archive-search-rail--legacy) .search-field {
   flex: 0 1 auto;
-}
-
-.archive-rail-divider {
-  display: flex;
-  align-self: stretch;
-  justify-content: center;
-  min-height: 44px;
-  touch-action: none;
-  cursor: col-resize;
-  user-select: none;
-}
-
-.archive-rail-divider span {
-  width: 2px;
-  background: var(--mrr-border);
-  border-radius: var(--mrr-radius-sm);
-}
-
-.archive-rail-divider:hover span,
-.archive-rail-divider.is-dragging span {
-  background: var(--mrr-primary);
-}
-
-.archive-rail-divider:focus-visible {
-  outline: 2px solid var(--mrr-ring);
-  outline-offset: -2px;
 }
 
 .archive-candidates {

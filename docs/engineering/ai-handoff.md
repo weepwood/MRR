@@ -702,3 +702,7 @@
 ## 用户列表文本分页与操作菜单精修（2026-11-26）
 
 基线 b8a355ed。按维护者反馈，每页数量由 ElPagination sizes 下拉改为 slot 内文本按钮，保留10/20/50/100选项，点击或键盘激活循环切换、回到第一页、只发一次查询；桌面分页28px/箭头12px、窄屏32px。quiet 行操作通过共享 MrrTableActions popper class 和 menus.css 统一浮层，最小144px、行高32/36px、图标16px、正文13px、无尖角；重置密码中性，禁用用户危险色，禁用态统一弱化。保留原重置密码管理员密码校验、禁用确认、自身账号限制、响应式编辑收纳。分页 Chromium/WebKit 11/11（含预热），四主题五宽度20/20；菜单双引擎四主题双宽度16/16，25/25定向单测和TypeScript通过。联合浏览器首轮7通过/2失败（新增测试误写重置用户密码弹窗名称），修正定位后3/3（含预热），原禁用确认/403重试测试通过。真实截图 /tmp/mrr-quiet-menu-*.png 与 /tmp/mrr-pagination-text-*.png；日志 /tmp/mrr-pagination-text-{browser,visual,tsc}.log、/tmp/mrr-pagination-menu-{browser,recheck,visual2,unit,tsc}.log。未运行完整CI、生产构建及Chrome86实机。仅本地9037，未推送、合并或发布。
+
+## Quiet 操作菜单内容自适应（2026-11-26）
+
+基线 455155b5。按维护者截图删除固定144px最小宽度，使用 max-content 与视口上限，保留4px菜单内边距、8px项内距及16px图标；四字操作实测102px、左右13px，原32/36px基础行高、危险语义及自身账号限制不变，长文字可自然换行。Chromium/WebKit 四主题双宽度16/16（含模拟长文字无横溢），既有菜单确认流程和新增左右字形边界断言3/3含预热。日志 /tmp/mrr-menu-fit-{visual,e2e}.log，截图 /tmp/mrr-menu-fit.png。未执行全量CI及真实Chrome86。仅本地9037，不推送。

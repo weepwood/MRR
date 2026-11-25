@@ -163,6 +163,19 @@ test('克制型用户操作菜单统一尺寸与危险语义，自身账号操�
   await expect(disable).toBeVisible()
   await expect.poll(() => menu.locator('.el-dropdown-menu__item').evaluateAll(els => els.map(el => el.getBoundingClientRect().height))).toEqual([32, 32])
   await expect.poll(() => menu.locator('.mrr-table-actions__menu-icon').evaluateAll(els => els.map(el => getComputedStyle(el).fontSize))).toEqual(['16px', '16px'])
+  // Content-sized menu: measure actual glyph bounds, not the allocated flex box.
+  await expect.poll(() => menu.evaluate((el) => {
+    const boundary = el.getBoundingClientRect()
+    return [...el.querySelectorAll('.el-dropdown-menu__item')].every((item) => {
+      const icon = item.querySelector('.mrr-table-actions__menu-icon')!
+      const label = item.querySelector('span:not(.mrr-table-actions__menu-icon)')!
+      const range = document.createRange()
+      range.selectNodeContents(label)
+      const left = icon.getBoundingClientRect().left - boundary.left
+      const right = boundary.right - range.getBoundingClientRect().right
+      return left >= 10 && left <= 16 && Math.abs(left - right) <= 2
+    })
+  })).toBe(true)
   await expect(menu.locator('.el-popper__arrow')).toHaveCount(0)
   await expect(reset).not.toHaveClass(/menu-item--warning/)
   await expect(disable).toHaveClass(/menu-item--danger/)

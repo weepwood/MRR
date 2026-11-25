@@ -13,6 +13,12 @@ const failed = ref(false)
 const zoom = ref(100)
 const rotation = ref(0)
 const viewport = ref<HTMLElement>()
+const imageBox = ref<HTMLElement>()
+const dragging = ref(false)
+let pan: { pointerId: number, x: number, y: number, left: number, top: number } | undefined
+let viewRevision = 0
+let generation = 0
+let controller: AbortController | undefined
 const natural = ref({ width: 0, height: 0 })
 const viewportSize = ref({ width: 0, height: 0 })
 let observer: ResizeObserver | undefined
@@ -41,9 +47,11 @@ watch(viewport, (element) => {
   }
 }, { flush: 'post' })
 async function centerImage() {
+  const revision = ++viewRevision
+  const current = generation
   await nextTick()
   const el = viewport.value
-  if (el) {
+  if (el && current === generation && revision === viewRevision) {
     el.scrollLeft = (el.scrollWidth - el.clientWidth) / 2
     el.scrollTop = (el.scrollHeight - el.clientHeight) / 2
   }
@@ -55,23 +63,99 @@ function decoded(event: Event) {
   measure()
   void centerImage()
 }
-function changeZoom(delta: number) {
-  zoom.value = Math.min(300, Math.max(50, zoom.value + delta))
-  void centerImage()
+async function changeZoom(delta: number, anchor?: { x: number, y: number }) {
+  if (!geometry.value) { return }
+  const next = Math.min(300, Math.max(50, zoom.value + delta))
+  if (next === zoom.value) { return }
+  const el = viewport.value
+  const box = imageBox.value
+  const bounds = box?.getBoundingClientRect()
+  const view = el?.getBoundingClientRect()
+  if (!el || !box || !bounds || !view || !bounds.width || !bounds.height) {
+    zoom.value = next
+    void centerImage()
+    return
+  }
+  const point = anchor ?? { x: view.left + el.clientWidth / 2, y: view.top + el.clientHeight / 2 }
+  const u = Math.min(1, Math.max(0, (point.x - bounds.left) / bounds.width))
+  const v = Math.min(1, Math.max(0, (point.y - bounds.top) / bounds.height))
+  const x = bounds.left + u * bounds.width
+  const y = bounds.top + v * bounds.height
+  const current = generation
+  const revision = ++viewRevision
+  zoom.value = next
+  await nextTick()
+  if (generation !== current || viewRevision !== revision || viewport.value !== el || imageBox.value !== box) { return }
+  const updated = box.getBoundingClientRect()
+  el.scrollLeft += updated.left + u * updated.width - x
+  el.scrollTop += updated.top + v * updated.height - y
+}
+function wheelZoom(event: WheelEvent) {
+  if (!geometry.value || (!event.ctrlKey && !event.metaKey) || !event.deltaY) { return }
+  event.preventDefault()
+  void changeZoom(event.deltaY < 0 ? 25 : -25, { x: event.clientX, y: event.clientY })
+}
+function keyboardView(event: KeyboardEvent) {
+  if (!geometry.value || event.ctrlKey || event.metaKey || event.altKey) { return }
+  if (event.key === '+' || event.key === '=') {
+    event.preventDefault()
+    void changeZoom(25)
+  }
+  else if (event.key === '-') {
+    event.preventDefault()
+    void changeZoom(-25)
+  }
+  else if (event.key === '0') {
+    event.preventDefault()
+    resetView()
+  }
+}
+function stopPan(event?: PointerEvent) {
+  if (event && pan?.pointerId !== event.pointerId) { return }
+  const active = pan
+  pan = undefined
+  dragging.value = false
+  const el = viewport.value
+  if (active && el?.hasPointerCapture?.(active.pointerId)) { el.releasePointerCapture(active.pointerId) }
+}
+function beginPan(event: PointerEvent) {
+  const el = viewport.value
+  if (!geometry.value || !el || event.pointerType !== 'mouse' || event.button !== 0 || pan
+    || !(event.target instanceof Element) || !event.target.closest('.scan-canvas')
+    || (el.scrollWidth <= el.clientWidth && el.scrollHeight <= el.clientHeight)) { return }
+  event.preventDefault()
+  el.focus({ preventScroll: true })
+  el.setPointerCapture(event.pointerId)
+  pan = { pointerId: event.pointerId, x: event.clientX, y: event.clientY, left: el.scrollLeft, top: el.scrollTop }
+  dragging.value = true
+}
+function movePan(event: PointerEvent) {
+  const el = viewport.value
+  if (!pan || pan.pointerId !== event.pointerId || !el) { return }
+  if (!(event.buttons & 1)) { stopPan(event); return }
+  el.scrollLeft = pan.left - (event.clientX - pan.x)
+  el.scrollTop = pan.top - (event.clientY - pan.y)
+}
+function decodeFailed(event: Event) {
+  const image = event.target as HTMLImageElement
+  if (!source.value || image.getAttribute('src') !== source.value) { return }
+  clear()
+  failed.value = true
 }
 function rotate() {
+  stopPan()
   rotation.value = (rotation.value + 90) % 360
   void centerImage()
 }
 function resetView() {
+  stopPan()
   zoom.value = 100
   rotation.value = 0
   void centerImage()
 }
-let generation = 0
-let controller: AbortController | undefined
-
 function clear() {
+  stopPan()
+  viewRevision++
   generation++
   controller?.abort()
   controller = undefined
@@ -153,15 +237,15 @@ onBeforeUnmount(() => { observer?.disconnect(); clear() })
         </el-button>
         <span class="scan-viewer-angle">{{ rotation }}°</span>
       </div>
-      <div ref="viewport" class="scan-viewport" tabindex="0" role="region" aria-label="原图滚动查看区">
+      <div ref="viewport" class="scan-viewport" :class="{ 'is-pannable': zoom > 100, 'is-dragging': dragging }" tabindex="0" role="region" aria-label="原图滚动查看区" @wheel="wheelZoom" @keydown="keyboardView" @pointerdown="beginPan" @pointermove="movePan" @pointerup="stopPan" @pointercancel="stopPan" @lostpointercapture="stopPan">
         <div class="scan-canvas" :style="geometry ? { minWidth: `${geometry.boxWidth + 24}px`, minHeight: `${geometry.boxHeight + 24}px` } : undefined">
-          <div class="scan-image-box" :style="geometry ? { width: `${geometry.boxWidth}px`, height: `${geometry.boxHeight}px` } : undefined">
-            <img :key="source" :src="source" alt="待核对影像" class="scan-content" :class="{ 'scan-content--positioned': geometry }" :style="geometry ? { width: `${geometry.width}px`, height: `${geometry.height}px`, transform: `translate(-50%, -50%) rotate(${rotation}deg)` } : undefined" @load="decoded" @error="failed = true">
+          <div ref="imageBox" class="scan-image-box" :style="geometry ? { width: `${geometry.boxWidth}px`, height: `${geometry.boxHeight}px` } : undefined">
+            <img :key="source" :src="source" alt="待核对影像" class="scan-content" :class="{ 'scan-content--positioned': geometry }" :style="geometry ? { width: `${geometry.width}px`, height: `${geometry.height}px`, transform: `translate(-50%, -50%) rotate(${rotation}deg)` } : undefined" draggable="false" @load="decoded" @error="decodeFailed">
           </div>
         </div>
       </div>
       <p class="scan-viewer-hint">
-        100% 为适应窗口，放大后可滚动查看；旋转仅改变显示，不修改原文件。
+        100% 为适应窗口。放大后可拖动或滚动；Ctrl / ⌘ + 滚轮按指针缩放，聚焦查看区后 + / − / 0 缩放或复位。旋转仅改变显示，不修改原文件。
       </p>
     </div>
   </component>
@@ -209,6 +293,15 @@ onBeforeUnmount(() => { observer?.disconnect(); clear() })
   height: clamp(240px, 54vh, 640px);
   overflow: auto;
   background: var(--el-fill-color-light);
+}
+
+.scan-viewport.is-pannable {
+  cursor: grab;
+}
+
+.scan-viewport.is-dragging {
+  cursor: grabbing;
+  user-select: none;
 }
 
 .scan-viewport:focus-visible {

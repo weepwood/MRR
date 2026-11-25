@@ -35,6 +35,43 @@ describe('demo OCR facts and jobs', () => {
     expect(scans.find(scan => scan.id === suggestion.scanId)?.btype).toBe(suggestion.suggestedType)
   })
 
+  it('人工拒绝和改类保留OCR事实，非法类型及重复审核不改变记录', () => {
+    const { scans } = createDemoRecords()
+    const store = createOcrStore(scans, true)
+    const now = 10000
+    const rejectJob = store.create(2, { scanId: 3, idempotencyKey: 'reject' }, now).data!
+    const reject = store.suggestions(rejectJob.id, now + 2000)![0]
+    const fact = store.fact(3, true, now + 2000)
+    expect(store.review(reject.id, 'REJECT', undefined, now + 2000).code).toBe(200)
+    expect(scans.find(row => row.id === 3)?.btype).toBe(0)
+    expect(store.fact(3, true, now + 2000)).toEqual(fact)
+    const overrideJob = store.create(2, { scanId: 3, idempotencyKey: 'override' }, now + 2000).data!
+    const override = store.suggestions(overrideJob.id, now + 4000)![0]
+    const newFact = store.fact(3, true, now + 4000)
+    expect(store.review(override.id, 'OVERRIDE', 999, now + 4000).code).toBe(400)
+    expect(store.review(override.id, 'UNKNOWN', undefined, now + 4000).code).toBe(400)
+    expect(store.review(override.id, 'OVERRIDE', 15, now + 4000).code).toBe(200)
+    expect(scans.find(row => row.id === 3)?.btype).toBe(15)
+    expect(store.fact(3, true, now + 4000)).toEqual(newFact)
+    expect(store.review(override.id, 'REJECT', undefined, now + 4000).code).toBe(409)
+  })
+
+  it('重新识别后旧建议不可修改分类，新建议仍可人工确认', () => {
+    const { scans } = createDemoRecords()
+    const store = createOcrStore(scans, true)
+    const now = 10000
+    const first = store.create(2, { scanId: 3, idempotencyKey: 'first' }, now).data!
+    const old = store.suggestions(first.id, now + 2000)![0]
+    const oldFact = store.fact(3, true, now + 2000)
+    const second = store.create(2, { scanId: 3, idempotencyKey: 'second' }, now + 2000).data!
+    const current = store.suggestions(second.id, now + 4000)![0]
+    expect(store.fact(3, true, now + 4000)?.resultVersion).not.toBe(oldFact?.resultVersion)
+    expect(store.suggestions(first.id, now + 4000)![0].reviewStatus).toBe('SUPERSEDED')
+    expect(store.review(old.id, 'ACCEPT', undefined, now + 4000).code).toBe(409)
+    expect(scans.find(row => row.id === 3)?.btype).toBe(0)
+    expect(store.review(current.id, 'ACCEPT', undefined, now + 4000).code).toBe(200)
+  })
+
   it('cancels queued work and demonstrates a failed page without fake text', () => {
     const { scans } = createDemoRecords()
     const store = createOcrStore(scans)

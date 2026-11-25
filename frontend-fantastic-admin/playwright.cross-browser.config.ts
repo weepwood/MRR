@@ -3,7 +3,7 @@ import base from './playwright.config'
 
 // Explicit candidate qualification; the default PR/release Chromium gate is unchanged.
 const warmup = base.projects!.find(project => project.name === 'warmup')!
-const workflowChecks = /(?:v11-entry-quality|v11-loaded-states|v11-repair-workbench|legacy-route-settings|auth-storage-healing|database-browse-demo|runtime-error-detail|query-page-consistency|shared-ui-layout|global-visual)\.spec\.ts$/
+const workflowChecks = /(?:v11-entry-quality|v11-loaded-states|v11-repair-workbench|legacy-route-settings|auth-storage-healing|database-browse-demo|runtime-error-detail|query-page-consistency|shared-ui-layout|global-visual|archive-scan-navigation|archive-viewer-navigation|archive-workbench-search|archive-manifest-layout|archive-workbench-controls)\.spec\.ts$/
 const routeMatrix = /candidate-route-matrix\.qualification\.ts$/
 
 export default defineConfig({

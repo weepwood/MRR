@@ -53,6 +53,7 @@ const activeTab = ref(props.archiveOnly ? 'archive' : 'overview')
 const overview = ref<DataRelationOverview | null>(null)
 const qualitySummary = ref<DataQualitySummary | null>(null)
 const issues = ref<DataQualityIssue[]>([])
+const railWidth = ref(260)
 const searchType = ref('BAH')
 const searchValue = ref('')
 const archiveSearchInput = ref<InputInstance>()
@@ -69,6 +70,8 @@ const detailError = ref(false)
 const detailRegion = ref<HTMLElement>()
 let searchVersion = 0
 let detailVersion = 0
+let searchController: AbortController | undefined
+let detailController: AbortController | undefined
 let overviewVersion = 0
 let qualityVersion = 0
 let sessionVersion = 0
@@ -90,11 +93,33 @@ function invalidatePreview() {
 watch(previewVisible, (visible) => {
   if (!visible) invalidatePreview()
 }, { flush: 'sync' })
+function invalidateArchiveSearch() {
+  ++searchVersion
+  ++detailVersion
+  searchController?.abort()
+  detailController?.abort()
+  searchController = undefined
+  detailController = undefined
+  searchLoading.value = false
+  detailLoading.value = false
+  searchResults.value = []
+  selectedArchive.value = null
+  relationDetail.value = null
+  searchError.value = false
+  searchCompleted.value = false
+  detailError.value = false
+}
+function clearArchiveSearch() {
+  invalidateArchiveSearch()
+  searchValue.value = ''
+  focusSearch()
+}
+watch([searchType, () => searchValue.value.trim()], invalidateArchiveSearch, { flush: 'sync' })
+
 function resetPage() {
   previewVisible.value = false
   invalidatePreview()
-  ++searchVersion
-  ++detailVersion
+  invalidateArchiveSearch()
   ++overviewVersion
   ++qualityVersion
   ++sessionVersion
@@ -105,16 +130,9 @@ function resetPage() {
   overviewLoading.value = false
   checking.value = false
   activeTab.value = props.archiveOnly ? 'archive' : 'overview'
-  searchLoading.value = false
-  detailLoading.value = false
-  searchResults.value = []
   searchValue.value = ''
-  selectedArchive.value = null
-  relationDetail.value = null
   searchType.value = 'BAH'
-  searchError.value = false
-  searchCompleted.value = false
-  detailError.value = false
+  railWidth.value = 260
   issueSeverity.value = 'ALL'
 }
 watch(() => useUserStore().token, resetPage, { flush: 'sync' })
@@ -124,8 +142,7 @@ watch(() => props.archiveOnly, () => {
 }, { flush: 'sync' })
 onBeforeUnmount(() => {
   invalidatePreview()
-  ++searchVersion
-  ++detailVersion
+  invalidateArchiveSearch()
   ++overviewVersion
   ++qualityVersion
   ++sessionVersion
@@ -279,42 +296,45 @@ async function searchArchives() {
     return
   }
 
-  const current = ++searchVersion
-  ++detailVersion
+  if (searchLoading.value) return
+  invalidateArchiveSearch()
+  const current = searchVersion
+  const controller = new AbortController()
+  searchController = controller
   searchLoading.value = true
-  detailLoading.value = false
-  searchError.value = false
-  searchCompleted.value = false
-  detailError.value = false
-  searchResults.value = []
-  relationDetail.value = null
-  selectedArchive.value = null
   try {
-    const response = await searchDataRelationArchives(searchType.value, value, 20)
+    const response = await searchDataRelationArchives(searchType.value, value, 20, controller.signal)
     if (current !== searchVersion) return
     searchResults.value = response.data ?? []
     searchCompleted.value = true
     if (searchResults.value.length === 1) {
-      await openArchive(searchResults.value[0])
+      void openArchive(searchResults.value[0])
     }
   }
   catch {
     if (current === searchVersion) searchError.value = true
   }
   finally {
-    if (current === searchVersion) searchLoading.value = false
+    if (current === searchVersion) {
+      searchLoading.value = false
+      searchController = undefined
+    }
   }
 }
 
 async function openArchive(row: ArchiveSearchResult) {
+  if (selectedArchive.value?.id === row.id && (detailLoading.value || relationDetail.value)) return
   const current = ++detailVersion
+  detailController?.abort()
+  const controller = new AbortController()
+  detailController = controller
   selectedArchive.value = row
   relationDetail.value = null
   detailError.value = false
   detailLoading.value = true
   activeTab.value = 'archive'
   try {
-    const response = await getArchiveRelationDetail(row.id)
+    const response = await getArchiveRelationDetail(row.id, controller.signal)
     if (current !== detailVersion) return
     if (!response.data || Number(response.data.archive.id) !== row.id) throw new Error('Archive detail identity mismatch')
     relationDetail.value = response.data
@@ -323,7 +343,10 @@ async function openArchive(row: ArchiveSearchResult) {
     if (current === detailVersion) detailError.value = true
   }
   finally {
-    if (current === detailVersion) detailLoading.value = false
+    if (current === detailVersion) {
+      detailLoading.value = false
+      detailController = undefined
+    }
   }
 }
 
@@ -541,9 +564,17 @@ onMounted(() => {
       </el-tab-pane>
 
       <el-tab-pane label="病案工作台" name="archive">
-        <div class="archive-stack" :class="{ 'archive-stack--workspace': archiveOnly }">
+        <div class="archive-stack" :class="{ 'archive-stack--workspace': archiveOnly }" :style="archiveOnly ? { '--archive-rail-width': `${railWidth}px` } : undefined">
           <div class="archive-search-rail" :class="{ 'archive-search-rail--legacy': !archiveOnly }" role="region" aria-label="病案检索及候选">
-            <MrrSectionCard title="查找病案" :description="archiveOnly ? undefined : '选择编号类型，查询病案主档及其跨表关系。'">
+            <MrrSectionCard :body-padding="archiveOnly ? 'compact' : 'normal'" title="查找病案" :description="archiveOnly ? undefined : '选择编号类型，查询病案主档及其跨表关系。'">
+              <div v-if="archiveOnly" class="archive-rail-controls">
+                <label for="archive-rail-width">检索栏目标宽度</label>
+                <output for="archive-rail-width">{{ railWidth }}px</output>
+                <input id="archive-rail-width" v-model.number="railWidth" type="range" min="220" max="360" step="10">
+                <el-button size="small" text @click="railWidth = 260">
+                  恢复默认
+                </el-button>
+              </div>
               <div class="search-row">
                 <div class="search-field search-field--type">
                   <label for="relation-search-type">查询类型</label>
@@ -560,9 +591,12 @@ onMounted(() => {
                 <MrrFilterActionButton type="primary" action="search" :pending="searchLoading" :busy="searchLoading" @click="searchArchives">
                   查询
                 </MrrFilterActionButton>
+                <el-button v-if="searchValue || searchLoading || searchCompleted || searchError" @click="clearArchiveSearch">
+                  清空检索
+                </el-button>
               </div>
             </MrrSectionCard>
-            <MrrSectionCard v-if="archiveOnly && (searchLoading || searchCompleted || searchError)" title="病案主档候选" :description="searchCompleted ? `本次返回 ${searchResults.length} 条，最多 20 条` : '按编号检索后选择病案'">
+            <MrrSectionCard v-if="archiveOnly && (searchLoading || searchCompleted || searchError)" body-padding="compact" title="病案主档候选" :description="searchCompleted ? `本次返回 ${searchResults.length} 条，最多 20 条` : '按编号检索后选择病案'">
               <AppLoading v-if="searchLoading" />
               <AppError v-else-if="searchError" message="病案查询失败，请重试" @retry="searchArchives" />
               <AppEmpty v-else-if="!searchResults.length" size="compact" :description="searchCompleted ? '当前条件未找到病案主档' : '等待检索'" />
@@ -606,7 +640,7 @@ onMounted(() => {
           <AppError v-else-if="!archiveOnly && searchError" message="病案查询失败，请重试" @retry="searchArchives" />
           <AppEmpty v-else-if="!archiveOnly && searchCompleted && !searchLoading" icon="i-lucide:search-x" description="当前条件未找到病案主档" />
 
-          <div ref="detailRegion" v-loading="detailLoading" class="archive-detail-stack">
+          <div ref="detailRegion" v-loading="detailLoading" class="archive-detail-stack" :aria-busy="detailLoading">
             <p v-if="detailLoading && selectedArchive" class="archive-detail-status" role="status">
               正在加载病案主档 #{{ selectedArchive.id }} 的关系…
             </p>
@@ -977,7 +1011,8 @@ p {
 
 /* The standalone workspace keeps search context beside the current record. */
 .archive-stack--workspace {
-  grid-template-columns: minmax(220px, 260px) minmax(0, 1fr);
+  grid-template-columns: minmax(220px, min(var(--archive-rail-width, 260px), 34%)) minmax(0, 1fr);
+  gap: var(--mrr-space-3);
   align-items: start;
 }
 
@@ -1059,9 +1094,26 @@ p {
   flex: 0 1 auto;
 }
 
+.archive-rail-controls {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: var(--mrr-space-1) var(--mrr-space-2);
+  align-items: center;
+  margin-bottom: var(--mrr-space-3);
+  font-size: var(--mrr-font-size-xs);
+  color: var(--el-text-color-secondary);
+}
+
+.archive-rail-controls input {
+  width: 100%;
+  min-width: 0;
+  accent-color: var(--el-color-primary);
+}
+
 .archive-candidates {
   display: grid;
   gap: var(--mrr-space-2);
+  align-content: start;
   max-height: 540px;
   overflow: auto;
 }
@@ -1071,7 +1123,7 @@ p {
   gap: var(--mrr-space-1);
   justify-items: start;
   min-width: 0;
-  padding: var(--mrr-space-3);
+  padding: var(--mrr-space-2);
   color: var(--el-text-color-regular);
   text-align: left;
   overflow-wrap: anywhere;
@@ -1125,6 +1177,10 @@ p {
 }
 
 @media (max-width: 1050px) {
+  .archive-rail-controls {
+    display: none;
+  }
+
   .archive-stack--workspace {
     grid-template-columns: minmax(0, 1fr);
   }

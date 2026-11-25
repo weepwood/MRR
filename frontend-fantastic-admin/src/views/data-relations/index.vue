@@ -173,6 +173,11 @@ const {
   actionColumnWidth: issueActionColumnWidth,
 } = useTableActionLayout(issueActions.length, 2)
 
+const { maxInlineActions: archiveMaxInlineActions, actionColumnWidth: archiveActionColumnWidth } = useTableActionLayout(1, 1)
+function archiveActions(row: ArchiveSearchResult): MrrTableAction[] {
+  return [{ key: 'detail', label: `查看病案主档 ${row.id} 的关系`, icon: 'i-lucide:eye', tone: 'primary', placement: 'inline' }]
+}
+
 const latestRun = computed(() => qualitySummary.value?.latestRun ?? overview.value?.latestQualityRun ?? null)
 const checks = computed<QualityCheck[]>(() => qualitySummary.value?.checks ?? overview.value?.relationChecks ?? [])
 const filteredIssues = computed(() => {
@@ -613,7 +618,7 @@ onMounted(() => {
           <MrrResizeHandle v-if="archiveOnly" ref="railDivider" v-model="railWidth" class="archive-rail-divider" :min="220" :max="360" :default-width="260" label="调整检索栏宽度" controls="archive-search-pane" />
 
           <MrrSectionCard v-if="!archiveOnly && searchResults.length" class="section-card" title="病案主档候选" description="精确匹配优先；仅前导零差异标记为格式差异（FORMAT_ONLY）">
-            <el-table :data="searchResults" highlight-current-row @row-click="openArchive">
+            <el-table :data="searchResults" row-key="id" :current-row-key="selectedArchive?.id" highlight-current-row @row-click="openArchive">
               <el-table-column prop="id" label="主档 ID" width="120" />
               <el-table-column prop="bah" label="病案号（BAH）" min-width="150" />
               <el-table-column prop="sjh" label="上架号（SJH）" min-width="150" />
@@ -627,11 +632,9 @@ onMounted(() => {
                   </el-tag>
                 </template>
               </el-table-column>
-              <el-table-column label="操作" width="110" fixed="right">
+              <el-table-column label="操作" :width="archiveActionColumnWidth" fixed="right" align="center">
                 <template #default="{ row }">
-                  <el-button text type="primary" :aria-label="`查看病案主档 ${row.id} 的关系`" @click.stop="openArchive(row as ArchiveSearchResult)">
-                    查看关系
-                  </el-button>
+                  <MrrTableActions :actions="archiveActions(row as ArchiveSearchResult)" :max-inline="archiveMaxInlineActions" @select="openArchive(row as ArchiveSearchResult)" />
                 </template>
               </el-table-column>
             </el-table>

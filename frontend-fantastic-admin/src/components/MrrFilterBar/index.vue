@@ -1,4 +1,7 @@
 <script setup lang="ts">
+import { useElementSize } from '@vueuse/core'
+import { computed, ref, useId } from 'vue'
+
 defineOptions({ name: 'MrrFilterBar' })
 
 const props = withDefaults(defineProps<{
@@ -12,23 +15,42 @@ const props = withDefaults(defineProps<{
    */
   labelled?: boolean
   layout?: 'inline' | 'grid'
+  /** Number of filled advanced fields; never implies a successful query. */
+  advancedCount?: number
 }>(), {
   compact: false,
   embedded: false,
   focusRing: true,
   labelled: false,
   layout: 'inline',
+  advancedCount: 0,
 })
 
 const slots = useSlots()
+const fields = ref<HTMLElement>()
+const { width: fieldsWidth } = useElementSize(computed(() => props.layout === 'grid' ? fields.value : undefined))
+const advancedExpanded = ref(true)
+const advancedId = useId()
+// Chrome 86 supports ResizeObserver, but not CSS container queries. Use actual
+// available width (sidebar/inspector included), not the browser viewport.
+const columns = computed(() => {
+  if (props.layout !== 'grid' || fieldsWidth.value <= 0) { return undefined }
+  return fieldsWidth.value >= 760 ? 3 : fieldsWidth.value >= 480 ? 2 : 1
+})
 </script>
 
 <template>
   <div class="mrr-filter-bar" :class="{ 'mrr-filter-bar--compact': props.compact, 'mrr-filter-bar--embedded': props.embedded, 'mrr-filter-bar--focus-ring': props.focusRing, 'mrr-filter-bar--labelled': props.labelled, 'mrr-filter-bar--grid': props.layout === 'grid' }">
-    <div class="mrr-filter-bar__fields">
+    <div ref="fields" class="mrr-filter-bar__fields" :data-grid-columns="columns">
       <slot />
+      <div v-if="slots.advanced" v-show="advancedExpanded" :id="advancedId" class="mrr-filter-bar__advanced">
+        <slot name="advanced" />
+      </div>
     </div>
-    <div v-if="slots.actions" class="mrr-filter-bar__actions">
+    <div v-if="slots.actions || slots.advanced" class="mrr-filter-bar__actions">
+      <el-button v-if="slots.advanced" native-type="button" :aria-controls="advancedId" :aria-expanded="advancedExpanded" @click="advancedExpanded = !advancedExpanded">
+        {{ advancedExpanded ? '收起高级筛选' : '展开高级筛选' }}（已填写 {{ props.advancedCount }} 项）
+      </el-button>
       <slot name="actions" />
     </div>
   </div>
@@ -74,14 +96,14 @@ const slots = useSlots()
  * 以固定宽度孤零零靠左（N4「差半个字段」观感），而是与首行一样铺满行宽。
  * 单个次行字段由上限约束，避免被拉成整行长的超大控件。
  */
-.mrr-filter-bar--embedded .mrr-filter-bar__fields > :deep(*) {
+.mrr-filter-bar--embedded:not(.mrr-filter-bar--grid) .mrr-filter-bar__fields > :deep(*) {
   flex-grow: 1;
   max-width: 460px;
 }
 
 @media (max-width: 760px) {
   /* 窄屏下字段已是整行宽，解除上限避免被压成 460px。 */
-  .mrr-filter-bar--embedded .mrr-filter-bar__fields > :deep(*) {
+  .mrr-filter-bar--embedded:not(.mrr-filter-bar--grid) .mrr-filter-bar__fields > :deep(*) {
     max-width: 100%;
   }
 }
@@ -93,6 +115,10 @@ const slots = useSlots()
   gap: var(--mrr-space-2);
   align-items: center;
   min-width: 0;
+}
+
+.mrr-filter-bar__advanced {
+  display: contents;
 }
 
 .mrr-filter-bar__actions {
@@ -218,6 +244,23 @@ const slots = useSlots()
   .mrr-filter-bar__actions :deep(.el-button) {
     flex: 1 1 120px;
   }
+}
+
+/* Measured width takes precedence over viewport fallback, including range span. */
+.mrr-filter-bar--grid .mrr-filter-bar__fields[data-grid-columns="3"] {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.mrr-filter-bar--grid .mrr-filter-bar__fields[data-grid-columns="2"] {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.mrr-filter-bar--grid .mrr-filter-bar__fields[data-grid-columns="1"] {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.mrr-filter-bar--grid .mrr-filter-bar__fields[data-grid-columns="1"] :deep(.mrr-filter-bar__range) {
+  grid-column: auto;
 }
 
 /*

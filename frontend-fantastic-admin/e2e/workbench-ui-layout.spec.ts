@@ -106,9 +106,14 @@ test('候选病案可通过键盘操作查看关系，并显示匹配方式', as
   await expect(page.getByText('格式差异（FORMAT_ONLY）', { exact: true })).toBeVisible()
   const action = page.getByRole('button', { name: '查看病案主档 91002 的关系' })
   await action.focus()
-  await page.keyboard.press('Enter')
+  await expect(action).toBeFocused()
+  await action.press('Enter')
   await expect(page.getByText('病案主档 #91002', { exact: true })).toBeVisible()
   await expect(page.locator('.archive-header')).toContainText('病案号（BAH）：123')
+  await expect(page.getByRole('row').filter({ has: page.getByRole('cell', { name: '91002', exact: true }) })).toHaveClass(/current-row/)
+  await page.setViewportSize({ width: 375, height: 812 })
+  await page.getByRole('row').filter({ has: page.getByRole('cell', { name: '91002', exact: true }) }).getByRole('button', { name: '更多操作' }).click()
+  await expect(page.getByRole('menuitem', { name: '查看病案主档 91002 的关系' })).toBeVisible()
 })
 
 test('只读修复预览失败可重试且保留当前异常身份', async ({ page }) => {

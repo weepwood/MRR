@@ -52,6 +52,10 @@ for (const item of pages) {
           // leave transition. Wait for the actual collapsed and hidden state
           // before testing the next label's native focus behavior.
           if (await control.getAttribute('role') === 'combobox') {
+            // Click a non-control outside the select to exercise real outside dismissal.
+            // Tab may leave the teleported popper open even when aria-expanded is false.
+            await page.getByRole('heading', { level: 1, name: item.title, exact: true }).click()
+            await expect(control).not.toBeFocused()
             await expect(control).toHaveAttribute('aria-expanded', 'false')
             const popupId = await control.getAttribute('aria-controls')
             expect(popupId).toBeTruthy()
@@ -111,6 +115,33 @@ for (const item of pages) {
     const next = waitQuery()
     await page.locator('.el-pagination .btn-next').click()
     expect(new URL((await next).url()).searchParams.get('page')).toBe('2')
+  })
+
+  test(`${item.path} 折叠高级筛选保留隐藏条件、查询及重置语义`, async ({ page }) => {
+    await openPage(page, item.path)
+    await page.setViewportSize({ width: 375, height: 900 })
+    const form = page.locator('form').first()
+    const input = form.getByLabel('客户端 IP', { exact: true })
+    const disclosure = form.getByRole('button', { name: /高级筛选/ })
+    await input.fill('192.0.2.42')
+    await expect(disclosure).toContainText('已填写 1 项')
+    const expandedHeight = (await form.boundingBox())!.height
+    await disclosure.click()
+    await expect(disclosure).toHaveAttribute('aria-expanded', 'false')
+    await expect(input).toBeHidden()
+    await expect(disclosure).toContainText('已填写 1 项')
+    expect((await form.boundingBox())!.height).toBeLessThan(expandedHeight)
+    const request = page.waitForRequest(req => req.method() === 'GET' && new URL(req.url()).pathname.endsWith(item.endpoint))
+    await form.getByRole('button', { name: '查询', exact: true }).click()
+    expect(new URL((await request).url()).searchParams.get('clientIp')).toBe('192.0.2.42')
+    await expect(form.getByRole('button', { name: '重置', exact: true })).toHaveAttribute('aria-disabled', 'false')
+    const reset = page.waitForRequest(req => req.method() === 'GET' && new URL(req.url()).pathname.endsWith(item.endpoint))
+    await form.getByRole('button', { name: '重置', exact: true }).click()
+    expect(new URL((await reset).url()).searchParams.has('clientIp')).toBe(false)
+    await expect(disclosure).toContainText('已填写 0 项')
+    await disclosure.click()
+    await expect(input).toBeVisible()
+    await expect(input).toHaveValue('')
   })
 
   for (const status of [403, 500]) {

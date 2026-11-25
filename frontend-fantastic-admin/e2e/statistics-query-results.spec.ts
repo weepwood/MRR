@@ -26,6 +26,8 @@ async function statsRepro(page: Page) {
   await filter.fill('OLD')
   await filter.press('Enter')
   await expect.poll(() => Boolean(pending)).toBe(true)
+  await expect(table.getByText('SYN-BASE', { exact: true })).toBeVisible()
+  await expect(page.locator('.mrr-data-table-panel__content')).toHaveAttribute('aria-busy', 'true')
   await filter.fill('NEW')
   await filter.press('Enter')
   await expect(table.getByText('SYN-NEW', { exact: true })).toBeVisible()

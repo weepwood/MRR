@@ -616,3 +616,10 @@
 
 - #849已合并dcb01928，验收head5a70bb74与合并tree一致；main 24152bee、V1.1 92896f7c 保持冻结。前置业务视觉本地70c1290e，剩余审计标签回归须独立收口。
 - P3 独立worktree `v1.2-table-gallery-contract` 基于70c1290e，展厅DataExamples使用MrrFilterActionButton、公共标签和useTableActionLayout，不新增依赖、业务API或权限变更。新增断点回归及实际展厅宽/中/窄屏操作测试，18/18单测、2/2 Chromium含预热、ESLint/类型初验通过。首次隔离端口9037测试因合成认证fixture仍绑定9000而跳登录，临时映射测试origin后通过；临时配置和fixture不提交。日志 `/tmp/mrr-v12-table-gallery-{unit,layout-unit,browser-final,tsc,eslint}.log`。未进行全站跨浏览器、生产部署及真实终端验收。前置批次验收后集中重放本批提交，避免小PR。独立revert即可回滚。
+
+## V1.2 业务视觉集中治理（2026-11-26）
+
+- 工作区 `/Volumes/data/Project/MRR-worktrees/v1.2-table-gallery-contract`，分支 feat/v1.2-table-gallery-contract，基线 dcb01928，含 70c1290e、0614ffe5。关联 #835，P1/P2；无 API、数据库、真实医疗数据或正式部署变更。main 24152bee、V1.1 92896f7c 已核对冻结。线上预览 V1.2 清单仍 c50653f1。
+- 实施公共筛选实际宽度、高级筛选折叠和已填写计数、响应式固定操作列及选中态、统计/OCR/运维反馈、设置目录容器响应；修复 tooltip 默认键盘拦截。维持原表头、行高、分页与游标契约，未全量重构。详见 [实际业务视觉审查](../design/business-page-visual-audit.md)。
+- 164/164 定向单测；首轮联合38/38，扩展59/62，最终260组截图/280选择器/500标签、所测容器零溢出。小修最终定向5/7：设置、候选键盘、审计明暗通过，日志明暗浮层残留仍阻塞。WebKit 10项无法启动（所需2388未安装）；未执行Firefox、真实Chrome86、正式构建发布与全站跨浏览器验收。证据 /tmp/mrr-v12-closure-{final-unit,final-browser,repair3,webkit,tsc6,lint6,style6}.log。不得合并未通过门禁的版本。
+- 下一步：针对 Element Plus Select 的快速聚焦/关闭时序复现，保留真实关闭断言；分别验证日志/审计，之后重跑累计联合、远端CI、独立预览身份。回滚以本批提交独立 revert（前置两个本地提交同一 PR）；不改 main/V1.1。临时隔离端口配置与合成认证fixture不提交。

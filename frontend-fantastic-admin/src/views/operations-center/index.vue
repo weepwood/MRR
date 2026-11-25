@@ -11,6 +11,7 @@ import type {
   PermissionMatrix,
   ReadinessSnapshot,
 } from '@/api/modules/operations'
+import { useElementSize } from '@vueuse/core'
 import { ElMessage } from 'element-plus'
 import { computed, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
@@ -31,6 +32,8 @@ import {
   verifyImageContent,
 } from '@/api/modules/operations'
 import AppEmpty from '@/components/AppEmpty/index.vue'
+import AppError from '@/components/AppError/index.vue'
+import AppLoading from '@/components/AppLoading/index.vue'
 import MrrPageHeader from '@/components/MrrPageHeader/index.vue'
 import MrrPageShell from '@/components/MrrPageShell/index.vue'
 import MrrSectionCard from '@/components/MrrSectionCard/index.vue'
@@ -64,6 +67,9 @@ const loading = reactive({
 
 const overview = ref<OperationsOverview>()
 const overviewFailed = ref(false)
+const dashboardRef = ref<HTMLElement>()
+const { width: dashboardWidth } = useElementSize(dashboardRef)
+const compactDashboard = computed(() => dashboardWidth.value > 0 && dashboardWidth.value < 850)
 const networkChanges = ref<string[]>([])
 let overviewRequest: Promise<void> | undefined
 const canManage = computed(() => hasPermission('system:manage'))
@@ -555,17 +561,18 @@ onMounted(async () => {
 
     <el-tabs v-model="activeTab" class="diagnostics-tabs" @tab-change="handleTabChange">
       <el-tab-pane label="运维总览" name="overview">
-        <div class="overview-dashboard" :aria-busy="loading.overview">
+        <div ref="dashboardRef" class="overview-dashboard" :class="{ 'overview-dashboard--compact': compactDashboard }" :aria-busy="loading.overview">
           <el-alert
-            v-if="overviewFailed"
-            :title="overview ? '刷新失败，当前为上次成功数据' : '无法获取状态'"
+            v-if="overviewFailed && overview"
+            title="刷新失败，当前为上次成功数据"
             type="warning"
             :closable="false"
             show-icon
           >
             请重试刷新看板。若服务不可达，请在服务器查看 Windows 服务日志。
           </el-alert>
-          <el-skeleton v-if="!overview && loading.overview" :rows="4" />
+          <AppLoading v-if="!overview && loading.overview" type="card" :cols="3" />
+          <AppError v-else-if="!overview && overviewFailed" message="无法获取状态，请重试刷新看板。若服务不可达，请在服务器查看 Windows 服务日志。" @retry="loadOverview" />
 
           <template v-if="overview">
             <el-alert
@@ -1263,6 +1270,14 @@ onMounted(async () => {
   display: grid;
   grid-template-columns: minmax(0, 1.25fr) minmax(320px, 0.75fr);
   gap: var(--mrr-space-4);
+}
+
+.two-column-layout > * {
+  min-width: 0;
+}
+
+.overview-dashboard--compact .two-column-layout {
+  grid-template-columns: minmax(0, 1fr);
 }
 
 .section-card,

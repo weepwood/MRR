@@ -1,15 +1,20 @@
 <script setup lang="ts">
 import type { OcrBatch, OcrBatchPreview, OcrBatchRequest, OcrRevert } from '@/api/modules/ocr-batches'
+import type { MrrTableAction } from '@/components/MrrTableActions/types'
 import { useDocumentVisibility, useIntervalFn } from '@vueuse/core'
 import { ElMessage } from 'element-plus'
 import { computed, onMounted, reactive, ref, watch } from 'vue'
 import { actOnOcrBatch, createOcrBatch, listOcrBatches, listOcrBatchJobs, previewOcrBatch, previewOcrRollback, rollbackOcrBatchPage } from '@/api/modules/ocr-batches'
 import AppEmpty from '@/components/AppEmpty/index.vue'
+import AppError from '@/components/AppError/index.vue'
+import AppLoading from '@/components/AppLoading/index.vue'
 import MrrDataTablePanel from '@/components/MrrDataTablePanel/index.vue'
 import MrrPageHeader from '@/components/MrrPageHeader/index.vue'
 import MrrPageShell from '@/components/MrrPageShell/index.vue'
 import MrrSectionCard from '@/components/MrrSectionCard/index.vue'
 import MrrStatusTag from '@/components/MrrStatusTag/index.vue'
+import MrrTableActions from '@/components/MrrTableActions/index.vue'
+import { useTableActionLayout } from '@/composables/useTableActionLayout'
 import { actionDialog } from '@/ui/components/ActionDialog'
 import useAuth from '@/utils/composables/useAuth'
 import { getRequestErrorMessage } from '@/utils/request-error-message'
@@ -52,19 +57,19 @@ const rollbackOpen = ref(false)
 const rollbackAfter = ref(0)
 const rollbackRows = ref<OcrRevert[]>([])
 const rollbackMessage = ref('')
-let loading = false
+const loading = ref(false)
 let generation = 0
 
 async function reload() {
-  if (loading || visibility.value === 'hidden') { return }
-  loading = true
+  if (loading.value || visibility.value === 'hidden') { return }
+  loading.value = true
   const version = generation
   try {
     const result = await listOcrBatches(after.value)
     if (version === generation) { batches.value = result.data || []; loadError.value = '' }
   }
   catch { loadError.value = '批次读取失败，请稍后刷新' }
-  finally { loading = false }
+  finally { loading.value = false }
 }
 const polling = useIntervalFn(() => void reload(), 3000, { immediate: false })
 watch([visibility, batches], () => {
@@ -135,6 +140,22 @@ async function children(id: string, next = false) {
     selectedJob.value = childJobs.value[0] || ''
   })
 }
+const { maxInlineActions, actionColumnWidth } = useTableActionLayout(4, 2)
+function batchActions(row: OcrBatch): MrrTableAction[] {
+  return [
+    { key: 'children', label: '查看明细与审核', icon: 'i-lucide:eye', placement: 'inline' },
+    { key: 'pause', label: '暂停', icon: 'i-lucide:pause', visible: row.status === 'RUNNING' },
+    { key: 'resume', label: '续跑', icon: 'i-lucide:play', visible: row.status === 'PAUSED' },
+    { key: 'cancel', label: '取消', icon: 'i-lucide:circle-stop', tone: 'danger', visible: ['RUNNING', 'PAUSED'].includes(row.status) },
+    { key: 'rollback', label: '回退预览', icon: 'i-lucide:rotate-ccw', tone: 'danger', visible: row.autoApply && auth('classification:override'), placement: 'overflow' },
+  ]
+}
+function selectBatchAction(key: string, row: OcrBatch) {
+  if (busy.value || !batchActions(row).some(item => item.key === key && item.visible !== false)) { return }
+  if (key === 'children') { void children(row.id) }
+  else if (key === 'rollback') { void inspectRollback(row.id) }
+  else if (key === 'pause' || key === 'resume' || key === 'cancel') { void action(row.id, key) }
+}
 async function nextPage() { after.value = batches.value[batches.value.length - 1]?.id || ''; generation++; await reload() }
 onMounted(() => void reload())
 async function inspectRollback(id: string) {
@@ -181,7 +202,7 @@ async function skipRollbackPage() {
       </template>
     </MrrPageHeader>
 
-    <el-alert v-if="loadError" :title="loadError" type="error" :closable="false" />
+    <el-alert v-if="loadError && batches.length" :title="`${loadError}，当前显示上次读取结果`" type="error" :closable="false" />
     <MrrSectionCard
       title="批次范围"
       description="设置影像 ID 范围和本批次页数上限，再预览符合条件的页面。"
@@ -233,7 +254,9 @@ async function skipRollbackPage() {
         </el-button>
       </template>
 
-      <el-table :data="batches">
+      <AppLoading v-if="loading && !batches.length" type="table" :rows="5" />
+      <AppError v-else-if="loadError && !batches.length" :message="loadError" @retry="reload" />
+      <el-table v-else :data="batches">
         <!-- 成功但为空走共享空态（DESIGN.md §5.1），不用 el-table 默认「暂无数据」 -->
         <template #empty>
           <AppEmpty size="compact" description="暂无批次记录，可在上方创建" />
@@ -274,30 +297,9 @@ async function skipRollbackPage() {
             <span v-else class="ocr-batches__unit">—</span>
           </template>
         </el-table-column>
-        <el-table-column label="操作" min-width="300" fixed="right">
+        <el-table-column label="操作" :width="actionColumnWidth" fixed="right" align="center">
           <template #default="{ row }">
-            <!--
-              原来最多 5 个默认按钮挤在 280px 列里，会折成两三行且行高不齐。
-              改为一组小号按钮：流程控制在前（暂停 / 续跑 / 取消），查看与回退在后；
-              取消与回退是不可逆或高影响操作，用危险色文字区分，按钮名称与行为不变。
-            -->
-            <div class="ocr-batches__row-actions">
-              <el-button v-if="row.status === 'RUNNING'" size="small" @click="action(row.id, 'pause')">
-                暂停
-              </el-button>
-              <el-button v-if="row.status === 'PAUSED'" size="small" @click="action(row.id, 'resume')">
-                续跑
-              </el-button>
-              <el-button v-if="['RUNNING', 'PAUSED'].includes(row.status)" size="small" type="danger" plain @click="action(row.id, 'cancel')">
-                取消
-              </el-button>
-              <el-button size="small" @click="children(row.id)">
-                查看明细与审核
-              </el-button>
-              <el-button v-if="row.autoApply && auth('classification:override')" size="small" type="danger" link @click="inspectRollback(row.id)">
-                回退预览
-              </el-button>
-            </div>
+            <MrrTableActions :actions="batchActions(row as OcrBatch)" :max-inline="maxInlineActions" @select="selectBatchAction($event, row as OcrBatch)" />
           </template>
         </el-table-column>
       </el-table>
@@ -409,17 +411,6 @@ async function skipRollbackPage() {
   padding-top: var(--mrr-space-3);
   margin-top: var(--mrr-space-1);
   border-top: 1px solid var(--mrr-border);
-}
-
-.ocr-batches__row-actions {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--mrr-space-1) var(--mrr-space-2);
-  align-items: center;
-}
-
-.ocr-batches__row-actions :deep(.el-button + .el-button) {
-  margin-left: 0;
 }
 
 .ocr-batches__mono {

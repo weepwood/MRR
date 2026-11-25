@@ -145,6 +145,8 @@ const { clearResults, list, total, loading, resultVersion, pageNum, pageSize, qu
   defaultQuery: { ...defaultQuery, keyword: linkedRequestId.value },
 })
 
+const advancedCount = computed(() => [query.clientIp, query.requestUri, query.method, query.responseStatus].filter(value => String(value ?? '').trim()).length)
+
 function searchFromStart(keyword = '') {
   Object.assign(query, defaultQuery, { keyword, timeRange: [] })
   return handleSearch()
@@ -280,7 +282,7 @@ function statusTagType(status: string | number) {
     <MrrDataTablePanel title="日志记录" :count="total" :loading="loading" :result-key="resultVersion">
       <template #filters>
         <el-form label-position="top" @submit.prevent>
-          <MrrFilterBar embedded layout="grid">
+          <MrrFilterBar embedded layout="grid" :advanced-count="advancedCount">
             <el-form-item label="关键字" for="logs-keyword">
               <el-input
                 id="logs-keyword"
@@ -289,30 +291,6 @@ function statusTagType(status: string | number) {
                 placeholder="Request ID / URI / 参数 / 审计目标"
                 @keyup.enter="handleSearch"
               />
-            </el-form-item>
-            <el-form-item label="用户" for="logs-username">
-              <MrrUserSearchSelect
-                id="logs-username"
-                v-model="query.username"
-                placeholder="搜索已存在用户名"
-                @update:model-value="handleSearch"
-              />
-            </el-form-item>
-            <el-form-item label="客户端 IP" for="logs-client-ip">
-              <el-input id="logs-client-ip" v-model="query.clientIp" clearable placeholder="127.0.0.1" @keyup.enter="handleSearch" />
-            </el-form-item>
-            <el-form-item label="请求 URI" for="logs-request-uri">
-              <el-input id="logs-request-uri" v-model="query.requestUri" clearable placeholder="真实路径或接口模板" @keyup.enter="handleSearch" />
-            </el-form-item>
-            <el-form-item label="方法" for="logs-method">
-              <el-select id="logs-method" v-model="query.method" class="mrr-single-select" clearable placeholder="全部请求方法">
-                <el-option v-for="item in methodOptions" :key="item" :label="item" :value="item" />
-              </el-select>
-            </el-form-item>
-            <el-form-item label="状态码" for="logs-status">
-              <el-select id="logs-status" v-model="query.responseStatus" class="mrr-single-select" clearable placeholder="全部状态码">
-                <el-option v-for="item in statusOptions" :key="item.label" :label="item.label" :value="item.value" />
-              </el-select>
             </el-form-item>
             <el-form-item label="访问时间" class="mrr-filter-bar__range">
               <el-date-picker
@@ -326,6 +304,32 @@ function statusTagType(status: string | number) {
                 format="YYYY-MM-DD HH:mm:ss"
               />
             </el-form-item>
+            <el-form-item label="用户" for="logs-username">
+              <MrrUserSearchSelect
+                id="logs-username"
+                v-model="query.username"
+                placeholder="搜索已存在用户名"
+                @update:model-value="handleSearch"
+              />
+            </el-form-item>
+            <template #advanced>
+              <el-form-item label="客户端 IP" for="logs-client-ip">
+                <el-input id="logs-client-ip" v-model="query.clientIp" clearable placeholder="127.0.0.1" @keyup.enter="handleSearch" />
+              </el-form-item>
+              <el-form-item label="请求 URI" for="logs-request-uri">
+                <el-input id="logs-request-uri" v-model="query.requestUri" clearable placeholder="真实路径或接口模板" @keyup.enter="handleSearch" />
+              </el-form-item>
+              <el-form-item label="方法" for="logs-method">
+                <el-select id="logs-method" v-model="query.method" class="mrr-single-select" clearable placeholder="全部请求方法">
+                  <el-option v-for="item in methodOptions" :key="item" :label="item" :value="item" />
+                </el-select>
+              </el-form-item>
+              <el-form-item label="状态码" for="logs-status">
+                <el-select id="logs-status" v-model="query.responseStatus" class="mrr-single-select" clearable placeholder="全部状态码">
+                  <el-option v-for="item in statusOptions" :key="item.label" :label="item.label" :value="item.value" />
+                </el-select>
+              </el-form-item>
+            </template>
             <template #actions>
               <MrrFilterActionButton action="search" :pending="loading" :busy="loading" @click="handleSearch">
                 查询

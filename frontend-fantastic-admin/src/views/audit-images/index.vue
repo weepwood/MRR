@@ -222,6 +222,7 @@ const {
   immediate: false,
 })
 
+const advancedCount = computed(() => [query.clientIp, query.auditAction, query.responseStatus].filter(value => String(value ?? '').trim()).length)
 let analyticsGeneration = 0
 let disposed = false
 function clearDetail() {
@@ -395,13 +396,15 @@ onMounted(loadData)
     </MrrPageHeader>
 
     <el-form label-position="top" @submit.prevent>
-      <MrrFilterBar layout="grid">
+      <MrrFilterBar layout="grid" :advanced-count="advancedCount">
         <el-form-item label="关键字" for="audit-keyword"><el-input id="audit-keyword" v-model="query.keyword" clearable placeholder="病案号 / 上架号 / 身份证号 / URI" @keyup.enter="handleSearch" /></el-form-item>
-        <el-form-item label="用户" for="audit-username"><MrrUserSearchSelect id="audit-username" v-model="query.username" placeholder="搜索已存在用户名" @update:model-value="handleSearch" /></el-form-item>
-        <el-form-item label="客户端 IP" for="audit-client-ip"><el-input id="audit-client-ip" v-model="query.clientIp" clearable placeholder="127.0.0.1" @keyup.enter="handleSearch" /></el-form-item>
-        <el-form-item label="访问类型" for="audit-action"><el-select id="audit-action" v-model="query.auditAction" class="mrr-single-select" clearable placeholder="全部访问类型"><el-option v-for="item in actionOptions" :key="item.value" :label="item.label" :value="item.value" /></el-select></el-form-item>
-        <el-form-item label="状态码" for="audit-status"><el-select id="audit-status" v-model="query.responseStatus" class="mrr-single-select" clearable placeholder="全部状态码"><el-option v-for="item in statusOptions" :key="item.label" :label="item.label" :value="item.value" /></el-select></el-form-item>
         <el-form-item label="访问时间" class="mrr-filter-bar__range"><el-date-picker v-model="query.timeRange" type="datetimerange" :popper-options="rangePickerPopperOptions" range-separator="至" start-placeholder="开始时间" end-placeholder="结束时间" value-format="YYYY-MM-DD HH:mm:ss" format="YYYY-MM-DD HH:mm:ss" /></el-form-item>
+        <el-form-item label="用户" for="audit-username"><MrrUserSearchSelect id="audit-username" v-model="query.username" placeholder="搜索已存在用户名" @update:model-value="handleSearch" /></el-form-item>
+        <template #advanced>
+          <el-form-item label="客户端 IP" for="audit-client-ip"><el-input id="audit-client-ip" v-model="query.clientIp" clearable placeholder="127.0.0.1" @keyup.enter="handleSearch" /></el-form-item>
+          <el-form-item label="访问类型" for="audit-action"><el-select id="audit-action" v-model="query.auditAction" class="mrr-single-select" clearable placeholder="全部访问类型"><el-option v-for="item in actionOptions" :key="item.value" :label="item.label" :value="item.value" /></el-select></el-form-item>
+          <el-form-item label="状态码" for="audit-status"><el-select id="audit-status" v-model="query.responseStatus" class="mrr-single-select" clearable placeholder="全部状态码"><el-option v-for="item in statusOptions" :key="item.label" :label="item.label" :value="item.value" /></el-select></el-form-item>
+        </template>
         <template #actions><MrrFilterActionButton action="search" :pending="loading || analyticsLoading" :busy="loading" @click="handleSearch">查询</MrrFilterActionButton><MrrFilterActionButton action="reset" :pending="loading || analyticsLoading" :busy="loading" @click="resetFilters">重置</MrrFilterActionButton></template>
       </MrrFilterBar>
     </el-form>

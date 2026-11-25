@@ -15,12 +15,15 @@ const routes = [
   ['runtime-errors', '运行错误中心'],
   ['data-exchange', '数据导入导出'],
   ['operations-center', '运维诊断中心'],
+  ['statistics', '病案扫描数据统计'],
+  ['data-relations', '数据关系工作台'],
+  ['ocr-batches', '历史未分类影像识别'],
 ] as const
 
 for (const palette of ['mrr', 'gr8r'] as const) {
   for (const theme of ['light', 'dark'] as const) {
     test(`${palette}/${theme} 实际业务页视觉调查`, async ({ page }, testInfo) => {
-      test.setTimeout(180_000)
+      test.setTimeout(240_000)
       await page.addInitScript(({ palette, theme }) => localStorage.setItem('MRR-ADMIN:app-settings', JSON.stringify({ app: { colorScheme: theme, themePalette: palette, pageTitleStyle: 'plain', enableMotion: false }, menu: { mode: 'single' }, layout: { enableMobileAdaptation: true } })), { palette, theme })
       const results: unknown[] = []
       for (const [route, title] of routes) {
@@ -30,7 +33,7 @@ for (const palette of ['mrr', 'gr8r'] as const) {
         await expect.poll(() => page.locator('html').evaluate(el => el.classList.contains('dark'))).toBe(theme === 'dark')
         if (palette === 'gr8r') { await expect(page.locator('html')).toHaveAttribute('data-mrr-palette', 'gr8r') }
         await expect.poll(() => page.locator('.mrr-page-shell').first().evaluate(el => !el.querySelector('.el-loading-mask:not([style*="display: none"]), [aria-busy="true"]'))).toBe(true)
-        for (const width of [1440, 760, 375]) {
+        for (const width of [1440, 1280, 1024, 760, 375]) {
           await page.setViewportSize({ width, height: 900 })
           await expect.poll(() => page.evaluate(() => document.body.dataset.mode)).toBe(width < 1024 ? 'mobile' : 'pc')
           await page.evaluate(() => new Promise<void>(resolve => requestAnimationFrame(() => requestAnimationFrame(() => resolve()))))
@@ -71,8 +74,12 @@ for (const palette of ['mrr', 'gr8r'] as const) {
             expect(label.weight, `${route} filter label weight`).toBe('600')
           }
           if (route === 'logs' || route === 'audit-images') {
-            const columns = await page.locator('.mrr-filter-bar--grid .mrr-filter-bar__fields').evaluate(el => getComputedStyle(el).gridTemplateColumns.trim().split(/\s+/).length)
-            expect(columns, 'query grid columns').toBe(width === 1440 ? 3 : width === 760 ? 2 : 1)
+            const grid = page.locator('.mrr-filter-bar--grid .mrr-filter-bar__fields')
+            await expect.poll(() => grid.evaluate((el) => {
+              const w = el.getBoundingClientRect().width
+              const columns = getComputedStyle(el).gridTemplateColumns.trim().split(/\s+/).length
+              return columns === (w >= 760 ? 3 : w >= 480 ? 2 : 1)
+            })).toBe(true)
           }
           if (route === 'audit-images') {
             const summary = page.locator('.mrr-metric-grid--five')
@@ -85,7 +92,7 @@ for (const palette of ['mrr', 'gr8r'] as const) {
             expect(cards.every(card => card.labelFits)).toBe(true)
             const groups = new Map<number, number>()
             for (const card of cards) { groups.set(card.y, (groups.get(card.y) || 0) + 1) }
-            expect([...groups.values()], `${width} audit metric rows`).toEqual(width === 1440 ? [5] : width === 760 ? [2, 2, 1] : [1, 1, 1, 1, 1])
+            expect([...groups.values()], `${width} audit metric rows`).toEqual(width === 1440 ? [5] : width > 800 ? [3, 2] : width === 760 ? [2, 2, 1] : [1, 1, 1, 1, 1])
           }
           results.push({ route, width, palette, theme, ...metrics })
           if (evidence) {
@@ -96,7 +103,7 @@ for (const palette of ['mrr', 'gr8r'] as const) {
         }
       }
       await testInfo.attach('business-visual-metrics', { body: JSON.stringify(results), contentType: 'application/json' })
-      expect(results).toHaveLength(routes.length * 3)
+      expect(results).toHaveLength(routes.length * 5)
     })
   }
 }

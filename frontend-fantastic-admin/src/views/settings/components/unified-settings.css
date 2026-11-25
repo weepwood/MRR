@@ -113,20 +113,18 @@
 .save-status strong { font-size: var(--mrr-font-size-sm); }
 .save-status small { margin-top: 2px; font-size: var(--mrr-font-size-xs); color: var(--mrr-muted-foreground); }
 
-@media (max-width: 980px) {
-  .settings-layout { grid-template-columns: minmax(0, 1fr); gap: var(--mrr-space-5); }
+/* Match the actual available workspace, including the application sidebar. */
+.settings-layout--compact { grid-template-columns: minmax(0, 1fr); gap: var(--mrr-space-5); }
 
-  .settings-sidebar {
-    grid-template-columns: minmax(0, 1fr) auto;
-    align-items: end;
-    padding-bottom: var(--mrr-space-3);
-    border-bottom: 1px solid var(--mrr-border);
-  }
-
-  .settings-nav { display: none; }
-  .settings-category-select { display: block; width: 100%; min-width: 140px; }
+.settings-layout--compact .settings-sidebar {
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: end;
+  padding-bottom: var(--mrr-space-3);
+  border-bottom: 1px solid var(--mrr-border);
 }
 
-@media (max-width: 480px) {
-  .settings-sidebar { grid-template-columns: minmax(0, 1fr); gap: var(--mrr-space-2); }
-}
+.settings-layout--compact .settings-nav { display: none; }
+.settings-layout--compact .settings-category-select { display: block; width: 100%; min-width: 140px; }
+
+.settings-layout--narrow .settings-sidebar { grid-template-columns: minmax(0, 1fr); gap: var(--mrr-space-2); }
+.settings-layout--narrow .settings-category-select { min-width: 0; }

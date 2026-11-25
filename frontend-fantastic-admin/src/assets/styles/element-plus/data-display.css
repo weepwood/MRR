@@ -46,6 +46,7 @@ body .el-table {
   --el-table-header-bg-color: color-mix(in srgb, var(--mrr-muted) 64%, var(--mrr-card));
   --el-table-row-hover-bg-color: color-mix(in srgb, var(--mrr-muted) 72%, var(--mrr-card));
   --el-table-border-color: var(--mrr-border);
+  --el-table-current-row-bg-color: var(--mrr-tone-primary-soft);
 
   font-size: var(--mrr-font-size-sm);
 
@@ -137,6 +138,13 @@ body .el-table--border .el-table__fixed-right .el-table__fixed-footer-wrapper tr
 
 .el-table--enable-row-hover .el-table__body tr:hover > td.el-table__cell {
   background: var(--el-table-row-hover-bg-color);
+}
+
+/* The selected row remains identifiable even while the pointer crosses it.
+ * Element Plus applies the same cell rule to sticky/fixed columns. */
+body .el-table .el-table__body tr.current-row > td.el-table__cell,
+body .el-table .el-table__body tr.current-row:hover > td.el-table__cell {
+  background: var(--el-table-current-row-bg-color);
 }
 
 .el-table__empty-block {

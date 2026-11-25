@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import type { SettingsSection } from '../composables/useUnifiedSettings'
 import type { SettingsSearchResult } from '../settings-search'
+import { useElementSize, useMediaQuery } from '@vueuse/core'
 import { computed, nextTick, onUnmounted, ref, useId, watch } from 'vue'
 import { onBeforeRouteLeave } from 'vue-router'
 import AppError from '@/components/AppError/index.vue'
@@ -51,6 +52,12 @@ const ocrSettingsRef = ref<OcrClassificationSettingsRef>()
 const runtimeSettingsRef = ref<RuntimeSettingsRef>()
 const appConfigRef = ref<AppConfigPanelRef>()
 const contentRef = ref<HTMLElement>()
+const layoutRef = ref<HTMLElement>()
+const { width: layoutWidth } = useElementSize(layoutRef)
+const compactFallback = useMediaQuery('(max-width: 980px)')
+const narrowFallback = useMediaQuery('(max-width: 480px)')
+const compactLayout = computed(() => layoutWidth.value > 0 ? layoutWidth.value < 800 : compactFallback.value)
+const narrowLayout = computed(() => layoutWidth.value > 0 ? layoutWidth.value < 480 : narrowFallback.value)
 const sectionHeadingRef = ref<HTMLElement>()
 const sectionHeadingId = useId()
 const savedRecently = ref(false)
@@ -405,7 +412,7 @@ onUnmounted(() => {
       </div>
     </header>
 
-    <div class="settings-layout">
+    <div ref="layoutRef" class="settings-layout" :class="{ 'settings-layout--compact': compactLayout, 'settings-layout--narrow': narrowLayout }">
       <aside class="settings-sidebar" aria-label="设置目录">
         <SettingsSearch @select="openSearchResult" />
         <nav class="settings-nav" aria-label="设置分类">
@@ -425,7 +432,7 @@ onUnmounted(() => {
 
         <el-select
           :model-value="activeSection"
-          class="settings-category-select"
+          class="settings-category-select mrr-single-select"
           aria-label="设置分类"
           @change="(value: SettingsSection) => requestSection(value)"
         >

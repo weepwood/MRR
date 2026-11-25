@@ -71,6 +71,8 @@ defineExpose({ availableActions, inlineActions, overflowActions })
       :content="actionTooltip(action)"
       placement="top"
       :show-after="250"
+      :trigger-keys="[]"
+      trigger="hover"
     >
       <span class="mrr-table-actions__button-wrap">
         <el-button

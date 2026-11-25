@@ -13,6 +13,9 @@ import {
   getStatisticsList,
   getStatisticsSummary,
 } from '@/api/modules/statistics'
+import AppEmpty from '@/components/AppEmpty/index.vue'
+import AppError from '@/components/AppError/index.vue'
+import AppLoading from '@/components/AppLoading/index.vue'
 import { MrrChartCard, MrrDualAxisChart } from '@/components/charts'
 import MrrDataTablePanel from '@/components/MrrDataTablePanel/index.vue'
 import MrrFilterActionButton from '@/components/MrrFilterActionButton/index.vue'
@@ -412,6 +415,8 @@ onMounted(refreshAll)
       title="病案明细列表"
       icon="i-lucide:file-text"
       :count="statisticsListData.total ?? 0"
+      :loading="listLoading && statisticsListData.list.length > 0"
+      :result-key="statisticsListData.list"
     >
       <template #actions>
         <el-button
@@ -434,13 +439,15 @@ onMounted(refreshAll)
             placeholder="搜索病案号 / 上架号 / 操作员"
             clearable
             class="search-keyword"
+            aria-label="病案明细关键词"
             @keyup.enter="handleListSearch"
           />
           <el-select
             v-model="listSearchType"
             placeholder="全部类型"
             clearable
-            class="search-type"
+            class="search-type mrr-single-select"
+            aria-label="病案明细类型"
             @change="handleListSearch"
           >
             <el-option label="全部" value="" />
@@ -474,10 +481,12 @@ onMounted(refreshAll)
         </MrrFilterBar>
       </template>
 
-      <AppError v-if="listError" :message="listError" @retry="loadStatisticsList" />
+      <AppLoading v-if="listLoading && !statisticsListData.list.length" type="table" :rows="8" />
+      <AppError v-else-if="listError" :message="listError" @retry="loadStatisticsList" />
+      <AppEmpty v-else-if="!statisticsListData.list.length" description="暂无病案明细数据" />
+      <!-- Keep the table mounted so sorting survives error/retry. -->
       <el-table
-        v-show="!listError"
-        v-loading="listLoading"
+        v-show="!listError && statisticsListData.list.length > 0"
         :data="statisticsListData.list"
         stripe
         empty-text="暂无病案明细数据"

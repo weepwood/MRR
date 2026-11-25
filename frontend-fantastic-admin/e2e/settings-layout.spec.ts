@@ -9,6 +9,27 @@ async function openSettings(page: Page, section: string) {
 }
 
 test.describe('系统设置分类布局', () => {
+  test('分类目录随实际工作区宽度收纳，保持当前设置和页面边界', async ({ page }) => {
+    await page.addInitScript(() => {
+      localStorage.setItem('MRR-ADMIN:app-settings', JSON.stringify({ layout: { enableMobileAdaptation: true } }))
+    })
+    await page.setViewportSize({ width: 1440, height: 900 })
+    await openSettings(page, 'system')
+    const layout = page.locator('.settings-layout')
+    for (const width of [1440, 1280, 1024, 760, 375, 1440]) {
+      await page.setViewportSize({ width, height: 900 })
+      await expect.poll(() => layout.evaluate(el => el.classList.contains('settings-layout--compact') === (el.getBoundingClientRect().width < 800))).toBe(true)
+      await expect.poll(() => layout.evaluate(el => el.scrollWidth <= el.clientWidth + 1)).toBe(true)
+      await expect(page.getByRole('heading', { name: '系统信息', exact: true })).toBeVisible()
+      if (await layout.evaluate(el => el.classList.contains('settings-layout--compact'))) {
+        await expect(page.getByRole('combobox', { name: '设置分类', exact: true })).toBeVisible()
+      }
+      else {
+        await expect(page.getByRole('navigation', { name: '设置分类' })).toBeVisible()
+      }
+    }
+  })
+
   test('分区图标与两行标题说明等高', async ({ page }) => {
     await page.setViewportSize({ width: 1440, height: 900 })
     await openSettings(page, 'system')

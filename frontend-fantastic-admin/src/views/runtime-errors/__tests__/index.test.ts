@@ -65,7 +65,7 @@ const stubs = {
   'MrrFilterActionButton': { props: ['action'], template: '<button :data-action="action"><slot /></button>' },
   'MrrDataTablePanel': { template: '<section><slot name="filters" /><slot /></section>' },
   'MrrFilterBar': { template: '<div><slot /><slot name="actions" /></div>' },
-  'el-button': { props: ['link'], template: '<button class="el-button-stub" @click="$emit(\'click\')"><slot /></button>' },
+  'el-button': { props: ['link'], emits: ['click'], template: '<button class="el-button-stub" @click="$emit(\'click\')"><slot /></button>' },
   'el-input': { props: ['modelValue', 'placeholder'], emits: ['update:modelValue'], template: '<input :value="modelValue" @input="$emit(\'update:modelValue\', $event.target.value)" />' },
   'el-select': { name: 'ElSelect', props: ['modelValue'], emits: ['update:modelValue'], template: '<div><slot /></div>' },
   'el-option': { props: ['label'], template: '<span>{{ label }}</span>' },
@@ -127,6 +127,95 @@ describe('运行错误中心', () => {
     expect(state.list).toEqual([])
     expect(state.total).toBe(0)
     expect(state.error).toBe('synthetic denied')
+  })
+
+  it('概览未完成时列表独立展示，概览失败后单独重试', async () => {
+    let rejectOverview!: (reason: unknown) => void
+    api.getSystemErrorOverview.mockReturnValueOnce(new Promise((_, reject) => { rejectOverview = reject }))
+    const wrapper = openPage()
+    await flushPromises()
+    expect(wrapper.get('.rows').text()).toBe(rowFixture.errorId)
+    expect(wrapper.get('.metric').text()).toContain('—')
+    rejectOverview(new Error('synthetic overview outage'))
+    await flushPromises()
+    expect(wrapper.get('.rows').text()).toBe(rowFixture.errorId)
+    expect(wrapper.get('.overview-status').text()).toContain('概览加载失败')
+    await wrapper.get('.overview-status button').trigger('click')
+    await flushPromises()
+    expect(api.searchSystemErrors).toHaveBeenCalledTimes(1)
+    expect(wrapper.get('.metric').text()).toContain('9')
+    expect(wrapper.find('.overview-status').exists()).toBe(false)
+  })
+
+  it('列表失败不遮挡有效概览，旧概览失败保留上次数据并标记', async () => {
+    api.searchSystemErrors.mockRejectedValueOnce(new Error('synthetic list failure'))
+    const wrapper = openPage()
+    await flushPromises()
+    expect(wrapper.get('.query-error').text()).toContain('synthetic list failure')
+    expect(wrapper.get('.metric').text()).toContain('9')
+    api.getSystemErrorOverview.mockRejectedValueOnce(new Error('synthetic overview failure'))
+    await button(wrapper, '刷新').trigger('click')
+    await flushPromises()
+    expect(wrapper.get('.rows').text()).toBe(rowFixture.errorId)
+    expect(wrapper.get('.metric').text()).toContain('9')
+    expect(wrapper.get('.overview-status').text()).toContain('上次成功')
+  })
+
+  it('概览迟到成功或失败不会覆盖新代次，权限撤销清空列表和概览', async () => {
+    let finishOld!: (value: unknown) => void
+    api.getSystemErrorOverview.mockReturnValueOnce(new Promise((resolve) => { finishOld = resolve }))
+    const wrapper = openPage()
+    await flushPromises()
+    await button(wrapper, '刷新').trigger('click')
+    await flushPromises()
+    finishOld({ data: { ...overviewFixture, errorGroups: 999 } })
+    await flushPromises()
+    expect(wrapper.get('.metric').text()).toContain('9')
+    expect(wrapper.text()).not.toContain('999')
+    api.getSystemErrorOverview.mockRejectedValueOnce(Object.assign(new Error('synthetic denied'), { response: { status: 403 } }))
+    await button(wrapper, '刷新').trigger('click')
+    await flushPromises()
+    expect(setupState(wrapper).list).toEqual([])
+    expect(wrapper.get('.metric').text()).toContain('—')
+    expect(wrapper.get('.query-error').text()).toContain('synthetic denied')
+  })
+
+  it('旧概览拒绝不覆盖新成功，概览拒绝权限后迟到列表不能回填', async () => {
+    let rejectOld!: (reason: unknown) => void
+    api.getSystemErrorOverview.mockReturnValueOnce(new Promise((_, reject) => { rejectOld = reject }))
+    const wrapper = openPage()
+    await flushPromises()
+    await button(wrapper, '刷新').trigger('click')
+    await flushPromises()
+    rejectOld(Object.assign(new Error('old denied'), { response: { status: 403 } }))
+    await flushPromises()
+    expect(wrapper.get('.rows').text()).toBe(rowFixture.errorId)
+    expect(wrapper.get('.metric').text()).toContain('9')
+    expect(wrapper.find('.overview-status').exists()).toBe(false)
+
+    let finishList!: (value: unknown) => void
+    api.searchSystemErrors.mockReturnValueOnce(new Promise((resolve) => { finishList = resolve }))
+    api.getSystemErrorOverview.mockRejectedValueOnce(Object.assign(new Error('current denied'), { response: { status: 403 } }))
+    await button(wrapper, '刷新').trigger('click')
+    await flushPromises()
+    finishList({ data: { list: [rowFixture], total: 1 } })
+    await flushPromises()
+    expect(setupState(wrapper).list).toEqual([])
+    expect(setupState(wrapper).total).toBe(0)
+    expect(wrapper.get('.metric').text()).toContain('—')
+    expect(wrapper.get('.query-error').text()).toContain('current denied')
+  })
+
+  it('会话改变后忽略迟到概览，且不会显示上个会话的统计', async () => {
+    let resolveOld!: (value: unknown) => void
+    api.getSystemErrorOverview.mockReturnValueOnce(new Promise((resolve) => { resolveOld = resolve }))
+    const wrapper = openPage()
+    await flushPromises()
+    session.user!.token = 'new-synthetic-token'
+    resolveOld({ data: overviewFixture })
+    await flushPromises()
+    expect(wrapper.get('.metric').text()).toContain('—')
+    expect(setupState(wrapper).list).toEqual([])
   })
 
   it('首次进入追踪链接时直接检索 Request ID', async () => {

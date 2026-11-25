@@ -19,6 +19,7 @@ const active = (job: OcrJob) => ['PENDING', 'RUNNING'].includes(job.status)
 export function createOcrStore(scans: readonly MockScanRecord[], enableSuggestions = false) {
   const jobs: Work[] = []
   const facts = new Map<number, OcrFact>()
+  const suggestionVersions = new Map<number, string>()
   let nextId = 1
   let nextSuggestion = 1
 
@@ -48,7 +49,14 @@ export function createOcrStore(scans: readonly MockScanRecord[], enableSuggestio
           })
           work.items[job.processedCount].status = failed ? 'FAILED' : low ? 'LOW_CONFIDENCE' : 'NO_MATCH'
           work.items[job.processedCount].failureCode = failed ? 'SOURCE_NOT_FOUND' : null
-          if (enableSuggestions && !failed && !low) {
+          const resultVersion = facts.get(scan.id)?.resultVersion
+          for (const suggestion of jobs.flatMap(item => item.suggestions)) {
+            if (suggestion.scanId === scan.id && suggestion.reviewStatus === 'PENDING' && suggestionVersions.get(suggestion.id) !== resultVersion) {
+              suggestion.reviewStatus = 'SUPERSEDED'
+            }
+          }
+          if (enableSuggestions && !failed && !low && resultVersion) {
+            suggestionVersions.set(nextSuggestion, resultVersion)
             work.items[job.processedCount].status = 'SUGGESTED'
             work.items[job.processedCount].suggestedType = 1
             work.suggestions.push({ id: nextSuggestion++, scanId: scan.id, suggestedType: 1, ruleScore: 1, ocrConfidence: 0.96, reviewStatus: 'PENDING', autoStatus: 'NOT_APPLIED', autoEligible: false, reasonCode: 'DEMO_ONLY', matchedRules: '合成影像关键词' })
@@ -127,7 +135,8 @@ export function createOcrStore(scans: readonly MockScanRecord[], enableSuggestio
       advance(now)
       const row = jobs.flatMap(work => work.suggestions).find(item => item.id === id)
       const scan = scans.find(item => item.id === row?.scanId)
-      if (!row || !scan || row.reviewStatus !== 'PENDING' || scan.btype !== 0 || !scan.uploadFlag) {
+      if (!row || !scan || row.reviewStatus !== 'PENDING' || scan.btype !== 0 || !scan.uploadFlag
+        || suggestionVersions.get(row.id) !== facts.get(scan.id)?.resultVersion) {
         return demoError(409, '演示建议已失效或已审核')
       }
       if (action === 'REJECT') {

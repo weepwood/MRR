@@ -22,6 +22,12 @@ const enabled = ref(false)
 const busy = ref(false)
 const failed = ref(false)
 const more = ref(false)
+const moreBusy = ref(false)
+const moreFailed = ref(false)
+const issueStatus = ref('')
+const issueTypes = computed(() => [...new Set(issues.value.map(row => row.status).filter(Boolean))].sort())
+const visibleIssues = computed(() => issueStatus.value ? issues.value.filter(row => row.status === issueStatus.value) : issues.value)
+
 let generation = 0
 let comparisonGeneration = 0
 let reportGeneration = 0
@@ -144,17 +150,51 @@ function clear() {
   busy.value = false
   failed.value = false
   more.value = false
+  moreBusy.value = false
+  moreFailed.value = false
+  issueStatus.value = ''
 }
 
-async function load(mode: 'refresh' | 'start' | 'cancel' | 'resume' | 'more' | 'history' | 'version' = 'refresh') {
+async function loadMoreIssues() {
+  const observation = latest.value
+  if (!observation || !more.value || busy.value || moreBusy.value) { return }
+  const current = generation
+  const archive = props.archiveId
+  const after = issues.value.at(-1)?.cursor ?? 0
+  moreBusy.value = true
+  moreFailed.value = false
+  try {
+    const data = (await getManifestIssues(observation.version, after)).data
+    if (current !== generation || props.archiveId !== archive || latest.value?.version !== observation.version) { return }
+    if (!Array.isArray(data) || data.length > 100) { throw new Error('Invalid anomaly page') }
+    let cursor = after
+    for (const row of data) {
+      if (!Number.isSafeInteger(row.cursor) || row.cursor <= cursor) { throw new Error('Invalid anomaly cursor') }
+      cursor = row.cursor
+    }
+    issues.value = [...issues.value, ...data]
+    more.value = data.length === 100 && issues.value.length < observation.anomalies
+  }
+  catch {
+    if (current === generation) { moreFailed.value = true }
+  }
+  finally {
+    if (current === generation) { moreBusy.value = false }
+  }
+}
+
+async function load(mode: 'refresh' | 'start' | 'cancel' | 'resume' | 'history' | 'version' = 'refresh') {
   if (busy.value) {
     return
   }
   resetComparison()
   resetReport()
+  moreBusy.value = false
+  moreFailed.value = false
+  issueStatus.value = ''
+  scanPreview.value = null
   const current = ++generation
   const archiveId = props.archiveId
-  const currentVersion = latest.value?.version
   const requestedVersion = typeof selectedVersion.value === 'number' ? selectedVersion.value : undefined
   busy.value = true
   failed.value = false
@@ -189,7 +229,7 @@ async function load(mode: 'refresh' | 'start' | 'cancel' | 'resume' | 'more' | '
     }
     enabled.value = response.data.enabled
     newest.value = response.data.latest
-    if (mode !== 'more' && mode !== 'version') {
+    if (mode !== 'version') {
       const appendHistory = mode === 'history'
       const page = await getManifestHistory(archiveId, appendHistory ? history.value.at(-1)?.version : undefined)
       if (current !== generation) {
@@ -212,17 +252,15 @@ async function load(mode: 'refresh' | 'start' | 'cancel' | 'resume' | 'more' | '
       }
       observation = historic.data
     }
-    const append = mode === 'more' && observation?.version === currentVersion
-    const previous = append ? issues.value : []
     latest.value = observation
-    issues.value = previous
+    issues.value = []
     more.value = false
     if (observation && observation.anomalies > 0) {
-      const page = await getManifestIssues(observation.version, previous.at(-1)?.cursor ?? 0)
+      const page = await getManifestIssues(observation.version, 0)
       if (current !== generation) {
         return
       }
-      issues.value = [...previous, ...(page.data ?? [])]
+      issues.value = page.data ?? []
       more.value = (page.data?.length ?? 0) === 100 && issues.value.length < observation.anomalies
     }
   }
@@ -244,7 +282,7 @@ onBeforeUnmount(clear)
 </script>
 
 <template>
-  <MrrSectionCard title="影像文件完整性" description="有界后台观察；不修改影像或病案关联。">
+  <MrrSectionCard body-padding="compact" title="影像文件完整性" description="有界后台观察；不修改影像或病案关联。">
     <template #actions>
       <el-button :loading="busy" @click="load()">
         刷新结果
@@ -261,6 +299,7 @@ onBeforeUnmount(clear)
     </template>
     <AppError v-if="failed" message="完整性观察读取或操作失败，请刷新核对实际状态" @retry="load()" />
     <div v-if="history.length" class="manifest-history">
+      <span class="manifest-note">历史版本</span>
       <el-select v-model="selectedVersion" clearable placeholder="最新版本" aria-label="完整性历史版本" :disabled="busy" @change="load('version')">
         <el-option v-for="version in history" :key="version.version" :label="`#${version.version} · ${labels[version.status] || version.status} · ${formatDateTime(version.createdAt)}`" :value="version.version" />
       </el-select>
@@ -270,11 +309,14 @@ onBeforeUnmount(clear)
     </div>
     <template v-if="latest">
       <div class="mrr-stat-strip manifest-stats">
-        <div v-for="item in [{ label: '已处理', value: latest.processed }, { label: '已验证', value: latest.verified }, { label: '异常', value: latest.anomalies }]" :key="item.label" class="mrr-stat-tile">
+        <div v-for="item in [{ label: '已处理', value: latest.processed }, { label: '已验证', value: latest.verified }, { label: '异常', value: latest.anomalies }, ...(latest.snapshotCount != null ? [{ label: '未处理', value: Math.max(0, latest.snapshotCount - latest.processed) }] : [])]" :key="item.label" class="mrr-stat-tile">
           <span class="mrr-stat-tile__label">{{ item.label }}</span>
           <strong class="mrr-stat-tile__value">{{ item.value }}</strong>
         </div>
       </div>
+      <p v-if="latest.snapshotCount != null && latest.snapshotCount > 0" class="manifest-note manifest-progress-label">
+        处理进度（不等于校验通过率）
+      </p>
       <el-progress v-if="latest.snapshotCount != null && latest.snapshotCount > 0" :percentage="Math.min(100, Math.floor(latest.processed / latest.snapshotCount * 100))" />
       <p v-if="latest.snapshotCount != null">
         固定成员 {{ latest.processed }} / {{ latest.snapshotCount }}
@@ -284,7 +326,10 @@ onBeforeUnmount(clear)
       <p v-if="latest.recoveryCount || latest.status === 'FAILED'" class="manifest-note">
         已恢复 {{ latest.recoveryCount ?? 0 }} / 3 次；恢复保留原成员与处理结果，已取消任务不允许恢复。
       </p>
-      <div v-if="latest.snapshotCount != null && compareOptions.length" class="manifest-compare">
+      <section v-if="latest.snapshotCount != null && compareOptions.length" class="manifest-compare" aria-label="版本比较">
+        <h3 class="manifest-subtitle">
+          版本比较
+        </h3>
         <div class="manifest-history">
           <select v-model="compareBase" class="manifest-base-select" aria-label="完整性比较基准版本" :disabled="busy || comparing">
             <option :value="undefined">
@@ -314,8 +359,11 @@ onBeforeUnmount(clear)
             下载比较摘要 JSON
           </el-button>
         </template>
-      </div>
-      <div v-if="latest.snapshotCount != null" class="manifest-compare">
+      </section>
+      <section v-if="latest.snapshotCount != null" class="manifest-compare" aria-label="完整性报告">
+        <h3 class="manifest-subtitle">
+          完整性报告
+        </h3>
         <el-button :disabled="busy" :loading="reportBusy" @click="loadReport">
           查看完整性报告
         </el-button>
@@ -345,23 +393,48 @@ onBeforeUnmount(clear)
             下载完整性报告 JSON
           </el-button>
         </template>
-      </div>
-      <el-table v-if="issues.length" :data="issues" max-height="320">
-        <el-table-column prop="scanId" label="影像 ID" width="120" />
-        <el-table-column prop="status" label="异常类型" min-width="180" />
-        <el-table-column prop="bytesRead" label="读取字节" width="120" />
-        <el-table-column prop="checkedAt" label="校验时间" min-width="200" />
-        <el-table-column label="核对" width="95">
-          <template #default="{ row }">
-            <el-button link type="primary" @click="scanPreview = Number(row.scanId)">
-              查看影像
-            </el-button>
-          </template>
-        </el-table-column>
-      </el-table>
-      <el-button v-if="more" :disabled="busy" @click="load('more')">
-        加载更多异常
-      </el-button>
+      </section>
+      <section v-if="issues.length" class="manifest-compare" aria-label="已加载异常">
+        <div class="manifest-issue-toolbar">
+          <h3 class="manifest-subtitle">
+            异常明细
+          </h3>
+          <span class="manifest-note">已加载 {{ issues.length }} / {{ latest.anomalies }}</span>
+          <select v-model="issueStatus" class="manifest-base-select" aria-label="筛选已加载异常">
+            <option value="">
+              全部已加载异常
+            </option>
+            <option v-for="status in issueTypes" :key="status" :value="status">
+              {{ status }}
+            </option>
+          </select>
+        </div>
+        <p v-if="issueStatus" class="manifest-note">
+          仅筛选已加载的 {{ issues.length }} 条异常，当前 {{ visibleIssues.length }} 条；不是全量筛选。
+        </p>
+        <el-table :data="visibleIssues" max-height="320" empty-text="已加载异常中无匹配记录">
+          <el-table-column prop="scanId" label="影像 ID" width="120" />
+          <el-table-column prop="status" label="异常类型" min-width="180" />
+          <el-table-column prop="bytesRead" label="读取字节" width="120" />
+          <el-table-column prop="checkedAt" label="校验时间" min-width="200" />
+          <el-table-column label="核对" width="95">
+            <template #default="{ row }">
+              <el-button link type="primary" @click="scanPreview = Number(row.scanId)">
+                查看影像
+              </el-button>
+            </template>
+          </el-table-column>
+        </el-table>
+        <div v-if="moreFailed" class="manifest-issue-toolbar" role="status">
+          <span>更多异常读取失败，已加载结果保留。</span>
+          <el-button size="small" :disabled="busy" :loading="moreBusy" @click="loadMoreIssues">
+            重试加载更多
+          </el-button>
+        </div>
+        <el-button v-else-if="more" :disabled="busy" :loading="moreBusy" @click="loadMoreIssues">
+          加载更多异常
+        </el-button>
+      </section>
       <p class="manifest-note">
         固定成员快照不等同于文件内容的瞬时快照；观察结束不代表当前病案全部完整。历史旧版本仍为有界观察。
       </p>
@@ -374,12 +447,14 @@ onBeforeUnmount(clear)
 
 <style scoped>
 .manifest-stats {
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 100px), 1fr));
 }
 
 .manifest-history {
   display: flex;
+  flex-wrap: wrap;
   gap: var(--mrr-space-2);
+  align-items: center;
   margin-bottom: var(--mrr-space-3);
 }
 
@@ -399,7 +474,38 @@ onBeforeUnmount(clear)
 }
 
 .manifest-compare {
-  margin-block: var(--mrr-space-3);
+  display: grid;
+  gap: var(--mrr-space-2);
+  min-width: 0;
+  padding-block: var(--mrr-space-3);
+  border-top: 1px solid var(--el-border-color-light);
+}
+
+.manifest-compare > :deep(.el-button) {
+  justify-self: start;
+  margin-left: 0;
+}
+
+.manifest-subtitle {
+  margin: 0;
+  font-size: var(--mrr-font-size-sm);
+  font-weight: 600;
+}
+
+.manifest-issue-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--mrr-space-2);
+  align-items: center;
+}
+
+.manifest-issue-toolbar .manifest-base-select {
+  flex: 0 1 220px;
+  min-height: 32px;
+}
+
+.manifest-progress-label {
+  margin-block: var(--mrr-space-2) var(--mrr-space-1);
 }
 
 .manifest-note {

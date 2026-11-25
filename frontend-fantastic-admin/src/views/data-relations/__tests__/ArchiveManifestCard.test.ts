@@ -135,6 +135,83 @@ describe('archiveManifestCard', () => {
     wrapper.unmount()
   })
 
+  it('异常分页保留已加载报告与版本比较，不重新读取最新版本', async () => {
+    const latest = { ...observation(1), snapshotCount: 150, processed: 150, anomalies: 101, verified: 49 }
+    api.getLatestManifest.mockResolvedValue({ data: { enabled: false, latest } })
+    api.getManifestHistory.mockResolvedValue({ data: [latest, { ...latest, version: 100 }] })
+    api.getManifestIssues.mockResolvedValueOnce({ data: Array.from({ length: 100 }, (_, i) => ({ cursor: i + 1, scanId: i + 1000, status: 'TIMEOUT' })) })
+      .mockResolvedValueOnce({ data: [{ cursor: 101, scanId: 1100, status: 'MISSING_OR_UNREADABLE' }] })
+    api.getManifestReport.mockResolvedValue({ data: { ...latest, segments: [], anomalyCounts: { TIMEOUT: 100, MISSING_OR_UNREADABLE: 1 } } })
+    api.getManifestComparison.mockResolvedValue({ data: { archiveId: 1, baseVersion: 100, targetVersion: 101, added: 0, removed: 0, changed: 0, unchanged: 150, digestComparison: 'SAME' } })
+    const wrapper = card()
+    await flushPromises()
+    const button = (label: string) => wrapper.findAll('button').find(b => b.text() === label)!
+    await button('查看完整性报告').trigger('click')
+    await wrapper.get('select[aria-label="完整性比较基准版本"]').setValue('100')
+    await button('比较版本').trigger('click')
+    await flushPromises()
+    await button('加载更多异常').trigger('click')
+    await flushPromises()
+    expect(api.getLatestManifest).toHaveBeenCalledTimes(1)
+    expect(api.getManifestIssues).toHaveBeenLastCalledWith(101, 100)
+    expect(wrapper.text()).toContain('下载完整性报告 JSON')
+    expect(wrapper.text()).toContain('下载比较摘要 JSON')
+    expect(wrapper.text()).toContain('1100')
+    expect(wrapper.text()).not.toContain('加载更多异常')
+    wrapper.unmount()
+  })
+
+  it('更多异常读取失败只影响异常分页，重试仍使用相同版本和游标', async () => {
+    const latest = { ...observation(1), snapshotCount: 150, processed: 150, anomalies: 101, verified: 49 }
+    api.getLatestManifest.mockResolvedValue({ data: { enabled: false, latest } })
+    api.getManifestIssues.mockResolvedValueOnce({ data: Array.from({ length: 100 }, (_, i) => ({ cursor: i + 1, scanId: i + 1000, status: 'TIMEOUT' })) })
+      .mockRejectedValueOnce(new Error('synthetic failure'))
+      .mockResolvedValueOnce({ data: [{ cursor: 101, scanId: 1100, status: 'TIMEOUT' }] })
+    api.getManifestReport.mockResolvedValue({ data: { ...latest, segments: [], anomalyCounts: { TIMEOUT: 101 } } })
+    const wrapper = card()
+    await flushPromises()
+    const button = (label: string) => wrapper.findAll('button').find(b => b.text() === label)!
+    await button('查看完整性报告').trigger('click')
+    await flushPromises()
+    await button('加载更多异常').trigger('click')
+    await flushPromises()
+    expect(wrapper.text()).toContain('更多异常读取失败')
+    expect(wrapper.text()).toContain('下载完整性报告 JSON')
+    expect(wrapper.text()).toContain('1099')
+    await button('重试加载更多').trigger('click')
+    await flushPromises()
+    expect(api.getManifestIssues).toHaveBeenLastCalledWith(101, 100)
+    expect(wrapper.text()).toContain('1100')
+    expect(wrapper.text()).not.toContain('更多异常读取失败')
+    wrapper.unmount()
+  })
+
+  it('异常分页拒绝不递增游标并隔离切换病案后的迟到结果', async () => {
+    const latest = { ...observation(1), snapshotCount: 150, processed: 150, anomalies: 101, verified: 49 }
+    api.getLatestManifest.mockResolvedValue({ data: { enabled: false, latest } })
+    api.getManifestIssues.mockResolvedValueOnce({ data: Array.from({ length: 100 }, (_, i) => ({ cursor: i + 1, scanId: i + 1000, status: 'TIMEOUT' })) })
+      .mockResolvedValueOnce({ data: [{ cursor: 100, scanId: 9999, status: 'TIMEOUT' }] })
+    const wrapper = card()
+    await flushPromises()
+    const button = (label: string) => wrapper.findAll('button').find(b => b.text() === label)!
+    await button('加载更多异常').trigger('click')
+    await flushPromises()
+    expect(wrapper.text()).toContain('更多异常读取失败')
+    expect(wrapper.text()).not.toContain('9999')
+    let resolve!: (value: unknown) => void
+    api.getManifestIssues.mockImplementationOnce(() => new Promise((r) => { resolve = r }))
+    await button('重试加载更多').trigger('click')
+    api.getLatestManifest.mockResolvedValue({ data: { enabled: false, latest: observation(2) } })
+    await wrapper.setProps({ archiveId: 2 })
+    await flushPromises()
+    resolve({ data: [{ cursor: 101, scanId: 9999, status: 'TIMEOUT' }] })
+    await flushPromises()
+    expect(wrapper.text()).toContain('版本 #102')
+    expect(wrapper.text()).not.toContain('9999')
+    expect(wrapper.text()).not.toContain('更多异常读取失败')
+    wrapper.unmount()
+  })
+
   it('ignores delayed results from the previous archive', async () => {
     let resolve!: (data: unknown) => void
     api.getLatestManifest.mockImplementationOnce(() => new Promise(r => resolve = r))

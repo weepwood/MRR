@@ -543,7 +543,7 @@ onMounted(() => {
       <el-tab-pane label="病案工作台" name="archive">
         <div class="archive-stack" :class="{ 'archive-stack--workspace': archiveOnly }">
           <div class="archive-search-rail" :class="{ 'archive-search-rail--legacy': !archiveOnly }" role="region" aria-label="病案检索及候选">
-            <MrrSectionCard title="查找病案" :description="archiveOnly ? undefined : '选择编号类型，查询病案主档及其跨表关系。'">
+            <MrrSectionCard :body-padding="archiveOnly ? 'compact' : 'normal'" title="查找病案" :description="archiveOnly ? undefined : '选择编号类型，查询病案主档及其跨表关系。'">
               <div class="search-row">
                 <div class="search-field search-field--type">
                   <label for="relation-search-type">查询类型</label>
@@ -562,7 +562,7 @@ onMounted(() => {
                 </MrrFilterActionButton>
               </div>
             </MrrSectionCard>
-            <MrrSectionCard v-if="archiveOnly && (searchLoading || searchCompleted || searchError)" title="病案主档候选" :description="searchCompleted ? `本次返回 ${searchResults.length} 条，最多 20 条` : '按编号检索后选择病案'">
+            <MrrSectionCard v-if="archiveOnly && (searchLoading || searchCompleted || searchError)" body-padding="compact" title="病案主档候选" :description="searchCompleted ? `本次返回 ${searchResults.length} 条，最多 20 条` : '按编号检索后选择病案'">
               <AppLoading v-if="searchLoading" />
               <AppError v-else-if="searchError" message="病案查询失败，请重试" @retry="searchArchives" />
               <AppEmpty v-else-if="!searchResults.length" size="compact" :description="searchCompleted ? '当前条件未找到病案主档' : '等待检索'" />
@@ -977,7 +977,8 @@ p {
 
 /* The standalone workspace keeps search context beside the current record. */
 .archive-stack--workspace {
-  grid-template-columns: minmax(220px, 260px) minmax(0, 1fr);
+  grid-template-columns: clamp(220px, 22%, 280px) minmax(0, 1fr);
+  gap: var(--mrr-space-3);
   align-items: start;
 }
 
@@ -1062,6 +1063,7 @@ p {
 .archive-candidates {
   display: grid;
   gap: var(--mrr-space-2);
+  align-content: start;
   max-height: 540px;
   overflow: auto;
 }
@@ -1071,7 +1073,7 @@ p {
   gap: var(--mrr-space-1);
   justify-items: start;
   min-width: 0;
-  padding: var(--mrr-space-3);
+  padding: var(--mrr-space-2);
   color: var(--el-text-color-regular);
   text-align: left;
   overflow-wrap: anywhere;

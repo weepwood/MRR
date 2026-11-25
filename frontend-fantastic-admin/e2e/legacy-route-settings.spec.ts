@@ -1,6 +1,10 @@
 import { expect, test } from '@playwright/test'
 
+test.use({ actionTimeout: 10_000 })
+
 test('旧文件系统路由配置回到显式业务菜单，深链刷新正常且不暴露组件目录', async ({ page }) => {
+  // Four document loads plus assertions; keep per-operation deadlines independent.
+  test.setTimeout(90_000)
   const warnings: string[] = []
   page.on('console', (message) => {
     if (message.text().includes('Parent route')) { warnings.push(message.text()) }

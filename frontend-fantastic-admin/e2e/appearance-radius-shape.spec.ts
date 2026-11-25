@@ -101,7 +101,7 @@ test.describe('界面外观 · 圆角曲线', () => {
    * 把手柄压成圆角方块（见 components/corner-shape.css 的分组说明）。
    *
    * 项目里有两套控件：Element Plus 的 .el-switch / .el-slider，以及界面外观页
-   * 自己在用的 reka-ui 封装 .fa-switch / .fa-slider。两套都必须退出 G2，否则
+   * 自己在用的 reka-ui 封装 .fa-slider。现存控件都必须退出 G2，否则
    * 用户就在“圆角曲线”旁边看到开关变形。这里同时锁住计算值与像素：
    * 两种曲线下比较同一个开关/滑块的逐像素颜色，允许背景抗锯齿的微小误差。
    */
@@ -128,12 +128,12 @@ test.describe('界面外观 · 圆角曲线', () => {
     // 主题色块是 50% 正圆。
     expect(await cornerShapeOf(page, '.theme-swatch')).toBe('round')
 
-    // reka-ui 版开关与滑块：根节点、轨道、手柄逐层都要是圆弧。
-    for (const selector of ['.fa-switch', '.fa-switch__thumb', '.fa-slider', '.fa-slider__track', '.fa-slider__thumb']) {
+    // 统一 Element Plus 开关与仍保留的 reka-ui 滑块：根节点、轨道、手柄逐层都要是圆弧。
+    for (const selector of ['.el-switch', '.el-switch__core', '.el-switch__action', '.fa-slider', '.fa-slider__track', '.fa-slider__thumb']) {
       expect(await cornerShapeOf(page, selector), `${selector} 应为标准圆弧`).toBe('round')
     }
 
-    const switchEl = page.locator('.fa-switch').first()
+    const switchEl = page.locator('.el-switch').first()
     const sliderEl = page.locator('.fa-slider').first()
     const sqSwitch = await switchEl.screenshot()
     const sqSlider = await sliderEl.screenshot()
@@ -142,7 +142,7 @@ test.describe('界面外观 · 圆角曲线', () => {
     // 比较解码后的像素，仍要求图片尺寸一致，并对每个像素应用同一上限。
     await options.getByRole('button', { name: '标准圆弧' }).click()
     await expect(page.locator('html')).toHaveAttribute('data-radius-shape', 'round')
-    expect(await maxScreenshotChannelDifference(page, sqSwitch, await switchEl.screenshot()), 'reka-ui 开关的像素差异').toBeLessThanOrEqual(3)
+    expect(await maxScreenshotChannelDifference(page, sqSwitch, await switchEl.screenshot()), '统一开关的像素差异').toBeLessThanOrEqual(3)
     expect(await maxScreenshotChannelDifference(page, sqSlider, await sliderEl.screenshot()), 'reka-ui 滑块的像素差异').toBeLessThanOrEqual(3)
 
     // Element Plus 版开关与滑块：直接跳到该页会重新拉取设置（未保存的修改被丢弃），

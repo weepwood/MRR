@@ -38,6 +38,12 @@ html[data-mrr-palette="gr8r"] {
    * 表头 38、行 40。信息密度提高后同一屏能多两行病案，扫读时更少翻页。
    */
   --mrr-input-height: 30px;
+  --mrr-field-padding-x: 10px;
+  --mrr-field-padding-x-sm: 10px;
+  --mrr-field-padding-x-lg: 10px;
+  --mrr-textarea-padding-y: 7px;
+  --mrr-field-focus-bg: var(--mrr-card);
+  --mrr-field-shadow: 0 0 0 0 transparent;
   --mrr-control-height: 30px;
   --mrr-control-height-compact: 26px;
   --mrr-control-height-large: 36px;
@@ -204,39 +210,7 @@ html[data-mrr-palette="gr8r"] .fa-button-control:not(:disabled):not([data-loadin
 
 /* ===== 5. 输入、下拉与文本域 ===== */
 
-/*
- * 控件底色由 JS 置为表面白（原先是有填充的灰调），这里只收描边：
- * 静置 1px 中性边、hover 一档加深、聚焦交给主色 ring，去掉输入框自带的小投影。
- */
-html[data-mrr-palette="gr8r"] .el-input__wrapper,
-html[data-mrr-palette="gr8r"] .el-select__wrapper {
-  padding-inline: 10px;
-  box-shadow: 0 0 0 1px var(--mrr-control-border) inset;
-}
-
-html[data-mrr-palette="gr8r"] .el-input__wrapper:hover,
-html[data-mrr-palette="gr8r"] .el-select__wrapper:hover,
-html[data-mrr-palette="gr8r"] .el-textarea__inner:hover {
-  box-shadow: 0 0 0 1px var(--mrr-control-border-hover) inset;
-}
-
-html[data-mrr-palette="gr8r"] .el-input__wrapper.is-focus,
-html[data-mrr-palette="gr8r"] .el-select__wrapper.is-focused,
-html[data-mrr-palette="gr8r"] .el-date-editor.el-input__wrapper.is-active,
-html[data-mrr-palette="gr8r"] .el-date-editor.el-input__wrapper:focus-within {
-  background: var(--mrr-card);
-  box-shadow: 0 0 0 1px var(--mrr-ring) inset, var(--mrr-focus-ring);
-}
-
-html[data-mrr-palette="gr8r"] .el-textarea__inner {
-  padding: 7px 10px;
-  box-shadow: 0 0 0 1px var(--mrr-control-border) inset;
-}
-
-html[data-mrr-palette="gr8r"] .el-textarea__inner:focus {
-  background: var(--mrr-card);
-  box-shadow: 0 0 0 1px var(--mrr-ring) inset, var(--mrr-focus-ring);
-}
+/* 外观由公共控件层引用上方密度/表面令牌，不在主题层重新定义控件选择器。 */
 
 /* ===== 6. 表格：安静的表头 + 更紧的行 ===== */
 

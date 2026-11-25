@@ -361,7 +361,7 @@ function handleReset() {
               <strong>动态效果</strong>
               <small>默认启用界面过渡和动效。关闭后会停用动态效果，仅保存在当前浏览器。</small>
             </div>
-            <FaSwitch v-model="settingsStore.settings.app.enableMotion" aria-label="动态效果" />
+            <el-switch v-model="settingsStore.settings.app.enableMotion" aria-label="动态效果" />
           </div>
         </div>
       </TabsContent>
@@ -418,7 +418,7 @@ function handleReset() {
               <strong>次导航只展开一项</strong>
               <small>展开新菜单时自动收起其他菜单。</small>
             </div>
-            <FaSwitch v-model="settingsStore.settings.menu.subMenuUniqueOpened" />
+            <el-switch v-model="settingsStore.settings.menu.subMenuUniqueOpened" aria-label="次导航只展开一项" />
           </div>
 
           <div class="setting-item">
@@ -426,7 +426,7 @@ function handleReset() {
               <strong>默认折叠次导航</strong>
               <small>进入系统时以紧凑状态显示次导航。</small>
             </div>
-            <FaSwitch v-model="settingsStore.settings.menu.subMenuCollapse" />
+            <el-switch v-model="settingsStore.settings.menu.subMenuCollapse" aria-label="默认折叠次导航" />
           </div>
 
           <div v-if="settingsStore.mode === 'pc'" class="setting-item">
@@ -434,7 +434,7 @@ function handleReset() {
               <strong>显示折叠按钮</strong>
               <small>允许用户手动展开或折叠次导航。</small>
             </div>
-            <FaSwitch v-model="settingsStore.settings.menu.enableSubMenuCollapseButton" />
+            <el-switch v-model="settingsStore.settings.menu.enableSubMenuCollapseButton" aria-label="显示折叠按钮" />
           </div>
 
           <div class="setting-item">
@@ -442,7 +442,7 @@ function handleReset() {
               <strong>导航快捷键</strong>
               <small>单栏导航模式下不可用。</small>
             </div>
-            <FaSwitch v-model="settingsStore.settings.menu.enableHotkeys" :disabled="['single'].includes(settingsStore.settings.menu.mode)" />
+            <el-switch v-model="settingsStore.settings.menu.enableHotkeys" :disabled="['single'].includes(settingsStore.settings.menu.mode)" aria-label="导航快捷键" />
           </div>
 
           <div class="setting-item">
@@ -481,19 +481,19 @@ function handleReset() {
               <div class="label-copy">
                 <strong>启用标签栏</strong>
               </div>
-              <FaSwitch v-model="settingsStore.settings.tabbar.enable" />
+              <el-switch v-model="settingsStore.settings.tabbar.enable" aria-label="启用标签栏" />
             </div>
             <div class="setting-item">
               <div class="label-copy">
                 <strong>显示页面图标</strong>
               </div>
-              <FaSwitch v-model="settingsStore.settings.tabbar.enableIcon" :disabled="!settingsStore.settings.tabbar.enable" />
+              <el-switch v-model="settingsStore.settings.tabbar.enableIcon" :disabled="!settingsStore.settings.tabbar.enable" aria-label="显示页面图标" />
             </div>
             <div class="setting-item">
               <div class="label-copy">
                 <strong>标签栏快捷键</strong>
               </div>
-              <FaSwitch v-model="settingsStore.settings.tabbar.enableHotkeys" :disabled="!settingsStore.settings.tabbar.enable" />
+              <el-switch v-model="settingsStore.settings.tabbar.enableHotkeys" :disabled="!settingsStore.settings.tabbar.enable" aria-label="标签栏快捷键" />
             </div>
           </div>
         </div>
@@ -508,37 +508,37 @@ function handleReset() {
               <div class="label-copy">
                 <strong>启用工具栏</strong>
               </div>
-              <FaSwitch v-model="settingsStore.settings.toolbar.enable" />
+              <el-switch v-model="settingsStore.settings.toolbar.enable" aria-label="启用工具栏" />
             </div>
             <div v-if="settingsStore.mode === 'pc'" class="setting-item">
               <div class="label-copy">
                 <strong>面包屑导航</strong>
               </div>
-              <FaSwitch v-model="settingsStore.settings.toolbar.breadcrumb" :disabled="!settingsStore.settings.toolbar.enable" />
+              <el-switch v-model="settingsStore.settings.toolbar.breadcrumb" :disabled="!settingsStore.settings.toolbar.enable" aria-label="面包屑导航" />
             </div>
             <div class="setting-item">
               <div class="label-copy">
                 <strong>导航搜索</strong>
               </div>
-              <FaSwitch v-model="settingsStore.settings.toolbar.navSearch" :disabled="!settingsStore.settings.toolbar.enable" />
+              <el-switch v-model="settingsStore.settings.toolbar.navSearch" :disabled="!settingsStore.settings.toolbar.enable" aria-label="导航搜索" />
             </div>
             <div v-if="settingsStore.mode === 'pc'" class="setting-item">
               <div class="label-copy">
                 <strong>全屏入口</strong>
               </div>
-              <FaSwitch v-model="settingsStore.settings.toolbar.fullscreen" :disabled="!settingsStore.settings.toolbar.enable" />
+              <el-switch v-model="settingsStore.settings.toolbar.fullscreen" :disabled="!settingsStore.settings.toolbar.enable" aria-label="全屏入口" />
             </div>
             <div class="setting-item">
               <div class="label-copy">
                 <strong>页面刷新入口</strong>
               </div>
-              <FaSwitch v-model="settingsStore.settings.toolbar.pageReload" :disabled="!settingsStore.settings.toolbar.enable" />
+              <el-switch v-model="settingsStore.settings.toolbar.pageReload" :disabled="!settingsStore.settings.toolbar.enable" aria-label="页面刷新入口" />
             </div>
             <div class="setting-item">
               <div class="label-copy">
                 <strong>主题切换入口</strong>
               </div>
-              <FaSwitch v-model="settingsStore.settings.toolbar.colorScheme" :disabled="!settingsStore.settings.toolbar.enable" />
+              <el-switch v-model="settingsStore.settings.toolbar.colorScheme" :disabled="!settingsStore.settings.toolbar.enable" aria-label="主题切换入口" />
             </div>
           </div>
         </div>
@@ -553,13 +553,13 @@ function handleReset() {
               <div class="label-copy">
                 <strong>主页快捷键</strong>
               </div>
-              <FaSwitch v-model="settingsStore.settings.mainPage.enableHotkeys" :disabled="!settingsStore.settings.toolbar.enable" />
+              <el-switch v-model="settingsStore.settings.mainPage.enableHotkeys" :disabled="!settingsStore.settings.toolbar.enable" aria-label="主页快捷键" />
             </div>
             <div class="setting-item">
               <div class="label-copy">
                 <strong>导航搜索快捷键</strong>
               </div>
-              <FaSwitch v-model="settingsStore.settings.navSearch.enableHotkeys" :disabled="!settingsStore.settings.toolbar.navSearch" />
+              <el-switch v-model="settingsStore.settings.navSearch.enableHotkeys" :disabled="!settingsStore.settings.toolbar.navSearch" aria-label="导航搜索快捷键" />
             </div>
           </div>
         </div>
@@ -576,7 +576,7 @@ function handleReset() {
               <div class="label-copy">
                 <strong>启用主页</strong>
               </div>
-              <FaSwitch v-model="settingsStore.settings.home.enable" />
+              <el-switch v-model="settingsStore.settings.home.enable" aria-label="启用主页" />
             </div>
             <div class="setting-item">
               <div class="label-copy">
@@ -597,7 +597,7 @@ function handleReset() {
               <div class="label-copy">
                 <strong>启用底部版权</strong>
               </div>
-              <FaSwitch v-model="settingsStore.settings.copyright.enable" />
+              <el-switch v-model="settingsStore.settings.copyright.enable" aria-label="启用底部版权" />
             </div>
             <div class="setting-item">
               <div class="label-copy">
@@ -636,25 +636,25 @@ function handleReset() {
               <div class="label-copy">
                 <strong>启用权限控制</strong>
               </div>
-              <FaSwitch v-model="settingsStore.settings.app.enablePermission" />
+              <el-switch v-model="settingsStore.settings.app.enablePermission" aria-label="启用权限控制" />
             </div>
             <div class="setting-item">
               <div class="label-copy">
                 <strong>显示载入进度条</strong>
               </div>
-              <FaSwitch v-model="settingsStore.settings.app.enableProgress" />
+              <el-switch v-model="settingsStore.settings.app.enableProgress" aria-label="显示载入进度条" />
             </div>
             <div class="setting-item">
               <div class="label-copy">
                 <strong>色弱模式</strong>
               </div>
-              <FaSwitch v-model="settingsStore.settings.app.enableColorAmblyopiaMode" />
+              <el-switch v-model="settingsStore.settings.app.enableColorAmblyopiaMode" aria-label="色弱模式" />
             </div>
             <div class="setting-item">
               <div class="label-copy">
                 <strong>动态页面标题</strong>
               </div>
-              <FaSwitch v-model="settingsStore.settings.app.enableDynamicTitle" />
+              <el-switch v-model="settingsStore.settings.app.enableDynamicTitle" aria-label="动态页面标题" />
             </div>
           </div>
         </div>

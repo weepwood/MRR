@@ -76,7 +76,7 @@ test('组件目录准确索引两套控件，表单对照保留标签、只读�
   await expect(fields.getByLabel('原生只读名称', { exact: true })).toHaveAttribute('readonly', '')
   await expect(fields.getByLabel('校验示例', { exact: true })).toHaveAttribute('aria-invalid', 'true')
   await expect(fields.getByLabel('校验示例', { exact: true })).toHaveAccessibleDescription('请输入示例名称')
-  await expect(fields.getByText('请输入示例名称', { exact: true })).toBeVisible()
+  await expect(fields.getByText('请输入示例名称', { exact: true })).toHaveCount(2)
   await fields.getByLabel('校验示例', { exact: true }).fill('有效示例')
   await expect(fields.getByLabel('校验示例', { exact: true })).not.toHaveAttribute('aria-invalid', 'true')
   await expect(fields.getByText('请输入示例名称', { exact: true })).toHaveCount(0)
@@ -141,7 +141,11 @@ test('页头尺寸示例：紧凑页头更矮，长说明折行后仍完整显�
     const [standard, compact] = await heights()
     return compact < standard
   }).toBe(true)
-  await page.getByLabel('使用长说明（检查折行）', { exact: true }).click()
+  const longDescription = page.getByRole('switch', { name: '使用长说明（检查折行）', exact: true })
+  await expect(longDescription).toHaveAttribute('aria-checked', 'false')
+  await longDescription.focus()
+  await longDescription.press('Space')
+  await expect(longDescription).toHaveAttribute('aria-checked', 'true')
   await expect.poll(() => page.locator('.pattern-sample .mrr-page-header__description').evaluateAll(nodes => nodes.every(node => node.scrollWidth <= node.clientWidth + 1))).toBe(true)
 })
 

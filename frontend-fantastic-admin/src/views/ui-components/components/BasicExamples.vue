@@ -13,6 +13,7 @@ const nativeName = ref('组件演示')
 const validationName = ref('')
 const validationError = computed(() => validationName.value.trim() ? '' : '请输入示例名称')
 const note = ref('这里是可编辑的示例说明。')
+const nativeNote = ref('这里是可编辑的示例说明。')
 const source = ref('local')
 const nativeSource = ref('local')
 const date = ref('2026-11-12')
@@ -196,6 +197,15 @@ const options = [{ label: '本地示例', value: 'local' }, { label: '归档示�
       <label :for="`${id}-note`">示例说明</label>
       <FaTextarea :id="`${id}-note`" v-model="note" :rows="2" />
     </div>
+    <div class="example-field">
+      <label :for="`${id}-native-note`">原生说明</label>
+      <el-input :id="`${id}-native-note`" v-model="nativeNote" type="textarea" :rows="2" />
+    </div>
+    <div class="example-field">
+      <label :for="`${id}-fa-validation`">封装校验示例</label>
+      <FaInput :id="`${id}-fa-validation`" v-model="validationName" :aria-invalid="!!validationError" :aria-describedby="validationError ? `${id}-fa-validation-error` : undefined" class="example-full-width" />
+      <span v-if="validationError" :id="`${id}-fa-validation-error`" class="example-field-error">{{ validationError }}</span>
+    </div>
   </div>
 
   <div v-else class="example-stack">
@@ -208,9 +218,9 @@ const options = [{ label: '本地示例', value: 'local' }, { label: '归档示�
       </FaCheckbox>
     </div>
     <div class="example-row">
-      <FaSwitch :id="`${id}-switch`" v-model="enabled" />
+      <el-switch :id="`${id}-switch`" v-model="enabled" />
       <label :for="`${id}-switch`">启用示例</label>
-      <FaSwitch :model-value="false" disabled aria-label="禁用开关" />
+      <el-switch :model-value="false" disabled aria-label="禁用开关" />
     </div>
     <div class="example-field">
       <span :id="`${id}-slider-label`">示例进度 {{ slider[0] }}%</span>

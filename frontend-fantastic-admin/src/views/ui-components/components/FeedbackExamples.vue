@@ -102,7 +102,7 @@ function confirm(kind: string) {
       </div>
     </div>
     <div class="example-row">
-      <FaSwitch :id="`${example}-glass-switch`" v-model="glassBlur" />
+      <el-switch :id="`${example}-glass-switch`" v-model="glassBlur" />
       <label :for="`${example}-glass-switch`">启用毛玻璃（关闭则对比生产 UI 的不透明表面）</label>
     </div>
   </div>

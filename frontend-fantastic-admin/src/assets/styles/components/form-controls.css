@@ -19,7 +19,7 @@
 .el-pagination .el-pagination__sizes .el-select .el-select__wrapper {
   height: var(--mrr-input-height);
   min-height: var(--mrr-input-height);
-  padding-inline: 11px;
+  padding-inline: var(--mrr-field-padding-x);
   border-radius: var(--mrr-control-radius);
 }
 
@@ -34,7 +34,7 @@
 }
 
 .el-range-editor--small {
-  padding-inline: 9px;
+  padding-inline: var(--mrr-field-padding-x-sm);
 }
 
 .el-range-editor--large,
@@ -43,7 +43,7 @@
 }
 
 .el-range-editor--large {
-  padding-inline: 12px;
+  padding-inline: var(--mrr-field-padding-x-lg);
 }
 
 .el-input-number {
@@ -104,14 +104,14 @@
   box-sizing: border-box;
   height: var(--mrr-input-height);
   min-height: var(--mrr-input-height);
-  padding: 0 11px;
-  font-size: 13px;
+  padding: 0 calc(var(--mrr-field-padding-x) - 1px);
+  font-size: var(--mrr-field-font-size);
   line-height: 1;
   color: var(--mrr-foreground);
   background: var(--mrr-control-bg);
   border: 1px solid var(--mrr-control-border);
   border-radius: var(--mrr-control-radius);
-  box-shadow: var(--mrr-shadow-xs);
+  box-shadow: var(--mrr-field-shadow);
   transition: color var(--mrr-motion-feedback) var(--mrr-ease-out), background-color var(--mrr-motion-feedback) var(--mrr-ease-out), border-color var(--mrr-motion-feedback) var(--mrr-ease-out), box-shadow var(--mrr-motion-feedback) var(--mrr-ease-out);
 }
 
@@ -130,7 +130,7 @@
 .fa-select-trigger:focus-visible,
 .fa-select-trigger[data-state="open"] {
   outline: none;
-  background: var(--mrr-background);
+  background: var(--mrr-field-focus-bg);
   border-color: var(--mrr-ring);
   box-shadow: var(--mrr-focus-ring);
 }
@@ -144,6 +144,82 @@
   border-color: var(--mrr-border);
   box-shadow: none;
   opacity: 0.62;
+}
+
+/* Textareas use the same inset outline as Element Plus. Native rows remain authoritative. */
+.fa-textarea-control {
+  box-sizing: border-box;
+  width: 100%;
+  min-width: 0;
+  padding: var(--mrr-textarea-padding-y) var(--mrr-field-padding-x);
+  font-size: var(--mrr-field-font-size);
+  line-height: var(--mrr-textarea-line-height);
+  color: var(--mrr-foreground);
+  resize: vertical;
+  background: var(--mrr-control-bg);
+  border: 0;
+  border-radius: var(--mrr-control-radius);
+  box-shadow: 0 0 0 1px var(--mrr-control-border) inset, var(--mrr-field-shadow);
+}
+
+.fa-textarea-control:not([rows]) {
+  min-height: var(--mrr-textarea-min-height);
+}
+
+.fa-textarea-control::placeholder {
+  color: var(--mrr-muted-foreground);
+}
+
+.fa-textarea-control:hover:not(:disabled) {
+  background: var(--mrr-control-bg-hover);
+  box-shadow: 0 0 0 1px var(--mrr-control-border-hover) inset, var(--mrr-field-shadow);
+}
+
+.fa-textarea-control:focus-visible {
+  outline: none;
+  background: var(--mrr-field-focus-bg);
+  box-shadow: 0 0 0 1px var(--mrr-ring) inset, var(--mrr-focus-ring);
+}
+
+.fa-textarea-control:disabled {
+  color: var(--mrr-muted-foreground);
+  cursor: not-allowed;
+  background: var(--mrr-control-bg-disabled);
+  box-shadow: 0 0 0 1px var(--mrr-border) inset;
+  opacity: 0.62;
+}
+
+.fa-input-control[readonly]:not(:disabled) {
+  background: var(--mrr-muted);
+  border-color: var(--mrr-border);
+}
+
+.fa-textarea-control[readonly]:not(:disabled) {
+  background: var(--mrr-muted);
+  box-shadow: 0 0 0 1px var(--mrr-border) inset;
+}
+
+.fa-input-control[readonly]:focus-visible:not(:disabled) {
+  box-shadow: var(--mrr-focus-ring);
+}
+
+.fa-textarea-control[readonly]:focus-visible:not(:disabled) {
+  box-shadow: 0 0 0 1px var(--mrr-ring) inset, var(--mrr-focus-ring);
+}
+
+/* Keep the existing registration error class compatible and add semantic aria-invalid. */
+.fa-input-control[aria-invalid="true"]:not(:disabled),
+.fa-input-control.border-destructive:not(:disabled),
+.fa-select-trigger[aria-invalid="true"]:not([data-disabled]) {
+  background: var(--mrr-field-focus-bg);
+  border-color: var(--mrr-destructive);
+  box-shadow: var(--mrr-danger-focus-ring);
+}
+
+.fa-textarea-control[aria-invalid="true"]:not(:disabled),
+.fa-textarea-control.border-destructive:not(:disabled) {
+  background: var(--mrr-field-focus-bg);
+  box-shadow: 0 0 0 1px var(--mrr-destructive) inset, var(--mrr-danger-focus-ring);
 }
 
 .fa-select-chevron {

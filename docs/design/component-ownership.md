@@ -1,0 +1,192 @@
+# 控件唯一实现与源码使用清单
+
+2026-11-25，用户明确同一种元素只使用同一种控件，替代前期双族长期并存方案。Element Plus 为基础业务控件唯一目标；Fa 专门用途组件、MRR 组合组件保留，内部同类基础控件也必须迁移。当前处于迁移期，不将双族视觉一致性视为最终验收。
+
+## 选型与归属
+
+| 原实现 | 唯一目标 |
+| --- | --- |
+| FaButton | ElButton |
+| FaInput | ElInput |
+| FaTextarea | ElInput (textarea) |
+| FaSelect | ElSelect |
+| FaSwitch | ElSwitch |
+| FaCheckbox | ElCheckbox |
+| FaSlider | ElSlider |
+| FaTabs | ElTabs |
+| FaTooltip | ElTooltip |
+| FaModal | ElDialog |
+| FaDrawer | ElDrawer |
+| FaPopover | ElPopover |
+| FaProgress | ElProgress |
+| FaDropdown | ElDropdown |
+| FaButtonGroup | ElButtonGroup |
+| FaAvatar | ElAvatar |
+| FaDivider | ElDivider |
+| FaCard | ElCard |
+| FaContextMenu | 评估 ElDropdown contextmenu |
+| FaImagePreview | 评估 ElImageViewer |
+
+FaIcon、FaKbd、FaPinInput、FaScrollArea、FaSmartFixedBlock、FaPasswordStrength 等非同类或专门用途组件不机械删除；若实际有等价成熟实现，再单独评估。FaContextMenu、复杂导航搜索、浮层、登录表单等需要明确焦点、键盘、表单验证和生命周期合同，不能仅替换标签。MRR 的 MrrDataTablePanel、MrrSectionCard、MrrFilterBar 等组合组件属于业务抽象而非另一套基础控件库。原生 HTML 的语义按钮、文件选择、链接等不一刀切，需区分复合控件内部实现与重复的独立基础控件。
+
+## 迁移前实际统计
+
+固定源快照 `dd69b9566807fb2baef4d07df8b8c6b4cbfe41e0`（#837 旧 head）。仅 src/views、src/components、src/layouts 的 Vue 开始标签，排除 ui-components 展厅与 __tests__，不包含动态渲染、内部封装展开次数与原生 HTML。标签统计不等于页面运行时实例数或视觉缺陷数；el-input 含 type=textarea 15处，另有文本/其他类型123处。原始 FaSwitch 22处业务及5处展厅；FaTabs 直接导入的 Tabs/TabsList/TabsTrigger/TabsContent 另见 AppConfigPanel，不计入 FaTabs 标签。
+
+| 控件 | Fa | Element Plus |
+| --- | ---: | ---: |
+| 按钮 | 21 | 328 |
+| 文本/其他单行输入 | 17 | 123 |
+| 文本域 | 1 | 15 |
+| 选择 | 0 | 51 |
+| 开关 | 22 | 21 |
+| 复选 | 1 | 8 |
+| 滑块 | 1 | 5 |
+| 标签页 | 2 | 6 |
+| Tooltip | 6 | 7 |
+| 弹窗 | 3 | 21 |
+| 抽屉 | 1 | 2 |
+| 浮层 | 0 | 4 |
+| 进度 | 0 | 10 |
+| 数字输入 | 0 | 21 |
+| 表格 | 0 | 56 |
+| 分页 | 0 | 13 |
+| 日期 | 0 | 8 |
+| 表单 | 0 | 24 |
+
+## 实施顺序与禁止事项
+
+1. 完成开关全量迁移；删除 FaSwitch 及其专属 CSS / 自动类型 / 展厅入口，实际验证键盘、禁用、持久化、G2 圆角及业务布局。禁止再引入同类实现。
+2. 集中迁移文本输入、按钮、复选、选择、数字、滑块和标签页，覆盖设置与登录/注册/账户；原验证/保存/权限不变。双族桥接 CSS 仅过渡使用，零引用后清除；不新增 Fa 同类控件。
+3. 集中迁移全局导航与 Tooltip/Popover/Dialog/Drawer，重点验证焦点恢复、快捷键、Escape、打开关闭、悬浮状态、层级、移动端滚动。再迁移组件内部依赖、展厅，最后清除死代码和冗余主题分支。
+4. 完成定义：同类业务/展厅/组合组件只用一个基础实现，源码与直接导入检查、实际浏览器、真实业务流程、设计令牌所有权和无旧专属样式；依赖删除仅当所有引用不存在。每批按风险审查、集中PR。保护 V1.1/main/医疗数据。
+
+## 已实施：开关归一
+
+22处外观设置和5处展厅 FaSwitch 均迁移 ElSwitch，删除三份旧组件文件、自动类型及旧G2选择器；22个设置开关与原标签对应的可访问名称完整，保留原 v-model/disabled 与设置持久化、权限合同。全量源码无旧开关组件/样式引用，新增 component-ownership.test.ts 防止回流。原页面其他控件不在此次迁移范围。合成数据 E2E 验证键盘、禁用、点击、保存/重新加载。样式测试69/69；首轮联合32/33，旧展厅通过 getByLabel 点击新控件视觉隐藏的原生 input 超时，改为键盘切换并确认 aria-checked 后保留原折行断言。不延长时限或跳过测试。最终定向展厅/圆角/开关15/15含预热（43.7秒）；真实业务布局18项亦通过。日志 /tmp/mrr-v12-switch-{red,green,unit,final,tsc}.log。
+
+## 逐文件原始引用清单
+
+| 源文件（相对 src/） | Fa 标签 | Element Plus 标签 |
+| --- | --- | --- |
+| `components/AccountButton/index.vue` | FaAvatar × 2, FaButton × 1, FaIcon × 6, FaModal × 1 | — |
+| `components/AccountForm/EditPasswordForm.vue` | FaButton × 1, FaInput × 3 | — |
+| `components/AccountForm/LoginForm.vue` | FaButton × 1, FaCheckbox × 1, FaIcon × 3, FaInput × 2 | el-icon × 2 |
+| `components/AccountForm/RegisterFieldLabel.vue` | FaIcon × 1, FaTooltip × 1 | — |
+| `components/AccountForm/RegisterForm.vue` | FaButton × 2, FaIcon × 5, FaInput × 5, FaTextarea × 1 | — |
+| `components/AccountForm/ResetPasswordForm.vue` | FaButton × 3, FaInput × 2, FaPinInput × 1 | — |
+| `components/AppEmpty/index.vue` | — | el-button × 1 |
+| `components/AppError/index.vue` | — | el-button × 1 |
+| `components/MrrDataTablePanel/index.vue` | — | el-tag × 1 |
+| `components/MrrFilterActionButton/index.vue` | FaIcon × 1 | el-button × 1 |
+| `components/MrrInfoTip/index.vue` | — | el-icon × 1, el-tooltip × 1 |
+| `components/MrrMetricCard/index.vue` | FaIcon × 1 | el-card × 1 |
+| `components/MrrPageHeader/index.vue` | FaIcon × 1 | — |
+| `components/MrrScanContentDialog/index.vue` | — | el-button × 7 |
+| `components/MrrSectionCard/index.vue` | FaIcon × 1 | el-card × 1 |
+| `components/MrrStorageBrowser/InlinePreview.vue` | — | el-button × 1 |
+| `components/MrrStorageBrowser/Preview.vue` | — | el-dialog × 1, el-image × 1 |
+| `components/MrrStorageBrowser/index.vue` | — | el-button × 11, el-button-group × 3, el-icon × 2, el-input × 2, el-tooltip × 1 |
+| `components/MrrTableActions/index.vue` | FaIcon × 4 | el-button × 2, el-dropdown × 1, el-dropdown-item × 1, el-dropdown-menu × 1, el-tooltip × 1 |
+| `components/MrrUserSearchSelect/index.vue` | — | el-option × 1, el-select × 1 |
+| `components/ScanQueryDiagnostics/index.vue` | FaIcon × 1 | el-alert × 1, el-button × 2, el-dialog × 1, el-tag × 1 |
+| `components/SystemAdminContactPopover/index.vue` | FaIcon × 3 | el-popover × 1 |
+| `layouts/components/AppSetting/index.vue` | FaButton × 1, FaDrawer × 1, FaIcon × 1 | — |
+| `layouts/components/Header/index.vue` | FaIcon × 1, FaScrollArea × 1 | — |
+| `layouts/components/HotkeysIntro/index.vue` | FaKbd × 19, FaModal × 1 | — |
+| `layouts/components/Logo/index.vue` | FaButton × 1, FaIcon × 1 | — |
+| `layouts/components/MainSidebar/index.vue` | FaIcon × 1, FaScrollArea × 1 | — |
+| `layouts/components/Menu/item.vue` | FaIcon × 2, FaTooltip × 1 | — |
+| `layouts/components/Menu/sub.vue` | FaScrollArea × 1 | — |
+| `layouts/components/SubSidebar/index.vue` | FaButton × 1, FaIcon × 1, FaScrollArea × 1 | — |
+| `layouts/components/Topbar/Tabbar/index.vue` | FaContextMenu × 1, FaIcon × 2, FaScrollArea × 1, FaTooltip × 1 | — |
+| `layouts/components/Topbar/Toolbar/ColorScheme/index.vue` | FaButton × 1, FaIcon × 1 | — |
+| `layouts/components/Topbar/Toolbar/Fullscreen/index.vue` | FaButton × 1, FaIcon × 1 | — |
+| `layouts/components/Topbar/Toolbar/NavSearch/index.vue` | FaButton × 1, FaIcon × 1, FaKbd × 1 | — |
+| `layouts/components/Topbar/Toolbar/NavSearch/search.vue` | FaIcon × 8, FaKbd × 4, FaModal × 1, FaScrollArea × 1 | — |
+| `layouts/components/Topbar/Toolbar/PageReload/index.vue` | FaButton × 1, FaIcon × 1, FaKbd × 1, FaTooltip × 1 | — |
+| `layouts/components/Topbar/Toolbar/leftSide.vue` | FaButton × 1, FaIcon × 1 | — |
+| `layouts/components/Topbar/index.vue` | FaSmartFixedBlock × 1 | — |
+| `layouts/components/views/link.vue` | FaButton × 1, FaIcon × 2, FaPageMain × 1, FaTooltip × 1 | — |
+| `layouts/index.vue` | FaCopyright × 1 | — |
+| `views/[...all].vue` | FaButton × 2, FaIcon × 1 | — |
+| `views/archive-boxes/index.vue` | — | el-button × 5, el-dialog × 1, el-form × 1, el-form-item × 6, el-icon × 2, el-input × 10, el-option × 2, el-pagination × 2, el-radio-button × 2, el-radio-group × 1, el-select × 2, el-table × 2, el-table-column × 13, el-tag × 1 |
+| `views/audit-images/components/AuditAnalytics.vue` | — | el-table × 2, el-table-column × 8, el-tag × 2 |
+| `views/audit-images/index.vue` | — | el-alert × 1, el-button × 2, el-date-picker × 1, el-descriptions × 1, el-descriptions-item × 13, el-dialog × 1, el-form × 1, el-form-item × 6, el-icon × 2, el-input × 2, el-option × 2, el-pagination × 1, el-select × 2, el-table × 1, el-table-column × 10, el-tag × 2 |
+| `views/auth-test/components/ExternalArchiveTicketTester.vue` | — | el-alert × 5, el-button × 13, el-form × 3, el-form-item × 14, el-input × 13, el-option × 1, el-select × 1, el-switch × 2, el-table × 1, el-table-column × 5, el-tag × 4 |
+| `views/auth-test/components/JwtLoginTester.vue` | — | el-alert × 1, el-button × 6, el-form × 2, el-form-item × 3, el-input × 3, el-tag × 2 |
+| `views/auth-test/components/OssDiagnosticsTester.vue` | — | el-alert × 1, el-button × 3, el-tag × 1 |
+| `views/auth-test/components/ProtectedApiTester.vue` | — | el-button × 2, el-checkbox × 1, el-form × 1, el-form-item × 6, el-input × 4, el-option × 1, el-select × 1, el-tag × 1 |
+| `views/auth-test/index.vue` | — | el-button × 1, el-card × 1, el-tab-pane × 5, el-table × 1, el-table-column × 7, el-tabs × 1, el-tag × 3 |
+| `views/data-exchange/components/DatasetImportPanel.vue` | — | el-alert × 2, el-button × 4, el-icon × 1, el-table × 1, el-table-column × 4, el-upload × 1 |
+| `views/data-exchange/index.vue` | — | el-button × 5, el-date-picker × 2, el-input × 19, el-input-number × 2, el-option × 5, el-segmented × 1, el-select × 1 |
+| `views/data-relations/ArchiveManifestCard.vue` | — | el-alert × 1, el-button × 12, el-option × 1, el-progress × 1, el-select × 1, el-table × 2, el-table-column × 11 |
+| `views/data-relations/RepairOrderPanel.vue` | — | el-alert × 1, el-button × 7, el-table × 1, el-table-column × 6, el-tag × 2, el-timeline × 1, el-timeline-item × 1 |
+| `views/data-relations/components/ArchiveScanInspector.vue` | — | el-button × 7, el-skeleton × 1 |
+| `views/data-relations/components/QualityCaseReview.vue` | — | el-button × 7, el-table × 1, el-table-column × 5, el-timeline × 1, el-timeline-item × 1 |
+| `views/data-relations/index.vue` | FaIcon × 4 | el-alert × 3, el-button × 10, el-card × 2, el-descriptions × 2, el-descriptions-item × 5, el-drawer × 1, el-input × 2, el-option × 6, el-progress × 1, el-select × 2, el-tab-pane × 8, el-table × 10, el-table-column × 60, el-tabs × 2, el-tag × 3 |
+| `views/database-browse/index.vue` | FaIcon × 1 | el-alert × 4, el-button × 5, el-input × 1, el-option × 1, el-select × 1, el-table × 1, el-table-column × 1, el-tag × 2 |
+| `views/help/index.vue` | FaIcon × 1 | el-button × 1, el-card × 1, el-icon × 1, el-tag × 1 |
+| `views/home/DashboardWorkspace.vue` | FaIcon × 16 | el-button × 13, el-dialog × 2, el-dropdown × 1, el-dropdown-item × 6, el-dropdown-menu × 1, el-form × 1, el-form-item × 4, el-input × 2, el-option × 2, el-radio-button × 1, el-radio-group × 1, el-select × 2, el-switch × 1, el-tooltip × 1 |
+| `views/home/DemoScenarioControl.vue` | — | el-button × 2, el-option × 1, el-select × 1 |
+| `views/home/HomeArchiveLookup.vue` | FaIcon × 1 | el-button × 1, el-input × 2 |
+| `views/idcard/index.vue` | — | el-button × 1, el-input × 1 |
+| `views/login.vue` | FaCopyright × 1, FaIcon × 2, FaTooltip × 1 | el-alert × 1, el-icon × 1, el-popover × 1 |
+| `views/logs/index.vue` | — | el-alert × 1, el-button × 4, el-date-picker × 1, el-descriptions × 1, el-descriptions-item × 18, el-dialog × 1, el-form × 1, el-form-item × 7, el-icon × 2, el-input × 3, el-option × 2, el-pagination × 1, el-select × 2, el-table × 1, el-table-column × 9, el-tag × 2 |
+| `views/monitoring-dashboard/index.vue` | — | el-button × 2 |
+| `views/monitoring/index.vue` | — | el-alert × 1, el-button × 4, el-descriptions × 2, el-descriptions-item × 16, el-progress × 2, el-table × 3, el-table-column × 15, el-tag × 5 |
+| `views/nginx-browser/index.vue` | — | el-button × 4, el-option × 1, el-select × 1, el-tag × 1 |
+| `views/ocr-batches/index.vue` | FaIcon × 1 | el-alert × 2, el-button × 12, el-checkbox × 1, el-dialog × 1, el-form × 1, el-form-item × 3, el-input-number × 3, el-option × 1, el-select × 1, el-table × 2, el-table-column × 13 |
+| `views/operations-center/DeliveryStatusCard.vue` | — | el-alert × 1, el-button × 1, el-descriptions × 2, el-descriptions-item × 10, el-skeleton × 1, el-tag × 2 |
+| `views/operations-center/components/NginxConfigurationCard.vue` | — | el-alert × 1, el-button × 4, el-tag × 1 |
+| `views/operations-center/components/NginxRuntimeCard.vue` | — | el-button × 3, el-radio-button × 2, el-radio-group × 1, el-table × 1, el-table-column × 5, el-tag × 1 |
+| `views/operations-center/components/OperationsHistoryCard.vue` | — | el-button × 1, el-radio-button × 2, el-radio-group × 1, el-skeleton × 1 |
+| `views/operations-center/components/StorageCircuitHistoryCard.vue` | — | el-button × 1, el-radio-button × 2, el-radio-group × 1, el-skeleton × 1, el-table × 1, el-table-column × 5, el-tag × 1 |
+| `views/operations-center/index.vue` | — | el-alert × 7, el-button × 23, el-card × 1, el-descriptions × 1, el-descriptions-item × 3, el-form × 1, el-form-item × 5, el-input × 3, el-input-number × 1, el-option × 1, el-progress × 2, el-select × 1, el-skeleton × 1, el-tab-pane × 8, el-table × 6, el-table-column × 35, el-tabs × 1, el-tag × 16, el-timeline × 1, el-timeline-item × 1 |
+| `views/oss-browser/index.vue` | — | el-tag × 1 |
+| `views/oss-migration/components/OssFileExplorer.vue` | — | el-button × 3 |
+| `views/oss-migration/index.vue` | — | el-alert × 7, el-button × 11, el-card × 1, el-descriptions × 1, el-descriptions-item × 13, el-dialog × 1, el-drawer × 1, el-form × 3, el-form-item × 12, el-input × 4, el-input-number × 3, el-option × 7, el-pagination × 2, el-progress × 2, el-radio-button × 3, el-radio-group × 1, el-select × 3, el-switch × 1, el-tab-pane × 2, el-table × 4, el-table-column × 33, el-tabs × 1, el-tag × 13 |
+| `views/password/change-required.vue` | FaIcon × 3 | el-alert × 1, el-button × 2, el-form × 1, el-form-item × 3, el-input × 3, el-progress × 1 |
+| `views/patients/components/PatientAnalyticsPanel.vue` | — | el-alert × 1, el-pagination × 2, el-switch × 1, el-tab-pane × 3, el-table × 2, el-table-column × 13, el-tabs × 1, el-tag × 1 |
+| `views/patients/components/PatientEditDialog.vue` | — | el-alert × 1, el-button × 2, el-date-picker × 2, el-dialog × 1, el-form × 1, el-form-item × 8, el-input × 6 |
+| `views/patients/components/PatientImportDialog.vue` | — | el-alert × 3, el-button × 4, el-dialog × 1, el-icon × 1, el-table × 1, el-table-column × 4, el-upload × 1 |
+| `views/patients/index.vue` | FaIcon × 1 | el-button × 4, el-icon × 1, el-input × 1, el-pagination × 1, el-table × 1, el-table-column × 10 |
+| `views/permissions/index.vue` | — | el-button × 3, el-card × 1, el-input × 2, el-option × 1, el-option-group × 1, el-select × 1, el-table × 1, el-table-column × 2, el-tag × 5, el-tooltip × 1 |
+| `views/records/index.vue` | — | el-button × 3, el-descriptions × 1, el-descriptions-item × 12, el-dialog × 1, el-icon × 1, el-input × 4, el-option × 2, el-select × 2, el-table × 1, el-table-column × 11 |
+| `views/response-analysis/index.vue` | — | el-button × 1, el-icon × 1, el-table × 1, el-table-column × 7 |
+| `views/runtime-errors/index.vue` | — | el-button × 6, el-descriptions × 1, el-descriptions-item × 12, el-dialog × 1, el-icon × 1, el-input × 1, el-option × 6, el-pagination × 1, el-select × 3, el-table × 1, el-table-column × 9, el-tag × 2 |
+| `views/scan-img/index.vue` | — | el-icon × 1, el-image × 2, el-tooltip × 2 |
+| `views/settings/components/AppConfigPanel.vue` | FaButton × 2, FaIcon × 8, FaInput × 5, FaSlider × 1, FaSwitch × 22, FaTabs × 2 | el-button × 3, el-color-picker × 1 |
+| `views/settings/components/ArchiveSettings.vue` | — | el-alert × 1, el-form-item × 4, el-input-number × 1, el-segmented × 3, el-slider × 1, el-switch × 2 |
+| `views/settings/components/ClassificationRules.vue` | — | el-alert × 1, el-button × 9, el-checkbox × 3, el-input × 5, el-input-number × 2, el-option × 8, el-select × 4, el-table × 2, el-table-column × 11 |
+| `views/settings/components/DepartmentThemeSettings.vue` | FaIcon × 2 | el-alert × 1, el-button × 8, el-card × 1, el-color-picker × 2, el-dialog × 1, el-input × 2, el-option × 1, el-select × 1 |
+| `views/settings/components/DeveloperSettings.vue` | FaIcon × 2 | el-alert × 3, el-input × 1, el-switch × 2, el-tag × 1 |
+| `views/settings/components/DocumentationSettings.vue` | FaIcon × 1 | el-alert × 1, el-button × 1, el-form-item × 1, el-input × 1 |
+| `views/settings/components/ExternalLinksSettings.vue` | FaIcon × 7 | el-button × 3, el-input × 2, el-tag × 1 |
+| `views/settings/components/ImageDirectoryRoutingSettings.vue` | — | el-alert × 1, el-button × 5, el-input × 2, el-option × 3, el-select × 2, el-tag × 1 |
+| `views/settings/components/LoginSupportSettings.vue` | — | el-alert × 1, el-form-item × 17, el-input × 17, el-switch × 3 |
+| `views/settings/components/OcrClassificationSettings.vue` | — | el-alert × 1, el-form × 1, el-form-item × 7, el-input × 2, el-input-number × 5, el-switch × 3 |
+| `views/settings/components/RuntimeSettings.vue` | FaIcon × 1 | el-alert × 2, el-button × 3, el-form × 1, el-form-item × 1, el-input × 1, el-input-number × 1, el-option × 1, el-select × 1, el-switch × 1, el-tag × 3 |
+| `views/settings/components/SecuritySettings.vue` | — | el-form-item × 2, el-input-number × 1, el-slider × 1, el-switch × 3 |
+| `views/settings/components/SettingsSearch.vue` | FaIcon × 2 | el-autocomplete × 1 |
+| `views/settings/components/SystemInfoSettings.vue` | — | el-alert × 1, el-form-item × 5, el-input × 5 |
+| `views/settings/components/UnifiedSettingsPage.vue` | FaIcon × 8 | el-button × 6, el-form × 1, el-option × 1, el-select × 1, el-tag × 1 |
+| `views/statistics-detail/ArchiveDetailContent.vue` | FaIcon × 2 | el-button × 4, el-date-picker × 1, el-input × 3, el-option × 2, el-pagination × 1, el-radio-button × 2, el-radio-group × 1, el-select × 2, el-table × 1, el-table-column × 12, el-tag × 3 |
+| `views/statistics/archive.vue` | — | el-alert × 1, el-button × 10, el-option × 2, el-select × 1 |
+| `views/statistics/archive/components/ArchiveCaseList.vue` | — | el-skeleton × 1, el-tag × 1 |
+| `views/statistics/archive/components/ArchiveHeader.vue` | — | el-button × 3, el-dialog × 1, el-popover × 1 |
+| `views/statistics/archive/components/ArchiveMoreSettings.vue` | — | el-button × 2, el-popover × 1, el-segmented × 8, el-slider × 3, el-switch × 2 |
+| `views/statistics/archive/components/ArchiveQueryFailure.vue` | FaIcon × 2 | el-button × 2 |
+| `views/statistics/archive/components/ArchiveRecentLookups.vue` | FaIcon × 1 | — |
+| `views/statistics/archive/components/ArchiveSearchBar.vue` | — | el-input × 3 |
+| `views/statistics/archive/components/ArchiveWall.vue` | — | ElImageViewer × 1 |
+| `views/statistics/archive/components/ClassificationReview.vue` | — | el-alert × 1, el-button × 8, el-option × 2, el-select × 2, el-table × 2, el-table-column × 11 |
+| `views/statistics/archive/components/OcrPanel.vue` | — | el-alert × 1, el-button × 6, el-config-provider × 1, el-progress × 1, el-tag × 1 |
+| `views/statistics/archive/components/PatientCard.vue` | FaIcon × 1 | — |
+| `views/statistics/archive/components/PreviewActionBar.vue` | — | el-button × 3, el-option × 1, el-select × 1 |
+| `views/statistics/archive/components/PreviewPanel.vue` | — | ElImageViewer × 1 |
+| `views/statistics/archive/components/PreviewViewerToolbar.vue` | — | el-icon × 5 |
+| `views/statistics/archive/components/TypeFilterBar.vue` | — | el-checkbox × 2 |
+| `views/statistics/external-archive.vue` | — | el-button × 3, el-result × 3 |
+| `views/statistics/index.vue` | — | el-button × 2, el-date-picker × 1, el-input × 1, el-option × 2, el-pagination × 1, el-select × 1, el-table × 1, el-table-column × 7, el-tag × 1 |
+| `views/users/index.vue` | FaIcon × 3 | el-alert × 5, el-button × 16, el-checkbox × 1, el-dialog × 6, el-form × 4, el-form-item × 11, el-input × 5, el-input-number × 2, el-option × 6, el-pagination × 1, el-select × 6, el-table × 1, el-table-column × 8, el-tag × 1 |

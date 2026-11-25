@@ -9,7 +9,7 @@ export const categories = [
 
 export const examples = [
   { id: 'buttons', category: 'basic', title: '按钮与操作', description: '比较主次、尺寸，以及禁用和加载状态。', components: ['FaButton', 'FaButtonGroup', 'ElButton', 'ElRadioGroup'] },
-  { id: 'navigation', category: 'basic', title: '页签与提示', description: '切换内容分区，查看键盘提示和悬停说明。', components: ['FaTabs', 'FaTooltip', 'FaKbd'] },
+  { id: 'navigation', category: 'basic', title: '页签与提示', description: '切换内容分区，查看键盘提示和悬停说明。', components: ['ElTabs', 'FaTooltip', 'FaKbd'] },
   { id: 'page-header', category: 'basic', title: '页头尺寸', description: '概览页用默认尺寸，查询、列表与浏览页用紧凑尺寸；可切换长说明查看折行。', components: ['MrrPageHeader size="compact"'] },
   { id: 'fields', category: 'form', title: '输入与筛选', description: '对照两套输入控件，检查可见标签、只读、禁用与校验反馈；选择、日期与数量均可操作。', components: ['FaInput', 'FaTextarea', 'ElInput', 'ElSelect', 'ElFormItem', 'ElDatePicker', 'ElInputNumber'] },
   { id: 'selection', category: 'form', title: '选择与开关', description: '复选框、开关和滑块使用独立的本页示例状态。', components: ['ElCheckbox', 'ElSwitch', 'ElSlider'] },

@@ -1,9 +1,10 @@
 <script setup lang="ts">
+import type { TabsInstance } from 'element-plus'
 import type { Settings } from '#/global'
 import settingsDefault from '@/settings.default'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/ui/components/FaTabs/tabs'
 import { notify } from '@/utils/notification'
 import { diffTwoObj } from '@/utils/object'
+import { handleSegmentedTabKey } from '@/utils/segmented-tabs'
 import { normalizeThemeColor, readableInkOn, themeColorPresets } from '@/utils/theme-color'
 import { gr8rPrimary, normalizeThemePalette, themePalettePresets } from '@/utils/theme-palette'
 
@@ -17,7 +18,31 @@ const props = withDefaults(defineProps<{
 
 const settingsStore = useSettingsStore()
 const autoSaveState = ref<'idle' | 'saving' | 'saved'>('idle')
+const tabsId = useId()
+const groupTabsRef = ref<TabsInstance>()
+onMounted(() => {
+  groupTabsRef.value?.tabNavRef?.tabListRef?.setAttribute('aria-label', '外观设置分类')
+})
+
 const activeGroup = ref<string | number>('theme')
+const groupTab = computed({
+  get: () => `${tabsId}-group-${activeGroup.value}`,
+  set: (value) => { activeGroup.value = value.slice(`${tabsId}-group-`.length) },
+})
+const themeTab = computed({
+  get: () => `${tabsId}-theme-${settingsStore.settings.app.colorScheme}`,
+  set: (value) => { settingsStore.settings.app.colorScheme = value.slice(`${tabsId}-theme-`.length) as typeof settingsStore.settings.app.colorScheme },
+})
+const titleTab = computed({
+  get: () => `${tabsId}-title-${settingsStore.settings.app.pageTitleStyle}`,
+  set: (value) => { settingsStore.settings.app.pageTitleStyle = value.slice(`${tabsId}-title-`.length) as typeof settingsStore.settings.app.pageTitleStyle },
+})
+const themeOptions = [
+  { icon: 'i-lucide:sun', label: '明亮', value: 'light' },
+  { icon: 'i-lucide:moon', label: '暗黑', value: 'dark' },
+  { icon: 'i-lucide:sun-moon', label: '跟随系统', value: '' },
+]
+const titleOptions = [{ label: '页面同级', value: 'plain' }, { label: '卡片', value: 'card' }]
 const importInput = ref<HTMLInputElement>()
 let autoSaveTimer: ReturnType<typeof setTimeout> | undefined
 
@@ -188,478 +213,492 @@ function handleReset() {
     </div>
     <input ref="importInput" class="import-input" type="file" accept="application/json,.json" @change="handleImport">
 
-    <Tabs v-model="activeGroup">
-      <TabsList class="appearance-tabs" aria-label="外观设置分类">
-        <TabsTrigger
-          v-for="group in appearanceGroups"
-          :key="group.key"
-          :value="group.key"
-          :data-settings-search-target="group.key"
-          class="appearance-tab"
-        >
-          <span class="appearance-tab-label">
-            <FaIcon :name="group.icon" aria-hidden="true" />
-            {{ group.label }}
+    <el-tabs ref="groupTabsRef" v-model="groupTab" class="mrr-segmented-tabs appearance-tabs" @keydown="handleSegmentedTabKey">
+      <el-tab-pane :name="`${tabsId}-group-theme`" lazy>
+        <template #label>
+          <span data-settings-search-target="theme" class="appearance-tab-label">
+            <FaIcon :name="appearanceGroups[0].icon" aria-hidden="true" />
+            {{ appearanceGroups[0].label }}
           </span>
-        </TabsTrigger>
-      </TabsList>
-      <TabsContent value="theme" class="appearance-tab-content">
-        <div class="config-section">
-          <div class="setting-item setting-item--stack">
-            <div class="label-copy">
-              <strong>整体配色方案</strong>
-              <small>选择整套页面、侧栏、卡片和状态色；暖色扁平风格还会一并调整控件高度、圆角与描边层次。不改变布局结构与业务功能。</small>
-            </div>
-            <div class="theme-palette-options" role="group" aria-label="整体配色方案">
-              <button
-                v-for="palette in themePalettePresets"
-                :key="palette.id"
-                type="button"
-                class="theme-palette-option"
-                :aria-pressed="activeThemePalette === palette.id"
-                @click="settingsStore.settings.app.themePalette = palette.id"
-              >
-                <span
-                  class="theme-palette-preview"
-                  aria-hidden="true"
-                  :style="{ backgroundColor: palette.preview.canvas, borderColor: palette.preview.line }"
+        </template>
+        <div v-if="activeGroup === 'theme'" class="appearance-tab-content">
+          <div class="config-section">
+            <div class="setting-item setting-item--stack">
+              <div class="label-copy">
+                <strong>整体配色方案</strong>
+                <small>选择整套页面、侧栏、卡片和状态色；暖色扁平风格还会一并调整控件高度、圆角与描边层次。不改变布局结构与业务功能。</small>
+              </div>
+              <div class="theme-palette-options" role="group" aria-label="整体配色方案">
+                <button
+                  v-for="palette in themePalettePresets"
+                  :key="palette.id"
+                  type="button"
+                  class="theme-palette-option"
+                  :aria-pressed="activeThemePalette === palette.id"
+                  @click="settingsStore.settings.app.themePalette = palette.id"
                 >
-                  <span class="theme-palette-preview__sidebar" :style="{ backgroundColor: palette.preview.sidebar, borderColor: palette.preview.line }">
-                    <span :style="{ backgroundColor: palette.preview.ink, opacity: 0.5 }" />
-                    <span :style="{ backgroundColor: palette.preview.ink, opacity: 0.25 }" />
-                    <span :style="{ backgroundColor: palette.preview.accent, opacity: 0.75 }" />
+                  <span
+                    class="theme-palette-preview"
+                    aria-hidden="true"
+                    :style="{ backgroundColor: palette.preview.canvas, borderColor: palette.preview.line }"
+                  >
+                    <span class="theme-palette-preview__sidebar" :style="{ backgroundColor: palette.preview.sidebar, borderColor: palette.preview.line }">
+                      <span :style="{ backgroundColor: palette.preview.ink, opacity: 0.5 }" />
+                      <span :style="{ backgroundColor: palette.preview.ink, opacity: 0.25 }" />
+                      <span :style="{ backgroundColor: palette.preview.accent, opacity: 0.75 }" />
+                    </span>
+                    <span class="theme-palette-preview__panel" :style="{ backgroundColor: palette.preview.surface, borderColor: palette.preview.line }">
+                      <span class="theme-palette-preview__heading" :style="{ backgroundColor: palette.preview.ink }" />
+                      <span class="theme-palette-preview__line" :style="{ backgroundColor: palette.preview.ink, opacity: 0.2 }" />
+                      <span class="theme-palette-preview__line theme-palette-preview__line--short" :style="{ backgroundColor: palette.preview.ink, opacity: 0.2 }" />
+                      <span class="theme-palette-preview__action" :style="{ backgroundColor: palette.preview.accent }" />
+                    </span>
                   </span>
-                  <span class="theme-palette-preview__panel" :style="{ backgroundColor: palette.preview.surface, borderColor: palette.preview.line }">
-                    <span class="theme-palette-preview__heading" :style="{ backgroundColor: palette.preview.ink }" />
-                    <span class="theme-palette-preview__line" :style="{ backgroundColor: palette.preview.ink, opacity: 0.2 }" />
-                    <span class="theme-palette-preview__line theme-palette-preview__line--short" :style="{ backgroundColor: palette.preview.ink, opacity: 0.2 }" />
-                    <span class="theme-palette-preview__action" :style="{ backgroundColor: palette.preview.accent }" />
+                  <span class="theme-palette-option__name">
+                    <strong>{{ palette.name }}</strong>
+                    <FaIcon v-if="activeThemePalette === palette.id" name="i-lucide:check-circle-2" aria-hidden="true" />
                   </span>
-                </span>
-                <span class="theme-palette-option__name">
-                  <strong>{{ palette.name }}</strong>
-                  <FaIcon v-if="activeThemePalette === palette.id" name="i-lucide:check-circle-2" aria-hidden="true" />
-                </span>
-                <small>{{ palette.description }}</small>
-              </button>
+                  <small>{{ palette.description }}</small>
+                </button>
+              </div>
+              <!-- 主题不只换色：把同时变化的结构项说清楚，避免用户以为是页面「变紧/变松」出了问题。 -->
+              <p v-if="activeThemePalette === 'gr8r'" class="theme-palette-note">
+                当前主题同时调整：控件高度 30px、表格行高 40px、卡片改为 1px 描边且去投影、圆角上限 10px。
+              </p>
             </div>
-            <!-- 主题不只换色：把同时变化的结构项说清楚，避免用户以为是页面「变紧/变松」出了问题。 -->
-            <p v-if="activeThemePalette === 'gr8r'" class="theme-palette-note">
-              当前主题同时调整：控件高度 30px、表格行高 40px、卡片改为 1px 描边且去投影、圆角上限 10px。
-            </p>
-          </div>
-          <div class="setting-item setting-item--stack">
-            <div class="label-copy">
-              <strong>颜色主题</strong>
-              <small>可固定明亮、暗黑模式，或跟随操作系统。</small>
+            <div class="setting-item setting-item--stack">
+              <div class="label-copy">
+                <strong>颜色主题</strong>
+                <small>可固定明亮、暗黑模式，或跟随操作系统。</small>
+              </div>
+              <el-tabs v-model="themeTab" class="theme-tabs mrr-segmented-tabs" @keydown="handleSegmentedTabKey">
+                <el-tab-pane v-for="option in themeOptions" :key="option.value" :name="`${tabsId}-theme-${option.value}`">
+                  <template #label>
+                    <span class="mrr-segmented-label">
+                      <FaIcon :name="option.icon" aria-hidden="true" />
+                      {{ option.label }}
+                    </span>
+                  </template>
+                </el-tab-pane>
+              </el-tabs>
             </div>
-            <FaTabs
-              v-model="settingsStore.settings.app.colorScheme"
-              :list="[
-                { icon: 'i-lucide:sun', label: '明亮', value: 'light' },
-                { icon: 'i-lucide:moon', label: '暗黑', value: 'dark' },
-                { icon: 'i-lucide:sun-moon', label: '跟随系统', value: '' },
-              ]"
-              class="theme-tabs"
-            />
-          </div>
 
-          <div class="setting-item">
-            <div class="label-copy">
-              <strong>主题主色</strong>
-              <small>{{ activeThemePalette === 'gr8r' ? '暖色扁平风格使用固定配套主色，随明暗模式自动调整；切回 MRR 经典可自由选色。' : '菜单、主要按钮和选中状态会同步使用此颜色。' }}</small>
-            </div>
-            <div v-if="activeThemePalette === 'mrr'" class="theme-colors" role="group" aria-label="主题主色">
-              <button
-                v-for="preset in themeColorPresets"
-                :key="preset.color"
-                type="button"
-                class="theme-swatch"
-                :style="{ '--swatch-color': preset.color, '--swatch-ink': swatchInk(preset.color) }"
-                :title="preset.label"
-                :aria-label="preset.label"
-                :aria-pressed="activeThemeColor === preset.color"
-                @click="settingsStore.settings.app.themeColor = preset.color"
-              >
-                <FaIcon v-if="activeThemeColor === preset.color" name="i-lucide:check" aria-hidden="true" />
-              </button>
-              <div class="custom-color">
-                <el-color-picker
-                  v-model="settingsStore.settings.app.themeColor"
-                  color-format="hex"
-                  aria-label="自定义主题主色"
-                />
-                <span>自定义</span>
+            <div class="setting-item">
+              <div class="label-copy">
+                <strong>主题主色</strong>
+                <small>{{ activeThemePalette === 'gr8r' ? '暖色扁平风格使用固定配套主色，随明暗模式自动调整；切回 MRR 经典可自由选色。' : '菜单、主要按钮和选中状态会同步使用此颜色。' }}</small>
+              </div>
+              <div v-if="activeThemePalette === 'mrr'" class="theme-colors" role="group" aria-label="主题主色">
+                <button
+                  v-for="preset in themeColorPresets"
+                  :key="preset.color"
+                  type="button"
+                  class="theme-swatch"
+                  :style="{ '--swatch-color': preset.color, '--swatch-ink': swatchInk(preset.color) }"
+                  :title="preset.label"
+                  :aria-label="preset.label"
+                  :aria-pressed="activeThemeColor === preset.color"
+                  @click="settingsStore.settings.app.themeColor = preset.color"
+                >
+                  <FaIcon v-if="activeThemeColor === preset.color" name="i-lucide:check" aria-hidden="true" />
+                </button>
+                <div class="custom-color">
+                  <el-color-picker
+                    v-model="settingsStore.settings.app.themeColor"
+                    color-format="hex"
+                    aria-label="自定义主题主色"
+                  />
+                  <span>自定义</span>
+                </div>
+              </div>
+              <div v-else class="theme-palette-accent" aria-label="暖色扁平风格当前主色">
+                <span class="theme-palette-accent__swatch" :style="{ backgroundColor: gr8rAccent }" aria-hidden="true" />
+                <span class="theme-palette-accent__copy">
+                  <strong>{{ gr8rAccent }}</strong>
+                  <small>原 MRR 主色设置已保留</small>
+                </span>
+                <button type="button" class="theme-palette-accent__reset" @click="settingsStore.settings.app.themePalette = 'mrr'">
+                  自定义主色
+                </button>
               </div>
             </div>
-            <div v-else class="theme-palette-accent" aria-label="暖色扁平风格当前主色">
-              <span class="theme-palette-accent__swatch" :style="{ backgroundColor: gr8rAccent }" aria-hidden="true" />
-              <span class="theme-palette-accent__copy">
-                <strong>{{ gr8rAccent }}</strong>
-                <small>原 MRR 主色设置已保留</small>
-              </span>
-              <button type="button" class="theme-palette-accent__reset" @click="settingsStore.settings.app.themePalette = 'mrr'">
-                自定义主色
-              </button>
-            </div>
-          </div>
 
-          <div class="setting-item">
-            <div class="label-copy">
-              <strong>圆角系数</strong>
-              <small>{{ activeThemePalette === 'gr8r' ? '统一调整页面卡片与面板的圆角程度；暖色扁平风格会把上限收敛到 10px。' : '统一调整页面卡片与面板的圆角程度。' }}</small>
+            <div class="setting-item">
+              <div class="label-copy">
+                <strong>圆角系数</strong>
+                <small>{{ activeThemePalette === 'gr8r' ? '统一调整页面卡片与面板的圆角程度；暖色扁平风格会把上限收敛到 10px。' : '统一调整页面卡片与面板的圆角程度。' }}</small>
+              </div>
+              <div class="radius-control">
+                <el-slider v-model="appRadius" aria-label="圆角系数" :min="0" :max="1" :step="0.25" class="slider-field mrr-compact-slider" />
+                <span class="radius-value">{{ settingsStore.settings.app.radius }}</span>
+              </div>
             </div>
-            <div class="radius-control">
-              <el-slider v-model="appRadius" aria-label="圆角系数" :min="0" :max="1" :step="0.25" class="slider-field mrr-compact-slider" />
-              <span class="radius-value">{{ settingsStore.settings.app.radius }}</span>
-            </div>
-          </div>
 
-          <div class="setting-item setting-item--stack">
-            <div class="label-copy">
-              <strong>圆角曲线</strong>
-              <small>G2 连续曲线的曲率平滑过渡，观感接近 iOS 图标；标准圆弧为等半径圆角。差异随圆角系数增大而更明显。开关、滑块与圆形图标不属于圆角矩形，两种模式下都保持标准圆弧。</small>
+            <div class="setting-item setting-item--stack">
+              <div class="label-copy">
+                <strong>圆角曲线</strong>
+                <small>G2 连续曲线的曲率平滑过渡，观感接近 iOS 图标；标准圆弧为等半径圆角。差异随圆角系数增大而更明显。开关、滑块与圆形图标不属于圆角矩形，两种模式下都保持标准圆弧。</small>
+              </div>
+              <div class="corner-options" role="group" aria-label="圆角曲线">
+                <button
+                  v-for="shape in radiusShapes"
+                  :key="shape.value"
+                  type="button"
+                  class="corner-option"
+                  :aria-pressed="radiusShape === shape.value"
+                  @click="settingsStore.settings.app.radiusShape = shape.value"
+                >
+                  <span class="corner-preview" :class="`corner-preview--${shape.value}`" aria-hidden="true" />
+                  {{ shape.label }}
+                </button>
+              </div>
+              <p v-if="!supportsCornerShape" class="corner-hint">
+                <FaIcon name="i-lucide:info" aria-hidden="true" />
+                当前浏览器未实现 CSS corner-shape，本机仍按标准圆弧绘制；设置会保存并对支持的浏览器生效。
+              </p>
             </div>
-            <div class="corner-options" role="group" aria-label="圆角曲线">
-              <button
-                v-for="shape in radiusShapes"
-                :key="shape.value"
-                type="button"
-                class="corner-option"
-                :aria-pressed="radiusShape === shape.value"
-                @click="settingsStore.settings.app.radiusShape = shape.value"
-              >
-                <span class="corner-preview" :class="`corner-preview--${shape.value}`" aria-hidden="true" />
-                {{ shape.label }}
-              </button>
-            </div>
-            <p v-if="!supportsCornerShape" class="corner-hint">
-              <FaIcon name="i-lucide:info" aria-hidden="true" />
-              当前浏览器未实现 CSS corner-shape，本机仍按标准圆弧绘制；设置会保存并对支持的浏览器生效。
-            </p>
-          </div>
 
-          <div class="setting-item setting-item--stack">
-            <div class="label-copy">
-              <strong>页面标题风格</strong>
-              <small>页面同级更简洁，卡片风格层次更突出。</small>
+            <div class="setting-item setting-item--stack">
+              <div class="label-copy">
+                <strong>页面标题风格</strong>
+                <small>页面同级更简洁，卡片风格层次更突出。</small>
+              </div>
+              <el-tabs v-model="titleTab" class="title-style-tabs mrr-segmented-tabs" @keydown="handleSegmentedTabKey">
+                <el-tab-pane v-for="option in titleOptions" :key="option.value" :name="`${tabsId}-title-${option.value}`" :label="option.label" />
+              </el-tabs>
             </div>
-            <FaTabs
-              v-model="settingsStore.settings.app.pageTitleStyle"
-              :list="[
-                { label: '页面同级', value: 'plain' },
-                { label: '卡片', value: 'card' },
-              ]"
-              class="title-style-tabs"
-            />
-          </div>
 
-          <div class="setting-item">
-            <div class="label-copy">
-              <strong>动态效果</strong>
-              <small>默认启用界面过渡和动效。关闭后会停用动态效果，仅保存在当前浏览器。</small>
-            </div>
-            <el-switch v-model="settingsStore.settings.app.enableMotion" aria-label="动态效果" />
-          </div>
-        </div>
-      </TabsContent>
-
-      <TabsContent value="navigation" class="appearance-tab-content">
-        <div class="config-section">
-          <div v-if="settingsStore.mode === 'pc'" class="setting-item setting-item--stack">
-            <div class="label-copy">
-              <strong>导航栏模式</strong>
-              <small>选择适合当前工作区的菜单布局。</small>
-            </div>
-            <div class="menu-mode" role="group" aria-label="导航栏模式">
-              <button
-                v-for="item in navigationModes"
-                :key="item.value"
-                type="button"
-                class="mode-option"
-                :aria-pressed="settingsStore.settings.menu.mode === item.value"
-                @click="settingsStore.settings.menu.mode = item.value"
-              >
-                <span class="mode" :class="`mode-${item.value}`" aria-hidden="true">
-                  <span class="mode-container" />
-                </span>
-                {{ item.label }}
-              </button>
-            </div>
-          </div>
-
-          <div class="setting-item">
-            <div class="label-copy">
-              <strong>主导航点击模式</strong>
-              <small>智能选择会根据可访问菜单数量自动判断。</small>
-            </div>
-            <div class="button-options">
-              <el-button
-                v-for="(item, index) in [
-                  { label: '切换', value: 'switch' },
-                  { label: '跳转', value: 'jump' },
-                  { label: '智能选择', value: 'smart' },
-                ]"
-                :key="index"
-                :type="settingsStore.settings.menu.mainMenuClickMode === item.value ? 'primary' : 'default'"
-                :auto-insert-space="false"
-                :aria-pressed="settingsStore.settings.menu.mainMenuClickMode === item.value"
-                size="small"
-                @click="settingsStore.settings.menu.mainMenuClickMode = (item.value as any)"
-              >
-                {{ item.label }}
-              </el-button>
-            </div>
-          </div>
-
-          <div class="setting-item">
-            <div class="label-copy">
-              <strong>次导航只展开一项</strong>
-              <small>展开新菜单时自动收起其他菜单。</small>
-            </div>
-            <el-switch v-model="settingsStore.settings.menu.subMenuUniqueOpened" aria-label="次导航只展开一项" />
-          </div>
-
-          <div class="setting-item">
-            <div class="label-copy">
-              <strong>默认折叠次导航</strong>
-              <small>进入系统时以紧凑状态显示次导航。</small>
-            </div>
-            <el-switch v-model="settingsStore.settings.menu.subMenuCollapse" aria-label="默认折叠次导航" />
-          </div>
-
-          <div v-if="settingsStore.mode === 'pc'" class="setting-item">
-            <div class="label-copy">
-              <strong>显示折叠按钮</strong>
-              <small>允许用户手动展开或折叠次导航。</small>
-            </div>
-            <el-switch v-model="settingsStore.settings.menu.enableSubMenuCollapseButton" aria-label="显示折叠按钮" />
-          </div>
-
-          <div class="setting-item">
-            <div class="label-copy">
-              <strong>导航快捷键</strong>
-              <small>单栏导航模式下不可用。</small>
-            </div>
-            <el-switch v-model="settingsStore.settings.menu.enableHotkeys" :disabled="['single'].includes(settingsStore.settings.menu.mode)" aria-label="导航快捷键" />
-          </div>
-
-          <div class="setting-item">
-            <div class="label-copy">
-              <strong>顶栏定位</strong>
-              <small>控制滚动页面时顶栏的显示方式。</small>
-            </div>
-            <div class="button-options">
-              <el-button
-                v-for="(item, index) in [
-                  { label: '静止', value: 'static' },
-                  { label: '固定', value: 'fixed' },
-                  { label: '粘性', value: 'sticky' },
-                ]"
-                :key="index"
-                :type="settingsStore.settings.topbar.mode === item.value ? 'primary' : 'default'"
-                :auto-insert-space="false"
-                :aria-pressed="settingsStore.settings.topbar.mode === item.value"
-                size="small"
-                @click="settingsStore.settings.topbar.mode = (item.value as any)"
-              >
-                {{ item.label }}
-              </el-button>
+            <div class="setting-item">
+              <div class="label-copy">
+                <strong>动态效果</strong>
+                <small>默认启用界面过渡和动效。关闭后会停用动态效果，仅保存在当前浏览器。</small>
+              </div>
+              <el-switch v-model="settingsStore.settings.app.enableMotion" aria-label="动态效果" />
             </div>
           </div>
         </div>
-      </TabsContent>
+      </el-tab-pane>
 
-      <TabsContent value="workspace" class="appearance-tab-content">
-        <div class="config-subsection">
-          <div class="subsection-heading">
-            <strong>标签栏</strong>
-            <small>管理已打开页面及其快捷操作。</small>
-          </div>
-          <div class="config-section config-section--nested">
-            <div class="setting-item">
+      <el-tab-pane :name="`${tabsId}-group-navigation`" lazy>
+        <template #label>
+          <span data-settings-search-target="navigation" class="appearance-tab-label">
+            <FaIcon :name="appearanceGroups[1].icon" aria-hidden="true" />
+            {{ appearanceGroups[1].label }}
+          </span>
+        </template>
+        <div v-if="activeGroup === 'navigation'" class="appearance-tab-content">
+          <div class="config-section">
+            <div v-if="settingsStore.mode === 'pc'" class="setting-item setting-item--stack">
               <div class="label-copy">
-                <strong>启用标签栏</strong>
+                <strong>导航栏模式</strong>
+                <small>选择适合当前工作区的菜单布局。</small>
               </div>
-              <el-switch v-model="settingsStore.settings.tabbar.enable" aria-label="启用标签栏" />
-            </div>
-            <div class="setting-item">
-              <div class="label-copy">
-                <strong>显示页面图标</strong>
+              <div class="menu-mode" role="group" aria-label="导航栏模式">
+                <button
+                  v-for="item in navigationModes"
+                  :key="item.value"
+                  type="button"
+                  class="mode-option"
+                  :aria-pressed="settingsStore.settings.menu.mode === item.value"
+                  @click="settingsStore.settings.menu.mode = item.value"
+                >
+                  <span class="mode" :class="`mode-${item.value}`" aria-hidden="true">
+                    <span class="mode-container" />
+                  </span>
+                  {{ item.label }}
+                </button>
               </div>
-              <el-switch v-model="settingsStore.settings.tabbar.enableIcon" :disabled="!settingsStore.settings.tabbar.enable" aria-label="显示页面图标" />
             </div>
-            <div class="setting-item">
-              <div class="label-copy">
-                <strong>标签栏快捷键</strong>
-              </div>
-              <el-switch v-model="settingsStore.settings.tabbar.enableHotkeys" :disabled="!settingsStore.settings.tabbar.enable" aria-label="标签栏快捷键" />
-            </div>
-          </div>
-        </div>
 
-        <div class="config-subsection">
-          <div class="subsection-heading">
-            <strong>工具栏</strong>
-            <small>控制页面顶部常用工具的显示。</small>
-          </div>
-          <div class="config-section config-section--nested">
             <div class="setting-item">
               <div class="label-copy">
-                <strong>启用工具栏</strong>
+                <strong>主导航点击模式</strong>
+                <small>智能选择会根据可访问菜单数量自动判断。</small>
               </div>
-              <el-switch v-model="settingsStore.settings.toolbar.enable" aria-label="启用工具栏" />
+              <div class="button-options">
+                <el-button
+                  v-for="(item, index) in [
+                    { label: '切换', value: 'switch' },
+                    { label: '跳转', value: 'jump' },
+                    { label: '智能选择', value: 'smart' },
+                  ]"
+                  :key="index"
+                  :type="settingsStore.settings.menu.mainMenuClickMode === item.value ? 'primary' : 'default'"
+                  :auto-insert-space="false"
+                  :aria-pressed="settingsStore.settings.menu.mainMenuClickMode === item.value"
+                  size="small"
+                  @click="settingsStore.settings.menu.mainMenuClickMode = (item.value as any)"
+                >
+                  {{ item.label }}
+                </el-button>
+              </div>
             </div>
+
+            <div class="setting-item">
+              <div class="label-copy">
+                <strong>次导航只展开一项</strong>
+                <small>展开新菜单时自动收起其他菜单。</small>
+              </div>
+              <el-switch v-model="settingsStore.settings.menu.subMenuUniqueOpened" aria-label="次导航只展开一项" />
+            </div>
+
+            <div class="setting-item">
+              <div class="label-copy">
+                <strong>默认折叠次导航</strong>
+                <small>进入系统时以紧凑状态显示次导航。</small>
+              </div>
+              <el-switch v-model="settingsStore.settings.menu.subMenuCollapse" aria-label="默认折叠次导航" />
+            </div>
+
             <div v-if="settingsStore.mode === 'pc'" class="setting-item">
               <div class="label-copy">
-                <strong>面包屑导航</strong>
+                <strong>显示折叠按钮</strong>
+                <small>允许用户手动展开或折叠次导航。</small>
               </div>
-              <el-switch v-model="settingsStore.settings.toolbar.breadcrumb" :disabled="!settingsStore.settings.toolbar.enable" aria-label="面包屑导航" />
+              <el-switch v-model="settingsStore.settings.menu.enableSubMenuCollapseButton" aria-label="显示折叠按钮" />
             </div>
-            <div class="setting-item">
-              <div class="label-copy">
-                <strong>导航搜索</strong>
-              </div>
-              <el-switch v-model="settingsStore.settings.toolbar.navSearch" :disabled="!settingsStore.settings.toolbar.enable" aria-label="导航搜索" />
-            </div>
-            <div v-if="settingsStore.mode === 'pc'" class="setting-item">
-              <div class="label-copy">
-                <strong>全屏入口</strong>
-              </div>
-              <el-switch v-model="settingsStore.settings.toolbar.fullscreen" :disabled="!settingsStore.settings.toolbar.enable" aria-label="全屏入口" />
-            </div>
-            <div class="setting-item">
-              <div class="label-copy">
-                <strong>页面刷新入口</strong>
-              </div>
-              <el-switch v-model="settingsStore.settings.toolbar.pageReload" :disabled="!settingsStore.settings.toolbar.enable" aria-label="页面刷新入口" />
-            </div>
-            <div class="setting-item">
-              <div class="label-copy">
-                <strong>主题切换入口</strong>
-              </div>
-              <el-switch v-model="settingsStore.settings.toolbar.colorScheme" :disabled="!settingsStore.settings.toolbar.enable" aria-label="主题切换入口" />
-            </div>
-          </div>
-        </div>
 
-        <div class="config-subsection">
-          <div class="subsection-heading">
-            <strong>快捷键</strong>
-            <small>控制主页和导航搜索的键盘操作。</small>
-          </div>
-          <div class="config-section config-section--nested">
             <div class="setting-item">
               <div class="label-copy">
-                <strong>主页快捷键</strong>
+                <strong>导航快捷键</strong>
+                <small>单栏导航模式下不可用。</small>
               </div>
-              <el-switch v-model="settingsStore.settings.mainPage.enableHotkeys" :disabled="!settingsStore.settings.toolbar.enable" aria-label="主页快捷键" />
+              <el-switch v-model="settingsStore.settings.menu.enableHotkeys" :disabled="['single'].includes(settingsStore.settings.menu.mode)" aria-label="导航快捷键" />
             </div>
-            <div class="setting-item">
-              <div class="label-copy">
-                <strong>导航搜索快捷键</strong>
-              </div>
-              <el-switch v-model="settingsStore.settings.navSearch.enableHotkeys" :disabled="!settingsStore.settings.toolbar.navSearch" aria-label="导航搜索快捷键" />
-            </div>
-          </div>
-        </div>
-      </TabsContent>
 
-      <TabsContent value="other" class="appearance-tab-content">
-        <div class="config-subsection">
-          <div class="subsection-heading">
-            <strong>主页</strong>
-            <small>控制登录后的默认入口与名称。</small>
-          </div>
-          <div class="config-section config-section--nested">
             <div class="setting-item">
               <div class="label-copy">
-                <strong>启用主页</strong>
+                <strong>顶栏定位</strong>
+                <small>控制滚动页面时顶栏的显示方式。</small>
               </div>
-              <el-switch v-model="settingsStore.settings.home.enable" aria-label="启用主页" />
-            </div>
-            <div class="setting-item">
-              <div class="label-copy">
-                <strong>主页名称</strong>
+              <div class="button-options">
+                <el-button
+                  v-for="(item, index) in [
+                    { label: '静止', value: 'static' },
+                    { label: '固定', value: 'fixed' },
+                    { label: '粘性', value: 'sticky' },
+                  ]"
+                  :key="index"
+                  :type="settingsStore.settings.topbar.mode === item.value ? 'primary' : 'default'"
+                  :auto-insert-space="false"
+                  :aria-pressed="settingsStore.settings.topbar.mode === item.value"
+                  size="small"
+                  @click="settingsStore.settings.topbar.mode = (item.value as any)"
+                >
+                  {{ item.label }}
+                </el-button>
               </div>
-              <el-input v-model="settingsStore.settings.home.title" class="appearance-field" aria-label="主页名称" />
             </div>
           </div>
         </div>
+      </el-tab-pane>
 
-        <div class="config-subsection">
-          <div class="subsection-heading">
-            <strong>底部版权</strong>
-            <small>设置页脚展示的版权与备案信息。</small>
-          </div>
-          <div class="config-section config-section--nested">
-            <div class="setting-item">
-              <div class="label-copy">
-                <strong>启用底部版权</strong>
-              </div>
-              <el-switch v-model="settingsStore.settings.copyright.enable" aria-label="启用底部版权" />
+      <el-tab-pane :name="`${tabsId}-group-workspace`" lazy>
+        <template #label>
+          <span data-settings-search-target="workspace" class="appearance-tab-label">
+            <FaIcon :name="appearanceGroups[2].icon" aria-hidden="true" />
+            {{ appearanceGroups[2].label }}
+          </span>
+        </template>
+        <div v-if="activeGroup === 'workspace'" class="appearance-tab-content">
+          <div class="config-subsection">
+            <div class="subsection-heading">
+              <strong>标签栏</strong>
+              <small>管理已打开页面及其快捷操作。</small>
             </div>
-            <div class="setting-item">
-              <div class="label-copy">
-                <strong>日期</strong>
+            <div class="config-section config-section--nested">
+              <div class="setting-item">
+                <div class="label-copy">
+                  <strong>启用标签栏</strong>
+                </div>
+                <el-switch v-model="settingsStore.settings.tabbar.enable" aria-label="启用标签栏" />
               </div>
-              <el-input v-model="settingsStore.settings.copyright.dates" :disabled="!settingsStore.settings.copyright.enable" class="appearance-field" aria-label="日期" />
-            </div>
-            <div class="setting-item">
-              <div class="label-copy">
-                <strong>公司</strong>
+              <div class="setting-item">
+                <div class="label-copy">
+                  <strong>显示页面图标</strong>
+                </div>
+                <el-switch v-model="settingsStore.settings.tabbar.enableIcon" :disabled="!settingsStore.settings.tabbar.enable" aria-label="显示页面图标" />
               </div>
-              <el-input v-model="settingsStore.settings.copyright.company" :disabled="!settingsStore.settings.copyright.enable" class="appearance-field" aria-label="公司" />
-            </div>
-            <div class="setting-item">
-              <div class="label-copy">
-                <strong>网址</strong>
+              <div class="setting-item">
+                <div class="label-copy">
+                  <strong>标签栏快捷键</strong>
+                </div>
+                <el-switch v-model="settingsStore.settings.tabbar.enableHotkeys" :disabled="!settingsStore.settings.tabbar.enable" aria-label="标签栏快捷键" />
               </div>
-              <el-input v-model="settingsStore.settings.copyright.website" :disabled="!settingsStore.settings.copyright.enable" class="appearance-field" aria-label="网址" />
-            </div>
-            <div class="setting-item">
-              <div class="label-copy">
-                <strong>备案号</strong>
-              </div>
-              <el-input v-model="settingsStore.settings.copyright.beian" :disabled="!settingsStore.settings.copyright.enable" class="appearance-field" aria-label="备案号" />
             </div>
           </div>
-        </div>
 
-        <div class="config-subsection">
-          <div class="subsection-heading">
-            <strong>其他功能</strong>
-            <small>权限、载入反馈和辅助显示选项。</small>
+          <div class="config-subsection">
+            <div class="subsection-heading">
+              <strong>工具栏</strong>
+              <small>控制页面顶部常用工具的显示。</small>
+            </div>
+            <div class="config-section config-section--nested">
+              <div class="setting-item">
+                <div class="label-copy">
+                  <strong>启用工具栏</strong>
+                </div>
+                <el-switch v-model="settingsStore.settings.toolbar.enable" aria-label="启用工具栏" />
+              </div>
+              <div v-if="settingsStore.mode === 'pc'" class="setting-item">
+                <div class="label-copy">
+                  <strong>面包屑导航</strong>
+                </div>
+                <el-switch v-model="settingsStore.settings.toolbar.breadcrumb" :disabled="!settingsStore.settings.toolbar.enable" aria-label="面包屑导航" />
+              </div>
+              <div class="setting-item">
+                <div class="label-copy">
+                  <strong>导航搜索</strong>
+                </div>
+                <el-switch v-model="settingsStore.settings.toolbar.navSearch" :disabled="!settingsStore.settings.toolbar.enable" aria-label="导航搜索" />
+              </div>
+              <div v-if="settingsStore.mode === 'pc'" class="setting-item">
+                <div class="label-copy">
+                  <strong>全屏入口</strong>
+                </div>
+                <el-switch v-model="settingsStore.settings.toolbar.fullscreen" :disabled="!settingsStore.settings.toolbar.enable" aria-label="全屏入口" />
+              </div>
+              <div class="setting-item">
+                <div class="label-copy">
+                  <strong>页面刷新入口</strong>
+                </div>
+                <el-switch v-model="settingsStore.settings.toolbar.pageReload" :disabled="!settingsStore.settings.toolbar.enable" aria-label="页面刷新入口" />
+              </div>
+              <div class="setting-item">
+                <div class="label-copy">
+                  <strong>主题切换入口</strong>
+                </div>
+                <el-switch v-model="settingsStore.settings.toolbar.colorScheme" :disabled="!settingsStore.settings.toolbar.enable" aria-label="主题切换入口" />
+              </div>
+            </div>
           </div>
-          <div class="config-section config-section--nested">
-            <div class="setting-item">
-              <div class="label-copy">
-                <strong>启用权限控制</strong>
-              </div>
-              <el-switch v-model="settingsStore.settings.app.enablePermission" aria-label="启用权限控制" />
+
+          <div class="config-subsection">
+            <div class="subsection-heading">
+              <strong>快捷键</strong>
+              <small>控制主页和导航搜索的键盘操作。</small>
             </div>
-            <div class="setting-item">
-              <div class="label-copy">
-                <strong>显示载入进度条</strong>
+            <div class="config-section config-section--nested">
+              <div class="setting-item">
+                <div class="label-copy">
+                  <strong>主页快捷键</strong>
+                </div>
+                <el-switch v-model="settingsStore.settings.mainPage.enableHotkeys" :disabled="!settingsStore.settings.toolbar.enable" aria-label="主页快捷键" />
               </div>
-              <el-switch v-model="settingsStore.settings.app.enableProgress" aria-label="显示载入进度条" />
-            </div>
-            <div class="setting-item">
-              <div class="label-copy">
-                <strong>色弱模式</strong>
+              <div class="setting-item">
+                <div class="label-copy">
+                  <strong>导航搜索快捷键</strong>
+                </div>
+                <el-switch v-model="settingsStore.settings.navSearch.enableHotkeys" :disabled="!settingsStore.settings.toolbar.navSearch" aria-label="导航搜索快捷键" />
               </div>
-              <el-switch v-model="settingsStore.settings.app.enableColorAmblyopiaMode" aria-label="色弱模式" />
-            </div>
-            <div class="setting-item">
-              <div class="label-copy">
-                <strong>动态页面标题</strong>
-              </div>
-              <el-switch v-model="settingsStore.settings.app.enableDynamicTitle" aria-label="动态页面标题" />
             </div>
           </div>
         </div>
-      </TabsContent>
-    </Tabs>
+      </el-tab-pane>
+
+      <el-tab-pane :name="`${tabsId}-group-other`" lazy>
+        <template #label>
+          <span data-settings-search-target="other" class="appearance-tab-label">
+            <FaIcon :name="appearanceGroups[3].icon" aria-hidden="true" />
+            {{ appearanceGroups[3].label }}
+          </span>
+        </template>
+        <div v-if="activeGroup === 'other'" class="appearance-tab-content">
+          <div class="config-subsection">
+            <div class="subsection-heading">
+              <strong>主页</strong>
+              <small>控制登录后的默认入口与名称。</small>
+            </div>
+            <div class="config-section config-section--nested">
+              <div class="setting-item">
+                <div class="label-copy">
+                  <strong>启用主页</strong>
+                </div>
+                <el-switch v-model="settingsStore.settings.home.enable" aria-label="启用主页" />
+              </div>
+              <div class="setting-item">
+                <div class="label-copy">
+                  <strong>主页名称</strong>
+                </div>
+                <el-input v-model="settingsStore.settings.home.title" class="appearance-field" aria-label="主页名称" />
+              </div>
+            </div>
+          </div>
+
+          <div class="config-subsection">
+            <div class="subsection-heading">
+              <strong>底部版权</strong>
+              <small>设置页脚展示的版权与备案信息。</small>
+            </div>
+            <div class="config-section config-section--nested">
+              <div class="setting-item">
+                <div class="label-copy">
+                  <strong>启用底部版权</strong>
+                </div>
+                <el-switch v-model="settingsStore.settings.copyright.enable" aria-label="启用底部版权" />
+              </div>
+              <div class="setting-item">
+                <div class="label-copy">
+                  <strong>日期</strong>
+                </div>
+                <el-input v-model="settingsStore.settings.copyright.dates" :disabled="!settingsStore.settings.copyright.enable" class="appearance-field" aria-label="日期" />
+              </div>
+              <div class="setting-item">
+                <div class="label-copy">
+                  <strong>公司</strong>
+                </div>
+                <el-input v-model="settingsStore.settings.copyright.company" :disabled="!settingsStore.settings.copyright.enable" class="appearance-field" aria-label="公司" />
+              </div>
+              <div class="setting-item">
+                <div class="label-copy">
+                  <strong>网址</strong>
+                </div>
+                <el-input v-model="settingsStore.settings.copyright.website" :disabled="!settingsStore.settings.copyright.enable" class="appearance-field" aria-label="网址" />
+              </div>
+              <div class="setting-item">
+                <div class="label-copy">
+                  <strong>备案号</strong>
+                </div>
+                <el-input v-model="settingsStore.settings.copyright.beian" :disabled="!settingsStore.settings.copyright.enable" class="appearance-field" aria-label="备案号" />
+              </div>
+            </div>
+          </div>
+
+          <div class="config-subsection">
+            <div class="subsection-heading">
+              <strong>其他功能</strong>
+              <small>权限、载入反馈和辅助显示选项。</small>
+            </div>
+            <div class="config-section config-section--nested">
+              <div class="setting-item">
+                <div class="label-copy">
+                  <strong>启用权限控制</strong>
+                </div>
+                <el-switch v-model="settingsStore.settings.app.enablePermission" aria-label="启用权限控制" />
+              </div>
+              <div class="setting-item">
+                <div class="label-copy">
+                  <strong>显示载入进度条</strong>
+                </div>
+                <el-switch v-model="settingsStore.settings.app.enableProgress" aria-label="显示载入进度条" />
+              </div>
+              <div class="setting-item">
+                <div class="label-copy">
+                  <strong>色弱模式</strong>
+                </div>
+                <el-switch v-model="settingsStore.settings.app.enableColorAmblyopiaMode" aria-label="色弱模式" />
+              </div>
+              <div class="setting-item">
+                <div class="label-copy">
+                  <strong>动态页面标题</strong>
+                </div>
+                <el-switch v-model="settingsStore.settings.app.enableDynamicTitle" aria-label="动态页面标题" />
+              </div>
+            </div>
+          </div>
+        </div>
+      </el-tab-pane>
+    </el-tabs>
   </div>
 </template>
 
@@ -737,36 +776,34 @@ function handleReset() {
 
 .import-input { display: none; }
 
-.appearance-tabs {
+.appearance-tabs > :deep(.el-tabs__header .el-tabs__nav) {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: var(--mrr-space-1);
-  width: 100%;
   border: 1px solid var(--mrr-border);
   border-radius: var(--mrr-radius-card);
 }
 
-.app-config-panel--drawer .appearance-tabs {
+.app-config-panel--drawer .appearance-tabs > :deep(.el-tabs__header .el-tabs__nav) {
   grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
-.appearance-tab {
+.appearance-tabs > :deep(.el-tabs__header .el-tabs__item) {
   min-width: 0;
+  height: auto;
   min-height: 38px;
   padding-inline: var(--mrr-space-2);
+  white-space: normal;
   border: 1px solid transparent;
   border-radius: var(--mrr-radius-md);
-  transition: background-color var(--mrr-motion-feedback) var(--mrr-ease-out), border-color var(--mrr-motion-feedback) var(--mrr-ease-out);
 }
 
-.appearance-tab[data-state="active"] {
+.appearance-tabs > :deep(.el-tabs__header .el-tabs__item.is-active) {
   font-weight: 600;
   color: var(--mrr-navigation-active-foreground, var(--mrr-primary));
   background: var(--mrr-card);
   border-color: var(--mrr-border);
 }
-
-.appearance-tab :deep(.truncate) { white-space: normal; }
 
 .appearance-tab-label {
   display: flex;
@@ -778,7 +815,7 @@ function handleReset() {
 }
 
 .appearance-tab-label :deep(svg) { flex-shrink: 0; }
-.appearance-tab-content { margin-top: var(--mrr-space-4); }
+.appearance-tabs > :deep(.el-tabs__content) { padding-top: var(--mrr-space-4); }
 
 .config-section {
   overflow: hidden;
@@ -834,6 +871,12 @@ function handleReset() {
 
 .theme-tabs {
   width: 240px;
+}
+
+/* The old 240px option bar contained 238px of intrinsic-width segments.
+ * Its centered flex row therefore started 1px from the outer edge. */
+.theme-tabs > :deep(.el-tabs__header .el-tabs__nav) {
+  padding-inline: 1px;
 }
 
 /* 配色预览始终显示方案自身的真实色值，而非当前主题的颜色。 */
@@ -1265,7 +1308,7 @@ function handleReset() {
 }
 
 @media (max-width: 1200px) {
-  .appearance-tabs { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .appearance-tabs > :deep(.el-tabs__header .el-tabs__nav) { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
 
 @media (max-width: 720px) {

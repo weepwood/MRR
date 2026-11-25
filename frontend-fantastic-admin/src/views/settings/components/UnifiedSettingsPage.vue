@@ -96,7 +96,7 @@ async function openSearchResult(result: SettingsSearchResult) {
   const anchor = result.anchor
     ? content.querySelector<HTMLElement>(`[data-settings-search-target="${result.anchor}"]`)
     : undefined
-  const target = anchor ?? sectionHeadingRef.value
+  const target = anchor?.closest<HTMLElement>('[role="tab"]') ?? anchor ?? sectionHeadingRef.value
   if (!target) { return }
 
   target.focus({ preventScroll: true })

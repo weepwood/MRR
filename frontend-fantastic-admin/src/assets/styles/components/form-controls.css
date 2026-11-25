@@ -455,3 +455,100 @@
   font-size: 16px;
   color: var(--mrr-muted-foreground);
 }
+
+/* Segmented appearance for existing settings and gallery tabs. The single
+ * Element Plus implementation retains its tab/panel and keyboard semantics. */
+.mrr-segmented-tabs.el-tabs {
+  --mrr-segmented-tab-shadow: 0 1px 2px 0 rgb(0 0 0 / 5%);
+
+  flex-direction: column;
+  min-width: 0;
+}
+
+.mrr-segmented-tabs > .el-tabs__header {
+  margin: 0;
+}
+
+.mrr-segmented-tabs > .el-tabs__header .el-tabs__nav-wrap {
+  margin: 0;
+  overflow: visible;
+}
+
+.mrr-segmented-tabs > .el-tabs__header .el-tabs__nav-wrap::after,
+.mrr-segmented-tabs > .el-tabs__header .el-tabs__active-bar {
+  display: none;
+}
+
+.mrr-segmented-tabs > .el-tabs__header .el-tabs__nav-scroll {
+  overflow: visible;
+}
+
+.mrr-segmented-tabs > .el-tabs__header .el-tabs__nav {
+  float: none;
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  padding: 4px;
+  font-size: 14px;
+  font-weight: 400;
+  color: hsl(var(--muted-foreground));
+  background: hsl(var(--muted));
+  border-radius: 10px;
+}
+
+/* Segments fit the declared width (or wrap in the category grid); the
+ * underline-tab scroll translation otherwise shifts the 240px theme group. */
+.mrr-segmented-tabs > .el-tabs__header .el-tabs__nav-wrap.is-scrollable {
+  padding-inline: 0;
+}
+
+.mrr-segmented-tabs > .el-tabs__header .el-tabs__nav-prev,
+.mrr-segmented-tabs > .el-tabs__header .el-tabs__nav-next {
+  display: none;
+}
+
+.mrr-segmented-tabs > .el-tabs__header .el-tabs__nav {
+  transform: none !important;
+}
+
+.mrr-segmented-tabs > .el-tabs__header .el-tabs__item {
+  width: 100%;
+  height: 32px;
+  padding: 6px 12px;
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 20px;
+  color: hsl(var(--muted-foreground));
+  background: transparent;
+  border-radius: 8px;
+}
+
+/* EP's first/last tab padding reset is for underline navigation, not segments. */
+.mrr-segmented-tabs:not(.appearance-tabs) > .el-tabs__header .el-tabs__item:is(:nth-child(2), :last-child) {
+  padding-inline: 12px;
+}
+
+.mrr-segmented-tabs > .el-tabs__header .el-tabs__item.is-active {
+  color: hsl(var(--foreground));
+  background: hsl(var(--background));
+  box-shadow: var(--mrr-segmented-tab-shadow);
+}
+
+.mrr-segmented-tabs > .el-tabs__header .el-tabs__item:focus-visible {
+  outline: 2px solid var(--mrr-ring);
+  outline-offset: -2px;
+}
+
+.mrr-segmented-tabs > .el-tabs__content {
+  padding-top: 8px;
+  overflow: visible;
+}
+
+.mrr-segmented-label {
+  display: flex;
+  gap: 4px;
+  align-items: center;
+  justify-content: center;
+}

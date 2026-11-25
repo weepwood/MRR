@@ -311,10 +311,12 @@ onBeforeUnmount(reset)
 
 .scan-row {
   display: grid;
+  grid-template-columns: minmax(0, 1fr);
   gap: var(--mrr-space-1);
   padding: var(--mrr-space-2);
   color: var(--el-text-color-regular);
   text-align: left;
+  overflow-wrap: anywhere;
   cursor: pointer;
   background: var(--el-fill-color-blank);
   border: 1px solid var(--el-border-color-light);
@@ -352,6 +354,14 @@ onBeforeUnmount(reset)
   justify-content: space-between;
 }
 
+.scan-toolbar,
+.scan-actions,
+.scan-pagination {
+  min-width: 0;
+  max-width: 100%;
+  overflow-wrap: anywhere;
+}
+
 .scan-toolbar {
   margin-bottom: var(--mrr-space-2);
 }
@@ -360,6 +370,29 @@ onBeforeUnmount(reset)
 .scan-list-note {
   margin-top: var(--mrr-space-2);
   font-size: var(--mrr-font-size-xs);
+}
+
+/* Flex children may have wider intrinsic text on Linux/fallback fonts.
+ * Keep every action accessible without clipping the surrounding panel. */
+.scan-pagination :deep(.el-button),
+.scan-actions :deep(.el-button) {
+  min-width: 0;
+  max-width: 100%;
+  height: auto;
+  min-height: var(--mrr-control-height-compact);
+  white-space: normal;
+}
+
+.scan-pagination :deep(.el-button > span),
+.scan-actions :deep(.el-button > span) {
+  min-width: 0;
+  overflow-wrap: anywhere;
+  white-space: normal;
+}
+
+.scan-pagination :deep(.el-icon),
+.scan-actions :deep(.el-icon) {
+  flex-shrink: 0;
 }
 
 .scan-pagination :deep(.el-button + .el-button),

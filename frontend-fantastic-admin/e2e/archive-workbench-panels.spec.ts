@@ -65,9 +65,19 @@ test('影像与OCR面板按实际空间调整，专注原图不重新加载且�
   for (const width of [1100, 760, 390]) {
     await page.setViewportSize({ width, height: 900 })
     await expect(ocrHandle).toHaveCount(0)
-    await expect.poll(() => inspector.evaluate(el => el.scrollWidth <= el.clientWidth + 2)).toBe(true)
+    await expect.poll(() => inspector.evaluate((el) => {
+      const box = el.getBoundingClientRect()
+      if (el.scrollWidth <= el.clientWidth + 2) { return [] }
+      return [{ viewport: innerWidth, panel: el.clientWidth, scroll: el.scrollWidth, overflowing: [...el.querySelectorAll('*')]
+        .filter(node => !node.closest('.scan-viewport, .scan-list'))
+        .filter(node => node.getBoundingClientRect().width > 0 && node.getBoundingClientRect().right > box.right + 2)
+        .slice(0, 12)
+        .map(node => ({ element: node.tagName, class: String(node.className), width: node.getBoundingClientRect().width })) }]
+    }), { message: `影像核对在 ${width}px 视口不允许横向溢出` }).toEqual([])
     await expect(image).toHaveAttribute('src', src!)
   }
+  await page.addStyleTag({ content: '.scan-inspector button { letter-spacing: 1px; }' })
+  await expect.poll(() => inspector.evaluate(el => el.scrollWidth <= el.clientWidth + 2)).toBe(true)
   await expect(listHandle).toHaveCount(0)
   await page.screenshot({ path: test.info().outputPath('v12-panels-mobile.png'), fullPage: true })
 })

@@ -289,6 +289,7 @@ onBeforeUnmount(() => { observer?.disconnect(); clear() })
 <style scoped>
 .scan-inline {
   display: grid;
+  grid-template-columns: minmax(0, 1fr);
   place-items: center stretch;
   min-width: 0;
   min-height: 240px;
@@ -312,11 +313,13 @@ onBeforeUnmount(() => { observer?.disconnect(); clear() })
 }
 
 .scan-tool-group {
+  box-sizing: border-box;
   display: flex;
   flex-wrap: wrap;
   gap: var(--mrr-space-1);
   align-items: center;
   min-width: 0;
+  max-width: 100%;
   padding-inline-end: var(--mrr-space-2);
   border-inline-end: 1px solid var(--mrr-border);
 }
@@ -410,6 +413,7 @@ onBeforeUnmount(() => { observer?.disconnect(); clear() })
 .scan-viewer-hint {
   padding: var(--mrr-space-2);
   margin: 0;
+  overflow-wrap: anywhere;
 }
 
 .scan-content {

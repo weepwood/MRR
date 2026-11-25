@@ -265,7 +265,7 @@ async function skipRollbackPage() {
             <span class="ocr-batches__mono">{{ row.id }}</span>
           </template>
         </el-table-column>
-        <el-table-column prop="status" label="状态" min-width="110">
+        <el-table-column prop="status" label="状态" width="124">
           <template #default="{ row }">
             <MrrStatusTag :label="statusMeta(row.status).label" :tone="statusMeta(row.status).tone" :title="row.status" />
           </template>
@@ -277,20 +277,20 @@ async function skipRollbackPage() {
           </template>
         </el-table-column>
         <!-- 计数列右对齐：数字按个位对齐，扫读一列时不必逐个比较位数。 -->
-        <el-table-column prop="successCount" label="已识别" min-width="84" align="right" />
-        <el-table-column prop="failedCount" label="失败" min-width="72" align="right">
+        <el-table-column prop="successCount" label="已识别" width="88" align="right" />
+        <el-table-column prop="failedCount" label="失败" width="80" align="right">
           <template #default="{ row }">
             <span :class="{ 'ocr-batches__failed': row.failedCount > 0 }">{{ row.failedCount }}</span>
           </template>
         </el-table-column>
-        <el-table-column prop="autoAppliedCount" label="自动归类" min-width="90" align="right" />
-        <el-table-column prop="reviewRequiredCount" label="待审核建议" min-width="104" align="right" />
-        <el-table-column prop="cursorId" label="续跑起点" min-width="110">
+        <el-table-column prop="autoAppliedCount" label="自动归类" width="96" align="right" />
+        <el-table-column prop="reviewRequiredCount" label="待审核建议" width="112" align="right" />
+        <el-table-column prop="cursorId" label="续跑起点" width="120" show-overflow-tooltip>
           <template #default="{ row }">
             <span class="ocr-batches__mono">{{ row.cursorId }}</span>
           </template>
         </el-table-column>
-        <el-table-column prop="reasonCode" label="等待原因" min-width="130" show-overflow-tooltip>
+        <el-table-column prop="reasonCode" label="等待原因" min-width="150" show-overflow-tooltip>
           <template #default="{ row }">
             <span v-if="row.reasonCode" class="ocr-batches__mono">{{ row.reasonCode }}</span>
             <span v-else class="ocr-batches__unit">—</span>

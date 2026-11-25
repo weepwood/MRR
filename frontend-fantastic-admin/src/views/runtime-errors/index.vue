@@ -420,10 +420,10 @@ function levelTagType(level: string) {
         :description="linkedRequestId && query.keyword === linkedRequestId ? '未找到相关运行错误。错误组仅保留最近一次关联的 Request ID。' : '暂无运行错误事件'"
       />
       <el-table v-else :data="list" stripe class="runtime-errors-table">
-        <el-table-column prop="lastSeenAt" label="最后发生" min-width="175">
+        <el-table-column prop="lastSeenAt" label="最后发生" width="176">
           <template #default="{ row }">{{ formatDateTime(row.lastSeenAt) }}</template>
         </el-table-column>
-        <el-table-column prop="errorId" label="错误编号" min-width="190" show-overflow-tooltip>
+        <el-table-column prop="errorId" label="错误编号" width="184" show-overflow-tooltip>
           <template #default="{ row }"><span class="detail-code runtime-errors__id">{{ row.errorId || '-' }}</span></template>
         </el-table-column>
         <el-table-column prop="level" label="级别" width="90">
@@ -431,19 +431,19 @@ function levelTagType(level: string) {
             <el-tag :type="levelTagType(row.level)">{{ row.level }}</el-tag>
           </template>
         </el-table-column>
-        <el-table-column prop="module" label="模块" min-width="120" show-overflow-tooltip>
+        <el-table-column prop="module" label="模块" width="132" show-overflow-tooltip>
           <template #default="{ row }">
             <el-button link :auto-insert-space="false" class="module-filter mrr-inline-action" :title="`点击按模块 ${row.module} 筛选`" @click="filterByModule(row.module)">
               {{ row.module || '-' }}
             </el-button>
           </template>
         </el-table-column>
-        <el-table-column label="错误摘要" min-width="360" show-overflow-tooltip>
+        <el-table-column label="错误摘要" min-width="300" show-overflow-tooltip>
           <template #default="{ row }">
             <span>{{ summaryDisplay(row as SystemErrorEvent) }}</span>
           </template>
         </el-table-column>
-        <el-table-column prop="requestId" label="Request ID" min-width="155" show-overflow-tooltip>
+        <el-table-column prop="requestId" label="Request ID" width="176" show-overflow-tooltip>
           <template #default="{ row }"><span class="detail-code runtime-errors__id">{{ row.requestId || '-' }}</span></template>
         </el-table-column>
         <el-table-column prop="occurrenceCount" label="次数" width="90" align="right" />

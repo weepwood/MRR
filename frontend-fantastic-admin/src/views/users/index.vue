@@ -679,7 +679,7 @@ onMounted(loadData)
 
       <el-table v-else :data="users" row-key="id">
         <el-table-column type="index" label="序号" :width="userIndexWidth" :index="userRowIndex" align="center" class-name="user-index-column" />
-        <el-table-column prop="username" label="用户" min-width="220" show-overflow-tooltip>
+        <el-table-column prop="username" label="用户" width="240" show-overflow-tooltip>
           <template #default="{ row }">
             <div class="user-identity">
               <span class="user-avatar" aria-hidden="true">{{ String(row.displayName || row.username || '?').slice(0, 1) }}</span>
@@ -690,7 +690,7 @@ onMounted(loadData)
             </div>
           </template>
         </el-table-column>
-        <el-table-column label="申请信息" min-width="180" class-name="user-application-column">
+        <el-table-column label="申请信息" min-width="240" class-name="user-application-column">
           <template #default="{ row }">
             <el-button
               v-if="hasApplication(row)"
@@ -706,10 +706,10 @@ onMounted(loadData)
             <span v-else class="user-source">管理员创建</span>
           </template>
         </el-table-column>
-        <el-table-column label="角色" width="112" show-overflow-tooltip><template #default="{ row }"><span class="user-role">{{ row.roleName || row.roleCode }}</span></template></el-table-column>
+        <el-table-column label="角色" width="96" show-overflow-tooltip><template #default="{ row }"><span class="user-role">{{ row.roleName || row.roleCode }}</span></template></el-table-column>
         <el-table-column label="凭据状态" width="152" show-overflow-tooltip><template #default="{ row }"><MrrStatusTag :label="credentialStatus(row).label" :tone="credentialStatus(row).tone" /></template></el-table-column>
-        <el-table-column label="账号状态" width="110" class-name="user-status-column"><template #default="{ row }"><MrrStatusTag :status="row.status" :label="statusDisplay(row.status).label" :tone="statusDisplay(row.status).tone" /></template></el-table-column>
-        <el-table-column prop="lastLoginAt" label="最后登录" width="184" show-overflow-tooltip><template #default="{ row }"><span class="user-last-login">{{ formatDateTime(row.lastLoginAt) }}</span></template></el-table-column>
+        <el-table-column label="账号状态" width="96" class-name="user-status-column"><template #default="{ row }"><MrrStatusTag :status="row.status" :label="statusDisplay(row.status).label" :tone="statusDisplay(row.status).tone" /></template></el-table-column>
+        <el-table-column prop="lastLoginAt" label="最后登录" width="176" show-overflow-tooltip><template #default="{ row }"><span class="user-last-login">{{ formatDateTime(row.lastLoginAt) }}</span></template></el-table-column>
         <el-table-column
           v-if="canManage"
           label="操作"
@@ -882,6 +882,7 @@ onMounted(loadData)
 .users-filter-bar :deep(.mrr-filter-bar__actions) { flex-shrink: 0; align-self: flex-end; padding-left: 0; border-left: 0; }
 
 .users-state { display: grid; min-height: 280px; padding: var(--mrr-space-5); place-items: center; }
+.users-table-panel :deep(.el-table tr > .user-index-column:first-child > .cell) { padding-inline: 8px; }
 .users-table-panel :deep(td.user-index-column) { font-variant-numeric: tabular-nums; color: var(--mrr-muted-foreground); }
 .user-identity { display: flex; gap: var(--mrr-space-3); align-items: center; min-width: 0; }
 .user-avatar { display: grid; flex: 0 0 32px; width: 32px; height: 32px; font-size: var(--mrr-font-size-xs); font-weight: 700; color: var(--mrr-muted-foreground); background: var(--mrr-muted); border: 1px solid transparent; border-radius: var(--mrr-radius-md); place-items: center; }

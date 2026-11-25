@@ -347,10 +347,10 @@ function statusTagType(status: string | number) {
         :description="linkedRequestId && query.keyword === linkedRequestId ? '未找到该 Request ID 对应的访问日志' : '暂无日志记录'"
       />
       <el-table v-else :data="list" stripe>
-        <el-table-column prop="accessTime" label="访问时间" min-width="180">
+        <el-table-column prop="accessTime" label="访问时间" width="176">
           <template #default="{ row }">{{ formatDateTime(row.accessTime) }}</template>
         </el-table-column>
-        <el-table-column prop="requestId" label="Request ID" min-width="170" show-overflow-tooltip>
+        <el-table-column prop="requestId" label="Request ID" width="200" show-overflow-tooltip>
           <template #default="{ row }">
             <template v-if="row.requestId">
               <span class="log-mono">{{ row.requestId }}</span>
@@ -364,13 +364,13 @@ function statusTagType(status: string | number) {
             <template v-else>-</template>
           </template>
         </el-table-column>
-        <el-table-column prop="username" label="用户" min-width="120">
+        <el-table-column prop="username" label="用户" width="132" show-overflow-tooltip>
           <template #default="{ row }">{{ row.username || '-' }}</template>
         </el-table-column>
-        <el-table-column prop="clientIp" label="客户端 IP" min-width="140">
+        <el-table-column prop="clientIp" label="客户端 IP" width="148" show-overflow-tooltip>
           <template #default="{ row }"><span class="log-mono">{{ row.clientIp || '-' }}</span></template>
         </el-table-column>
-        <el-table-column prop="method" label="方法" width="100">
+        <el-table-column prop="method" label="方法" width="92">
           <template #default="{ row }">
             <el-tag :type="methodTagType(row.method)">{{ row.method || '-' }}</el-tag>
           </template>
@@ -378,7 +378,7 @@ function statusTagType(status: string | number) {
         <el-table-column prop="requestUri" label="真实请求 URI" min-width="280" show-overflow-tooltip>
           <template #default="{ row }"><span class="log-mono">{{ row.requestUri || '-' }}</span></template>
         </el-table-column>
-        <el-table-column prop="responseStatus" label="状态码" width="100">
+        <el-table-column prop="responseStatus" label="状态码" width="92">
           <template #default="{ row }">
             <el-tag :type="statusTagType(row.responseStatus)">{{ row.responseStatus || '-' }}</el-tag>
           </template>

@@ -247,13 +247,9 @@ onUnmounted(() => {
           <AppLoading v-if="loading && !tableData.length" type="table" :rows="8" />
           <AppError v-else-if="error" :message="error" @retry="loadData" />
           <AppEmpty v-else-if="!tableData.length" description="暂无患者记录" />
-          <!--
-            列宽改为 min-width：原来 9 个固定 width 列合计约 1240px（不含操作列），
-            1366 宽屏下容器放不下，操作列被挤出视区需要横向滚动；
-            宽屏下又不会伸展，右侧留出空白。min-width 让 el-table 按容器分配余量。
-          -->
+          <!-- 短字段使用稳定宽度，科室、病区弹性分配余量，窄屏保留原生横向滚动。 -->
           <el-table v-else :data="tableData" stripe class="patients-table">
-            <el-table-column prop="bah" label="病案号" min-width="130">
+            <el-table-column prop="bah" label="病案号" width="132" show-overflow-tooltip>
               <template #default="{ row }">
                 <router-link
                   v-if="row.bah"
@@ -267,8 +263,8 @@ onUnmounted(() => {
                 <span v-else>—</span>
               </template>
             </el-table-column>
-            <el-table-column prop="name" label="姓名" min-width="90" />
-            <el-table-column prop="idCard" label="身份证号" min-width="190">
+            <el-table-column prop="name" label="姓名" width="112" show-overflow-tooltip />
+            <el-table-column prop="idCard" label="身份证号" width="220">
               <template #default="{ row }">
                 <!-- 无身份证号的标本行（导入前/带病案号入院）不渲染任何可点控件 -->
                 <div class="id-card-cell">
@@ -293,12 +289,12 @@ onUnmounted(() => {
                 </div>
               </template>
             </el-table-column>
-            <el-table-column prop="department" label="科室" min-width="120" show-overflow-tooltip />
-            <el-table-column prop="bingqu" label="病区" min-width="120" show-overflow-tooltip />
-            <el-table-column prop="chuangwei" label="床位" min-width="90" show-overflow-tooltip />
-            <el-table-column prop="ruyuan" label="入院日期" min-width="110" />
-            <el-table-column prop="admissiontime" label="入院时间" min-width="160" show-overflow-tooltip />
-            <el-table-column prop="id" label="ID" min-width="80" />
+            <el-table-column prop="department" label="科室" min-width="140" show-overflow-tooltip />
+            <el-table-column prop="bingqu" label="病区" min-width="130" show-overflow-tooltip />
+            <el-table-column prop="chuangwei" label="床位" width="90" show-overflow-tooltip />
+            <el-table-column prop="ruyuan" label="入院日期" width="120" show-overflow-tooltip />
+            <el-table-column prop="admissiontime" label="入院时间" width="176" show-overflow-tooltip />
+            <el-table-column prop="id" label="ID" width="108" show-overflow-tooltip />
             <el-table-column
               v-if="canEditPatients"
               label="操作"

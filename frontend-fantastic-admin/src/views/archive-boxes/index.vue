@@ -539,17 +539,17 @@ onMounted(refreshAll)
       <template v-else-if="activeView === 'records'">
         <AppEmpty v-if="!records.length" description="暂无符合条件的装箱记录" />
         <el-table v-else :data="records" stripe>
-          <el-table-column label="病案号" min-width="110">
+          <el-table-column label="病案号" width="124" show-overflow-tooltip>
             <template #default="{ row }">
               <span class="record-code">{{ normalizeText(row.bah) }}</span>
             </template>
           </el-table-column>
-          <el-table-column label="上架号" min-width="110">
+          <el-table-column label="上架号" width="124" show-overflow-tooltip>
             <template #default="{ row }">
               <span class="record-code">{{ normalizeText(row.sjh) }}</span>
             </template>
           </el-table-column>
-          <el-table-column label="实际箱号" min-width="135">
+          <el-table-column label="实际箱号" width="144" show-overflow-tooltip>
             <template #default="{ row }">
               <el-button
                 v-if="row.boxNo"
@@ -563,22 +563,22 @@ onMounted(refreshAll)
               <span v-else class="empty-value">未确认</span>
             </template>
           </el-table-column>
-          <el-table-column label="状态" min-width="145">
+          <el-table-column label="状态" width="140">
             <template #default="{ row }">
               <MrrStatusTag v-bind="statusMeta(row.status)" />
             </template>
           </el-table-column>
-          <el-table-column label="原计划箱号" min-width="135">
+          <el-table-column label="原计划箱号" width="144" show-overflow-tooltip>
             <template #default="{ row }">
               {{ normalizeText(row.expectedBoxNo) }}
             </template>
           </el-table-column>
-          <el-table-column prop="remark" label="备注" min-width="185" show-overflow-tooltip>
+          <el-table-column prop="remark" label="备注" min-width="220" show-overflow-tooltip>
             <template #default="{ row }">
               {{ normalizeText(row.remark) }}
             </template>
           </el-table-column>
-          <el-table-column label="更新时间" width="170">
+          <el-table-column label="更新时间" width="176">
             <template #default="{ row }">
               {{ formatDateTime(row.updatedAt) }}
             </template>
@@ -610,15 +610,15 @@ onMounted(refreshAll)
               </el-button>
             </template>
           </el-table-column>
-          <el-table-column prop="recordCount" label="箱内病案" width="140" />
-          <el-table-column label="异常记录" width="140">
+          <el-table-column prop="recordCount" label="箱内病案" width="112" />
+          <el-table-column label="异常记录" width="112">
             <template #default="{ row }">
               <el-tag :type="row.abnormalCount ? 'warning' : 'success'" effect="light">
                 {{ row.abnormalCount }}
               </el-tag>
             </template>
           </el-table-column>
-          <el-table-column label="最近更新" width="190">
+          <el-table-column label="最近更新" width="176">
             <template #default="{ row }">
               {{ formatDateTime(row.updatedAt) }}
             </template>

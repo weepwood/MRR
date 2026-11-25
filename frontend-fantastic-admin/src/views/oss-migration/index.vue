@@ -1177,8 +1177,8 @@ onMounted(() => {
         >
           <el-table-column v-if="recordTab === 'pending'" type="selection" width="48" />
           <el-table-column prop="id" label="Scan ID" width="100" />
-          <el-table-column prop="bah" label="病案号" width="140" />
-          <el-table-column prop="sjh" label="上架号" width="140">
+          <el-table-column prop="bah" label="病案号" width="128" show-overflow-tooltip />
+          <el-table-column prop="sjh" label="上架号" width="128" show-overflow-tooltip>
             <template #default="{ row }">
               {{ row.sjh || '未填写' }}
             </template>
@@ -1371,7 +1371,7 @@ onMounted(() => {
         >
           <el-table-column type="selection" width="48" :selectable="logSelectable" />
           <el-table-column prop="scanId" label="Scan ID" width="100" />
-          <el-table-column prop="localPath" label="迁移来源" min-width="160" show-overflow-tooltip />
+          <el-table-column prop="localPath" label="迁移来源" min-width="200" show-overflow-tooltip />
           <el-table-column prop="migrationStatus" label="结果" width="120">
             <template #default="{ row }">
               <el-tag :type="statusMeta(row.migrationStatus).type" size="small">
@@ -1384,8 +1384,8 @@ onMounted(() => {
               {{ formatFileSize(row.fileSize) }}
             </template>
           </el-table-column>
-          <el-table-column prop="checksumMd5" label="MD5" min-width="190" show-overflow-tooltip />
-          <el-table-column prop="errorMessage" label="错误信息" min-width="240" show-overflow-tooltip>
+          <el-table-column prop="checksumMd5" label="MD5" width="250" show-overflow-tooltip />
+          <el-table-column prop="errorMessage" label="错误信息" min-width="280" show-overflow-tooltip>
             <template #default="{ row }">
               {{ row.errorMessage || '-' }}
             </template>

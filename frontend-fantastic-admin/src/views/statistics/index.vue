@@ -492,13 +492,13 @@ onMounted(refreshAll)
         empty-text="暂无病案明细数据"
         @sort-change="handleSortChange"
       >
-        <el-table-column prop="bah" label="病案号" min-width="130" sortable="custom" show-overflow-tooltip />
-        <el-table-column prop="sjh" label="上架号" min-width="130" show-overflow-tooltip />
-        <el-table-column prop="date" label="日期" width="120" sortable="custom" />
-        <el-table-column prop="type" label="类型" width="100" />
-        <el-table-column prop="pages" label="页数" width="80" sortable="custom" />
-        <el-table-column prop="openerNo" label="操作员" width="100" />
-        <el-table-column prop="cid" label="设备 ID（CID）" min-width="120" show-overflow-tooltip />
+        <el-table-column prop="bah" label="病案号" min-width="136" sortable="custom" show-overflow-tooltip />
+        <el-table-column prop="sjh" label="上架号" min-width="136" show-overflow-tooltip />
+        <el-table-column prop="date" label="日期" min-width="132" sortable="custom" show-overflow-tooltip />
+        <el-table-column prop="type" label="类型" min-width="120" show-overflow-tooltip />
+        <el-table-column prop="pages" label="页数" width="88" sortable="custom" />
+        <el-table-column prop="openerNo" label="操作员" min-width="112" show-overflow-tooltip />
+        <el-table-column prop="cid" label="设备 ID（CID）" min-width="150" show-overflow-tooltip />
       </el-table>
 
       <template v-if="!listError" #pagination>

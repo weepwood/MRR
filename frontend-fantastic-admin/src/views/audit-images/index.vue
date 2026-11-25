@@ -423,14 +423,14 @@ onMounted(loadData)
       <AppError v-else-if="error" :message="error" @retry="loadListData" />
       <AppEmpty v-else-if="!list.length" description="暂无审计记录" />
       <el-table v-else :data="list" stripe>
-        <el-table-column prop="accessTime" label="访问时间" min-width="180"><template #default="{ row }">{{ formatDateTime(row.accessTime) }}</template></el-table-column>
-        <el-table-column prop="username" label="用户" min-width="120"><template #default="{ row }">{{ row.username || '-' }}</template></el-table-column>
-        <el-table-column label="病案号" min-width="130"><template #default="{ row }">{{ auditIdentifiers(row).bah }}</template></el-table-column>
-        <el-table-column label="上架号" min-width="130"><template #default="{ row }">{{ auditIdentifiers(row).sjh }}</template></el-table-column>
-        <el-table-column label="身份证号" min-width="190" show-overflow-tooltip><template #default="{ row }"><span class="audit-mono">{{ auditIdentifiers(row).idCard }}</span></template></el-table-column>
-        <el-table-column prop="auditDescription" label="访问类型" min-width="170"><template #default="{ row }"><el-tag effect="plain">{{ row.auditDescription || actionLabel(row.auditAction) }}</el-tag></template></el-table-column>
-        <el-table-column prop="clientIp" label="客户端 IP" min-width="140"><template #default="{ row }"><span class="audit-mono">{{ row.clientIp || '-' }}</span></template></el-table-column>
-        <el-table-column prop="responseStatus" label="状态码" width="100"><template #default="{ row }"><el-tag :type="statusTagType(row.responseStatus)">{{ row.responseStatus || '-' }}</el-tag></template></el-table-column>
+        <el-table-column prop="accessTime" label="访问时间" width="176"><template #default="{ row }">{{ formatDateTime(row.accessTime) }}</template></el-table-column>
+        <el-table-column prop="username" label="用户" width="132" show-overflow-tooltip><template #default="{ row }">{{ row.username || '-' }}</template></el-table-column>
+        <el-table-column label="病案号" width="128" show-overflow-tooltip><template #default="{ row }">{{ auditIdentifiers(row).bah }}</template></el-table-column>
+        <el-table-column label="上架号" width="128" show-overflow-tooltip><template #default="{ row }">{{ auditIdentifiers(row).sjh }}</template></el-table-column>
+        <el-table-column label="身份证号" width="190" show-overflow-tooltip><template #default="{ row }"><span class="audit-mono">{{ auditIdentifiers(row).idCard }}</span></template></el-table-column>
+        <el-table-column prop="auditDescription" label="访问类型" min-width="160" show-overflow-tooltip><template #default="{ row }"><el-tag effect="plain">{{ row.auditDescription || actionLabel(row.auditAction) }}</el-tag></template></el-table-column>
+        <el-table-column prop="clientIp" label="客户端 IP" width="148" show-overflow-tooltip><template #default="{ row }"><span class="audit-mono">{{ row.clientIp || '-' }}</span></template></el-table-column>
+        <el-table-column prop="responseStatus" label="状态码" width="92"><template #default="{ row }"><el-tag :type="statusTagType(row.responseStatus)">{{ row.responseStatus || '-' }}</el-tag></template></el-table-column>
         <el-table-column prop="executeTime" label="耗时(ms)" width="105" align="right" />
         <el-table-column label="操作" :width="detailActionColumnWidth" fixed="right" align="center">
           <template #default="{ row }">

@@ -128,7 +128,7 @@ onMounted(loadData)
             stripe
             empty-text="暂无慢接口数据"
           >
-            <el-table-column prop="method" label="方法" width="90">
+            <el-table-column prop="method" label="方法" width="84">
               <template #default="{ row }">
                 <span class="endpoint-mono">{{ row.method }}</span>
               </template>
@@ -139,23 +139,23 @@ onMounted(loadData)
               </template>
             </el-table-column>
             <!-- 数值列右对齐，按个位对齐便于比较；P95 是本表的排序依据，加粗突出。 -->
-            <el-table-column prop="requestCount" label="请求数" width="100" align="right" />
-            <el-table-column label="错误率" width="110" align="right">
+            <el-table-column prop="requestCount" label="请求数" width="92" align="right" />
+            <el-table-column label="错误率" width="96" align="right">
               <template #default="{ row }">
                 {{ formatPercent(errorRate(row.errorCount, row.requestCount)) }}
               </template>
             </el-table-column>
-            <el-table-column label="客户端平均" width="130" align="right">
+            <el-table-column label="客户端平均" width="116" align="right">
               <template #default="{ row }">
                 {{ formatDuration(row.avgClientDurationMs) }}
               </template>
             </el-table-column>
-            <el-table-column label="客户端 P95" width="130" align="right">
+            <el-table-column label="客户端 P95" width="116" align="right">
               <template #default="{ row }">
                 <strong class="endpoint-p95">{{ formatDuration(row.p95ClientDurationMs) }}</strong>
               </template>
             </el-table-column>
-            <el-table-column label="服务端平均" width="130" align="right">
+            <el-table-column label="服务端平均" width="116" align="right">
               <template #default="{ row }">
                 {{ formatDuration(row.avgServerDurationMs) }}
               </template>

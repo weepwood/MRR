@@ -310,7 +310,7 @@ watch(() => props.resultKey, (next, previous) => {
   transition: none;
 }
 
-.mrr-data-table-panel--quiet .mrr-data-table-panel__content :deep(.el-table tr > .el-table__cell:first-child > .cell) {
+.mrr-data-table-panel--quiet .mrr-data-table-panel__content :deep(.el-table tr > .el-table__cell:first-child:not(.is-center) > .cell) {
   padding-left: var(--mrr-card-inset);
 }
 
@@ -332,7 +332,7 @@ watch(() => props.resultKey, (next, previous) => {
 }
 
 @media (max-width: 760px) {
-  .mrr-data-table-panel--quiet .mrr-data-table-panel__content :deep(.el-table tr > .el-table__cell:first-child > .cell) {
+  .mrr-data-table-panel--quiet .mrr-data-table-panel__content :deep(.el-table tr > .el-table__cell:first-child:not(.is-center) > .cell) {
     padding-left: var(--mrr-card-inset-compact);
   }
 }

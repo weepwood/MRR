@@ -531,6 +531,8 @@ Element Plus `el-button` 与 reka-ui `FaButton`（`.fa-button-control`）**尺�
 
 ## 8. 新旧页面统一
 
+V1.2 当前实施顺序与证据台账见 [全站 UI 规范与组件治理](../docs/design/v1.2-ui-system-roadmap.md)。本文件仍是视觉契约；复用现有组件、按同一相关控件族及页面族集中迁移，不逐页机械换库或为视觉修改业务行为。
+
 ### 8.1 迁移状态
 
 | 状态 | 页面 |
@@ -554,7 +556,7 @@ Element Plus `el-button` 与 reka-ui `FaButton`（`.fa-button-control`）**尺�
 - z-index：**已收口**，见 §2.8。
 - 页内网格间距 `gap: 12/14/16/18px` 仍是页面局部值，随各页改造时统一到 `--mrr-space-*`。
 
-### 8.2 迁移步骤（每页一个 PR）
+### 8.2 迁移步骤（按相关组件族集中 PR）
 
 1. 外层 `div.page-shell` → `MrrPageShell`；`header.page-header` → `MrrPageHeader`，`h2` 升为组件内的 `h1`；显式导入组件（单测环境不自动注册）。
 2. 删除页面里重复的 `.page-header` / `.eyebrow` / `.subtitle` / `.page-shell` 样式。

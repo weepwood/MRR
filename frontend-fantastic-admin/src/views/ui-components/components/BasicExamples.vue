@@ -7,7 +7,7 @@ defineProps<{ example: ExampleId }>()
 const id = useId()
 const buttonState = ref('normal')
 const clicks = ref(0)
-const activeTab = ref<string | number>('preview')
+const activeTab = ref<string | number>(`${id}-preview`)
 const name = ref('组件演示')
 const nativeName = ref('组件演示')
 const validationName = ref('')
@@ -118,18 +118,18 @@ const options = [{ label: '本地示例', value: 'local' }, { label: '归档示�
   </div>
 
   <div v-else-if="example === 'navigation'" class="example-stack">
-    <FaTabs v-model="activeTab" :list="[{ label: '组件预览', value: 'preview' }, { label: '交互说明', value: 'notes' }]">
-      <template #preview>
+    <el-tabs v-model="activeTab" class="mrr-segmented-tabs">
+      <el-tab-pane :name="`${id}-preview`" label="组件预览" lazy>
         <p class="example-note">
           正在展示页签的预览内容，可以使用方向键切换页签。
         </p>
-      </template>
-      <template #notes>
+      </el-tab-pane>
+      <el-tab-pane :name="`${id}-notes`" label="交互说明" lazy>
         <p class="example-note">
           页签内容随选择切换；提示可以通过悬停或键盘聚焦查看。
         </p>
-      </template>
-    </FaTabs>
+      </el-tab-pane>
+    </el-tabs>
     <div class="example-row">
       <FaTooltip text="这是组件说明提示，支持键盘聚焦。">
         <FaButton variant="outline">

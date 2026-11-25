@@ -143,14 +143,16 @@ export function getDataRelationOverview() {
   return getRequest<DataRelationOverview>('/api/v1/system/data-relations/overview')
 }
 
-export function searchDataRelationArchives(type: string, value: string, limit = 20) {
+export function searchDataRelationArchives(type: string, value: string, limit = 20, signal?: AbortSignal) {
   return getRequest<ArchiveSearchResult[]>('/api/v1/system/data-relations/archives/search', {
     params: { type, value, limit },
+    signal,
+    skipGlobalError: true,
   })
 }
 
-export function getArchiveRelationDetail(archiveId: number) {
-  return getRequest<ArchiveRelationDetail>(`/api/v1/system/data-relations/archives/${archiveId}`)
+export function getArchiveRelationDetail(archiveId: number, signal?: AbortSignal) {
+  return getRequest<ArchiveRelationDetail>(`/api/v1/system/data-relations/archives/${archiveId}`, { signal, skipGlobalError: true })
 }
 
 export function getDataQualitySummary() {

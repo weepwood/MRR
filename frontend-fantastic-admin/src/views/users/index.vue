@@ -43,6 +43,9 @@ const roles = ref<AuthRole[]>([])
 const total = ref(0)
 const page = ref(1)
 const size = ref(20)
+const loadedRowOffset = ref(0)
+const userRowIndex = (index: number) => loadedRowOffset.value + index + 1
+const userIndexWidth = computed(() => Math.max(64, String(Math.max(total.value, loadedRowOffset.value + users.value.length)).length * 8 + 24))
 const pageSizes = [10, 20, 50, 100] as const
 const compactPagination = useMediaQuery('(max-width: 760px)')
 const nextPageSize = computed(() => pageSizes[(pageSizes.findIndex(value => value === size.value) + 1) % pageSizes.length]!)
@@ -199,6 +202,8 @@ watch(resetSaving, (isSaving, _, onCleanup) => {
 })
 
 async function loadData(action?: 'search' | 'reset') {
+  const requestedPage = page.value
+  const requestedSize = size.value
   const showButtonLoading = hasLoaded.value && action !== undefined
   loading.value = true
   if (showButtonLoading) {
@@ -208,8 +213,8 @@ async function loadData(action?: 'search' | 'reset') {
     error.value = ''
     const [usersRes, rolesRes] = await Promise.all([
       apiUser.getUsers({
-        page: page.value,
-        size: size.value,
+        page: requestedPage,
+        size: requestedSize,
         keyword: filters.keyword.trim(),
         roleCode: filters.roleCode,
         status: filters.status,
@@ -217,6 +222,7 @@ async function loadData(action?: 'search' | 'reset') {
       apiUser.getRoles(),
     ])
     users.value = (Array.isArray(usersRes.data?.list) ? usersRes.data.list : []) as CredentialAwareUser[]
+    loadedRowOffset.value = (requestedPage - 1) * requestedSize
     total.value = Number(usersRes.data?.total ?? users.value.length)
     roles.value = Array.isArray(rolesRes.data) ? rolesRes.data : []
     hasMetricSnapshot.value = true
@@ -672,6 +678,7 @@ onMounted(loadData)
       <div v-else-if="!users.length" class="users-state"><AppEmpty description="暂无符合条件的用户记录" /></div>
 
       <el-table v-else :data="users" row-key="id">
+        <el-table-column type="index" label="序号" :width="userIndexWidth" :index="userRowIndex" align="center" class-name="user-index-column" />
         <el-table-column prop="username" label="用户" min-width="220" show-overflow-tooltip>
           <template #default="{ row }">
             <div class="user-identity">
@@ -683,7 +690,7 @@ onMounted(loadData)
             </div>
           </template>
         </el-table-column>
-        <el-table-column label="申请信息" min-width="180">
+        <el-table-column label="申请信息" min-width="180" class-name="user-application-column">
           <template #default="{ row }">
             <el-button
               v-if="hasApplication(row)"
@@ -701,7 +708,7 @@ onMounted(loadData)
         </el-table-column>
         <el-table-column label="角色" width="112" show-overflow-tooltip><template #default="{ row }"><span class="user-role">{{ row.roleName || row.roleCode }}</span></template></el-table-column>
         <el-table-column label="凭据状态" width="152" show-overflow-tooltip><template #default="{ row }"><MrrStatusTag :label="credentialStatus(row).label" :tone="credentialStatus(row).tone" /></template></el-table-column>
-        <el-table-column label="账号状态" width="110"><template #default="{ row }"><MrrStatusTag :status="row.status" :label="statusDisplay(row.status).label" :tone="statusDisplay(row.status).tone" /></template></el-table-column>
+        <el-table-column label="账号状态" width="110" class-name="user-status-column"><template #default="{ row }"><MrrStatusTag :status="row.status" :label="statusDisplay(row.status).label" :tone="statusDisplay(row.status).tone" /></template></el-table-column>
         <el-table-column prop="lastLoginAt" label="最后登录" width="184" show-overflow-tooltip><template #default="{ row }"><span class="user-last-login">{{ formatDateTime(row.lastLoginAt) }}</span></template></el-table-column>
         <el-table-column
           v-if="canManage"
@@ -875,6 +882,7 @@ onMounted(loadData)
 .users-filter-bar :deep(.mrr-filter-bar__actions) { flex-shrink: 0; align-self: flex-end; padding-left: 0; border-left: 0; }
 
 .users-state { display: grid; min-height: 280px; padding: var(--mrr-space-5); place-items: center; }
+.users-table-panel :deep(td.user-index-column) { font-variant-numeric: tabular-nums; color: var(--mrr-muted-foreground); }
 .user-identity { display: flex; gap: var(--mrr-space-3); align-items: center; min-width: 0; }
 .user-avatar { display: grid; flex: 0 0 32px; width: 32px; height: 32px; font-size: var(--mrr-font-size-xs); font-weight: 700; color: var(--mrr-muted-foreground); background: var(--mrr-muted); border: 1px solid transparent; border-radius: var(--mrr-radius-md); place-items: center; }
 .user-identity__copy { display: flex; flex-direction: column; min-width: 0; gap: 2px; line-height: 1.3; }

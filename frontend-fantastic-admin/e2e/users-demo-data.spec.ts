@@ -10,8 +10,11 @@ test('扩充模拟用户覆盖四种状态、长申请与真实分页', async ({
   const rows = panel.locator('.el-table__body tr.el-table__row')
   await expect(metrics).toHaveText(['6', '9', '3', '2'])
   await expect(rows).toHaveCount(20)
+  const indices = rows.locator('td.user-index-column .cell')
+  await expect(panel.getByRole('columnheader', { name: '序号', exact: true })).toBeVisible()
+  await expect(indices).toHaveText(Array.from({ length: 20 }, (_, i) => String(i + 1)))
   await expect(panel.locator('.el-pagination__total')).toHaveText('共 28 条')
-  await expect(rows.locator('td:nth-child(5) .mrr-status-tag')).toHaveText([
+  await expect(rows.locator('td.user-status-column .mrr-status-tag')).toHaveText([
     ...Array.from({ length: 6 }).fill('待审核'),
     '启用',
     '启用',
@@ -41,7 +44,7 @@ test('扩充模拟用户覆盖四种状态、长申请与真实分页', async ({
   for (const width of [1920, 1440, 768, 375]) {
     await page.setViewportSize({ width, height: 900 })
     await expect.poll(() => rows.evaluateAll(elements => elements.every((row) => {
-      const cell = row.querySelector('td:nth-child(2) .cell')!
+      const cell = row.querySelector('td.user-application-column .cell')!
       const text = cell.querySelector('.application-preview__text, .user-source')!
       const left = cell.getBoundingClientRect().left + Number.parseFloat(getComputedStyle(cell).paddingLeft)
       return Math.abs(text.getBoundingClientRect().left - left) <= 1
@@ -58,11 +61,13 @@ test('扩充模拟用户覆盖四种状态、长申请与真实分页', async ({
   await expect(dialog).toBeHidden()
   await panel.locator('.btn-next').click()
   await expect(rows).toHaveCount(8)
+  await expect(indices).toHaveText(Array.from({ length: 8 }, (_, i) => String(i + 21)))
   await expect(metrics).toHaveText(['0', '4', '1', '3'])
   const keyword = panel.getByRole('textbox', { name: '关键词' })
   await keyword.fill('apply.longtext@example.invalid')
   await keyword.press('Enter')
   await expect(rows).toHaveCount(1)
+  await expect(indices).toHaveText(['1'])
   await expect(rows.first()).toContainText('长说明申请演示')
   await expect(panel.locator('.el-pagination__total')).toHaveText('共 1 条')
   await panel.getByRole('button', { name: '重置', exact: true }).click()
@@ -72,4 +77,10 @@ test('扩充模拟用户覆盖四种状态、长申请与真实分页', async ({
   await panel.getByRole('button', { name: '查询', exact: true }).click()
   await expect(rows).toHaveCount(5)
   await expect(metrics).toHaveText(['0', '0', '0', '5'])
+  await expect(indices).toHaveText(['1', '2', '3', '4', '5'])
+  await panel.getByRole('button', { name: '重置', exact: true }).click()
+  await expect(rows).toHaveCount(20)
+  await panel.locator('.users-pagination__size').click()
+  await expect(rows).toHaveCount(28)
+  await expect(indices).toHaveText(Array.from({ length: 28 }, (_, i) => String(i + 1)))
 })

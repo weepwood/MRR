@@ -24,7 +24,7 @@ const triggerLabel = computed(() => {
         <span class="sr-only">必填</span>
       </sup>
     </label>
-    <FaTooltip side="top" :delay="200">
+    <MrrTooltip placement="top" :show-after="200">
       <button type="button" class="field-info-trigger" aria-label="查看字段填写要求" :aria-description="triggerLabel">
         <FaIcon aria-hidden="true" name="i-lucide:info" />
       </button>
@@ -36,7 +36,7 @@ const triggerLabel = computed(() => {
           </div>
         </div>
       </template>
-    </FaTooltip>
+    </MrrTooltip>
   </div>
 </template>
 

@@ -18,7 +18,7 @@ function mountMenu(accordion: boolean, initialMenu = menu, collapse = false) {
     global: {
       stubs: {
         RouterLink: { props: ['to', 'custom'], template: '<slot :href="\'\'" :navigate="() => {}" />' },
-        FaTooltip: { template: '<div><slot /></div>' },
+        MrrTooltip: { template: '<div><slot /></div>' },
         FaScrollArea: { template: '<div><slot /></div>' },
         FaIcon: true,
       },

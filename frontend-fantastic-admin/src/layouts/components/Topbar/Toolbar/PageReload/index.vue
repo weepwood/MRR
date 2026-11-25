@@ -51,7 +51,7 @@ function handleCtrlClick() {
 </script>
 
 <template>
-  <FaTooltip side="bottom" :disabled="settingsStore.os === 'mac'">
+  <MrrTooltip placement="bottom" :disabled="settingsStore.os === 'mac'">
     <template #content>
       <div class="flex-col-center gap-2">
         <p>按住 <FaKbd>Ctrl</FaKbd> 键并点击</p>
@@ -65,5 +65,5 @@ function handleCtrlClick() {
         :class="{ 'mrr-icon-spin-once': isAnimating }"
       />
     </el-button>
-  </FaTooltip>
+  </MrrTooltip>
 </template>

@@ -63,7 +63,7 @@ const strengthColor = computed(() => {
         class="h-full transition-[width,background-color] duration-mrr-move ease-mrr-out"
       />
     </div>
-    <FaTooltip>
+    <MrrTooltip>
       <FaIcon name="i-lucide:circle-question-mark" class="cursor-help text-sm text-muted-foreground" />
       <template #content>
         <div class="py-1">
@@ -94,6 +94,6 @@ const strengthColor = computed(() => {
           </ul>
         </div>
       </template>
-    </FaTooltip>
+    </MrrTooltip>
   </div>
 </template>

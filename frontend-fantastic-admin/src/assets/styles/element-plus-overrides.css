@@ -605,6 +605,35 @@ body .el-select .el-select__wrapper.is-focused .el-select__caret {
 }
 
 /* ===== Popovers, dropdowns and picker panels ===== */
+
+/* Tooltip / lightweight popover retain the compact original floating surface.
+ * Element Plus owns positioning, lifecycle and triggering. */
+body .el-popper.mrr-tooltip,
+body .el-popover.el-popper.mrr-light-popover {
+  box-sizing: border-box;
+  max-width: calc(100vw - 24px);
+  color: var(--mrr-popover-foreground);
+  background: var(--mrr-popover);
+  border: 1px solid var(--mrr-border);
+  border-radius: calc(var(--radius) - 2px);
+  box-shadow: 0 4px 6px -1px rgb(0 0 0 / 10%), 0 2px 4px -2px rgb(0 0 0 / 10%);
+}
+
+body .el-popper.mrr-tooltip {
+  z-index: 10000 !important;
+  padding: 6px 12px;
+  font-size: 12px;
+  line-height: 16px;
+}
+
+body .el-popover.el-popper.mrr-light-popover {
+  width: max-content;
+  min-width: min(288px, calc(100vw - 24px));
+  padding: 16px;
+  font-size: 14px;
+  line-height: 21px;
+}
+
 .el-select__popper.el-popper,
 .el-dropdown__popper.el-popper,
 .el-picker__popper.el-popper,

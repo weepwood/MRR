@@ -9,6 +9,13 @@ const modalOpen = ref(false)
 const drawerOpen = ref(false)
 const message = ref('选择一个浮层查看实际效果。')
 const glassBlur = ref(true)
+const popover = ref<{ hide: () => void }>()
+const popoverPosition = {
+  modifiers: [
+    { name: 'flip', options: { fallbackPlacements: ['top-start'], flipVariations: false } },
+    { name: 'preventOverflow', options: { padding: 12, tether: false } },
+  ],
+}
 const modalTrigger = ref<{ $el: HTMLButtonElement }>()
 const drawerTrigger = ref<{ $el: HTMLButtonElement }>()
 
@@ -63,14 +70,14 @@ function confirm(kind: string) {
       <el-button ref="drawerTrigger" class="mrr-button-flow" :auto-insert-space="false" @click="drawerOpen = true">
         打开抽屉
       </el-button>
-      <FaPopover side="bottom" align="start" :collision-padding="12">
-        <el-button class="mrr-button-flow" :auto-insert-space="false">
-          打开气泡
-        </el-button>
-        <template #panel>
-          <p>气泡用于补充轻量说明，点击外部或按 Escape 关闭。</p>
+      <el-popover ref="popover" role="dialog" trigger="click" placement="bottom-start" :popper-options="popoverPosition" :offset="4" :show-arrow="false" width="max-content" popper-class="mrr-light-popover">
+        <template #reference>
+          <el-button class="mrr-button-flow" :auto-insert-space="false" @keydown.esc="popover?.hide()">
+            打开气泡
+          </el-button>
         </template>
-      </FaPopover>
+        <p>气泡用于补充轻量说明，点击外部或按 Escape 关闭。</p>
+      </el-popover>
     </div>
     <p class="example-note" role="status">
       {{ message }}

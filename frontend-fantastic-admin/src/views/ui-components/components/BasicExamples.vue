@@ -131,11 +131,11 @@ const options = [{ label: '本地示例', value: 'local' }, { label: '归档示�
       </el-tab-pane>
     </el-tabs>
     <div class="example-row">
-      <FaTooltip text="这是组件说明提示，支持键盘聚焦。">
+      <MrrTooltip content="这是组件说明提示，支持键盘聚焦。">
         <el-button class="mrr-button-flow" :auto-insert-space="false">
           查看提示
         </el-button>
-      </FaTooltip>
+      </MrrTooltip>
       <span class="example-note">快捷键样式 <FaKbd>Ctrl</FaKbd> + <FaKbd>K</FaKbd></span>
     </div>
   </div>

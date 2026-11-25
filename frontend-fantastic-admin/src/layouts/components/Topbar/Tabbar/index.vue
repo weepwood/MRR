@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import type { DropdownInstance } from 'element-plus'
 import type { Tabbar } from '#/global'
 import { useMagicKeys } from '@vueuse/core'
 import hotkeys from 'hotkeys-js'
@@ -100,6 +101,49 @@ function contextMenuItems(routeItem: Tabbar.recordRaw) {
   ]
 }
 
+// A single Element Plus dropdown serves all tabs. The virtual anchor preserves
+// the pointer position without adding a second interactive node to each tab.
+const contextMenu = ref<DropdownInstance>()
+const contextTab = shallowRef<Tabbar.recordRaw>()
+const contextAnchor = shallowRef<HTMLElement>()
+const contextReference = shallowRef({ getBoundingClientRect: () => new DOMRect() })
+const contextGroups = computed(() => contextTab.value ? contextMenuItems(contextTab.value) : [])
+const contextPosition = {
+  strategy: 'fixed' as const,
+  modifiers: [
+    { name: 'offset', options: { offset: [0, 2] } },
+    { name: 'flip', options: { fallbackPlacements: ['left-start'], flipVariations: false } },
+    { name: 'preventOverflow', options: { padding: 8, tether: false } },
+  ],
+}
+
+async function openContextMenu(event: MouseEvent | KeyboardEvent, tab: Tabbar.recordRaw) {
+  event.preventDefault()
+  const anchor = event.currentTarget as HTMLElement
+  const rect = anchor.getBoundingClientRect()
+  contextMenu.value?.handleClose()
+  contextTab.value = tab
+  contextAnchor.value = anchor
+  const x = event instanceof MouseEvent ? event.clientX : rect.left + 12
+  const y = event instanceof MouseEvent ? event.clientY : rect.bottom
+  contextReference.value = { getBoundingClientRect: () => new DOMRect(x, y, 0, 0) }
+  await nextTick()
+  contextMenu.value?.handleOpen()
+}
+
+function handleContextKey(event: KeyboardEvent, tab: Tabbar.recordRaw) {
+  if (event.key === 'ContextMenu' || (event.shiftKey && event.key === 'F10')) {
+    void openContextMenu(event, tab)
+  }
+}
+
+function restoreContextFocus(event: KeyboardEvent) {
+  if (event.key === 'Escape') {
+    contextMenu.value?.handleClose()
+    contextAnchor.value?.focus({ preventScroll: true })
+  }
+}
+
 const visibleTabIndex = ref<number[]>([])
 function getVisibleTabs() {
   const containerWidth = tabsRef.value?.ref?.$el.clientWidth ?? 0
@@ -193,43 +237,59 @@ onUnmounted(() => {
             }" role="link" tabindex="0" :aria-current="element.tabId === activedTabId ? 'page' : undefined"
             @click="router.push(element.fullPath)"
             @keydown.enter.self.prevent="router.push(element.fullPath)"
+            @contextmenu="openContextMenu($event, element)" @keydown.self="handleContextKey($event, element)"
           >
-            <FaContextMenu :items="contextMenuItems(element)">
-              <div class="size-full">
-                <div class="tab-dividers" />
-                <div class="tab-background" />
-                <MrrTooltip :show-after="1000" placement="bottom">
-                  <div class="tab-content">
-                    <div :key="element.tabId" class="title" :class="{ 'title--has-action': tabbarStore.list.length > 1 }">
-                      <FaIcon v-if="settingsStore.settings.tabbar.enableIcon && element.icon" :name="element.icon" class="icon" />
-                      {{ typeof element?.title === 'function' ? element.title() : element.title }}
-                    </div>
-                    <button
-                      v-if="tabbarStore.list.length > 1" type="button" class="action-icon"
-                      :aria-label="`关闭标签页：${typeof element?.title === 'function' ? element.title() : element.title}`"
-                      @click.stop="tabbar.closeById(element.tabId)" @keydown.enter.stop
-                    >
-                      <FaIcon name="i-lucide:x" />
-                    </button>
-                    <div v-show="keys.alt && getVisibleTabIndex(index) >= 0 && getVisibleTabIndex(index) < 9" class="hotkey-number">
-                      {{ getVisibleTabIndex(index) + 1 }}
-                    </div>
+            <div class="size-full">
+              <div class="tab-dividers" />
+              <div class="tab-background" />
+              <MrrTooltip :show-after="1000" placement="bottom">
+                <div class="tab-content">
+                  <div :key="element.tabId" class="title" :class="{ 'title--has-action': tabbarStore.list.length > 1 }">
+                    <FaIcon v-if="settingsStore.settings.tabbar.enableIcon && element.icon" :name="element.icon" class="icon" />
+                    {{ typeof element?.title === 'function' ? element.title() : element.title }}
                   </div>
-                  <template #content>
-                    <div class="text-sm">
-                      {{ typeof element?.title === 'function' ? element.title() : element.title }}
-                    </div>
-                    <div class="text-accent-foreground/50">
-                      {{ element.fullPath }}
-                    </div>
-                  </template>
-                </MrrTooltip>
-              </div>
-            </FaContextMenu>
+                  <button
+                    v-if="tabbarStore.list.length > 1" type="button" class="action-icon"
+                    :aria-label="`关闭标签页：${typeof element?.title === 'function' ? element.title() : element.title}`"
+                    @click.stop="tabbar.closeById(element.tabId)" @keydown.enter.stop
+                  >
+                    <FaIcon name="i-lucide:x" />
+                  </button>
+                  <div v-show="keys.alt && getVisibleTabIndex(index) >= 0 && getVisibleTabIndex(index) < 9" class="hotkey-number">
+                    {{ getVisibleTabIndex(index) + 1 }}
+                  </div>
+                </div>
+                <template #content>
+                  <div class="text-sm">
+                    {{ typeof element?.title === 'function' ? element.title() : element.title }}
+                  </div>
+                  <div class="text-accent-foreground/50">
+                    {{ element.fullPath }}
+                  </div>
+                </template>
+              </MrrTooltip>
+            </div>
           </div>
         </TransitionGroup>
       </FaScrollArea>
     </div>
+    <el-dropdown
+      ref="contextMenu" class="mrr-context-anchor" virtual-triggering :virtual-ref="contextReference"
+      trigger="contextmenu" :trigger-keys="[]" placement="right-start" :show-arrow="false"
+      :popper-options="contextPosition" popper-class="mrr-context-menu"
+    >
+      <template #dropdown>
+        <el-dropdown-menu @keydown="restoreContextFocus">
+          <template v-for="(group, index) in contextGroups" :key="index">
+            <li v-if="index > 0" role="separator" class="mrr-context-separator" />
+            <el-dropdown-item v-for="item in group" :key="item.label" :disabled="item.disabled" @click="item.handle()">
+              <FaIcon :name="item.icon" class="size-4 shrink-0" />
+              {{ item.label }}
+            </el-dropdown-item>
+          </template>
+        </el-dropdown-menu>
+      </template>
+    </el-dropdown>
     <component :is="useSlots('tabbar-end')" />
   </div>
 </template>

@@ -137,6 +137,13 @@ FaIcon、FaKbd、FaPinInput、FaScrollArea、FaSmartFixedBlock、FaPasswordStren
 - 24组旧/新真实视觉（四主题×1440/760×展厅Dialog/Drawer/设置Drawer），基线5/5（26.6s）；首轮1/5，暖色间距覆盖和滑入采集错误，修正后5/5（32.4s）；联合39/40（1.0m）仅一例入场位移20px，修复祖先动画等待；实际截图发现设置标题下方5px偏移，恢复旧4px间距及20px描述行高。最终21/21（44.2s），24对同尺寸，所测几何最大0px、属性一致，RGB任一通道差>8中位0.010995%、最大0.470486%，非像素完全相同；77/77样式，vue-tsc及lint通过。覆盖关闭事件正常/减弱/关闭动效、搜索权限、设置保存、独立标识、改密失败恢复/重复提交/退出。未重跑最终40全套；尚未独立对照快捷键介绍、系统信息、导航搜索、个人设置全表面截图及其遮罩/Escape限制专项，医院Chrome86与全站跨浏览器未执行。
 - 日志 /tmp/mrr-v12-dialog-{before,after,after2,closure,final,unit-final,final-tsc}.log；证据 /tmp/mrr-v12-dialog-visual-6b。新批基线6b59857与3cff46b1代码树一致，重放至合并基线后提交。下一批账户下拉菜单及历史样式/依赖清理。
 
+## 账户与标签页菜单统一（2026-11-26）
+
+- #846 已合并 adc06302，head cdf7a301，159文件1072/1072、Pages5/5及治理通过，tree一致。账户菜单、标签页右键菜单均迁 ElDropdown，删除16+17个旧实现文件，保留共享样式、危险色、禁用操作、原指针定位。标签页使用单一虚拟锚点，无额外逐标签可交互节点，支持Shift+F10/ContextMenu及Escape焦点恢复。
+- 账户菜单四主题×1440/760共8对截图，旧版移动入口须先展开侧栏，修复采集路径后5/5；旧/新个人设置关闭保护（Escape、遮罩、保留输入及关闭按钮）通过。右键菜单浅/深两组真实截图及关闭非活动标签测试，初次宽差5px源自EP默认图标margin，移除重复间距。最终10对截图同尺寸，RGB任一通道差>8比例全0%，非逐像素相等。账户所测几何与属性、右键所测几何与字体/圆角通过1px门禁。样式78/78，vue-tsc、lint通过。联合26/26（44.5s），新增Shift+F10/Escape后右键专项3/3（18.1s）。未验证触摸长按、医院Chrome86、全站跨浏览器；其他业务浮层全表面截图仍待补齐。
+- 剩余Reka实际调用包含头像、折叠、旧图片预览、通知、PIN、进度、滚动及shadcn表单/标签；class-variance-authority仍用于头像和通知，不直接移除依赖。下一批按重叠能力处理Avatar/Progress/Collapse/Divider及旧上传/预览与通知，避免机械删除专用实现。
+- 日志/tmp/mrr-v12-menu-{before2,after,closure,unit,tsc}.log，/tmp/mrr-v12-context-{before,after,final,tsc}.log；证据/tmp/mrr-v12-menu-visual-cdf及/tmp/mrr-v12-context-visual-cdf。
+
 ## 逐文件原始引用清单
 
 | 源文件（相对 src/） | Fa 标签 | Element Plus 标签 |

@@ -1,14 +1,5 @@
 <script setup lang="ts">
 import type { HTMLAttributes } from 'vue'
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuGroup,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from '@/ui/components/FaDropdown/dropdown-menu'
 import { cn } from '@/utils'
 import Profile from './profile.vue'
 
@@ -30,70 +21,79 @@ const settingsStore = useSettingsStore()
 const userStore = useUserStore()
 
 const isProfileShow = ref(false)
+const menuOpen = ref(false)
+const trigger = ref<{ $el: HTMLElement }>()
+const placement = computed(() => props.dropdownAlign === 'center' ? props.dropdownSide : `${props.dropdownSide}-${props.dropdownAlign}` as const)
+const popperOptions = {
+  modifiers: [
+    { name: 'offset', options: { offset: [0, 8] } },
+    { name: 'preventOverflow', options: { padding: 12, tether: false } },
+  ],
+}
+function closeOnEscape(event: KeyboardEvent) {
+  if (event.key === 'Escape' && menuOpen.value) {
+    nextTick(() => trigger.value?.$el.focus({ preventScroll: true }))
+  }
+}
 </script>
 
 <template>
-  <DropdownMenu :modal="false">
-    <DropdownMenuTrigger as-child>
-      <el-button
-        text :auto-insert-space="false" :data-variant="buttonVariant" :data-avatar-only="onlyAvatar" :aria-label="`账号菜单：${userStore.account}`" :title="userStore.account" :class="cn('mrr-migrated-toolbar account-trigger min-w-0 flex-center gap-2 px-2 py-0 text-[13px]', {
-          'size-[var(--mrr-control-height)] shrink-0 p-1': onlyAvatar,
-        }, props.class)"
-      >
-        <FaAvatar :src="userStore.avatar" :class="cn('size-7 shrink-0', { 'size-full': onlyAvatar })">
-          <FaIcon name="i-lucide:user-round" class="size-6 text-[var(--text-secondary)]" />
-        </FaAvatar>
-        <div v-if="!onlyAvatar" class="min-w-0 flex-center-between flex-1 gap-2">
-          <div class="flex-1 truncate text-start">
-            {{ userStore.account }}
-          </div>
-          <FaIcon name="i-lucide:chevrons-up-down" class="size-4 shrink-0 text-[var(--text-secondary)]" />
-        </div>
-      </el-button>
-    </DropdownMenuTrigger>
-    <DropdownMenuContent
-      :align="dropdownAlign" :side="dropdownSide" :side-offset="8" :collision-padding="12"
-      class="account-menu max-w-[calc(100vw-24px)] w-[248px] rounded-[var(--mrr-radius-lg)] p-1.5"
+  <el-dropdown class="mrr-account-dropdown" trigger="click" :placement="placement" :show-arrow="false" :popper-options="popperOptions" popper-class="mrr-account-menu" @visible-change="menuOpen = $event">
+    <el-button
+      ref="trigger" :data-state="menuOpen ? 'open' : 'closed'" text :auto-insert-space="false" :data-variant="buttonVariant" :data-avatar-only="onlyAvatar" :aria-label="`账号菜单：${userStore.account}`" :title="userStore.account" :class="cn('mrr-migrated-toolbar account-trigger min-w-0 flex-center gap-2 px-2 py-0 text-[13px]', {
+        'size-[var(--mrr-control-height)] shrink-0 p-1': onlyAvatar,
+      }, props.class)"
     >
-      <DropdownMenuLabel class="p-2">
-        <div class="flex items-center gap-3">
-          <FaAvatar :src="userStore.avatar" class="size-9 shrink-0">
-            <FaIcon name="i-lucide:user-round" class="size-7 text-[var(--text-secondary)]" />
-          </FaAvatar>
-          <div class="min-w-0 flex-1">
-            <div class="account-name text-sm text-[var(--text-primary)] font-semibold leading-5">
-              {{ userStore.account }}
-            </div>
-            <div class="mt-0.5 text-xs text-[var(--text-secondary)] font-normal leading-4">
-              当前登录账号
+      <FaAvatar :src="userStore.avatar" :class="cn('size-7 shrink-0', { 'size-full': onlyAvatar })">
+        <FaIcon name="i-lucide:user-round" class="size-6 text-[var(--text-secondary)]" />
+      </FaAvatar>
+      <div v-if="!onlyAvatar" class="min-w-0 flex-center-between flex-1 gap-2">
+        <div class="flex-1 truncate text-start">
+          {{ userStore.account }}
+        </div>
+        <FaIcon name="i-lucide:chevrons-up-down" class="size-4 shrink-0 text-[var(--text-secondary)]" />
+      </div>
+    </el-button>
+    <template #dropdown>
+      <el-dropdown-menu @keydown="closeOnEscape">
+        <li role="presentation" class="mrr-account-label p-2">
+          <div class="flex items-center gap-3">
+            <FaAvatar :src="userStore.avatar" class="size-9 shrink-0">
+              <FaIcon name="i-lucide:user-round" class="size-7 text-[var(--text-secondary)]" />
+            </FaAvatar>
+            <div class="min-w-0 flex-1">
+              <div class="account-name text-sm text-[var(--text-primary)] font-semibold leading-5">
+                {{ userStore.account }}
+              </div>
+              <div class="mt-0.5 text-xs text-[var(--text-secondary)] font-normal leading-4">
+                当前登录账号
+              </div>
             </div>
           </div>
-        </div>
-      </DropdownMenuLabel>
-      <DropdownMenuSeparator class="mx-2 my-1 bg-[var(--mrr-border)]" />
-      <DropdownMenuGroup>
-        <DropdownMenuItem
+        </li>
+        <li role="separator" class="mrr-account-separator" />
+        <el-dropdown-item
           v-if="settingsStore.settings.home.enable" class="min-h-9 cursor-pointer gap-2.5 px-2.5"
-          @select="router.push({ path: settingsStore.settings.home.fullPath })"
+          @click="router.push({ path: settingsStore.settings.home.fullPath })"
         >
           <FaIcon name="i-lucide:house" class="size-4 shrink-0 text-[var(--text-secondary)]" />
           {{ settingsStore.settings.home.title }}
-        </DropdownMenuItem>
-        <DropdownMenuItem class="min-h-9 cursor-pointer gap-2.5 px-2.5" @select="isProfileShow = true">
+        </el-dropdown-item>
+        <el-dropdown-item class="min-h-9 cursor-pointer gap-2.5 px-2.5" @click="isProfileShow = true">
           <FaIcon name="i-lucide:user-round" class="size-4 shrink-0 text-[var(--text-secondary)]" />
           个人设置
-        </DropdownMenuItem>
-      </DropdownMenuGroup>
-      <DropdownMenuSeparator class="mx-2 my-1 bg-[var(--mrr-border)]" />
-      <DropdownMenuItem
-        class="account-logout min-h-9 cursor-pointer gap-2.5 px-2.5 text-[var(--color-danger)] focus:bg-[var(--mrr-navigation-hover)] focus:text-[var(--color-danger)]"
-        @select="userStore.logout(settingsStore.settings.home.fullPath)"
-      >
-        <FaIcon name="i-lucide:log-out" class="size-4 shrink-0" />
-        退出登录
-      </DropdownMenuItem>
-    </DropdownMenuContent>
-  </DropdownMenu>
+        </el-dropdown-item>
+        <li role="separator" class="mrr-account-separator" />
+        <el-dropdown-item
+          class="account-logout min-h-9 cursor-pointer gap-2.5 px-2.5 text-[var(--color-danger)] focus:bg-[var(--mrr-navigation-hover)] focus:text-[var(--color-danger)]"
+          @click="userStore.logout(settingsStore.settings.home.fullPath)"
+        >
+          <FaIcon name="i-lucide:log-out" class="size-4 shrink-0" />
+          退出登录
+        </el-dropdown-item>
+      </el-dropdown-menu>
+    </template>
+  </el-dropdown>
   <MrrDialog v-model="isProfileShow" title="个人设置" align-center :header="false" :footer="false" :close-on-click-overlay="false" :close-on-press-escape="false" class="mrr-profile-dialog overflow-hidden" content-class="min-h-full p-0 flex">
     <Profile />
   </MrrDialog>

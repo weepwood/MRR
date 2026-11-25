@@ -54,7 +54,7 @@ function manifestVersion(version: number) {
   }
 }
 
-const demoOrders = [{ id: 1, issueId: 2, scanId: 3, targetArchiveId: 2, status: 'PROPOSED', proposedBy: 2, approvedBy: null }]
+const demoOrders = [{ id: 1, issueId: 2, scanId: 3, entityType: 'mr_scan', entityId: '3', targetArchiveId: 2, status: 'PROPOSED', proposedBy: 2, approvedBy: null }]
 export default defineFakeRoute([
   {
     url: '/api/v1/system/data-relations/overview',

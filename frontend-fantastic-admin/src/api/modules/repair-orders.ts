@@ -4,7 +4,9 @@ export type RepairAction = 'approve' | 'apply' | 'verify' | 'cancel' | 'compensa
 export interface RepairOrder {
   id: number
   issueId: number
-  scanId: number
+  scanId: number | null
+  entityType?: string
+  entityId?: string
   targetArchiveId: number
   status: string
   proposedBy: number

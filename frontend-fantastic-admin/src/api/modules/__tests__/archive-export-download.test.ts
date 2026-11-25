@@ -1,3 +1,4 @@
+import { AxiosHeaders } from 'axios'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { downloadExportJobWithResume } from '@/views/statistics/archive/utils/resumable-export-download'
 import { downloadArchiveExportJob, downloadArchivePdf, downloadArchiveZip, downloadSelectedImagesPdf } from '../archive-export'
@@ -74,6 +75,30 @@ describe('archive export transport budget', () => {
     Object.defineProperty(blob, 'size', { value: limit + 1 })
     api.get.mockResolvedValue(blob)
     await expect(downloadArchiveZip()).rejects.toThrow('分批')
+  })
+
+  it.each([
+    [200, 'bytes 0-9/10', 'a'.repeat(64)],
+    [206, 'bytes 0-9/11', 'a'.repeat(64)],
+    [206, 'bytes 1-10/10', 'a'.repeat(64)],
+    [206, 'bytes 0-9/10', 'b'.repeat(64)],
+  ])('rejects incorrect HTTP representation metadata (%s, %s)', async (status, contentRange, hash) => {
+    api.get.mockImplementation(async (_url, config) => {
+      const headers = new AxiosHeaders({ 'content-range': contentRange, 'etag': `"${hash}"` })
+      return config.transformResponse[0](new Blob([new Uint8Array(10)]), headers, status)
+    })
+    await expect(downloadArchiveExportJob('synthetic-job', 'bytes=0-9', { bytes: 10, sha256: 'a'.repeat(64) })).rejects.toThrow('导出')
+    expect(api.get.mock.calls[0][1].headers['If-Range']).toBe(`"${'a'.repeat(64)}"`)
+    expect(api.get).toHaveBeenCalledOnce()
+  })
+
+  it('accepts correct partial representation with strong ETag and total', async () => {
+    const blob = new Blob([new Uint8Array(10)])
+    api.get.mockImplementation(async (_url, config) => config.transformResponse[0](blob, new AxiosHeaders({
+      'content-range': 'bytes 0-9/20',
+      'etag': `"${'a'.repeat(64)}"`,
+    }), 206))
+    await expect(downloadArchiveExportJob('synthetic-job', 'bytes=0-9', { bytes: 20, sha256: 'a'.repeat(64) })).resolves.toBe(blob)
   })
 
   it('preserves permission errors without retrying', async () => {

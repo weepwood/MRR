@@ -11,6 +11,7 @@ export interface ManifestObservation {
   createdAt: string
   updatedAt: string
   snapshotCount?: number | null
+  recoveryCount?: number
 }
 
 export interface ManifestIssue {
@@ -30,6 +31,10 @@ export function getLatestManifest(archiveId: number) {
 
 export function startManifest(archiveId: number) {
   return postRequest<ManifestObservation>(base, undefined, { params: { archiveId } })
+}
+
+export function resumeManifest(archiveId: number, version: number) {
+  return postRequest<ManifestObservation>(`${base}/${version}/resume`, undefined, { params: { archiveId }, retry: false })
 }
 
 export function cancelManifest(version: number) {
@@ -63,4 +68,32 @@ export interface ManifestComparison {
 
 export function getManifestComparison(archiveId: number, baseVersion: number, targetVersion: number) {
   return getRequest<ManifestComparison>(`${base}/compare`, { params: { archiveId, baseVersion, targetVersion } })
+}
+
+export interface ManifestSegment {
+  number: number
+  firstOrdinal: number
+  lastOrdinal: number
+  planned: number
+  processed: number
+  verified: number
+  anomalies: number
+}
+
+export interface ManifestReport {
+  version: number
+  archiveId: number
+  status: string
+  snapshotCount: number
+  processed: number
+  verified: number
+  anomalies: number
+  completeDigestAvailable: boolean
+  updatedAt: string
+  segments: ManifestSegment[]
+  anomalyCounts: Record<string, number>
+}
+
+export function getManifestReport(archiveId: number, version: number) {
+  return getRequest<ManifestReport>(`${base}/${version}/report`, { params: { archiveId } })
 }

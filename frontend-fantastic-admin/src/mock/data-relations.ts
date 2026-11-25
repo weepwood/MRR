@@ -91,6 +91,21 @@ export default defineFakeRoute([
     },
   },
   {
+    url: '/api/v1/system/data-relations/archives/:archiveId/scans',
+    response: ({ params, query }) => {
+      const archiveId = Number(params.archiveId)
+      const limit = Number(query?.limit ?? 50)
+      const afterId = query?.afterId == null ? null : Number(query.afterId)
+      const afterPage = query?.afterPage == null ? null : Number(query.afterPage)
+      if (!Number.isSafeInteger(archiveId) || archiveId <= 0 || !Number.isInteger(limit) || limit < 1 || limit > 100 || (afterId != null && (!Number.isSafeInteger(afterId) || afterId <= 0)) || (afterPage != null && (afterId == null || !Number.isInteger(afterPage)))) { return demoError(400, '无效分页') }
+      const rows = activeScans(archiveId).sort((a, b) => a.pages - b.pages || a.id - b.id).filter(row => afterId == null || (afterPage != null && (row.pages > afterPage || (row.pages === afterPage && row.id > afterId)))).slice(0, limit + 1)
+      const more = rows.length > limit
+      if (more) { rows.pop() }
+      const last = rows.at(-1)
+      return demoOk({ archiveId, rows: rows.map(s => ({ id: s.id, archiveId: s.archiveId, uploadFlag: s.uploadFlag, pages: s.pages, btype: s.btype, migrationStatus: s.migrationStatus })), nextCursor: more && last ? { pages: last.pages, id: last.id } : null })
+    },
+  },
+  {
     url: '/api/v1/system/data-relations/archives/:archiveId',
     response: ({ params }) => {
       const archive = archives().find(row => row.id === Number(params.archiveId))
@@ -155,6 +170,19 @@ export default defineFakeRoute([
     },
   },
   {
+    url: '/api/v1/operations/archive-manifests/:version/report',
+    response: ({ params, query }) => {
+      const row = manifestVersion(Number(params.version))
+      if (!row || row.observation.archiveId !== Number(query?.archiveId)) { return demoError(409, '演示版本与病案不一致') }
+      const count = row.ids.length
+      return demoOk({
+        ...row.observation,
+        segments: count ? [{ number: 1, firstOrdinal: 1, lastOrdinal: count, planned: count, processed: count, verified: 0, anomalies: count }] : [],
+        anomalyCounts: count ? { UNVERIFIED: count } : {},
+      })
+    },
+  },
+  {
     url: '/api/v1/operations/archive-manifests/:version/anomalies',
     response: ({ params, query }) => demoOk((manifestVersion(Number(params.version))?.ids ?? []).map((id, i) => ({
       cursor: i + 1,
@@ -180,6 +208,13 @@ export default defineFakeRoute([
       ? demoOk(Number(query?.after ?? 0) < 1 ? [{ id: 1, actorId: 2, action: 'PROPOSED', beforeArchiveId: null, afterArchiveId: null, createdAt: hoursAgo(2) }] : [])
       : demoError(404, '演示工单不存在'),
   },
+  {
+    url: '/api/v1/system/data-quality/repair-orders/:id',
+    response: ({ params }) => {
+      const row = demoOrders.find(order => order.id === Number(params.id))
+      return row ? demoOk(row) : demoError(404, '演示工单不存在')
+    },
+  },
   { url: '/api/v1/system/data-quality/repair-orders', method: 'POST', response: () => demoError(503, '演示不执行真实修复') },
   { url: '/api/v1/system/data-quality/repair-orders/:id/approve', method: 'POST', response: () => demoError(503, '演示不执行真实修复') },
   { url: '/api/v1/system/data-quality/repair-orders/:id/apply', method: 'POST', response: () => demoError(503, '演示不执行真实修复') },
@@ -187,5 +222,6 @@ export default defineFakeRoute([
   { url: '/api/v1/system/data-quality/repair-orders/:id/cancel', method: 'POST', response: () => demoError(503, '演示不执行真实修复') },
   { url: '/api/v1/system/data-quality/repair-orders/:id/compensate', method: 'POST', response: () => demoError(503, '演示不执行真实修复') },
   { url: '/api/v1/operations/archive-manifests', method: 'POST', response: () => demoError(503, '演示不执行真实文件校验') },
+  { url: '/api/v1/operations/archive-manifests/:version/resume', method: 'POST', response: () => demoError(503, '演示不恢复真实文件校验') },
   { url: '/api/v1/operations/archive-manifests/:version/cancel', method: 'POST', response: () => demoError(503, '演示不执行真实文件校验') },
 ])

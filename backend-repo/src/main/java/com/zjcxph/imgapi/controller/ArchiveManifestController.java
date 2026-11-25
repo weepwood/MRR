@@ -60,11 +60,26 @@ public class ArchiveManifestController {
         return Result.success(service.get(version));
     }
 
+    @GetMapping("/{version}/report")
+    public Result<com.zjcxph.imgapi.repository.ArchiveManifestRepository.Report> report(
+            @PathVariable long version, @RequestParam long archiveId, HttpServletResponse response) {
+        noStore(response);
+        return Result.success(service.report(archiveId,version));
+    }
+
     @GetMapping("/{version}/anomalies")
     public Result<List<ArchiveManifestService.Issue>> issues(@PathVariable long version,
             @RequestParam(defaultValue = "0") int after, HttpServletResponse response) {
         noStore(response);
         return Result.success(service.issues(version, after));
+    }
+
+    @PostMapping("/{version}/resume")
+    @RequirePermissions({"system:manage", "record:read"})
+    public Result<ArchiveManifestService.Observation> resume(@PathVariable long version,
+            @RequestParam long archiveId,HttpServletResponse response) {
+        noStore(response);
+        return Result.success(service.resume(archiveId,version,actor()));
     }
 
     @PostMapping("/{version}/cancel")

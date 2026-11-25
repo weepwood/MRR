@@ -67,6 +67,27 @@ class ArchiveManifestServiceTest {
         verifyNoInteractions(mapper, storage);
     }
 
+    @Test
+    void missingFixedOrdinalConsumesFailureBudgetInsteadOfLoopingCompletion() {
+        var fixed = new ArchiveManifestRepository.Lease(1L,9L,50,1,9,1,UUID.randomUUID(),2);
+        when(repo.claim(any())).thenReturn(Optional.of(fixed));
+        when(repo.next(fixed)).thenReturn(Optional.empty());
+        service(true).tick();
+        verify(repo).retry(fixed,true);
+        verify(repo,never()).finish(any(),any());
+        verifyNoInteractions(mapper,storage);
+    }
+
+    @Test
+    void resumeRequiresEnabledWritableSystemAndValidIdentity() {
+        assertThatThrownBy(() -> service(false).resume(9,1,7)).hasMessageContaining("关闭");
+        when(readiness.isReadOnly()).thenReturn(true);
+        assertThatThrownBy(() -> service(true).resume(9,1,7)).hasMessageContaining("只读");
+        when(readiness.isReadOnly()).thenReturn(false);
+        assertThatThrownBy(() -> service(true).resume(9,1,0)).hasMessageContaining("无效");
+        verifyNoInteractions(repo);
+    }
+
     private ArchiveManifestService service(boolean enabled) {
         return new ArchiveManifestService(repo, mapper, storage, readiness, maintenance, enabled);
     }

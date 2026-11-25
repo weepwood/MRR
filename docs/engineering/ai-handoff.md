@@ -362,6 +362,26 @@
 
 - #805 已合并 integration/v1.1 ba1487ba，main 24152bee 冻结；独立分支 feat/v1.1-operations-history，详见 [运维历史及Nginx专项](v1.1-operations-history.md)。新增有界独立采样表、历史趋势与相邻观察时间线；固定本地 Windows Nginx 语法校验及元数据；两个特性默认关闭。不执行真实 Windows 生产命令。最终 PR/门禁以 GitHub 为准，真实医院验收仍独立。
 
+## 09 V1.1 工单异常重开与完整性报告（2026-11-25）
+
+- #806 的 scope/Pages 初次失败分别修复兼容迁移及 NAS 标签定位，最新 head 8120e18c；远端最终门禁以实际结果为准。独立后续 feat/v1.1-repair-manifest 基于该 head，详见 [重开与报告](v1.1-repair-manifest-report.md)。只允许新成功检查、同一影像缺失关联和唯一候选的明确重提，旧工单 SUPERSEDED、保留审计、新工单独立审批；固定成员报告只读分段及汇总。17 PG专项、15 Vitest、4 Chromium（含预热）通过。未合并 #806 前不重复建立依赖 PR；合并后从最新 integration/v1.1 吸收该增量。main 24152bee 冻结，未执行生产操作。
+
+## 10 V1.1 Manifest任务恢复与公开配置演示（2026-11-25）
+
+- 后续 feat/v1.1-repair-manifest 基于 bbe12df8，新增 [显式任务恢复与公开配置](v1.1-manifest-recovery.md)，仅最新FAILED固定成员任务、显式确认、原游标恢复、旧租约拒绝、最多三次、原子恢复审计；54迁移及18后端、5前端专项通过，Pages静态冒烟通过，179/219路由匹配。#806 最新候选函数覆盖率问题另在父分支补10项真实行为/契约测试，本地完整覆盖率门禁73.26%恢复，远端仍须复核。父PR未合并前不创建重复PR；main冻结、不执行真实医疗数据或生产操作。
+
+## 11 V1.1 病案影像分页与内嵌OCR（2026-11-25）
+
+- 后续 feat/v1.1-repair-manifest 基于 40a0c31b，详见 [影像分页与内嵌OCR](v1.1-workbench-scan-pagination.md)：真实双权限只读游标接口，重复/空页码遍历、每组50条、有界请求，内嵌识别保留现有档案袋抽屉。PG定向13/13、权限11/11、相关组件19/19与新增OCR专项3/3（2项重叠）、Chromium4/4（含预热）通过。静态路由180/220、40缺失。#806 27bcd270 Pages/governance/development已过、候选仍执行，不提前合并。main冻结，未执行真实医疗或生产操作。
+
+## 12 V1.1 持久存储熔断事件（2026-11-25）
+
+- [专项记录](v1.1-storage-circuit-history.md)：既有状态机脱敏事件采集、UUID+sequence去重、七天有界历史；PG12/12、权限12/12、组件3/3、Chromium14/14及静态冒烟通过。#806 候选build通过，Windows恢复待确认；main冻结。
+
+## 13 V1.1 导出版本与断点校验（2026-11-25）
+
+- #806 完整候选及Windows恢复通过，已合并 integration/v1.1 c3e6bdba。上一轮熔断历史已推送9966fb50。新增 [导出版本与断点校验](v1.1-export-representation.md)，全部已有前缀分块核验、If-Range/ETag/Content-Range及总长度校验，保留128MiB预算与权限。61 Vitest、4 Chromium（含预热）通过。后续集中PR基于c3e6bdba，main冻结。
+
 ## 每轮交接模板
 
 - 更新时间、任务、风险、目标及非目标：

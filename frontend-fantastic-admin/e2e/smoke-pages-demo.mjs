@@ -45,6 +45,22 @@ async function smokePagesDemo() {
     assert.equal(mockResponses.user?.data?.username, 'admin', '用户信息必须来自浏览器 Mock')
     assert.equal(mockResponses.scans?.data?.list?.length, 3, '扫描记录必须由浏览器 Mock 返回')
 
+    const publicConfig = await page.evaluate(async () => {
+      const get = path => fetch(`/proxy/api/v1/public/config/${path}`).then(response => response.json())
+      const [login, environment, docs, session] = await Promise.all([
+        get('login-page'), get('client-environment'), get('documentation'),
+        fetch('/proxy/api/v1/documentation/session', { method: 'POST' }).then(response => response.json()),
+      ])
+      return { login, environment, docs, session }
+    })
+    assert.equal(publicConfig.login.data.loginEnvironmentLabel, '静态演示环境')
+    assert.equal(publicConfig.login.data.systemAdminContactVisible, false)
+    assert.equal(publicConfig.environment.code, 503)
+    assert.equal(publicConfig.environment.data, undefined)
+    assert.deepEqual(publicConfig.docs.data, { documentationUserGuideUrl: '', documentationDeveloperUrl: '', documentationOperationsUrl: '' })
+    assert.equal(publicConfig.session.code, 503)
+
+
     // Verify shared records through the actual static browser Mock.
     const relations = await page.evaluate(async () => {
       const get = path => fetch(`/proxy/api/v1/${path}`).then(response => response.json())
@@ -415,7 +431,7 @@ async function smokePagesDemo() {
     await archiveInput.waitFor({ timeout: 20000 })
     await archiveInput.fill('26070000')
     await archiveInput.press('Enter')
-    const samples = workbench.getByRole('group', { name: '有效影像样本' })
+    const samples = workbench.getByRole('group', { name: '有效影像列表' })
     await samples.getByRole('button').first().click({ timeout: 20000 })
     const scanImage = workbench.getByAltText('待核对影像')
     await scanImage.waitFor({ timeout: 20000 })
@@ -425,7 +441,7 @@ async function smokePagesDemo() {
     })
     assert.match(await scanImage.getAttribute('src'), /^blob:/)
     await workbench.getByRole('button', { name: '识别文字', exact: true }).click()
-    await workbench.getByRole('dialog', { name: '影像文字识别' }).waitFor({ timeout: 15000 })
+    await workbench.getByRole('region', { name: '影像文字识别' }).waitFor({ timeout: 15000 })
     await workbench.close()
 
     // Use the actual bundled browser Mock, not Playwright page.route stubs.
@@ -439,6 +455,12 @@ async function smokePagesDemo() {
     assert.equal(await opsPage.getByRole('button', { name: '校验配置语法' }).isDisabled(), true)
     const history = await opsPage.evaluate(() => fetch('/proxy/api/v1/operations/history?hours=168').then(response => response.json()))
     assert.equal(history.data.hours, 168)
+    await opsPage.getByRole('heading', { name: '持久存储熔断事件' }).waitFor({ timeout: 20000 })
+    const circuits = await opsPage.evaluate(() => fetch('/proxy/api/v1/operations/storage-circuit-history?hours=168').then(response => response.json()))
+    assert.equal(circuits.data.hours, 168)
+    assert.equal(circuits.data.events.length, 5)
+    assert.equal(circuits.data.events[0].eventType, 'RECOVERED')
+
     assert.ok(history.data.samples.length > 0 && history.data.samples.length <= 2017)
     const disabledCheck = await opsPage.evaluate(() => fetch('/proxy/api/v1/operations/nginx/check', { method: 'POST' }).then(response => response.json()))
     assert.equal(disabledCheck.data.status, 'DISABLED')

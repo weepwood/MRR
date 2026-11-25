@@ -28,3 +28,10 @@ export function requireArchiveExportBlob(blob: Blob): Blob {
   requireArchiveExportSize(blob.size)
   return blob
 }
+
+export class ArchiveExportIntegrityError extends Error {
+  constructor(message: string) {
+    super(message)
+    this.name = 'ArchiveExportIntegrityError'
+  }
+}

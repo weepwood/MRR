@@ -61,6 +61,16 @@ public class OperationsCenterService {
         httpSource = http; nginxSource = nginx; ossSource = oss;
     }
 
+    /** Passive redacted circuit buffers; do not query readiness, medical data or storage. */
+    public Map<String,Map<String,Object>> storageCircuitSnapshots() {
+        Map<String,Map<String,Object>> snapshots = new LinkedHashMap<>();
+        if (nasSource != null) snapshots.put("NAS",nasSource.runtimeSnapshot());
+        if (httpSource != null) snapshots.put("HTTP",httpSource.runtimeSnapshot());
+        if (nginxSource != null) snapshots.put("NGINX",nginxSource.runtimeSnapshot());
+        if (ossSource != null) snapshots.put("OSS",ossSource.runtimeSnapshot());
+        return snapshots;
+    }
+
     /** Read only cached readiness, JVM and in-process storage counters; no new source probes or scan queries. */
     public com.zjcxph.imgapi.repository.OperationsHistoryRepository.Sample historySample(Instant sampledAt) {
         Map<String,Object> ready = effectiveReadiness(readinessService.getSnapshot());

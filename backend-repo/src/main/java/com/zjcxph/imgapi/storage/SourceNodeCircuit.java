@@ -20,6 +20,7 @@ final class SourceNodeCircuit {
     private static final int HISTORY_LIMIT = 16;
     private final java.util.ArrayDeque<java.util.Map<String, Object>> events = new java.util.ArrayDeque<>();
     private long opened, recovered, probes, sequence;
+    private final java.util.UUID circuitId = java.util.UUID.randomUUID();
 
     private void event(String type) {
         if (events.size() == HISTORY_LIMIT) events.removeFirst();
@@ -28,7 +29,7 @@ final class SourceNodeCircuit {
     }
 
     synchronized java.util.Map<String, Object> history() {
-        return java.util.Map.of("opened", opened, "recovered", recovered, "probes", probes,
+        return java.util.Map.of("circuitId", circuitId.toString(), "opened", opened, "recovered", recovered, "probes", probes,
                 "events", java.util.List.copyOf(events));
     }
 

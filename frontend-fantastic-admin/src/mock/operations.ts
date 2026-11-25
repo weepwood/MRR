@@ -137,6 +137,26 @@ export default defineFakeRoute([
       return demoOk({ enabled: true, hours, bucketSeconds: 300, from: new Date(from).toISOString(), to: new Date(to).toISOString(), samples })
     },
   },
+  {
+    url: '/api/v1/operations/storage-circuit-history',
+    response: ({ query }) => {
+      const hours = Number(query?.hours ?? 24)
+      if (hours !== 24 && hours !== 168) { return demoError(400, '仅支持最近24小时或7天') }
+      // Synthetic state-machine observations, independent from sampled mode changes.
+      const at = Math.floor(Date.now() / 300000) * 300000 - 3600000
+      const circuitId = '00000000-0000-4000-8000-000000000001'
+      const events = ['OPENED', 'PROBE_STARTED', 'METADATA_ONLY', 'PROBE_STARTED', 'RECOVERED'].map((eventType, i) => ({
+        circuitId,
+        sequence: i + 1,
+        sourceKind: 'NAS',
+        nodeOrdinal: 1,
+        eventType,
+        occurredAt: new Date(at + i * 30000).toISOString(),
+        collectedAt: new Date(at + i * 30000 + 10000).toISOString(),
+      })).reverse()
+      return demoOk({ enabled: true, hours, truncated: false, events })
+    },
+  },
   { url: '/api/v1/operations/readiness', response: () => demoOk(readiness()) },
   { url: '/api/v1/operations/readiness/refresh', method: 'POST', response: () => demoOk(readiness()) },
   { url: '/api/v1/operations/maintenance', response: () => demoOk({ ...maintenance }) },

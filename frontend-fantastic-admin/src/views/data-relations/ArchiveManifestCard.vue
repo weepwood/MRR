@@ -1,6 +1,7 @@
 <script setup lang="ts">
-import type { ManifestComparison, ManifestIssue, ManifestObservation } from '@/api/modules/archive-manifest'
-import { cancelManifest, getLatestManifest, getManifestComparison, getManifestHistory, getManifestIssues, getManifestVersion, startManifest } from '@/api/modules/archive-manifest'
+import type { ManifestComparison, ManifestIssue, ManifestObservation, ManifestReport } from '@/api/modules/archive-manifest'
+import { ElMessageBox } from 'element-plus'
+import { cancelManifest, getLatestManifest, getManifestComparison, getManifestHistory, getManifestIssues, getManifestReport, getManifestVersion, resumeManifest, startManifest } from '@/api/modules/archive-manifest'
 import AppEmpty from '@/components/AppEmpty/index.vue'
 import AppError from '@/components/AppError/index.vue'
 import MrrScanContentDialog from '@/components/MrrScanContentDialog/index.vue'
@@ -23,6 +24,48 @@ const failed = ref(false)
 const more = ref(false)
 let generation = 0
 let comparisonGeneration = 0
+let reportGeneration = 0
+const report = ref<ManifestReport | null>(null)
+const reportBusy = ref(false)
+const reportFailed = ref(false)
+
+function resetReport() {
+  reportGeneration++
+  report.value = null
+  reportBusy.value = false
+  reportFailed.value = false
+}
+
+async function loadReport() {
+  const archive = props.archiveId
+  const version = latest.value?.version
+  if (version == null || latest.value?.snapshotCount == null || busy.value || reportBusy.value) { return }
+  const current = ++reportGeneration
+  reportBusy.value = true
+  reportFailed.value = false
+  report.value = null
+  try {
+    const data = (await getManifestReport(archive, version)).data
+    if (current !== reportGeneration) { return }
+    if (!data || data.archiveId !== archive || data.version !== version || data.segments.length > 10) {
+      throw new Error('Manifest report identity mismatch')
+    }
+    report.value = data
+  }
+  catch {
+    if (current === reportGeneration) { reportFailed.value = true }
+  }
+  finally {
+    if (current === reportGeneration) { reportBusy.value = false }
+  }
+}
+
+function exportReport() {
+  const data = report.value
+  if (!data || data.archiveId !== props.archiveId || data.version !== latest.value?.version) { return }
+  downloadBlob(new Blob([JSON.stringify({ reportVersion: 1, ...data, scope: 'FIXED_MEMBERSHIP_OBSERVATION', limitation: '仅为已持久化观察与异常汇总，不代表当前文件完整；未处理成员不视为通过。' }, null, 2)], { type: 'application/json;charset=utf-8' }), `manifest-report-${data.version}.json`)
+}
+
 const compareBase = ref<number>()
 const comparison = ref<ManifestComparison | null>(null)
 const comparing = ref(false)
@@ -77,12 +120,19 @@ watch(compareBase, () => {
 }, { flush: 'sync' })
 const viewingLatest = computed(() => typeof selectedVersion.value !== 'number' || selectedVersion.value === newest.value?.version)
 const active = computed(() => ['PENDING', 'RUNNING'].includes(newest.value?.status ?? ''))
+const canResume = computed(() => {
+  const row = newest.value
+  return !!row && enabled.value && viewingLatest.value && row.status === 'FAILED'
+    && row.snapshotCount != null && row.processed < row.snapshotCount && (row.recoveryCount ?? 0) < 3
+})
+
 const canManage = computed(() => hasPermission('system:manage') && hasPermission('record:read'))
 const labels: Record<string, string> = { PENDING: '等待校验', RUNNING: '校验中', COMPLETED: '本次观察结束', PARTIAL: '达到处理上限', FAILED: '任务失败', CANCELLED: '已取消' }
 
 function clear() {
   generation++
   resetComparison()
+  resetReport()
   scanPreview.value = null
   latest.value = null
   newest.value = null
@@ -96,11 +146,12 @@ function clear() {
   more.value = false
 }
 
-async function load(mode: 'refresh' | 'start' | 'cancel' | 'more' | 'history' | 'version' = 'refresh') {
+async function load(mode: 'refresh' | 'start' | 'cancel' | 'resume' | 'more' | 'history' | 'version' = 'refresh') {
   if (busy.value) {
     return
   }
   resetComparison()
+  resetReport()
   const current = ++generation
   const archiveId = props.archiveId
   const currentVersion = latest.value?.version
@@ -111,13 +162,22 @@ async function load(mode: 'refresh' | 'start' | 'cancel' | 'more' | 'history' | 
     if (mode === 'start') {
       await startManifest(archiveId)
     }
+    if (mode === 'resume' && canResume.value && newest.value) {
+      const version = newest.value.version
+      try {
+        await ElMessageBox.confirm(`继续版本 #${version} 的固定成员校验？保留已处理结果，从持久游标恢复；最多恢复三次，不修改影像或病案事实。`, '恢复失败任务', { type: 'warning', confirmButtonText: '确认恢复', cancelButtonText: '返回' })
+      }
+      catch { return }
+      if (current !== generation || archiveId !== props.archiveId) { return }
+      await resumeManifest(archiveId, version)
+    }
     if (mode === 'cancel' && newest.value?.version != null) {
       await cancelManifest(newest.value.version)
     }
     if (current !== generation) {
       return
     }
-    if (mode === 'start' || mode === 'cancel') {
+    if (mode === 'start' || mode === 'cancel' || mode === 'resume') {
       selectedVersion.value = undefined
     }
     const response = await getLatestManifest(archiveId)
@@ -142,7 +202,7 @@ async function load(mode: 'refresh' | 'start' | 'cancel' | 'more' | 'history' | 
       historyMore.value = (page.data?.length ?? 0) === 50
     }
     let observation = response.data.latest
-    if (mode !== 'start' && mode !== 'cancel' && requestedVersion != null && requestedVersion !== observation?.version) {
+    if (mode !== 'start' && mode !== 'cancel' && mode !== 'resume' && requestedVersion != null && requestedVersion !== observation?.version) {
       const historic = await getManifestVersion(requestedVersion)
       if (current !== generation) {
         return
@@ -192,6 +252,9 @@ onBeforeUnmount(clear)
       <el-button v-if="canManage && enabled && !active && viewingLatest" type="primary" :disabled="busy" @click="load('start')">
         开始校验
       </el-button>
+      <el-button v-if="canManage && canResume" :disabled="busy" @click="load('resume')">
+        恢复失败任务
+      </el-button>
       <el-button v-if="canManage && active && viewingLatest" :disabled="busy" @click="load('cancel')">
         取消任务
       </el-button>
@@ -218,6 +281,9 @@ onBeforeUnmount(clear)
         <span v-if="latest.snapshotCount > 0"> · 分段 {{ Math.min(Math.ceil(latest.snapshotCount / 5000), Math.floor(latest.processed / 5000) + 1) }} / {{ Math.ceil(latest.snapshotCount / 5000) }}</span>
       </p>
       <p>版本 #{{ latest.version }} · {{ labels[latest.status] || latest.status }} · {{ formatDateTime(latest.updatedAt) }}</p>
+      <p v-if="latest.recoveryCount || latest.status === 'FAILED'" class="manifest-note">
+        已恢复 {{ latest.recoveryCount ?? 0 }} / 3 次；恢复保留原成员与处理结果，已取消任务不允许恢复。
+      </p>
       <div v-if="latest.snapshotCount != null && compareOptions.length" class="manifest-compare">
         <div class="manifest-history">
           <select v-model="compareBase" class="manifest-base-select" aria-label="完整性比较基准版本" :disabled="busy || comparing">
@@ -246,6 +312,37 @@ onBeforeUnmount(clear)
           </p>
           <el-button @click="exportComparison">
             下载比较摘要 JSON
+          </el-button>
+        </template>
+      </div>
+      <div v-if="latest.snapshotCount != null" class="manifest-compare">
+        <el-button :disabled="busy" :loading="reportBusy" @click="loadReport">
+          查看完整性报告
+        </el-button>
+        <AppError v-if="reportFailed" message="报告读取失败，固定成员可能已清理或观察不一致" @retry="loadReport" />
+        <template v-if="report">
+          <p>报告版本 #{{ report.version }} · 持久检查时间 {{ formatDateTime(report.updatedAt) }}</p>
+          <p>计划 {{ report.snapshotCount }} · 已处理 {{ report.processed }} · 未处理 {{ report.snapshotCount - report.processed }} · 已验证 {{ report.verified }} · 异常 {{ report.anomalies }}</p>
+          <el-table v-if="report.segments.length" :data="report.segments" size="small">
+            <el-table-column prop="number" label="分段" width="72" />
+            <el-table-column label="固定序号" min-width="120">
+              <template #default="{ row }">
+                {{ row.firstOrdinal }}–{{ row.lastOrdinal }}
+              </template>
+            </el-table-column>
+            <el-table-column prop="planned" label="计划" width="88" />
+            <el-table-column prop="processed" label="已处理" width="88" />
+            <el-table-column prop="verified" label="已验证" width="88" />
+            <el-table-column prop="anomalies" label="异常" width="88" />
+          </el-table>
+          <p v-if="Object.keys(report.anomalyCounts).length" class="manifest-note">
+            异常全量汇总：{{ Object.entries(report.anomalyCounts).map(([kind, count]) => `${kind} ${count}`).join(' · ') }}
+          </p>
+          <p class="manifest-note">
+            固定成员报告不是当前文件健康证明；未处理项不视为通过。
+          </p>
+          <el-button @click="exportReport">
+            下载完整性报告 JSON
           </el-button>
         </template>
       </div>

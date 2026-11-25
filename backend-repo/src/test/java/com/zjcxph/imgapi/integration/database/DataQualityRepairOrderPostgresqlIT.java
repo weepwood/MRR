@@ -98,6 +98,43 @@ class DataQualityRepairOrderPostgresqlIT extends PostgresqlIntegrationTestSuppor
         assertThat(jdbc.queryForObject("SELECT archive_id FROM app.mr_scan WHERE id=?",Long.class,order.scanId())).isNull();
     }
 
+    @Test
+    void verifiedRecurrenceNeedsNewSuccessfulRunAndNewApproval() {
+        var service = service(true);
+        long oldIssue = fixture();
+        var old = service.approve(service.propose(oldIssue,11L).id(),12L);
+        service.apply(old.id(),12L);
+        service.verify(old.id(),13L);
+        // Construct a synthetic recurrence using the existing trigger (ambiguity then resolution).
+        long duplicate = jdbc.queryForObject("INSERT INTO app.mr_archive(bah) VALUES ('7654321') RETURNING id",Long.class);
+        jdbc.update("UPDATE app.mr_scan SET archive_id=NULL WHERE id=?",old.scanId());
+        jdbc.update("DELETE FROM app.mr_archive WHERE id=?",duplicate);
+        assertThat(jdbc.queryForObject("SELECT archive_id FROM app.mr_scan WHERE id=?",Long.class,old.scanId())).isNull();
+        assertThatThrownBy(() -> service.propose(oldIssue,14L)).hasMessageContaining("重新成功检查");
+        assertThat(service.get(old.id()).status()).isEqualTo("VERIFIED");
+        long run = jdbc.queryForObject("""
+                INSERT INTO app.mrr_data_quality_run(status,triggered_by,started_at,completed_at)
+                VALUES ('SUCCESS','synthetic',clock_timestamp(),clock_timestamp()) RETURNING id
+                """,Long.class);
+        long issue = jdbc.queryForObject("""
+                INSERT INTO app.mrr_data_quality_issue(run_id,check_code,check_name,severity,entity_type,entity_id,bah,detail,detected_at)
+                VALUES (?,'SCAN_ARCHIVE_LINK_MISSING_ESTIMATED','synthetic','WARNING','mr_scan',?,'7654321','synthetic',clock_timestamp()) RETURNING id
+                """,Long.class,run,Integer.toString(old.scanId()));
+        var next = service.propose(issue,14L);
+        assertThat(next.reopenedFrom()).isEqualTo(old.id());
+        assertThat(next.approvedBy()).isNull();
+        assertThat(next.status()).isEqualTo("PROPOSED");
+        assertThat(service.get(old.id()).status()).isEqualTo("SUPERSEDED");
+        assertThat(service.events(old.id(),0)).extracting(DataQualityRepairOrderService.Event::action)
+                .containsExactly("PROPOSED","APPROVED","APPLIED","VERIFIED","SUPERSEDED");
+        assertThat(service.list(null,issue,null,14L).orders()).extracting(DataQualityRepairOrderService.Order::id)
+                .containsExactly(next.id(),old.id());
+        assertThatThrownBy(() -> service.approve(next.id(),14L)).hasMessageContaining("不同");
+        assertThatThrownBy(() -> service.propose(issue,15L)).hasMessageContaining("有效修复工单");
+        assertThat(jdbc.queryForObject("SELECT archive_id FROM app.mr_scan WHERE id=?",Long.class,old.scanId())).isNull();
+        assertThat(service.approve(next.id(),15L).status()).isEqualTo("APPROVED");
+    }
+
     private DataQualityRepairOrderService service(boolean enabled) {
         return new DataQualityRepairOrderService(jdbc, new DataQualityServiceImpl(jdbc, new SimpleMeterRegistry()),
                 mock(DeploymentReadinessService.class), mock(MaintenanceModeService.class), enabled);

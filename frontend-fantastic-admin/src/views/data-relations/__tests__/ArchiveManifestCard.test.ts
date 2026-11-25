@@ -8,9 +8,13 @@ const api = vi.hoisted(() => ({
   getManifestComparison: vi.fn(),
   getManifestVersion: vi.fn(),
   getManifestIssues: vi.fn(),
+  getManifestReport: vi.fn(),
   startManifest: vi.fn(),
+  resumeManifest: vi.fn(),
   cancelManifest: vi.fn(),
 }))
+const confirm = vi.hoisted(() => vi.fn())
+vi.mock('element-plus', async importOriginal => ({ ...await importOriginal<typeof import('element-plus')>(), ElMessageBox: { confirm } }))
 vi.mock('@/api/modules/archive-manifest', () => api)
 vi.mock('@/api/modules/classification', () => ({ getReviewImage: vi.fn() }))
 vi.mock('@/utils/session', () => ({ hasPermission: () => true }))
@@ -83,6 +87,51 @@ describe('archiveManifestCard', () => {
     resolve({ data: { archiveId: 1, baseVersion: 100, targetVersion: 101 } })
     await flushPromises()
     expect(wrapper.text()).not.toContain('新增成员')
+    wrapper.unmount()
+  })
+
+  it('loads an explicit fixed-membership report and rejects late results from a previous archive', async () => {
+    api.getLatestManifest.mockResolvedValue({ data: { enabled: false, latest: { ...observation(1), snapshotCount: 4 } } })
+    api.getManifestReport.mockResolvedValue({ data: { ...observation(1), snapshotCount: 4, segments: [{ number: 1, firstOrdinal: 1, lastOrdinal: 4, planned: 4, processed: 3, verified: 2, anomalies: 1 }], anomalyCounts: { MISSING_OR_UNREADABLE: 1 } } })
+    const wrapper = card()
+    await flushPromises()
+    const button = () => wrapper.findAll('button').find(b => b.text() === '查看完整性报告')!
+    await button().trigger('click')
+    await flushPromises()
+    expect(api.getManifestReport).toHaveBeenCalledWith(1, 101)
+    expect(wrapper.text()).toContain('未处理 1')
+    expect(wrapper.text()).toContain('MISSING_OR_UNREADABLE 1')
+    expect(wrapper.text()).toContain('下载完整性报告 JSON')
+    let resolve!: (value: unknown) => void
+    api.getManifestReport.mockImplementationOnce(() => new Promise(r => resolve = r))
+    await button().trigger('click')
+    api.getLatestManifest.mockResolvedValue({ data: { enabled: false, latest: { ...observation(2), snapshotCount: 4 } } })
+    await wrapper.setProps({ archiveId: 2 })
+    await flushPromises()
+    resolve({ data: { ...observation(1), snapshotCount: 4, segments: [], anomalyCounts: {} } })
+    await flushPromises()
+    expect(wrapper.text()).not.toContain('下载完整性报告 JSON')
+    wrapper.unmount()
+  })
+
+  it('resumes only explicitly confirmed failed latest fixed snapshots and preserves the version', async () => {
+    const failed = { ...observation(1), status: 'FAILED', snapshotCount: 4, recoveryCount: 1 }
+    api.getLatestManifest.mockResolvedValue({ data: { enabled: true, latest: failed } })
+    const wrapper = card()
+    await flushPromises()
+    const button = () => wrapper.findAll('button').find(b => b.text() === '恢复失败任务')!
+    confirm.mockRejectedValueOnce('cancel')
+    await button().trigger('click')
+    await flushPromises()
+    expect(api.resumeManifest).not.toHaveBeenCalled()
+    confirm.mockResolvedValueOnce(undefined)
+    api.resumeManifest.mockResolvedValue({ data: { ...failed, status: 'PENDING', recoveryCount: 2 } })
+    api.getLatestManifest.mockResolvedValue({ data: { enabled: true, latest: { ...failed, status: 'PENDING', recoveryCount: 2 } } })
+    await button().trigger('click')
+    await flushPromises()
+    expect(api.resumeManifest).toHaveBeenCalledExactlyOnceWith(1, 101)
+    expect(wrapper.text()).toContain('已恢复 2 / 3 次')
+    expect(wrapper.text()).not.toContain('恢复失败任务')
     wrapper.unmount()
   })
 

@@ -1,3 +1,4 @@
+import { Buffer } from 'node:buffer'
 import { expect, test } from '@playwright/test'
 
 test('修复工单必须显式确认，审批执行复验和审计按服务器状态更新', async ({ page }) => {
@@ -58,6 +59,20 @@ test('演示病案完整性显示固定成员与版本，写操作关闭', async
   await page.getByRole('button', { name: '下载比较摘要 JSON' }).click()
   const download = await downloadPromise
   expect(download.suggestedFilename()).toBe('manifest-comparison-1-1001.json')
+  await page.getByRole('button', { name: '查看完整性报告', exact: true }).click()
+  await expect(page.getByText('报告版本 #1001', { exact: false })).toBeVisible()
+  await expect(page.getByText('未处理 0', { exact: false })).toBeVisible()
+  await expect(page.getByText('异常全量汇总：UNVERIFIED 2', { exact: false })).toBeVisible()
+  const reportPromise = page.waitForEvent('download')
+  await page.getByRole('button', { name: '下载完整性报告 JSON', exact: true }).click()
+  const report = await reportPromise
+  expect(report.suggestedFilename()).toBe('manifest-report-1001.json')
+  const stream = await report.createReadStream()
+  const chunks = []
+  for await (const chunk of stream) { chunks.push(chunk) }
+  const data = JSON.parse(Buffer.concat(chunks).toString('utf8'))
+  expect(data).toMatchObject({ reportVersion: 1, archiveId: 1, version: 1001, snapshotCount: 2, processed: 2, anomalies: 2, anomalyCounts: { UNVERIFIED: 2 }, scope: 'FIXED_MEMBERSHIP_OBSERVATION' })
+
   await page.screenshot({ path: test.info().outputPath('manifest-workbench.png'), fullPage: true })
 })
 
@@ -80,7 +95,7 @@ test('独立病案工作台可从菜单打开，直接查询且兼容旧数据�
   await expect(page.getByText('病案主档 #1', { exact: true })).toBeVisible()
   await expect(page.getByRole('heading', { name: '影像文件完整性' })).toBeVisible()
   expect(globalRequests).toEqual([])
-  const samples = page.getByRole('group', { name: '有效影像样本' })
+  const samples = page.getByRole('group', { name: '有效影像列表' })
   await expect(samples.getByRole('button')).toHaveCount(2)
   await expect(page.getByAltText('待核对影像')).toHaveCount(0)
   await samples.getByRole('button').first().click()
@@ -91,8 +106,8 @@ test('独立病案工作台可从菜单打开，直接查询且兼容旧数据�
   await expect(samples.getByRole('button').last()).toHaveAttribute('aria-pressed', 'true')
   await expect(image).toBeVisible()
   await page.getByRole('button', { name: '识别文字', exact: true }).click()
-  await expect(page.getByRole('dialog', { name: '影像文字识别' })).toBeVisible()
-  await page.getByRole('dialog', { name: '影像文字识别' }).getByRole('button', { name: '关闭此对话框' }).click()
+  await expect(page.getByRole('region', { name: '影像文字识别' })).toBeVisible()
+  await page.getByRole('region', { name: '影像文字识别' }).getByRole('button', { name: '收起识别' }).click()
   await page.screenshot({ path: test.info().outputPath('standalone-archive-workbench.png'), fullPage: true })
   await page.getByRole('button', { name: '关闭原图' }).click()
   await expect(image).toHaveCount(0)

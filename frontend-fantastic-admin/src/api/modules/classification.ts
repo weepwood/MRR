@@ -30,7 +30,15 @@ export interface ClassificationSuggestion {
 export interface OcrItem { scanId: number, status: string, failureCode: string | null, suggestedType: number | null }
 
 export const getRecordTypes = () => getRequest<{ value: number, label: string }[]>('/api/v1/medical-record-types')
-export const getReviewImage = (scanId: number) => api.get<Blob>(`/api/v1/img/content/${scanId}`, { responseType: 'blob' })
+export function getReviewImage(scanId: number, signal?: AbortSignal) {
+  return api.get<Blob, Blob>(`/api/v1/img/content/${scanId}`, {
+  // Pages 静态 Mock 与 Nginx 文件预览保持一致：Fetch Response 转换真实 Blob。
+    adapter: import.meta.env.MODE === 'pages' ? 'fetch' : undefined,
+    responseType: 'blob',
+    signal,
+    skipGlobalError: true,
+  })
+}
 export const getClassificationVersions = () => getRequest<ClassificationVersion[]>('/api/v1/classification/rule-sets')
 export const getClassificationBundle = (version: string) => getRequest<ClassificationBundle>(`/api/v1/classification/rule-sets/${version}`)
 export const createClassificationDraft = (bundle: ClassificationBundle) => postRequest<string>('/api/v1/classification/rule-sets', bundle)

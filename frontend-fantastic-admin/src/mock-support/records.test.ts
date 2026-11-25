@@ -17,13 +17,15 @@ describe('shared synthetic records', () => {
     expect(scans).toHaveLength(64)
     expect(new Set(patients.map(patient => patient.bah)).size).toBe(32)
     expect(new Set(patients.map(patient => patient.brxh)).size).toBe(32)
+    expect(patients.filter(patient => !patient.idCard)).toHaveLength(2)
+    expect(patients[25].idCard).toBe(patients[31].idCard)
     expect(new Set(scans.map(scan => scan.id)).size).toBe(64)
     expect(new Set(scans.map(scan => scan.sjh)).size).toBe(64)
     for (const patient of patients) {
       const related = scans.filter(scan => scan.bah === patient.bah)
       expect(related).toHaveLength(2)
       expect(related.every(scan => scan.brxh === patient.brxh && scan.uploadDate >= patient.admissiontime)).toBe(true)
-      expect(patient.idCard).toMatch(/^000000\d{12}$/)
+      expect(patient.idCard).toMatch(/^(?:000000\d{12})?$/)
     }
   })
 

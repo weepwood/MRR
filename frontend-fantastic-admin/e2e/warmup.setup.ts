@@ -36,6 +36,8 @@ const AUTHENTICATED_ROUTES = [
   '/ocr-batches',
   '/archive',
   '/archive/embed',
+  '/archive-workbench',
+  '/data-relations',
   '/archive-boxes',
   '/settings',
   '/settings?section=archive',

@@ -34,9 +34,12 @@ import { useTableActionLayout } from '@/composables/useTableActionLayout'
 import { formatDateTime } from '@/utils/display-format'
 import { hasPermission } from '@/utils/session'
 import ArchiveManifestCard from './ArchiveManifestCard.vue'
+import ArchiveScanInspector from './components/ArchiveScanInspector.vue'
 import RepairOrderPanel from './RepairOrderPanel.vue'
 
 defineOptions({ name: 'DataRelationWorkbenchPage' })
+
+const props = withDefaults(defineProps<{ archiveOnly?: boolean }>(), { archiveOnly: false })
 
 const canRepair = computed(() => hasPermission('system:manage') && hasPermission('record:manage'))
 const overviewLoading = ref(false)
@@ -44,7 +47,7 @@ const searchLoading = ref(false)
 const detailLoading = ref(false)
 const checking = ref(false)
 const previewLoading = ref(false)
-const activeTab = ref('overview')
+const activeTab = ref(props.archiveOnly ? 'archive' : 'overview')
 const overview = ref<DataRelationOverview | null>(null)
 const qualitySummary = ref<DataQualitySummary | null>(null)
 const issues = ref<DataQualityIssue[]>([])
@@ -78,7 +81,7 @@ function invalidatePreview() {
 watch(previewVisible, (visible) => {
   if (!visible) invalidatePreview()
 }, { flush: 'sync' })
-watch(() => useUserStore().token, () => {
+function resetPage() {
   previewVisible.value = false
   invalidatePreview()
   ++searchVersion
@@ -92,13 +95,23 @@ watch(() => useUserStore().token, () => {
   issueKeyword.value = ''
   overviewLoading.value = false
   checking.value = false
-  activeTab.value = 'overview'
+  activeTab.value = props.archiveOnly ? 'archive' : 'overview'
   searchLoading.value = false
   detailLoading.value = false
   searchResults.value = []
   searchValue.value = ''
   selectedArchive.value = null
   relationDetail.value = null
+  searchType.value = 'BAH'
+  searchError.value = false
+  searchCompleted.value = false
+  detailError.value = false
+  issueSeverity.value = 'ALL'
+}
+watch(() => useUserStore().token, resetPage, { flush: 'sync' })
+watch(() => props.archiveOnly, () => {
+  resetPage()
+  if (!props.archiveOnly) void loadDashboard()
 }, { flush: 'sync' })
 onBeforeUnmount(() => {
   invalidatePreview()
@@ -294,7 +307,7 @@ async function openArchive(row: ArchiveSearchResult) {
   try {
     const response = await getArchiveRelationDetail(row.id)
     if (current !== detailVersion) return
-    if (!response.data) throw new Error('Empty archive detail')
+    if (!response.data || Number(response.data.archive.id) !== row.id) throw new Error('Archive detail identity mismatch')
     relationDetail.value = response.data
   }
   catch {
@@ -371,27 +384,35 @@ function handleIssueAction(action: string, issue: DataQualityIssue) {
   }
 }
 
-onMounted(loadDashboard)
+onMounted(() => {
+  if (!props.archiveOnly) void loadDashboard()
+})
 </script>
 
 <template>
   <MrrPageShell class="relation-workbench">
     <MrrPageHeader
-      title="数据关系工作台"
-      eyebrow="Data Governance"
-      description="以 mr_archive 为中心查看统计、患者、扫描、装箱和迁移数据，发现缺失关联与字段冲突。关联检查、影像完整性观察与修复预览集中查看。"
+      :title="archiveOnly ? '病案工作台' : '数据关系工作台'"
+      :eyebrow="archiveOnly ? 'Medical Records' : 'Data Governance'"
+      :description="archiveOnly ? '按病案号、上架号或主档 ID 查找病案，集中核对患者、扫描影像、文件完整性及关联异常。' : '以 mr_archive 为中心查看统计、患者、扫描、装箱和迁移数据，发现缺失关联与字段冲突。关联检查、影像完整性观察与修复预览集中查看。'"
     >
       <template #actions>
-        <el-button :loading="overviewLoading" @click="loadDashboard">
+        <router-link v-if="archiveOnly" class="el-button" to="/data-relations">
+          数据关系工作台
+        </router-link>
+        <router-link v-else class="el-button" to="/archive-workbench">
+          打开病案工作台
+        </router-link>
+        <el-button v-if="!archiveOnly" :loading="overviewLoading" @click="loadDashboard">
           刷新
         </el-button>
-        <el-button type="primary" :loading="checking" @click="runChecks">
+        <el-button v-if="!archiveOnly" type="primary" :loading="checking" @click="runChecks">
           执行检查
         </el-button>
       </template>
     </MrrPageHeader>
 
-    <section class="mrr-metric-grid mrr-metric-grid--four" aria-label="数据关系健康总览">
+    <section v-if="!archiveOnly" class="mrr-metric-grid mrr-metric-grid--four" aria-label="数据关系健康总览">
       <MrrMetricCard
         label="关系健康度"
         :value="formatPercent(overview?.healthScore)"
@@ -416,8 +437,8 @@ onMounted(loadDashboard)
       />
     </section>
 
-    <el-tabs v-model="activeTab" class="workbench-tabs">
-      <el-tab-pane label="关系总览" name="overview">
+    <el-tabs v-model="activeTab" class="workbench-tabs" :class="{ 'workbench-tabs--archive-only': archiveOnly }">
+      <el-tab-pane v-if="!archiveOnly" label="关系总览" name="overview">
         <AppLoading v-if="overviewLoading && !overview" type="card" :cols="3" />
         <div v-else v-loading="overviewLoading" class="overview-stack">
           <section class="relation-grid">
@@ -619,6 +640,8 @@ onMounted(loadDashboard)
                 show-icon
               />
 
+              <ArchiveScanInspector v-if="archiveOnly && selectedArchive && hasPermission('record:read')" :key="`scan-${selectedArchive.id}`" :archive-id="selectedArchive.id" :samples="relationDetail.scanSamples" />
+
               <ArchiveManifestCard v-if="selectedArchive && hasPermission('system:read') && hasPermission('record:read')" :key="selectedArchive.id" :archive-id="selectedArchive.id" />
               <RepairOrderPanel v-if="selectedArchive && canRepair" :key="`repair-${selectedArchive.id}`" :archive-id="selectedArchive.id" />
 
@@ -687,10 +710,10 @@ onMounted(loadDashboard)
         </div>
       </el-tab-pane>
 
-      <el-tab-pane v-if="canRepair" label="修复工单" name="repairs">
+      <el-tab-pane v-if="!archiveOnly && canRepair" label="修复工单" name="repairs">
         <RepairOrderPanel v-if="activeTab === 'repairs'" />
       </el-tab-pane>
-      <el-tab-pane label="检查与异常" name="quality">
+      <el-tab-pane v-if="!archiveOnly" label="检查与异常" name="quality">
         <div class="quality-stack">
           <MrrSectionCard class="section-card" title="检查规则结果" description="关联、编号、文件元数据、重复扫描和迁移一致性">
             <template #actions>
@@ -863,6 +886,10 @@ p {
 
 .relation-card small {
   color: var(--el-text-color-secondary);
+}
+
+.workbench-tabs--archive-only > :deep(.el-tabs__header) {
+  display: none;
 }
 
 .workbench-tabs :deep(.el-tabs__content) {

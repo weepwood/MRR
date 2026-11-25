@@ -206,6 +206,50 @@ public class ArchiveManifestRepository {
                 : summaries("WHERE archive_id=? AND id<? ORDER BY id DESC LIMIT 50",archiveId,before);
     }
 
+    public record Comparison(long archiveId, long baseVersion, long targetVersion,
+                             int baseCount, int targetCount, int added, int removed,
+                             int changed, int unchanged, String digestComparison) {}
+
+    /** One statement: retained immutable memberships only; no current scan table or source access. */
+    @Transactional(readOnly = true, timeout = 5)
+    public Optional<Comparison> compare(long archiveId, long baseVersion, long targetVersion) {
+        return jdbc.query("""
+                WITH versions AS MATERIALIZED (
+                    SELECT a.id AS base_id,b.id AS target_id,a.archive_id,
+                           a.snapshot_count AS base_count,b.snapshot_count AS target_count,
+                           CASE WHEN a.status='COMPLETED' AND b.status='COMPLETED'
+                                      AND a.processed>0 AND b.processed>0
+                                      AND a.digest_chain IS NOT NULL AND b.digest_chain IS NOT NULL
+                                THEN CASE WHEN a.digest_chain=b.digest_chain THEN 'SAME' ELSE 'DIFFERENT' END
+                                ELSE 'UNAVAILABLE' END AS digest_comparison
+                    FROM app.mrr_archive_manifest a JOIN app.mrr_archive_manifest b ON a.archive_id=b.archive_id
+                    WHERE a.archive_id=? AND a.id=? AND b.id=? AND a.id<>b.id
+                        AND a.snapshot_count IS NOT NULL AND b.snapshot_count IS NOT NULL
+                ), base_members AS MATERIALIZED (
+                    SELECT m.scan_id,m.fingerprint FROM versions v
+                    JOIN app.mrr_archive_manifest_member m ON m.manifest_id=v.base_id
+                ), target_members AS MATERIALIZED (
+                    SELECT m.scan_id,m.fingerprint FROM versions v
+                    JOIN app.mrr_archive_manifest_member m ON m.manifest_id=v.target_id
+                ), counts AS (
+                    SELECT count(*) FILTER (WHERE a.scan_id IS NULL)::int AS added,
+                           count(*) FILTER (WHERE b.scan_id IS NULL)::int AS removed,
+                           count(*) FILTER (WHERE a.scan_id IS NOT NULL AND b.scan_id IS NOT NULL
+                               AND a.fingerprint<>b.fingerprint)::int AS changed,
+                           count(*) FILTER (WHERE a.scan_id IS NOT NULL AND b.scan_id IS NOT NULL
+                               AND a.fingerprint=b.fingerprint)::int AS unchanged
+                    FROM base_members a FULL JOIN target_members b ON a.scan_id=b.scan_id
+                )
+                SELECT v.archive_id,v.base_id,v.target_id,v.base_count,v.target_count,
+                       c.added,c.removed,c.changed,c.unchanged,v.digest_comparison
+                FROM versions v CROSS JOIN counts c
+                WHERE v.base_count=c.removed+c.changed+c.unchanged
+                  AND v.target_count=c.added+c.changed+c.unchanged
+                """, (rs,n) -> new Comparison(rs.getLong(1),rs.getLong(2),rs.getLong(3),
+                rs.getInt(4),rs.getInt(5),rs.getInt(6),rs.getInt(7),rs.getInt(8),rs.getInt(9),rs.getString(10)),
+                archiveId,baseVersion,targetVersion).stream().findFirst();
+    }
+
     @Transactional(timeout = 5)
     public int pruneExpired(int days) {
         return jdbc.update("""

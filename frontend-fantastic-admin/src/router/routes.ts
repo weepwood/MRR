@@ -37,6 +37,19 @@ const archiveEmbeddedRoute: RouteRecordRaw = {
   },
 }
 
+const archiveWorkbenchRoute: RouteRecordRaw = {
+  path: '/archive-workbench',
+  name: 'archiveWorkbench',
+  component: () => import('@/views/data-relations/index.vue'),
+  props: { archiveOnly: true },
+  meta: {
+    title: '病案工作台',
+    icon: 'i-lucide:layout-dashboard',
+    auth: ['system:read'],
+    cache: false,
+  },
+}
+
 const monitoringFilesystemRoute: RouteRecordRaw = {
   path: '/monitoring',
   name: 'monitoring',
@@ -244,6 +257,7 @@ const asyncRoutes: Route.recordMainRaw[] = [
         meta: { title: 'OSS 文件浏览', icon: 'i-lucide:folder-open', auth: ['record:read'], cache: true },
       },
       nginxBrowserRoute,
+      archiveWorkbenchRoute,
       archiveEmbeddedRoute,
     ],
   },
@@ -361,6 +375,7 @@ const generatedAsyncRoutes = generatedRoutes.filter(
     '/auth-test',
     '/ui-components',
     '/data-relations',
+    '/archive-workbench',
     '/nginx-browser',
     '/operations-center',
     ...externalArchiveGeneratedPaths,
@@ -375,6 +390,7 @@ const generatedAsyncRoutes = generatedRoutes.filter(
 const asyncRoutesByFilesystem = [
   ...setupLayouts(generatedAsyncRoutes),
   archiveEmbeddedRoute,
+  archiveWorkbenchRoute,
   monitoringFilesystemRoute,
   authenticationTestRoute,
   nginxBrowserRoute,

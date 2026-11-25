@@ -26,17 +26,20 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 class DiagnosticEndpointPermissionsTest {
     @Test
-    void nginxCheckRequiresBothOperationsPermissions() throws Exception {
+    void nginxCheckRequiresManageWithExistingReadInheritance() throws Exception {
         var service = mock(NginxConfigurationDiagnostics.class);
         var controller = new com.zjcxph.imgapi.controller.NginxConfigurationDiagnosticsController(service);
         var handler = new HandlerMethod(controller,controller.getClass().getMethod("check",jakarta.servlet.http.HttpServletResponse.class));
         var authorization = new AuthorizationInterceptor();
         String path = "/api/v1/operations/nginx/check";
-        for (var permissions : List.of(List.of("system:read"),List.of("system:manage"),List.of("log:read"))) {
+        for (var permissions : List.of(List.<String>of(),List.of("system:read"),List.of("log:read"))) {
             var response = new MockHttpServletResponse();
             assertThat(authorization.preHandle(request("POST",path,permissions),response,handler)).isFalse();
             assertThat(response.getStatus()).isEqualTo(403);
         }
+        // Existing PermissionResolver hierarchy: system:manage includes system:read.
+        assertThat(authorization.preHandle(request("POST",path,List.of("system:manage")),
+                new MockHttpServletResponse(),handler)).isTrue();
         assertThat(authorization.preHandle(request("POST",path,List.of("system:read","system:manage")),
                 new MockHttpServletResponse(),handler)).isTrue();
         verifyNoInteractions(service);

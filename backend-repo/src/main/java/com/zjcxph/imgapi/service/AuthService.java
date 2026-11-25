@@ -41,6 +41,8 @@ public interface AuthService {
                                            Long administratorId,
                                            String clientIp);
 
+    AuthUserProfileDTO reopenRegistration(Long userId, Long administratorId, String clientIp);
+
     AuthSession currentUser();
 
     List<AuthUserProfileDTO> listUsers();

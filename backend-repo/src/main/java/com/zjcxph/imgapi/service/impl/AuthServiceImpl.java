@@ -242,6 +242,27 @@ public class AuthServiceImpl implements AuthService {
     }
 
     @Override
+    @Transactional(rollbackFor = Exception.class)
+    public AuthUserProfileDTO reopenRegistration(Long userId, Long administratorId, String clientIp) {
+        // Serialize with role/status administration before validating the actor.
+        authRoleMapper.lockAdminRole();
+        requireActiveAdministrator(administratorId);
+        AuthUser target = authUserMapper.findById(userId);
+        if (target == null) {
+            throw new BusinessException(404, "用户不存在");
+        }
+        if (!"rejected".equalsIgnoreCase(target.getStatus())) {
+            throw new BusinessException(409, "只有已拒绝的注册申请可以恢复待审核");
+        }
+        if (authUserMapper.reopenRegistration(userId) != 1) {
+            throw new BusinessException(409, "注册申请状态已发生变化，请刷新后重试");
+        }
+        securityAudit.warn("event=USER_REGISTRATION_REOPENED actorUserId={} targetUserId={} username={} sourceIp={} result=SUCCESS",
+                administratorId, userId, target.getUsername(), clientIp);
+        return toProfile(authUserMapper.findById(userId));
+    }
+
+    @Override
     public AuthSession currentUser() {
         AuthSession session = AuthContext.getCurrentUser();
         if (session != null && session.isAdmin()) {
@@ -420,6 +441,9 @@ public class AuthServiceImpl implements AuthService {
         AuthUser user = authUserMapper.findById(id);
         if (user == null) {
             return 0;
+        }
+        if ("pending".equalsIgnoreCase(user.getStatus()) || "rejected".equalsIgnoreCase(user.getStatus())) {
+            throw new BusinessException(409, "注册申请账号必须通过专用审核操作处理，不能通过禁用绕过审核");
         }
         if (isLastActiveAdmin(user)) {
             throw lastActiveAdminRequired();

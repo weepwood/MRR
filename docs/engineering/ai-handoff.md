@@ -722,3 +722,7 @@
 ## 用户列表状态、排序和对齐（2026-11-26）
 
 基线 cdcd6cff。恢复正常/启用的公共绿色状态标签，删除局部透明和中性色覆盖。实测申请摘要按钮内部 span 继承公共 justify-content:center，较普通来源文字偏移30px；改为左对齐，保留省略和只读弹窗。正式 AuthUserMapper.findAllWithPagination 已待审核优先、COALESCE(applied_at,created_at) DESC、id DESC；Mock 对完整筛选结果采用相同排序再分页，补齐基础账号创建时间，未修改后端。第一页6/9/3/2，第二页0/4/1/3，历史三账号布局 fixture 不改排序。双浏览器四主题四宽度32/32，全部摘要起始线偏差0px；定向浏览器9/9含预热、数据单测3/3、TypeScript通过。日志 /tmp/mrr-user-order-{browser,visual,unit,tsc}.log，截图 /tmp/mrr-user-order-final.png。未执行全量构建、Chrome86实机及真实数据库验收；仅本地9037，不推送。
+
+## 用户操作列与注册申请恢复（2026-11-26）
+
+基线 49d1e4a8。统一四状态铅笔+更多，固定96px，待审核打开审核窗（通过/拒绝），已拒绝确认恢复待审核，禁用编辑/恢复启用，启用编辑/密码重置/禁用。检查正式后端原无恢复接口且通用编辑明确禁止直接激活注册申请；新增 POST /api/v1/auth/users/{id}/registration/reopen，user:manage + 活动管理员验证，事务及管理员角色锁，rejected 条件更新，仅改状态和更新时间，保留原申请、拒绝决定、角色和密码，记录安全审计。重新审核后方可启用；堵住 pending/rejected 经 DELETE 禁用再编辑启用的绕过路径。无数据库迁移。静态演示新接口沿用原503写入限制；前端完整成功链使用隔离模拟响应，非真实医院数据。Java21 后端44/44单测，独立新建PG16+56条现有迁移的真实MyBatis集成1/1，确认状态、原密码哈希/版本、角色和拒绝原因保留、重复恢复失败及后续审核。Chromium/WebKit 9/9含预热，覆盖四状态三视口两入口、恢复取消/409重试/重新审核、拒绝原因和禁用原流程。TypeScript、ESLint、Stylelint定向检查；未运行全量前后端CI、Chrome86实机或真实HTTP认证链。证据 /tmp/mrr-user-actions-{backend-final,browser,tsc,lint,style}.log。9037保持运行，仅本地，不推送、不合并、不发布。

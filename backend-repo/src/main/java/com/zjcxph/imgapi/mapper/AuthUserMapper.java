@@ -88,6 +88,11 @@ public interface AuthUserMapper {
                            @Param("rejectReason") String rejectReason,
                            @Param("reviewedBy") Long reviewedBy);
 
+    // Retain the previous decision until the next review; no role or credential changes.
+    @Update("update mr_auth_user set status = 'pending', updated_at = CURRENT_TIMESTAMP " +
+            "where id = #{id} and lower(status) = 'rejected'")
+    int reopenRegistration(@Param("id") Long id);
+
     @Select("select count(*) from mr_auth_user where upper(role_code) = 'ADMIN' and lower(status) = 'active'")
     int countActiveAdmins();
 

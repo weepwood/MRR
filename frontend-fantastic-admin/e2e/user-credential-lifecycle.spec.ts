@@ -204,6 +204,7 @@ test.describe('用户凭据生命周期', () => {
     await page.route('**/api/v1/auth/users?*', route => route.fulfill({ json: { code: 200, data: { list: [applicant], total: 1 } } }))
     await page.route('**/api/v1/auth/users/21/registration/reject', async (route) => {
       submissions++
+      applicant.status = 'rejected'
       expect(route.request().postDataJSON()).toEqual({ rejectReason: '第一行\n第二行' })
       await route.fulfill({ json: { code: 200, data: { ...applicant, status: 'rejected' } } })
     })
@@ -213,7 +214,8 @@ test.describe('用户凭据生命周期', () => {
     const dialog = page.getByRole('dialog', { name: '拒绝注册申请' })
     const reason = dialog.getByPlaceholder('拒绝原因将保存在审核记录中')
     async function openReject() {
-      await row.getByRole('button', { name: '拒绝申请' }).click()
+      await row.getByRole('button', { name: '更多操作' }).click()
+      await page.getByRole('menuitem', { name: '拒绝申请' }).click()
       await expect(dialog).toHaveClass(/\bel-overlay-dialog\b/)
       await expect(reason).toBeFocused()
     }

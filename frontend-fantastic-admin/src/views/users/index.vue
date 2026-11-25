@@ -18,7 +18,6 @@ import MrrPageHeader from '@/components/MrrPageHeader/index.vue'
 import MrrPageShell from '@/components/MrrPageShell/index.vue'
 import MrrStatusTag from '@/components/MrrStatusTag/index.vue'
 import MrrTableActions from '@/components/MrrTableActions/index.vue'
-import { useTableActionLayout } from '@/composables/useTableActionLayout'
 import { actionDialog, ActionDialogCancelled } from '@/ui/components/ActionDialog'
 import { copyText as copyToClipboard } from '@/utils/copy-text'
 
@@ -95,6 +94,7 @@ function openApplication(row: CredentialAwareUser) {
 
 const approveVisible = ref(false)
 const approveSaving = ref(false)
+const rejectSaving = ref(false)
 const approveTarget = ref<CredentialAwareUser | null>(null)
 const approveFormRef = ref()
 const approveForm = reactive({ roleCode: '' })
@@ -114,10 +114,8 @@ const credentialAcknowledged = ref(false)
 const credentialTitle = ref('')
 const credentialResult = ref<UserCredentialResult | null>(null)
 
-const {
-  maxInlineActions: userResponsiveInlineActions,
-  actionColumnWidth: userActionColumnWidth,
-} = useTableActionLayout(2, 2)
+// Two stable action slots at every width, including fixed narrow-screen columns.
+const userActionColumnWidth = 96
 
 const approvableRoles = computed(() => {
   const nonAdminRoles = roles.value.filter(role => String(role.code || '').toUpperCase() !== 'ADMIN')
@@ -274,94 +272,92 @@ function isSelf(rowId?: number | string) {
 
 function userActions(row: CredentialAwareUser): MrrTableAction[] {
   const status = normalizeStatus(row.status)
+  const pencil = (key: string, label: string): MrrTableAction => ({
+    key, label, icon: 'i-lucide:pencil', tone: 'primary', placement: 'inline',
+  })
+  const detail: MrrTableAction = {
+    key: 'application', label: '查看申请详情', icon: 'i-lucide:file-text', placement: 'overflow',
+  }
   if (status === 'pending') {
-    return [
-      {
-        key: 'approve',
-        label: '审核通过',
-        icon: 'i-lucide:check',
-        tone: 'success',
-        placement: 'inline',
-      },
-      {
-        key: 'reject',
-        label: '拒绝申请',
-        icon: 'i-lucide:x',
-        tone: 'danger',
-      },
-    ]
+    return [pencil('approve', '审核注册申请'), detail, {
+      key: 'reject', label: '拒绝申请', icon: 'i-lucide:x', tone: 'danger', placement: 'overflow',
+    }]
+  }
+  if (status === 'rejected') {
+    return [pencil('reopen', '恢复待审核'), detail]
+  }
+  if (status === 'disabled') {
+    return [pencil('edit', '编辑用户'), {
+      key: 'enable', label: '恢复启用', icon: 'i-lucide:user-check', placement: 'overflow',
+    }]
   }
   if (status === 'active') {
     const self = isSelf(row.id)
     return [
+      pencil('edit', '编辑用户'),
       {
-        key: 'edit',
-        label: '编辑用户',
-        icon: 'i-lucide:pencil',
-        tone: 'primary',
-        placement: 'inline',
-      },
-      {
-        key: 'reset-password',
-        label: '重置密码',
-        icon: 'i-lucide:key-round',
-        tone: 'default',
-        placement: 'overflow',
-        disabled: self,
+        key: 'reset-password', label: '重置密码', icon: 'i-lucide:key-round',
+        tone: 'default', placement: 'overflow', disabled: self,
         disabledReason: self ? '请通过个人设置修改自己的密码' : undefined,
       },
       {
-        key: 'disable',
-        label: '禁用用户',
-        icon: 'i-lucide:ban',
-        tone: 'danger',
-        placement: 'overflow',
-        disabled: self,
+        key: 'disable', label: '禁用用户', icon: 'i-lucide:ban',
+        tone: 'danger', placement: 'overflow', disabled: self,
         disabledReason: self ? '不能禁用当前登录账号' : undefined,
       },
     ]
   }
-  if (status === 'disabled') {
-    return [
-      {
-        key: 'edit',
-        label: '编辑用户',
-        icon: 'i-lucide:pencil',
-        tone: 'primary',
-        placement: 'inline',
-      },
-    ]
-  }
-  return []
-}
-
-function userHasActions(row: CredentialAwareUser) {
-  return ['pending', 'active', 'disabled'].includes(normalizeStatus(row.status))
-}
-
-function userInlineLimit(row: CredentialAwareUser) {
-  return isPending(row)
-    ? userResponsiveInlineActions.value
-    : Math.min(userResponsiveInlineActions.value, 1)
+  return [{ ...pencil('unknown', '未知账号状态'), disabled: true }, {
+    key: 'application', label: '查看申请详情', icon: 'i-lucide:file-text',
+    placement: 'overflow', disabled: !hasApplication(row),
+  }]
 }
 
 function handleUserAction(action: string, row: CredentialAwareUser) {
+  if (!canManage.value || loading.value) return
   switch (action) {
-    case 'approve':
-      openApprove(row)
+    case 'approve': openApprove(row); break
+    case 'reject': void handleReject(row); break
+    case 'reopen': openReopen(row); break
+    case 'application': openApplication(row); break
+    case 'edit': openEdit(row); break
+    case 'enable':
+      if (normalizeStatus(row.status) === 'disabled') {
+        openEdit(row)
+        editForm.status = 'active'
+      }
       break
-    case 'reject':
-      void handleReject(row)
-      break
-    case 'edit':
-      openEdit(row)
-      break
-    case 'reset-password':
-      openReset(row)
-      break
-    case 'disable':
-      openDisable(row)
-      break
+    case 'reset-password': openReset(row); break
+    case 'disable': openDisable(row); break
+  }
+}
+
+const reopenVisible = ref(false)
+const reopenSaving = ref(false)
+const reopenTarget = ref<CredentialAwareUser | null>(null)
+
+function openReopen(row: CredentialAwareUser) {
+  if (normalizeStatus(row.status) !== 'rejected' || !row.id || reopenSaving.value) return
+  reopenTarget.value = row
+  reopenVisible.value = true
+}
+
+async function handleReopen() {
+  const row = reopenTarget.value
+  if (!canManage.value || !reopenVisible.value || !row?.id || reopenSaving.value) return
+  reopenSaving.value = true
+  try {
+    await apiUser.reopenRegistration(row.id)
+    reopenVisible.value = false
+    ElMessage.success('注册申请已恢复待审核')
+    page.value = 1
+    await loadData()
+  }
+  catch (err: any) {
+    ElMessage.error(err?.response?.data?.message || err?.message || '恢复申请失败')
+  }
+  finally {
+    reopenSaving.value = false
   }
 }
 
@@ -406,8 +402,9 @@ function openApprove(row: CredentialAwareUser) {
 }
 
 async function handleApprove() {
+  if (approveSaving.value || rejectSaving.value || !canManage.value) return
   await approveFormRef.value?.validate()
-  if (!approveTarget.value?.id) return
+  if (!approveTarget.value?.id || approveSaving.value || rejectSaving.value) return
   approveSaving.value = true
   try {
     const response = await apiUser.approveRegistration(approveTarget.value.id, { roleCode: approveForm.roleCode })
@@ -415,6 +412,7 @@ async function handleApprove() {
     if (index !== -1) users.value[index] = { ...users.value[index], ...response.data }
     approveVisible.value = false
     ElMessage.success('注册申请已通过，用户现在可以登录')
+    await loadData()
   }
   catch (err: any) {
     ElMessage.error(err?.response?.data?.message || err?.message || '审核通过操作失败')
@@ -424,8 +422,16 @@ async function handleApprove() {
   }
 }
 
+function rejectFromReview() {
+  const row = approveTarget.value
+  if (!row || approveSaving.value || rejectSaving.value) return
+  approveVisible.value = false
+  void handleReject(row)
+}
+
 async function handleReject(row: CredentialAwareUser) {
-  if (!row.id || !isPending(row)) return
+  if (!row.id || !isPending(row) || approveSaving.value || rejectSaving.value || !canManage.value) return
+  rejectSaving.value = true
   try {
     const { value } = await actionDialog.prompt(
       `请输入拒绝「${row.displayName || row.username}」注册申请的原因。`,
@@ -442,11 +448,16 @@ async function handleReject(row: CredentialAwareUser) {
     const response = await apiUser.rejectRegistration(row.id, { rejectReason: value.trim() })
     const index = users.value.findIndex(item => item.id === row.id)
     if (index !== -1) users.value[index] = { ...users.value[index], ...response.data }
+    approveVisible.value = false
     ElMessage.success('注册申请已拒绝')
+    await loadData()
   }
   catch (err: any) {
     if (err instanceof ActionDialogCancelled) return
     ElMessage.error(err?.response?.data?.message || err?.message || '拒绝操作失败')
+  }
+  finally {
+    rejectSaving.value = false
   }
 }
 
@@ -686,13 +697,11 @@ onMounted(loadData)
         >
           <template #default="{ row }">
             <MrrTableActions
-              v-if="userHasActions(row)"
               appearance="quiet"
               :actions="userActions(row)"
-              :max-inline="userInlineLimit(row)"
+              :max-inline="1"
               @select="handleUserAction($event, row)"
             />
-            <span v-else class="no-perm">审核已结束</span>
           </template>
         </el-table-column>
       </el-table>
@@ -735,7 +744,7 @@ onMounted(loadData)
           <p>{{ applicationTarget.applyRemark || '未填写' }}</p>
         </section>
         <section v-if="applicationTarget.rejectReason" class="application-detail__section application-detail__section--rejected">
-          <h3>拒绝原因</h3>
+          <h3>{{ isPending(applicationTarget) ? '上次拒绝原因' : '拒绝原因' }}</h3>
           <p>{{ applicationTarget.rejectReason }}</p>
         </section>
       </div>
@@ -761,6 +770,7 @@ onMounted(loadData)
         <div><span>联系方式</span><strong>{{ approveTarget?.contactInfo || '-' }}</strong></div>
         <div><span>申请说明</span><p>{{ approveTarget?.applyRemark || '-' }}</p></div>
         <div><span>申请时间</span><strong>{{ formatDateTime(approveTarget?.appliedAt) }}</strong></div>
+        <div v-if="approveTarget?.rejectReason"><span>上次拒绝原因</span><p>{{ approveTarget.rejectReason }}</p></div>
       </div>
       <el-form ref="approveFormRef" :model="approveForm" :rules="approveRules" label-position="top" class="dialog-form">
         <el-form-item label="授予角色" prop="roleCode">
@@ -769,8 +779,23 @@ onMounted(loadData)
           </el-select>
         </el-form-item>
       </el-form>
-      <template #footer><el-button @click="approveVisible = false">取消</el-button><el-button type="success" :loading="approveSaving" @click="handleApprove">确认通过</el-button></template>
+      <template #footer><el-button :disabled="approveSaving" @click="approveVisible = false">取消</el-button><el-button type="danger" plain :disabled="approveSaving || rejectSaving" @click="rejectFromReview">拒绝申请</el-button><el-button type="success" :loading="approveSaving" @click="handleApprove">确认通过</el-button></template>
     </el-dialog>
+
+    <MrrDialog v-model="reopenVisible" title="恢复注册申请" :close-on-click-overlay="!reopenSaving" :close-on-press-escape="!reopenSaving" :closable="!reopenSaving" @closed="reopenTarget = null">
+      <div v-if="reopenTarget" class="application-detail">
+        <el-alert type="warning" :closable="false" show-icon title="恢复后账号重新进入待审核，仍不能登录，需再次审核通过。" />
+        <div class="review-summary">
+          <div><span>用户名</span><strong>{{ reopenTarget.username }}</strong></div>
+          <div><span>显示名称</span><strong>{{ reopenTarget.displayName }}</strong></div>
+          <div v-if="reopenTarget.rejectReason"><span>原拒绝原因</span><p>{{ reopenTarget.rejectReason }}</p></div>
+        </div>
+      </div>
+      <template #footer>
+        <el-button :disabled="reopenSaving" @click="reopenVisible = false">取消</el-button>
+        <el-button type="primary" :loading="reopenSaving" :disabled="reopenSaving" @click="handleReopen">恢复待审核</el-button>
+      </template>
+    </MrrDialog>
 
     <el-dialog v-model="editVisible" title="编辑用户" width="480px" :close-on-click-modal="false">
       <el-form ref="editFormRef" :model="editForm" :rules="editRules" label-position="top" class="dialog-form">
@@ -898,7 +923,7 @@ onMounted(loadData)
 .application-detail__fields dd, .application-detail__section p { min-width: 0; margin: 0; line-height: 1.65; overflow-wrap: anywhere; white-space: pre-wrap; }
 .application-detail__section { display: grid; min-width: 0; gap: var(--mrr-space-2); }
 .application-detail__section--rejected h3 { color: var(--mrr-destructive); }
-.no-perm, .unit { margin-left: var(--mrr-space-2); font-size: var(--mrr-font-size-xs); color: var(--mrr-muted-foreground); }
+.unit { margin-left: var(--mrr-space-2); font-size: var(--mrr-font-size-xs); color: var(--mrr-muted-foreground); }
 .dialog-form { display: grid; gap: 2px; margin-top: var(--mrr-space-4); }
 .readonly-field { display: flex; align-items: center; width: 100%; min-height: var(--mrr-control-height); padding: 0 var(--mrr-space-3); color: var(--mrr-muted-foreground); background: var(--mrr-muted); border: 1px solid var(--mrr-border); border-radius: var(--mrr-radius-md); }
 .full-width { width: 100%; }

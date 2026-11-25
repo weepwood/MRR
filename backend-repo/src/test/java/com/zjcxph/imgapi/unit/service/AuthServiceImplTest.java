@@ -305,6 +305,61 @@ class AuthServiceImplTest {
                     .hasMessageContaining("专用审核");
         }
 
+        @Test
+        void reopenRegistration_preservesPriorDecisionAndCredentials() {
+            AuthUser rejected = pendingUser();
+            rejected.setStatus("rejected");
+            rejected.setRejectReason("资料不完整");
+            AuthUser reopened = pendingUser();
+            reopened.setRejectReason("资料不完整");
+            when(authUserMapper.findById(1L)).thenReturn(mockUser);
+            when(authUserMapper.findById(2L)).thenReturn(rejected, reopened);
+            when(authUserMapper.reopenRegistration(2L)).thenReturn(1);
+
+            var result = authService.reopenRegistration(2L, 1L, "127.0.0.1");
+
+            assertThat(result.getStatus()).isEqualTo("pending");
+            assertThat(result.getRejectReason()).isEqualTo("资料不完整");
+            assertThat(result.getPasswordVersion()).isEqualTo(1);
+            verify(authUserMapper).reopenRegistration(2L);
+            verify(authUserMapper, org.mockito.Mockito.never()).updateUser(any(AuthUser.class));
+        }
+
+        @Test
+        void reopenRegistration_rejectsNonRejectedAndConcurrentChange() {
+            AuthUser pending = pendingUser();
+            when(authUserMapper.findById(1L)).thenReturn(mockUser);
+            when(authUserMapper.findById(2L)).thenReturn(pending);
+            assertThatThrownBy(() -> authService.reopenRegistration(2L, 1L, null))
+                    .isInstanceOf(BusinessException.class).hasMessageContaining("只有已拒绝");
+            verify(authUserMapper, org.mockito.Mockito.never()).reopenRegistration(2L);
+            pending.setStatus("rejected");
+            when(authUserMapper.reopenRegistration(2L)).thenReturn(0);
+            assertThatThrownBy(() -> authService.reopenRegistration(2L, 1L, null))
+                    .isInstanceOf(BusinessException.class).hasMessageContaining("状态已发生变化");
+        }
+
+        @Test
+        void reopenRegistration_requiresActiveAdministrator() {
+            mockUser.setStatus("disabled");
+            when(authUserMapper.findById(1L)).thenReturn(mockUser);
+            assertThatThrownBy(() -> authService.reopenRegistration(2L, 1L, null))
+                    .isInstanceOf(BusinessException.class).hasMessageContaining("有效管理员");
+            verify(authUserMapper, org.mockito.Mockito.never()).reopenRegistration(2L);
+        }
+
+        @Test
+        void disableUser_cannotBypassRegistrationReview() {
+            AuthUser pending = pendingUser();
+            when(authUserMapper.findById(2L)).thenReturn(pending);
+            for (String status : java.util.List.of("pending", "rejected")) {
+                pending.setStatus(status);
+                assertThatThrownBy(() -> authService.disableUser(2L))
+                        .isInstanceOf(BusinessException.class).hasMessageContaining("不能通过禁用绕过审核");
+            }
+            verify(authUserMapper, org.mockito.Mockito.never()).updateStatus(2L, "disabled");
+        }
+
         private RegisterRequest registrationRequest() {
             RegisterRequest request = new RegisterRequest();
             request.setUsername("new.doctor");

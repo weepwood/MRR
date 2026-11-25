@@ -7,9 +7,16 @@ const api = vi.hoisted(() => ({
   getImageAuditAnalytics: vi.fn(),
   getLogById: vi.fn(),
   searchImageAuditLogs: vi.fn(),
+  exportImageAuditLogs: vi.fn(),
 }))
 
+const session = vi.hoisted(() => ({ store: null as null | { token: string, isSessionVerified: boolean, profile: { roleCode: string }, permissions: string[] } }))
 vi.mock('@/api/modules/logs', () => api)
+vi.mock('@/store/modules/user', async () => {
+  const { reactive } = await import('vue')
+  session.store = reactive({ token: 'demo-token', isSessionVerified: true, profile: { roleCode: 'OPERATOR' }, permissions: ['log:read'] })
+  return { useUserStore: () => session.store }
+})
 vi.mock('@/api/modules/user', () => ({ default: { getUsers: vi.fn().mockResolvedValue({ data: { list: [], total: 0 } }) } }))
 
 const stubs = {
@@ -39,6 +46,7 @@ const stubs = {
 
 describe('audit images page', () => {
   beforeEach(() => {
+    Object.assign(session.store!, { token: 'demo-token', isSessionVerified: true, permissions: ['log:read'] })
     api.searchImageAuditLogs.mockReset().mockResolvedValue({
       data: { list: [], total: 0, page: 1, size: 20 },
     })
@@ -60,8 +68,8 @@ describe('audit images page', () => {
     const wrapper = mount(AuditImagesPage, { global: { stubs } })
     await flushPromises()
 
-    expect(api.searchImageAuditLogs).toHaveBeenCalledWith({ page: 1, size: 20 })
-    expect(api.getImageAuditAnalytics).toHaveBeenCalledWith({})
+    expect(api.searchImageAuditLogs).toHaveBeenCalledWith({ page: 1, size: 20 }, 'demo-token')
+    expect(api.getImageAuditAnalytics).toHaveBeenCalledWith({}, 'demo-token')
 
     const refreshButton = wrapper.findAll('button').find(button => button.text() === '刷新')
     expect(refreshButton).toBeDefined()
@@ -152,4 +160,38 @@ describe('audit images page', () => {
     expect(api.searchImageAuditLogs).toHaveBeenCalledTimes(1)
     expect(api.getImageAuditAnalytics).toHaveBeenCalledTimes(1)
   })
+})
+
+it('撤销审计权限后迟到统计、详情和导出均不能恢复', async () => {
+  Object.assign(session.store!, { token: 'demo-token', isSessionVerified: true, permissions: ['log:read'] })
+  api.searchImageAuditLogs.mockResolvedValue({ data: { list: [{ id: 1 }], total: 1 } })
+  api.getImageAuditAnalytics.mockResolvedValue({ data: { totalAccesses: 1 } })
+  const wrapper = mount(AuditImagesPage, { global: { stubs } })
+  await flushPromises()
+  const state = (wrapper.vm as any).$.setupState
+  let finishStats!: (value: unknown) => void
+  let finishDetail!: (value: unknown) => void
+  let finishExport!: (value: unknown) => void
+  api.getImageAuditAnalytics.mockReturnValueOnce(new Promise((resolve) => { finishStats = resolve }))
+  api.getLogById.mockReturnValueOnce(new Promise((resolve) => { finishDetail = resolve }))
+  api.exportImageAuditLogs.mockReturnValueOnce(new Promise((resolve) => { finishExport = resolve }))
+  const stats = state.loadAnalytics()
+  const detail = state.openDetail({ id: 1, requestId: 'synthetic' })
+  const download = state.exportAudit('all')
+  const click = vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(() => {})
+  try {
+    session.store!.permissions = []
+    expect(state.list).toEqual([])
+    expect(state.analytics.totalAccesses).toBe(0)
+    expect(state.detailVisible).toBe(false)
+    expect(state.exportLoading).toBe(false)
+    finishStats({ data: { totalAccesses: 8 } })
+    finishDetail({ data: { id: 1, requestId: 'synthetic' } })
+    finishExport({ data: new Blob(['synthetic']), headers: {} })
+    await Promise.all([stats, detail, download])
+    expect(state.analytics.totalAccesses).toBe(0)
+    expect(state.currentLog).toBeNull()
+    expect(click).not.toHaveBeenCalled()
+  }
+  finally { click.mockRestore(); wrapper.unmount() }
 })

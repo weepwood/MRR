@@ -33,6 +33,10 @@ export const useUserStore = defineStore('user', () => {
   const profile = ref<AuthProfile>(initialSession.profile)
   const sessionStatus = ref<AuthSessionStatus>(initialSession.token ? 'candidate' : 'anonymous')
 
+  const sessionEpoch = ref(0)
+  let sessionGeneration = 0
+  let profileGeneration = 0
+
   const isLogin = computed(() => Boolean(token.value))
   const isSessionVerified = computed(() => isLogin.value && sessionStatus.value === 'verified')
   const mustChangePassword = computed(() => isSessionVerified.value && Boolean(profile.value.mustChangePassword))
@@ -51,6 +55,10 @@ export const useUserStore = defineStore('user', () => {
       clearSession()
       return
     }
+    sessionGeneration++
+    profileGeneration++
+    sessionEpoch.value++
+    sessionStatus.value = 'candidate'
     const user = session.user || {}
     token.value = nextToken
     avatar.value = typeof user.avatar === 'string' ? user.avatar : ''
@@ -73,7 +81,9 @@ export const useUserStore = defineStore('user', () => {
   }
 
   async function login(data: { account: string, password: string }) {
+    const generation = ++sessionGeneration
     const res = await apiUser.login(data)
+    if (generation !== sessionGeneration) { throw new Error('登录请求已失效') }
     const payload: any = res.data || {}
     const loginData: any = payload.data || payload
     const returnedUser: AuthProfile = loginData.user || loginData.profile || payload.user || {}
@@ -86,16 +96,11 @@ export const useUserStore = defineStore('user', () => {
 
   async function logout(redirect = router.currentRoute.value.fullPath) {
     const redirectTarget = redirect
-    const shouldRevokeToken = !isDemoMode && Boolean(token.value)
-    if (shouldRevokeToken) {
-      try {
-        await apiUser.logout()
-      }
-      catch {
-        // 即使服务端不可达，也要保证本地会话可以退出。
-      }
-    }
+    const originalToken = token.value
     clearSession()
+    const revocation = !isDemoMode && originalToken
+      ? apiUser.logout(originalToken).catch(() => {})
+      : Promise.resolve()
     if (isDemoMode) {
       // 演示模式的守卫会给匿名访客自动注入 Dev User 会话；不打标记的话
       // 「退出登录」跳到 /login 的瞬间就会被重新登录，永远退不出去。
@@ -107,6 +112,7 @@ export const useUserStore = defineStore('user', () => {
         ...(redirectTarget !== settingsStore.settings.home.fullPath && router.currentRoute.value.name !== 'login' && { redirect: redirectTarget }),
       },
     }).catch(() => {})
+    await revocation
   }
 
   async function requestLogout() {
@@ -118,6 +124,9 @@ export const useUserStore = defineStore('user', () => {
   }
 
   function clearSession() {
+    sessionEpoch.value++
+    sessionGeneration++
+    profileGeneration++
     clearAuthSessionStorage()
     token.value = ''
     account.value = ''
@@ -132,10 +141,20 @@ export const useUserStore = defineStore('user', () => {
   }
 
   async function refreshProfile() {
-    const res = await apiUser.permission()
+    const generation = sessionGeneration
+    const request = ++profileGeneration
+    const originalToken = token.value
+    if (!originalToken) { return false }
+    const isCurrent = () => generation === sessionGeneration && request === profileGeneration && originalToken === token.value
+    const res = await apiUser.permission(originalToken).catch((error) => {
+      if (!isCurrent()) { return undefined }
+      throw error
+    })
+    if (!res || !isCurrent()) { return false }
     const nextProfile: AuthProfile = (res.data || {}) as AuthProfile
     persistProfile(nextProfile)
     sessionStatus.value = 'verified'
+    return true
   }
 
   async function verifySession() {
@@ -147,12 +166,13 @@ export const useUserStore = defineStore('user', () => {
       return true
     }
 
+    const generation = sessionGeneration
     sessionStatus.value = 'verifying'
     try {
-      await refreshProfile()
-      return true
+      return await refreshProfile()
     }
     catch (error: any) {
+      if (generation !== sessionGeneration) { return false }
       if (!token.value || error?.response?.status === 401) {
         sessionStatus.value = 'anonymous'
       }
@@ -190,6 +210,7 @@ export const useUserStore = defineStore('user', () => {
     permissions,
     profile,
     sessionStatus,
+    sessionEpoch,
     isLogin,
     isSessionVerified,
     mustChangePassword,

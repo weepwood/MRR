@@ -23,33 +23,34 @@ export function searchSystemLogs(params: {
   responseStatus?: string
   startTime?: string
   endTime?: string
-}) {
-  return getRequest<PaginatedResult<LogRecord>>('/api/v1/logs/search', { params })
+}, authSessionToken?: string) {
+  return getRequest<PaginatedResult<LogRecord>>('/api/v1/logs/search', { params, authSessionToken })
 }
 
 export function searchImageAuditLogs(params: ImageAuditFilterParams & {
   page: number
   size: number
-}) {
-  return getRequest<PaginatedResult<LogRecord>>('/api/v1/logs/audit/images', { params })
+}, authSessionToken?: string) {
+  return getRequest<PaginatedResult<LogRecord>>('/api/v1/logs/audit/images', { params, authSessionToken })
 }
 
-export function getImageAuditAnalytics(params: ImageAuditFilterParams) {
-  return getRequest<ImageAuditAnalytics>('/api/v1/logs/audit/images/analytics', { params })
+export function getImageAuditAnalytics(params: ImageAuditFilterParams, authSessionToken?: string) {
+  return getRequest<ImageAuditAnalytics>('/api/v1/logs/audit/images/analytics', { params, authSessionToken })
 }
 
 export async function exportImageAuditLogs(params: ImageAuditFilterParams & {
   scope?: 'all' | 'user' | 'target'
   value?: string
-}) {
+}, authSessionToken?: string) {
   if (isDemoFileMode) {
-    return getRequest<{ text: string, name: string }>('/api/v1/logs/audit/images/export', { params, skipResponseMetrics: true }).then(r => demoCsvResponse(r.data))
+    return getRequest<{ text: string, name: string }>('/api/v1/logs/audit/images/export', { params, authSessionToken, skipResponseMetrics: true }).then(r => demoCsvResponse(r.data))
   }
   // The global Axios response interceptor returns response.data directly.
   // Normalize the Blob back to the shape expected by the download caller.
   const blob = await api.get<Blob>('/api/v1/logs/audit/images/export', {
     params,
     responseType: 'blob',
+    authSessionToken,
     skipResponseMetrics: true,
   }) as unknown as Blob
 
@@ -63,8 +64,8 @@ export async function exportImageAuditLogs(params: ImageAuditFilterParams & {
   }
 }
 
-export function getLogById(id: string | number, signal?: AbortSignal) {
-  return getRequest<LogRecord>(`/api/v1/logs/${id}`, { signal, retry: false, skipGlobalError: true })
+export function getLogById(id: string | number, signal?: AbortSignal, authSessionToken?: string) {
+  return getRequest<LogRecord>(`/api/v1/logs/${id}`, { signal, authSessionToken, retry: false, skipGlobalError: true })
 }
 
 /** POST /api/v1/logs/retention/cleanup — 运行日志清理 */

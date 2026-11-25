@@ -1,6 +1,6 @@
-import { AxiosError, AxiosHeaders } from 'axios'
+import axios, { AxiosError, AxiosHeaders } from 'axios'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import api from '../index'
+import api, { revokeAuthSession } from '../index'
 
 const { user } = vi.hoisted(() => ({ user: { isLogin: true, isSessionVerified: true, token: 'synthetic-a', requestLogout: vi.fn() } }))
 vi.mock('@/store/modules/user', () => ({ useUserStore: () => user }))
@@ -66,4 +66,24 @@ describe('session-bound history requests', () => {
     await expect(response).rejects.toMatchObject({ code: 'ERR_CANCELED' })
     expect(user.requestLogout).not.toHaveBeenCalled()
   })
+})
+
+it('candidate verification permits only matching auth/me token', async () => {
+  user.token = 'synthetic-a'
+  user.isSessionVerified = false
+  const adapter = vi.fn(async config => ({ config, status: 200, statusText: 'OK', headers: new AxiosHeaders(), data: { code: 200, data: {} } }))
+  await api.get('/api/v1/auth/me', { authSessionToken: 'synthetic-a', skipResponseMetrics: true, adapter })
+  expect(adapter.mock.calls[0][0].headers.get('Authorization')).toBe('Bearer synthetic-a')
+  await expect(api.get('/api/v1/auth/me', { authSessionToken: 'synthetic-b', adapter })).rejects.toMatchObject({ code: 'ERR_CANCELED' })
+  expect(adapter).toHaveBeenCalledOnce()
+})
+
+it('revokes captured token without reading replacement account token', async () => {
+  user.token = 'synthetic-b'
+  const post = vi.spyOn(axios, 'post').mockResolvedValue({ status: 200 })
+  await revokeAuthSession('synthetic-a')
+  expect(post).toHaveBeenCalledExactlyOnceWith('/api/v1/auth/logout', undefined, expect.objectContaining({
+    timeout: 5000,
+    headers: { Authorization: 'Bearer synthetic-a' },
+  }))
 })

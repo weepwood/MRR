@@ -9,7 +9,7 @@ import type {
   RequiredPasswordChangePayload,
   UserCredentialResult,
 } from '../user-credential-types'
-import { deleteRequest, getRequest, postRequest, putRequest } from '../index'
+import { deleteRequest, getRequest, postRequest, putRequest, revokeAuthSession } from '../index'
 
 const AUTH_SKIP_GLOBAL_ERROR = { skipGlobalError: true }
 
@@ -26,7 +26,7 @@ export default {
     AUTH_SKIP_GLOBAL_ERROR,
   ),
 
-  permission: () => getRequest<AuthUser>('/api/v1/auth/me', AUTH_SKIP_GLOBAL_ERROR),
+  permission: (authSessionToken?: string) => getRequest<AuthUser>('/api/v1/auth/me', { ...AUTH_SKIP_GLOBAL_ERROR, authSessionToken, retry: false }),
 
   passwordEdit: (data: { password: string, newPassword: string }) => postRequest<void>(
     '/api/v1/auth/password/edit',
@@ -39,7 +39,7 @@ export default {
     AUTH_SKIP_GLOBAL_ERROR,
   ),
 
-  logout: () => postRequest<void>('/api/v1/auth/logout'),
+  logout: (token: string) => revokeAuthSession(token),
 
   getUsers: (params: { page?: number, size?: number, keyword?: string, roleCode?: string, status?: string } = {}) =>
     getRequest<PaginatedResult<AuthUser>>('/api/v1/auth/users', {

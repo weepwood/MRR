@@ -136,22 +136,22 @@ describe('日志管理', () => {
 
     routeState.route!.path = '/logs'
     await flushPromises()
-    expect(api.searchSystemLogs).toHaveBeenLastCalledWith({ page: 1, size: 20, keyword: 'req-500-001' })
+    expect(api.searchSystemLogs).toHaveBeenLastCalledWith({ page: 1, size: 20, keyword: 'req-500-001' }, 'demo-token')
 
     await wrapper.get('[data-action="reset"]').trigger('click')
     await flushPromises()
     expect(routeState.route!.query.requestId).toBeUndefined()
-    expect(api.searchSystemLogs).toHaveBeenLastCalledWith({ page: 1, size: 20 })
+    expect(api.searchSystemLogs).toHaveBeenLastCalledWith({ page: 1, size: 20 }, 'demo-token')
   })
 
   it('首次打开追踪链接后重置可恢复全部日志', async () => {
     routeState.route!.query = { requestId: 'req-500-001' }
     const wrapper = openPage()
     await flushPromises()
-    expect(api.searchSystemLogs).toHaveBeenCalledExactlyOnceWith({ page: 1, size: 20, keyword: 'req-500-001' })
+    expect(api.searchSystemLogs).toHaveBeenCalledExactlyOnceWith({ page: 1, size: 20, keyword: 'req-500-001' }, 'demo-token')
     await wrapper.get('[data-action="reset"]').trigger('click')
     await flushPromises()
-    expect(api.searchSystemLogs).toHaveBeenLastCalledWith({ page: 1, size: 20 })
+    expect(api.searchSystemLogs).toHaveBeenLastCalledWith({ page: 1, size: 20 }, 'demo-token')
   })
 
   it('列表正常渲染且头部显示自动刷新说明', async () => {

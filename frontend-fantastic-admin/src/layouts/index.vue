@@ -17,6 +17,7 @@ const LinkView = defineAsyncComponent(() => import('./components/views/link.vue'
 const routeInfo = useRoute()
 const settingsStore = useSettingsStore()
 const keepAliveStore = useKeepAliveStore()
+const userStore = useUserStore()
 const menuStore = useMenuStore()
 const hotkeysIntroVisible = ref(false)
 
@@ -127,13 +128,13 @@ onBeforeUnmount(() => {
         <div class="main-container pb-[var(--g-main-container-padding-bottom)]">
           <Topbar />
           <div class="main">
-            <RouterView v-slot="{ Component, route }">
+            <RouterView v-if="userStore.isSessionVerified" :key="userStore.sessionEpoch" v-slot="{ Component, route }">
               <!-- 主内容不使用离场过渡，避免新旧页面在重页面切换时叠加闪烁。 -->
               <KeepAlive :include="keepAliveStore.list" :max="10">
                 <component :is="Component" v-show="!isLink" :key="route.name ?? route.path" />
               </KeepAlive>
             </RouterView>
-            <LinkView v-if="isLink" />
+            <LinkView v-if="userStore.isSessionVerified && isLink" />
           </div>
           <FaCopyright />
         </div>

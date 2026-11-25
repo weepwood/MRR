@@ -1,6 +1,6 @@
 import type { Ref } from 'vue'
 import type { ApiResult, PaginatedResult } from '@/api/types'
-import { getCurrentScope, onMounted, onScopeDispose, reactive, ref } from 'vue'
+import { getCurrentScope, onMounted, onScopeDispose, reactive, ref, watch } from 'vue'
 
 /**
  * CRUD 列表通用 composable。
@@ -30,6 +30,7 @@ interface CrudListOptions<T, Q extends Record<string, any>> {
   defaultQuery: Q
   immediate?: boolean
   defaultPageSize?: number
+  session?: { key: () => string, allowed: () => boolean, onReset?: () => void, resetQuery?: Q }
 }
 
 interface CrudFetchContext {
@@ -66,11 +67,28 @@ export function useCrudList<T, Q extends Record<string, any>>(opts: CrudListOpti
     })
   }
 
+  function clearResults() {
+    generation++
+    list.value = []
+    total.value = 0
+    loading.value = false
+    pageNum.value = 1
+    pageSize.value = opts.defaultPageSize ?? 20
+    Object.keys(query).forEach(key => delete (query as any)[key])
+    Object.assign(query, opts.session?.resetQuery ?? opts.defaultQuery)
+    resultVersion.value++
+    opts.session?.onReset?.()
+  }
+
+  if (opts.session) {
+    watch([opts.session.key, opts.session.allowed], clearResults, { flush: 'sync' })
+  }
+
   async function loadData(options?: { silent?: boolean }) {
-    if (disposed) { return }
+    if (disposed || (opts.session && !opts.session.allowed())) { return }
     const silent = options?.silent === true
     const token = ++generation
-    const isCurrent = () => !disposed && token === generation
+    const isCurrent = () => !disposed && token === generation && (!opts.session || opts.session.allowed())
     if (!silent) { loading.value = true }
     try {
       const params = {

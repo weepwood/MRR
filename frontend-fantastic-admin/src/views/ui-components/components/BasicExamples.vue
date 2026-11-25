@@ -20,7 +20,7 @@ const date = ref('2026-11-12')
 const count = ref(3)
 const checked = ref<boolean | 'indeterminate'>(true)
 const enabled = ref(true)
-const slider = ref([40])
+const slider = ref(40)
 const options = [{ label: '本地示例', value: 'local' }, { label: '归档示例', value: 'archive' }]
 </script>
 
@@ -151,7 +151,9 @@ const options = [{ label: '本地示例', value: 'local' }, { label: '归档示�
     </div>
     <div class="example-field">
       <label :for="`${id}-source`">示例来源</label>
-      <FaSelect :id="`${id}-source`" v-model="source" :options="options" class="example-full-width" />
+      <el-select :id="`${id}-source`" v-model="source" class="example-full-width mrr-single-select">
+        <el-option v-for="option in options" :key="option.value" :label="option.label" :value="option.value" />
+      </el-select>
     </div>
     <div class="example-field">
       <label :for="`${id}-native-source`">原生来源</label>
@@ -223,8 +225,8 @@ const options = [{ label: '本地示例', value: 'local' }, { label: '归档示�
       <el-switch :model-value="false" disabled aria-label="禁用开关" />
     </div>
     <div class="example-field">
-      <span :id="`${id}-slider-label`">示例进度 {{ slider[0] }}%</span>
-      <FaSlider v-model="slider" :aria-labelledby="`${id}-slider-label`" :step="5" class="example-slider" />
+      <span :id="`${id}-slider-label`">示例进度 {{ slider }}%</span>
+      <el-slider v-model="slider" :aria-label="`示例进度 ${slider}%`" :step="5" class="example-slider mrr-compact-slider" />
     </div>
     <p class="example-note" role="status">
       复选框{{ checked ? '已选中' : '未选中' }}，开关{{ enabled ? '已启用' : '已关闭' }}。

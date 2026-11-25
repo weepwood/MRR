@@ -11,18 +11,14 @@
  *
  * 为什么要退出：squircle 描述的是「圆角矩形」，形状不是圆角矩形的元素套上去
  * 会被读成走形，而不是更柔和。三类元素必须保持标准圆弧：
- *   1. 开关与滑块（Element Plus 的 .el-switch / .el-slider，reka-ui 的
- *      .fa-slider）——轨道端头是半圆，内部滑块与手柄是正圆，
+ *   1. 开关与滑块（Element Plus 的 .el-switch / .el-slider）——轨道端头是半圆，内部滑块与手柄是正圆，
  *      超椭圆会把端头削平、把手柄压成圆角方块，部件与轨道的贴合也会出现
  *      1px 缝隙；
  *   2. 正圆与胶囊（圆点、头像、色块、圆形图标按钮、pill 标签与计数）——半径
  *      本来就等于半边尺寸，超椭圆在四角各收一次，视觉上从圆变成了圆角方形；
  *   3. 由正圆零件组成的复合控件（单选、复选、进度、步骤条、时间线、加载）。
  *
- * 项目里同时存在两套控件体系，必须都覆盖：Element Plus（.el-*）与 reka-ui
- * 封装的 FaSlider（类名由 UnoCSS 生成，另补语义类名
- * fa-slider 作为稳定锚点）。漏掉任一体系，用户就会在界面外观页看到「切到 G2
- * 后开关端头削平、滑块手柄变圆角方块」。
+ * 开关与滑块已统一为 Element Plus，必须覆盖根节点及其圆形零件。
  *
  * 仅 Chrome/Edge 139+ 实现 corner-shape；其他浏览器整块跳过（@supports 判定
  * 为 false），保留 border-radius 的圆弧，属装饰性降级，不影响圆角大小、点击
@@ -42,15 +38,13 @@
   }
 
   /*
-   * 1. 开关与滑块。Element Plus 用 .el-switch / .el-slider；reka-ui 封装的
-   *    FaSlider 使用 .fa-slider。变量在根节点重置，
+   * 1. 开关与滑块。Element Plus 用 .el-switch / .el-slider。变量在根节点重置，
    *    轨道、手柄、滑块等子元素与伪元素会一起跟随。
    */
   :root[data-radius-shape="squircle"] :is(
     .el-switch,
     .el-slider,
-    .el-slider__stop,
-    .fa-slider
+    .el-slider__stop
   ) {
     --mrr-corner: round;
   }

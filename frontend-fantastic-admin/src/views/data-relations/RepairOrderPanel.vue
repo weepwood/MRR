@@ -6,6 +6,7 @@ import AppEmpty from '@/components/AppEmpty/index.vue'
 import AppError from '@/components/AppError/index.vue'
 import MrrSectionCard from '@/components/MrrSectionCard/index.vue'
 import { formatDateTime } from '@/utils/display-format'
+import { isSessionAccessDenied } from '@/utils/session-access-denied'
 
 const props = defineProps<{ archiveId?: number, issueId?: number, deterministic?: boolean }>()
 const orders = ref<RepairOrder[]>([])
@@ -33,6 +34,21 @@ const actionLabels: Record<RepairAction, string> = {
   compensate: '条件补偿',
 }
 let generation = 0
+let auditGeneration = 0
+const auditBusy = ref(false)
+const auditFailed = ref(false)
+const auditMore = ref(false)
+let auditAppend = false
+
+function clearAudit() {
+  auditGeneration++
+  selected.value = null
+  events.value = []
+  auditBusy.value = false
+  auditFailed.value = false
+  auditMore.value = false
+  auditAppend = false
+}
 const recurrence = computed(() => orders.value.find(row => row.status === 'VERIFIED' && row.issueId !== props.issueId))
 const canPropose = computed(() => enabled.value && props.deterministic && props.issueId && !orders.value.some(row =>
   !['CANCELLED', 'COMPENSATED', 'SUPERSEDED'].includes(row.status) && row.id !== recurrence.value?.id))
@@ -64,8 +80,7 @@ function actions(row: RepairOrder): RepairAction[] {
 function clear() {
   generation++
   orders.value = []
-  events.value = []
-  selected.value = null
+  clearAudit()
   actor.value = 0
   enabled.value = false
   busy.value = false
@@ -83,8 +98,7 @@ async function load(append = false, focus?: number) {
   const before = append ? orders.value.at(-1)?.id : undefined
   if (!append) {
     orders.value = []
-    selected.value = null
-    events.value = []
+    clearAudit()
   }
   try {
     const { data } = await listRepairOrders({ archiveId: props.archiveId, issueId: props.issueId, before })
@@ -100,7 +114,7 @@ async function load(append = false, focus?: number) {
     more.value = data.orders.length === 50
     const row = orders.value.find(item => item.id === focus)
     if (row) {
-      await readEvents(row, current)
+      void readEvents(row)
     }
   }
   catch {
@@ -116,35 +130,53 @@ async function load(append = false, focus?: number) {
   }
 }
 
-async function readEvents(row: RepairOrder, current: number) {
+async function readEvents(row: RepairOrder, append = false) {
+  if (append && (auditBusy.value || selected.value?.id !== row.id || !auditMore.value)) { return }
+  const current = ++auditGeneration
+  const after = append ? events.value.at(-1)?.id ?? 0 : 0
+  if (!append) {
+    events.value = []
+    auditMore.value = false
+  }
   selected.value = row
-  events.value = []
-  const { data } = await getRepairEvents(row.id)
-  if (current === generation && selected.value?.id === row.id) {
-    events.value = data ?? []
+  auditBusy.value = true
+  auditFailed.value = false
+  auditAppend = append
+  try {
+    const { data } = await getRepairEvents(row.id, after)
+    if (current !== auditGeneration || selected.value?.id !== row.id) { return }
+    if (!Array.isArray(data) || data.length > 100) { throw new Error('Invalid audit page') }
+    let cursor = after
+    for (const event of data) {
+      if (!Number.isSafeInteger(event.id) || event.id <= cursor) { throw new Error('Invalid audit cursor') }
+      cursor = event.id
+    }
+    events.value = [...events.value, ...data]
+    auditMore.value = data.length === 100
+  }
+  catch (error) {
+    if (current === auditGeneration) {
+      if (isSessionAccessDenied(error)) {
+        clear()
+        failed.value = true
+      }
+      else { auditFailed.value = true }
+    }
+  }
+  finally {
+    if (current === auditGeneration) { auditBusy.value = false }
   }
 }
 
 async function select(row: RepairOrder) {
-  if (busy.value) {
-    return
-  }
-  const current = ++generation
-  busy.value = true
-  failed.value = false
-  try {
-    await readEvents(row, current)
-  }
-  catch {
-    if (current === generation) {
-      failed.value = true
-    }
-  }
-  finally {
-    if (current === generation) {
-      busy.value = false
-    }
-  }
+  if (busy.value || (selected.value?.id === row.id && !auditFailed.value)) { return }
+  await readEvents(row)
+}
+function retryAudit() {
+  if (selected.value && !busy.value && !auditBusy.value) { void readEvents(selected.value, auditAppend) }
+}
+function moreAudit() {
+  if (selected.value && !busy.value) { void readEvents(selected.value, true) }
 }
 
 async function change(action: RepairAction | 'propose', row?: RepairOrder) {
@@ -169,6 +201,7 @@ async function change(action: RepairAction | 'propose', row?: RepairOrder) {
     if (current !== generation) {
       return
     }
+    clearAudit()
     const result = action === 'propose' ? await proposeRepairOrder(issue!) : await actOnRepairOrder(row!.id, action)
     if (current !== generation) {
       return
@@ -241,20 +274,40 @@ onBeforeUnmount(clear)
     <el-button v-if="more" :disabled="busy" @click="load(true)">
       加载更多工单
     </el-button>
-    <section v-if="selected" class="repair-audit">
-      <h3>工单 #{{ selected.id }} · 事务审计</h3>
+    <section v-if="selected" class="repair-audit" aria-label="工单事务审计" :aria-busy="auditBusy">
+      <div class="repair-audit-heading">
+        <h3>工单 #{{ selected.id }} · 事务审计</h3>
+        <el-tag effect="plain">
+          {{ labels[selected.status] || selected.status }}
+        </el-tag>
+      </div>
       <p>{{ entityLabel(selected) }} · 目标主档 #{{ selected.targetArchiveId }}</p>
       <p v-if="selected.reopenedFrom">
         前序工单 #{{ selected.reopenedFrom }} · 新工单独立审批
       </p>
       <p>提交人 #{{ selected.proposedBy }} · 审批人 {{ selected.approvedBy ? `#${selected.approvedBy}` : '未审批' }}</p>
-      <el-timeline>
+      <el-timeline v-if="events.length">
         <el-timeline-item v-for="event in events" :key="event.id" :timestamp="formatDateTime(event.createdAt)">
           {{ labels[event.action] || event.action }} · 操作者 #{{ event.actorId }}
           <div>{{ event.beforeArchiveId ?? '未关联' }} → {{ event.afterArchiveId ?? '未关联' }}</div>
         </el-timeline-item>
       </el-timeline>
-      <AppEmpty v-if="!events.length && !busy" description="暂无审计记录" />
+      <p v-if="auditBusy" role="status" class="repair-audit-note">
+        正在读取审计记录…
+      </p>
+      <div v-else-if="auditFailed" role="status" class="repair-audit-heading">
+        <span>审计记录读取失败{{ events.length ? '，已加载记录保留' : '' }}。</span>
+        <el-button size="small" :disabled="busy" @click="retryAudit">
+          重试审计
+        </el-button>
+      </div>
+      <AppEmpty v-else-if="!events.length" size="compact" description="暂无审计记录" />
+      <div v-if="events.length" class="repair-audit-heading">
+        <span class="repair-audit-note">已加载 {{ events.length }} 条审计记录</span>
+        <el-button v-if="auditMore && !auditFailed" size="small" :disabled="busy" :loading="auditBusy" @click="moreAudit">
+          加载更多审计
+        </el-button>
+      </div>
     </section>
   </MrrSectionCard>
 </template>
@@ -265,6 +318,19 @@ onBeforeUnmount(clear)
   gap: var(--mrr-space-3);
   padding-top: var(--mrr-space-4);
   border-top: 1px solid var(--mrr-border);
+}
+
+.repair-audit-heading {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--mrr-space-2);
+  align-items: center;
+  justify-content: space-between;
+}
+
+.repair-audit-note {
+  font-size: var(--mrr-font-size-xs);
+  color: var(--el-text-color-secondary);
 }
 
 .repair-audit h3,

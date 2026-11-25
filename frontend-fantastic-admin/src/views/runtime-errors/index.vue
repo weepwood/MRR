@@ -45,7 +45,7 @@ const detailVisible = ref(false)
 const detailLoading = ref(false)
 const detailError = ref('')
 const detailTarget = ref<SystemErrorEvent | null>(null)
-const canReadErrors = computed(() => checkSessionPermission(
+const canReadErrors = computed(() => userStore.isSessionVerified && checkSessionPermission(
   userStore.profile.roleCode,
   userStore.permissions,
   'system:error:read',
@@ -56,16 +56,19 @@ let detailController: AbortController | undefined
 const current = ref<SystemErrorEvent | null>(null)
 const lastRefreshedAt = ref<Date | null>(null)
 
-const overview = ref<SystemErrorOverview>({
-  totalGroups: 0,
-  totalOccurrences: 0,
-  openGroups: 0,
-  acknowledgedGroups: 0,
-  resolvedGroups: 0,
-  errorGroups: 0,
-  warnGroups: 0,
-  recentOccurrences: 0,
-})
+function emptyOverview(): SystemErrorOverview {
+  return {
+    totalGroups: 0,
+    totalOccurrences: 0,
+    openGroups: 0,
+    acknowledgedGroups: 0,
+    resolvedGroups: 0,
+    errorGroups: 0,
+    warnGroups: 0,
+    recentOccurrences: 0,
+  }
+}
+const overview = ref<SystemErrorOverview>(emptyOverview())
 
 const defaultQuery = {
   keyword: '',
@@ -78,14 +81,18 @@ const linkedRequestId = ref(routeRequestId.value)
 
 /** 模块筛选项：去重后的已有模块名；拉取失败不阻断筛选（下拉仍可手输）。 */
 const moduleOptions = ref<string[]>([])
+let moduleGeneration = 0
 
 async function loadModules() {
+  if (!canReadErrors.value) { return }
+  const generation = ++moduleGeneration
   try {
-    const response = await listSystemErrorModules()
+    const response = await listSystemErrorModules(userStore.token)
+    if (generation !== moduleGeneration || !canReadErrors.value) { return }
     moduleOptions.value = Array.isArray(response.data) ? response.data : []
   }
   catch {
-    moduleOptions.value = []
+    if (generation === moduleGeneration) { moduleOptions.value = [] }
   }
 }
 
@@ -105,6 +112,7 @@ function rangeStart(range: string) {
 }
 
 const { query, list, total, loading, resultVersion, pageNum: page, pageSize: size, loadData, handleSearch } = useCrudList<SystemErrorEvent, typeof defaultQuery>({
+  session: { resetQuery: defaultQuery, key: () => userStore.token, allowed: () => canReadErrors.value, onReset: () => { overview.value = emptyOverview(); lastRefreshedAt.value = null; error.value = ''; linkedRequestId.value = ''; moduleGeneration++; moduleOptions.value = [] } },
   defaultQuery: { ...defaultQuery, keyword: linkedRequestId.value },
   fetchApi: async ({ page, size, keyword, level, module, range }, { isCurrent, silent }) => {
     try {
@@ -116,8 +124,8 @@ const { query, list, total, loading, resultVersion, pageNum: page, pageSize: siz
           level: level || undefined,
           module: module.trim() || undefined,
           since: rangeStart(range),
-        }),
-        getSystemErrorOverview(),
+        }, userStore.token),
+        getSystemErrorOverview(userStore.token),
       ])
       if (isCurrent()) {
         error.value = ''
@@ -204,7 +212,7 @@ async function openDetail(row: SystemErrorEvent) {
   const isCurrent = () => generation === detailGeneration && detailVisible.value
     && canReadErrors.value && route.path === '/runtime-errors'
   try {
-    const response = await getSystemErrorDetail(row.id, controller.signal)
+    const response = await getSystemErrorDetail(row.id, controller.signal, userStore.token)
     if (!isCurrent()) { return }
     if (!response.data || response.data.id !== row.id || response.data.errorId !== row.errorId) {
       throw new Error('Unexpected system error identity')

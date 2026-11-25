@@ -6,7 +6,7 @@ import type { MrrTableAction } from '@/components/MrrTableActions/types'
 import { useMediaQuery } from '@vueuse/core'
 import { ElMessage } from 'element-plus'
 import { Download, RefreshCw as Refresh } from 'lucide-vue-next'
-import { onMounted, onScopeDispose, ref } from 'vue'
+import { computed, onMounted, onScopeDispose, ref, watch } from 'vue'
 import { exportImageAuditLogs, getImageAuditAnalytics, getLogById, searchImageAuditLogs } from '@/api/modules/logs'
 import AppEmpty from '@/components/AppEmpty/index.vue'
 import AppError from '@/components/AppError/index.vue'
@@ -20,12 +20,22 @@ import MrrTableActions from '@/components/MrrTableActions/index.vue'
 import MrrUserSearchSelect from '@/components/MrrUserSearchSelect/index.vue'
 import { useCrudList } from '@/composables/useCrudList'
 import { useTableActionLayout } from '@/composables/useTableActionLayout'
+import { useUserStore } from '@/store/modules/user'
 import { rangePickerPopperOptions } from '@/ui/provider/picker-options'
+import { checkSessionPermission } from '@/utils/permission'
 import AuditAnalytics from './components/AuditAnalytics.vue'
 
 defineOptions({ name: 'ImageAuditPage' })
 
+const userStore = useUserStore()
+const canReadAudit = computed(() => userStore.isSessionVerified && checkSessionPermission(userStore.profile.roleCode, userStore.permissions, 'log:read'))
 const detailVisible = ref(false)
+const detailLoading = ref(false)
+const detailError = ref('')
+const detailTarget = ref<LogRecord | null>(null)
+let detailGeneration = 0
+let detailController: AbortController | undefined
+let exportGeneration = 0
 const isNarrowScreen = useMediaQuery('(max-width: 760px)')
 const currentLog = ref<LogRecord | null>(null)
 const error = ref('')
@@ -189,11 +199,12 @@ const {
   handleSizeChange,
   handlePageChange,
 } = useCrudList<LogRecord, AuditQuery>({
+  session: { key: () => userStore.token, allowed: () => canReadAudit.value, onReset: resetAuditSession },
   fetchApi: async (params, { isCurrent }) => {
     error.value = ''
     try {
       const { page, size, ...filters } = params
-      return await searchImageAuditLogs({ ...buildAuditParams(filters), page, size })
+      return await searchImageAuditLogs({ ...buildAuditParams(filters), page, size }, userStore.token)
     }
     catch (err: any) {
       if (isCurrent()) error.value = err?.message || '加载失败'
@@ -206,20 +217,40 @@ const {
 
 let analyticsGeneration = 0
 let disposed = false
+function clearDetail() {
+  detailGeneration++
+  detailController?.abort()
+  detailController = undefined
+  detailLoading.value = false
+  detailError.value = ''
+  detailTarget.value = null
+  currentLog.value = null
+}
+function resetAuditSession() {
+  analyticsGeneration++
+  exportGeneration++
+  analytics.value = createEmptyAnalytics()
+  analyticsLoading.value = false
+  analyticsError.value = ''
+  error.value = ''
+  exportLoading.value = false
+  detailVisible.value = false
+  clearDetail()
+}
+watch(detailVisible, (visible) => { if (!visible) clearDetail() }, { flush: 'sync' })
 onScopeDispose(() => {
   disposed = true
-  analyticsGeneration++
-  analyticsLoading.value = false
+  resetAuditSession()
 })
 
 async function loadAnalytics() {
-  if (disposed) return
+  if (disposed || !canReadAudit.value) return
   const token = ++analyticsGeneration
-  const isCurrent = () => !disposed && token === analyticsGeneration
+  const isCurrent = () => !disposed && token === analyticsGeneration && canReadAudit.value
   analyticsLoading.value = true
   analyticsError.value = ''
   try {
-    const res = await getImageAuditAnalytics(buildAuditParams(query))
+    const res = await getImageAuditAnalytics(buildAuditParams(query), userStore.token)
     if (!isCurrent()) return
     analytics.value = {
       totalAccesses: res.data?.totalAccesses ?? 0,
@@ -257,16 +288,30 @@ async function resetFilters() {
 }
 
 async function openDetail(row: LogRecord) {
+  if (!canReadAudit.value || row.id == null) return
+  clearDetail()
+  const generation = detailGeneration
+  const controller = new AbortController()
+  detailController = controller
+  detailTarget.value = row
+  detailVisible.value = true
+  detailLoading.value = true
+  const isCurrent = () => !disposed && generation === detailGeneration && canReadAudit.value && detailVisible.value
   try {
-    const res = await getLogById(row.id!)
-    currentLog.value = { ...(res.data || {}), ...row }
+    const res = await getLogById(row.id, controller.signal, userStore.token)
+    if (!isCurrent()) return
+    if (!res.data || String(res.data.id) !== String(row.id) || (row.requestId && res.data.requestId !== row.requestId)) throw new Error('Unexpected audit identity')
+    currentLog.value = res.data
   }
   catch {
-    currentLog.value = row
+    if (isCurrent()) detailError.value = '无法读取审计详情，请重试'
   }
   finally {
-    detailVisible.value = true
+    if (isCurrent()) { detailLoading.value = false; detailController = undefined }
   }
+}
+function retryDetail() {
+  if (detailTarget.value) void openDetail(detailTarget.value)
 }
 
 function handleDetailAction(action: string, row: LogRecord) {
@@ -276,9 +321,13 @@ function handleDetailAction(action: string, row: LogRecord) {
 }
 
 async function exportAudit(scope: 'all' | 'user' | 'target', value?: string) {
+  if (disposed || !canReadAudit.value || exportLoading.value) return
+  const generation = ++exportGeneration
+  const isCurrent = () => !disposed && generation === exportGeneration && canReadAudit.value
   exportLoading.value = true
   try {
-    const response = await exportImageAuditLogs({ ...buildAuditParams(query), scope, value })
+    const response = await exportImageAuditLogs({ ...buildAuditParams(query), scope, value }, userStore.token)
+    if (!isCurrent()) return
     const blob = response.data
     if (!(blob instanceof Blob)) throw new TypeError('导出接口未返回有效的文件数据')
     const disposition = String(response.headers?.['content-disposition'] || '')
@@ -295,10 +344,10 @@ async function exportAudit(scope: 'all' | 'user' | 'target', value?: string) {
     ElMessage.success('审计数据已导出')
   }
   catch (err: any) {
-    ElMessage.error(err?.message || '导出失败')
+    if (isCurrent()) ElMessage.error(err?.message || '导出失败')
   }
   finally {
-    exportLoading.value = false
+    if (isCurrent()) exportLoading.value = false
   }
 }
 
@@ -382,7 +431,9 @@ onMounted(loadData)
     </MrrDataTablePanel>
 
     <el-dialog v-model="detailVisible" title="审计详情" width="min(820px, 92vw)" class="audit-detail">
-      <el-descriptions v-if="currentLog" :column="isNarrowScreen ? 1 : 2" border>
+      <AppLoading v-if="detailLoading" />
+      <AppError v-else-if="detailError" :message="detailError" @retry="retryDetail" />
+      <el-descriptions v-else-if="currentLog" :column="isNarrowScreen ? 1 : 2" border>
         <el-descriptions-item label="Request ID">{{ currentLog.requestId || '-' }}</el-descriptions-item>
         <el-descriptions-item label="用户">{{ currentLog.username || '-' }}</el-descriptions-item>
         <el-descriptions-item label="访问类型">{{ currentLog.auditDescription || actionLabel(currentLog.auditAction) }}</el-descriptions-item>

@@ -50,21 +50,21 @@ export interface SystemErrorQuery {
   since?: string
 }
 
-export function searchSystemErrors(params: SystemErrorQuery) {
-  return getRequest<PaginatedResult<SystemErrorEvent>>('/api/v1/system-errors', { params })
+export function searchSystemErrors(params: SystemErrorQuery, authSessionToken?: string) {
+  return getRequest<PaginatedResult<SystemErrorEvent>>('/api/v1/system-errors', { params, authSessionToken })
 }
 
-export function getSystemErrorOverview() {
-  return getRequest<SystemErrorOverview>('/api/v1/system-errors/overview')
+export function getSystemErrorOverview(authSessionToken?: string) {
+  return getRequest<SystemErrorOverview>('/api/v1/system-errors/overview', { authSessionToken })
 }
 
 /** 错误中心模块筛选项：去重后的模块名（量级小，直接全量）。 */
-export function listSystemErrorModules() {
-  return getRequest<string[]>('/api/v1/system-errors/modules')
+export function listSystemErrorModules(authSessionToken?: string) {
+  return getRequest<string[]>('/api/v1/system-errors/modules', { authSessionToken })
 }
 
-export function getSystemErrorDetail(id: number, signal?: AbortSignal) {
-  return getRequest<SystemErrorEvent>(`/api/v1/system-errors/${id}`, { signal, retry: false, skipGlobalError: true })
+export function getSystemErrorDetail(id: number, signal?: AbortSignal, authSessionToken?: string) {
+  return getRequest<SystemErrorEvent>(`/api/v1/system-errors/${id}`, { signal, authSessionToken, retry: false, skipGlobalError: true })
 }
 
 export function updateSystemErrorStatus(id: number, status: SystemErrorStatus) {

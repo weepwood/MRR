@@ -236,7 +236,7 @@ declare module 'axios' {
 function isStaleSession(config: import('axios').AxiosRequestConfig | undefined) {
   const user = useUserStore()
   return config?.authSessionToken !== undefined
-    && (!user.isSessionVerified || config.authSessionToken !== user.token)
+    && (config.authSessionToken !== user.token || (!user.isSessionVerified && config.url !== '/api/v1/auth/me'))
 }
 
 async function handleError(error: unknown) {
@@ -352,6 +352,16 @@ api.interceptors.response.use(
   },
   handleError,
 )
+
+/** Revoke exactly the captured token, never the account currently displayed. */
+export async function revokeAuthSession(token: string) {
+  if (!token) { return }
+  await axios.post('/api/v1/auth/logout', undefined, {
+    baseURL: api.defaults.baseURL,
+    timeout: 5000,
+    headers: { Authorization: `Bearer ${token}` },
+  })
+}
 
 export default api
 

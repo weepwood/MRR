@@ -106,6 +106,7 @@ const { list, total, loading, resultVersion, pageNum, pageSize, query, handleSea
   LogRecord,
   LogsQuery
 >({
+  session: { resetQuery: defaultQuery, key: () => userStore.token, allowed: () => canReadLogs.value, onReset: () => { error.value = ''; lastRefreshedAt.value = ''; linkedRequestId.value = '' } },
   fetchApi: async (params, { isCurrent, silent }) => {
     const { page, size, keyword, username, clientIp, requestUri, method, responseStatus, timeRange } = params
     const apiParams: Parameters<typeof searchSystemLogs>[0] = { page, size }
@@ -120,7 +121,7 @@ const { list, total, loading, resultVersion, pageNum, pageSize, query, handleSea
       apiParams.endTime = timeRange[1]
     }
     try {
-      const response = await searchSystemLogs(apiParams)
+      const response = await searchSystemLogs(apiParams, userStore.token)
       if (isCurrent()) {
         error.value = ''
         lastRefreshedAt.value = new Date().toLocaleTimeString('zh-CN', { hour12: false })
@@ -207,7 +208,7 @@ async function openDetail(row: LogRecord) {
   detailLoading.value = true
   const isCurrent = () => generation === detailGeneration && detailVisible.value && canReadLogs.value && route.path === '/logs'
   try {
-    const response = await getLogById(row.id, controller.signal)
+    const response = await getLogById(row.id, controller.signal, userStore.token)
     if (!isCurrent()) { return }
     if (!response.data || String(response.data.id) !== String(row.id) || (row.requestId && response.data.requestId !== row.requestId)) {
       throw new Error('Unexpected log identity')

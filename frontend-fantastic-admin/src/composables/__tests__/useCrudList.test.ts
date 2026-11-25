@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest'
-import { effectScope } from 'vue'
+import { effectScope, ref } from 'vue'
 import { useCrudList } from '../useCrudList'
 
 function deferred<T>() {
@@ -148,4 +148,34 @@ describe('cRUD列表请求归属', () => {
     }
     finally { scope.stop() }
   })
+})
+
+it('会话切换及权限撤销同步清理列表并拒绝迟到结果', async () => {
+  const key = ref('first')
+  const allowed = ref(true)
+  const pending = deferred<ReturnType<typeof result>>()
+  const fetchApi = vi.fn().mockResolvedValueOnce(result('private')).mockReturnValueOnce(pending.promise)
+  const scope = effectScope()
+  const state = scope.run(() => useCrudList({
+    fetchApi,
+    defaultQuery: { keyword: '' },
+    immediate: false,
+    session: { key: () => key.value, allowed: () => allowed.value },
+  }))!
+  try {
+    await state.loadData()
+    state.query.keyword = 'private'
+    const old = state.loadData()
+    key.value = 'second'
+    allowed.value = false
+    expect(state.list.value).toEqual([])
+    expect(state.query.keyword).toBe('')
+    expect(state.loading.value).toBe(false)
+    pending.resolve(result('late'))
+    await old
+    await state.loadData()
+    expect(state.list.value).toEqual([])
+    expect(fetchApi).toHaveBeenCalledTimes(2)
+  }
+  finally { scope.stop() }
 })

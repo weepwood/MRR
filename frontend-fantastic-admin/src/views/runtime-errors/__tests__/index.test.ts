@@ -20,10 +20,10 @@ vi.mock('vue-router', async () => {
   routeState.route = route
   return { useRouter: () => ({ push: pushMock, replace: replaceMock }), useRoute: () => route }
 })
-const session = vi.hoisted(() => ({ user: null as { token: string, profile: { roleCode: string }, permissions: string[] } | null }))
+const session = vi.hoisted(() => ({ user: null as { isSessionVerified: boolean, token: string, profile: { roleCode: string }, permissions: string[] } | null }))
 vi.mock('@/store/modules/user', async () => {
   const { reactive } = await import('vue')
-  session.user = reactive({ token: 'demo-token', profile: { roleCode: 'OPERATOR' }, permissions: ['system:error:read', 'log:read'] })
+  session.user = reactive({ isSessionVerified: true, token: 'demo-token', profile: { roleCode: 'OPERATOR' }, permissions: ['system:error:read', 'log:read'] })
   return { useUserStore: () => session.user }
 })
 vi.mock('element-plus', () => ({ ElMessage: { success: vi.fn(), error: vi.fn(), info: vi.fn() } }))
@@ -121,12 +121,12 @@ describe('运行错误中心', () => {
     expect(api.searchSystemErrors).toHaveBeenCalledExactlyOnceWith(expect.objectContaining({
       page: 1,
       keyword: 'req-from-logs-001',
-    }))
+    }), 'demo-token')
 
     await wrapper.get('[data-action="reset"]').trigger('click')
     await flushPromises()
     expect(routeState.route!.query.requestId).toBeUndefined()
-    expect(api.searchSystemErrors).toHaveBeenLastCalledWith(expect.objectContaining({ page: 1, keyword: undefined }))
+    expect(api.searchSystemErrors).toHaveBeenLastCalledWith(expect.objectContaining({ page: 1, keyword: undefined }), 'demo-token')
   })
 
   it('新的追踪检索清除缓存筛选，旧请求晚返回时保留当前结果', async () => {
@@ -143,7 +143,7 @@ describe('运行错误中心', () => {
       level: undefined,
       module: undefined,
       since: undefined,
-    })
+    }, 'demo-token')
     finishOld({ data: { list: [{ ...rowFixture, errorId: 'ERR-SYNTHETIC-OLD' }], total: 50 } })
     await flushPromises()
     expect(wrapper.get('.rows').text()).toBe(rowFixture.errorId)
@@ -157,7 +157,7 @@ describe('运行错误中心', () => {
     expect(wrapper.get('.query-error').text()).toContain('temporary synthetic failure')
     await button(wrapper, '刷新').trigger('click')
     await flushPromises()
-    expect(api.searchSystemErrors).toHaveBeenLastCalledWith(expect.objectContaining({ keyword: 'req-synthetic-001' }))
+    expect(api.searchSystemErrors).toHaveBeenLastCalledWith(expect.objectContaining({ keyword: 'req-synthetic-001' }), 'demo-token')
     expect(wrapper.get('.rows').text()).toBe(rowFixture.errorId)
   })
 
@@ -177,12 +177,12 @@ describe('运行错误中心', () => {
 
     await wrapper.find('[title="点击仅看 ERROR 错误组"]').trigger('click')
     await flushPromises()
-    expect(api.searchSystemErrors).toHaveBeenLastCalledWith(expect.objectContaining({ level: 'ERROR' }))
+    expect(api.searchSystemErrors).toHaveBeenLastCalledWith(expect.objectContaining({ level: 'ERROR' }), 'demo-token')
 
     await wrapper.find('[title="点击仅看 ERROR 错误组"]').trigger('click')
     await flushPromises()
     // 取消后条件清空，loadData 把空串规范化为 undefined（不发送该参数）
-    expect(api.searchSystemErrors).toHaveBeenLastCalledWith(expect.objectContaining({ level: undefined }))
+    expect(api.searchSystemErrors).toHaveBeenLastCalledWith(expect.objectContaining({ level: undefined }), 'demo-token')
   })
 
   it('时间范围筛选映射为 since 参数，取消后不再发送', async () => {
@@ -210,10 +210,10 @@ describe('运行错误中心', () => {
     const state = setupState(wrapper)
 
     await (state.filterByModule as (module?: string) => void)('handler')
-    expect(api.searchSystemErrors).toHaveBeenLastCalledWith(expect.objectContaining({ module: 'handler' }))
+    expect(api.searchSystemErrors).toHaveBeenLastCalledWith(expect.objectContaining({ module: 'handler' }), 'demo-token')
 
     await (state.filterByModule as (module?: string) => void)('handler')
-    expect(api.searchSystemErrors).toHaveBeenLastCalledWith(expect.objectContaining({ module: undefined }))
+    expect(api.searchSystemErrors).toHaveBeenLastCalledWith(expect.objectContaining({ module: undefined }), 'demo-token')
   })
 
   it('模块下拉挂载时拉取去重模块名，失败静默保留手输能力', async () => {
@@ -239,12 +239,12 @@ describe('运行错误中心', () => {
     queryState.module = 'storage'
     await handleSearch()
     await flushPromises()
-    expect(api.searchSystemErrors).toHaveBeenLastCalledWith(expect.objectContaining({ module: 'storage' }))
+    expect(api.searchSystemErrors).toHaveBeenLastCalledWith(expect.objectContaining({ module: 'storage' }), 'demo-token')
 
     queryState.module = ''
     await handleSearch()
     await flushPromises()
-    expect(api.searchSystemErrors).toHaveBeenLastCalledWith(expect.objectContaining({ module: undefined }))
+    expect(api.searchSystemErrors).toHaveBeenLastCalledWith(expect.objectContaining({ module: undefined }), 'demo-token')
   })
 
   it('承接日志管理页跳转：requestId 查询参数自动填入关键字检索', async () => {
@@ -254,7 +254,7 @@ describe('运行错误中心', () => {
 
     routeState.route!.query = { requestId: 'req-from-logs-001' }
     await flushPromises()
-    expect(api.searchSystemErrors).toHaveBeenLastCalledWith(expect.objectContaining({ keyword: 'req-from-logs-001' }))
+    expect(api.searchSystemErrors).toHaveBeenLastCalledWith(expect.objectContaining({ keyword: 'req-from-logs-001' }), 'demo-token')
   })
 
   it('旧详情成功或失败不能覆盖新记录，也不能提前结束新记录加载', async () => {

@@ -339,3 +339,5 @@ python scripts/release_baseline.py validate
 此时应记录阻塞事实、最小复现和可选方案，创建或更新 Issue，而不是生成一个看似可运行的临时实现。
 
 2026-11-26：#844 经 GitHub 合并接口成功 squash 至 2dff0e4b，验收 head f6934742 与合并 tree 一致；提示分支重放至新基线。此前 OPEN 为历史状态。
+
+2026-11-26：#848最终head ca25d1f8修复Linux抽屉边界（按实际遮罩边缘，1px门禁不变），全部远端门禁通过并squash合并c50653f1，tree一致。业务视觉调查10路由×四主题×三宽度120截图，报告[实际业务视觉审查](docs/design/business-page-visual-audit.md)。样式治理与筛选高度修复集中交付；13个实际单选实例，120组复验、156项高度精确通过、联合21/21；预览run45659383575尚未确认上线。

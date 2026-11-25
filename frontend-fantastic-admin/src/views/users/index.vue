@@ -594,12 +594,12 @@ onMounted(loadData)
             <el-input id="users-filter-keyword" v-model="filters.keyword" aria-label="关键词" clearable placeholder="搜索用户名、显示名、联系方式或角色…" @keyup.enter="handleSearch" />
           </div>
           <div class="users-filter__field users-filter__select">
-            <el-select id="users-filter-role" v-model="filters.roleCode" aria-label="角色" clearable placeholder="全部角色">
+            <el-select id="users-filter-role" v-model="filters.roleCode" class="mrr-single-select" aria-label="角色" clearable placeholder="全部角色">
               <el-option v-for="role in roles" :key="role.code" :label="role.name || role.code" :value="role.code!" />
             </el-select>
           </div>
           <div class="users-filter__field users-filter__select">
-            <el-select id="users-filter-status" v-model="filters.status" aria-label="账号状态" clearable placeholder="全部状态">
+            <el-select id="users-filter-status" v-model="filters.status" class="mrr-single-select" aria-label="账号状态" clearable placeholder="全部状态">
               <el-option v-for="option in statusOptions" :key="option.value" v-bind="option" />
             </el-select>
           </div>

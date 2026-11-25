@@ -66,7 +66,7 @@ onMounted(() => {
 <template>
   <el-select
     :id="props.id"
-    class="mrr-user-search-select"
+    class="mrr-user-search-select mrr-single-select"
     :model-value="props.modelValue"
     filterable
     remote

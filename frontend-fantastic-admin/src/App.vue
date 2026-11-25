@@ -98,7 +98,6 @@ onBeforeUnmount(() => {
       <FaNotAllowed v-else />
     </RouterView>
     <FaBackToTop />
-    <FaNotification />
     <ActionDialog />
     <SystemInfo v-if="systemInfoVisible" v-model="systemInfoVisible" />
   </Provider>

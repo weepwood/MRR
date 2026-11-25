@@ -1737,3 +1737,90 @@ body .mrr-account-menu .el-dropdown-menu__item i,
 body .mrr-context-menu .el-dropdown-menu__item i {
   margin-right: 0;
 }
+
+/* Account avatars, progress and system dividers use Element Plus rendering.
+ * Local modifiers preserve the established layout and semantic tokens. */
+body .el-avatar.mrr-account-avatar {
+  --el-avatar-size: 28px;
+
+  display: inline-flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  width: var(--el-avatar-size);
+  height: var(--el-avatar-size);
+  overflow: hidden;
+  font-size: 12px;
+  font-weight: 400;
+  line-height: 16px;
+  color: hsl(var(--foreground));
+  user-select: none;
+  background: hsl(var(--secondary));
+  border-radius: 9999px;
+}
+
+body .el-avatar.mrr-account-avatar--menu {
+  --el-avatar-size: 36px;
+}
+
+body .el-avatar.mrr-account-avatar--fill {
+  width: 100%;
+  height: 100%;
+}
+
+body .mrr-compact-progress {
+  width: 100%;
+  font-size: 14px;
+  color: hsl(var(--foreground));
+}
+
+body .mrr-compact-progress .el-progress-bar {
+  width: 100%;
+  padding: 0;
+  margin: 0;
+}
+
+body .mrr-compact-progress .el-progress-bar__outer {
+  overflow: hidden;
+  background: hsl(var(--secondary));
+  border-radius: 9999px;
+}
+
+body .mrr-compact-progress .el-progress-bar__inner {
+  background: hsl(var(--primary));
+  border-radius: 0;
+}
+
+body .el-divider.mrr-system-divider {
+  display: flex;
+  gap: 16px;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 20px;
+  margin: 16px 0;
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 20px;
+  color: hsl(var(--foreground));
+  white-space: nowrap;
+  border: 0;
+}
+
+body .el-divider.mrr-system-divider::before,
+body .el-divider.mrr-system-divider::after {
+  flex: 1;
+  min-width: 16px;
+  height: 1px;
+  content: "";
+  background: hsl(var(--border));
+}
+
+body .el-divider.mrr-system-divider .el-divider__text {
+  position: static;
+  padding: 0;
+  font: inherit;
+  color: inherit;
+  background: transparent;
+  transform: none;
+}

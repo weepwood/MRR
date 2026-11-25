@@ -75,7 +75,7 @@ function handleAction() {
   font-size: 13px;
 }
 
-.app-empty.is-compact .app-empty-text:last-child {
+.app-empty-text:last-child {
   margin-bottom: 0;
 }
 </style>

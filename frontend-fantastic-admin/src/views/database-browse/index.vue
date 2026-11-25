@@ -26,7 +26,7 @@ const filterableColumns = computed<DbBrowseColumnView[]>(
 const rows = computed(() => page.value?.rows ?? [])
 const columns = computed(() => page.value?.columns ?? [])
 
-const estimateText = computed(() => formatRowCount(page.value?.estimatedRows))
+const estimateText = computed(() => formatRowCount(page.value?.estimatedRows, page.value?.estimated ?? true))
 
 const currentTable = computed(() => tables.value.find(item => item.tableKey === tableKey.value))
 
@@ -43,10 +43,10 @@ const emptyText = computed(() => {
  * 行数展示。{@code null} 表示后端拿不到估算（从未 ANALYZE 且不是空表），
  * 这时显示「未统计」而不是「0」，避免把「不知道」显示成「没有数据」。
  */
-function formatRowCount(value?: number | null): string {
+function formatRowCount(value?: number | null, estimated = true): string {
   if (value == null) { return '未统计' }
   if (value === 0) { return '0 行' }
-  return `约 ${value.toLocaleString('zh-CN')} 行`
+  return `${estimated ? '约 ' : ''}${value.toLocaleString('zh-CN')} 行`
 }
 
 function tableOptionLabel(item: DbBrowseTableSummary): string {
@@ -209,10 +209,13 @@ onMounted(loadTables)
     <!-- 两块原为无标题 el-card：补分区标题，与其他业务页的「条件卡 + 结果卡」结构一致（DESIGN.md §3.4）。 -->
     <MrrSectionCard title="选择数据表" description="只列出当前账号已授权的表；部分大表必须带过滤条件才会返回数据。" icon="i-lucide:database">
       <div class="toolbar">
-        <span class="toolbar-label">数据表</span>
+        <label class="toolbar-label" for="db-table-select">数据表</label>
         <el-select
+          id="db-table-select"
           v-model="tableKey"
           class="table-select"
+          aria-label="数据表"
+          :disabled="loading"
           placeholder="选择要查看的表"
           filterable
           @change="selectTable"
@@ -224,7 +227,7 @@ onMounted(loadTables)
             :value="item.tableKey"
           >
             <span class="option-name">{{ item.label }}</span>
-            <span class="option-meta">{{ item.tableKey }} · {{ formatRowCount(item.estimatedRows) }}</span>
+            <span class="option-meta">{{ item.tableKey }} · {{ formatRowCount(item.estimatedRows, item.estimated) }}</span>
           </el-option>
         </el-select>
         <el-tag v-if="schema?.personalData" type="warning" effect="plain">
@@ -254,6 +257,20 @@ onMounted(loadTables)
         show-icon
         :title="errorMessage"
       />
+
+      <section v-if="!tableKey && tables.length && !loading && !featureDisabled && !errorMessage" class="table-directory" aria-label="已授权数据表">
+        <p class="directory-caption">
+          已授权 {{ tables.length }} 张数据表{{ tables.length > 6 ? '，下方展示前 6 张，更多可通过上方搜索选择' : '，点击下方卡片开始浏览' }}。
+        </p>
+        <div class="directory-grid">
+          <button v-for="item in tables.slice(0, 6)" :key="item.tableKey" type="button" class="directory-item" :aria-label="`浏览${item.label}`" @click="selectTable(item.tableKey)">
+            <span class="directory-name"><FaIcon name="i-lucide:table-2" aria-hidden="true" /> <strong>{{ item.label }}</strong></span>
+            <span class="directory-meta">{{ item.tableKey }} · {{ formatRowCount(item.estimatedRows, item.estimated) }}</span>
+            <span class="directory-description">{{ item.description }}</span>
+            <span v-if="item.requireFilter" class="directory-meta">需要过滤条件</span>
+          </button>
+        </div>
+      </section>
 
       <div v-if="currentTable" class="table-meta">
         <div class="meta-line">
@@ -360,6 +377,64 @@ onMounted(loadTables)
 /* 窄屏下不撑破工具条：最多 420px，容器更窄时跟随收缩。 */
 .table-select {
   width: min(100%, 420px);
+}
+
+.table-directory {
+  display: grid;
+  gap: var(--mrr-space-3);
+  margin-top: var(--mrr-space-4);
+}
+
+.directory-caption {
+  margin: 0;
+  font-size: var(--mrr-font-size-sm);
+  color: var(--mrr-muted-foreground);
+}
+
+.directory-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 260px), 1fr));
+  gap: var(--mrr-space-3);
+}
+
+.directory-item {
+  display: grid;
+  gap: var(--mrr-space-2);
+  min-width: 0;
+  padding: var(--mrr-space-4);
+  color: var(--mrr-card-foreground);
+  text-align: left;
+  overflow-wrap: anywhere;
+  cursor: pointer;
+  background: var(--mrr-card);
+  border: 1px solid var(--mrr-border);
+  border-radius: var(--mrr-radius-md);
+}
+
+.directory-item:hover {
+  border-color: var(--mrr-primary);
+}
+
+.directory-item:focus-visible {
+  outline: 2px solid var(--mrr-primary);
+  outline-offset: 2px;
+}
+
+.directory-name {
+  display: flex;
+  gap: var(--mrr-space-2);
+  align-items: center;
+}
+
+.directory-name strong {
+  font-size: var(--mrr-font-size-sm);
+}
+
+.directory-meta,
+.directory-description {
+  font-size: var(--mrr-font-size-xs);
+  line-height: 1.5;
+  color: var(--mrr-muted-foreground);
 }
 
 .option-name {

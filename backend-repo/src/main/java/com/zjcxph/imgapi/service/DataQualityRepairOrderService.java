@@ -30,7 +30,7 @@ public class DataQualityRepairOrderService {
     }
 
     public record Order(long id, long issueId, int scanId, long targetArchiveId,
-                        String status, long proposedBy, Long approvedBy) {}
+                        String status, long proposedBy, Long approvedBy, Long reopenedFrom) {}
     private record Source(Long archiveId, String fingerprint, String revision, String bah, String sjh, Integer active) {}
     private record Candidate(long archiveId, String fingerprint) {}
     private record State(Order order, String sourceFingerprint, String targetFingerprint, String appliedRevision, boolean fresh) {}
@@ -43,14 +43,25 @@ public class DataQualityRepairOrderService {
     public Workbench list(Long archiveId, Long issueId, Long before, long actor) {
         if (actor<=0 || (archiveId!=null && archiveId<=0) || (issueId!=null && issueId<=0) || (before!=null && before<=0))
             throw new BusinessException(400,"无效查询参数");
-        StringBuilder sql=new StringBuilder("SELECT id,issue_id,scan_id,target_archive_id,status,proposed_by,approved_by FROM app.mrr_data_quality_repair_order WHERE true");
+        StringBuilder sql=new StringBuilder("SELECT id,issue_id,scan_id,target_archive_id,status,proposed_by,approved_by,reopened_from FROM app.mrr_data_quality_repair_order WHERE true");
         java.util.ArrayList<Object> args=new java.util.ArrayList<>();
         if (archiveId!=null) { sql.append(" AND target_archive_id=?"); args.add(archiveId); }
-        if (issueId!=null) { sql.append(" AND issue_id=?"); args.add(issueId); }
+        if (issueId!=null) {
+            // Include prior orders for this exact scan only when the current issue is the supported check.
+            Integer scanId = jdbc.query("""
+                    SELECT entity_id FROM app.mrr_data_quality_issue
+                    WHERE id=? AND entity_id IS NOT NULL AND entity_type='mr_scan' AND check_code='SCAN_ARCHIVE_LINK_MISSING_ESTIMATED'
+                    """,(rs,n)->rs.getString(1),issueId).stream().findFirst().map(value -> {
+                        try { return Integer.valueOf(value); } catch (NumberFormatException invalid) { return null; }
+                    }).orElse(null);
+            if (scanId != null && scanId > 0) {
+                sql.append(" AND (issue_id=? OR scan_id=?)"); args.add(issueId); args.add(scanId);
+            } else { sql.append(" AND issue_id=?"); args.add(issueId); }
+        }
         if (before!=null) { sql.append(" AND id<?"); args.add(before); }
         sql.append(" ORDER BY id DESC LIMIT 50");
         List<Order> orders=jdbc.query(sql.toString(),(rs,n)->new Order(rs.getLong(1),rs.getLong(2),rs.getInt(3),
-                rs.getLong(4),rs.getString(5),rs.getLong(6),rs.getObject(7,Long.class)),args.toArray());
+                rs.getLong(4),rs.getString(5),rs.getLong(6),rs.getObject(7,Long.class),rs.getObject(8,Long.class)),args.toArray());
         return new Workbench(enabled && !readiness.isReadOnly() && !maintenance.isEnabled(),actor,orders);
     }
 
@@ -84,14 +95,33 @@ public class DataQualityRepairOrderService {
         if (!Boolean.TRUE.equals(preview.get("deterministic"))) throw conflict("不存在确定性修复候选");
         var candidate = uniqueCandidate(source);
         if (source.archiveId() != null) throw conflict("扫描已有主档关联");
-        if (Boolean.TRUE.equals(jdbc.queryForObject("""
-                SELECT EXISTS(SELECT 1 FROM app.mrr_data_quality_repair_order
-                WHERE scan_id=? AND status IN ('PROPOSED','APPROVED','APPLIED','VERIFIED'))
-                """,Boolean.class,scanId))) throw conflict("该扫描已有有效修复工单");
+        Long prior = jdbc.query("""
+                SELECT id FROM app.mrr_data_quality_repair_order
+                WHERE scan_id=? AND status IN ('PROPOSED','APPROVED','APPLIED','VERIFIED')
+                FOR UPDATE NOWAIT
+                """,(rs,n)->rs.getLong(1),scanId).stream().findFirst().orElse(null);
+        if (prior != null) {
+            // A fresh successful run must have started after verification, not merely completed later.
+            // Reopen only a real recurrence (the current source was locked and confirmed unlinked above).
+            boolean recurrent = Boolean.TRUE.equals(jdbc.queryForObject("""
+                    SELECT EXISTS(SELECT 1 FROM app.mrr_data_quality_repair_order o
+                      JOIN app.mrr_data_quality_issue i ON i.id=?
+                      JOIN app.mrr_data_quality_run r ON r.id=i.run_id
+                      WHERE o.id=? AND o.status='VERIFIED' AND o.issue_id<>i.id
+                        AND i.entity_type='mr_scan' AND i.entity_id=CAST(o.scan_id AS text)
+                        AND i.check_code='SCAN_ARCHIVE_LINK_MISSING_ESTIMATED'
+                        AND r.status='SUCCESS' AND r.started_at>o.updated_at
+                        AND r.completed_at IS NOT NULL AND i.detected_at>=r.started_at)
+                    """,Boolean.class,issueId,prior));
+            if (!recurrent) throw conflict("该扫描已有有效修复工单，需在复验后重新成功检查");
+            change(prior,"SUPERSEDED");
+            // This event records an order transition, not a modification of the medical link.
+            audit(prior,actor,"SUPERSEDED",null,null);
+        }
         Long id = jdbc.queryForObject("""
-                INSERT INTO app.mrr_data_quality_repair_order(issue_id,scan_id,target_archive_id,source_fingerprint,target_fingerprint,status,proposed_by)
-                VALUES (?,?,?,?,?,'PROPOSED',?) RETURNING id
-                """, Long.class, issueId, scanId, candidate.archiveId(), source.fingerprint(), candidate.fingerprint(), actor);
+                INSERT INTO app.mrr_data_quality_repair_order(issue_id,scan_id,target_archive_id,source_fingerprint,target_fingerprint,status,proposed_by,reopened_from)
+                VALUES (?,?,?,?,?,'PROPOSED',?,?) RETURNING id
+                """, Long.class, issueId, scanId, candidate.archiveId(), source.fingerprint(), candidate.fingerprint(), actor,prior);
         audit(id, actor, "PROPOSED", null, null);
         return get(id);
     }
@@ -239,7 +269,7 @@ public class DataQualityRepairOrderService {
                 FROM app.mrr_data_quality_repair_order WHERE id=?
                 """+(lock?" FOR UPDATE NOWAIT":""),(rs,n)->new State(
                 new Order(rs.getLong("id"),rs.getLong("issue_id"),rs.getInt("scan_id"),rs.getLong("target_archive_id"),
-                        rs.getString("status"),rs.getLong("proposed_by"),rs.getObject("approved_by",Long.class)),
+                        rs.getString("status"),rs.getLong("proposed_by"),rs.getObject("approved_by",Long.class),rs.getObject("reopened_from",Long.class)),
                 rs.getString("source_fingerprint"),rs.getString("target_fingerprint"),rs.getString("applied_revision"),rs.getBoolean("fresh")),id)
                 .stream().findFirst().orElseThrow(()->new BusinessException(404,"工单不存在"));
     }

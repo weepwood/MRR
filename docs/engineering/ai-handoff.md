@@ -362,6 +362,10 @@
 
 - #805 已合并 integration/v1.1 ba1487ba，main 24152bee 冻结；独立分支 feat/v1.1-operations-history，详见 [运维历史及Nginx专项](v1.1-operations-history.md)。新增有界独立采样表、历史趋势与相邻观察时间线；固定本地 Windows Nginx 语法校验及元数据；两个特性默认关闭。不执行真实 Windows 生产命令。最终 PR/门禁以 GitHub 为准，真实医院验收仍独立。
 
+## 09 V1.1 工单异常重开与完整性报告（2026-11-25）
+
+- #806 的 scope/Pages 初次失败分别修复兼容迁移及 NAS 标签定位，最新 head 8120e18c；远端最终门禁以实际结果为准。独立后续 feat/v1.1-repair-manifest 基于该 head，详见 [重开与报告](v1.1-repair-manifest-report.md)。只允许新成功检查、同一影像缺失关联和唯一候选的明确重提，旧工单 SUPERSEDED、保留审计、新工单独立审批；固定成员报告只读分段及汇总。17 PG专项、15 Vitest、4 Chromium（含预热）通过。未合并 #806 前不重复建立依赖 PR；合并后从最新 integration/v1.1 吸收该增量。main 24152bee 冻结，未执行生产操作。
+
 ## 每轮交接模板
 
 - 更新时间、任务、风险、目标及非目标：

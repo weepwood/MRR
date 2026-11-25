@@ -155,6 +155,19 @@ export default defineFakeRoute([
     },
   },
   {
+    url: '/api/v1/operations/archive-manifests/:version/report',
+    response: ({ params, query }) => {
+      const row = manifestVersion(Number(params.version))
+      if (!row || row.observation.archiveId !== Number(query?.archiveId)) { return demoError(409, '演示版本与病案不一致') }
+      const count = row.ids.length
+      return demoOk({
+        ...row.observation,
+        segments: count ? [{ number: 1, firstOrdinal: 1, lastOrdinal: count, planned: count, processed: count, verified: 0, anomalies: count }] : [],
+        anomalyCounts: count ? { UNVERIFIED: count } : {},
+      })
+    },
+  },
+  {
     url: '/api/v1/operations/archive-manifests/:version/anomalies',
     response: ({ params, query }) => demoOk((manifestVersion(Number(params.version))?.ids ?? []).map((id, i) => ({
       cursor: i + 1,
@@ -179,6 +192,13 @@ export default defineFakeRoute([
     response: ({ params, query }) => Number(params.id) === 1
       ? demoOk(Number(query?.after ?? 0) < 1 ? [{ id: 1, actorId: 2, action: 'PROPOSED', beforeArchiveId: null, afterArchiveId: null, createdAt: hoursAgo(2) }] : [])
       : demoError(404, '演示工单不存在'),
+  },
+  {
+    url: '/api/v1/system/data-quality/repair-orders/:id',
+    response: ({ params }) => {
+      const row = demoOrders.find(order => order.id === Number(params.id))
+      return row ? demoOk(row) : demoError(404, '演示工单不存在')
+    },
   },
   { url: '/api/v1/system/data-quality/repair-orders', method: 'POST', response: () => demoError(503, '演示不执行真实修复') },
   { url: '/api/v1/system/data-quality/repair-orders/:id/approve', method: 'POST', response: () => demoError(503, '演示不执行真实修复') },

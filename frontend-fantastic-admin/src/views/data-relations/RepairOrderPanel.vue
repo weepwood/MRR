@@ -23,6 +23,7 @@ const labels: Record<string, string> = {
   VERIFIED: '已复验',
   CANCELLED: '已取消',
   COMPENSATED: '已补偿',
+  SUPERSEDED: '异常重开（旧工单）',
 }
 const actionLabels: Record<RepairAction, string> = {
   approve: '审批通过',
@@ -32,7 +33,9 @@ const actionLabels: Record<RepairAction, string> = {
   compensate: '条件补偿',
 }
 let generation = 0
-const canPropose = computed(() => enabled.value && props.deterministic && props.issueId && !orders.value.some(row => !['CANCELLED', 'COMPENSATED'].includes(row.status)))
+const recurrence = computed(() => orders.value.find(row => row.status === 'VERIFIED' && row.issueId !== props.issueId))
+const canPropose = computed(() => enabled.value && props.deterministic && props.issueId && !orders.value.some(row =>
+  !['CANCELLED', 'COMPENSATED', 'SUPERSEDED'].includes(row.status) && row.id !== recurrence.value?.id))
 
 function actions(row: RepairOrder): RepairAction[] {
   if (!enabled.value || !actor.value) {
@@ -148,9 +151,9 @@ async function change(action: RepairAction | 'propose', row?: RepairOrder) {
   busy.value = true
   failed.value = false
   try {
-    const label = action === 'propose' ? '提交修复工单' : actionLabels[action]
+    const label = action === 'propose' ? (recurrence.value ? '重新提交修复工单' : '提交修复工单') : actionLabels[action]
     const message = action === 'propose'
-      ? `为异常 #${issue} 提交唯一关联候选，提交本身不会修改病案。`
+      ? (recurrence.value ? `为异常 #${issue} 重新提交工单，必须是复验后新成功检查发现的同一影像缺失关联；保留旧工单与审计，新工单独立审批，不修改病案。` : `为异常 #${issue} 提交唯一关联候选，提交本身不会修改病案。`)
       : `工单 #${row?.id}：影像 #${row?.scanId}，目标主档 #${row?.targetArchiveId}。后端将重新检查身份、状态和关联事实。`
     try {
       await ElMessageBox.confirm(message, label, { type: action === 'apply' || action === 'compensate' ? 'warning' : 'info', confirmButtonText: label, cancelButtonText: '返回' })
@@ -193,7 +196,7 @@ onBeforeUnmount(clear)
         刷新工单
       </el-button>
       <el-button v-if="canPropose" type="primary" :disabled="busy" @click="change('propose')">
-        提交工单
+        {{ recurrence ? '重新提交工单' : '提交工单' }}
       </el-button>
     </template>
     <AppError v-if="failed" message="工单读取或操作失败，请刷新核对实际状态" @retry="load()" />
@@ -201,6 +204,11 @@ onBeforeUnmount(clear)
     <el-table v-if="orders.length" :data="orders" row-key="id" highlight-current-row @row-click="select">
       <el-table-column prop="id" label="工单" width="90" />
       <el-table-column prop="scanId" label="影像" width="100" />
+      <el-table-column label="前序工单" width="105">
+        <template #default="{ row }">
+          {{ row.reopenedFrom ? `#${row.reopenedFrom}` : '—' }}
+        </template>
+      </el-table-column>
       <el-table-column prop="targetArchiveId" label="目标主档" min-width="120" />
       <el-table-column label="状态" width="110">
         <template #default="{ row }">
@@ -226,6 +234,9 @@ onBeforeUnmount(clear)
     </el-button>
     <section v-if="selected" class="repair-audit">
       <h3>工单 #{{ selected.id }} · 事务审计</h3>
+      <p v-if="selected.reopenedFrom">
+        前序工单 #{{ selected.reopenedFrom }} · 新工单独立审批
+      </p>
       <p>提交人 #{{ selected.proposedBy }} · 审批人 {{ selected.approvedBy ? `#${selected.approvedBy}` : '未审批' }}</p>
       <el-timeline>
         <el-timeline-item v-for="event in events" :key="event.id" :timestamp="formatDateTime(event.createdAt)">

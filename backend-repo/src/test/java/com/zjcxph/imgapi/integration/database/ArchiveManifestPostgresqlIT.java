@@ -153,6 +153,49 @@ class ArchiveManifestPostgresqlIT extends PostgresqlIntegrationTestSupport {
         assertThat(repo.compare(archive,base,target)).isEmpty();
     }
 
+    @Test
+    void reportUsesDurableSegmentsAndCompleteAnomalyCountsWithoutCurrentScans() {
+        long archive=archive();
+        jdbc.update("""
+                INSERT INTO app.mr_scan(archive_id,bah,pages,uploadflag,filename)
+                SELECT ?,'123456',n,1,'synthetic.png' FROM generate_series(1,5002) n
+                """,archive);
+        var repo=new ArchiveManifestRepository(jdbc);
+        long job=repo.create(archive,7L).orElseThrow();
+        // Synthetic persisted checkpoint: the report uses all recorded anomalies, not a paginated UI sample.
+        jdbc.update("UPDATE app.mrr_archive_manifest SET processed=5001,verified=4999,anomalies=2,digest_chain=NULL WHERE id=?",job);
+        jdbc.update("""
+                INSERT INTO app.mrr_archive_manifest_anomaly(manifest_id,ordinal,scan_id,status,bytes_read)
+                SELECT manifest_id,ordinal,scan_id,'MISSING_OR_UNREADABLE',0
+                FROM app.mrr_archive_manifest_member WHERE manifest_id=? AND ordinal IN (2,5001)
+                """,job);
+        var report=repo.report(archive,job).orElseThrow();
+        assertThat(report.snapshotCount()).isEqualTo(5002);
+        assertThat(report.segments()).containsExactly(
+                new ArchiveManifestRepository.Segment(1,1,5000,5000,5000,4999,1),
+                new ArchiveManifestRepository.Segment(2,5001,5002,2,1,0,1));
+        assertThat(report.anomalyCounts()).containsExactlyEntriesOf(java.util.Map.of("MISSING_OR_UNREADABLE",2));
+        assertThat(report.completeDigestAvailable()).isFalse();
+        jdbc.update("DELETE FROM app.mr_scan WHERE archive_id=?",archive);
+        assertThat(repo.report(archive,job)).contains(report);
+        assertThat(repo.report(archive+999,job)).isEmpty();
+        jdbc.update("DELETE FROM app.mrr_archive_manifest_anomaly WHERE manifest_id=? AND ordinal=2",job);
+        assertThat(repo.report(archive,job)).isEmpty();
+    }
+
+    @Test
+    void emptyFixedSnapshotHasNoSegmentsAndLegacyCannotProduceFixedReport() {
+        long archive=archive();
+        var repo=new ArchiveManifestRepository(jdbc);
+        long job=repo.create(archive,7L).orElseThrow();
+        var report=repo.report(archive,job).orElseThrow();
+        assertThat(report.snapshotCount()).isZero();
+        assertThat(report.segments()).isEmpty();
+        assertThat(report.anomalyCounts()).isEmpty();
+        jdbc.update("UPDATE app.mrr_archive_manifest SET snapshot_count=NULL WHERE id=?",job);
+        assertThat(repo.report(archive,job)).isEmpty();
+    }
+
     private long archive() {
         return jdbc.queryForObject("INSERT INTO app.mr_archive(bah) VALUES ('123456') RETURNING id", Long.class);
     }

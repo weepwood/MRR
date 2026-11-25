@@ -75,6 +75,12 @@ public class ArchiveManifestService {
                 .orElseThrow(() -> new BusinessException(409, "版本不存在、已清理或不具备完整固定成员快照"));
     }
 
+    public ArchiveManifestRepository.Report report(long archiveId,long version) {
+        if (archiveId<=0 || version<=0) throw new BusinessException(400,"无效病案或校验版本");
+        return repository.report(archiveId,version)
+                .orElseThrow(() -> new BusinessException(409,"版本不存在、已清理或固定成员与观察结果不一致"));
+    }
+
     @Scheduled(fixedDelay = 3600000, initialDelay = 3600000)
     public void pruneHistory() {
         if (enabled && !readiness.isReadOnly() && !maintenance.isEnabled()) repository.pruneExpired(90);

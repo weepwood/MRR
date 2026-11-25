@@ -74,7 +74,9 @@ def build_inventory(root: Path) -> TestInventory:
         if FOCUSED_FRONTEND_PATTERN.search(text):
             focused_or_disabled.append(f"{_relative(path, root)}: contains focused test")
 
-    for path in _iter_files(frontend_e2e, "*.spec.ts"):
+    for path in _iter_files(frontend_e2e, "*.ts"):
+        if not path.name.endswith((".spec.ts", ".qualification.ts")):
+            continue
         frontend_e2e_count += 1
         text = path.read_text(encoding="utf-8", errors="replace")
         if FOCUSED_FRONTEND_PATTERN.search(text):

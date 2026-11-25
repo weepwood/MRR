@@ -915,3 +915,13 @@ pnpm dev         # 启动开发服务器
 | UnoCSS | `https://unocss.dev/` |
 | Vite | `https://vite.dev/` |
 | 通用编码风格 | `.trae/rules/zh/coding-style.md` |
+
+
+### 独立候选跨浏览器矩阵
+
+常规 Chromium E2E 不变。候选阶段可执行：
+```sh
+pnpm exec playwright install chromium firefox webkit
+CI=true pnpm exec playwright test --config=playwright.cross-browser.config.ts
+```
+也可指定 `--project=chromium-matrix`、`--project=firefox`、`--project=webkit`，或手动触发 frontend-mock 工作流并设置 cross_browser=true（只运行 Firefox/WebKit 补充矩阵及共享预热）。测试覆盖 22 个明确业务入口、双主题、1440/390px 宽度，后两种引擎另复用十个现有业务与交互测试文件。使用合成认证/Mock 数据；不是医院现场、真实旧版浏览器或全数据状态视觉验收。可选报告目录 test-results-cross-browser 与 playwright-cross-browser-report；不纳入源码。默认不重试，不允许 focused tests；GitHub 保存 JUnit 与失败诊断，保留一天。

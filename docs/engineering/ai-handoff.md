@@ -466,6 +466,10 @@
 
 - #816 已合并14ba5b83、原4151ba41树一致，main冻结。真实复核关闭#508/#621/#519/#521/#523/#524，open69→63；现场事项保留。新分支feat/v1.1-dependency-closure，#140/#569旧路由插件清单/锁文件纯删除、resilience4j未使用依赖、编译/缓存配置与系统信息注入精简，保留iText正式导出。后端31/31、前端9/9、Chromium3/3含预热、TypeScript/生产构建/Chrome86静态及冻结锁文件校验通过。详见[工程收口第三批](v1.1-engineering-closure.md)。#140/#389/#569范围未全完结，下一步远端CI及候选，不重复三千万基准。
 
+## 35 V1.1 候选验收与跨浏览器矩阵（2026-11-25）
+
+- #817 59eeba00全部必要CI成功，合并28d9ca60树一致；main冻结24152bee。Release dry-run 45577278120精确集成SHA、retain_candidate=true，identity成功，完整验证执行中，不发布。独立分支feat/v1.1-candidate-qualification新增可选矩阵/工作流：22入口双主题双宽度、Chromium45/45含预热、88张截图；Firefox/WebKit179项含预热尚未执行。本机下载慢已停止专用安装，改手动CI，默认PR/Chromium门禁不变。464项测试资产清单及定向3/3、文档通过。详见[候选验收](v1.1-candidate-qualification.md)，待候选制品、远端跨浏览器和实际缺陷收口，不更改VERSION或main。
+
 ## 每轮交接模板
 
 - 更新时间、任务、风险、目标及非目标：

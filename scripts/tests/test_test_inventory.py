@@ -40,6 +40,18 @@ class TestInventoryTest(unittest.TestCase):
             self.assertEqual(inventory.total_files, 4)
             self.assertEqual(len(inventory.focused_or_disabled), 2)
 
+    def test_optional_qualification_files_are_counted_and_checked(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            self._write(root, "frontend-fantastic-admin/e2e/matrix.qualification.ts",
+                        "test.only('matrix', async () => {})")
+            self._write(root, "frontend-fantastic-admin/e2e/helpers/utility.ts",
+                        "export const utility = true")
+            inventory = build_inventory(root)
+            self.assertEqual(inventory.frontend_e2e_files, 1)
+            self.assertEqual(inventory.total_files, 1)
+            self.assertEqual(len(inventory.focused_or_disabled), 1)
+
     def test_markdown_contains_all_test_layers(self):
         with tempfile.TemporaryDirectory() as temp_dir:
             inventory = build_inventory(Path(temp_dir))

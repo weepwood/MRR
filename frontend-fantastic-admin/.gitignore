@@ -27,3 +27,7 @@ export_to_markdown.py
 
 # 构建产物压缩包
 *.zip
+
+# Optional candidate cross-browser qualification reports
+/test-results-cross-browser/
+/playwright-cross-browser-report/

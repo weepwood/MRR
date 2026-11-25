@@ -726,3 +726,7 @@
 ## 用户操作列与注册申请恢复（2026-11-26）
 
 基线 49d1e4a8。统一四状态铅笔+更多，固定96px，待审核打开审核窗（通过/拒绝），已拒绝确认恢复待审核，禁用编辑/恢复启用，启用编辑/密码重置/禁用。检查正式后端原无恢复接口且通用编辑明确禁止直接激活注册申请；新增 POST /api/v1/auth/users/{id}/registration/reopen，user:manage + 活动管理员验证，事务及管理员角色锁，rejected 条件更新，仅改状态和更新时间，保留原申请、拒绝决定、角色和密码，记录安全审计。重新审核后方可启用；堵住 pending/rejected 经 DELETE 禁用再编辑启用的绕过路径。无数据库迁移。静态演示新接口沿用原503写入限制；前端完整成功链使用隔离模拟响应，非真实医院数据。Java21 后端44/44单测，独立新建PG16+56条现有迁移的真实MyBatis集成1/1，确认状态、原密码哈希/版本、角色和拒绝原因保留、重复恢复失败及后续审核。Chromium/WebKit 9/9含预热，覆盖四状态三视口两入口、恢复取消/409重试/重新审核、拒绝原因和禁用原流程。TypeScript、ESLint、Stylelint定向检查；未运行全量前后端CI、Chrome86实机或真实HTTP认证链。证据 /tmp/mrr-user-actions-{backend-final,browser,tsc,lint,style}.log。9037保持运行，仅本地，不推送、不合并、不发布。
+
+## 注册申请弹窗与审核外观归一（2026-11-26）
+
+基线 40f6cc17。原详情/恢复为 MrrDialog，审核为直接 ElDialog，底层均 Element Plus。改为一个 MrrDialog 实例的 detail/review/reopen 三模式，共享 review-summary 双列语义字段及公共 overlay-shells.css 的 opt-in business 外观；无需新组件，540px宽度上限、16px标题、桌面20px/窄屏16px水平内边距、卡片底色、内容可滚动和对齐底栏。保留详情只读、审核角色及原拒绝原因 prompt、恢复待审核，统一忙态防关闭/重复提交，未改变后端/API。实际 Chromium 截图 /tmp/mrr-registration-{detail,review}-v2.png；四主题双宽度三模式双引擎48组布局检查及既有长文本、审核、恢复、拒绝业务回归共9/9含预热；TypeScript、ESLint、Stylelint定向通过。日志 /tmp/mrr-registration-dialog-{browser,tsc,lint,style}.log。其他普通用户编辑/创建/密码对话框和全局默认 MrrDialog 未迁移，未运行全量CI/生产构建/Chrome86实机；仅本地9037，不推送、不发布。

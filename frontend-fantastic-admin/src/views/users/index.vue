@@ -76,8 +76,15 @@ const createForm = reactive({
   temporaryPasswordValidHours: 24,
 })
 
-const applicationVisible = ref(false)
-const applicationTarget = ref<CredentialAwareUser | null>(null)
+type RegistrationDialogMode = 'detail' | 'review' | 'reopen'
+const registrationVisible = ref(false)
+const registrationMode = ref<RegistrationDialogMode>('detail')
+const registrationTarget = ref<CredentialAwareUser | null>(null)
+const registrationTitle = computed(() => ({
+  detail: '申请详情',
+  review: '审核注册申请',
+  reopen: '恢复注册申请',
+})[registrationMode.value])
 
 function hasApplication(row: CredentialAwareUser) {
   return Boolean(row.appliedAt || row.contactInfo?.trim() || row.applyRemark?.trim() || row.rejectReason?.trim() || row.reviewedAt || row.reviewedBy != null || ['pending', 'rejected'].includes(normalizeStatus(row.status)))
@@ -88,16 +95,26 @@ function applicationPreview(row: CredentialAwareUser) {
 }
 
 function openApplication(row: CredentialAwareUser) {
-  applicationTarget.value = row
-  applicationVisible.value = true
+  openRegistrationDialog(row, 'detail')
 }
 
-const approveVisible = ref(false)
 const approveSaving = ref(false)
 const rejectSaving = ref(false)
-const approveTarget = ref<CredentialAwareUser | null>(null)
 const approveFormRef = ref()
 const approveForm = reactive({ roleCode: '' })
+const reopenSaving = ref(false)
+const registrationBusy = computed(() => approveSaving.value || rejectSaving.value || reopenSaving.value)
+
+function openRegistrationDialog(row: CredentialAwareUser, mode: RegistrationDialogMode) {
+  if (registrationBusy.value || registrationVisible.value) return
+  registrationTarget.value = row
+  registrationMode.value = mode
+  registrationVisible.value = true
+}
+
+function clearRegistrationDialog() {
+  if (!registrationVisible.value) registrationTarget.value = null
+}
 
 const resetVisible = ref(false)
 const resetSaving = ref(false)
@@ -332,23 +349,18 @@ function handleUserAction(action: string, row: CredentialAwareUser) {
   }
 }
 
-const reopenVisible = ref(false)
-const reopenSaving = ref(false)
-const reopenTarget = ref<CredentialAwareUser | null>(null)
-
 function openReopen(row: CredentialAwareUser) {
   if (normalizeStatus(row.status) !== 'rejected' || !row.id || reopenSaving.value) return
-  reopenTarget.value = row
-  reopenVisible.value = true
+  openRegistrationDialog(row, 'reopen')
 }
 
 async function handleReopen() {
-  const row = reopenTarget.value
-  if (!canManage.value || !reopenVisible.value || !row?.id || reopenSaving.value) return
+  const row = registrationTarget.value
+  if (!canManage.value || !registrationVisible.value || registrationMode.value !== 'reopen' || !row?.id || registrationBusy.value) return
   reopenSaving.value = true
   try {
     await apiUser.reopenRegistration(row.id)
-    reopenVisible.value = false
+    registrationVisible.value = false
     ElMessage.success('注册申请已恢复待审核')
     page.value = 1
     await loadData()
@@ -395,22 +407,22 @@ async function handleCreate() {
 }
 
 function openApprove(row: CredentialAwareUser) {
-  if (!isPending(row)) return
-  approveTarget.value = row
+  if (!isPending(row) || !canManage.value || registrationVisible.value || registrationBusy.value) return
   approveForm.roleCode = approvableRoles.value[0]?.code || ''
-  approveVisible.value = true
+  openRegistrationDialog(row, 'review')
 }
 
 async function handleApprove() {
-  if (approveSaving.value || rejectSaving.value || !canManage.value) return
+  const row = registrationTarget.value
+  if (registrationBusy.value || !canManage.value || !registrationVisible.value || registrationMode.value !== 'review' || !row?.id || !isPending(row)) return
   await approveFormRef.value?.validate()
-  if (!approveTarget.value?.id || approveSaving.value || rejectSaving.value) return
+  if (registrationBusy.value || !registrationVisible.value || registrationMode.value !== 'review' || registrationTarget.value !== row) return
   approveSaving.value = true
   try {
-    const response = await apiUser.approveRegistration(approveTarget.value.id, { roleCode: approveForm.roleCode })
-    const index = users.value.findIndex(item => item.id === approveTarget.value!.id)
+    const response = await apiUser.approveRegistration(row.id, { roleCode: approveForm.roleCode })
+    const index = users.value.findIndex(item => item.id === row.id)
     if (index !== -1) users.value[index] = { ...users.value[index], ...response.data }
-    approveVisible.value = false
+    registrationVisible.value = false
     ElMessage.success('注册申请已通过，用户现在可以登录')
     await loadData()
   }
@@ -423,9 +435,9 @@ async function handleApprove() {
 }
 
 function rejectFromReview() {
-  const row = approveTarget.value
-  if (!row || approveSaving.value || rejectSaving.value) return
-  approveVisible.value = false
+  const row = registrationTarget.value
+  if (!row || registrationMode.value !== 'review' || registrationBusy.value) return
+  registrationVisible.value = false
   void handleReject(row)
 }
 
@@ -448,7 +460,7 @@ async function handleReject(row: CredentialAwareUser) {
     const response = await apiUser.rejectRegistration(row.id, { rejectReason: value.trim() })
     const index = users.value.findIndex(item => item.id === row.id)
     if (index !== -1) users.value[index] = { ...users.value[index], ...response.data }
-    approveVisible.value = false
+    registrationVisible.value = false
     ElMessage.success('注册申请已拒绝')
     await loadData()
   }
@@ -722,33 +734,62 @@ onMounted(loadData)
       </template>
     </MrrDataTablePanel>
 
-    <MrrDialog v-model="applicationVisible" title="申请详情" @closed="applicationTarget = null">
-      <div v-if="applicationTarget" class="application-detail">
-        <div class="application-detail__identity">
-          <div class="user-identity">
-            <span class="user-avatar" aria-hidden="true">{{ String(applicationTarget.displayName || applicationTarget.username || '?').slice(0, 1) }}</span>
-            <div class="user-identity__copy">
-              <strong>{{ applicationTarget.username }}</strong>
-              <span v-if="applicationTarget.displayName" class="user-identity__name">{{ applicationTarget.displayName }}</span>
-            </div>
+    <MrrDialog
+      v-model="registrationVisible"
+      :title="registrationTitle"
+      class="mrr-dialog-shell--business"
+      :close-on-click-overlay="registrationMode === 'detail' && !registrationBusy"
+      :close-on-press-escape="!registrationBusy"
+      :closable="!registrationBusy"
+      @closed="clearRegistrationDialog"
+    >
+      <div v-if="registrationTarget" class="registration-dialog-content">
+        <el-alert
+          v-if="registrationMode === 'review'"
+          type="warning"
+          :closable="false"
+          show-icon
+          title="审核通过后账号立即启用，用户可使用注册时设置的密码登录。"
+        />
+        <el-alert
+          v-else-if="registrationMode === 'reopen'"
+          type="warning"
+          :closable="false"
+          show-icon
+          title="恢复后账号重新进入待审核，仍不能登录，需再次审核通过。"
+        />
+        <dl class="review-summary">
+          <div><dt>用户名</dt><dd><strong>{{ registrationTarget.username }}</strong></dd></div>
+          <div><dt>显示名称</dt><dd>{{ registrationTarget.displayName || '未填写' }}</dd></div>
+          <div><dt>账号状态</dt><dd><MrrStatusTag :label="statusDisplay(registrationTarget.status).label" :tone="statusDisplay(registrationTarget.status).tone" /></dd></div>
+          <div><dt>联系方式</dt><dd>{{ registrationTarget.contactInfo || '未填写' }}</dd></div>
+          <div><dt>申请时间</dt><dd>{{ formatDateTime(registrationTarget.appliedAt) }}</dd></div>
+          <div v-if="registrationTarget.reviewedAt"><dt>审核时间</dt><dd>{{ formatDateTime(registrationTarget.reviewedAt) }}</dd></div>
+          <div class="application-detail__section">
+            <dt>申请说明</dt>
+            <dd><p>{{ registrationTarget.applyRemark || '未填写' }}</p></dd>
           </div>
-          <MrrStatusTag :label="statusDisplay(applicationTarget.status).label" :tone="statusDisplay(applicationTarget.status).tone" />
-        </div>
-        <dl class="application-detail__fields">
-          <div><dt>联系方式</dt><dd>{{ applicationTarget.contactInfo || '未填写' }}</dd></div>
-          <div><dt>申请时间</dt><dd>{{ formatDateTime(applicationTarget.appliedAt) }}</dd></div>
-          <div v-if="applicationTarget.reviewedAt"><dt>审核时间</dt><dd>{{ formatDateTime(applicationTarget.reviewedAt) }}</dd></div>
+          <div v-if="registrationTarget.rejectReason" class="application-detail__section--rejected">
+            <dt>{{ registrationMode === 'reopen' ? '原拒绝原因' : isPending(registrationTarget) ? '上次拒绝原因' : '拒绝原因' }}</dt>
+            <dd><p>{{ registrationTarget.rejectReason }}</p></dd>
+          </div>
         </dl>
-        <section class="application-detail__section">
-          <h3>申请说明</h3>
-          <p>{{ applicationTarget.applyRemark || '未填写' }}</p>
-        </section>
-        <section v-if="applicationTarget.rejectReason" class="application-detail__section application-detail__section--rejected">
-          <h3>{{ isPending(applicationTarget) ? '上次拒绝原因' : '拒绝原因' }}</h3>
-          <p>{{ applicationTarget.rejectReason }}</p>
-        </section>
+        <el-form v-if="registrationMode === 'review'" ref="approveFormRef" :model="approveForm" :rules="approveRules" label-position="top" class="registration-review-form" :disabled="registrationBusy">
+          <el-form-item label="授予角色" prop="roleCode">
+            <el-select v-model="approveForm.roleCode" class="full-width">
+              <el-option v-for="role in approvableRoles" :key="role.code" :label="role.name || role.code" :value="role.code!" />
+            </el-select>
+          </el-form-item>
+        </el-form>
       </div>
-      <template #footer><el-button @click="applicationVisible = false">关闭</el-button></template>
+      <template #footer>
+        <el-button :disabled="registrationBusy" :auto-insert-space="false" @click="registrationVisible = false">{{ registrationMode === 'detail' ? '关闭' : '取消' }}</el-button>
+        <template v-if="registrationMode === 'review'">
+          <el-button type="danger" plain :disabled="registrationBusy" @click="rejectFromReview">拒绝申请</el-button>
+          <el-button type="primary" :loading="approveSaving" :disabled="registrationBusy" @click="handleApprove">确认通过</el-button>
+        </template>
+        <el-button v-else-if="registrationMode === 'reopen'" type="primary" :loading="reopenSaving" :disabled="registrationBusy" @click="handleReopen">恢复待审核</el-button>
+      </template>
     </MrrDialog>
 
     <el-dialog v-model="createVisible" title="创建用户" width="520px" :close-on-click-modal="false">
@@ -761,41 +802,6 @@ onMounted(loadData)
       </el-form>
       <template #footer><el-button @click="createVisible = false">取消</el-button><el-button type="primary" :loading="createSaving" @click="handleCreate">创建用户</el-button></template>
     </el-dialog>
-
-    <el-dialog v-model="approveVisible" title="审核注册申请" width="540px" :close-on-click-modal="false">
-      <el-alert type="warning" :closable="false" show-icon title="审核通过后账号立即变为启用状态，用户可使用注册时设置的密码登录。" />
-      <div class="review-summary">
-        <div><span>用户名</span><strong>{{ approveTarget?.username }}</strong></div>
-        <div><span>显示名称</span><strong>{{ approveTarget?.displayName }}</strong></div>
-        <div><span>联系方式</span><strong>{{ approveTarget?.contactInfo || '-' }}</strong></div>
-        <div><span>申请说明</span><p>{{ approveTarget?.applyRemark || '-' }}</p></div>
-        <div><span>申请时间</span><strong>{{ formatDateTime(approveTarget?.appliedAt) }}</strong></div>
-        <div v-if="approveTarget?.rejectReason"><span>上次拒绝原因</span><p>{{ approveTarget.rejectReason }}</p></div>
-      </div>
-      <el-form ref="approveFormRef" :model="approveForm" :rules="approveRules" label-position="top" class="dialog-form">
-        <el-form-item label="授予角色" prop="roleCode">
-          <el-select v-model="approveForm.roleCode" class="full-width">
-            <el-option v-for="role in approvableRoles" :key="role.code" :label="role.name || role.code" :value="role.code!" />
-          </el-select>
-        </el-form-item>
-      </el-form>
-      <template #footer><el-button :disabled="approveSaving" @click="approveVisible = false">取消</el-button><el-button type="danger" plain :disabled="approveSaving || rejectSaving" @click="rejectFromReview">拒绝申请</el-button><el-button type="success" :loading="approveSaving" @click="handleApprove">确认通过</el-button></template>
-    </el-dialog>
-
-    <MrrDialog v-model="reopenVisible" title="恢复注册申请" :close-on-click-overlay="!reopenSaving" :close-on-press-escape="!reopenSaving" :closable="!reopenSaving" @closed="reopenTarget = null">
-      <div v-if="reopenTarget" class="application-detail">
-        <el-alert type="warning" :closable="false" show-icon title="恢复后账号重新进入待审核，仍不能登录，需再次审核通过。" />
-        <div class="review-summary">
-          <div><span>用户名</span><strong>{{ reopenTarget.username }}</strong></div>
-          <div><span>显示名称</span><strong>{{ reopenTarget.displayName }}</strong></div>
-          <div v-if="reopenTarget.rejectReason"><span>原拒绝原因</span><p>{{ reopenTarget.rejectReason }}</p></div>
-        </div>
-      </div>
-      <template #footer>
-        <el-button :disabled="reopenSaving" @click="reopenVisible = false">取消</el-button>
-        <el-button type="primary" :loading="reopenSaving" :disabled="reopenSaving" @click="handleReopen">恢复待审核</el-button>
-      </template>
-    </MrrDialog>
 
     <el-dialog v-model="editVisible" title="编辑用户" width="480px" :close-on-click-modal="false">
       <el-form ref="editFormRef" :model="editForm" :rules="editRules" label-position="top" class="dialog-form">
@@ -915,22 +921,27 @@ onMounted(loadData)
 .application-preview__icon { flex: none; font-size: 14px; }
 .application-preview.el-button:not(.is-disabled):hover { color: var(--mrr-primary); background: transparent; }
 .application-preview.el-button:focus-visible { outline: 2px solid var(--mrr-primary); outline-offset: -2px; }
-.application-detail { display: grid; min-width: 0; gap: var(--mrr-space-4); }
-.application-detail__identity { display: flex; gap: var(--mrr-space-3); align-items: center; justify-content: space-between; min-width: 0; }
-.application-detail__fields { display: grid; gap: var(--mrr-space-3); margin: 0; padding-block: var(--mrr-space-4); border-block: 1px solid var(--mrr-border); }
-.application-detail__fields > div { display: grid; grid-template-columns: 80px minmax(0, 1fr); gap: var(--mrr-space-3); align-items: start; }
-.application-detail__fields dt, .application-detail__section h3 { margin: 0; font-size: var(--mrr-font-size-xs); font-weight: 600; color: var(--mrr-muted-foreground); }
-.application-detail__fields dd, .application-detail__section p { min-width: 0; margin: 0; line-height: 1.65; overflow-wrap: anywhere; white-space: pre-wrap; }
-.application-detail__section { display: grid; min-width: 0; gap: var(--mrr-space-2); }
-.application-detail__section--rejected h3 { color: var(--mrr-destructive); }
+
+/* Shared registration summary: review is the reference layout in every mode. */
+.registration-dialog-content { display: grid; min-width: 0; gap: var(--mrr-space-4); }
+.registration-review-form :deep(.el-form-item) { margin-bottom: 0; }
 .unit { margin-left: var(--mrr-space-2); font-size: var(--mrr-font-size-xs); color: var(--mrr-muted-foreground); }
 .dialog-form { display: grid; gap: 2px; margin-top: var(--mrr-space-4); }
 .readonly-field { display: flex; align-items: center; width: 100%; min-height: var(--mrr-control-height); padding: 0 var(--mrr-space-3); color: var(--mrr-muted-foreground); background: var(--mrr-muted); border: 1px solid var(--mrr-border); border-radius: var(--mrr-radius-md); }
 .full-width { width: 100%; }
-.review-summary, .credential-panel { display: grid; gap: var(--mrr-space-3); padding: var(--mrr-space-4); margin-top: var(--mrr-space-4); background: var(--mrr-muted); border: 1px solid var(--mrr-border); border-radius: var(--mrr-radius-lg); }
-.review-summary > div, .credential-panel > div { display: grid; grid-template-columns: 90px 1fr; gap: var(--mrr-space-3); align-items: start; }
-.review-summary span, .credential-panel span { font-size: var(--mrr-font-size-xs); color: var(--mrr-muted-foreground); }
-.review-summary p, .review-summary strong { min-width: 0; margin: 0; line-height: 1.6; overflow-wrap: anywhere; white-space: pre-wrap; }
+.credential-panel { display: grid; gap: var(--mrr-space-3); padding: var(--mrr-space-4); margin-top: var(--mrr-space-4); background: var(--mrr-muted); border: 1px solid var(--mrr-border); border-radius: var(--mrr-radius-lg); }
+.credential-panel > div { display: grid; grid-template-columns: 90px 1fr; gap: var(--mrr-space-3); align-items: start; }
+.credential-panel span { font-size: var(--mrr-font-size-xs); color: var(--mrr-muted-foreground); }
+.review-summary { display: grid; gap: var(--mrr-space-3); min-width: 0; padding: var(--mrr-space-4); margin: 0; background: var(--mrr-muted); border: 1px solid var(--mrr-border); border-radius: var(--mrr-radius-md); }
+.review-summary > div { display: grid; grid-template-columns: 88px minmax(0, 1fr); gap: var(--mrr-space-3); align-items: baseline; min-width: 0; }
+.review-summary dt { font-size: var(--mrr-font-size-sm); color: var(--mrr-muted-foreground); }
+.review-summary dd, .review-summary p { min-width: 0; margin: 0; font-size: var(--mrr-font-size-md); line-height: 1.6; overflow-wrap: anywhere; white-space: pre-wrap; }
+.review-summary strong { font-weight: 600; }
+.review-summary .application-detail__section--rejected dt { color: var(--mrr-destructive); }
+@media (max-width: 480px) {
+  .review-summary { padding: var(--mrr-space-3); }
+  .review-summary > div { grid-template-columns: 76px minmax(0, 1fr); gap: var(--mrr-space-2); }
+}
 .credential-panel code { padding: var(--mrr-space-2) var(--mrr-space-3); font-family: var(--mrr-font-mono); font-size: var(--mrr-font-size-md); letter-spacing: 0.02em; font-weight: 700; word-break: break-all; background: var(--mrr-card); border-radius: var(--mrr-radius-md); }
 .credential-actions { display: flex; gap: var(--mrr-space-2); margin-top: var(--mrr-space-4); }
 .acknowledge { margin-top: var(--mrr-space-4); }

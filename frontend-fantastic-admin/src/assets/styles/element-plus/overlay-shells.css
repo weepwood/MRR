@@ -192,3 +192,68 @@ body .mrr-drawer-shell .el-drawer__close-btn {
     align-items: stretch;
   }
 }
+
+/* Opt-in business dialog geometry: use the review form's surface language
+ * without the double padding of a raw el-dialog. Existing variants unchanged. */
+body .el-dialog.mrr-dialog-shell.mrr-dialog-shell--business {
+  width: min(540px, calc(100vw - 24px));
+  min-height: 0;
+  max-height: 90vh;
+  margin: 5vh auto 0;
+  color: var(--mrr-card-foreground);
+  background: var(--mrr-card);
+  border-radius: var(--mrr-radius-dialog);
+}
+
+body .mrr-dialog-shell--business > .mrr-dialog-header {
+  justify-content: center;
+  min-height: 56px;
+  padding: var(--mrr-space-4) var(--mrr-space-5);
+}
+
+body .mrr-dialog-shell--business .mrr-overlay-title {
+  padding-right: var(--mrr-space-6);
+  font-size: var(--mrr-font-size-lg);
+  font-weight: 650;
+  line-height: 1.4;
+  letter-spacing: normal;
+}
+
+body .mrr-dialog-shell--business > .mrr-dialog-body {
+  min-height: 0;
+  padding: var(--mrr-space-5);
+}
+
+body .mrr-dialog-shell--business > .mrr-overlay-footer {
+  padding: var(--mrr-space-3) var(--mrr-space-5);
+  background: var(--mrr-card);
+}
+
+body .mrr-dialog-shell--business .el-dialog__headerbtn {
+  top: 14px;
+  right: var(--mrr-space-4);
+  width: 28px;
+  height: 28px;
+}
+
+body .mrr-dialog-shell--business .el-dialog__headerbtn:hover {
+  background: var(--mrr-muted);
+}
+
+@media (max-width: 639px) {
+  body .el-dialog.mrr-dialog-shell.mrr-dialog-shell--business {
+    max-height: calc(100vh - 24px);
+    margin: 12px auto 0;
+  }
+
+  body .mrr-dialog-shell--business > .mrr-dialog-header,
+  body .mrr-dialog-shell--business > .mrr-dialog-body,
+  body .mrr-dialog-shell--business > .mrr-overlay-footer {
+    padding-inline: var(--mrr-space-4);
+  }
+
+  body .mrr-dialog-shell--business > .mrr-overlay-footer {
+    flex-flow: row wrap;
+    align-items: center;
+  }
+}

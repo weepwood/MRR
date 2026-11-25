@@ -643,7 +643,7 @@ onMounted(loadData)
       <MrrMetricCard v-for="item in summaryCards" :key="item.label" v-bind="item" :value="hasMetricSnapshot ? item.value : '—'" />
     </section>
 
-    <MrrDataTablePanel class="users-table-panel" appearance="quiet" role="region" aria-label="用户列表" :loading="loading" :result-key="users">
+    <MrrDataTablePanel class="users-table-panel" role="region" aria-label="用户列表" :loading="loading" :result-key="users">
       <template #filters>
         <div class="users-toolbar">
           <MrrFilterBar class="users-filter-bar" embedded :focus-ring="false">
@@ -677,19 +677,17 @@ onMounted(loadData)
       <div v-else-if="error" class="users-state"><AppError :message="error" @retry="loadData" /></div>
       <div v-else-if="!users.length" class="users-state"><AppEmpty description="暂无符合条件的用户记录" /></div>
 
-      <el-table v-else :data="users" row-key="id">
+      <el-table v-else :data="users" row-key="id" stripe>
         <el-table-column type="index" label="序号" :width="userIndexWidth" :index="userRowIndex" align="center" class-name="user-index-column" />
-        <el-table-column prop="username" label="用户" width="240" show-overflow-tooltip>
+        <el-table-column prop="username" label="用户名" width="168" show-overflow-tooltip>
           <template #default="{ row }">
             <div class="user-identity">
               <span class="user-avatar" aria-hidden="true">{{ String(row.displayName || row.username || '?').slice(0, 1) }}</span>
-              <div class="user-identity__copy">
-                <strong>{{ row.username }}</strong>
-                <span v-if="row.displayName && row.displayName !== row.username" class="user-identity__name">{{ row.displayName }}</span>
-              </div>
+              <span class="user-identity__username">{{ row.username }}</span>
             </div>
           </template>
         </el-table-column>
+        <el-table-column prop="displayName" label="显示名称" width="132" show-overflow-tooltip />
         <el-table-column label="申请信息" min-width="240" class-name="user-application-column">
           <template #default="{ row }">
             <el-button
@@ -706,10 +704,10 @@ onMounted(loadData)
             <span v-else class="user-source">管理员创建</span>
           </template>
         </el-table-column>
-        <el-table-column label="角色" width="96" show-overflow-tooltip><template #default="{ row }"><span class="user-role">{{ row.roleName || row.roleCode }}</span></template></el-table-column>
+        <el-table-column label="角色" width="96" show-overflow-tooltip><template #default="{ row }">{{ row.roleName || row.roleCode }}</template></el-table-column>
         <el-table-column label="凭据状态" width="152" show-overflow-tooltip><template #default="{ row }"><MrrStatusTag :label="credentialStatus(row).label" :tone="credentialStatus(row).tone" /></template></el-table-column>
         <el-table-column label="账号状态" width="96" class-name="user-status-column"><template #default="{ row }"><MrrStatusTag :status="row.status" :label="statusDisplay(row.status).label" :tone="statusDisplay(row.status).tone" /></template></el-table-column>
-        <el-table-column prop="lastLoginAt" label="最后登录" width="176" show-overflow-tooltip><template #default="{ row }"><span class="user-last-login">{{ formatDateTime(row.lastLoginAt) }}</span></template></el-table-column>
+        <el-table-column prop="lastLoginAt" label="最后登录" width="176" show-overflow-tooltip><template #default="{ row }">{{ formatDateTime(row.lastLoginAt) }}</template></el-table-column>
         <el-table-column
           v-if="canManage"
           label="操作"
@@ -719,7 +717,6 @@ onMounted(loadData)
         >
           <template #default="{ row }">
             <MrrTableActions
-              appearance="quiet"
               :actions="userActions(row)"
               :max-inline="1"
               @select="handleUserAction($event, row)"
@@ -875,7 +872,7 @@ onMounted(loadData)
 .users-filter__field { display: grid; min-width: 0; }
 .users-filter-bar :deep(.mrr-filter-bar__fields > .users-filter__keyword) { width: 100%; max-width: none; min-width: 0; }
 .users-filter-bar :deep(.mrr-filter-bar__fields > .users-filter__select) { width: 100%; max-width: none; min-width: 0; }
-.users-toolbar { display: flex; flex-wrap: wrap; align-items: flex-start; gap: var(--mrr-space-3); padding-bottom: var(--mrr-space-3); }
+.users-toolbar { display: flex; flex-wrap: wrap; align-items: flex-start; gap: var(--mrr-space-3); }
 .users-toolbar > .users-filter-bar.mrr-filter-bar--embedded { flex: 1 1 640px; min-width: 0; padding-bottom: 0; justify-content: flex-start; }
 .users-toolbar__create { flex: none; margin-inline-start: auto; }
 .users-filter-bar :deep(.mrr-filter-bar__fields) { display: grid; flex: 0 1 784px; grid-template-columns: minmax(0, 1fr) 144px 144px; }
@@ -884,14 +881,10 @@ onMounted(loadData)
 .users-state { display: grid; min-height: 280px; padding: var(--mrr-space-5); place-items: center; }
 .users-table-panel :deep(.el-table tr > .user-index-column:first-child > .cell) { padding-inline: 8px; }
 .users-table-panel :deep(td.user-index-column) { font-variant-numeric: tabular-nums; color: var(--mrr-muted-foreground); }
-.user-identity { display: flex; gap: var(--mrr-space-3); align-items: center; min-width: 0; }
-.user-avatar { display: grid; flex: 0 0 32px; width: 32px; height: 32px; font-size: var(--mrr-font-size-xs); font-weight: 700; color: var(--mrr-muted-foreground); background: var(--mrr-muted); border: 1px solid transparent; border-radius: var(--mrr-radius-md); place-items: center; }
-.user-identity__copy { display: flex; flex-direction: column; min-width: 0; gap: 2px; line-height: 1.3; }
-.user-identity__copy strong { overflow: hidden; font-weight: 600; text-overflow: ellipsis; white-space: nowrap; }
-.user-identity__name { overflow: hidden; font-size: var(--mrr-font-size-xs); color: var(--mrr-muted-foreground); text-overflow: ellipsis; white-space: nowrap; }
-.user-source { font-size: var(--mrr-font-size-xs); color: var(--mrr-muted-foreground); }
-.user-role { font-size: var(--mrr-font-size-sm); color: var(--mrr-card-foreground); }
-.user-last-login { font-variant-numeric: tabular-nums; color: var(--mrr-muted-foreground); }
+.user-identity { display: flex; gap: var(--mrr-space-2); align-items: center; min-width: 0; }
+.user-avatar { display: grid; flex: 0 0 28px; width: 28px; height: 28px; font-size: var(--mrr-font-size-xs); font-weight: 600; color: var(--mrr-primary); background: var(--mrr-tone-primary-soft); border: 1px solid var(--mrr-border); border-radius: 50%; place-items: center; }
+.user-identity__username { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.user-source { color: var(--mrr-muted-foreground); }
 
 /* Quiet pagination: keep Element Plus navigation and replace only the size selector.
  * Smaller visual targets still have a 28px minimum pointer/keyboard footprint. */
@@ -927,9 +920,9 @@ onMounted(loadData)
 .users-table-panel :deep(.el-pagination__total) { margin-inline-end: auto; color: var(--mrr-muted-foreground); }
 
 /* One line for scanning; the read-only dialog preserves the original text. */
-.application-preview.el-button { justify-content: flex-start; width: 100%; max-width: 100%; min-width: 0; height: 32px; padding: 0; color: var(--mrr-muted-foreground); text-align: left; border: 0; box-shadow: none; }
+.application-preview.el-button { justify-content: flex-start; width: 100%; max-width: 100%; min-width: 0; height: var(--mrr-control-height); padding: 0; color: var(--mrr-muted-foreground); text-align: left; border: 0; box-shadow: none; }
 .application-preview.el-button :deep(> span) { display: flex; gap: var(--mrr-space-2); align-items: center; justify-content: flex-start; width: 100%; min-width: 0; }
-.application-preview__text { min-width: 0; overflow: hidden; font-size: var(--mrr-font-size-xs); text-align: left; text-overflow: ellipsis; white-space: nowrap; }
+.application-preview__text { min-width: 0; overflow: hidden; font-size: var(--mrr-font-size-sm); text-align: left; text-overflow: ellipsis; white-space: nowrap; }
 .application-preview__icon { flex: none; font-size: 14px; }
 .application-preview.el-button:not(.is-disabled):hover { color: var(--mrr-primary); background: transparent; }
 .application-preview.el-button:focus-visible { outline: 2px solid var(--mrr-primary); outline-offset: -2px; }

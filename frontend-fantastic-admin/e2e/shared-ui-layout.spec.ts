@@ -79,8 +79,7 @@ for (const theme of ['light', 'dark'] as const) {
       await expectContained(page, '.mrr-page-header, .mrr-filter-bar, .mrr-data-table-panel__pagination')
       await expect.poll(() => page.locator('.users-table-panel').evaluate((panel) => {
         const filters = panel.querySelector('.users-filter-bar')!.getBoundingClientRect()
-        const cell = panel.querySelector('.el-table__header th:first-child .cell')!
-        const cellLeft = cell.getBoundingClientRect().left + Number.parseFloat(getComputedStyle(cell).paddingLeft)
+        const cellLeft = panel.querySelector('.el-table')!.getBoundingClientRect().left
         const footer = panel.querySelector('.el-pagination__total')!.getBoundingClientRect()
         return { left: Math.round(cellLeft - filters.left), footer: Math.round(footer.left - filters.left) }
       })).toEqual({ left: 0, footer: 0 })

@@ -2,7 +2,7 @@ import { expect, test } from '@playwright/test'
 import { isolateLocalVisualSettings } from './helpers/local-visual-settings'
 
 const cases = [
-  { route: 'users', key: '申请信息', fixed: { 序号: 64, 用户: 240, 角色: 96, 凭据状态: 152, 账号状态: 96, 最后登录: 176, 操作: 96 }, elastic: { 申请信息: 240 } },
+  { route: 'users', key: '申请信息', fixed: { 序号: 64, 用户名: 168, 显示名称: 132, 角色: 96, 凭据状态: 152, 账号状态: 96, 最后登录: 176, 操作: 96 }, elastic: { 申请信息: 240 } },
   { route: 'records', key: '文件名', fixed: { 病案号: 128, 病人序号: 112, 上架号: 120, 页数: 80, 迁移状态: 112 }, elastic: { 文件名: 240, 目录: 140 } },
   { route: 'patients', key: '身份证号', fixed: { 病案号: 132, 姓名: 112, 身份证号: 220, 床位: 90, 入院日期: 120, 入院时间: 176, ID: 108 }, elastic: { 科室: 140, 病区: 130 } },
   { route: 'logs', key: '真实请求 URI', fixed: { '访问时间': 176, 'Request ID': 200, '用户': 132, '客户端 IP': 148, '方法': 92, '状态码': 92 }, elastic: { '真实请求 URI': 280 } },

@@ -288,24 +288,24 @@ watch(() => props.resultKey, (next, previous) => {
  * Plus otherwise paints ordinary cells from transparent and fixed cells from
  * an inherited opaque background, with independent 250ms transitions.
  * Keep the sticky mask opaque and switch the row surface in the same frame. */
-.mrr-data-table-panel--quiet .mrr-data-table-panel__content :deep(.el-table__body tr) {
+.mrr-data-table-panel__content :deep(.el-table__body tr) {
   --mrr-table-row-surface: var(--el-table-tr-bg-color);
 }
 
-.mrr-data-table-panel--quiet .mrr-data-table-panel__content :deep(.el-table--striped .el-table__body tr.el-table__row--striped) {
+.mrr-data-table-panel__content :deep(.el-table--striped .el-table__body tr.el-table__row--striped) {
   --mrr-table-row-surface: var(--el-fill-color-lighter);
 }
 
-.mrr-data-table-panel--quiet .mrr-data-table-panel__content :deep(.el-table--enable-row-hover .el-table__body tr:hover),
-.mrr-data-table-panel--quiet .mrr-data-table-panel__content :deep(.el-table .el-table__body tr.hover-row) {
+.mrr-data-table-panel__content :deep(.el-table--enable-row-hover .el-table__body tr:hover),
+.mrr-data-table-panel__content :deep(.el-table .el-table__body tr.hover-row) {
   --mrr-table-row-surface: var(--el-table-row-hover-bg-color);
 }
 
-.mrr-data-table-panel--quiet .mrr-data-table-panel__content :deep(.el-table .el-table__body tr.current-row) {
+.mrr-data-table-panel__content :deep(.el-table .el-table__body tr.current-row) {
   --mrr-table-row-surface: var(--el-table-current-row-bg-color);
 }
 
-.mrr-data-table-panel--quiet .mrr-data-table-panel__content :deep(.el-table .el-table__body tr > td.el-table__cell) {
+.mrr-data-table-panel__content :deep(.el-table .el-table__body tr > td.el-table__cell) {
   background-color: var(--mrr-table-row-surface);
   transition: none;
 }

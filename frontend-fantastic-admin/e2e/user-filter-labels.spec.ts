@@ -79,22 +79,24 @@ test('字段选值后名称不变，Enter查询与重置保留原参数', async 
   await expect(keyword).toHaveValue('')
 })
 
-test('用户列表单一计数、身份信息合并及筛选层级保持一致', async ({ page }) => {
+test('用户列表采用公共默认表格、独立身份字段及单一计数', async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 900 })
   await openUsers(page)
   const panel = page.locator('.users-table-panel')
-  await expect(panel).toHaveClass(/mrr-data-table-panel--quiet/)
+  await expect(panel).not.toHaveClass(/mrr-data-table-panel--quiet/)
+  await expect(panel.locator('.el-table')).toHaveClass(/el-table--striped/)
   await expect(panel.locator('.mrr-data-table-panel__count')).toHaveCount(0)
-  await expect(panel.locator('.user-role')).toHaveCount(3)
   await expect(panel.locator('.el-table .el-tag')).toHaveCount(0)
-  await expect(panel.locator('.mrr-table-actions--quiet')).toHaveCount(3)
+  await expect(panel.locator('.mrr-table-actions--quiet')).toHaveCount(0)
+  await expect(panel.locator('.mrr-table-actions')).toHaveCount(3)
   await expect(panel.locator('.el-pagination__total')).toHaveCount(1)
   await expect(panel.locator('.el-pagination__total')).toHaveText('共 3 条')
   await expect(panel.locator('.el-pagination__jump')).toHaveCount(0)
   const identity = panel.locator('.user-identity').filter({ hasText: 'admin' })
   await expect(identity.getByText('admin', { exact: true })).toBeVisible()
-  await expect(identity.getByText('系统管理员', { exact: true })).toBeVisible()
-  await expect(panel.getByRole('columnheader', { name: '用户', exact: true })).toBeVisible()
+  await expect(panel.getByRole('row').filter({ hasText: 'admin' }).getByText('系统管理员', { exact: true })).toBeVisible()
+  await expect(panel.getByRole('columnheader', { name: '用户名', exact: true })).toBeVisible()
+  await expect(panel.getByRole('columnheader', { name: '显示名称', exact: true })).toBeVisible()
   await expect.poll(() => panel.locator('.users-filter__field').evaluateAll((els) => {
     const widths = els.map(el => el.getBoundingClientRect().width)
     const tops = els.map(el => el.getBoundingClientRect().top)
@@ -155,33 +157,19 @@ test('每页条数以文本轮换，回到第一页且只发一次查询', async
   await expect.poll(() => footer.locator('.el-pager .is-active').evaluate(el => el.getBoundingClientRect().height)).toBe(32)
 })
 
-test('克制型用户操作菜单统一尺寸与危险语义，自身账号操作仍禁用', async ({ page }) => {
+test('公共用户操作菜单保留危险语义，自身账号操作仍禁用', async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 900 })
   await openUsers(page)
   const row = page.getByRole('row').filter({ hasText: '扫描操作员' })
   await row.getByRole('button', { name: '更多操作' }).click()
-  const menu = page.locator('.mrr-table-action-menu--quiet:visible')
+  const menu = page.locator('.mrr-table-actions__menu:visible')
   await expect(menu).toBeVisible()
   const reset = menu.getByRole('menuitem', { name: '重置密码' })
   const disable = menu.getByRole('menuitem', { name: '禁用用户' })
   await expect(reset).toBeVisible()
   await expect(disable).toBeVisible()
-  await expect.poll(() => menu.locator('.el-dropdown-menu__item').evaluateAll(els => els.map(el => el.getBoundingClientRect().height))).toEqual([32, 32])
-  await expect.poll(() => menu.locator('.mrr-table-actions__menu-icon').evaluateAll(els => els.map(el => getComputedStyle(el).fontSize))).toEqual(['16px', '16px'])
-  // Content-sized menu: measure actual glyph bounds, not the allocated flex box.
-  await expect.poll(() => menu.evaluate((el) => {
-    const boundary = el.getBoundingClientRect()
-    return [...el.querySelectorAll('.el-dropdown-menu__item')].every((item) => {
-      const icon = item.querySelector('.mrr-table-actions__menu-icon')!
-      const label = item.querySelector('span:not(.mrr-table-actions__menu-icon)')!
-      const range = document.createRange()
-      range.selectNodeContents(label)
-      const left = icon.getBoundingClientRect().left - boundary.left
-      const right = boundary.right - range.getBoundingClientRect().right
-      return left >= 10 && left <= 16 && Math.abs(left - right) <= 2
-    })
-  })).toBe(true)
-  await expect(menu.locator('.el-popper__arrow')).toHaveCount(0)
+  await expect(menu.locator('.el-dropdown-menu__item')).toHaveCount(2)
+  await expect(page.locator('.mrr-table-action-menu--quiet:visible')).toHaveCount(0)
   await expect(reset).not.toHaveClass(/menu-item--warning/)
   await expect(disable).toHaveClass(/menu-item--danger/)
   await disable.click()

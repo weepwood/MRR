@@ -65,6 +65,14 @@ FaIcon、FaKbd、FaPinInput、FaScrollArea、FaSmartFixedBlock、FaPasswordStren
 
 22处外观设置和5处展厅 FaSwitch 均迁移 ElSwitch，删除三份旧组件文件、自动类型及旧G2选择器；22个设置开关与原标签对应的可访问名称完整，保留原 v-model/disabled 与设置持久化、权限合同。全量源码无旧开关组件/样式引用，新增 component-ownership.test.ts 防止回流。原页面其他控件不在此次迁移范围。合成数据 E2E 验证键盘、禁用、点击、保存/重新加载。样式测试69/69；首轮联合32/33，旧展厅通过 getByLabel 点击新控件视觉隐藏的原生 input 超时，改为键盘切换并确认 aria-checked 后保留原折行断言。不延长时限或跳过测试。最终定向展厅/圆角/开关15/15含预热（43.7秒）；真实业务布局18项亦通过。日志 /tmp/mrr-v12-switch-{red,green,unit,final,tsc}.log。
 
+## 迁移必须保持页面视觉（用户追加约束）
+
+替换基础控件时优先保留当前页面布局与外观，不将设计改版混入归一 PR。针对实际调用方在同一浏览器、视口、主题、数据和状态下采集旧版本与新版本截图及计算样式；控制位置与几何偏差不超过1 CSS px，字号/字重/圆角/底色/字色保持一致，差异先定位原因。像素级差异须记录，不能将跨平台字体渲染或不同描边机制误称为完全一致；不以隐藏溢出、硬编码全局尺寸或放宽断言掩盖变化。组件替换后的行为、权限、焦点及持久化单独验收。
+
+本次基线 `52557ea5` 与已合并 `3014094e` Git tree 完全一致。AppConfigPanel 五处 FaInput、两组三按钮 FaButton 迁为原生 Element Plus；保留既有200px字段列、flex gap、原尺寸/主题与选中状态，附加可访问名称。Element Plus 自动给双汉字插入间隔，首次对照发现单按钮宽3.609375px、整组位移7.21875px；仅在迁移的两组关闭 auto-insert-space，未修改其他页面。消除原生相邻按钮额外 margin，保留页面 gap。实际四套经典/暖色×明暗、1440/760px、每种七行共56组前后截图与计算样式；第二轮5/5含预热，所测几何最大差0px、所测视觉属性无差异；56对截图同尺寸，RGB任一通道差>8的像素比例中位0.004888%、最大0.117832%，并检查最大差异截图（主页名称）。默认状态下主页字段可编辑、版权四字段禁用。截图不是全页面/全状态像素相等证明。最终设置视觉/操作/搜索及业务控件布局联合 Chromium 28/28（含预热，46.5秒），vue-tsc、ESLint、Stylelint、文档与冻结基线通过。迁移前后证据目录 /tmp/mrr-v12-control-visual-52557，日志 /tmp/mrr-v12-control-visual-{before,after,after2,final,tsc}.log。
+
+复现：同一环境分别在旧、新工作区运行 e2e/settings-control-visual.spec.ts（旧工作区复制该测试，勿改生产源码）；旧版使用 MRR_CONTROL_VISUAL_CAPTURE=true 和 MRR_CONTROL_VISUAL_EVIDENCE=/tmp/独立证据目录，指定 -g '外观设置控件迁移视觉契约'；新版仅提供同一 EVIDENCE 路径。无环境变量时 CI 验证唯一实现、宽度、间距、状态及业务交互；不以 Mac 的像素截图作为 Linux 固定快照。截图只含合成数据。下一批登录/注册须覆盖真实表单验证、密码切换和提交/错误/加载等行为，不能机械替换。
+
 ## 逐文件原始引用清单
 
 | 源文件（相对 src/） | Fa 标签 | Element Plus 标签 |

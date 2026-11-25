@@ -342,6 +342,8 @@ Element Plus `el-button` 与 reka-ui `FaButton`（`.fa-button-control`）**尺�
 
 Element Plus 是同类基础业务控件的唯一目标，禁止新增重复 Fa 实现或调用；历史 Fa 按组件族迁移，保留有独特职责的 FaIcon、FaKbd 等及 MRR 组合组件。源码清单、迁移与验收见[控件唯一实现与源码使用清单](../docs/design/component-ownership.md)。双族字段令牌仅为迁移期桥接，最终删除不再使用的样式和组件。开关已实施全量统一，待远端门禁；其余不宣称完成。
 
+迁移与视觉重设计分离：默认保留现有页面几何、主题色、字号、字重、布局与交互状态。同环境基线截图/计算样式对照，几何偏差≤1 CSS px；对实际不一致先定位组件默认行为并在恰当归属处修复。测试与记录见归属清单，不宣称跨平台像素完全一致。
+
 ### 4.2.1 字段控件的统一视觉契约
 
 - `--mrr-field-font-size`、`--mrr-field-padding-x(-sm/-lg)`、`--mrr-textarea-padding-y`、`--mrr-textarea-line-height`、`--mrr-textarea-min-height`、`--mrr-field-focus-bg`、`--mrr-field-shadow` 与既有输入高度/圆角/颜色令牌同源。Element Plus 在 element-plus-overrides.css、Fa 在 form-controls.css 引用；主题仅改令牌，不重写同一字段选择器。默认文本域最小高度为未明确行数时的基准，显式 rows 尊重组件自身测量。

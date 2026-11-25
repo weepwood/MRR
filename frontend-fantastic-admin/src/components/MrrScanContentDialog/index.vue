@@ -11,6 +11,7 @@ const source = ref('')
 const loading = ref(false)
 const failed = ref(false)
 const zoom = ref(100)
+const viewMode = ref<'window' | 'width' | 'actual'>('window')
 const rotation = ref(0)
 const viewport = ref<HTMLElement>()
 const imageBox = ref<HTMLElement>()
@@ -27,7 +28,9 @@ const geometry = computed(() => {
   const { width: availableWidth, height: availableHeight } = viewportSize.value
   if (!width || !height || availableWidth <= 0 || availableHeight <= 0) { return null }
   const sideways = rotation.value % 180 !== 0
-  const fit = Math.min((availableWidth - 24) / (sideways ? height : width), (availableHeight - 24) / (sideways ? width : height), 1)
+  const widthFit = Math.min((availableWidth - 24) / (sideways ? height : width), 1)
+  const heightFit = (availableHeight - 24) / (sideways ? width : height)
+  const fit = viewMode.value === 'actual' ? 1 : viewMode.value === 'width' ? widthFit : Math.min(widthFit, heightFit)
   const factor = Math.max(0.001, fit) * zoom.value / 100
   const w = width * factor
   const h = height * factor
@@ -105,6 +108,14 @@ function keyboardView(event: KeyboardEvent) {
     event.preventDefault()
     void changeZoom(-25)
   }
+  else if (event.key.toLowerCase() === 'w' || event.key === '1') {
+    event.preventDefault()
+    setViewMode(event.key === '1' ? 'actual' : 'width')
+  }
+  else if (event.key.toLowerCase() === 'r') {
+    event.preventDefault()
+    rotate(event.shiftKey ? -90 : 90)
+  }
   else if (event.key === '0') {
     event.preventDefault()
     resetView()
@@ -142,14 +153,21 @@ function decodeFailed(event: Event) {
   clear()
   failed.value = true
 }
-function rotate() {
+function setViewMode(mode: typeof viewMode.value) {
   stopPan()
-  rotation.value = (rotation.value + 90) % 360
+  viewMode.value = mode
+  zoom.value = 100
+  void centerImage()
+}
+function rotate(delta = 90) {
+  stopPan()
+  rotation.value = (rotation.value + delta + 360) % 360
   void centerImage()
 }
 function resetView() {
   stopPan()
   zoom.value = 100
+  viewMode.value = 'window'
   rotation.value = 0
   void centerImage()
 }
@@ -165,6 +183,7 @@ function clear() {
   source.value = ''
   natural.value = { width: 0, height: 0 }
   zoom.value = 100
+  viewMode.value = 'window'
   rotation.value = 0
   loading.value = false
   failed.value = false
@@ -229,15 +248,24 @@ onBeforeUnmount(() => { observer?.disconnect(); clear() })
         <el-button size="small" :disabled="!geometry || zoom >= 300" @click="changeZoom(25)">
           放大
         </el-button>
-        <el-button size="small" :disabled="!geometry" @click="rotate">
+        <el-button size="small" :disabled="!geometry" @click="rotate()">
           旋转 90°
         </el-button>
-        <el-button size="small" :disabled="!geometry" @click="resetView">
+        <el-button size="small" :disabled="!geometry" @click="rotate(-90)">
+          逆时针旋转
+        </el-button>
+        <el-button size="small" :disabled="!geometry" :aria-pressed="viewMode === 'window'" @click="resetView">
           适应窗口
+        </el-button>
+        <el-button size="small" :disabled="!geometry" :aria-pressed="viewMode === 'width'" @click="setViewMode('width')">
+          适应宽度
+        </el-button>
+        <el-button size="small" :disabled="!geometry" :aria-pressed="viewMode === 'actual'" @click="setViewMode('actual')">
+          实际大小
         </el-button>
         <span class="scan-viewer-angle">{{ rotation }}°</span>
       </div>
-      <div ref="viewport" class="scan-viewport" :class="{ 'is-pannable': zoom > 100, 'is-dragging': dragging }" tabindex="0" role="region" aria-label="原图滚动查看区" @wheel="wheelZoom" @keydown="keyboardView" @pointerdown="beginPan" @pointermove="movePan" @pointerup="stopPan" @pointercancel="stopPan" @lostpointercapture="stopPan">
+      <div ref="viewport" class="scan-viewport" :class="{ 'is-pannable': viewMode !== 'window' || zoom > 100, 'is-dragging': dragging }" tabindex="0" role="region" aria-label="原图滚动查看区" @wheel="wheelZoom" @keydown="keyboardView" @pointerdown="beginPan" @pointermove="movePan" @pointerup="stopPan" @pointercancel="stopPan" @lostpointercapture="stopPan">
         <div class="scan-canvas" :style="geometry ? { minWidth: `${geometry.boxWidth + 24}px`, minHeight: `${geometry.boxHeight + 24}px` } : undefined">
           <div ref="imageBox" class="scan-image-box" :style="geometry ? { width: `${geometry.boxWidth}px`, height: `${geometry.boxHeight}px` } : undefined">
             <img :key="source" :src="source" alt="待核对影像" class="scan-content" :class="{ 'scan-content--positioned': geometry }" :style="geometry ? { width: `${geometry.width}px`, height: `${geometry.height}px`, transform: `translate(-50%, -50%) rotate(${rotation}deg)` } : undefined" draggable="false" @load="decoded" @error="decodeFailed">
@@ -245,7 +273,7 @@ onBeforeUnmount(() => { observer?.disconnect(); clear() })
         </div>
       </div>
       <p class="scan-viewer-hint">
-        100% 为适应窗口。放大后可拖动或滚动；Ctrl / ⌘ + 滚轮按指针缩放，聚焦查看区后 + / − / 0 缩放或复位。旋转仅改变显示，不修改原文件。
+        100% 相对于当前显示模式；实际大小为原图像素与 CSS 像素 1:1。可拖动或滚动；Ctrl / ⌘ + 滚轮缩放，聚焦查看区后 + / − 缩放，W 适宽、1 实际大小、R / Shift+R 旋转、0 复位。仅改变显示，不修改原文件。
       </p>
     </div>
   </component>
@@ -278,6 +306,12 @@ onBeforeUnmount(() => { observer?.disconnect(); clear() })
 
 .scan-viewer-toolbar :deep(.el-button + .el-button) {
   margin-left: 0;
+}
+
+.scan-viewer-toolbar :deep(.el-button[aria-pressed="true"]) {
+  color: var(--mrr-primary);
+  background: var(--mrr-tone-primary-soft);
+  border-color: var(--mrr-tone-primary-border);
 }
 
 .scan-viewer-percent,

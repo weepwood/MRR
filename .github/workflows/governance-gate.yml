@@ -5,6 +5,7 @@ on:
     branches:
       - main
       - integration/v1.1
+      - integration/v1.2
     types:
       - opened
       - synchronize

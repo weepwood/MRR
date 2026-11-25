@@ -141,7 +141,11 @@ test('页头尺寸示例：紧凑页头更矮，长说明折行后仍完整显�
     const [standard, compact] = await heights()
     return compact < standard
   }).toBe(true)
-  await page.getByLabel('使用长说明（检查折行）', { exact: true }).click()
+  const longDescription = page.getByRole('switch', { name: '使用长说明（检查折行）', exact: true })
+  await expect(longDescription).toHaveAttribute('aria-checked', 'false')
+  await longDescription.focus()
+  await longDescription.press('Space')
+  await expect(longDescription).toHaveAttribute('aria-checked', 'true')
   await expect.poll(() => page.locator('.pattern-sample .mrr-page-header__description').evaluateAll(nodes => nodes.every(node => node.scrollWidth <= node.clientWidth + 1))).toBe(true)
 })
 

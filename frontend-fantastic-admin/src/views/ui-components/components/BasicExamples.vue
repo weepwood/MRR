@@ -218,9 +218,9 @@ const options = [{ label: '本地示例', value: 'local' }, { label: '归档示�
       </FaCheckbox>
     </div>
     <div class="example-row">
-      <FaSwitch :id="`${id}-switch`" v-model="enabled" />
+      <el-switch :id="`${id}-switch`" v-model="enabled" />
       <label :for="`${id}-switch`">启用示例</label>
-      <FaSwitch :model-value="false" disabled aria-label="禁用开关" />
+      <el-switch :model-value="false" disabled aria-label="禁用开关" />
     </div>
     <div class="example-field">
       <span :id="`${id}-slider-label`">示例进度 {{ slider[0] }}%</span>

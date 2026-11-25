@@ -158,7 +158,7 @@ tokens.css（语义令牌，唯一数值源）
 
 实际公式与上下限见 tokens.css，不复制成新常量。
 
-**G2 连续圆角**（`app.radiusShape = squircle`，`corner-shape: squircle`）只改圆角内侧曲率，不改大小，Chrome/Edge 139+ 之外自动降级为圆弧。它只适用于圆角矩形。开关、滑块、正圆、胶囊，以及由正圆零件组成的复合控件，通过 `--mrr-corner: round` 连同子树退出。新增同类元素沿用 `*-dot` / `*avatar*` / `*swatch` / `*spinner` / `*-marker` 命名，或加 `data-corner="round"`。两套控件（`.el-switch/.el-slider` 与 `.fa-switch/.fa-slider`）都需登记。详见 [corner-shape.css](src/assets/styles/components/corner-shape.css)。
+**G2 连续圆角**（`app.radiusShape = squircle`，`corner-shape: squircle`）只改圆角内侧曲率，不改大小，Chrome/Edge 139+ 之外自动降级为圆弧。它只适用于圆角矩形。开关、滑块、正圆、胶囊，以及由正圆零件组成的复合控件，通过 `--mrr-corner: round` 连同子树退出。新增同类元素沿用 `*-dot` / `*avatar*` / `*swatch` / `*spinner` / `*-marker` 命名，或加 `data-corner="round"`。开关使用唯一 `.el-switch`，迁移期间滑块 `.el-slider/.fa-slider` 均需登记。详见 [corner-shape.css](src/assets/styles/components/corner-shape.css)。
 
 <a id="elevation--depth"></a>
 
@@ -337,6 +337,10 @@ Element Plus `el-button` 与 reka-ui `FaButton`（`.fa-button-control`）**尺�
 | 图标 | `size="icon"`（方形，工具按钮） | `circle`（正圆，图标入口） |
 
 同一组控件里不混用方、圆两种图标按钮。加载态保留变体配色并阻止点击、设置 `aria-busy`；禁用态不只降低透明度，需可读出原因。守护测试：[button-consistency.test.ts](src/assets/styles/button-consistency.test.ts)、[button-parity.spec.ts](e2e/button-parity.spec.ts)。
+
+### 4.2.0 控件唯一实现（V1.2）
+
+Element Plus 是同类基础业务控件的唯一目标，禁止新增重复 Fa 实现或调用；历史 Fa 按组件族迁移，保留有独特职责的 FaIcon、FaKbd 等及 MRR 组合组件。源码清单、迁移与验收见[控件唯一实现与源码使用清单](../docs/design/component-ownership.md)。双族字段令牌仅为迁移期桥接，最终删除不再使用的样式和组件。开关已实施全量统一，待远端门禁；其余不宣称完成。
 
 ### 4.2.1 字段控件的统一视觉契约
 

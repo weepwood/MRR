@@ -102,7 +102,7 @@ onBeforeUnmount(() => {
 <template>
   <div v-if="example === 'page-header'" class="example-stack">
     <div class="example-row">
-      <FaSwitch :id="`${id}-long-description`" v-model="longDescription" />
+      <el-switch :id="`${id}-long-description`" v-model="longDescription" />
       <label :for="`${id}-long-description`">使用长说明（检查折行）</label>
     </div>
     <!--
@@ -145,7 +145,7 @@ onBeforeUnmount(() => {
         <MrrStatusTag status="failed" label="失败" />
       </div>
       <div class="example-row">
-        <FaSwitch :id="`${id}-live-switch`" v-model="liveOverride" />
+        <el-switch :id="`${id}-live-switch`" v-model="liveOverride" />
         <label :for="`${id}-live-switch`">「同步中」显式开启光圈（传 tone 时默认关闭）</label>
       </div>
       <p class="example-note">

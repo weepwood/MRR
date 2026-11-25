@@ -74,9 +74,9 @@ watch(() => menuStore.actived, (val, oldVal) => {
         </TransitionGroup>
       </FaScrollArea>
       <div v-if="settingsStore.mode === 'pc' && settingsStore.settings.menu.enableSubMenuCollapseButton" class="collapse-area relative flex items-center px-3 py-3" :class="[settingsStore.settings.menu.subMenuCollapse ? 'justify-center' : 'justify-end']">
-        <FaButton variant="ghost" size="icon" aria-controls="mrr-sub-navigation" :aria-label="settingsStore.settings.menu.subMenuCollapse ? '展开次导航' : '收起次导航'" class="transition" :class="{ '-rotate-z-180': settingsStore.settings.menu.subMenuCollapse }" @click="settingsStore.toggleSidebarCollapse()">
+        <el-button text aria-controls="mrr-sub-navigation" :aria-label="settingsStore.settings.menu.subMenuCollapse ? '展开次导航' : '收起次导航'" class="mrr-migrated-toolbar mrr-toolbar-icon transition" :class="{ '-rotate-z-180': settingsStore.settings.menu.subMenuCollapse }" @click="settingsStore.toggleSidebarCollapse()">
           <FaIcon name="toolbar-collapse" class="size-4" />
-        </FaButton>
+        </el-button>
       </div>
       <component :is="useSlots('sub-sidebar-after-menu')" />
       <div v-if="settingsStore.settings.menu.mode === 'single'" class="account-area flex-center px-3 pb-3">
@@ -108,7 +108,7 @@ watch(() => menuStore.actived, (val, oldVal) => {
         display: none;
       }
 
-      :deep(span) {
+      :deep(.logo-title) {
         display: none;
       }
     }

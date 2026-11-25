@@ -108,6 +108,13 @@ FaIcon、FaKbd、FaPinInput、FaScrollArea、FaSmartFixedBlock、FaPasswordStren
 - 新增仅处理Home/End的辅助键盘函数，方向键仍由Element Plus拥有；实际设置搜索、目标焦点、主题空字符串跟随系统、标题设置、抽屉独立ID、保存与离开确认通过。联合40/40（1.0m，阴影修正前），最终阴影修正后定向6/6（29.8秒，含预热），样式72/72、vue-tsc、lint通过。日志 /tmp/mrr-v12-tabs-{after5,closure,closure-tsc,final-unit,shadow-final}.log。
 - #841已合并2e9db6ef，head40786f77与合并tree一致，远端159文件1066/1066、Pages18/18、230/230路由。标签分支重放至2e9db6ef成功，保留G2修复；最终联合标签/G2 9/9（32.7秒）。未执行Chrome86现场与完整跨浏览器。
 
+## 全局工具栏与导航按钮迁移（2026-11-25）
+
+- #842 已合并 bec3cd9a，head3e02d580，159文件1067/1067、Pages6/6、tree一致；本批基线bec3cd9a。账户菜单触发器、应用外观、标志折叠、次导航折叠、移动导航、全屏、刷新、主题切换及全局搜索共9处调用迁至 ElButton；保留菜单、提示、弹窗现有实现和事件合同。共享导航按钮样式仅用于迁移实例，保留方形图标、搜索留白、账户中性底与状态；消除原生按钮相邻margin和slot容器引入的布局差异。9处防回退源码守护。
+- 实际4主题×1440/720共8对顶栏截图、52个可见按钮实例的几何/字号/字重/圆角/颜色/边框，首轮5/5，8对任一RGB通道差>8像素比例0%。增加侧栏头像和标志四主题×展开/收起×两控件16对基线；发现账户内层24px图标被EP通用16px规则缩小，恢复原图标继承尺寸；联合30/34，四失败均由收起侧栏原宽泛span隐藏规则使新EP内容span消失，收窄至.logo-title。没有放宽1px几何门禁。最终工具栏与导航联合15/15含预热（31.7秒），24对同尺寸截图所测几何最大0px、属性一致，任一RGB通道差>8的像素比例全0%；非完全像素相等。主题、全屏、刷新、搜索、账户菜单键盘/焦点及折叠状态通过；未重跑此前34项联合全套。旧对比度测试从旧工具类改为共享搜索锚点及12px padding/8px margin检查，保留 muted 对比度断言；73/73样式测试、vue-tsc通过。日志 /tmp/mrr-v12-toolbar-{before-all,after,sidebar-before,sidebar-after,final,closure,unit-final,tsc}.log；证据目录 /tmp/mrr-v12-toolbar-visual-bec-all（含补采侧栏）及 /tmp/mrr-v12-toolbar-sidebar-bec。
+- 预览仓库0831685增加当前运行及尝试精确制品元数据可见性门禁（发布job actions:read），实际45646958524成功，独立no-cache根及V1.2身份bec3cd9a、V1.1保持92896f7c；未证明未来所有调度正常。
+- 尚存29处FaButton调用（展厅、链接/404及无入口找回密码），FaInput/FaTextarea等另批；不将专用菜单或业务组件机械改写。移动搜索原图标按钮无显式可访问名称的历史问题另行修复；未执行医院现场/完整跨浏览器。
+
 ## 逐文件原始引用清单
 
 | 源文件（相对 src/） | Fa 标签 | Element Plus 标签 |

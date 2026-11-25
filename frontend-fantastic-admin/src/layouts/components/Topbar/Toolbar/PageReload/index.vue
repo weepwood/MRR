@@ -58,12 +58,12 @@ function handleCtrlClick() {
         <p>可切换为浏览器原生刷新</p>
       </div>
     </template>
-    <FaButton variant="ghost" size="icon" aria-label="刷新页面" title="刷新页面" @click.exact="handleClick" @click.ctrl.exact="handleCtrlClick">
+    <el-button class="mrr-migrated-toolbar mrr-toolbar-icon" text aria-label="刷新页面" title="刷新页面" @click.exact="handleClick" @click.ctrl.exact="handleCtrlClick">
       <FaIcon
         name="i-lucide:refresh-cw"
         class="mrr-icon-interactive size-4"
         :class="{ 'mrr-icon-spin-once': isAnimating }"
       />
-    </FaButton>
+    </el-button>
   </FaTooltip>
 </template>

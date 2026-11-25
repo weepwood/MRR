@@ -88,15 +88,15 @@ onBeforeUnmount(() => {
       'cursor-default': !canToggleSidebar && !settingsStore.settings.home.enable,
     }"
   >
-    <FaButton
-      v-if="canToggleSidebar" type="button" variant="ghost" size="icon"
-      class="logo-toggle relative" :class="{ 'is-collapsed': sidebarCollapsed }"
+    <el-button
+      v-if="canToggleSidebar" native-type="button" text
+      class="mrr-migrated-toolbar mrr-toolbar-icon logo-toggle relative" :class="{ 'is-collapsed': sidebarCollapsed }"
       :aria-label="toggleLabel" :aria-expanded="!sidebarCollapsed" :title="toggleLabel"
       @click="settingsStore.toggleSidebarCollapse()"
     >
       <img :src="logo" alt="" class="logo logo-mark size-[17px] shrink-0 object-contain">
       <FaIcon :name="sidebarCollapsed ? 'i-lucide:panel-left-open' : 'i-lucide:panel-left-close'" class="logo-toggle-icon absolute size-[17px]" />
-    </FaButton>
+    </el-button>
     <component
       :is="canToggleSidebar ? RouterLink : 'span'" v-if="!sidebarCollapsed" :to="canToggleSidebar ? to : undefined"
       class="min-h-[var(--mrr-control-height)] min-w-0 flex-center gap-2 text-inherit no-underline"

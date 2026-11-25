@@ -35,8 +35,8 @@ const isProfileShow = ref(false)
 <template>
   <DropdownMenu :modal="false">
     <DropdownMenuTrigger as-child>
-      <FaButton
-        :variant="buttonVariant" :aria-label="`账号菜单：${userStore.account}`" :title="userStore.account" :class="cn('account-trigger min-w-0 flex-center gap-2 px-2 py-0 text-[13px]', {
+      <el-button
+        text :auto-insert-space="false" :data-variant="buttonVariant" :data-avatar-only="onlyAvatar" :aria-label="`账号菜单：${userStore.account}`" :title="userStore.account" :class="cn('mrr-migrated-toolbar account-trigger min-w-0 flex-center gap-2 px-2 py-0 text-[13px]', {
           'size-[var(--mrr-control-height)] shrink-0 p-1': onlyAvatar,
         }, props.class)"
       >
@@ -49,7 +49,7 @@ const isProfileShow = ref(false)
           </div>
           <FaIcon name="i-lucide:chevrons-up-down" class="size-4 shrink-0 text-[var(--text-secondary)]" />
         </div>
-      </FaButton>
+      </el-button>
     </DropdownMenuTrigger>
     <DropdownMenuContent
       :align="dropdownAlign" :side="dropdownSide" :side-offset="8" :collision-padding="12"

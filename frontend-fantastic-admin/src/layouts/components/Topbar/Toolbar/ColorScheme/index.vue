@@ -49,9 +49,10 @@ function toggleColorScheme(event: MouseEvent) {
 </script>
 
 <template>
-  <FaButton
-    variant="ghost"
-    size="icon"
+  <el-button
+    class="mrr-migrated-toolbar mrr-toolbar-icon"
+    text
+
     :aria-label="settingsStore.currentColorScheme === 'dark' ? '切换为亮色主题' : '切换为暗色主题'"
     :title="settingsStore.currentColorScheme === 'dark' ? '切换为亮色主题' : '切换为暗色主题'"
     @click="toggleColorScheme"
@@ -62,5 +63,5 @@ function toggleColorScheme(event: MouseEvent) {
         dark: 'i-lucide:moon',
       }[settingsStore.currentColorScheme!]" class="size-4"
     />
-  </FaButton>
+  </el-button>
 </template>

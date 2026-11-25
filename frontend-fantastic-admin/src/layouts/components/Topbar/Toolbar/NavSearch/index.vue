@@ -33,7 +33,7 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <FaButton :variant="settingsStore.mode === 'pc' ? 'outline' : 'ghost'" :size="settingsStore.mode === 'pc' ? undefined : 'icon'" :class="{ 'mx-2 px-3 group': settingsStore.mode === 'pc' }" @click="openSearch">
+  <el-button :text="settingsStore.mode !== 'pc'" :auto-insert-space="false" class="mrr-migrated-toolbar" :class="settingsStore.mode === 'pc' ? 'mrr-toolbar-search group' : 'mrr-toolbar-icon'" @click="openSearch">
     <FaIcon name="i-lucide:search" class="size-4" />
     <template v-if="settingsStore.mode === 'pc'">
       <span class="text-sm text-muted-foreground transition group-hover-text-foreground">搜索</span>
@@ -41,6 +41,6 @@ onUnmounted(() => {
         {{ settingsStore.os === 'mac' ? '⌘' : 'Ctrl' }} K
       </FaKbd>
     </template>
-  </FaButton>
+  </el-button>
   <Search v-if="hasOpened" v-model="isShow" />
 </template>

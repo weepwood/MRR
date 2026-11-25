@@ -51,6 +51,39 @@ describe('病案影像核对', () => {
     expect(wrapper.get('.scan-row').text()).toContain('11')
     wrapper.unmount()
   })
+  it('当前组导航与原图专注模式保持选中身份，不触发新分页', async () => {
+    api.getArchiveScanPage.mockResolvedValue({ data: { archiveId: 1, rows: [row(11), row(12), { ...row(13), pages: null }], nextCursor: null } })
+    const wrapper = card()
+    await flushPromises()
+    const button = (label: string) => wrapper.findAll('button').find(b => b.text() === label)!
+    const scans = wrapper.findAll('.scan-row')
+    await scans[0].trigger('click')
+    expect(button('上一张').attributes('disabled')).toBeDefined()
+    await button('下一张').trigger('click')
+    expect(wrapper.get('[data-test="image"]').text()).toBe('12')
+    await scans[1].trigger('keydown', { key: 'End' })
+    expect(wrapper.get('[data-test="image"]').text()).toBe('13')
+    expect(button('下一张').attributes('disabled')).toBeDefined()
+    await button('专注原图').trigger('click')
+    expect(wrapper.get('[data-test="image"]').text()).toBe('13')
+    expect(wrapper.find('[data-test="ocr"]').exists()).toBe(false)
+    await button('恢复布局').trigger('click')
+    expect(wrapper.get('[data-test="ocr"]').text()).toBe('13 true')
+    expect(api.getArchiveScanPage).toHaveBeenCalledOnce()
+    wrapper.unmount()
+  })
+  it.each([
+    { rows: [row(12), row(11)], nextCursor: null },
+    { rows: [row(11)], nextCursor: { pages: 2, id: 11 } },
+    { rows: [{ ...row(11), pages: null }, row(12)], nextCursor: null },
+  ])('拒绝非递增位置或与末行不一致的游标', async (invalid) => {
+    api.getArchiveScanPage.mockResolvedValue({ data: { archiveId: 1, ...invalid } })
+    const wrapper = card()
+    await flushPromises()
+    expect(wrapper.find('.scan-row').exists()).toBe(false)
+    expect(wrapper.text()).toContain('影像列表读取失败')
+    wrapper.unmount()
+  })
   it('拒绝跨病案数据与迟到响应；权限撤销清空列表', async () => {
     let resolve!: (value: unknown) => void
     api.getArchiveScanPage.mockImplementationOnce(() => new Promise(r => resolve = r))

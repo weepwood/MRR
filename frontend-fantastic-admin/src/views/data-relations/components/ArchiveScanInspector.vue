@@ -19,12 +19,42 @@ const busy = ref(false)
 const failed = ref(false)
 let generation = 0
 let controller: AbortController | undefined
-const selected = computed(() => rows.value.find(row => Number(row.id) === selectedId.value))
+const selectedIndex = computed(() => rows.value.findIndex(row => Number(row.id) === selectedId.value))
+const selected = computed(() => rows.value[selectedIndex.value])
+const focusMode = ref(false)
+const listRegion = ref<HTMLElement>()
 const canRead = computed(() => hasPermission('system:read') && hasPermission('record:read'))
 const canOcr = computed(() => canRead.value && hasPermission('ocr:read'))
 
 function clear() {
   selectedId.value = null
+  focusMode.value = false
+}
+function selectRow(index: number, focus = false) {
+  if (!canRead.value || busy.value || index < 0 || index >= rows.value.length) { return }
+  selectedId.value = Number(rows.value[index].id)
+  const target = listRegion.value?.querySelector<HTMLButtonElement>(`[data-scan-id="${selectedId.value}"]`)
+  if (focus) { target?.focus() }
+  else if (target && listRegion.value) {
+    const bounds = target.getBoundingClientRect()
+    const list = listRegion.value.getBoundingClientRect()
+    if (bounds.top < list.top) { listRegion.value.scrollTop -= list.top - bounds.top }
+    else if (bounds.bottom > list.bottom) { listRegion.value.scrollTop += bounds.bottom - list.bottom }
+  }
+}
+function navigateList(event: KeyboardEvent) {
+  if (!(event.target instanceof HTMLButtonElement) || !event.target.matches('.scan-row')) { return }
+  const index = rows.value.findIndex(row => String(row.id) === (event.target as HTMLButtonElement).dataset.scanId)
+  if (index < 0) { return }
+  const next = ({ ArrowUp: index - 1, ArrowDown: index + 1, Home: 0, End: rows.value.length - 1 } as Record<string, number>)[event.key]
+  if (next === undefined) { return }
+  event.preventDefault()
+  selectRow(next, true)
+}
+function comparePosition(a: ArchiveScanCursor, b: ArchiveScanCursor) {
+  if (a.pages === null && b.pages !== null) { return 1 }
+  if (a.pages !== null && b.pages === null) { return -1 }
+  return (a.pages ?? 0) - (b.pages ?? 0) || a.id - b.id
 }
 function reset() {
   generation++
@@ -56,12 +86,18 @@ async function load(index = 0) {
     if (generation !== current) { return }
     if (!data || data.archiveId !== archive || data.rows.length > 50) { throw new Error('Invalid archive page') }
     const ids = new Set<number>()
+    let last = cursor
     for (const row of data.rows) {
       const id = Number(row.id)
       if (!Number.isSafeInteger(id) || id <= 0 || ids.has(id) || Number(row.archiveId) !== archive || !Number.isFinite(Number(row.uploadFlag)) || Number(row.uploadFlag) === 0) { throw new Error('Invalid scan identity') }
+      const pages = row.pages
+      if (pages !== null && (typeof pages !== 'number' || !Number.isSafeInteger(pages))) { throw new Error('Invalid page number') }
+      const position = { id, pages }
+      if (last && comparePosition(position, last) <= 0) { throw new Error('Invalid scan order') }
       ids.add(id)
+      last = position
     }
-    if (data.nextCursor && (!data.rows.length || data.nextCursor.id !== Number(data.rows.at(-1)?.id) || (data.nextCursor.id === cursor?.id && data.nextCursor.pages === cursor?.pages))) { throw new Error('Invalid cursor') }
+    if (data.nextCursor && (!data.rows.length || !last || data.nextCursor.id !== last.id || data.nextCursor.pages !== last.pages)) { throw new Error('Invalid cursor') }
     rows.value = data.rows
     nextCursor.value = data.nextCursor
     cursors.value = cursors.value.slice(0, index + 1)
@@ -82,7 +118,7 @@ onBeforeUnmount(reset)
 
 <template>
   <MrrSectionCard v-if="canRead" title="影像核对" description="按页码和影像 ID 分页读取当前有效影像，每页最多 50 条；实时列表并非固定快照。">
-    <div class="scan-inspector">
+    <div class="scan-inspector" :class="{ 'scan-inspector--focus': focusMode }">
       <div>
         <div class="scan-pagination">
           <el-button size="small" :disabled="busy || page === 0" @click="load(page - 1)">
@@ -98,11 +134,14 @@ onBeforeUnmount(reset)
         </div>
         <AppError v-if="failed" message="影像列表读取失败，请重试" @retry="load(page)" />
         <el-skeleton v-else-if="busy" :rows="3" animated />
-        <div v-else class="scan-list" role="group" aria-label="有效影像列表">
-          <button v-for="row in rows" :key="Number(row.id)" type="button" class="scan-row" :aria-pressed="selectedId === Number(row.id)" @click="selectedId = Number(row.id)">
+        <div v-else ref="listRegion" class="scan-list" role="group" aria-label="有效影像列表" @keydown="navigateList">
+          <button v-for="(row, index) in rows" :key="Number(row.id)" type="button" class="scan-row" :data-scan-id="row.id" :aria-pressed="selectedId === Number(row.id)" @click="selectRow(index)">
             <span>第 {{ row.pages ?? '—' }} 页</span>
-            <small>影像 #{{ row.id }}</small>
+            <small>影像 #{{ row.id }} · 类型 {{ row.btype ?? '未知' }}</small>
           </button>
+          <p v-if="rows.length" class="scan-list-note">
+            本组 {{ rows.length }} 条 · 方向键切换
+          </p>
           <AppEmpty v-if="!rows.length" size="compact" description="暂无可核对的有效影像" />
         </div>
       </div>
@@ -111,20 +150,30 @@ onBeforeUnmount(reset)
           <div class="scan-toolbar">
             <strong>影像 #{{ selectedId }} · 第 {{ selected.pages ?? '—' }} 页</strong>
             <div class="scan-actions">
+              <span class="scan-position">{{ selectedIndex + 1 }} / {{ rows.length }}</span>
+              <el-button size="small" :disabled="selectedIndex <= 0" @click="selectRow(selectedIndex - 1)">
+                上一张
+              </el-button>
+              <el-button size="small" :disabled="selectedIndex >= rows.length - 1" @click="selectRow(selectedIndex + 1)">
+                下一张
+              </el-button>
+              <el-button size="small" :aria-pressed="focusMode" @click="focusMode = !focusMode">
+                {{ focusMode ? '恢复布局' : '专注原图' }}
+              </el-button>
               <el-button size="small" @click="clear">
                 关闭原图
               </el-button>
             </div>
           </div>
-          <div class="scan-review">
+          <div class="scan-review" :class="{ 'scan-review--ocr': canOcr && !focusMode }">
             <MrrScanContentDialog :scan-id="selectedId" inline @close="clear" />
-            <OcrPanel v-if="canOcr" :scan-id="selectedId" :expected-archive-id="archiveId" :unclassified="selected.btype != null && Number(selected.btype) === 0" inline />
+            <OcrPanel v-if="canOcr && !focusMode" :scan-id="selectedId" :expected-archive-id="archiveId" :unclassified="selected.btype != null && Number(selected.btype) === 0" inline />
           </div>
           <p class="scan-note">
             类型：{{ selected.btype ?? '未知' }} · 迁移：{{ selected.migrationStatus ?? '未知' }}
           </p>
         </template>
-        <AppEmpty v-else size="compact" description="从左侧选择影像核对原图" />
+        <AppEmpty v-else size="compact" description="从影像列表选择一张原图开始核对" />
       </div>
     </div>
   </MrrSectionCard>
@@ -133,7 +182,7 @@ onBeforeUnmount(reset)
 <style scoped>
 .scan-inspector {
   display: grid;
-  grid-template-columns: minmax(120px, 190px) minmax(0, 1fr);
+  grid-template-columns: minmax(130px, 168px) minmax(0, 1fr);
   gap: var(--mrr-space-3);
   min-width: 0;
 }
@@ -148,9 +197,17 @@ onBeforeUnmount(reset)
 
 .scan-review {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(min(100%, 280px), 1fr));
+  grid-template-columns: minmax(0, 1fr);
   gap: var(--mrr-space-3);
   align-items: start;
+}
+
+.scan-review--ocr {
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 300px), 1fr));
+}
+
+.scan-inspector--focus .scan-review {
+  grid-template-columns: minmax(0, 1fr);
 }
 
 .scan-list {
@@ -185,7 +242,9 @@ onBeforeUnmount(reset)
 }
 
 .scan-row small,
-.scan-note {
+.scan-note,
+.scan-list-note,
+.scan-position {
   color: var(--el-text-color-secondary);
 }
 
@@ -206,12 +265,19 @@ onBeforeUnmount(reset)
   margin-bottom: var(--mrr-space-2);
 }
 
-.scan-note {
+.scan-note,
+.scan-list-note {
   margin-top: var(--mrr-space-2);
   font-size: 12px;
 }
 
-@media (max-width: 640px) {
+@media (max-width: 1280px) {
+  .scan-review--ocr {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+@media (max-width: 760px) {
   .scan-inspector {
     grid-template-columns: minmax(0, 1fr);
   }

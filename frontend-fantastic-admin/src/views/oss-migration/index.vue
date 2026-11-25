@@ -200,6 +200,17 @@ const recordFilters = reactive<RecordFilterState>({
   limit: 100,
 })
 
+// The backend counts migrated and eligible records as disjoint subsets of
+// uploaded scans. Retry and missing-shelf status counts can overlap; do not sum them.
+const unavailableCount = computed(() => {
+  const { totalCount, migratedCount, pendingCount } = stats.value
+  if (totalCount == null || migratedCount == null || pendingCount == null) {
+    return undefined
+  }
+  const remaining = totalCount - migratedCount - pendingCount
+  return remaining >= 0 ? remaining : undefined
+})
+
 const summaryCards = computed(() => ([
   {
     label: '总图片记录',
@@ -223,32 +234,11 @@ const summaryCards = computed(() => ([
     tone: 'amber',
   },
   {
-    label: '等待上架号',
-    icon: 'i-lucide:clock',
-    value: stats.value.waitingSjhCount ?? 0,
-    note: '保留原图，补齐后自动恢复',
-    tone: 'blue',
-  },
-  {
-    label: '等待重试',
-    icon: 'i-lucide:refresh-cw',
-    value: stats.value.retryWaitCount ?? 0,
-    note: '后续任务到期后可再次领取',
-    tone: 'amber',
-  },
-  {
-    label: '正在迁移',
-    icon: 'i-lucide:cloud-upload',
-    value: stats.value.migratingCount ?? 0,
-    note: '已原子领取、正在处理',
-    tone: 'blue',
-  },
-  {
-    label: '永久失败',
-    icon: 'i-lucide:circle-x',
-    value: stats.value.failedCount ?? 0,
-    note: '核对 Nginx 原图或对象冲突',
-    tone: 'danger',
+    label: '暂不可领取',
+    icon: 'i-lucide:list-filter',
+    value: unavailableCount.value,
+    note: `尚未迁移且当前不可领取的记录数（总记录 − 已迁移 − 当前可领取）。状态明细：等待上架号 ${formatNumber(stats.value.waitingSjhCount)}，等待重试 ${formatNumber(stats.value.retryWaitCount)}，正在迁移 ${formatNumber(stats.value.migratingCount)}，永久失败 ${formatNumber(stats.value.failedCount)}。状态可能重叠，不能直接相加；已到期的重试记录可能属于当前可领取。`,
+    tone: (stats.value.failedCount ?? 0) > 0 ? 'danger' : 'amber',
   },
 ] as const))
 
@@ -907,12 +897,12 @@ onMounted(() => {
         show-icon
       />
 
-      <section class="mrr-metric-grid mrr-metric-grid--wide">
+      <section class="mrr-metric-grid mrr-metric-grid--four" aria-label="迁移核心指标">
         <MrrMetricCard
           v-for="item in summaryCards"
           :key="item.label"
           :label="item.label"
-          :value="formatNumber(item.value)"
+          :value="item.value == null ? '—' : formatNumber(item.value)"
           :note="item.note"
           :tone="item.tone"
           :icon="item.icon"

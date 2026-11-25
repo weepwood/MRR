@@ -40,10 +40,10 @@ public class ArchiveManifestService {
 
     public record Observation(long version, long archiveId, String status, int processed,
                               int verified, int anomalies, boolean completeDigestAvailable,
-                              String createdAt, String updatedAt, Integer snapshotCount) {
+                              String createdAt, String updatedAt, Integer snapshotCount, int recoveryCount) {
         static Observation from(ArchiveManifestRepository.Summary s) {
             return new Observation(s.id(), s.archiveId(), s.status(), s.processed(), s.verified(),
-                    s.anomalies(), s.digestChain()!=null, s.createdAt(), s.updatedAt(),s.snapshotCount());
+                    s.anomalies(), s.digestChain()!=null, s.createdAt(), s.updatedAt(),s.snapshotCount(),s.recoveryCount());
         }
     }
     public record Issue(int cursor, int scanId, String status, long bytesRead, boolean digestAvailable, String checkedAt) {}
@@ -97,6 +97,19 @@ public class ArchiveManifestService {
                 new Issue(a.ordinal(), a.scanId(), a.status(), a.bytesRead(), a.sha256()!=null, a.checkedAt())).toList();
     }
 
+    public Observation resume(long archiveId, long version, long actorId) {
+        if (!enabled) throw new BusinessException(503,"病案完整性后台校验已关闭");
+        if (readiness.isReadOnly() || maintenance.isEnabled()) throw new BusinessException(503,"系统处于只读模式");
+        if (archiveId<=0 || version<=0 || actorId<=0) throw new BusinessException(400,"无效病案、版本或操作者");
+        try {
+            if (!repository.resume(archiveId,version,actorId))
+                throw new BusinessException(409,"仅能恢复最新失败且成员完整的固定快照，或恢复次数已达上限/已有活动任务");
+        } catch (org.springframework.dao.DuplicateKeyException conflict) {
+            throw new BusinessException(409,"已有活动校验任务或恢复冲突");
+        }
+        return get(version);
+    }
+
     public Observation cancel(long id, long actorId) {
         if (actorId <= 0) throw new BusinessException(400, "无效操作者");
         if (!repository.cancel(id, actorId)) throw new BusinessException(409, "校验任务不存在或已结束");
@@ -111,7 +124,12 @@ public class ArchiveManifestService {
         try {
             var candidate = repository.next(lease).orElse(null);
             if (candidate == null) {
-                repository.finish(lease, "COMPLETED");
+                if (lease.snapshotCount()!=null && lease.processed()<lease.snapshotCount()) {
+                    // Missing persisted ordinal is a consistency error, never a completed observation.
+                    repository.retry(lease,true);
+                } else {
+                    repository.finish(lease, "COMPLETED");
+                }
                 return;
             }
             if (lease.processed() >= lease.limit()) {

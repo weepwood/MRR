@@ -10,8 +10,11 @@ const api = vi.hoisted(() => ({
   getManifestIssues: vi.fn(),
   getManifestReport: vi.fn(),
   startManifest: vi.fn(),
+  resumeManifest: vi.fn(),
   cancelManifest: vi.fn(),
 }))
+const confirm = vi.hoisted(() => vi.fn())
+vi.mock('element-plus', async importOriginal => ({ ...await importOriginal<typeof import('element-plus')>(), ElMessageBox: { confirm } }))
 vi.mock('@/api/modules/archive-manifest', () => api)
 vi.mock('@/api/modules/classification', () => ({ getReviewImage: vi.fn() }))
 vi.mock('@/utils/session', () => ({ hasPermission: () => true }))
@@ -108,6 +111,27 @@ describe('archiveManifestCard', () => {
     resolve({ data: { ...observation(1), snapshotCount: 4, segments: [], anomalyCounts: {} } })
     await flushPromises()
     expect(wrapper.text()).not.toContain('下载完整性报告 JSON')
+    wrapper.unmount()
+  })
+
+  it('resumes only explicitly confirmed failed latest fixed snapshots and preserves the version', async () => {
+    const failed = { ...observation(1), status: 'FAILED', snapshotCount: 4, recoveryCount: 1 }
+    api.getLatestManifest.mockResolvedValue({ data: { enabled: true, latest: failed } })
+    const wrapper = card()
+    await flushPromises()
+    const button = () => wrapper.findAll('button').find(b => b.text() === '恢复失败任务')!
+    confirm.mockRejectedValueOnce('cancel')
+    await button().trigger('click')
+    await flushPromises()
+    expect(api.resumeManifest).not.toHaveBeenCalled()
+    confirm.mockResolvedValueOnce(undefined)
+    api.resumeManifest.mockResolvedValue({ data: { ...failed, status: 'PENDING', recoveryCount: 2 } })
+    api.getLatestManifest.mockResolvedValue({ data: { enabled: true, latest: { ...failed, status: 'PENDING', recoveryCount: 2 } } })
+    await button().trigger('click')
+    await flushPromises()
+    expect(api.resumeManifest).toHaveBeenCalledExactlyOnceWith(1, 101)
+    expect(wrapper.text()).toContain('已恢复 2 / 3 次')
+    expect(wrapper.text()).not.toContain('恢复失败任务')
     wrapper.unmount()
   })
 

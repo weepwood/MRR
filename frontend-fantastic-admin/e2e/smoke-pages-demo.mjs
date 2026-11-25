@@ -45,6 +45,22 @@ async function smokePagesDemo() {
     assert.equal(mockResponses.user?.data?.username, 'admin', '用户信息必须来自浏览器 Mock')
     assert.equal(mockResponses.scans?.data?.list?.length, 3, '扫描记录必须由浏览器 Mock 返回')
 
+    const publicConfig = await page.evaluate(async () => {
+      const get = path => fetch(`/proxy/api/v1/public/config/${path}`).then(response => response.json())
+      const [login, environment, docs, session] = await Promise.all([
+        get('login-page'), get('client-environment'), get('documentation'),
+        fetch('/proxy/api/v1/documentation/session', { method: 'POST' }).then(response => response.json()),
+      ])
+      return { login, environment, docs, session }
+    })
+    assert.equal(publicConfig.login.data.loginEnvironmentLabel, '静态演示环境')
+    assert.equal(publicConfig.login.data.systemAdminContactVisible, false)
+    assert.equal(publicConfig.environment.code, 503)
+    assert.equal(publicConfig.environment.data, undefined)
+    assert.deepEqual(publicConfig.docs.data, { documentationUserGuideUrl: '', documentationDeveloperUrl: '', documentationOperationsUrl: '' })
+    assert.equal(publicConfig.session.code, 503)
+
+
     // Verify shared records through the actual static browser Mock.
     const relations = await page.evaluate(async () => {
       const get = path => fetch(`/proxy/api/v1/${path}`).then(response => response.json())

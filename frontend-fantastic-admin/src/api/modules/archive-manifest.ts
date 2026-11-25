@@ -11,6 +11,7 @@ export interface ManifestObservation {
   createdAt: string
   updatedAt: string
   snapshotCount?: number | null
+  recoveryCount?: number
 }
 
 export interface ManifestIssue {
@@ -30,6 +31,10 @@ export function getLatestManifest(archiveId: number) {
 
 export function startManifest(archiveId: number) {
   return postRequest<ManifestObservation>(base, undefined, { params: { archiveId } })
+}
+
+export function resumeManifest(archiveId: number, version: number) {
+  return postRequest<ManifestObservation>(`${base}/${version}/resume`, undefined, { params: { archiveId }, retry: false })
 }
 
 export function cancelManifest(version: number) {

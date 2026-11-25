@@ -207,5 +207,6 @@ export default defineFakeRoute([
   { url: '/api/v1/system/data-quality/repair-orders/:id/cancel', method: 'POST', response: () => demoError(503, '演示不执行真实修复') },
   { url: '/api/v1/system/data-quality/repair-orders/:id/compensate', method: 'POST', response: () => demoError(503, '演示不执行真实修复') },
   { url: '/api/v1/operations/archive-manifests', method: 'POST', response: () => demoError(503, '演示不执行真实文件校验') },
+  { url: '/api/v1/operations/archive-manifests/:version/resume', method: 'POST', response: () => demoError(503, '演示不恢复真实文件校验') },
   { url: '/api/v1/operations/archive-manifests/:version/cancel', method: 'POST', response: () => demoError(503, '演示不执行真实文件校验') },
 ])

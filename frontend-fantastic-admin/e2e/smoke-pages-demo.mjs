@@ -300,13 +300,14 @@ async function smokePagesDemo() {
         await new Promise(resolve => setTimeout(resolve, 250))
         detail = await request(`ocr/jobs/${created.data.id}`)
       }
-      const [full, hidden, items, scan, list] = await Promise.all([
+      const [full, hidden, items, scan, list, suggestions] = await Promise.all([
         request('scan/3/ocr?full=true'), request('scan/3/ocr'),
         request(`ocr/jobs/${created.data.id}/items`), request('scan/3'), request('archive-records/2/ocr/jobs'),
+        request(`classification/jobs/${created.data.id}/suggestions`),
       ])
       const another = await request('archive-records/6/ocr/jobs', { idempotencyKey: 'pages-cancel' })
       const cancelled = await request(`ocr/jobs/${another.data.id}/cancel`, {})
-      return { before, created, reused, detail, full, hidden, items, scan, list, cancelled }
+      return { before, created, reused, detail, full, hidden, items, scan, list, suggestions, cancelled }
     })
     assert.equal(ocr.before.data.status, 'PENDING')
     assert.equal(ocr.created.data.plannedCount, 2)
@@ -315,7 +316,12 @@ async function smokePagesDemo() {
     assert.equal(ocr.detail.data.processedCount, 2)
     assert.ok(ocr.full.data.text.includes('合成影像'))
     assert.equal(ocr.hidden.data.text, null)
-    assert.deepEqual(ocr.items.data.map(item => item.status), ['NO_MATCH', 'LOW_CONFIDENCE'])
+    assert.deepEqual(ocr.items.data.map(item => item.status), ['SUGGESTED', 'LOW_CONFIDENCE'])
+    assert.equal(ocr.suggestions.data.length, 1)
+    assert.equal(ocr.suggestions.data[0].scanId, 3)
+    assert.equal(ocr.suggestions.data[0].reviewStatus, 'PENDING')
+    assert.equal(ocr.suggestions.data[0].autoEligible, false)
+    assert.equal(ocr.items.data[0].suggestedType, ocr.suggestions.data[0].suggestedType)
     assert.equal(ocr.scan.data.btype, 0)
     assert.equal(ocr.list.data[0].id, ocr.created.data.id)
     assert.equal(ocr.cancelled.data.status, 'CANCELLED')

@@ -15,42 +15,62 @@ public class DataQualityRepairOrderController {
     private final DataQualityRepairOrderService service;
     public DataQualityRepairOrderController(DataQualityRepairOrderService service) { this.service = service; }
 
+    @GetMapping
+    public Result<DataQualityRepairOrderService.Workbench> list(@RequestParam(required=false) Long archiveId,
+            @RequestParam(required=false) Long issueId,@RequestParam(required=false) Long before,HttpServletResponse response) {
+        noStore(response);
+        return Result.success(service.list(archiveId,issueId,before,actor()));
+    }
+
+    @GetMapping("/{id}/events")
+    public Result<java.util.List<DataQualityRepairOrderService.Event>> events(@PathVariable long id,
+            @RequestParam(defaultValue="0") long after,HttpServletResponse response) {
+        noStore(response);
+        return Result.success(service.events(id,after));
+    }
+
     @GetMapping("/{id}")
     public Result<DataQualityRepairOrderService.Order> get(@PathVariable long id, HttpServletResponse response) {
         noStore(response);
         return Result.success(service.get(id));
     }
 
+    @RequirePermissions({"system:manage","record:manage"})
     @PostMapping
     public Result<DataQualityRepairOrderService.Order> propose(@RequestParam long issueId, HttpServletResponse response) {
         noStore(response);
         return Result.success(service.propose(issueId,actor()));
     }
 
+    @RequirePermissions({"system:manage","record:manage"})
     @PostMapping("/{id}/approve")
     public Result<DataQualityRepairOrderService.Order> approve(@PathVariable long id,HttpServletResponse response) {
         noStore(response);
         return Result.success(service.approve(id,actor()));
     }
 
+    @RequirePermissions({"system:manage","record:manage"})
     @PostMapping("/{id}/apply")
     public Result<DataQualityRepairOrderService.Order> apply(@PathVariable long id,HttpServletResponse response) {
         noStore(response);
         return Result.success(service.apply(id,actor()));
     }
 
+    @RequirePermissions({"system:manage","record:manage"})
     @PostMapping("/{id}/verify")
     public Result<DataQualityRepairOrderService.Order> verify(@PathVariable long id,HttpServletResponse response) {
         noStore(response);
         return Result.success(service.verify(id,actor()));
     }
 
+    @RequirePermissions({"system:manage","record:manage"})
     @PostMapping("/{id}/cancel")
     public Result<DataQualityRepairOrderService.Order> cancel(@PathVariable long id,HttpServletResponse response) {
         noStore(response);
         return Result.success(service.cancel(id,actor()));
     }
 
+    @RequirePermissions({"system:manage","record:manage"})
     @PostMapping("/{id}/compensate")
     public Result<DataQualityRepairOrderService.Order> compensate(@PathVariable long id,HttpServletResponse response) {
         noStore(response);

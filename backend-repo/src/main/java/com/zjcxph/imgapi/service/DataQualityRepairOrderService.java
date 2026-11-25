@@ -36,6 +36,35 @@ public class DataQualityRepairOrderService {
     private record State(Order order, String sourceFingerprint, String targetFingerprint, String appliedRevision, boolean fresh) {}
     public boolean enabled() { return enabled; }
 
+    public record Workbench(boolean enabled,long actorId,List<Order> orders) {}
+    public record Event(long id,long actorId,String action,Long beforeArchiveId,Long afterArchiveId,String createdAt) {}
+
+    @Transactional(readOnly = true, timeout = 5)
+    public Workbench list(Long archiveId, Long issueId, Long before, long actor) {
+        if (actor<=0 || (archiveId!=null && archiveId<=0) || (issueId!=null && issueId<=0) || (before!=null && before<=0))
+            throw new BusinessException(400,"无效查询参数");
+        StringBuilder sql=new StringBuilder("SELECT id,issue_id,scan_id,target_archive_id,status,proposed_by,approved_by FROM app.mrr_data_quality_repair_order WHERE true");
+        java.util.ArrayList<Object> args=new java.util.ArrayList<>();
+        if (archiveId!=null) { sql.append(" AND target_archive_id=?"); args.add(archiveId); }
+        if (issueId!=null) { sql.append(" AND issue_id=?"); args.add(issueId); }
+        if (before!=null) { sql.append(" AND id<?"); args.add(before); }
+        sql.append(" ORDER BY id DESC LIMIT 50");
+        List<Order> orders=jdbc.query(sql.toString(),(rs,n)->new Order(rs.getLong(1),rs.getLong(2),rs.getInt(3),
+                rs.getLong(4),rs.getString(5),rs.getLong(6),rs.getObject(7,Long.class)),args.toArray());
+        return new Workbench(enabled && !readiness.isReadOnly() && !maintenance.isEnabled(),actor,orders);
+    }
+
+    @Transactional(readOnly = true, timeout = 5)
+    public List<Event> events(long id, long after) {
+        get(id);
+        return jdbc.query("""
+                SELECT id,actor_id,action,before_archive_id,after_archive_id,created_at::text
+                FROM app.mrr_data_quality_repair_event WHERE order_id=? AND id>?
+                ORDER BY id LIMIT 100
+                """,(rs,n)->new Event(rs.getLong(1),rs.getLong(2),rs.getString(3),
+                rs.getObject(4,Long.class),rs.getObject(5,Long.class),rs.getString(6)),id,Math.max(0,after));
+    }
+
     @Transactional(readOnly = true, timeout = 5)
     public Order get(long id) { return state(id, false).order(); }
 
@@ -55,6 +84,10 @@ public class DataQualityRepairOrderService {
         if (!Boolean.TRUE.equals(preview.get("deterministic"))) throw conflict("不存在确定性修复候选");
         var candidate = uniqueCandidate(source);
         if (source.archiveId() != null) throw conflict("扫描已有主档关联");
+        if (Boolean.TRUE.equals(jdbc.queryForObject("""
+                SELECT EXISTS(SELECT 1 FROM app.mrr_data_quality_repair_order
+                WHERE scan_id=? AND status IN ('PROPOSED','APPROVED','APPLIED','VERIFIED'))
+                """,Boolean.class,scanId))) throw conflict("该扫描已有有效修复工单");
         Long id = jdbc.queryForObject("""
                 INSERT INTO app.mrr_data_quality_repair_order(issue_id,scan_id,target_archive_id,source_fingerprint,target_fingerprint,status,proposed_by)
                 VALUES (?,?,?,?,?,'PROPOSED',?) RETURNING id

@@ -75,6 +75,57 @@ class ArchiveManifestPostgresqlIT extends PostgresqlIntegrationTestSupport {
         assertThat(repo.get(job).orElseThrow().status()).isEqualTo("CANCELLED");
     }
 
+    @Test
+    void membershipDoesNotShiftWhenPagesChangeOrRecordsDisappear() {
+        long archive=archive();
+        int a=scan(archive,1,1), b=scan(archive,2,1), c=scan(archive,3,1);
+        var repo=new ArchiveManifestRepository(jdbc);
+        long job=repo.create(archive,7L).orElseThrow();
+        assertThat(repo.get(job).orElseThrow().snapshotCount()).isEqualTo(3);
+        jdbc.update("UPDATE app.mr_scan SET pages=99 WHERE id=?",a);
+        jdbc.update("DELETE FROM app.mr_scan WHERE id=?",b);
+        scan(archive,0,1);
+        for(int expected: new int[]{a,b,c}) {
+            var lease=repo.claim(UUID.randomUUID()).orElseThrow();
+            assertThat(repo.finish(lease,"COMPLETED")).isFalse();
+            var row=repo.next(lease).orElseThrow();
+            assertThat(row.id()).isEqualTo(expected);
+            assertThat(repo.advance(lease,row,"VERIFIED",12,"a".repeat(64))).isTrue();
+        }
+        var end=repo.claim(UUID.randomUUID()).orElseThrow();
+        assertThat(repo.next(end)).isEmpty();
+        assertThat(repo.finish(end,"COMPLETED")).isTrue();
+        assertThat(repo.anomalies(job,0)).extracting(ArchiveManifestRepository.Anomaly::scanId).containsExactly(a,b);
+        assertThat(repo.get(job).orElseThrow().verified()).isEqualTo(1);
+    }
+
+    @Test
+    void snapshotsContinuePastLegacySegmentAndRetentionKeepsLatestComplete() {
+        long archive=archive();
+        jdbc.update("""
+            INSERT INTO app.mr_scan(archive_id,bah,pages,uploadflag,filename)
+            SELECT ?,'123456',n,1,'synthetic.png' FROM generate_series(1,5002) n
+            """,archive);
+        var repo=new ArchiveManifestRepository(jdbc);
+        long job=repo.create(archive,7L).orElseThrow();
+        assertThat(repo.get(job).orElseThrow().snapshotCount()).isEqualTo(5002);
+        // Seed a durable checkpoint to exercise the segment boundary without 5000 redundant reads.
+        jdbc.update("UPDATE app.mrr_archive_manifest SET processed=5000,verified=5000 WHERE id=?",job);
+        var lease=repo.claim(UUID.randomUUID()).orElseThrow();
+        assertThat(lease.limit()).isEqualTo(5002);
+        assertThat(repo.next(lease).orElseThrow().page()).isEqualTo(5001);
+        assertThat(repo.finish(lease,"COMPLETED")).isFalse();
+        assertThat(repo.cancel(job,7L)).isTrue();
+        long newer=repo.create(archive,7L).orElseThrow();
+        jdbc.update("UPDATE app.mrr_archive_manifest SET status='COMPLETED',processed=snapshot_count,verified=snapshot_count WHERE id=?",newer);
+        jdbc.update("UPDATE app.mrr_archive_manifest SET updated_at=clock_timestamp()-interval '91 days' WHERE id IN (?,?)",job,newer);
+        assertThat(repo.history(archive,null)).extracting(ArchiveManifestRepository.Summary::id).containsExactly(newer,job);
+        assertThat(repo.history(archive,newer)).extracting(ArchiveManifestRepository.Summary::id).containsExactly(job);
+        assertThat(repo.pruneExpired(90)).isEqualTo(1);
+        assertThat(repo.get(job)).isEmpty();
+        assertThat(repo.get(newer)).isPresent();
+    }
+
     private long archive() {
         return jdbc.queryForObject("INSERT INTO app.mr_archive(bah) VALUES ('123456') RETURNING id", Long.class);
     }

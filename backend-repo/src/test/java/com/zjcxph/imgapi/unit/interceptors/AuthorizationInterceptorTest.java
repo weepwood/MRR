@@ -128,6 +128,32 @@ class AuthorizationInterceptorTest {
         assertThat(interceptor.preHandle(request, response, handler("editable"))).isTrue();
     }
 
+    @Test
+    @DisplayName("修复工单六个写入口均要求双管理权限")
+    void repairOrderWritesRequireBothPermissions() throws Exception {
+        var controller = new com.zjcxph.imgapi.controller.DataQualityRepairOrderController(
+                mock(com.zjcxph.imgapi.service.DataQualityRepairOrderService.class));
+        for (String action : List.of("propose", "approve", "apply", "verify", "cancel", "compensate")) {
+            var method = controller.getClass().getMethod(action, long.class, HttpServletResponse.class);
+            var handler = new HandlerMethod(controller, method);
+            var path = "/api/v1/system/data-quality/repair-orders"
+                    + (action.equals("propose") ? "" : "/1/" + action);
+            for (List<String> permissions : List.of(List.<String>of(), List.of("system:manage"),
+                    List.of("record:manage"), List.of("system:manage", "record:manage"))) {
+                var req = new org.springframework.mock.web.MockHttpServletRequest("POST", path);
+                var res = new org.springframework.mock.web.MockHttpServletResponse();
+                req.setAttribute(AuthorizationInterceptor.AUTH_SESSION_ATTRIBUTE, session("DOCTOR", permissions));
+                boolean allowed = permissions.size() == 2;
+                assertThat(interceptor.preHandle(req, res, handler)).as(action + " " + permissions).isEqualTo(allowed);
+                assertThat(res.getStatus()).isEqualTo(allowed ? 200 : 403);
+            }
+            var req = new org.springframework.mock.web.MockHttpServletRequest("POST", path);
+            var res = new org.springframework.mock.web.MockHttpServletResponse();
+            assertThat(interceptor.preHandle(req, res, handler)).as(action).isFalse();
+            assertThat(res.getStatus()).isEqualTo(401);
+        }
+    }
+
     @org.springframework.stereotype.Component
     static class TestController {
         @org.springframework.web.bind.annotation.GetMapping("/open")

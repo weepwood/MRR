@@ -1,6 +1,8 @@
 import type { MockScanRecord } from './records'
-import type { OcrItem } from '@/api/modules/classification'
+import type { ClassificationSuggestion, OcrItem } from '@/api/modules/classification'
 import type { OcrFact, OcrJob } from '@/api/modules/ocr'
+import { MEDICAL_RECORD_TYPE_CODES } from '@/constants/medical-record-types'
+import { demoError, demoOk } from './response'
 
 interface Work {
   job: OcrJob
@@ -9,14 +11,16 @@ interface Work {
   selected?: number
   nextAt: number
   items: OcrItem[]
+  suggestions: ClassificationSuggestion[]
 }
 
 const active = (job: OcrJob) => ['PENDING', 'RUNNING'].includes(job.status)
 
-export function createOcrStore(scans: readonly MockScanRecord[]) {
+export function createOcrStore(scans: readonly MockScanRecord[], enableSuggestions = false) {
   const jobs: Work[] = []
   const facts = new Map<number, OcrFact>()
   let nextId = 1
+  let nextSuggestion = 1
 
   function advance(now: number) {
     for (const work of jobs) {
@@ -44,6 +48,11 @@ export function createOcrStore(scans: readonly MockScanRecord[]) {
           })
           work.items[job.processedCount].status = failed ? 'FAILED' : low ? 'LOW_CONFIDENCE' : 'NO_MATCH'
           work.items[job.processedCount].failureCode = failed ? 'SOURCE_NOT_FOUND' : null
+          if (enableSuggestions && !failed && !low) {
+            work.items[job.processedCount].status = 'SUGGESTED'
+            work.items[job.processedCount].suggestedType = 1
+            work.suggestions.push({ id: nextSuggestion++, scanId: scan.id, suggestedType: 1, ruleScore: 1, ocrConfidence: 0.96, reviewStatus: 'PENDING', autoStatus: 'NOT_APPLIED', autoEligible: false, reasonCode: 'DEMO_ONLY', matchedRules: '合成影像关键词' })
+          }
           if (failed) { job.failedCount++ }
           else { job.ocrSuccessCount++ }
         }
@@ -82,7 +91,7 @@ export function createOcrStore(scans: readonly MockScanRecord[]) {
       failedCount: 0,
       cancelRequested: false,
     }
-    jobs.unshift({ job, ids, key, selected: selected as number | undefined, nextAt: now + 1000, items: ids.map(scanId => ({ scanId, status: 'PENDING', failureCode: null, suggestedType: null })) })
+    jobs.unshift({ job, ids, key, selected: selected as number | undefined, nextAt: now + 1000, suggestions: [], items: ids.map(scanId => ({ scanId, status: 'PENDING', failureCode: null, suggestedType: null })) })
     return { code: 200, message: '模拟操作成功', data: { ...job } }
   }
 
@@ -109,6 +118,33 @@ export function createOcrStore(scans: readonly MockScanRecord[]) {
     items(id: string, now = Date.now()) {
       advance(now)
       return jobs.find(work => work.job.id === id)?.items.map(item => ({ ...item }))
+    },
+    suggestions(id: string, now = Date.now()) {
+      advance(now)
+      return jobs.find(work => work.job.id === id)?.suggestions.map(row => ({ ...row }))
+    },
+    review(id: number, action: string, type?: number, now = Date.now()) {
+      advance(now)
+      const row = jobs.flatMap(work => work.suggestions).find(item => item.id === id)
+      const scan = scans.find(item => item.id === row?.scanId)
+      if (!row || !scan || row.reviewStatus !== 'PENDING' || scan.btype !== 0 || !scan.uploadFlag) {
+        return demoError(409, '演示建议已失效或已审核')
+      }
+      if (action === 'REJECT') {
+        row.reviewStatus = 'REJECTED'
+      }
+      else if (action === 'ACCEPT' || action === 'OVERRIDE') {
+        const target = action === 'ACCEPT' ? row.suggestedType : type
+        if (target == null || !MEDICAL_RECORD_TYPE_CODES.includes(target)) {
+          return demoError(400, '演示分类类型无效')
+        }
+        scan.btype = target
+        row.reviewStatus = action === 'ACCEPT' ? 'ACCEPTED' : 'OVERRIDDEN'
+      }
+      else {
+        return demoError(400, '演示审核操作无效')
+      }
+      return demoOk(null)
     },
     cancel(id: string, now = Date.now()) {
       advance(now)

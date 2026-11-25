@@ -39,6 +39,13 @@ public class ArchiveManifestController {
         return Result.success(service.start(archiveId, actor()));
     }
 
+    @GetMapping("/history")
+    public Result<List<ArchiveManifestService.Observation>> history(@RequestParam long archiveId,
+            @RequestParam(required=false) Long before, HttpServletResponse response) {
+        noStore(response);
+        return Result.success(service.history(archiveId,before));
+    }
+
     @GetMapping("/{version}")
     public Result<ArchiveManifestService.Observation> get(@PathVariable long version, HttpServletResponse response) {
         noStore(response);

@@ -26,7 +26,7 @@ test('无图标指标在移动视口使用整行正文', async ({ page }) => {
 test('工作台字段有可访问名称，窄屏筛选与表格不撑开页面', async ({ page }) => {
   for (const width of [1366, 900, 768, 375]) {
     await page.setViewportSize({ width, height: 900 })
-    await page.getByRole('tab', { name: '病案关系查询', exact: true }).click()
+    await page.getByRole('tab', { name: '病案工作台', exact: true }).click()
     await expect(page.getByRole('textbox', { name: '病案查询值', exact: true })).toBeVisible()
     await page.getByRole('tab', { name: '检查与异常', exact: true }).click()
     await expect(page.getByRole('combobox', { name: '异常级别筛选', exact: true })).toBeVisible()
@@ -72,7 +72,7 @@ for (const theme of ['light', 'dark']) {
     })
     await page.setViewportSize({ width: 375, height: 812 })
     await page.reload()
-    await page.getByRole('tab', { name: '病案关系查询', exact: true }).click()
+    await page.getByRole('tab', { name: '病案工作台', exact: true }).click()
     await page.getByRole('textbox', { name: '病案查询值', exact: true }).fill(archive.bah)
     await page.getByRole('textbox', { name: '病案查询值', exact: true }).press('Enter')
     await expect(page.getByText('合成布局示例', { exact: true }).last()).toBeVisible()
@@ -99,7 +99,7 @@ test('候选病案可通过键盘操作查看关系，并显示匹配方式', as
       : { archive: candidates[1], statistics: [], patients: [], boxes: [], scanSummary: {}, scanSamples: [], comparisons: [], warnings: [] }
     await route.fulfill({ json: { code: 200, data } })
   })
-  await page.getByRole('tab', { name: '病案关系查询', exact: true }).click()
+  await page.getByRole('tab', { name: '病案工作台', exact: true }).click()
   const input = page.getByRole('textbox', { name: '病案查询值', exact: true })
   await input.fill('000123')
   await input.press('Enter')

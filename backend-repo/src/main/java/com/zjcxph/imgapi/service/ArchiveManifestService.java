@@ -40,10 +40,10 @@ public class ArchiveManifestService {
 
     public record Observation(long version, long archiveId, String status, int processed,
                               int verified, int anomalies, boolean completeDigestAvailable,
-                              String createdAt, String updatedAt) {
+                              String createdAt, String updatedAt, Integer snapshotCount) {
         static Observation from(ArchiveManifestRepository.Summary s) {
             return new Observation(s.id(), s.archiveId(), s.status(), s.processed(), s.verified(),
-                    s.anomalies(), s.digestChain()!=null, s.createdAt(), s.updatedAt());
+                    s.anomalies(), s.digestChain()!=null, s.createdAt(), s.updatedAt(),s.snapshotCount());
         }
     }
     public record Issue(int cursor, int scanId, String status, long bytesRead, boolean digestAvailable, String checkedAt) {}
@@ -61,6 +61,16 @@ public class ArchiveManifestService {
 
     public Observation latest(long archiveId) {
         return repository.latest(archiveId).map(Observation::from).orElse(null);
+    }
+
+    public List<Observation> history(long archiveId, Long before) {
+        if (archiveId<=0 || (before!=null && before<=0)) throw new BusinessException(400,"无效病案或游标");
+        return repository.history(archiveId,before).stream().map(Observation::from).toList();
+    }
+
+    @Scheduled(fixedDelay = 3600000, initialDelay = 3600000)
+    public void pruneHistory() {
+        if (enabled && !readiness.isReadOnly() && !maintenance.isEnabled()) repository.pruneExpired(90);
     }
 
     public Observation get(long id) {
@@ -91,8 +101,12 @@ public class ArchiveManifestService {
                 repository.finish(lease, "COMPLETED");
                 return;
             }
-            if (lease.processed() >= ArchiveManifestRepository.MAX_FILES) {
+            if (lease.processed() >= lease.limit()) {
                 repository.finish(lease, "PARTIAL");
+                return;
+            }
+            if (lease.snapshotCount()!=null && !repository.matches(lease,candidate)) {
+                repository.advance(lease,candidate,"STALE_SCAN",0,"");
                 return;
             }
             var scan = mapper.findActiveById(candidate.id());

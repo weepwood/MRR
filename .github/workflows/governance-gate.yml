@@ -4,6 +4,7 @@ on:
   pull_request:
     branches:
       - main
+      - integration/v1.1
     types:
       - opened
       - synchronize

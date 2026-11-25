@@ -21,6 +21,20 @@ describe('demo OCR facts and jobs', () => {
     expect(scans.find(scan => scan.id === 3)?.btype).toBe(0)
   })
 
+  it('produces synthetic review suggestions without automatically changing medical type', () => {
+    const { scans } = createDemoRecords()
+    const store = createOcrStore(scans, true)
+    const now = Date.now()
+    const id = store.create(2, { idempotencyKey: 'review' }, now).data!.id
+    const suggestion = store.suggestions(id, now + 3000)![0]
+    expect(suggestion.reviewStatus).toBe('PENDING')
+    expect(suggestion.autoEligible).toBe(false)
+    expect(scans.find(scan => scan.id === suggestion.scanId)?.btype).toBe(0)
+    expect(store.review(suggestion.id, 'ACCEPT', undefined, now + 3000).code).toBe(200)
+    expect(store.review(suggestion.id, 'REJECT', undefined, now + 3000).code).toBe(409)
+    expect(scans.find(scan => scan.id === suggestion.scanId)?.btype).toBe(suggestion.suggestedType)
+  })
+
   it('cancels queued work and demonstrates a failed page without fake text', () => {
     const { scans } = createDemoRecords()
     const store = createOcrStore(scans)

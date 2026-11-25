@@ -341,6 +341,15 @@
 - 1bcb89b5 已推送：复用 MrrSectionCard/Element Plus 的 Manifest 卡片、异常分页、状态与显式刷新/启停、账号/病案切换清理及安全SJH影像入口；合成关系/病案详情/Manifest Mock 与异常详情补齐，严格Mock覆盖新增 data-relations,archive-manifest。9项前端单测、vue-tsc、ESLint/stylelint、严格Mock与5工具测试通过；未做真实浏览器及截图验收。演示只展示未校验样例，写操作拒绝。修复审批列表/事件查看/工作台交互未接入，OCR其他演示欠账与无用依赖审计未执行；不要声称已完成。
 - 下一批优先：运维持久化历史指标及故障趋势、固定且默认关闭的 Windows nginx.exe -t 校验（复用 deploy/windows/mrrctl.ps1 固定路径与参数，不开放任意命令），完整修复工单列表与审计审核UI，Manifest 严格快照/分段与保留策略，真实浏览器/锁竞争专项，OCR与历史Issue及依赖审计。冻结 main 与正式版本身份不变；新迁移采用安全前向修复，禁止擅自发布。
 
+## 08 V1.1 工作台、严格成员快照与工程欠账（2026-11-25）
+
+- [专项实施、真实测试、77项开放 Issue 分类与回滚](v1.1-workbench-snapshot.md)。基于 b22f7964，独立分支 feat/v1.1-workbench-snapshot；#801/#802/#803 已关闭且原提交保留于 integration/v1.1。main 24152bee 冻结。P1，仅向集成分支提交 PR；最终门禁及合并状态以 GitHub 为准。
+- 50条迁移的隔离 PG16 与真实事务代理/多连接竞争通过；工单及成员历史 UI、共享影像核对、OCR Mock、gsap/FaHoverCard 清理；48 路由缺口及医院现场验收仍待。禁止真实修复、正式发布和重复性能基准。
+
+## 08 V1.1 #804 门禁修复（2026-11-25）
+
+- 旧 head e678ce6a 实际失败三项；已修复六个工单双权限方法声明、OCR Pages 合成状态契约、固定校验和 Wrapper 引导有限重试。真实 Java21 12项、工具链12项、静态 Pages 构建和 Chromium 全冒烟成功；Docker 干净镜像待远端验证。详见 [专项证据](v1.1-workbench-snapshot.md)。不得在最新门禁通过前合并，不动冻结 main 或生产。
+
 ## 每轮交接模板
 
 - 更新时间、任务、风险、目标及非目标：

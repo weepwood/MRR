@@ -199,7 +199,7 @@ public class DataQualityServiceImpl implements DataQualityService {
         result.put("readOnly", true);
         result.put("canApply", false);
         result.put("reason", !current ? "历史异常与当前记录不一致或记录已失效，请重新检查" : !validCodes ? "当前编号不满足安全关联规则" : deterministic
-                ? "存在唯一候选主档，但第一阶段仅提供预览，尚未开放写入"
+                ? "存在唯一候选主档；预览不授权写入，实际关联须通过受控修复工单"
                 : "候选关系不唯一或异常类型需要人工判断，禁止自动修改");
         return result;
     }

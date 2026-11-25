@@ -210,12 +210,12 @@ const options = [{ label: '本地示例', value: 'local' }, { label: '归档示�
 
   <div v-else class="example-stack">
     <div class="example-row">
-      <FaCheckbox v-model="checked">
+      <el-checkbox v-model="checked">
         选中此示例
-      </FaCheckbox>
-      <FaCheckbox :model-value="false" disabled>
+      </el-checkbox>
+      <el-checkbox :model-value="false" disabled>
         禁用复选框
-      </FaCheckbox>
+      </el-checkbox>
     </div>
     <div class="example-row">
       <el-switch :id="`${id}-switch`" v-model="enabled" />

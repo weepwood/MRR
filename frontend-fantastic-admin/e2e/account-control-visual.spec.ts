@@ -113,7 +113,8 @@ test('登录表单保留密码切换、失败恢复、请求体与记住用户�
   await page.getByRole('button', { name: '隐藏密码', exact: true }).click()
   await expect(password).toHaveAttribute('type', 'password')
   const remember = page.getByRole('checkbox', { name: '记住用户名' })
-  await remember.check()
+  if (!await remember.isChecked()) { await page.locator('.remember-checkbox .el-checkbox__label').click() }
+  await expect(remember).toBeChecked()
   await password.press('Enter')
   try {
     await expect.poll(() => requests).toBe(1)
@@ -147,7 +148,8 @@ test('注册密码不一致阻止进入下一步，切换可见性及修正后�
   await expect(page.getByText('两次输入的密码不一致', { exact: true })).toBeVisible()
   await expect(confirm).toHaveAttribute('aria-invalid', 'true')
   await confirm.fill('Synthetic-123')
-  await confirm.press('Enter')
+  await expect(confirm).toBeFocused()
+  await page.keyboard.press('Enter')
   await expect(page.locator('#register-contact')).toBeFocused()
   await page.getByRole('button', { name: '返回身份信息' }).click()
   await expect(password).toHaveValue('Synthetic-123')

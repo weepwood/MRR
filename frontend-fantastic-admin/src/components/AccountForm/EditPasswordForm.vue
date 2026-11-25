@@ -33,7 +33,7 @@ const form = useForm({
     checkPassword: '',
   },
 })
-const onSubmit = form.handleSubmit(async (values) => {
+const submitValidated = form.handleSubmit(async (values) => {
   loading.value = true
   try {
     await userStore.editPassword(values)
@@ -44,6 +44,21 @@ const onSubmit = form.handleSubmit(async (values) => {
     loading.value = false
   }
 })
+
+// Guard the whole validation/request lifecycle, including repeated Enter before
+// the loading button has rendered.
+let submitting = false
+async function onSubmit(event: SubmitEvent) {
+  event.preventDefault()
+  if (submitting) { return }
+  submitting = true
+  try {
+    await submitValidated(event)
+  }
+  finally {
+    submitting = false
+  }
+}
 </script>
 
 <template>
@@ -60,7 +75,7 @@ const onSubmit = form.handleSubmit(async (values) => {
       <FormField v-slot="{ componentField, errors }" name="password">
         <FormItem class="relative pb-6 space-y-0">
           <FormControl>
-            <FaInput type="password" autocomplete="current-password" placeholder="请输入原密码" class="w-full" :class="errors.length > 0 && 'border-destructive'" v-bind="componentField" />
+            <el-input type="password" autocomplete="current-password" placeholder="请输入原密码" class="w-full" :class="{ 'account-field-invalid': errors.length > 0 }" :aria-invalid="errors.length > 0" v-bind="componentField" />
           </FormControl>
           <Transition enter-active-class="transition-opacity" enter-from-class="opacity-0" leave-active-class="transition-opacity" leave-to-class="opacity-0">
             <FormMessage class="absolute bottom-1 text-xs" />
@@ -70,7 +85,7 @@ const onSubmit = form.handleSubmit(async (values) => {
       <FormField v-slot="{ componentField, errors }" name="newPassword">
         <FormItem class="relative pb-6 space-y-0">
           <FormControl>
-            <FaInput type="password" autocomplete="new-password" placeholder="请输入 6 到 64 位新密码" class="w-full" :class="errors.length > 0 && 'border-destructive'" v-bind="componentField" />
+            <el-input type="password" autocomplete="new-password" placeholder="请输入 6 到 64 位新密码" class="w-full" :class="{ 'account-field-invalid': errors.length > 0 }" :aria-invalid="errors.length > 0" v-bind="componentField" />
           </FormControl>
           <Transition enter-active-class="transition-opacity" enter-from-class="opacity-0" leave-active-class="transition-opacity" leave-to-class="opacity-0">
             <FormMessage class="absolute bottom-1 text-xs" />
@@ -80,16 +95,16 @@ const onSubmit = form.handleSubmit(async (values) => {
       <FormField v-slot="{ componentField, errors }" name="checkPassword">
         <FormItem class="relative pb-6 space-y-0">
           <FormControl>
-            <FaInput type="password" autocomplete="new-password" placeholder="请确认新密码" class="w-full" :class="errors.length > 0 && 'border-destructive'" v-bind="componentField" />
+            <el-input type="password" autocomplete="new-password" placeholder="请确认新密码" class="w-full" :class="{ 'account-field-invalid': errors.length > 0 }" :aria-invalid="errors.length > 0" v-bind="componentField" />
           </FormControl>
           <Transition enter-active-class="transition-opacity" enter-from-class="opacity-0" leave-active-class="transition-opacity" leave-to-class="opacity-0">
             <FormMessage class="absolute bottom-1 text-xs" />
           </Transition>
         </FormItem>
       </FormField>
-      <FaButton :loading="loading" size="lg" class="mt-8 w-full" type="submit">
+      <el-button :auto-insert-space="false" :loading="loading" size="large" class="mt-8 w-full" native-type="submit" type="primary">
         保存
-      </FaButton>
+      </el-button>
     </form>
   </div>
 </template>

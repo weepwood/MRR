@@ -117,9 +117,13 @@ const slots = useSlots()
   min-width: 0;
 }
 
-.mrr-filter-bar--labelled :deep(.mrr-filter-field > label) {
+/* Both native-labelled fields and Element Plus grid forms use the same label contract. */
+.mrr-filter-bar--labelled :deep(.mrr-filter-field > label),
+.mrr-filter-bar--labelled :deep(.mrr-filter-field__label),
+.mrr-filter-bar--grid :deep(.el-form-item__label) {
   font-size: 12px;
   font-weight: 600;
+  line-height: 18px;
   color: var(--mrr-card-foreground);
 }
 
@@ -147,10 +151,7 @@ const slots = useSlots()
 }
 
 .mrr-filter-bar--grid :deep(.el-form-item__label) {
-  margin-bottom: 6px;
-  font-size: 12px;
-  line-height: 18px;
-  color: var(--mrr-muted-foreground);
+  margin-bottom: var(--mrr-space-1);
 }
 
 .mrr-filter-bar--grid :deep(.el-input),
@@ -181,7 +182,7 @@ const slots = useSlots()
  * tokens.css 的 --mrr-control-bg（含 Chrome 86 静态回退），此处不再重复定义。
  */
 
-@media (max-width: 760px) {
+@media (max-width: 600px) {
   .mrr-filter-bar--grid .mrr-filter-bar__fields {
     grid-template-columns: minmax(0, 1fr);
   }
@@ -189,7 +190,9 @@ const slots = useSlots()
   .mrr-filter-bar--grid :deep(.mrr-filter-bar__range) {
     grid-column: auto;
   }
+}
 
+@media (max-width: 760px) {
   .mrr-filter-bar {
     flex-direction: column;
     align-items: stretch;

@@ -854,3 +854,11 @@ V1.2 当前实施顺序与证据台账见 [全站 UI 规范与组件治理](../d
 **2026-11-24（浏览器升级拦截页恢复聚焦轮廓）**
 
 - 浏览器升级拦截页（`public/browser_upgrade/index.css`，零转译静态壳层）此前 `:hover`、`:focus-visible` 一并 `outline: none`，违反 §5.2「焦点用 outline 即时可见」——该页是不满足 Chrome 86 基线用户的最后可视通道，键盘焦点被抹掉即失能。现拆分：hover 仍去轮廓但经 `:not(:focus-visible)` 让位键盘焦点（键盘 Tab 聚焦后指针再悬停同一按钮时环不消失，WAI/GOV.UK 惯例去轮廓必须排除键盘焦点；<86 该条含 `:not(:focus-visible)` 整条丢弃，hover 底色与改前持平、改前该规则组在 <86 同样不生效，无劣化）；`:focus-visible` 恢复 `2px solid #c2410c` 轮廓 + `outline-offset: 2px`（两属性 Chrome/Edge 老内核均支持，无 chrome86 风险）。环色不用 currentcolor 而定死 `#c2410c`：主按钮 `.button-primary` 文字为白（`color: #fff`），环画在按钮盒外落在 `.browser-compat-content` 白底上，currentcolor 会白环白底 1:1 不可见——定色与文件既有 accent 一致、对白底 5.18:1，亦是仓库既有惯例（`RegisterFieldLabel.vue` 定色 outline 而非 currentcolor）。由 `public-static-files.test` 两面锁定（存在非 none/0 轮廓的 `:focus-visible` 规则 + 任何 `:focus-visible` 块无 outline 重置残留，`:not()` 内嵌豁免），与 chrome86 门禁同文件的静态层哨兵，RED→GREEN。兼容事实：`:focus-visible` 伪类本身是 Chrome/Edge 86+、Firefox 85+、Safari 15.4+，不足 86 时未知伪类导致整条规则丢弃、由 UA 默认焦点环兜底（非「最后可视通道」在 <86 由本规则生效——该通道在 <86 由 UA 兜底）；拦截层受众 Edge 86-110 / Firefox 85-113 / Safari 15.4-16.3 均支持，修复对受众大多数真实生效。
+
+### 业务页面同类交互一致性补充（V1.2）
+
+- 常规列表查询/重置使用 MrrFilterActionButton 和中性按钮；写入、导出、批量下载等主要任务按明确主次使用 primary。已建立真实请求反馈模式，使用者不得为高频查询补足人工等待；原有动画反馈模式暂保留兼容。
+- 有可见标签的筛选字段（原生标签、EP 网格表单）统一 12px/600、18px 行高、主要文字色、4px 间距；复选框仅保留一个原生可访问名称。紧凑无标签布局仍需可访问名称。
+- 同类列表页采用统一 MrrPageHeader 与英文业务眉题；可随说明或元信息换行，不用固定高度裁切。
+- 同语义查看操作使用 MrrTableActions 的 eye/primary，窄屏进入更多菜单。不同任务的专用操作布局保留。
+- 五项指标用 mrr-metric-grid--five 均衡排布，不影响其他数量的指标；网格筛选 601–1100px 双列、600px 以下单列，日期范围占整行，不隐藏已生效条件。

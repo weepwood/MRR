@@ -51,7 +51,7 @@ for (const palette of ['mrr', 'gr8r'] as const) {
               titles: list('h1'),
               cards: list('.mrr-section-card, .el-card', 10),
               filters: list('.mrr-filter-bar, .mrr-data-table-panel__filters'),
-              fields: list('.mrr-filter-bar .el-input__wrapper, .mrr-filter-bar .el-select__wrapper, .mrr-filter-bar .el-date-editor, .mrr-filter-bar .el-form-item__label, .mrr-filter-field > label'),
+              fields: list('.mrr-filter-bar .el-input__wrapper, .mrr-filter-bar .el-select__wrapper, .mrr-filter-bar .el-date-editor, .mrr-filter-bar .el-form-item__label, .mrr-filter-field > label, .mrr-filter-field__label'),
               buttons: list('.mrr-filter-bar .el-button, .mrr-page-header .el-button'),
               tables: list('.el-table'),
               tableHeaders: list('.el-table__header th', 6),
@@ -65,6 +65,27 @@ for (const palette of ['mrr', 'gr8r'] as const) {
           expect(metrics.overflow, `${route} shared container overflow`).toEqual([])
           for (const field of metrics.fields.filter(item => item.cls.includes('el-select__wrapper'))) {
             expect(field.h, `${route} filter select height`).toBe(palette === 'gr8r' ? 30 : 33)
+          }
+          for (const label of metrics.fields.filter(item => item.cls === '' || item.cls.includes('el-form-item__label') || item.cls.includes('mrr-filter-field__label'))) {
+            expect(label.font, `${route} filter label font`).toBe('12px')
+            expect(label.weight, `${route} filter label weight`).toBe('600')
+          }
+          if (route === 'logs' || route === 'audit-images') {
+            const columns = await page.locator('.mrr-filter-bar--grid .mrr-filter-bar__fields').evaluate(el => getComputedStyle(el).gridTemplateColumns.trim().split(/\s+/).length)
+            expect(columns, 'query grid columns').toBe(width === 1440 ? 3 : width === 760 ? 2 : 1)
+          }
+          if (route === 'audit-images') {
+            const summary = page.locator('.mrr-metric-grid--five')
+            await expect(summary.locator('.mrr-metric-card')).toHaveCount(5)
+            const cards = await summary.locator('.mrr-metric-card').evaluateAll(elements => elements.map((el) => {
+              const rect = el.getBoundingClientRect()
+              const label = el.querySelector('.mrr-metric-card__label')!
+              return { x: rect.x, y: Math.round(rect.y), width: rect.width, right: rect.right, labelFits: label.scrollWidth <= label.clientWidth + 1 }
+            }))
+            expect(cards.every(card => card.labelFits)).toBe(true)
+            const groups = new Map<number, number>()
+            for (const card of cards) { groups.set(card.y, (groups.get(card.y) || 0) + 1) }
+            expect([...groups.values()], `${width} audit metric rows`).toEqual(width === 1440 ? [5] : width === 760 ? [2, 2, 1] : [1, 1, 1, 1, 1])
           }
           results.push({ route, width, palette, theme, ...metrics })
           if (evidence) {

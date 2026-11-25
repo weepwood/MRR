@@ -80,7 +80,7 @@ function handleTargetAction(action: string, target: string) {
 
 <template>
   <section class="analytics-shell" :aria-busy="loading">
-    <section class="mrr-metric-grid">
+    <section class="mrr-metric-grid mrr-metric-grid--five">
       <MrrMetricCard
         label="访问用户数"
         icon="i-lucide:user-round"

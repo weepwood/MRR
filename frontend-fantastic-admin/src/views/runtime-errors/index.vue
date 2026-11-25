@@ -4,6 +4,7 @@ import type {
   SystemErrorOverview,
 } from '@/api/modules/system-errors'
 /* eslint-disable vue/singleline-html-element-content-newline */
+import type { MrrTableAction } from '@/components/MrrTableActions/types'
 import { RefreshCw as Refresh } from 'lucide-vue-next'
 import { computed, onBeforeUnmount, onDeactivated, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
@@ -22,7 +23,9 @@ import MrrFilterBar from '@/components/MrrFilterBar/index.vue'
 import MrrMetricCard from '@/components/MrrMetricCard/index.vue'
 import MrrPageHeader from '@/components/MrrPageHeader/index.vue'
 import MrrPageShell from '@/components/MrrPageShell/index.vue'
+import MrrTableActions from '@/components/MrrTableActions/index.vue'
 import { useCrudList } from '@/composables/useCrudList'
+import { useTableActionLayout } from '@/composables/useTableActionLayout'
 import { useUserStore } from '@/store/modules/user'
 import useVisibleInterval from '@/utils/composables/useVisibleInterval'
 import { copyText as copyToClipboard } from '@/utils/copy-text'
@@ -31,6 +34,9 @@ import { checkSessionPermission } from '@/utils/permission'
 import { isSessionAccessDenied } from '@/utils/session-access-denied'
 
 defineOptions({ name: 'RuntimeErrorsPage' })
+
+const detailActions: MrrTableAction[] = [{ key: 'detail', label: '详情', icon: 'i-lucide:eye', tone: 'primary', placement: 'inline' }]
+const { maxInlineActions: detailMaxInlineActions, actionColumnWidth: detailActionColumnWidth } = useTableActionLayout(1, 1)
 
 const userStore = useUserStore()
 const router = useRouter()
@@ -455,9 +461,9 @@ function levelTagType(level: string) {
             </span>
           </template>
         </el-table-column>
-        <el-table-column label="操作" width="90" fixed="right" align="center">
+        <el-table-column label="操作" :width="detailActionColumnWidth" fixed="right" align="center">
           <template #default="{ row }">
-            <el-button link type="primary" @click="openDetail(row as SystemErrorEvent)">详情</el-button>
+            <MrrTableActions :actions="detailActions" :max-inline="detailMaxInlineActions" @select="openDetail(row as SystemErrorEvent)" />
           </template>
         </el-table-column>
       </el-table>

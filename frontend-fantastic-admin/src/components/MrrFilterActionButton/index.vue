@@ -11,9 +11,12 @@ const props = withDefaults(defineProps<{
   action: 'search' | 'reset'
   pending?: boolean
   busy?: boolean
+  /** Request-owned feedback does not extend a completed query. */
+  feedback?: 'minimum' | 'request'
 }>(), {
   pending: false,
   busy: false,
+  feedback: 'minimum',
 })
 
 const emit = defineEmits<{
@@ -23,6 +26,7 @@ const emit = defineEmits<{
 const attrs = useAttrs()
 const isSpinning = ref(false)
 const pendingWasObserved = ref(false)
+const showingBusy = computed(() => props.feedback === 'request' ? props.pending : isSpinning.value)
 const minSpinDuration = 320
 let spinStartedAt = 0
 let finishTimer: ReturnType<typeof setTimeout> | undefined
@@ -52,7 +56,11 @@ watch(() => props.pending, (pending) => {
 }, { flush: 'sync' })
 
 function handleClick(event: MouseEvent) {
-  if (props.busy || attrs.disabled || isSpinning.value) { return }
+  if (props.busy || attrs.disabled || showingBusy.value) { return }
+  if (props.feedback === 'request') {
+    emit('click', event)
+    return
+  }
 
   spinStartedAt = Date.now()
   isSpinning.value = true
@@ -69,7 +77,7 @@ onBeforeUnmount(() => {
 })
 
 const iconName = computed(() => {
-  if (isSpinning.value) { return 'i-lucide:loader-circle' }
+  if (showingBusy.value) { return 'i-lucide:loader-circle' }
   return props.action === 'search' ? 'i-lucide:search' : 'i-lucide:rotate-ccw'
 })
 </script>
@@ -77,11 +85,11 @@ const iconName = computed(() => {
 <template>
   <el-button
     v-bind="attrs"
-    :aria-busy="isSpinning"
-    :aria-disabled="isSpinning || props.busy || Boolean(attrs.disabled)"
+    :aria-busy="showingBusy"
+    :aria-disabled="showingBusy || props.busy || Boolean(attrs.disabled)"
     @click="handleClick"
   >
-    <FaIcon :name="iconName" class="mrr-filter-action-button__icon" :class="{ 'is-spinning': isSpinning }" />
+    <FaIcon :name="iconName" class="mrr-filter-action-button__icon" :class="{ 'is-spinning': showingBusy }" />
     <slot />
   </el-button>
 </template>

@@ -276,6 +276,52 @@
   }
 }
 
+/* Five-item analytical summaries: avoid a 4+1 orphan without changing other grids.
+ * Use a 6-track grid for a balanced 3+2 layout at intermediate widths. */
+.mrr-metric-grid--five {
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+}
+
+.mrr-metric-grid--five .mrr-metric-card__label {
+  overflow-wrap: anywhere;
+  white-space: normal;
+}
+
+@media (max-width: 1399px) {
+  .mrr-metric-grid--five {
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+  }
+
+  .mrr-metric-grid--five > * {
+    grid-column: span 2;
+  }
+
+  .mrr-metric-grid--five > :nth-last-child(-n + 2) {
+    grid-column: span 3;
+  }
+}
+
+@media (max-width: 800px) {
+  .mrr-metric-grid--five {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .mrr-metric-grid--five > *,
+  .mrr-metric-grid--five > :nth-last-child(-n + 2) {
+    grid-column: span 1;
+  }
+
+  .mrr-metric-grid--five > :last-child {
+    grid-column: 1 / -1;
+  }
+}
+
+@media (max-width: 600px) {
+  .mrr-metric-grid--five {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
 /*
  * Chrome 86 回退：卡面是分层实色底，丢了就与工作区背景糊成一片（亮色仅 1.02:1）。
  * 图标块与焦点边同样给实色，避免图标色块整块消失、焦点只剩一条 currentColor 描边。

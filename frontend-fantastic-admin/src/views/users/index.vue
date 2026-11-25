@@ -11,6 +11,7 @@ import AppEmpty from '@/components/AppEmpty/index.vue'
 import AppError from '@/components/AppError/index.vue'
 import AppLoading from '@/components/AppLoading/index.vue'
 import MrrDataTablePanel from '@/components/MrrDataTablePanel/index.vue'
+import MrrFilterActionButton from '@/components/MrrFilterActionButton/index.vue'
 import MrrFilterBar from '@/components/MrrFilterBar/index.vue'
 import MrrMetricCard from '@/components/MrrMetricCard/index.vue'
 import MrrPageHeader from '@/components/MrrPageHeader/index.vue'
@@ -604,8 +605,8 @@ onMounted(loadData)
             </el-select>
           </div>
           <template #actions>
-            <el-button :aria-busy="dataLoadingAction === 'search'" :aria-disabled="dataLoadingAction === 'search'" @click="handleSearch"><FaIcon :name="dataLoadingAction === 'search' ? 'i-lucide:loader-circle' : 'i-lucide:search'" class="mr-1" :class="{ 'animate-spin': dataLoadingAction === 'search' }" />查询</el-button>
-            <el-button :aria-busy="dataLoadingAction === 'reset'" :aria-disabled="dataLoadingAction === 'reset'" @click="resetFilters"><FaIcon :name="dataLoadingAction === 'reset' ? 'i-lucide:loader-circle' : 'i-lucide:rotate-ccw'" class="mr-1" :class="{ 'animate-spin': dataLoadingAction === 'reset' }" />重置</el-button>
+            <MrrFilterActionButton action="search" feedback="request" :pending="dataLoadingAction === 'search'" :busy="loading || dataLoadingAction !== null" @click="handleSearch">查询</MrrFilterActionButton>
+            <MrrFilterActionButton action="reset" feedback="request" :pending="dataLoadingAction === 'reset'" :busy="loading || dataLoadingAction !== null" @click="resetFilters">重置</MrrFilterActionButton>
           </template>
         </MrrFilterBar>
       </template>

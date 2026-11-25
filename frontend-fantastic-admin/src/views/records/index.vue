@@ -234,14 +234,13 @@ function typeLabel(value: unknown) {
             </el-select>
           </div>
           <div class="mrr-filter-field records-filter__field">
-            <label for="records-legacy-contains">匹配方式</label>
-            <label class="records-legacy-option">
-              <input id="records-legacy-contains" v-model="query.legacyContains" type="checkbox" aria-label="兼容包含查询">
-              兼容包含
-            </label>
+            <span class="mrr-filter-field__label">匹配方式</span>
+            <el-checkbox id="records-legacy-contains" v-model="query.legacyContains" class="records-legacy-option">
+              兼容包含查询
+            </el-checkbox>
           </div>
           <template #actions>
-            <MrrFilterActionButton type="primary" action="search" :pending="loading" :busy="loading" @click="handleSearch">
+            <MrrFilterActionButton action="search" :pending="loading" :busy="loading" @click="handleSearch">
               查询
             </MrrFilterActionButton>
             <MrrFilterActionButton action="reset" :pending="loading" :busy="loading" @click="resetFilters">
@@ -408,10 +407,9 @@ function typeLabel(value: unknown) {
 }
 
 .records-legacy-option {
-  display: flex;
-  gap: 6px;
-  align-items: center;
-  min-height: 32px;
+  height: var(--mrr-input-height);
+  min-height: var(--mrr-input-height);
+  margin-right: 0;
   white-space: nowrap;
 }
 

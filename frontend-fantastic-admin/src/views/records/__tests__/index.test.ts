@@ -23,6 +23,7 @@ function mountPage() {
         'el-button': { emits: ['click'], template: '<button @click="$emit(\'click\', $event)"><slot /></button>' },
         'el-input': { props: ['modelValue'], template: '<input :value="modelValue" @input="$emit(\'update:modelValue\', $event.target.value)" @keyup.enter="$emit(\'keyup.enter\')">' },
         'el-select': { props: ['modelValue'], template: '<select :value="modelValue" @change="$emit(\'update:modelValue\', Number($event.target.value)); $emit(\'change\')"><slot /></select>' },
+        'el-checkbox': { props: ['modelValue'], template: '<input type="checkbox" :checked="modelValue" @change="$emit(\'update:modelValue\', $event.target.checked)">' },
         'el-option': { props: ['value', 'label'], template: '<option :value="value">{{ label }}</option>' },
         'el-table-column': true,
         'el-dialog': true,

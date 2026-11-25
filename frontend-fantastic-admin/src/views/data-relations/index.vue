@@ -53,6 +53,7 @@ const activeTab = ref(props.archiveOnly ? 'archive' : 'overview')
 const overview = ref<DataRelationOverview | null>(null)
 const qualitySummary = ref<DataQualitySummary | null>(null)
 const issues = ref<DataQualityIssue[]>([])
+const railWidth = ref(260)
 const searchType = ref('BAH')
 const searchValue = ref('')
 const archiveSearchInput = ref<InputInstance>()
@@ -131,6 +132,7 @@ function resetPage() {
   activeTab.value = props.archiveOnly ? 'archive' : 'overview'
   searchValue.value = ''
   searchType.value = 'BAH'
+  railWidth.value = 260
   issueSeverity.value = 'ALL'
 }
 watch(() => useUserStore().token, resetPage, { flush: 'sync' })
@@ -562,9 +564,17 @@ onMounted(() => {
       </el-tab-pane>
 
       <el-tab-pane label="病案工作台" name="archive">
-        <div class="archive-stack" :class="{ 'archive-stack--workspace': archiveOnly }">
+        <div class="archive-stack" :class="{ 'archive-stack--workspace': archiveOnly }" :style="archiveOnly ? { '--archive-rail-width': `${railWidth}px` } : undefined">
           <div class="archive-search-rail" :class="{ 'archive-search-rail--legacy': !archiveOnly }" role="region" aria-label="病案检索及候选">
             <MrrSectionCard title="查找病案" :description="archiveOnly ? undefined : '选择编号类型，查询病案主档及其跨表关系。'">
+              <div v-if="archiveOnly" class="archive-rail-controls">
+                <label for="archive-rail-width">检索栏目标宽度</label>
+                <output for="archive-rail-width">{{ railWidth }}px</output>
+                <input id="archive-rail-width" v-model.number="railWidth" type="range" min="220" max="360" step="10">
+                <el-button size="small" text @click="railWidth = 260">
+                  恢复默认
+                </el-button>
+              </div>
               <div class="search-row">
                 <div class="search-field search-field--type">
                   <label for="relation-search-type">查询类型</label>
@@ -1001,7 +1011,7 @@ p {
 
 /* The standalone workspace keeps search context beside the current record. */
 .archive-stack--workspace {
-  grid-template-columns: minmax(220px, 260px) minmax(0, 1fr);
+  grid-template-columns: minmax(220px, min(var(--archive-rail-width, 260px), 34%)) minmax(0, 1fr);
   align-items: start;
 }
 
@@ -1083,6 +1093,22 @@ p {
   flex: 0 1 auto;
 }
 
+.archive-rail-controls {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: var(--mrr-space-1) var(--mrr-space-2);
+  align-items: center;
+  margin-bottom: var(--mrr-space-3);
+  font-size: var(--mrr-font-size-xs);
+  color: var(--el-text-color-secondary);
+}
+
+.archive-rail-controls input {
+  width: 100%;
+  min-width: 0;
+  accent-color: var(--el-color-primary);
+}
+
 .archive-candidates {
   display: grid;
   gap: var(--mrr-space-2);
@@ -1149,6 +1175,10 @@ p {
 }
 
 @media (max-width: 1050px) {
+  .archive-rail-controls {
+    display: none;
+  }
+
   .archive-stack--workspace {
     grid-template-columns: minmax(0, 1fr);
   }

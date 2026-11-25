@@ -380,6 +380,7 @@ function levelTagType(level: string) {
             <el-select
               id="runtime-errors-module"
               v-model="query.module"
+              class="mrr-single-select"
               clearable
               filterable
               allow-create
@@ -392,13 +393,13 @@ function levelTagType(level: string) {
             </el-select>
           </div>
           <div class="runtime-errors-filter__field runtime-errors-filter__select">
-            <el-select id="runtime-errors-level" v-model="query.level" clearable aria-label="级别" placeholder="全部级别">
+            <el-select id="runtime-errors-level" v-model="query.level" class="mrr-single-select" clearable aria-label="级别" placeholder="全部级别">
               <el-option label="ERROR" value="ERROR" />
               <el-option label="WARN" value="WARN" />
             </el-select>
           </div>
           <div class="runtime-errors-filter__field runtime-errors-filter__select">
-            <el-select id="runtime-errors-range" v-model="query.range" clearable aria-label="时间范围" placeholder="全部时间" @change="handleSearch">
+            <el-select id="runtime-errors-range" v-model="query.range" class="mrr-single-select" clearable aria-label="时间范围" placeholder="全部时间" @change="handleSearch">
               <el-option label="今天" value="today" />
               <el-option label="近 24 小时" value="24h" />
               <el-option label="近 7 天" value="7d" />

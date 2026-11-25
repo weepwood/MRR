@@ -1,0 +1,261 @@
+/* ===== Inputs, selects, date editors and textareas ===== */
+
+/* VeeValidate account forms retain their validation contract without ElFormItem. */
+.el-input.account-field-invalid .el-input__wrapper,
+.el-textarea.account-field-invalid .el-textarea__inner {
+  background: var(--mrr-field-focus-bg);
+  box-shadow: 0 0 0 1px var(--mrr-destructive) inset, var(--mrr-danger-focus-ring);
+}
+
+.el-input__wrapper,
+.el-select__wrapper,
+.el-textarea__inner,
+.el-input-number {
+  color: var(--mrr-foreground);
+  background: var(--mrr-control-bg);
+  border-radius: var(--mrr-control-radius);
+  transition:
+    color var(--mrr-motion-feedback) var(--mrr-ease-out),
+    background-color var(--mrr-motion-feedback) var(--mrr-ease-out),
+    border-color var(--mrr-motion-feedback) var(--mrr-ease-out),
+    box-shadow var(--mrr-motion-feedback) var(--mrr-ease-out);
+}
+
+.el-input__wrapper,
+.el-select__wrapper {
+  min-height: var(--mrr-input-height);
+  padding-inline: var(--mrr-field-padding-x);
+  box-shadow: 0 0 0 1px var(--mrr-control-border) inset, var(--mrr-field-shadow);
+}
+
+.el-input--small .el-input__wrapper,
+.el-select--small .el-select__wrapper {
+  min-height: var(--mrr-input-height);
+  padding-inline: var(--mrr-field-padding-x-sm);
+  border-radius: var(--mrr-radius-sm);
+}
+
+.el-input--large .el-input__wrapper,
+.el-select--large .el-select__wrapper {
+  min-height: var(--mrr-input-height);
+  padding-inline: var(--mrr-field-padding-x-lg);
+  border-radius: var(--mrr-radius-lg);
+}
+
+/* 用 .el-select .el-select__wrapper 提高优先级：EP 按需样式注入晚于本文件，
+ * 单类选择器会被其自带的 4px 圆角与 --el-fill-color-blank 底色覆盖，导致控件
+ * 不响应 --mrr-control-radius / --mrr-control-bg 令牌（与输入框底色不一致）。 */
+.el-select .el-select__wrapper {
+  padding-block: 4px;
+  background: var(--mrr-control-bg);
+  border-radius: var(--mrr-control-radius);
+}
+
+.el-input__wrapper:hover,
+.el-select__wrapper:hover,
+.el-textarea__inner:hover {
+  background: var(--mrr-control-bg-hover);
+  box-shadow: 0 0 0 1px var(--mrr-control-border-hover) inset, var(--mrr-field-shadow);
+}
+
+.el-input__wrapper.is-focus,
+.el-select__wrapper.is-focused,
+.el-date-editor.el-input__wrapper.is-active,
+.el-date-editor.el-input__wrapper:focus-within {
+  background: var(--mrr-field-focus-bg);
+  box-shadow: 0 0 0 1px var(--mrr-ring) inset, var(--mrr-focus-ring);
+}
+
+.el-textarea__inner {
+  min-height: var(--mrr-textarea-min-height);
+  padding: var(--mrr-textarea-padding-y) var(--mrr-field-padding-x);
+  line-height: var(--mrr-textarea-line-height);
+  border: 0;
+  box-shadow: 0 0 0 1px var(--mrr-control-border) inset, var(--mrr-field-shadow);
+}
+
+.el-textarea__inner:focus {
+  outline: none;
+  background: var(--mrr-field-focus-bg);
+  box-shadow: 0 0 0 1px var(--mrr-ring) inset, var(--mrr-focus-ring);
+}
+
+.el-input__inner,
+.el-select__selected-item,
+.el-textarea__inner {
+  font-size: var(--mrr-field-font-size);
+  color: var(--mrr-foreground);
+}
+
+body .el-input__inner::placeholder,
+body .el-textarea__inner::placeholder,
+body .el-select .el-select__selected-item.is-transparent,
+body .el-select__placeholder {
+  color: var(--mrr-muted-foreground);
+}
+
+/*
+ * 字数计数与提示条说明文字走次要文字令牌。
+ * Element Plus 默认把两者指向 --el-color-info（桥接后为中性档 #64748b），
+ * 在 info-light 提示条底（#f0f1f3）上只有 4.2:1；muted 在卡面、工作区、
+ * 提示条淡底上均 ≥ 4.5:1（见 contrast-baseline.test.ts）。
+ * 用 body 前缀抬过 EP 的 .el-textarea .el-input__count 双类选择器。
+ */
+body .el-input .el-input__count,
+body .el-textarea .el-input__count,
+body .el-input__count-inner {
+  color: var(--mrr-muted-foreground);
+}
+
+body .el-alert .el-alert__title {
+  color: var(--mrr-foreground);
+}
+
+/*
+ * 提示条说明文字走次要文字令牌。EP 按类型逐条设置 .el-alert--*.is-light
+ * .el-alert__description（0,3,0），这里须逐型覆写才能胜出；muted 在各类
+ * tone-soft 淡底上 4.61–4.72:1，均 ≥ 4.5（EP 的 --el-color-info 桥接后
+ * 为中性档 #64748b，在 info 淡底上只有 4.21:1）。
+ */
+body .el-alert.el-alert--primary.is-light .el-alert__description,
+body .el-alert.el-alert--success.is-light .el-alert__description,
+body .el-alert.el-alert--info.is-light .el-alert__description,
+body .el-alert.el-alert--warning.is-light .el-alert__description,
+body .el-alert.el-alert--error.is-light .el-alert__description {
+  color: var(--mrr-muted-foreground);
+}
+
+/*
+ * Element Plus 复选框自带回弹曲线（cubic-bezier(.71,-.46,.29,1.46)），
+ * 违反 §2.9「不用弹跳做交互反馈」；颜色类过渡改走 feedback 档令牌。
+ */
+body .el-checkbox .el-checkbox__inner {
+  transition: border-color var(--mrr-motion-feedback) var(--mrr-ease-out), background-color var(--mrr-motion-feedback) var(--mrr-ease-out);
+}
+
+body .el-input .el-input__prefix,
+body .el-input .el-input__suffix,
+body .el-input .el-input__icon,
+body .el-select .el-select__prefix,
+body .el-select .el-select__suffix,
+body .el-select .el-select__caret {
+  color: var(--mrr-muted-foreground);
+  transition: color var(--mrr-motion-feedback) var(--mrr-ease-out), transform var(--mrr-motion-move) var(--mrr-ease-out);
+}
+
+body .el-input .el-input__wrapper.is-focus .el-input__prefix,
+body .el-input .el-input__wrapper.is-focus .el-input__suffix,
+body .el-select .el-select__wrapper.is-focused .el-select__caret {
+  color: var(--mrr-foreground);
+}
+
+.el-select__wrapper.is-focused .el-select__caret {
+  transform: rotate(180deg);
+}
+
+.el-input__clear,
+.el-select__clear {
+  display: grid;
+  place-items: center;
+  width: 20px;
+  height: 20px;
+  border-radius: var(--mrr-radius-sm);
+}
+
+.el-input__clear:hover,
+.el-select__clear:hover {
+  color: var(--mrr-foreground);
+  background: var(--mrr-accent);
+}
+
+.el-select__selection {
+  gap: 4px;
+}
+
+.el-select__selected-item.el-tag {
+  color: var(--mrr-secondary-foreground);
+  background: var(--mrr-secondary);
+  border-color: transparent;
+  border-radius: var(--mrr-radius-sm);
+}
+
+.el-input.is-disabled .el-input__wrapper,
+.el-select .el-select__wrapper.is-disabled,
+.el-select__wrapper.is-disabled,
+.el-textarea.is-disabled .el-textarea__inner,
+.el-input-number.is-disabled {
+  color: var(--mrr-muted-foreground);
+  cursor: not-allowed;
+  background: var(--mrr-control-bg-disabled);
+  box-shadow: 0 0 0 1px var(--mrr-border) inset;
+  opacity: 0.62;
+}
+
+/* Disabled fields keep the same readable foreground as the surface. */
+.el-input.is-disabled .el-input__inner {
+  color: var(--mrr-muted-foreground);
+  -webkit-text-fill-color: var(--mrr-muted-foreground);
+}
+
+/*
+ * 只读输入框的弱化外观。单行输入依赖 `:has()` 识别内层 input——Element Plus
+ * 不会为 readonly 状态的外层 wrapper 附加标记类。`:has()` 需要 Chrome 105+，
+ * 因此该条规则收进 `@supports selector()`，Chrome 86 跳过、退化为普通外观；
+ * 多行输入直接用属性选择器，所有支持范围内浏览器一致生效。
+ */
+@supports selector(:has(*)) {
+  .el-input__wrapper:has(.el-input__inner[readonly]) {
+    background: var(--mrr-muted);
+    box-shadow: 0 0 0 1px var(--mrr-border) inset;
+  }
+}
+
+.el-textarea__inner[readonly] {
+  background: var(--mrr-muted);
+  box-shadow: 0 0 0 1px var(--mrr-border) inset;
+}
+
+.el-form-item.is-error .el-input__wrapper,
+.el-form-item.is-error .el-select__wrapper,
+.el-input__wrapper.is-error,
+.el-select__wrapper.is-error,
+.el-form-item.is-error .el-textarea__inner {
+  background: var(--mrr-background);
+  box-shadow: 0 0 0 1px var(--mrr-destructive) inset, var(--mrr-danger-focus-ring);
+}
+
+.el-input__wrapper.is-warning,
+.el-select__wrapper.is-warning {
+  box-shadow: 0 0 0 1px var(--color-warning) inset, var(--mrr-warning-focus-ring);
+}
+
+.el-input-number {
+  overflow: hidden;
+  box-shadow: 0 0 0 1px var(--mrr-control-border) inset, var(--mrr-shadow-xs);
+}
+
+.el-input-number .el-input__wrapper {
+  background: transparent;
+  box-shadow: none;
+}
+
+.el-input-number__decrease,
+.el-input-number__increase {
+  color: var(--mrr-muted-foreground);
+  background: var(--mrr-muted);
+  border-color: var(--mrr-border);
+}
+
+.el-input-number__decrease:hover,
+.el-input-number__increase:hover {
+  color: var(--mrr-foreground);
+  background: var(--mrr-accent);
+}
+
+.el-input-group__append,
+.el-input-group__prepend {
+  color: var(--mrr-muted-foreground);
+  background: var(--mrr-muted);
+  border-color: var(--mrr-border);
+  box-shadow: none;
+}

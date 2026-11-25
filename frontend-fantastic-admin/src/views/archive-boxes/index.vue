@@ -508,7 +508,7 @@ onMounted(refreshAll)
             </div>
             <div class="mrr-filter-field archive-filter__field">
               <label for="archive-status">装箱状态</label>
-              <el-select id="archive-status" v-model="filters.status" clearable aria-label="装箱状态" placeholder="全部状态">
+              <el-select id="archive-status" v-model="filters.status" class="mrr-single-select" clearable aria-label="装箱状态" placeholder="全部状态">
                 <el-option v-for="item in statusOptions" :key="item.value" :label="item.label" :value="item.value" />
               </el-select>
             </div>

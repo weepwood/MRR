@@ -346,6 +346,12 @@ Element Plus 是同类基础业务控件的唯一目标，禁止新增重复 Fa 
 
 迁移与视觉重设计分离：默认保留现有页面几何、主题色、字号、字重、布局与交互状态。同环境基线截图/计算样式对照，几何偏差≤1 CSS px；对实际不一致先定位组件默认行为并在恰当归属处修复。测试与记录见归属清单，不宣称跨平台像素完全一致。
 
+### 4.2.0.1 Element Plus 样式归属与级联
+
+`element-plus-overrides.css` 是统一入口，按原声明次序加载 `element-plus/` 下八个职责模块：基础令牌及按钮、字段、轻量浮层及反馈、数据展示、表单几何及查看器、对话框及抽屉外壳、菜单、辅助控件。模块化不改变选择器优先级；不得为形式上的去重跨模块移动存在级联覆盖的规则。公共业务组件样式保持在 `components/`，暖色主题仍最后加载；主题优先修改语义令牌，而不是复制控件规则。新增通用控件状态应进入对应模块，避免在业务页面用更高权重重复覆盖。由 `element-plus-cascade.test.ts` 和已有样式测试锁定实际导入顺序。
+
+公共临时通知由 ElMessage 渲染，新代码优先 `notify.success/warning/info/error`，默认 5000ms、重复分组、无关闭按钮；明确的常驻、关闭、偏移及不分组策略由调用方传参。已有直接 ElMessage 调用不强制改时长，不把持久任务结果或需确认的警告降为短暂提示。保持影像沉浸层上方的消息层级和请求错误去重合同。
+
 ### 4.2.1 字段控件的统一视觉契约
 
 - `--mrr-field-font-size`、`--mrr-field-padding-x(-sm/-lg)`、`--mrr-textarea-padding-y`、`--mrr-textarea-line-height`、`--mrr-textarea-min-height`、`--mrr-field-focus-bg`、`--mrr-field-shadow` 与既有输入高度/圆角/颜色令牌同源。Element Plus 在 element-plus-overrides.css 引用；主题仅改令牌，不重写同一字段选择器。默认文本域最小高度为未明确行数时的基准，显式 rows 尊重组件自身测量。

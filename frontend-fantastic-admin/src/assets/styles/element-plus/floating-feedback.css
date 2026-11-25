@@ -1,0 +1,146 @@
+/* ===== Popovers, dropdowns and picker panels ===== */
+
+/* Tooltip / lightweight popover retain the compact original floating surface.
+ * Element Plus owns positioning, lifecycle and triggering. */
+body .el-popper.mrr-tooltip,
+body .el-popover.el-popper.mrr-light-popover {
+  box-sizing: border-box;
+  max-width: calc(100vw - 24px);
+  color: var(--mrr-popover-foreground);
+  background: var(--mrr-popover);
+  border: 1px solid var(--mrr-border);
+  border-radius: calc(var(--radius) - 2px);
+  box-shadow: 0 4px 6px -1px rgb(0 0 0 / 10%), 0 2px 4px -2px rgb(0 0 0 / 10%);
+}
+
+body .el-popper.mrr-tooltip {
+  z-index: 10000 !important;
+  padding: 6px 12px;
+  font-size: 12px;
+  line-height: 16px;
+}
+
+body .el-popover.el-popper.mrr-light-popover {
+  width: max-content;
+  min-width: min(288px, calc(100vw - 24px));
+  padding: 16px;
+  font-size: 14px;
+  line-height: 21px;
+}
+
+.el-select__popper.el-popper,
+.el-dropdown__popper.el-popper,
+.el-picker__popper.el-popper,
+.el-popover.el-popper {
+  color: var(--mrr-popover-foreground);
+  background: var(--mrr-popover);
+  border: 0;
+  border-radius: var(--mrr-radius-lg);
+  box-shadow: var(--mrr-shadow-md), 0 0 0 1px var(--mrr-border);
+}
+
+.el-popper.is-light .el-popper__arrow::before {
+  background: var(--mrr-popover);
+  border-color: var(--mrr-border);
+}
+
+/*
+ * ===== Messages and notifications =====
+ * notify() 统一走 ElMessage（顶部居中）；此段让消息/通知与全站圆角、阴影令牌一致。
+ * EP 按需样式注入晚于本文件，需 body 前缀提权（与上方桥接惯例相同）。
+ */
+body .el-message {
+  /* 提示条必须压住页面级沉浸层：全屏影像 3000、预览工具栏 3001、确认弹窗 3200，
+   * 否则在影像全屏预览里改完分类，成功提示整条被图片盖住，看着像没生效。
+   * EP 把 z-index 写在行内 style 上，只能 !important 覆盖。 */
+  z-index: var(--mrr-z-message) !important;
+  border-color: var(--mrr-border);
+  border-radius: var(--mrr-radius-md);
+  box-shadow: var(--mrr-shadow-md);
+}
+
+body .el-notification {
+  border-color: var(--mrr-border);
+  border-radius: var(--mrr-radius-lg);
+  box-shadow: var(--mrr-shadow-lg);
+}
+
+@media (max-width: 760px) {
+  body .el-date-range-picker {
+    max-width: calc(100vw - 32px);
+    max-height: calc(100vh - 32px);
+    overflow-y: auto;
+  }
+
+  body .el-date-range-picker .el-picker-panel__body {
+    min-width: 0;
+  }
+
+  body .el-date-range-picker .el-date-range-picker__content {
+    display: block;
+    width: 100%;
+  }
+
+  body .el-date-range-picker .el-date-range-picker__content.is-left {
+    border-right: 0;
+    border-bottom: 1px solid var(--mrr-border);
+  }
+
+  body .el-date-range-picker .el-date-range-picker__time-header {
+    display: grid;
+    gap: var(--mrr-space-2);
+  }
+
+  body .el-date-range-picker .el-date-range-picker__editors-wrap {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: var(--mrr-space-2);
+    min-width: 0;
+  }
+
+  body .el-date-range-picker .el-date-range-picker__time-picker-wrap {
+    display: block;
+    min-width: 0;
+    padding: 0;
+  }
+
+  body .el-date-range-picker .el-time-panel {
+    right: 0;
+    left: auto;
+  }
+}
+
+.el-select__popper .el-select-dropdown__list:not(.el-vl__window),
+.el-dropdown__popper .el-dropdown-menu {
+  padding: var(--mrr-space-1);
+}
+
+/* Element Plus component CSS is injected after this file, so keep the menu
+ * contract more specific than its defaults. Select, pagination and action
+ * menus then share one row height, inset, type size and radius. */
+body .el-select-dropdown .el-select-dropdown__item,
+body .el-dropdown__popper .el-dropdown-menu__item {
+  box-sizing: border-box;
+  height: 34px;
+  min-height: 34px;
+  padding: 0 var(--mrr-space-2);
+  margin: 2px 0;
+  font-size: 13px;
+  line-height: 34px;
+  border-radius: var(--mrr-radius-sm);
+  transition: color var(--mrr-motion-feedback) var(--mrr-ease-out), background-color var(--mrr-motion-feedback) var(--mrr-ease-out);
+}
+
+body .el-select-dropdown .el-select-dropdown__item:hover,
+body .el-select-dropdown .el-select-dropdown__item.is-hovering,
+body .el-dropdown__popper .el-dropdown-menu__item:not(.is-disabled):focus,
+body .el-dropdown__popper .el-dropdown-menu__item:not(.is-disabled):hover {
+  color: var(--mrr-accent-foreground);
+  background: var(--mrr-accent);
+}
+
+body .el-select-dropdown .el-select-dropdown__item.is-selected {
+  font-weight: 500;
+  color: var(--mrr-primary);
+  background: var(--mrr-accent);
+}

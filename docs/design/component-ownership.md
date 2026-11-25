@@ -152,6 +152,14 @@ FaIcon、FaKbd、FaPinInput、FaScrollArea、FaSmartFixedBlock、FaPasswordStren
 - 日志/tmp/mrr-v12-residual-{before,after,closure,unit,final-tsc,remove}.log；证据/tmp/mrr-v12-residual-visual-9c。预览手动触发恢复，run45656099309计划V1.2 9c9022a1及V1.1冻结92896f7c，正在构建，尚未确认部署。
 - 后续集中完成公共通知入口约束（已统一底层，不强制批量改业务调用）、保留专用组件的归属审查、历史CSS/文档、全站视觉与浏览器验收。禁止为了零Reka而重写专用PIN和滚动区。
 
+## 全局样式工程与剩余专用组件归属（2026-11-26）
+
+- #848首轮head444c5479的生产构建成功，Chrome86静态门禁发现旧分段标签 `:is()`（需要88+）；b4a4e8bc改为等价显式:nth-child(2)/:last-child列表，新增守护9/9，本地生产构建和静态兼容通过。未放宽门禁，待精确新head远端复验。原部署run45656099309首次Pages查不到已上传artifact，核验artifact实际存在后重试失败任务成功，公网versions.json及preview-build.json均证实V1.2为9c9022a1、V1.1冻结92896f7c。
+- 独立样式治理分支基于b4a4e8bc。1826行EP桥接按原连续声明顺序拆八个模块，入口9行；PostCSS去除注释和空白后的完整选择器、at-rule、属性、值、important和顺序AST完全一致。四套原守护改读取真实导入级联，新增模块顺序/完备性守护。仅在外部form-controls.css合并分段标签nav的重复规则、tokens.css删除同根暗色重复控制边框别名；不跨模块搬动其他可能存在级联意义的同选择器规则。
+- 复查FaAuth、FaFixedActionBar、FaPageHeader、FaPasswordStrength、FaSearchBar零运行时引用，删除5个旧实现及类型，保留现有路由/业务权限，不修改密码校验。其余11个旧目录包含ActionDialog（全局确认）、FaBackToTop、FaCopyright、FaIcon、FaKbd、FaNotAllowed、FaPageMain（外部链接容器）、FaPinInput（旧找回密码，未启用）、FaScrollArea、FaSmartFixedBlock（顶栏布局）、FaSystemInfo（系统信息），均有专用职责或实际调用，保留。禁止为清零Fa前缀而重写。
+- 短期消息底层已统一ElMessage；46个文件包含直接引用，218处四类型调用，保留已有业务参数，不机械批量迁移。新增notify六项契约测试，默认5000ms、重复分组、无关闭按钮，支持duration=0及显式关闭/位置/分组，空说明不加标点。已有请求级去重和查看器z-index不变。
+- 90/90样式及通知单测、vue-tsc/lint、生产构建和Chrome86静态门禁通过；原兼容脚本对依赖@container、工具链选择器、107处color-mix及8处硬编码动效仍有提示，不能声称旧浏览器真实完整验收。跨浏览器配置调用未获执行，不绕过；本轮只执行既有Chromium定向回归。日志/tmp/mrr-v12-style-{unit,tsc,build,compat,browser}.log。最终Chromium定向29/29（1.3m），包含配色、G2、账户菜单、头像/进度/分隔线、分段标签及展厅，原截图基准仍生效。#848远端新head复验中，独立本地检查点待合并基线确认后重放。
+
 ## 逐文件原始引用清单
 
 | 源文件（相对 src/） | Fa 标签 | Element Plus 标签 |

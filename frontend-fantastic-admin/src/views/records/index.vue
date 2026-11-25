@@ -229,7 +229,7 @@ function typeLabel(value: unknown) {
           </div>
           <div class="mrr-filter-field records-filter__field">
             <label for="records-btype">类型</label>
-            <el-select id="records-btype" v-model="query.btype" clearable aria-label="类型" placeholder="全部类型">
+            <el-select id="records-btype" v-model="query.btype" class="mrr-single-select" clearable aria-label="类型" placeholder="全部类型">
               <el-option v-for="item in typeOptions" :key="item.value" :label="item.label" :value="item.value" />
             </el-select>
           </div>

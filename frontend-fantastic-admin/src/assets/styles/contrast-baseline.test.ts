@@ -3,6 +3,7 @@ import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { describe, expect, it } from 'vitest'
 import { darkTheme, lightTheme } from '../../../themes'
+import { readElementPlusCss } from './read-element-plus-css'
 
 /*
  * 对比度基线锁定测试（DESIGN.md §2.2、§5.3、§10）。
@@ -24,7 +25,7 @@ const projectRoot = path.resolve(styleDir, '../../..')
 
 const read = (relative: string) => fs.readFileSync(path.join(projectRoot, relative), 'utf8')
 
-const elementPlusOverrides = read('src/assets/styles/element-plus-overrides.css')
+const elementPlusOverrides = readElementPlusCss()
 const formControls = read('src/assets/styles/components/form-controls.css')
 const browserCompatibility = read('src/assets/styles/browser-compatibility.css')
 const navSearch = read('src/layouts/components/Topbar/Toolbar/NavSearch/index.vue')

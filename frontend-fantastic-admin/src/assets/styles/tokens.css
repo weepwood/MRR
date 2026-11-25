@@ -287,7 +287,6 @@
     --mrr-input: color-mix(in srgb, var(--mrr-foreground) 15%, transparent);
     --mrr-border-strong: rgb(255 255 255 / 16%);
     --mrr-control-bg-disabled: color-mix(in srgb, var(--mrr-muted) 80%, black);
-    --mrr-control-border: var(--mrr-input);
     --mrr-control-border-hover: color-mix(in srgb, var(--mrr-foreground) 24%, var(--mrr-input));
     --mrr-destructive-muted: color-mix(in srgb, var(--mrr-destructive) 20%, var(--mrr-card));
     --mrr-navigation-bg-solid: #131821;

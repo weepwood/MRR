@@ -19,7 +19,7 @@ test('目录支持搜索、分类、无匹配恢复与重置', async ({ page }) 
   await page.getByRole('button', { name: /表单与选择/ }).click()
   await expect(page.getByRole('heading', { name: '输入与筛选', exact: true })).toBeVisible()
   await expect(page.getByRole('main', { name: '组件预览' }).locator('article')).toHaveCount(2)
-  await page.getByLabel('查找组件', { exact: true }).fill('FaInput')
+  await page.getByLabel('查找组件', { exact: true }).fill('ElInput')
   await expect(page.getByRole('main', { name: '组件预览' }).locator('article')).toHaveCount(1)
   await page.getByLabel('查找组件', { exact: true }).fill('不存在的组件')
   await expect(page.getByText('没有匹配的组件，试试其他名称或分类。')).toBeVisible()
@@ -35,8 +35,8 @@ test('真实控件可编辑，禁用和加载按钮不可执行，示例不写�
       writes.push(request.method())
     }
   })
-  // 展示页把界面封装与 Element Plus 的同名按钮并排摆了对照行，这里按 testid 定位，避免歧义。
-  const primary = page.getByTestId('fa-primary')
+  // 展示页保留两组同实现按钮的状态示例，这里按 testid 定位，避免歧义。
+  const primary = page.getByTestId('role-primary')
   await primary.click()
   await expect(page.getByText('已触发 1 次示例操作')).toBeVisible()
   await page.getByText('禁用', { exact: true }).click()
@@ -64,7 +64,7 @@ test('真实控件可编辑，禁用和加载按钮不可执行，示例不写�
   expect(writes).toEqual([])
 })
 
-test('组件目录准确索引两套控件，表单对照保留标签、只读及错误说明', async ({ page }) => {
+test('组件目录准确索引统一控件，表单对照保留标签、只读及错误说明', async ({ page }) => {
   await openGallery(page)
   const search = page.getByLabel('查找组件', { exact: true })
   await search.fill('ElButton')
@@ -74,9 +74,9 @@ test('组件目录准确索引两套控件，表单对照保留标签、只读�
   await expect(fields).toBeVisible()
   const fa = fields.getByLabel('示例名称', { exact: true })
   const el = fields.getByLabel('原生名称', { exact: true })
-  await fa.fill('封装输入')
+  await fa.fill('独立输入')
   await el.fill('原生输入')
-  await expect(fa).toHaveValue('封装输入')
+  await expect(fa).toHaveValue('独立输入')
   await expect(el).toHaveValue('原生输入')
   await expect(fields.getByLabel('只读名称', { exact: true })).toHaveAttribute('readonly', '')
   await expect(fields.getByLabel('原生只读名称', { exact: true })).toHaveAttribute('readonly', '')

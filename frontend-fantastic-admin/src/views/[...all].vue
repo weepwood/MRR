@@ -48,12 +48,12 @@ function goBack() {
           抱歉，你访问的页面不存在或已被移除
         </p>
         <div class="mt-2 flex gap-3">
-          <FaButton @click="goBack">
+          <el-button class="mrr-button-flow" type="primary" :auto-insert-space="false" @click="goBack">
             返回首页 ({{ countdown }}s)
-          </FaButton>
-          <FaButton variant="outline" @click="router.back()">
+          </el-button>
+          <el-button class="mrr-button-flow" :auto-insert-space="false" @click="router.back()">
             返回上页
-          </FaButton>
+          </el-button>
         </div>
       </div>
     </div>

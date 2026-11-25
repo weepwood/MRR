@@ -2,7 +2,6 @@
  * Element Plus 只在这里桥接 MRR 的尺寸令牌；颜色、边框、圆角和状态
  * 继续由 element-plus-overrides.css 统一维护，避免两套全局规则互相覆盖。
  * 单行输入统一使用 --mrr-input-height，大小号保留字体、间距和圆角差异。
- * Fantastic Admin 自带的 FaInput 使用同一输入高度令牌。
  */
 .el-input,
 .el-select,
@@ -99,297 +98,118 @@
   }
 }
 
-.fa-input-control {
-  box-sizing: border-box;
-  height: var(--mrr-input-height);
-  min-height: var(--mrr-input-height);
-  padding: 0 calc(var(--mrr-field-padding-x) - 1px);
-  font-size: var(--mrr-field-font-size);
-  line-height: 1;
-  color: var(--mrr-foreground);
-  background: var(--mrr-control-bg);
-  border: 1px solid var(--mrr-control-border);
-  border-radius: var(--mrr-control-radius);
-  box-shadow: var(--mrr-field-shadow);
-  transition: color var(--mrr-motion-feedback) var(--mrr-ease-out), background-color var(--mrr-motion-feedback) var(--mrr-ease-out), border-color var(--mrr-motion-feedback) var(--mrr-ease-out), box-shadow var(--mrr-motion-feedback) var(--mrr-ease-out);
+/* Explicit readonly marker keeps the field appearance on older Chrome
+ * versions without :has(). Rows retain native text-area height. */
+.el-input.mrr-readonly-field:not(.is-disabled) .el-input__wrapper {
+  background: var(--mrr-muted);
+  box-shadow: 0 0 0 1px var(--mrr-border) inset;
 }
 
-.fa-input-control::placeholder {
-  color: var(--mrr-muted-foreground);
+.el-input.mrr-readonly-field:not(.is-disabled) .el-input__wrapper.is-focus {
+  box-shadow: 0 0 0 1px var(--mrr-ring) inset, var(--mrr-focus-ring);
 }
 
-.fa-input-control:hover:not(:disabled) {
-  background: var(--mrr-control-bg-hover);
-  border-color: var(--mrr-control-border-hover);
-}
-
-.fa-input-control:focus-visible {
-  outline: none;
-  background: var(--mrr-field-focus-bg);
-  border-color: var(--mrr-ring);
-  box-shadow: var(--mrr-focus-ring);
-}
-
-.fa-input-control:disabled {
-  color: var(--mrr-muted-foreground);
-  cursor: not-allowed;
-  background: var(--mrr-control-bg-disabled);
-  border-color: var(--mrr-border);
-  box-shadow: none;
-  opacity: 0.62;
-}
-
-/* Textareas use the same inset outline as Element Plus. Native rows remain authoritative. */
-.fa-textarea-control {
-  box-sizing: border-box;
-  width: 100%;
-  min-width: 0;
-  padding: var(--mrr-textarea-padding-y) var(--mrr-field-padding-x);
-  font-size: var(--mrr-field-font-size);
-  line-height: var(--mrr-textarea-line-height);
-  color: var(--mrr-foreground);
+.el-textarea.mrr-textarea-rows .el-textarea__inner {
+  min-height: 0;
   resize: vertical;
-  background: var(--mrr-control-bg);
-  border: 0;
+}
+
+/* Element Plus remains the only button implementation. These modifiers
+ * describe layout and semantic roles not provided by its built-in variants. */
+.el-button + .el-button.mrr-button-flow {
+  margin-left: 0;
+}
+
+.el-button.mrr-button-flow > span {
+  display: contents;
+}
+
+.el-button.mrr-button-flow i > i {
+  width: inherit;
+  height: inherit;
+  font-size: inherit;
+}
+
+.el-button.mrr-button-square {
+  flex-shrink: 0;
+  width: var(--mrr-control-height);
+  padding: 0;
+}
+
+.el-button.mrr-button-round {
+  border-radius: 9999px;
+}
+
+.el-button.mrr-button-secondary.is-text {
+  padding-inline: var(--mrr-button-padding-x);
+  color: var(--mrr-secondary-foreground);
+  background: var(--mrr-secondary);
+  border: 1px solid var(--mrr-border);
   border-radius: var(--mrr-control-radius);
-  box-shadow: 0 0 0 1px var(--mrr-control-border) inset, var(--mrr-field-shadow);
 }
 
-.fa-textarea-control:not([rows]) {
-  min-height: var(--mrr-textarea-min-height);
-}
-
-.fa-textarea-control::placeholder {
-  color: var(--mrr-muted-foreground);
-}
-
-.fa-textarea-control:hover:not(:disabled) {
-  background: var(--mrr-control-bg-hover);
-  box-shadow: 0 0 0 1px var(--mrr-control-border-hover) inset, var(--mrr-field-shadow);
-}
-
-.fa-textarea-control:focus-visible {
-  outline: none;
-  background: var(--mrr-field-focus-bg);
-  box-shadow: 0 0 0 1px var(--mrr-ring) inset, var(--mrr-focus-ring);
-}
-
-.fa-textarea-control:disabled {
-  color: var(--mrr-muted-foreground);
-  cursor: not-allowed;
-  background: var(--mrr-control-bg-disabled);
-  box-shadow: 0 0 0 1px var(--mrr-border) inset;
-  opacity: 0.62;
-}
-
-.fa-input-control[readonly]:not(:disabled) {
+.el-button.mrr-button-secondary.is-text:not(.is-disabled):hover {
   background: var(--mrr-muted);
+  border-color: var(--mrr-input);
+}
+
+body .el-button.mrr-button-secondary.is-text.is-disabled,
+body .el-button.mrr-button-secondary.is-text.is-disabled:hover,
+body .el-button.mrr-button-secondary.is-text.is-disabled:focus {
+  color: var(--mrr-muted-foreground);
+
+  /* EP text disabled hard-codes a transparent background with !important. */
+  background-color: var(--mrr-muted) !important;
   border-color: var(--mrr-border);
+  opacity: 1;
 }
 
-.fa-textarea-control[readonly]:not(:disabled) {
-  background: var(--mrr-muted);
-  box-shadow: 0 0 0 1px var(--mrr-border) inset;
-}
-
-.fa-input-control[readonly]:focus-visible:not(:disabled) {
-  box-shadow: var(--mrr-focus-ring);
-}
-
-.fa-textarea-control[readonly]:focus-visible:not(:disabled) {
-  box-shadow: 0 0 0 1px var(--mrr-ring) inset, var(--mrr-focus-ring);
-}
-
-/* Keep the existing registration error class compatible and add semantic aria-invalid. */
-.fa-input-control[aria-invalid="true"]:not(:disabled),
-.fa-input-control.border-destructive:not(:disabled) {
-  background: var(--mrr-field-focus-bg);
-  border-color: var(--mrr-destructive);
-  box-shadow: var(--mrr-danger-focus-ring);
-}
-
-.fa-textarea-control[aria-invalid="true"]:not(:disabled),
-.fa-textarea-control.border-destructive:not(:disabled) {
-  background: var(--mrr-field-focus-bg);
-  box-shadow: 0 0 0 1px var(--mrr-destructive) inset, var(--mrr-danger-focus-ring);
-}
-
-/*
- * FaButton 的交互状态层。
- *
- * 几何与静置配色由 `ui/components/FaButton/button/index.ts` 的 cva 产出
- * （调用方仍可用工具类覆盖，cn 会做 tailwind-merge）；这里只补工具类表达不了的状态：
- * hover / active / focus-visible / disabled / loading。
- *
- * 每条规则都与 element-plus-overrides.css 的「Buttons」段同值同令牌 ——
- * 两套按钮在同一工具栏里必须读作同一种控件：同样的悬停底、同样的禁用灰、同样的焦点轮廓。
- * 改任一侧请同时核对另一侧，button-consistency.test.ts 会比对两处引用的令牌。
- */
-.fa-button-control {
-  /* el-button 的行高是 1（高度由 height 决定），这里显式写死同一值：
-   * 依赖 `leading-none` 工具类会随 UnoCSS 的生成/层叠顺序变成继承来的 1.5，
-   * 单行文字看不出，但图标与文字的垂直居中会差半个像素级基线。 */
-  line-height: 1;
-  transition:
-    color var(--mrr-motion-feedback) var(--mrr-ease-out),
-    background-color var(--mrr-motion-feedback) var(--mrr-ease-out),
-    border-color var(--mrr-motion-feedback) var(--mrr-ease-out),
-    box-shadow var(--mrr-motion-feedback) var(--mrr-ease-out),
-    opacity var(--mrr-motion-feedback) var(--mrr-ease-out),
-    transform var(--mrr-motion-press) var(--mrr-ease-out);
-}
-
-/* 主要操作 —— el-button type="primary" */
-.fa-button-control[data-variant="default"]:not(:disabled):hover {
-  background: var(--color-primary-hover);
-  border-color: var(--color-primary-hover);
-}
-
-.fa-button-control[data-variant="default"]:not(:disabled):active {
-  background: var(--color-primary-active);
-  border-color: var(--color-primary-active);
-}
-
-/* 次要操作 —— el-button 默认外观 */
-.fa-button-control[data-variant="outline"]:not(:disabled):hover {
-  color: var(--mrr-accent-foreground);
-  background: var(--mrr-accent);
-  border-color: var(--mrr-input);
-}
-
-/* 辅助操作 —— Element Plus 没有中性实心底的按钮，这里保持页面自己的中性语义 */
-.fa-button-control[data-variant="secondary"]:not(:disabled):hover {
-  background: var(--mrr-muted);
-  border-color: var(--mrr-input);
-}
-
-/* 危险操作 —— el-button type="danger"：淡底不透明边，悬停只加深底色 */
-.fa-button-control[data-variant="destructive"]:not(:disabled):hover {
-  background: var(--mrr-tone-danger-soft);
-}
-
-@supports (color: color-mix(in srgb, #000 50%, #fff)) {
-  .fa-button-control[data-variant="destructive"]:not(:disabled):hover {
-    background: color-mix(in srgb, var(--mrr-destructive) 16%, var(--mrr-card));
-  }
-}
-
-/*
- * 文字类按钮的描边宽度与 Element Plus 逐像素对齐：text 变体是 0，
- * link 变体保留 1px 透明边框 —— 少了这 1px，两个变体的文字起点会差 1px，
- * 并排放在同一行里能看出来。
- */
-.fa-button-control[data-variant="ghost"] {
-  border-color: transparent;
+.el-button.mrr-button-flow.is-text:not(.mrr-button-secondary) {
   border-width: 0;
 }
 
-.fa-button-control[data-variant="link"] {
-  border-color: transparent;
-  border-width: 1px;
+.el-button.mrr-button-flow.is-link {
+  border: 1px solid transparent;
 }
 
-/* 轻量操作 —— el-button text：悬停只加底色，不改文字颜色 */
-.fa-button-control[data-variant="ghost"]:not(:disabled):hover {
-  background: var(--mrr-accent);
+.el-button.mrr-button-flow.el-button--small.is-text {
+  height: var(--mrr-control-height-compact);
+  min-height: var(--mrr-control-height-compact);
+  padding-inline: var(--mrr-button-padding-x-sm);
+  font-size: var(--mrr-button-font-size-sm);
+  border-radius: var(--mrr-radius-sm);
 }
 
-/* 文字操作 —— el-button link */
-.fa-button-control[data-variant="link"]:not(:disabled):hover {
-  text-decoration: underline;
-  text-underline-offset: 4px;
-  background: var(--mrr-accent);
-}
-
-/* 键盘焦点：与 el-button 一样用独立轮廓，避免被各变体的底色吞掉。 */
-.fa-button-control:focus-visible {
-  outline: 2px solid var(--mrr-primary);
-  outline-offset: 2px;
-  border-color: var(--mrr-ring);
-  box-shadow: var(--mrr-focus-ring);
-}
-
-.fa-button-control[data-variant="destructive"]:focus-visible {
-  outline-color: var(--mrr-destructive);
-  box-shadow: var(--mrr-danger-focus-ring);
-}
-
-/* 按压：与 el-button 同一节奏（主题可把 --mrr-motion-decor 声明成别的写法）。 */
-.fa-button-control:not(:disabled):not([data-loading]):active {
-  transform: var(--mrr-motion-decor, translateY(1px));
-}
-
-/*
- * 禁用态：有底色的按钮改中性灰，让它彻底不像「可点击的主按钮」；
- * 文字类按钮没有填充，降透明度即可（与 el-button 的处理一致）。
- */
-.fa-button-control:disabled:not([data-loading]):not([data-variant="ghost"]):not([data-variant="link"]) {
-  color: var(--mrr-muted-foreground);
-  background: var(--mrr-muted);
-  border-color: var(--mrr-border);
+.el-button.mrr-image-preview-button {
+  background: hsl(var(--muted) / 50%);
   box-shadow: none;
 }
 
-.fa-button-control:disabled,
-.fa-button-control[data-loading] {
-  cursor: not-allowed;
-  transform: none;
+.el-button.mrr-image-preview-button:not(.is-text) {
+  border: 0;
 }
 
-.fa-button-control:disabled[data-variant="ghost"],
-.fa-button-control:disabled[data-variant="link"],
-.fa-button-control[data-loading] {
-  opacity: 0.5;
-}
-
-.fa-button-control:disabled[data-variant="ghost"],
-.fa-button-control:disabled[data-variant="link"] {
-  color: var(--mrr-muted-foreground);
-}
-
-/*
- * 按钮组：与 .el-button-group 同一种拼接方式 —— 相邻按钮重叠 1px 共用描边，
- * 只保留外缘圆角。原先用 1px gap 拼，两个相邻描边并排会出现「双线」。
- */
-.fa-button-group {
+/* Use the same joined-edge contract for the single Element Plus group. */
+.el-button-group.mrr-joined-buttons {
   display: inline-flex;
   align-items: stretch;
 }
 
-.fa-button-group:not(.fa-button-group--vertical) > * + * {
+.el-button-group.mrr-joined-buttons::before,
+.el-button-group.mrr-joined-buttons::after {
+  display: none;
+}
+
+.el-button-group.mrr-joined-buttons > .el-button {
+  float: none;
+}
+
+.el-button-group.mrr-joined-buttons > .el-button + .el-button {
   margin-left: -1px;
 }
 
-.fa-button-group > *:not(:first-child):not(:last-child) {
-  border-radius: 0;
-}
-
-.fa-button-group:not(.fa-button-group--vertical) > *:first-child:not(:last-child) {
-  border-start-end-radius: 0;
-  border-end-end-radius: 0;
-}
-
-.fa-button-group:not(.fa-button-group--vertical) > *:last-child:not(:first-child) {
-  border-start-start-radius: 0;
-  border-end-start-radius: 0;
-}
-
-.fa-button-group--vertical {
-  flex-direction: column;
-}
-
-.fa-button-group--vertical > * + * {
-  margin-top: -1px;
-}
-
-.fa-button-group--vertical > *:first-child:not(:last-child) {
-  border-bottom-right-radius: 0;
-  border-bottom-left-radius: 0;
-}
-
-.fa-button-group--vertical > *:last-child:not(:first-child) {
-  border-top-left-radius: 0;
-  border-top-right-radius: 0;
+.el-button-group.mrr-joined-buttons > .el-button:only-child {
+  border-radius: var(--mrr-control-radius);
 }
 
 /* Existing compact settings/preview sliders: preserve the 8px rail and

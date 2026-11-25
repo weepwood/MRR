@@ -137,7 +137,7 @@ tokens.css（语义令牌，唯一数值源）
   - **描边补偿**：输入框、选择器、文本域、分页尺寸选择的 `11px` / `9px` 横向内边距加上 1px 描边，正好让文字落在 12 / 10px 竖线上。
   - **由高度令牌决定的密度**：表格单元格 `padding-block: 6 / 7px`（行高由 `--mrr-table-header-height` 等决定）、次侧栏菜单项纵向 `6px`（配合 `min-height: 34px`；改成 8px 每项会高 4px）。
   - **文字级微距**：标签到控件（`el-form-item__label`、筛选栏网格标签 6px）、标题到说明（页头说明 7px、指标卡说明 6px）、分组眉题、状态点与文字基线对齐。
-  - **按钮图标间距 6px**：`el-button` 与 `FaButton` 两族刻意取同一值，要改必须两边一起改。
+  - **按钮图标间距 6px**：由 Element Plus 公共按钮样式统一定义。
   - **功能性预留**：标签页关闭按钮的 `margin-right: 26px`（给绝对定位的关闭图标让位）。
   - **主题与受测区域**：暖色调色板 `warm-flat.css` 的密度值；登录页与登录表单、档案袋搜索栏的号码输入区（有逐帧 / 截断 E2E 约束）。
 
@@ -324,30 +324,32 @@ tokens.css（语义令牌，唯一数值源）
 | [useVisibleInterval](src/utils/composables/useVisibleInterval.ts) | 可见性感知的轮询；见 [§7](#7-性能) |
 | `actionDialog` | 简短确认与单字段输入 |
 
-### 4.2 两套按钮：同一种控件，两种实现
+### 4.2 按钮：单一实现与语义规格
 
-Element Plus `el-button` 与 reka-ui `FaButton`（`.fa-button-control`）**尺寸与状态同源**：`--mrr-button-font-size(-sm/-lg)` 与 `--mrr-button-padding-x(-sm/-lg/-text)` 是唯一数值来源。两侧只引用令牌，交互状态由 [form-controls.css](src/assets/styles/components/form-controls.css) 按 `[data-variant]` 统一定义；主题换密度只改令牌。
+基础按钮统一使用 Element Plus `el-button` / `el-button-group`，尺寸、状态与配色由公共令牌及 [element-plus-overrides.css](src/assets/styles/element-plus-overrides.css) 管理。布局和内建变体未覆盖的语义规格使用 [form-controls.css](src/assets/styles/components/form-controls.css) 的共享修饰类，不创建第二套按钮实现。
 
-| 语义 | FaButton | el-button |
-| --- | --- | --- |
-| 主要 / 次要 | `default` / `outline` | `type="primary"` / 无 type |
-| 轻量 / 文字 | `ghost` / `link` | `text` / `link type="primary"` |
-| 危险 | `destructive` | `type="danger"` |
-| 紧凑 / 大型 | `size="sm"` / `"lg"` | `size="small"` / `"large"` |
-| 图标 | `size="icon"`（方形，工具按钮） | `circle`（正圆，图标入口） |
+| 语义 | 唯一实现 |
+| --- | --- |
+| 主要 / 次要 | `type="primary"` / 无 type |
+| 轻量 / 文字 | `text` / `link type="primary"` |
+| 危险 | `type="danger"` |
+| 辅助 | `text` + `mrr-button-secondary` |
+| 紧凑 / 大型 | `size="small"` / `"large"` |
+| 图标 | `mrr-button-square` 或工具栏共享规格；圆形入口用 `circle` |
+| 拼接组 | `el-button-group` + `mrr-joined-buttons` |
 
-同一组控件里不混用方、圆两种图标按钮。加载态保留变体配色并阻止点击、设置 `aria-busy`；禁用态不只降低透明度，需可读出原因。守护测试：[button-consistency.test.ts](src/assets/styles/button-consistency.test.ts)、[button-parity.spec.ts](e2e/button-parity.spec.ts)。
+使用 `native-type="submit"` 表达表单提交，不将视觉 type 当作原生 type。加载态保持配色并阻止操作，必要时显式 aria-busy；禁用态需清楚区分。守护测试：[button-consistency](src/assets/styles/button-consistency.test.ts)、[button-parity](e2e/button-parity.spec.ts)、[button-migration-visual](e2e/button-migration-visual.spec.ts)。
 
 ### 4.2.0 控件唯一实现（V1.2）
 
-Element Plus 是同类基础业务控件的唯一目标，禁止新增重复 Fa 实现或调用；历史 Fa 按组件族迁移，保留有独特职责的 FaIcon、FaKbd 等及 MRR 组合组件。源码清单、迁移与验收见[控件唯一实现与源码使用清单](../docs/design/component-ownership.md)。双族字段令牌仅为迁移期桥接，最终删除不再使用的样式和组件。开关已实施全量统一，待远端门禁；其余不宣称完成。
+Element Plus 是同类基础业务控件的唯一目标，禁止新增重复 Fa 实现或调用；历史 Fa 按组件族迁移，保留有独特职责的 FaIcon、FaKbd 等及 MRR 组合组件。源码清单、迁移与验收见[控件唯一实现与源码使用清单](../docs/design/component-ownership.md)。开关、复选框、滑块、选择器、标签页和工具栏已集成；本批按钮、按钮组、输入和文本域本地迁移，最终是否合并以PR门禁为准。
 
 迁移与视觉重设计分离：默认保留现有页面几何、主题色、字号、字重、布局与交互状态。同环境基线截图/计算样式对照，几何偏差≤1 CSS px；对实际不一致先定位组件默认行为并在恰当归属处修复。测试与记录见归属清单，不宣称跨平台像素完全一致。
 
 ### 4.2.1 字段控件的统一视觉契约
 
-- `--mrr-field-font-size`、`--mrr-field-padding-x(-sm/-lg)`、`--mrr-textarea-padding-y`、`--mrr-textarea-line-height`、`--mrr-textarea-min-height`、`--mrr-field-focus-bg`、`--mrr-field-shadow` 与既有输入高度/圆角/颜色令牌同源。Element Plus 在 element-plus-overrides.css、Fa 在 form-controls.css 引用；主题仅改令牌，不重写同一字段选择器。默认文本域最小高度为未明确行数时的基准，显式 rows 尊重组件自身测量。
-- 只读仍可聚焦/复制，不等于禁用；错误样式支持 `aria-invalid="true"` 与原注册表单 `border-destructive`，错误说明需关联真实字段，不能只用红色。保持既有权限、提交和校验行为。
+- `--mrr-field-font-size`、`--mrr-field-padding-x(-sm/-lg)`、`--mrr-textarea-padding-y`、`--mrr-textarea-line-height`、`--mrr-textarea-min-height`、`--mrr-field-focus-bg`、`--mrr-field-shadow` 与既有输入高度/圆角/颜色令牌同源。Element Plus 在 element-plus-overrides.css 引用；主题仅改令牌，不重写同一字段选择器。默认文本域最小高度为未明确行数时的基准，显式 rows 尊重组件自身测量。
+- 只读仍可聚焦/复制，不等于禁用；错误样式使用 `aria-invalid="true"` 与共享校验样式类或 ElFormItem 错误状态，错误说明需关联真实字段，不能只用红色。保持既有权限、提交和校验行为。
 - 归属与实际视觉守护：[form-control-consistency](src/assets/styles/form-control-consistency.test.ts)、[form-control-parity](e2e/form-control-parity.spec.ts)，经典/暖色与明暗均验；现代浏览器证据不替代医院 Chrome86。
 
 ### 4.3 筛选栏

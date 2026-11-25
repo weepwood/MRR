@@ -247,7 +247,7 @@ body .el-button--info.is-plain:not(.is-disabled):hover {
 }
 
 /* 文字颜色回到 MRR 前景色 / 主色：Element Plus 的 --el-text-color-regular 在暗色模式下
- * 是偏冷的灰蓝，与另一套按钮（FaButton 的 ghost/link）并排时能看出两种灰。 */
+ * 是偏冷的灰蓝，轻量和文字按钮应保持语义颜色一致。 */
 .el-button.is-text:not(.is-disabled),
 .el-button.is-link:not(.is-disabled) {
   color: var(--mrr-foreground);
@@ -533,6 +533,12 @@ body .el-select .el-select__wrapper.is-focused .el-select__caret {
   background: var(--mrr-control-bg-disabled);
   box-shadow: 0 0 0 1px var(--mrr-border) inset;
   opacity: 0.62;
+}
+
+/* Disabled fields keep the same readable foreground as the surface. */
+.el-input.is-disabled .el-input__inner {
+  color: var(--mrr-muted-foreground);
+  -webkit-text-fill-color: var(--mrr-muted-foreground);
 }
 
 /*

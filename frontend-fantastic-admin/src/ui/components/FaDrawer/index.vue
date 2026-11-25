@@ -232,12 +232,15 @@ function handleAnimationEnd() {
         })"
       >
         <slot name="footer">
-          <FaButton v-if="showCancelButton" variant="outline" @click="onCancel">
+          <el-button v-if="showCancelButton" class="mrr-button-flow" :auto-insert-space="false" @click="onCancel">
             {{ cancelButtonText }}
-          </FaButton>
-          <FaButton v-if="showConfirmButton" :disabled="confirmButtonDisabled" :loading="confirmButtonLoading" @click="onConfirm">
+          </el-button>
+          <el-button v-if="showConfirmButton" class="mrr-button-flow" type="primary" :auto-insert-space="false" :disabled="confirmButtonDisabled" :loading="confirmButtonLoading" :aria-busy="(confirmButtonLoading) || undefined" @click="onConfirm">
+            <template #loading>
+              <FaIcon name="i-lucide:loader-circle" class="animate-spin" aria-hidden="true" />
+            </template>
             {{ confirmButtonText }}
-          </FaButton>
+          </el-button>
         </slot>
       </SheetFooter>
     </SheetContent>

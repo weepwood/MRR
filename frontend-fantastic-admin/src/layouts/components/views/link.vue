@@ -35,10 +35,10 @@ function open() {
               </div>
             </FaTooltip>
           </button>
-          <FaButton class="my-4" @click="open">
+          <el-button type="primary" :auto-insert-space="false" class="mrr-button-flow my-4" @click="open">
             <FaIcon name="i-lucide:external-link" />
             立即访问
-          </FaButton>
+          </el-button>
         </div>
       </FaPageMain>
     </Transition>

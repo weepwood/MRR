@@ -144,30 +144,30 @@ function handleAnimationEnd() {
           <div class="absolute bottom-20 left-1/2 text-sm text-muted-foreground -translate-x-1/2">
             {{ index + 1 }} / {{ srcList.length }}
           </div>
-          <FaButton variant="ghost" size="icon" class="absolute left-4 top-1/2 rounded-full bg-muted/50 -translate-y-1/2" @click="handlePrev">
+          <el-button text :auto-insert-space="false" class="mrr-button-flow mrr-button-square mrr-button-round mrr-image-preview-button absolute left-4 top-1/2 rounded-full bg-muted/50 -translate-y-1/2" @click="handlePrev">
             <FaIcon name="i-lucide:chevron-left" class="size-6" />
-          </FaButton>
-          <FaButton variant="ghost" size="icon" class="absolute right-4 top-1/2 rounded-full bg-muted/50 -translate-y-1/2" @click="handleNext">
+          </el-button>
+          <el-button text :auto-insert-space="false" class="mrr-button-flow mrr-button-square mrr-button-round mrr-image-preview-button absolute right-4 top-1/2 rounded-full bg-muted/50 -translate-y-1/2" @click="handleNext">
             <FaIcon name="i-lucide:chevron-right" class="size-6" />
-          </FaButton>
+          </el-button>
         </template>
-        <FaButtonGroup class="absolute bottom-4 left-1/2 scale-125 -translate-x-1/2">
-          <FaButton variant="outline" size="icon" class="border-none bg-muted/50" @click="handleZoomIn">
+        <el-button-group class="mrr-joined-buttons absolute bottom-4 left-1/2 scale-125 -translate-x-1/2">
+          <el-button :auto-insert-space="false" class="mrr-button-flow mrr-button-square mrr-image-preview-button border-none bg-muted/50" @click="handleZoomIn">
             <FaIcon name="i-lucide:zoom-in" class="size-5" />
-          </FaButton>
-          <FaButton variant="outline" size="icon" class="border-none bg-muted/50" @click="handleZoomOut">
+          </el-button>
+          <el-button :auto-insert-space="false" class="mrr-button-flow mrr-button-square mrr-image-preview-button border-none bg-muted/50" @click="handleZoomOut">
             <FaIcon name="i-lucide:zoom-out" class="size-5" />
-          </FaButton>
-          <FaButton variant="outline" size="icon" class="border-none bg-muted/50" @click="handleOriginalSize">
+          </el-button>
+          <el-button :auto-insert-space="false" class="mrr-button-flow mrr-button-square mrr-image-preview-button border-none bg-muted/50" @click="handleOriginalSize">
             <FaIcon name="i-lucide:maximize" class="size-5" />
-          </FaButton>
-          <FaButton variant="outline" size="icon" class="border-none bg-muted/50" @click="handleRotateLeft">
+          </el-button>
+          <el-button :auto-insert-space="false" class="mrr-button-flow mrr-button-square mrr-image-preview-button border-none bg-muted/50" @click="handleRotateLeft">
             <FaIcon name="i-lucide:rotate-cw" class="size-5" />
-          </FaButton>
-          <FaButton variant="outline" size="icon" class="border-none bg-muted/50" @click="handleRotateRight">
+          </el-button>
+          <el-button :auto-insert-space="false" class="mrr-button-flow mrr-button-square mrr-image-preview-button border-none bg-muted/50" @click="handleRotateRight">
             <FaIcon name="i-lucide:rotate-ccw" class="size-5" />
-          </FaButton>
-        </FaButtonGroup>
+          </el-button>
+        </el-button-group>
       </div>
     </DialogContent>
   </Dialog>

@@ -28,7 +28,7 @@ for (const preference of ['normal', 'reduced', 'off'] as const) {
   test(`按压与展开状态：${preference}`, async ({ page }) => {
     await page.emulateMedia({ reducedMotion: preference === 'reduced' ? 'reduce' : 'no-preference' })
     await page.evaluate((off) => { document.documentElement.dataset.motion = off ? 'off' : 'on' }, preference === 'off')
-    // 两套按钮（FaButton 与 el-button）共用同一套按压反馈：正常动效下沉 1px，
+    // 统一按钮使用同一套按压反馈：正常动效下沉 1px，
     // 减弱/关闭动效时都由 --mrr-motion-decor 退成 none。
     const pressed = preference === 'normal' ? 'matrix(1, 0, 0, 1, 0, 1)' : 'none'
     for (const name of ['确认查询', 'Element 操作']) {

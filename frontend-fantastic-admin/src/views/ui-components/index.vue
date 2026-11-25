@@ -31,10 +31,10 @@ function resetExamples() {
   <MrrPageShell class="component-gallery">
     <MrrPageHeader title="UI 组件" description="集中查看项目组件的真实外观与交互。使用合成示例，方便设计验收与页面搭建。">
       <template #actions>
-        <FaButton variant="outline" @click="resetExamples">
+        <el-button class="mrr-button-flow" :auto-insert-space="false" @click="resetExamples">
           <FaIcon name="i-lucide:rotate-ccw" aria-hidden="true" />
           重置所有示例
-        </FaButton>
+        </el-button>
       </template>
     </MrrPageHeader>
 
@@ -42,7 +42,7 @@ function resetExamples() {
       <aside class="gallery-directory" aria-label="组件目录">
         <div class="gallery-search">
           <FaIcon name="i-lucide:search" class="gallery-search-icon" aria-hidden="true" />
-          <FaInput id="gallery-search" v-model="keyword" type="search" placeholder="名称或组件名" aria-label="查找组件" class="gallery-search-input" />
+          <el-input id="gallery-search" v-model="keyword" type="search" placeholder="名称或组件名" aria-label="查找组件" class="gallery-search-input" />
         </div>
         <nav class="gallery-categories" aria-label="组件分类">
           <button
@@ -120,7 +120,14 @@ function resetExamples() {
 
 .gallery-search-input {
   width: 100%;
+}
+
+.gallery-search-input :deep(.el-input__wrapper) {
   padding-left: var(--mrr-space-8);
+}
+
+.gallery-search-icon {
+  z-index: 1;
 }
 
 .gallery-categories {

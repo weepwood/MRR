@@ -448,7 +448,7 @@ meta: {
 
 | 层级 | 目录 | 说明 | 示例 |
 |------|------|------|------|
-| **Ui** | `ui/components/` | 通用 UI 原子组件 (Fa*) | `FaButton`, `FaModal`, `FaCard` |
+| **Ui** | `ui/components/` | 通用 UI 原子组件 (Fa*) | `FaIcon`, `FaModal`, `FaCard` |
 | **Shadcn** | `ui/shadcn/` | shadcn-vue 组件 | `Button`, `Dialog`, `Table` |
 | **业务** | `components/` | 领域相关复用组件 | `AccountForm/LoginForm.vue` |
 | **页面** | `views/` | 路由页面组件 | `records/index.vue` |

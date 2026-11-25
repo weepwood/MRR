@@ -47,15 +47,15 @@ function search(reset = false) {
           <MrrFilterBar embedded>
             <div class="example-field example-full-width">
               <label :for="`${id}-query`">筛选示例</label>
-              <FaInput :id="`${id}-query`" v-model="keyword" placeholder="示例编号或名称" class="example-full-width" />
+              <el-input :id="`${id}-query`" v-model="keyword" placeholder="示例编号或名称" class="example-full-width" />
             </div>
             <template #actions>
-              <FaButton type="submit" variant="outline">
+              <el-button class="mrr-button-flow" :auto-insert-space="false" native-type="submit">
                 查询示例
-              </FaButton>
-              <FaButton type="button" variant="outline" @click="search(true)">
+              </el-button>
+              <el-button class="mrr-button-flow" :auto-insert-space="false" native-type="button" @click="search(true)">
                 重置筛选
-              </FaButton>
+              </el-button>
             </template>
           </MrrFilterBar>
         </form>

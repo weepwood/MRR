@@ -53,9 +53,9 @@ function handleCollaspe() {
       }"
     >
       <slot />
-      <FaButton v-if="collaspe" variant="link" size="icon" class="absolute inset-b-0 inset-s-1/2 opacity-0 transition-[opacity,transform] -translate-x-1/2 group-hover/pagemain:opacity-100" :class="{ 'rotate-x-180': !isCollaspe }" @click="handleCollaspe">
+      <el-button v-if="collaspe" link type="primary" :auto-insert-space="false" class="mrr-button-flow mrr-button-square absolute inset-b-0 inset-s-1/2 opacity-0 transition-[opacity,transform] -translate-x-1/2 group-hover/pagemain:opacity-100" :class="{ 'rotate-x-180': !isCollaspe }" @click="handleCollaspe">
         <FaIcon name="i-lucide:arrow-down" class="text-xl" />
-      </FaButton>
+      </el-button>
     </div>
   </div>
 </template>

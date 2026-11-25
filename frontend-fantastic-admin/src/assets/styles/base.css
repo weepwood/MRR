@@ -120,7 +120,6 @@ textarea {
   }
 
   .el-button,
-  .fa-button-control,
   .mrr-table-actions__button {
     border: 1px solid ButtonText;
   }

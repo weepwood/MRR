@@ -3,19 +3,43 @@ import { expect, test } from '@playwright/test'
 test('桌面检索栏支持键盘调整、复位且窄屏保持单栏', async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 900 })
   await page.goto('/archive-workbench')
-  const slider = page.getByRole('slider', { name: '检索栏目标宽度' })
+  const divider = page.getByRole('separator', { name: '调整检索栏宽度' })
   const rail = page.getByRole('region', { name: '病案检索及候选' })
   const width = () => rail.evaluate(el => el.getBoundingClientRect().width)
-  await expect(slider).toBeVisible()
+  await expect(divider).toBeVisible()
   await expect.poll(width).toBeCloseTo(260, 0)
-  await slider.focus()
-  await slider.press('End')
-  await expect(slider).toHaveValue('360')
+  const bounds = (await divider.boundingBox())!
+  await page.mouse.move(bounds.x + bounds.width / 2, bounds.y + 15)
+  await page.mouse.down()
+  try {
+    await page.mouse.move(bounds.x + bounds.width / 2 + 60, bounds.y + 15, { steps: 6 })
+    await expect.poll(width).toBeCloseTo(320, 0)
+  }
+  finally { await page.mouse.up() }
+  const nextBounds = (await divider.boundingBox())!
+  await divider.evaluate(el => el.addEventListener('pointerdown', (event) => {
+    el.setAttribute('data-test-pointer-id', String((event as PointerEvent).pointerId))
+  }, { once: true }))
+  await page.mouse.move(nextBounds.x + nextBounds.width / 2, nextBounds.y + 15)
+  await page.mouse.down()
+  try {
+    await expect(divider).toHaveClass(/is-dragging/)
+    await divider.dispatchEvent('pointercancel', { pointerId: Number(await divider.getAttribute('data-test-pointer-id')), pointerType: 'mouse' })
+    await expect(divider).not.toHaveClass(/is-dragging/)
+    await page.mouse.move(nextBounds.x + 20, nextBounds.y + 15)
+    await expect.poll(width).toBeCloseTo(320, 0)
+  }
+  finally { await page.mouse.up() }
+  await divider.focus()
+  await divider.press('End')
+  await expect(divider).toHaveAttribute('aria-valuenow', '360')
   await expect.poll(width).toBeGreaterThan(300)
-  await page.getByRole('button', { name: '恢复默认' }).click()
+  await divider.press('Home')
+  await expect.poll(width).toBeCloseTo(220, 0)
+  await divider.dblclick()
   await expect.poll(width).toBeCloseTo(260, 0)
   await page.setViewportSize({ width: 390, height: 844 })
-  await expect(slider).toBeHidden()
+  await expect(divider).toBeHidden()
   await expect.poll(() => page.locator('.archive-stack--workspace').evaluate(el => el.scrollWidth <= el.clientWidth + 2)).toBe(true)
   await expect(page.getByRole('textbox', { name: '病案查询值' })).toBeVisible()
 })

@@ -54,6 +54,45 @@ const overview = ref<DataRelationOverview | null>(null)
 const qualitySummary = ref<DataQualitySummary | null>(null)
 const issues = ref<DataQualityIssue[]>([])
 const railWidth = ref(260)
+const railDragging = ref(false)
+const railDivider = ref<HTMLElement>()
+let railDrag: { pointerId: number, x: number, width: number } | undefined
+function setRailWidth(width: number) {
+  railWidth.value = Math.round(Math.max(220, Math.min(360, width)))
+}
+function endRailDrag(event?: PointerEvent) {
+  if (event && railDrag?.pointerId !== event.pointerId) return
+  const active = railDrag
+  railDrag = undefined
+  railDragging.value = false
+  if (active && railDivider.value?.hasPointerCapture(active.pointerId)) railDivider.value.releasePointerCapture(active.pointerId)
+}
+function beginRailDrag(event: PointerEvent) {
+  const divider = railDivider.value
+  const rail = divider?.previousElementSibling
+  if (!divider || !rail || event.button !== 0 || railDrag) return
+  event.preventDefault()
+  divider.focus({ preventScroll: true })
+  divider.setPointerCapture(event.pointerId)
+  railDrag = { pointerId: event.pointerId, x: event.clientX, width: rail.getBoundingClientRect().width }
+  railDragging.value = true
+}
+function moveRailDrag(event: PointerEvent) {
+  if (!railDrag || railDrag.pointerId !== event.pointerId) return
+  if (event.pointerType === 'mouse' && !(event.buttons & 1)) { endRailDrag(event); return }
+  if (!railDivider.value?.getClientRects().length) { endRailDrag(event); return }
+  setRailWidth(railDrag.width + event.clientX - railDrag.x)
+}
+function keyboardRail(event: KeyboardEvent) {
+  if (event.ctrlKey || event.altKey || event.metaKey) return
+  const changes: Record<string, number> = { ArrowLeft: railWidth.value - 10, ArrowRight: railWidth.value + 10, Home: 220, End: 360, Enter: 260 }
+  const next = changes[event.key]
+  if (typeof next !== 'number') return
+  event.preventDefault()
+  endRailDrag()
+  setRailWidth(next)
+}
+
 const searchType = ref('BAH')
 const searchValue = ref('')
 const archiveSearchInput = ref<InputInstance>()
@@ -132,6 +171,7 @@ function resetPage() {
   activeTab.value = props.archiveOnly ? 'archive' : 'overview'
   searchValue.value = ''
   searchType.value = 'BAH'
+  endRailDrag()
   railWidth.value = 260
   issueSeverity.value = 'ALL'
 }
@@ -141,6 +181,7 @@ watch(() => props.archiveOnly, () => {
   if (!props.archiveOnly) void loadDashboard()
 }, { flush: 'sync' })
 onBeforeUnmount(() => {
+  endRailDrag()
   invalidatePreview()
   invalidateArchiveSearch()
   ++overviewVersion
@@ -565,16 +606,8 @@ onMounted(() => {
 
       <el-tab-pane label="病案工作台" name="archive">
         <div class="archive-stack" :class="{ 'archive-stack--workspace': archiveOnly }" :style="archiveOnly ? { '--archive-rail-width': `${railWidth}px` } : undefined">
-          <div class="archive-search-rail" :class="{ 'archive-search-rail--legacy': !archiveOnly }" role="region" aria-label="病案检索及候选">
+          <div :id="archiveOnly ? 'archive-search-pane' : undefined" class="archive-search-rail" :class="{ 'archive-search-rail--legacy': !archiveOnly }" role="region" aria-label="病案检索及候选">
             <MrrSectionCard :body-padding="archiveOnly ? 'compact' : 'normal'" title="查找病案" :description="archiveOnly ? undefined : '选择编号类型，查询病案主档及其跨表关系。'">
-              <div v-if="archiveOnly" class="archive-rail-controls">
-                <label for="archive-rail-width">检索栏目标宽度</label>
-                <output for="archive-rail-width">{{ railWidth }}px</output>
-                <input id="archive-rail-width" v-model.number="railWidth" type="range" min="220" max="360" step="10">
-                <el-button size="small" text @click="railWidth = 260">
-                  恢复默认
-                </el-button>
-              </div>
               <div class="search-row">
                 <div class="search-field search-field--type">
                   <label for="relation-search-type">查询类型</label>
@@ -611,6 +644,10 @@ onMounted(() => {
                 </button>
               </div>
             </MrrSectionCard>
+          </div>
+
+          <div v-if="archiveOnly" ref="railDivider" class="archive-rail-divider" :class="{ 'is-dragging': railDragging }" role="separator" tabindex="0" aria-label="调整检索栏宽度" aria-orientation="vertical" aria-controls="archive-search-pane" :aria-valuenow="railWidth" :aria-valuemin="220" :aria-valuemax="360" :aria-valuetext="`目标宽度 ${railWidth} 像素`" title="拖动调整检索栏；双击或 Enter 复位，方向键调整" @pointerdown="beginRailDrag" @pointermove="moveRailDrag" @pointerup="endRailDrag" @pointercancel="endRailDrag" @lostpointercapture="endRailDrag" @keydown="keyboardRail" @dblclick="setRailWidth(260)">
+            <span aria-hidden="true" />
           </div>
 
           <MrrSectionCard v-if="!archiveOnly && searchResults.length" class="section-card" title="病案主档候选" description="精确匹配优先；仅前导零差异标记为格式差异（FORMAT_ONLY）">
@@ -1011,8 +1048,8 @@ p {
 
 /* The standalone workspace keeps search context beside the current record. */
 .archive-stack--workspace {
-  grid-template-columns: minmax(220px, min(var(--archive-rail-width, 260px), 34%)) minmax(0, 1fr);
-  gap: var(--mrr-space-3);
+  grid-template-columns: minmax(220px, min(var(--archive-rail-width, 260px), 34%)) 12px minmax(0, 1fr);
+  gap: 0;
   align-items: start;
 }
 
@@ -1094,20 +1131,30 @@ p {
   flex: 0 1 auto;
 }
 
-.archive-rail-controls {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  gap: var(--mrr-space-1) var(--mrr-space-2);
-  align-items: center;
-  margin-bottom: var(--mrr-space-3);
-  font-size: var(--mrr-font-size-xs);
-  color: var(--el-text-color-secondary);
+.archive-rail-divider {
+  display: flex;
+  align-self: stretch;
+  justify-content: center;
+  min-height: 44px;
+  touch-action: none;
+  cursor: col-resize;
+  user-select: none;
 }
 
-.archive-rail-controls input {
-  width: 100%;
-  min-width: 0;
-  accent-color: var(--el-color-primary);
+.archive-rail-divider span {
+  width: 2px;
+  background: var(--mrr-border);
+  border-radius: var(--mrr-radius-sm);
+}
+
+.archive-rail-divider:hover span,
+.archive-rail-divider.is-dragging span {
+  background: var(--mrr-primary);
+}
+
+.archive-rail-divider:focus-visible {
+  outline: 2px solid var(--mrr-ring);
+  outline-offset: -2px;
 }
 
 .archive-candidates {
@@ -1177,12 +1224,13 @@ p {
 }
 
 @media (max-width: 1050px) {
-  .archive-rail-controls {
+  .archive-rail-divider {
     display: none;
   }
 
   .archive-stack--workspace {
     grid-template-columns: minmax(0, 1fr);
+    gap: var(--mrr-space-3);
   }
 
   .archive-candidates {

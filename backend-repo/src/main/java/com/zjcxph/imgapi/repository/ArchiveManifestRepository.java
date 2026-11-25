@@ -206,6 +206,68 @@ public class ArchiveManifestRepository {
                 : summaries("WHERE archive_id=? AND id<? ORDER BY id DESC LIMIT 50",archiveId,before);
     }
 
+    public record Segment(int number, int firstOrdinal, int lastOrdinal, int planned,
+                          int processed, int verified, int anomalies) {}
+    public record Report(long version, long archiveId, String status, int snapshotCount,
+                         int processed, int verified, int anomalies, boolean completeDigestAvailable,
+                         String updatedAt, List<Segment> segments, java.util.Map<String,Integer> anomalyCounts) {}
+    private record ReportPart(long version,long archiveId,String status,int snapshotCount,
+                              int processed,int verified,int anomalies,boolean digest,String updatedAt,
+                              Integer segment,String anomalyType,int count) {}
+
+    /** A single statement reads one retained fixed membership and its durable results.
+     * No storage access, current scan join, or raw filenames/checksums in the report.
+     */
+    @Transactional(readOnly = true, timeout = 5)
+    public Optional<Report> report(long archiveId,long version) {
+        var parts = jdbc.query("""
+                WITH v AS MATERIALIZED (
+                    SELECT id,archive_id,status,snapshot_count,processed,verified,anomalies,
+                           (status='COMPLETED' AND processed>0 AND digest_chain IS NOT NULL) AS digest,
+                           updated_at::text AS updated
+                    FROM app.mrr_archive_manifest m
+                    WHERE id=? AND archive_id=? AND snapshot_count IS NOT NULL
+                      AND snapshot_count=(SELECT count(*) FROM app.mrr_archive_manifest_member WHERE manifest_id=m.id)
+                      AND NOT EXISTS(SELECT 1 FROM app.mrr_archive_manifest_anomaly a
+                          WHERE a.manifest_id=m.id AND a.ordinal>m.processed)
+                ), counts AS (
+                    SELECT (a.ordinal-1)/5000+1 AS segment,a.status,count(*)::int AS count
+                    FROM app.mrr_archive_manifest_anomaly a JOIN v ON v.id=a.manifest_id
+                    GROUP BY 1,2
+                )
+                SELECT v.id,v.archive_id,v.status,v.snapshot_count,v.processed,v.verified,v.anomalies,
+                       v.digest,v.updated,g.segment,c.status,COALESCE(c.count,0)
+                FROM v LEFT JOIN LATERAL generate_series(1,(v.snapshot_count+4999)/5000) g(segment) ON true
+                LEFT JOIN counts c ON c.segment=g.segment ORDER BY g.segment,c.status
+                """, (rs,n)->new ReportPart(rs.getLong(1),rs.getLong(2),rs.getString(3),rs.getInt(4),
+                rs.getInt(5),rs.getInt(6),rs.getInt(7),rs.getBoolean(8),rs.getString(9),
+                rs.getObject(10,Integer.class),rs.getString(11),rs.getInt(12)),version,archiveId);
+        if (parts.isEmpty()) return Optional.empty();
+        var head = parts.getFirst();
+        var totals = new java.util.TreeMap<String,Integer>();
+        var segmentCounts = new java.util.TreeMap<Integer,Integer>();
+        for (var part: parts) {
+            if (part.segment()==null) continue;
+            segmentCounts.merge(part.segment(),part.count(),Integer::sum);
+            if (part.anomalyType()!=null) {
+                if (!RESULTS.contains(part.anomalyType()) || "VERIFIED".equals(part.anomalyType())) return Optional.empty();
+                totals.merge(part.anomalyType(),part.count(),Integer::sum);
+            }
+        }
+        if (totals.values().stream().mapToInt(Integer::intValue).sum()!=head.anomalies()) return Optional.empty();
+        var segments = new java.util.ArrayList<Segment>();
+        for (var entry: segmentCounts.entrySet()) {
+            int n=entry.getKey(), first=(n-1)*MAX_FILES+1, last=Math.min(n*MAX_FILES,head.snapshotCount());
+            int planned=last-first+1, processed=Math.max(0,Math.min(last,head.processed())-first+1);
+            int anomalies=entry.getValue();
+            if (anomalies>processed) return Optional.empty();
+            segments.add(new Segment(n,first,last,planned,processed,processed-anomalies,anomalies));
+        }
+        return Optional.of(new Report(head.version(),head.archiveId(),head.status(),head.snapshotCount(),
+                head.processed(),head.verified(),head.anomalies(),head.digest(),head.updatedAt(),
+                List.copyOf(segments),java.util.Collections.unmodifiableMap(totals)));
+    }
+
     public record Comparison(long archiveId, long baseVersion, long targetVersion,
                              int baseCount, int targetCount, int added, int removed,
                              int changed, int unchanged, String digestComparison) {}

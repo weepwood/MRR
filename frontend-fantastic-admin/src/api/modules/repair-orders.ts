@@ -9,6 +9,7 @@ export interface RepairOrder {
   status: string
   proposedBy: number
   approvedBy: number | null
+  reopenedFrom?: number | null
 }
 export interface RepairEvent {
   id: number

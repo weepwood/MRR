@@ -180,7 +180,7 @@ test('NAS 节点熔断和实际许可状态可见但不显示源地址', async (
   const dashboard = page.locator('.overview-dashboard')
   await expect(dashboard.getByText('NAS 节点运行状态', { exact: true })).toBeVisible()
   await expect(dashboard.getByText('全局许可 1 / 2')).toBeVisible()
-  await expect(dashboard.getByText('熔断冷却')).toBeVisible()
+  await expect(dashboard.getByText('熔断冷却', { exact: true })).toBeVisible()
   await expect(dashboard.getByText('探针进行中')).toBeVisible()
 })
 

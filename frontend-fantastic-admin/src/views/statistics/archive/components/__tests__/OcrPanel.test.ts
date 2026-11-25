@@ -1,5 +1,5 @@
 import { flushPromises, mount } from '@vue/test-utils'
-import { describe, expect, it, vi } from 'vitest'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { reactive } from 'vue'
 import OcrPanel from '../OcrPanel.vue'
 
@@ -11,7 +11,8 @@ const api = vi.hoisted(() => ({
   getOcrJob: vi.fn(),
 }))
 vi.mock('@/api/modules/ocr', () => api)
-vi.mock('@/utils/composables/useAuth', () => ({ default: () => ({ auth: () => true }) }))
+const permissions = reactive({ read: true, text: true })
+vi.mock('@/utils/composables/useAuth', () => ({ default: () => ({ auth: (p: string) => p === 'ocr:read' ? permissions.read : p === 'ocr:text-read' ? permissions.text : true }) }))
 vi.mock('../ClassificationReview.vue', () => ({ default: { template: '<div />' } }))
 const session = reactive({ token: 'synthetic-a' })
 vi.mock('@/store/modules/user', () => ({ useUserStore: () => session }))
@@ -33,6 +34,7 @@ function panel() {
 }
 
 describe('病案工作台 OCR 身份隔离', () => {
+  beforeEach(() => { permissions.read = true; permissions.text = true; vi.resetAllMocks() })
   it('拒绝属于其他病案的 OCR 内容并禁止基于错误身份创建任务', async () => {
     vi.clearAllMocks()
     api.getOcrFact.mockResolvedValue({ data: { scanId: 11, archiveId: 2, status: 'SUCCEEDED', text: '不得显示的合成文本' } })
@@ -64,6 +66,26 @@ describe('病案工作台 OCR 身份隔离', () => {
     expect(wrapper.get('textarea').element.value).toBe('新影像合成文本')
     await wrapper.findAll('button').find(b => b.text() === '收起识别')!.trigger('click')
     expect(wrapper.find('textarea').exists()).toBe(false)
+    wrapper.unmount()
+  })
+
+  it('任务身份不一致时禁止继续发起识别，文本权限撤销立即隐藏内容', async () => {
+    api.getOcrFact.mockResolvedValue({ data: { scanId: 11, archiveId: 1, status: 'SUCCEEDED', text: '合成原文' } })
+    api.getOcrJobs.mockResolvedValue({ data: [{ id: 'task', archiveId: 1 }] })
+    api.getOcrJob.mockResolvedValue({ data: { id: 'task', archiveId: 2, status: 'RUNNING' } })
+    const wrapper = panel()
+    await wrapper.get('button').trigger('click')
+    await flushPromises()
+    expect(wrapper.text()).toContain('任务身份不一致')
+    await (wrapper.vm as any).run(false)
+    expect(api.createOcrJob).not.toHaveBeenCalled()
+    permissions.text = false
+    await flushPromises()
+    expect(wrapper.find('textarea').exists()).toBe(false)
+    expect(api.getOcrFact).toHaveBeenLastCalledWith(11, false)
+    permissions.read = false
+    await flushPromises()
+    expect(wrapper.text()).toBe('')
     wrapper.unmount()
   })
 

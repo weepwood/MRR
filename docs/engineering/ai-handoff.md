@@ -634,3 +634,4 @@
 - 维护者明确要求先在本地持续开发并检查实际页面，按反馈调整，只有收到整理/合并 PR 的明确指令时才推送累计改动并进行合并。现有 #850 保持草稿，远端候选 91083764，main 与 V1.1 冻结；不主动发布预览站。工作区 /Volumes/data/Project/MRR-worktrees/v1.2-table-gallery-contract。
 - 本地用户预览：frontend-fantastic-admin 目录执行 `VITE_APP_DEMO_MODE=true VITE_BUILD_MOCK=true VITE_OPEN_PROXY=false pnpm exec vite --mode mock --host 127.0.0.1 --port 9037 --strictPort`。本轮 PID 23293（仅本次会话记录，重启需重新核验）。实际 Chromium 检查 /ui-components、/logs、/audit-images 成功，观测到 /proxy/ 请求均为本地 9037；已打开本机浏览器组件展厅。开发模式使用 history 路由，不使用 Pages 的 #/ 路由。用户预览端口固定，后续自动化使用不同端口及隔离会话，不关闭其他应用，不使用真实医疗数据。
 - 保留原有风险分级、本地证据、成熟公共组件、中文提交及 AGENTS.md 更新；累计改动待维护者授权后统一进入 #850（届时核验分支和最新门禁），不得宣称本地未推送改动已通过远端 CI。
+- 远端候选 91083764 的 Linux 完整跨浏览器验收 run 45665582083 最终 270 passed / 11 failed（21.6m），日志 /tmp/mrr-pr850-cross-failed.log；定向 WebKit 10/10 不代表完整矩阵通过。后续本地按失败具体断言与实际容器布局分类复现修复，不触发远端 CI，不降低门禁，用户预览继续运行。

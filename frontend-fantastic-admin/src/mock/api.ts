@@ -7,7 +7,7 @@ import { demoClock } from '../mock-support/clock'
 import { demoRecords, matchesLegacyScan } from '../mock-support/records'
 import { demoError, demoOk } from '../mock-support/response'
 import { registeredRuntimeSetting, runtimeSchema, validateRuntimeSetting } from '../mock-support/runtime-settings'
-import { createAdditionalMockUsers, createBaseMockUsers, filterMockUsers } from '../mock-support/users'
+import { createAdditionalMockUsers, createBaseMockUsers, filterMockUsers, orderMockUsers } from '../mock-support/users'
 
 type QueryValue = string | string[] | undefined
 
@@ -469,7 +469,7 @@ export default defineFakeRoute([
       const roleCode = normalize(firstQuery(query.roleCode))
       const status = normalize(firstQuery(query.status))
       const filtered = filterMockUsers(users, { keyword, roleCode, status })
-      return ok(paginate(filtered, query.page, query.size))
+      return ok(paginate(orderMockUsers(filtered), query.page, query.size))
     },
   },
   {

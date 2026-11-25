@@ -674,8 +674,8 @@ onMounted(loadData)
           </template>
         </el-table-column>
         <el-table-column label="角色" width="112" show-overflow-tooltip><template #default="{ row }"><span class="user-role">{{ row.roleName || row.roleCode }}</span></template></el-table-column>
-        <el-table-column label="凭据状态" width="152" show-overflow-tooltip><template #default="{ row }"><MrrStatusTag :class="{ 'user-credential-normal': credentialStatus(row).label === '正常' }" :label="credentialStatus(row).label" :tone="credentialStatus(row).tone" /></template></el-table-column>
-        <el-table-column label="账号状态" width="110"><template #default="{ row }"><MrrStatusTag :class="{ 'user-status-quiet': normalizeStatus(row.status) === 'active' }" :status="row.status" :label="statusDisplay(row.status).label" :tone="statusDisplay(row.status).tone" /></template></el-table-column>
+        <el-table-column label="凭据状态" width="152" show-overflow-tooltip><template #default="{ row }"><MrrStatusTag :label="credentialStatus(row).label" :tone="credentialStatus(row).tone" /></template></el-table-column>
+        <el-table-column label="账号状态" width="110"><template #default="{ row }"><MrrStatusTag :status="row.status" :label="statusDisplay(row.status).label" :tone="statusDisplay(row.status).tone" /></template></el-table-column>
         <el-table-column prop="lastLoginAt" label="最后登录" width="184" show-overflow-tooltip><template #default="{ row }"><span class="user-last-login">{{ formatDateTime(row.lastLoginAt) }}</span></template></el-table-column>
         <el-table-column
           v-if="canManage"
@@ -849,8 +849,6 @@ onMounted(loadData)
 .user-identity__name { overflow: hidden; font-size: var(--mrr-font-size-xs); color: var(--mrr-muted-foreground); text-overflow: ellipsis; white-space: nowrap; }
 .user-source { font-size: var(--mrr-font-size-xs); color: var(--mrr-muted-foreground); }
 .user-role { font-size: var(--mrr-font-size-sm); color: var(--mrr-card-foreground); }
-.user-credential-normal, .user-status-quiet { padding-inline: 0; background: transparent; border-color: transparent; }
-.user-credential-normal { color: var(--mrr-muted-foreground); }
 .user-last-login { font-variant-numeric: tabular-nums; color: var(--mrr-muted-foreground); }
 
 /* Quiet pagination: keep Element Plus navigation and replace only the size selector.
@@ -886,9 +884,9 @@ onMounted(loadData)
 .users-table-panel :deep(.el-pagination__total) { margin-inline-end: auto; color: var(--mrr-muted-foreground); }
 
 /* One line for scanning; the read-only dialog preserves the original text. */
-.application-preview.el-button { justify-content: flex-start; width: 100%; max-width: 100%; min-width: 0; height: 32px; padding: 0; color: var(--mrr-muted-foreground); border: 0; box-shadow: none; }
-.application-preview.el-button :deep(> span) { display: flex; gap: var(--mrr-space-2); align-items: center; width: 100%; min-width: 0; }
-.application-preview__text { overflow: hidden; font-size: var(--mrr-font-size-xs); text-overflow: ellipsis; white-space: nowrap; }
+.application-preview.el-button { justify-content: flex-start; width: 100%; max-width: 100%; min-width: 0; height: 32px; padding: 0; color: var(--mrr-muted-foreground); text-align: left; border: 0; box-shadow: none; }
+.application-preview.el-button :deep(> span) { display: flex; gap: var(--mrr-space-2); align-items: center; justify-content: flex-start; width: 100%; min-width: 0; }
+.application-preview__text { min-width: 0; overflow: hidden; font-size: var(--mrr-font-size-xs); text-align: left; text-overflow: ellipsis; white-space: nowrap; }
 .application-preview__icon { flex: none; font-size: 14px; }
 .application-preview.el-button:not(.is-disabled):hover { color: var(--mrr-primary); background: transparent; }
 .application-preview.el-button:focus-visible { outline: 2px solid var(--mrr-primary); outline-offset: -2px; }

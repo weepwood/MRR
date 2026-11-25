@@ -26,6 +26,7 @@ export function createBaseMockUsers(clock: Clock = demoClock): MockUser[] {
       permissions: ['*'],
       status: 'ACTIVE',
       lastLoginAt: clock.iso(),
+      createdAt: clock.iso(5),
     },
     {
       id: 2,
@@ -36,6 +37,7 @@ export function createBaseMockUsers(clock: Clock = demoClock): MockUser[] {
       permissions: ['audit:read', 'logs:read', 'statistics:read'],
       status: 'ACTIVE',
       lastLoginAt: clock.iso(1),
+      createdAt: clock.iso(6),
     },
     {
       id: 3,
@@ -46,6 +48,7 @@ export function createBaseMockUsers(clock: Clock = demoClock): MockUser[] {
       permissions: ['scan:read', 'scan:write', 'statistics:read'],
       status: 'ACTIVE',
       lastLoginAt: clock.iso(2),
+      createdAt: clock.iso(7),
     },
   ]
 }
@@ -143,4 +146,22 @@ export function filterMockUsers(users: MockUser[], filters: { keyword?: string, 
     && (!roleCode || normalize(row.roleCode) === roleCode)
     && (!status || normalize(row.status) === status),
   )
+}
+
+// Match AuthUserMapper.findAllWithPagination: pending first, then application
+// or creation time descending and id descending. Sort the full filtered list
+// before slicing a page, never reorder the visible page only.
+export function orderMockUsers(users: MockUser[]) {
+  const priority = (row: MockUser) => row.status.toLowerCase() === 'pending' ? 0 : 1
+  const time = (row: MockUser) => {
+    const value = Date.parse(row.appliedAt ?? row.createdAt ?? '')
+    return Number.isFinite(value) ? value : Number.POSITIVE_INFINITY
+  }
+  return [...users].sort((a, b) => {
+    const group = priority(a) - priority(b)
+    if (group) { return group }
+    const first = time(a)
+    const second = time(b)
+    return (first === second ? 0 : first > second ? -1 : 1) || b.id - a.id
+  })
 }

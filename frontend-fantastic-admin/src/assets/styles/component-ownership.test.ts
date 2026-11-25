@@ -13,6 +13,22 @@ function sources(dir: string): string[] {
 }
 
 describe('唯一基础控件归属', () => {
+  it('无业务调用的旧通知与上传预览链不恢复', () => {
+    for (const component of ['FaNotification', 'FaFileUpload', 'FaImageUpload', 'FaImagePreview']) {
+      expect(fs.existsSync(path.join(root, 'ui/components', component))).toBe(false)
+    }
+    const legacy = sources(root).filter(file => /\b(?:Fa(?:Notification|FileUpload|ImageUpload|ImagePreview)|useFa(?:Notification|ImagePreview)|faNotification)\b/.test(fs.readFileSync(file, 'utf8')))
+    expect(legacy.map(file => path.relative(root, file))).toEqual([])
+  })
+
+  it('头像、进度、分隔线及无调用卡片和折叠不恢复旧实现', () => {
+    for (const component of ['FaAvatar', 'FaProgress', 'FaDivider', 'FaCard', 'FaCollapsible']) {
+      expect(fs.existsSync(path.join(root, 'ui/components', component))).toBe(false)
+    }
+    const legacy = sources(root).filter(file => /\bFa(?:Avatar|Progress|Divider|Card|Collapsible)\b/.test(fs.readFileSync(file, 'utf8')))
+    expect(legacy.map(file => path.relative(root, file))).toEqual([])
+  })
+
   it('账户与标签页菜单不恢复旧实现', () => {
     for (const component of ['FaDropdown', 'FaContextMenu']) {
       expect(fs.existsSync(path.join(root, 'ui/components', component))).toBe(false)

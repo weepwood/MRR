@@ -59,7 +59,7 @@ function confirm(kind: string) {
       <p class="example-note">
         进度示例 64%
       </p>
-      <FaProgress :model-value="64" aria-label="演示任务进度 64%" />
+      <el-progress :percentage="64" :stroke-width="16" :show-text="false" class="mrr-compact-progress" aria-label="演示任务进度 64%" />
     </div>
   </div>
   <div v-else-if="example === 'overlays'" class="example-stack">

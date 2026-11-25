@@ -448,7 +448,7 @@ meta: {
 
 | 层级 | 目录 | 说明 | 示例 |
 |------|------|------|------|
-| **Ui** | `ui/components/` | 通用 UI 原子组件 (Fa*) | `FaIcon`, `FaModal`, `FaCard` |
+| **Ui** | `ui/components/` | 通用 UI 原子组件 (Fa*) | `FaIcon`, `FaKbd`, `FaPinInput` |
 | **Shadcn** | `ui/shadcn/` | shadcn-vue 组件 | `Button`, `Dialog`, `Table` |
 | **业务** | `components/` | 领域相关复用组件 | `AccountForm/LoginForm.vue` |
 | **页面** | `views/` | 路由页面组件 | `records/index.vue` |
@@ -574,10 +574,10 @@ UnoCSS 原子类 (首选) → scoped CSS → 全局 CSS
   <FaPageMain>
     <!-- 1. 摘要卡片 -->
     <div class="summary-grid grid grid-cols-4 gap-4 mb-4">
-      <FaCard v-for="item in summary" :key="item.label">
+      <el-card v-for="item in summary" :key="item.label" shadow="never">
         <div class="text-2xl font-bold">{{ item.value }}</div>
         <div class="text-sm text-gray-500">{{ item.label }}</div>
-      </FaCard>
+      </el-card>
     </div>
 
     <!-- 2. 搜索表单 -->

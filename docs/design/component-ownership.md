@@ -144,6 +144,14 @@ FaIcon、FaKbd、FaPinInput、FaScrollArea、FaSmartFixedBlock、FaPasswordStren
 - 剩余Reka实际调用包含头像、折叠、旧图片预览、通知、PIN、进度、滚动及shadcn表单/标签；class-variance-authority仍用于头像和通知，不直接移除依赖。下一批按重叠能力处理Avatar/Progress/Collapse/Divider及旧上传/预览与通知，避免机械删除专用实现。
 - 日志/tmp/mrr-v12-menu-{before2,after,closure,unit,tsc}.log，/tmp/mrr-v12-context-{before,after,final,tsc}.log；证据/tmp/mrr-v12-menu-visual-cdf及/tmp/mrr-v12-context-visual-cdf。
 
+## 残余基础控件与无调用链清理（2026-11-26）
+
+- #847 head4723c38c，159文件1073/1073、Pages7/7、230/230路由及治理全部成功，已合并9c9022a1，tree一致。
+- Avatar两处、展厅Progress一处、系统信息Divider四处迁EP。曾检查旧图片上传内部Progress，因全链无业务调用最终整链删除，不计实际迁移。FaCard/FaCollapsible无运行时引用（Card仅活跃工程文档示例），删除；旧FaFileUpload/FaImageUpload/FaImagePreview仅内部相互引用，旧FaNotification仅App挂载空容器、无调用；删除这四个组件及挂载。实际业务通知仍由ElMessage、病案查看器原业务实现承担。共删除49个旧实现文件，新增两项唯一归属守护。移除无引用class-variance-authority，package及lock仅对应删除11行；保留仍服务PIN、ScrollArea、shadcn表单/标签的Reka。历史自动生成文档保留，不作为当前实现依据。
+- 28组真实视觉（四主题×1440×两头像/进度/四分隔线），基线5/5（27.1秒），首次迁移5/5（26.5秒）。旧基线gr8r-light产品版本x1456为抽屉入场帧，最终等待实际抽屉右边界后x1072；其余27组所测位置一致。全部28对同尺寸，所测宽高最大0px、背景/色/圆角/字体大小一致，RGB任一通道差>8中位0%、最大0.10745%（进度条），非像素完全相等。清理依赖后最终37/37（1.2m）含系统信息、账户、展厅、改密及病案查看器，92/92单测含通知/请求错误/剪贴板，vue-tsc/lint通过。未进行非空头像网络慢加载/真实上传专用全流程（旧链已无调用）、全部业务浮层截图、医院Chrome86及完整跨浏览器。
+- 日志/tmp/mrr-v12-residual-{before,after,closure,unit,final-tsc,remove}.log；证据/tmp/mrr-v12-residual-visual-9c。预览手动触发恢复，run45656099309计划V1.2 9c9022a1及V1.1冻结92896f7c，正在构建，尚未确认部署。
+- 后续集中完成公共通知入口约束（已统一底层，不强制批量改业务调用）、保留专用组件的归属审查、历史CSS/文档、全站视觉与浏览器验收。禁止为了零Reka而重写专用PIN和滚动区。
+
 ## 逐文件原始引用清单
 
 | 源文件（相对 src/） | Fa 标签 | Element Plus 标签 |

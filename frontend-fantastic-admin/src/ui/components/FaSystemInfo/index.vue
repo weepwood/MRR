@@ -10,9 +10,9 @@ const shortCommit = computed(() => product.gitCommit === 'unknown' ? 'unknown' :
 
 <template>
   <MrrDrawer v-model="visible" title="系统信息" :footer="false">
-    <FaDivider>
+    <el-divider class="mrr-system-divider">
       产品版本
-    </FaDivider>
+    </el-divider>
     <div class="text-sm space-y-2">
       <div class="flex items-center justify-between gap-4 rounded-lg px-2 py-1.5 hover-bg-secondary">
         <span class="font-bold">MRR</span>
@@ -32,9 +32,9 @@ const shortCommit = computed(() => product.gitCommit === 'unknown' ? 'unknown' :
       </div>
     </div>
 
-    <FaDivider>
+    <el-divider class="mrr-system-divider">
       数据库兼容性
-    </FaDivider>
+    </el-divider>
     <div class="text-sm space-y-2">
       <div class="flex items-center justify-between gap-4 rounded-lg px-2 py-1.5 hover-bg-secondary">
         <span class="font-bold">最低迁移版本</span>
@@ -59,17 +59,17 @@ const shortCommit = computed(() => product.gitCommit === 'unknown' ? 'unknown' :
       </div>
     </div>
 
-    <FaDivider>
+    <el-divider class="mrr-system-divider">
       前端工程信息
-    </FaDivider>
+    </el-divider>
     <div class="flex items-center justify-between rounded-lg px-2 py-1.5 text-sm hover-bg-secondary">
       <span class="font-bold">前端应用版本</span>
       <span class="font-sans">{{ template.version }}</span>
     </div>
 
-    <FaDivider>
+    <el-divider class="mrr-system-divider">
       主要运行时依赖（声明版本范围）
-    </FaDivider>
+    </el-divider>
     <ul class="list-none text-sm">
       <li v-for="(val, key) in runtimeDependencies" :key="key" class="flex items-center justify-between rounded-lg px-2 py-1.5 hover-bg-secondary">
         <div class="font-bold">

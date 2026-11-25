@@ -44,9 +44,9 @@ function closeOnEscape(event: KeyboardEvent) {
         'size-[var(--mrr-control-height)] shrink-0 p-1': onlyAvatar,
       }, props.class)"
     >
-      <FaAvatar :src="userStore.avatar" :class="cn('size-7 shrink-0', { 'size-full': onlyAvatar })">
+      <el-avatar :src="userStore.avatar" class="mrr-account-avatar" :class="{ 'mrr-account-avatar--fill': onlyAvatar }">
         <FaIcon name="i-lucide:user-round" class="size-6 text-[var(--text-secondary)]" />
-      </FaAvatar>
+      </el-avatar>
       <div v-if="!onlyAvatar" class="min-w-0 flex-center-between flex-1 gap-2">
         <div class="flex-1 truncate text-start">
           {{ userStore.account }}
@@ -58,9 +58,9 @@ function closeOnEscape(event: KeyboardEvent) {
       <el-dropdown-menu @keydown="closeOnEscape">
         <li role="presentation" class="mrr-account-label p-2">
           <div class="flex items-center gap-3">
-            <FaAvatar :src="userStore.avatar" class="size-9 shrink-0">
+            <el-avatar :src="userStore.avatar" class="mrr-account-avatar mrr-account-avatar--menu">
               <FaIcon name="i-lucide:user-round" class="size-7 text-[var(--text-secondary)]" />
-            </FaAvatar>
+            </el-avatar>
             <div class="min-w-0 flex-1">
               <div class="account-name text-sm text-[var(--text-primary)] font-semibold leading-5">
                 {{ userStore.account }}

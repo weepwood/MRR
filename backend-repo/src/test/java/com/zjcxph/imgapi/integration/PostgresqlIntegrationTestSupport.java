@@ -46,6 +46,11 @@ public abstract class PostgresqlIntegrationTestSupport {
                 "spring.datasource.hikari.connection-init-sql",
                 () -> "SET search_path TO app, public"
         );
+        // Cached Spring test contexts share one PostgreSQL server. Do not eagerly
+        // reserve the production pool size for every distinct context.
+        // Four connections still allow the existing real multi-connection lock tests.
+        registry.add("spring.datasource.hikari.minimum-idle", () -> 0);
+        registry.add("spring.datasource.hikari.maximum-pool-size", () -> 4);
         registry.add("spring.flyway.enabled", () -> true);
         registry.add("spring.flyway.schemas", () -> "app");
         registry.add("spring.flyway.default-schema", () -> "app");

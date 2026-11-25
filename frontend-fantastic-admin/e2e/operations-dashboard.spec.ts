@@ -301,6 +301,17 @@ test('Nginx 默认关闭时禁止校验，显式检查仅发送固定请求', as
   await expect(page.getByText('配置语法校验失败', { exact: true })).toBeVisible()
   await expect(page.getByText('退出码 1', { exact: false })).toBeVisible()
   expect(calls).toBe(1)
+  await page.route('**/api/v1/operations/nginx/version', (route) => {
+    expect(route.request().method()).toBe('POST')
+    expect(route.request().postData()).toBeNull()
+    return route.fulfill({ json: { code: 200, data: { state: 'AVAILABLE', version: '1.28.0', observedAt: snapshotTime } } })
+  })
+  await page.route('**/api/v1/operations/nginx/listener-hints', route => route.fulfill({ json: { code: 200, data: { state: 'TEXT_HINTS', ports: [80], observedAt: snapshotTime } } }))
+  await page.getByRole('button', { name: '读取安装版本' }).click()
+  await expect(page.getByText('安装程序版本 Nginx 1.28.0', { exact: false })).toBeVisible()
+  await page.getByRole('button', { name: '核对监听配置文本' }).click()
+  await expect(page.getByText('独立数值 listen 文本提示：80', { exact: false })).toBeVisible()
+  await expect(page.getByText('不是生效监听配置或端口状态', { exact: false })).toBeVisible()
 })
 
 test('持久存储熔断事件区分真实状态机事件与采样变化', async ({ page }) => {
@@ -312,4 +323,35 @@ test('持久存储熔断事件区分真实状态机事件与采样变化', async
   await page.getByText('近 7 天', { exact: true }).click()
   expect((await (await response).json()).data.hours).toBe(168)
   await expect(page.getByRole('cell', { name: '节点恢复', exact: true })).toBeVisible()
+})
+
+test('Nginx 按需观察进程并仅展示投影日志，切换类别清除旧结果', async ({ page }) => {
+  let reads = 0
+  await page.route('**/api/v1/operations/nginx/runtime', route => route.fulfill({ json: { code: 200, data: { state: 'PROCESS_MATCHED', observedAt: snapshotTime } } }))
+  await page.route('**/api/v1/operations/nginx/logs?*', (route) => {
+    reads++
+    const kind = new URL(route.request().url()).searchParams.get('kind')
+    return route.fulfill({ json: { code: 200, data: { state: 'AVAILABLE', kind, observedAt: snapshotTime, truncated: true, omitted: 1, entries: [kind === 'access' ? { time: snapshotTime, method: 'GET', status: 502, requestSeconds: 0.25, severity: null } : { time: '2026-11-02T01:00:00', method: null, status: null, requestSeconds: null, severity: 'error' }] } } })
+  })
+  await page.goto('/operations-center')
+  await expect(page.getByRole('heading', { name: 'Nginx 运行观察与脱敏日志' })).toBeVisible()
+  expect(reads).toBe(0)
+  await page.getByRole('button', { name: '核对本地进程' }).click()
+  await expect(page.getByText('PID 对应本地安装程序正在运行', { exact: true })).toBeVisible()
+  await page.getByRole('button', { name: '读取脱敏日志' }).click()
+  await expect(page.getByRole('cell', { name: '502', exact: true })).toBeVisible()
+  await page.getByText('错误级别', { exact: true }).click()
+  await expect(page.getByRole('cell', { name: '502', exact: true })).toHaveCount(0)
+  await page.getByRole('button', { name: '读取脱敏日志' }).click()
+  await expect(page.getByRole('cell', { name: 'error', exact: true })).toBeVisible()
+  expect(reads).toBe(2)
+  await page.route('**/api/v1/operations/nginx/windows-observation', (route) => {
+    expect(route.request().method()).toBe('POST')
+    expect(route.request().postData()).toBeNull()
+    return route.fulfill({ json: { code: 200, data: { state: 'OBSERVED', serviceState: 'RUNNING', listenerState: 'OBSERVED', ports: [80], observedAt: snapshotTime } } })
+  })
+  await page.getByRole('button', { name: '核对 Windows 服务与 TCP 监听' }).click()
+  await expect(page.getByText('MRR-Gateway 服务：运行中', { exact: true })).toBeVisible()
+  await expect(page.getByText('已核对 Nginx 进程的本地 TCP 监听：80', { exact: true })).toBeVisible()
+  await expect(page.getByText('不证明两者属于同一启动链', { exact: false })).toBeVisible()
 })

@@ -21,6 +21,19 @@ public class NginxConfigurationDiagnosticsController {
         return Result.success(diagnostics.status());
     }
 
+    @GetMapping("/listener-hints")
+    public Result<NginxConfigurationDiagnostics.ListenerHints> listenerHints(HttpServletResponse response) {
+        response.setHeader("Cache-Control","private, no-store");
+        return Result.success(diagnostics.listenerHints());
+    }
+
+    @PostMapping("/version")
+    @RequirePermissions({"system:read","system:manage"})
+    public Result<NginxConfigurationDiagnostics.Version> version(HttpServletResponse response) {
+        response.setHeader("Cache-Control","private, no-store");
+        return Result.success(diagnostics.version());
+    }
+
     @PostMapping("/check")
     @RequirePermissions({"system:read","system:manage"})
     public Result<NginxConfigurationDiagnostics.Check> check(HttpServletResponse response) {

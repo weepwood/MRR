@@ -407,6 +407,27 @@ async function smokePagesDemo() {
     assert.equal(download.suggestedFilename(), '存储说明.txt')
     assert.match(await readFile(await download.path(), 'utf8'), /MRR 文件浏览演示数据/)
 
+    // Exercise the independent workbench and real bundled binary Mock end to end.
+    const workbench = await browser.newPage()
+    workbench.on('pageerror', error => pageErrors.push(error.message))
+    await workbench.goto(`${appUrl}#/archive-workbench`)
+    const archiveInput = workbench.getByRole('textbox', { name: '病案查询值' })
+    await archiveInput.waitFor({ timeout: 20000 })
+    await archiveInput.fill('26070000')
+    await archiveInput.press('Enter')
+    const samples = workbench.getByRole('group', { name: '有效影像样本' })
+    await samples.getByRole('button').first().click({ timeout: 20000 })
+    const scanImage = workbench.getByAltText('待核对影像')
+    await scanImage.waitFor({ timeout: 20000 })
+    await workbench.waitForFunction(() => {
+      const img = document.querySelector('img[alt="待核对影像"]')
+      return img?.complete && img.naturalWidth > 0
+    })
+    assert.match(await scanImage.getAttribute('src'), /^blob:/)
+    await workbench.getByRole('button', { name: '识别文字', exact: true }).click()
+    await workbench.getByRole('dialog', { name: '影像文字识别' }).waitFor({ timeout: 15000 })
+    await workbench.close()
+
     // Use the actual bundled browser Mock, not Playwright page.route stubs.
     const opsPage = await browser.newPage()
     opsPage.on('pageerror', error => pageErrors.push(error.message))

@@ -1,14 +1,14 @@
 <script setup lang="ts">
 import type { OcrFact } from '@/api/modules/ocr'
 import { ElMessage } from 'element-plus'
-import { computed, ref, watch } from 'vue'
+import { computed, onBeforeUnmount, ref, watch } from 'vue'
 import { cancelOcrJob, createOcrJob, getOcrFact, getOcrJobs } from '@/api/modules/ocr'
 import { Z_INDEX } from '@/constants/z-index'
 import useAuth from '@/utils/composables/useAuth'
 import { useOcrJob } from '../composables/useOcrJob'
 import ClassificationReview from './ClassificationReview.vue'
 
-const props = defineProps<{ scanId: number, imageUrl?: string, unclassified: boolean }>()
+const props = defineProps<{ scanId: number, imageUrl?: string, unclassified: boolean, expectedArchiveId?: number }>()
 const { auth } = useAuth()
 const { job, error: pollingError, follow, stop } = useOcrJob()
 const open = ref(false)
@@ -16,6 +16,7 @@ const fact = ref<OcrFact | null>(null)
 const busy = ref(false)
 const loadError = ref('')
 let generation = 0
+let actionGeneration = 0
 const running = computed(() => job.value && ['PENDING', 'RUNNING', 'CANCEL_REQUESTED'].includes(job.value.status))
 const statusLabels: Record<string, string> = {
   PENDING: '待识别',
@@ -35,10 +36,16 @@ async function load(resume = false) {
   try {
     const result = await getOcrFact(props.scanId, auth('ocr:text-read'))
     if (version !== generation) { return }
+    if (result.data && (result.data.scanId !== props.scanId || (props.expectedArchiveId != null && result.data.archiveId !== props.expectedArchiveId))) {
+      throw new Error('OCR identity mismatch')
+    }
     fact.value = result.data ?? null
     if (resume && fact.value) {
       const jobs = await getOcrJobs(fact.value.archiveId)
-      if (version === generation && jobs.data?.[0]) { follow(jobs.data[0].id) }
+      if (version === generation && jobs.data?.[0]) {
+        if (jobs.data[0].archiveId !== fact.value.archiveId) { throw new Error('OCR job identity mismatch') }
+        follow(jobs.data[0].id)
+      }
     }
   }
   catch {
@@ -50,14 +57,20 @@ async function run(wholeArchive = false) {
   if (!fact.value || busy.value) { return }
   busy.value = true
   const version = generation
+  const action = ++actionGeneration
   try {
     const result = await createOcrJob(fact.value.archiveId, wholeArchive ? undefined : props.scanId)
-    if (version === generation && result.data) { follow(result.data.id) }
+    if (version === generation && result.data) {
+      if (result.data.archiveId !== fact.value?.archiveId) { throw new Error('OCR job identity mismatch') }
+      follow(result.data.id)
+    }
   }
   catch {
     if (version === generation) { ElMessage.error('无法创建识别任务，请检查功能配置、病案关联或活动任务') }
   }
-  finally { busy.value = false }
+  finally {
+    if (action === actionGeneration) { busy.value = false }
+  }
 }
 
 async function cancel() {
@@ -70,14 +83,29 @@ watch(open, (value) => {
   if (value) {
     void load(true)
   }
-  else { generation++; stop() }
+  else { generation++; stop(); fact.value = null; job.value = null }
 })
-watch(() => props.scanId, () => {
+watch(() => [props.scanId, props.expectedArchiveId], () => {
   generation++
+  actionGeneration++
   stop()
   job.value = null
+  fact.value = null
+  busy.value = false
   if (open.value) { void load(true) }
 })
+function clearSession() {
+  generation++
+  actionGeneration++
+  stop()
+  open.value = false
+  fact.value = null
+  job.value = null
+  busy.value = false
+  loadError.value = ''
+}
+watch(() => useUserStore().token, clearSession, { flush: 'sync' })
+onBeforeUnmount(clearSession)
 watch(() => job.value?.status, (status) => {
   if (status && !['PENDING', 'RUNNING', 'CANCEL_REQUESTED'].includes(status) && open.value) { void load() }
 })

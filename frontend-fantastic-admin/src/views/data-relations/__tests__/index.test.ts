@@ -79,8 +79,9 @@ const overview = {
   notes: ['mr_scan 覆盖率来自 PostgreSQL 统计信息'],
 }
 
-function mountPage() {
+function mountPage(archiveOnly = false) {
   return mount(DataRelationWorkbenchPage, {
+    props: { archiveOnly },
     global: {
       components: { MrrPageHeader, MrrPageShell },
       directives: {
@@ -172,6 +173,20 @@ describe('dataRelationWorkbenchPage', () => {
         },
       ],
     })
+  })
+
+  it('独立病案入口直接展示查询且不请求全局治理数据', async () => {
+    const wrapper = mountPage(true)
+    await flushPromises()
+    expect(wrapper.findComponent(MrrPageHeader).props('title')).toBe('病案工作台')
+    expect(wrapper.text()).toContain('查找病案')
+    expect(wrapper.text()).not.toContain('关系健康度')
+    expect(wrapper.text()).not.toContain('执行检查')
+    expect(apiMocks.getDataRelationOverview).not.toHaveBeenCalled()
+    expect(apiMocks.getDataQualitySummary).not.toHaveBeenCalled()
+    expect(apiMocks.getDataQualityIssues).not.toHaveBeenCalled()
+    expect(apiMocks.runDataQualityChecks).not.toHaveBeenCalled()
+    wrapper.unmount()
   })
 
   it('loads overview and latest quality results without starting a new check', async () => {

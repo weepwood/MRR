@@ -354,6 +354,10 @@
 
 - [Manifest 比较及专项验证](v1.1-manifest-comparison.md)，独立依赖分支暂基于 #804 1d904fe6；须在其门禁通过合并后同步 integration/v1.1。另有患者统计独立分支 ed281f15；五项有证据的历史 Issue 已关闭，72 项开放。真实生产、正式发布及 main 不变。
 
+## 08 V1.1 独立病案工作台与集中增量（2026-11-25）
+
+- #804 已合并 integration/v1.1 7bab1280，冻结 main 24152bee 不变；[入口、集成和验证](v1.1-workbench-entry.md)。后续集中分支 feat/v1.1-workbench-entry 吸收 Manifest 与患者统计原增量，保留旧分支，避免重复 PR；业务菜单 /archive-workbench，原权限不变。嵌入有界影像核对及现有 OCR，修复实际 Blob 契约和会话/身份隔离。本地 24 项单测及 10 Chromium（含预热）通过；最终门禁及合并以 GitHub 为准。
+
 ## 每轮交接模板
 
 - 更新时间、任务、风险、目标及非目标：

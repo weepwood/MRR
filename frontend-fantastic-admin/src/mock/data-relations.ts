@@ -105,7 +105,7 @@ export default defineFakeRoute([
         patients,
         boxes: [],
         scanSummary: { activeCount: scans.length, unlinkedCandidateCount: 0 },
-        scanSamples: scans.map(s => ({ id: s.id, pages: s.pages, filename: s.filename, btype: s.btype, migrationStatus: s.migrationStatus, hasOss: Boolean(s.ossUrl) })),
+        scanSamples: scans.map(s => ({ id: s.id, archiveId: s.archiveId, uploadFlag: s.uploadFlag, pages: s.pages, filename: s.filename, btype: s.btype, migrationStatus: s.migrationStatus, hasOss: Boolean(s.ossUrl) })),
         migrationSummary: {},
         comparisons: patients.map(p => ({ field: 'BAH', canonicalValue: archive.bah, source: 'mr_patient', sourceValue: p.bah, status: 'EXACT' })),
         warnings: ['合成演示记录，不能用于真实关联修复'],

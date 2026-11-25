@@ -374,6 +374,10 @@
 
 - 后续 feat/v1.1-repair-manifest 基于 40a0c31b，详见 [影像分页与内嵌OCR](v1.1-workbench-scan-pagination.md)：真实双权限只读游标接口，重复/空页码遍历、每组50条、有界请求，内嵌识别保留现有档案袋抽屉。PG定向13/13、权限11/11、相关组件19/19与新增OCR专项3/3（2项重叠）、Chromium4/4（含预热）通过。静态路由180/220、40缺失。#806 27bcd270 Pages/governance/development已过、候选仍执行，不提前合并。main冻结，未执行真实医疗或生产操作。
 
+## 12 V1.1 持久存储熔断事件（2026-11-25）
+
+- [专项记录](v1.1-storage-circuit-history.md)：既有状态机脱敏事件采集、UUID+sequence去重、七天有界历史；PG12/12、权限12/12、组件3/3、Chromium14/14及静态冒烟通过。#806 候选build通过，Windows恢复待确认；main冻结。
+
 ## 每轮交接模板
 
 - 更新时间、任务、风险、目标及非目标：

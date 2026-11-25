@@ -455,6 +455,12 @@ async function smokePagesDemo() {
     assert.equal(await opsPage.getByRole('button', { name: '校验配置语法' }).isDisabled(), true)
     const history = await opsPage.evaluate(() => fetch('/proxy/api/v1/operations/history?hours=168').then(response => response.json()))
     assert.equal(history.data.hours, 168)
+    await opsPage.getByRole('heading', { name: '持久存储熔断事件' }).waitFor({ timeout: 20000 })
+    const circuits = await opsPage.evaluate(() => fetch('/proxy/api/v1/operations/storage-circuit-history?hours=168').then(response => response.json()))
+    assert.equal(circuits.data.hours, 168)
+    assert.equal(circuits.data.events.length, 5)
+    assert.equal(circuits.data.events[0].eventType, 'RECOVERED')
+
     assert.ok(history.data.samples.length > 0 && history.data.samples.length <= 2017)
     const disabledCheck = await opsPage.evaluate(() => fetch('/proxy/api/v1/operations/nginx/check', { method: 'POST' }).then(response => response.json()))
     assert.equal(disabledCheck.data.status, 'DISABLED')

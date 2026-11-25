@@ -39,6 +39,7 @@ import { formatDateTime as formatTime } from '@/utils/display-format'
 import { hasAnyPermission, hasPermission } from '@/utils/session'
 import NginxConfigurationCard from './components/NginxConfigurationCard.vue'
 import OperationsHistoryCard from './components/OperationsHistoryCard.vue'
+import StorageCircuitHistoryCard from './components/StorageCircuitHistoryCard.vue'
 import DeliveryStatusCard from './DeliveryStatusCard.vue'
 
 const route = useRoute()
@@ -621,6 +622,7 @@ onMounted(async () => {
             </section>
 
             <OperationsHistoryCard v-if="activeTab === 'overview'" />
+            <StorageCircuitHistoryCard v-if="activeTab === 'overview'" />
             <NginxConfigurationCard v-if="activeTab === 'overview'" />
 
             <MrrSectionCard v-if="indexCapacity" title="编号索引与容量" description="最近一次数据库目录快照 · 非服务器磁盘余量">

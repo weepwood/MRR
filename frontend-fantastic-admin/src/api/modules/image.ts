@@ -1,4 +1,5 @@
 import type { BAHImageData, ImageTypeRequest } from '../types'
+import { demoImageBlob, isDemoFileMode } from '../demo-file'
 import api, { getRequest, putRequest } from '../index'
 
 function resolveArchiveUserId(explicitUserId?: string): string | undefined {
@@ -39,6 +40,7 @@ export function getImgByCode(bah?: string, sjh?: string, forceRefresh = false, u
 
 /** GET /api/v1/img/image/{BAH}/{BRXH}/{FOLDER}/{FILENAME} — 获取单张图片（blob 流） */
 export function getImage(bah: string, brxh: string, folder: string, filename: string) {
+  if (isDemoFileMode) { return getRequest<{ svg: string }>(`/api/v1/img/image/${bah}/${brxh}/${folder}/${filename}`).then(r => demoImageBlob(r.data)) }
   return api.get<Blob>(`/api/v1/img/image/${bah}/${brxh}/${folder}/${filename}`, {
     responseType: 'blob',
   })
@@ -51,10 +53,12 @@ export function updateImageType(imageId: string | number, data: ImageTypeRequest
 
 /** GET /api/v1/img/image/{cx} — 获取单张图片（blob 流） */
 export function getImgByCx(cx: string) {
+  if (isDemoFileMode) { return getRequest<{ svg: string }>(`/api/v1/img/image/${cx}`).then(r => demoImageBlob(r.data)) }
   return api.get<Blob>(`/api/v1/img/image/${cx}`, { responseType: 'blob' })
 }
 
 /** GET /api/v1/img/oss-image/{id} — 从 OSS URL 获取图片（blob 流） */
 export function getImageFromOss(imageId: number | string) {
+  if (isDemoFileMode) { return getRequest<{ svg: string }>(`/api/v1/img/oss-image/${imageId}`).then(r => demoImageBlob(r.data)) }
   return api.get<Blob>(`/api/v1/img/oss-image/${imageId}`, { responseType: 'blob' })
 }

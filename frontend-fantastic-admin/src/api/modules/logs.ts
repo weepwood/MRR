@@ -1,4 +1,5 @@
 import type { ImageAuditAnalytics, LogRecord, PaginatedResult } from '../types'
+import { demoCsvResponse, isDemoFileMode } from '../demo-file'
 import api, { getRequest, postRequest } from '../index'
 
 export interface ImageAuditFilterParams {
@@ -41,6 +42,9 @@ export async function exportImageAuditLogs(params: ImageAuditFilterParams & {
   scope?: 'all' | 'user' | 'target'
   value?: string
 }) {
+  if (isDemoFileMode) {
+    return getRequest<{ text: string, name: string }>('/api/v1/logs/audit/images/export', { params, skipResponseMetrics: true }).then(r => demoCsvResponse(r.data))
+  }
   // The global Axios response interceptor returns response.data directly.
   // Normalize the Blob back to the shape expected by the download caller.
   const blob = await api.get<Blob>('/api/v1/logs/audit/images/export', {

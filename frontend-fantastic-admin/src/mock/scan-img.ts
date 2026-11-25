@@ -4,6 +4,7 @@ import { requiresSjhForBah, toMedicalRecordCodeSearchTerm } from '@/utils/medica
 import { ARCHIVE_BAH, archiveImages } from '../mock-support/archive-images'
 import { pageSvg } from '../mock-support/image'
 import { demoRecords } from '../mock-support/records'
+import { demoError, demoOk } from '../mock-support/response'
 
 /**
  * 影像查询页（/idcard/:idCard，views/scan-img）与影像档案袋（/archive，views/statistics/archive）的合成数据。
@@ -114,6 +115,28 @@ export default defineFakeRoute([
       }
       const images = sharedArchiveImages(bah, sjh)
       return { ...ok(images), meta: lookupMeta(images.length ? undefined : 'NO_MATCHING_IMAGES') }
+    },
+  },
+  {
+    url: '/api/v1/img/image/:bah/:brxh/:folder/:filename',
+    response: ({ params }) => {
+      const bah = String(params.bah)
+      if (requiresSjhForBah(bah)) { return demoError(400, '旧路径无法唯一识别该病案') }
+      const match = archiveImages.filter(row => toMedicalRecordCodeSearchTerm(row.bah) === toMedicalRecordCodeSearchTerm(bah)
+        && row.brxh === String(params.brxh) && row.filename === String(params.filename) && String(params.folder) === '26.07.13')
+      return match.length === 1 ? demoOk({ svg: decodeURIComponent(match[0].img_url.split(',')[1]) }) : demoError(404, '未找到唯一演示影像')
+    },
+  },
+  {
+    url: '/api/v1/img/image/:cx',
+    response: () => demoError(410, '旧 CX 路径不再提供影像，请使用扫描记录 ID'),
+  },
+  {
+    url: '/api/v1/img/oss-image/:id',
+    response: ({ params }) => {
+      const id = Number(params.id)
+      const scan = demoRecords.scans.find(row => row.id === id && row.uploadFlag !== 0)
+      return scan ? demoOk({ svg: svgMarkup(scan.bah, scan.id, MEDICAL_RECORD_TYPES.find(type => type.value === scan.btype)?.label ?? '未分类') }) : demoError(404, '未找到有效演示影像')
     },
   },
   {

@@ -19,5 +19,5 @@ export default defineFakeRoute([
   { url: '/api/v1/external/archive/session', method: 'POST', response: disabled },
   { url: '/api/v1/external/archive/context', response: disabled },
   { url: '/api/v1/external/archive/images', response: disabled },
-  { url: '/api/v1/external/archive/download', headers: { 'content-type': 'application/json', 'cache-control': 'no-store' }, response: (_context, _req, res) => { if (res) { res.statusCode = 503 } return disabled() } },
+  { url: '/api/v1/external/archive/download', statusCode: 503, response: disabled },
 ])

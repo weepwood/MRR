@@ -1,9 +1,6 @@
 import { defineFakeRoute } from 'vite-plugin-fake-server/client'
-import { createArchiveBoxStore } from '../mock-support/archive-boxes'
-import { demoRecords } from '../mock-support/records'
+import { demoArchiveBoxStore as store } from '../mock-support/archive-box-store'
 import { demoError, demoOk, demoPage } from '../mock-support/response'
-
-const store = createArchiveBoxStore(demoRecords.scans)
 
 function save(payload: Record<string, unknown>, id?: number) {
   try {

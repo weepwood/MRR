@@ -39,6 +39,14 @@ body .el-popover.el-popper.mrr-light-popover {
   box-shadow: var(--mrr-shadow-md), 0 0 0 1px var(--mrr-border);
 }
 
+/* Select 的受控 visible 与 v-show 在快速开合、视口重排时可能失步。
+ * 关闭是交互边界，不应等待缩放过渡；仅移除 Select 浮层的入退场过渡，
+ * 保留选项悬停、焦点、其他浮层动效以及 Element Plus 自身生命周期。 */
+.el-select__popper.el-zoom-in-top-enter-active,
+.el-select__popper.el-zoom-in-top-leave-active {
+  transition: none !important;
+}
+
 .el-popper.is-light .el-popper__arrow::before {
   background: var(--mrr-popover);
   border-color: var(--mrr-border);

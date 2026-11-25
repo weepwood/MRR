@@ -54,3 +54,9 @@
 - 定向诊断确认提示浮层默认 triggerKeys 拦截按钮键盘事件，设置页在移动适配关闭时 375px 仅剩 111px，分类选择器 min-width 140px 溢出。修正 tooltip triggerKeys、极窄最小宽度、移动适配测试前置；审计用例真实点击外部页头并继续断言浮层关闭及标签聚焦，不放宽门禁。
 - WebKit 10 个业务用例启动失败（当前 Playwright 需要 webkit-2388，本机仅旧版 2215），不是已执行的跨浏览器回归；Firefox、真实 Chrome86/医院终端未验收。线上版本清单读取时 V1.2 仍为 c50653f1，未宣称更新。
 - 最终定向复验 5/7（含预热）：设置实际宽度、候选病案键盘及审计明暗通过；日志明暗两个用例仍出现 aria-expanded=false 但浮层未隐藏。尚不能证明根因，不降低关闭断言；合并阻塞。日志 /tmp/mrr-v12-closure-repair3.log，完整扩展 /tmp/mrr-v12-closure-final-browser.log。164/164 定向单测、类型和样式静态检查通过（后续小修专项类型与 lint 结果见对应日志）。
+
+
+## 第四批：Select 浮层生命周期定向修复
+
+基线 06ffcef8。重复原宽窄屏严格断言，修复前 5/9（含预热），4 次实际失败。诊断在375px捕获用户名远程选择器与普通状态码选择器均出现 aria-expanded=false、浮层 aria-hidden=false、display:block、opacity:1、无活跃动画、焦点已离开；不能仅归因为远程请求。仅在公共 Element Plus 桥接中停用 Select 的 el-zoom-in-top 入退场过渡，其他浮层及控件状态动效不变。原查询、权限、焦点、关闭断言不改，临时诊断代码不提交。修复后同一四组用例各重复三次，13/13（含预热）。这证明当前复现实验的改善，不代表已证明上游内部根因。84/84 样式单测、生产构建、Chrome86 静态门禁通过；既有依赖语法及 color-mix 等提示保留，非真实 Chrome86 验收。最终视觉矩阵260组、所测容器零横向溢出。浏览器缓存单独置于外置盘 /Volumes/data/AI-Development/cache/mrr-playwright，未停止其他项目共享缓存的下载任务。证据 /tmp/mrr-v12-popper-{diagnostic,no-transition}.log、/tmp/mrr-v12-closure-{production,chrome86}.log、/tmp/mrr-v12-final-closure-styleunit.log、/tmp/mrr-v12-final-closure-visual。
+- 最终 Chromium 累计 62/62，WebKit 定向 10/10（另有共同预热 1/1）。Firefox 10/10 未能启动，均报告 Could not find profile folder；独立 TMPDIR 和独立 persistent profile 最小启动也失败，不能记为通过或产品回归。将既有 Linux 跨浏览器专项 CI 的候选范围补齐 OCR、设置、运维、统计及工作台布局，集中草稿 PR 验证，不绕过门禁。日志 /tmp/mrr-v12-final-closure-{chromium,cross}.log、/tmp/mrr-v12-firefox-smoke.log。

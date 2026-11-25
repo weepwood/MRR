@@ -114,12 +114,13 @@ const onSubmit = form.handleSubmit(async (values) => {
                 <span class="input-icon">
                   <el-icon><UserFilled /></el-icon>
                 </span>
-                <FaInput
+                <el-input
                   id="login-account"
                   type="text"
                   placeholder="请输入系统用户名"
                   autocomplete="username"
                   class="w-full"
+                  :aria-invalid="errors.length > 0"
                   v-bind="componentField"
                 />
               </div>
@@ -138,12 +139,13 @@ const onSubmit = form.handleSubmit(async (values) => {
                 <span class="input-icon">
                   <el-icon><Key /></el-icon>
                 </span>
-                <FaInput
+                <el-input
                   id="login-password"
                   :type="showPassword ? 'text' : 'password'"
                   placeholder="请输入登录密码"
                   autocomplete="current-password"
                   class="w-full"
+                  :aria-invalid="errors.length > 0"
                   v-bind="componentField"
                 />
                 <button
@@ -177,15 +179,16 @@ const onSubmit = form.handleSubmit(async (values) => {
       </div>
     </section>
 
-    <FaButton
+    <el-button
+      :auto-insert-space="false"
       :loading="loading"
-      size="lg"
+      size="large"
       class="login-submit-btn"
-      type="submit"
+      native-type="submit" type="primary"
     >
       <FaIcon v-if="!loading" name="i-lucide:log-in" />
       {{ buttonText }}
-    </FaButton>
+    </el-button>
   </form>
 </template>
 
@@ -338,33 +341,35 @@ const onSubmit = form.handleSubmit(async (values) => {
   pointer-events: none;
 }
 
-.input-shell :deep(.fa-input__wrapper),
-.input-shell :deep(input) {
-  width: 100%;
+/* One field surface, with the original login-specific icon gutters. */
+.input-shell :deep(.el-input__wrapper) {
+  box-sizing: border-box;
   height: var(--auth-input-height, var(--mrr-input-height));
-  padding-right: 14px;
-  padding-left: 42px;
-  font-size: 14px;
-  color: var(--mrr-foreground);
+  min-height: var(--auth-input-height, var(--mrr-input-height));
+  padding: 0 14px 0 42px;
   background: var(--mrr-control-bg);
-  border-color: var(--mrr-control-border);
   border-radius: var(--mrr-control-radius);
-  box-shadow: none;
+  box-shadow: 0 0 0 1px var(--mrr-control-border) inset;
 }
 
-.password-shell :deep(input) {
+.input-shell :deep(.el-input__inner) {
+  height: 100%;
+  padding: 0;
+  font-size: 14px;
+  color: var(--mrr-foreground);
+  background: transparent;
+}
+
+.password-shell :deep(.el-input__wrapper) {
   padding-right: 44px;
 }
 
-.input-shell:focus-within :deep(.fa-input__wrapper),
-.input-shell:focus-within :deep(input) {
-  border-color: var(--mrr-ring);
-  box-shadow: var(--mrr-focus-ring);
+.input-shell:focus-within :deep(.el-input__wrapper) {
+  box-shadow: 0 0 0 1px var(--mrr-ring) inset, var(--mrr-focus-ring);
 }
 
-.input-shell.invalid :deep(.fa-input__wrapper),
-.input-shell.invalid :deep(input) {
-  border-color: var(--mrr-destructive);
+.input-shell.invalid :deep(.el-input__wrapper) {
+  box-shadow: 0 0 0 1px var(--mrr-destructive) inset;
 }
 
 .password-toggle {

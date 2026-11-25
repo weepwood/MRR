@@ -343,6 +343,14 @@ body .el-button--info.is-plain:not(.is-disabled):hover {
 }
 
 /* ===== Inputs, selects, date editors and textareas ===== */
+
+/* VeeValidate account forms retain their validation contract without ElFormItem. */
+.el-input.account-field-invalid .el-input__wrapper,
+.el-textarea.account-field-invalid .el-textarea__inner {
+  background: var(--mrr-field-focus-bg);
+  box-shadow: 0 0 0 1px var(--mrr-destructive) inset, var(--mrr-danger-focus-ring);
+}
+
 .el-input__wrapper,
 .el-select__wrapper,
 .el-textarea__inner,

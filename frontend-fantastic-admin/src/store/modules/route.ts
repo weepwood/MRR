@@ -1,5 +1,5 @@
-import type { Route } from '#/global'
 import type { RouteRecordRaw, RouterMatcher } from 'vue-router'
+import type { Route } from '#/global'
 import { cloneDeep } from 'es-toolkit'
 import { createRouterMatcher } from 'vue-router'
 import { systemRoutes as systemRoutesRaw } from '@/router/routes'
@@ -8,42 +8,33 @@ export const useRouteStore = defineStore(
   // 唯一ID
   'route',
   () => {
-    const settingsStore = useSettingsStore()
-
     const isGenerate = ref(false)
     // 原始路由
     const routesRaw = ref<Route.recordMainRaw[]>([])
-    // 文件系统原始路由
-    const filesystemRoutesRaw = ref<RouteRecordRaw[]>([])
     // 已注册的路由，用于登出时删除路由
     const currentRemoveRoutes = ref<(() => void)[]>([])
 
     // 实际路由
     const routes = computed(() => {
       const returnRoutes: RouteRecordRaw[] = []
-      if (settingsStore.settings.app.routeBaseOn !== 'filesystem') {
-        if (routesRaw.value) {
-          routesRaw.value.forEach((item) => {
-            const tmpRoutes = cloneDeep(item.children) as RouteRecordRaw[]
-            tmpRoutes.map((v) => {
-              if (!v.meta) {
-                v.meta = {}
-              }
-              v.meta.auth = item.meta?.auth ?? v.meta?.auth
-              return v
-            })
-            returnRoutes.push(...tmpRoutes)
-          })
-          returnRoutes.forEach((item) => {
-            if (item.children) {
-              item.children = deleteMiddleRouteComponent(item.children)
+      if (routesRaw.value) {
+        routesRaw.value.forEach((item) => {
+          const tmpRoutes = cloneDeep(item.children) as RouteRecordRaw[]
+          tmpRoutes.map((v) => {
+            if (!v.meta) {
+              v.meta = {}
             }
-            return item
+            v.meta.auth = item.meta?.auth ?? v.meta?.auth
+            return v
           })
-        }
-      }
-      else {
-        returnRoutes.push(...cloneDeep(filesystemRoutesRaw.value) as RouteRecordRaw[])
+          returnRoutes.push(...tmpRoutes)
+        })
+        returnRoutes.forEach((item) => {
+          if (item.children) {
+            item.children = deleteMiddleRouteComponent(item.children)
+          }
+          return item
+        })
       }
       return returnRoutes
     })
@@ -94,12 +85,6 @@ export const useRouteStore = defineStore(
       routesMatcher.value = createRouterMatcher(routes, {})
       isGenerate.value = true
     }
-    // 生成路由（文件系统生成）
-    function generateRoutesAtFilesystem(asyncRoutes: RouteRecordRaw[]) {
-      // 设置 routes 数据
-      filesystemRoutesRaw.value = cloneDeep(asyncRoutes) as any
-      isGenerate.value = true
-    }
     // 记录 accessRoutes 路由，用于登出时删除路由
     function setCurrentRemoveRoutes(routes: (() => void)[]) {
       currentRemoveRoutes.value = routes
@@ -108,7 +93,6 @@ export const useRouteStore = defineStore(
     function removeRoutes() {
       isGenerate.value = false
       routesRaw.value = []
-      filesystemRoutesRaw.value = []
       currentRemoveRoutes.value.forEach((removeRoute) => {
         removeRoute()
       })
@@ -123,7 +107,6 @@ export const useRouteStore = defineStore(
       systemRoutes,
       getRouteMatchedByPath,
       generateRoutesAtFront,
-      generateRoutesAtFilesystem,
       setCurrentRemoveRoutes,
       removeRoutes,
     }

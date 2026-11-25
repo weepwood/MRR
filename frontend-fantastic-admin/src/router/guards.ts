@@ -8,7 +8,7 @@ import {
 import { readDemoLoggedOut } from '@/utils/auth-storage'
 import { setArchiveAccessMode } from '@/views/statistics/archive/access-mode'
 import setupProgress from './progress'
-import { asyncRoutes, asyncRoutesByFilesystem } from './routes'
+import { asyncRoutes } from './routes'
 import '@/assets/styles/nprogress.css'
 import '@/assets/styles/archive-legacy-mode.css'
 
@@ -144,15 +144,7 @@ function setupRoutes(router: Router) {
       }
       else {
         try {
-          switch (settingsStore.settings.app.routeBaseOn) {
-            case 'frontend':
-              routeStore.generateRoutesAtFront(asyncRoutes)
-              break
-            case 'filesystem':
-              routeStore.generateRoutesAtFilesystem(asyncRoutesByFilesystem)
-              menuStore.generateMenusAtFront()
-              break
-          }
+          routeStore.generateRoutesAtFront(asyncRoutes)
 
           const removeRoutes: (() => void)[] = []
           routeStore.routes.forEach((route) => {

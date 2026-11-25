@@ -1,7 +1,6 @@
 import type { RouteRecordRaw } from 'vue-router'
 import type { Menu, Route } from '#/global'
 import { cloneDeep } from 'es-toolkit'
-import menu from '@/menu'
 import { resolveRoutePath } from '@/utils'
 import { normalizeExternalLinkUrl } from '@/utils/external-links'
 
@@ -12,7 +11,6 @@ export const useMenuStore = defineStore(
     const settingsStore = useSettingsStore()
     const routeStore = useRouteStore()
 
-    const filesystemMenusRaw = ref<Menu.recordMainRaw[]>([])
     const actived = ref(0)
 
     // 将原始路由转换成导航菜单
@@ -116,13 +114,7 @@ export const useMenuStore = defineStore(
 
     // 完整导航数据
     const allMenus = computed(() => {
-      let returnMenus: Menu.recordMainRaw[] = []
-      if (settingsStore.settings.app.routeBaseOn !== 'filesystem') {
-        returnMenus = convertRouteToMenu(routeStore.routesRaw)
-      }
-      else {
-        returnMenus = cloneDeep(filesystemMenusRaw.value)
-      }
+      let returnMenus = convertRouteToMenu(routeStore.routesRaw)
       returnMenus = appendExternalLinksGroup(returnMenus)
       returnMenus = filterAsyncMenus(returnMenus)
       return returnMenus
@@ -177,11 +169,9 @@ export const useMenuStore = defineStore(
     // 默认展开的导航路径
     const defaultOpenedPaths = computed(() => {
       const defaultOpenedPaths: string[] = []
-      if (settingsStore.settings.app.routeBaseOn !== 'filesystem') {
-        allMenus.value.forEach((item) => {
-          defaultOpenedPaths.push(...getDefaultOpenedPaths(item.children))
-        })
-      }
+      allMenus.value.forEach((item) => {
+        defaultOpenedPaths.push(...getDefaultOpenedPaths(item.children))
+      })
       return defaultOpenedPaths
     })
     function getDefaultOpenedPaths(menus: Menu.recordRaw[], rootPath = '') {
@@ -217,10 +207,6 @@ export const useMenuStore = defineStore(
       })
       return res
     }
-    // 生成导航（前端生成）
-    async function generateMenusAtFront() {
-      filesystemMenusRaw.value = menu.filter(item => item.children.length !== 0)
-    }
     // 设置主导航
     function isPathInMenus(menus: Menu.recordRaw[], path: string) {
       let flag = false
@@ -253,7 +239,6 @@ export const useMenuStore = defineStore(
       sidebarMenusFirstDeepestPath,
       sidebarMenusHasOnlyMenu,
       defaultOpenedPaths,
-      generateMenusAtFront,
       setActived,
     }
   },

@@ -2,8 +2,11 @@ package com.zjcxph.imgapi.service;
 
 import com.zjcxph.imgapi.repository.SystemAvailabilityRepository;
 import com.zjcxph.imgapi.repository.SystemAvailabilityRepository.Period;
+import io.micrometer.core.instrument.Gauge;
+import io.micrometer.core.instrument.MeterRegistry;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.context.event.ApplicationReadyEvent;
 import org.springframework.context.event.EventListener;
@@ -26,6 +29,8 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.concurrent.atomic.AtomicLong;
+import java.util.concurrent.atomic.AtomicReference;
 
 @Service
 public class SystemAvailabilityService {
@@ -45,6 +50,25 @@ public class SystemAvailabilityService {
     private final int retentionDays;
     private final ZoneId zoneId;
     private final HttpClient httpClient;
+    private record RetentionSuccess(long timestamp, int deleted) {}
+    private final AtomicReference<RetentionSuccess> retentionSuccess = new AtomicReference<>(new RetentionSuccess(0, 0));
+    private final AtomicLong retentionFailures = new AtomicLong();
+    private final AtomicLong retentionDeleted = new AtomicLong();
+
+    @Autowired
+    public void registerRetentionMetrics(MeterRegistry registry) {
+        Gauge.builder("mrr.status.retention.enabled", this, service -> service.enabled ? 1 : 0)
+                .description("Availability retention scheduling enabled").register(registry);
+        Gauge.builder("mrr.status.retention.last.success.timestamp", retentionSuccess, value -> value.get().timestamp())
+                .description("Last successful retention batch Unix epoch seconds; zero before first success").register(registry);
+        Gauge.builder("mrr.status.retention.last.deleted", retentionSuccess, value -> value.get().deleted())
+                .description("Rows removed in last successful retention batch").register(registry);
+        Gauge.builder("mrr.status.retention.deleted", retentionDeleted, AtomicLong::get)
+                .description("Availability history rows removed since process start").register(registry);
+        Gauge.builder("mrr.status.retention.failures", retentionFailures, AtomicLong::get)
+                .description("Retention batch failures since process start").register(registry);
+    }
+
 
     public SystemAvailabilityService(
             SystemAvailabilityRepository repository,
@@ -234,8 +258,11 @@ public class SystemAvailabilityService {
         if (!enabled) return;
         try {
             int deleted = repository.deleteEndedBefore(Instant.now().minus(retentionDays, ChronoUnit.DAYS));
+            retentionDeleted.addAndGet(deleted);
+            retentionSuccess.set(new RetentionSuccess(Instant.now().getEpochSecond(), deleted));
             logger.info("Availability history retention batch completed: deleted={}", deleted);
         } catch (Exception failure) {
+            retentionFailures.incrementAndGet();
             logger.warn("Availability history retention batch failed: {}", failure.getClass().getSimpleName());
         }
     }

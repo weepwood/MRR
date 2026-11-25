@@ -20,9 +20,12 @@ vi.mock('vue-router', async () => {
   routeState.route = route
   return { useRouter: () => ({ push: pushMock, replace: replaceMock }), useRoute: () => route }
 })
-vi.mock('@/store/modules/user', () => ({
-  useUserStore: () => ({ profile: { roleCode: 'OPERATOR' }, permissions: ['system:error:read', 'log:read'] }),
-}))
+const session = vi.hoisted(() => ({ user: null as { token: string, profile: { roleCode: string }, permissions: string[] } | null }))
+vi.mock('@/store/modules/user', async () => {
+  const { reactive } = await import('vue')
+  session.user = reactive({ token: 'demo-token', profile: { roleCode: 'OPERATOR' }, permissions: ['system:error:read', 'log:read'] })
+  return { useUserStore: () => session.user }
+})
 vi.mock('element-plus', () => ({ ElMessage: { success: vi.fn(), error: vi.fn(), info: vi.fn() } }))
 
 const overviewFixture = {
@@ -92,6 +95,8 @@ function button(wrapper: ReturnType<typeof mount>, label: string) {
 
 beforeEach(() => {
   vi.resetAllMocks()
+  session.user!.token = 'demo-token'
+  session.user!.permissions = ['system:error:read', 'log:read']
   routeState.route!.path = '/runtime-errors'
   routeState.route!.query = {}
   replaceMock.mockImplementation(({ query }) => {
@@ -250,6 +255,68 @@ describe('运行错误中心', () => {
     routeState.route!.query = { requestId: 'req-from-logs-001' }
     await flushPromises()
     expect(api.searchSystemErrors).toHaveBeenLastCalledWith(expect.objectContaining({ keyword: 'req-from-logs-001' }))
+  })
+
+  it('旧详情成功或失败不能覆盖新记录，也不能提前结束新记录加载', async () => {
+    const wrapper = openPage()
+    await flushPromises()
+    const state = setupState(wrapper)
+    const open = state.openDetail as (row: typeof rowFixture) => Promise<void>
+    const next = { ...rowFixture, id: 2, errorId: 'ERR-SYNTHETIC-NEXT' }
+    let old!: (value: unknown) => void
+    let latest!: (value: unknown) => void
+    api.getSystemErrorDetail.mockReturnValueOnce(new Promise((resolve) => { old = resolve }))
+      .mockReturnValueOnce(new Promise((resolve) => { latest = resolve }))
+    const a = open(rowFixture)
+    const b = open(next)
+    old({ data: { ...rowFixture, stackTrace: 'OLD SECRET SYNTHETIC' } })
+    await a
+    expect(state.detailLoading).toBe(true)
+    latest({ data: next })
+    await b
+    expect((state.current as typeof next).id).toBe(2)
+    expect(wrapper.text()).not.toContain('OLD SECRET SYNTHETIC')
+  })
+
+  it('错误详情身份不符或网络失败显示可重试状态，关闭后迟到结果无效', async () => {
+    const wrapper = openPage()
+    await flushPromises()
+    const state = setupState(wrapper)
+    const open = state.openDetail as (row: typeof rowFixture) => Promise<void>
+    api.getSystemErrorDetail.mockResolvedValueOnce({ data: { ...rowFixture, id: 99 } })
+    await open(rowFixture)
+    expect(state.current).toBeNull()
+    expect(wrapper.get('.query-error').text()).toContain('无法读取运行错误详情')
+    api.getSystemErrorDetail.mockRejectedValueOnce(new Error('synthetic failure'))
+    await open(rowFixture)
+    expect(state.current).toBeNull()
+    let finish!: (value: unknown) => void
+    api.getSystemErrorDetail.mockReturnValueOnce(new Promise((resolve) => { finish = resolve }))
+    const pending = open(rowFixture)
+    state.detailVisible = false
+    await flushPromises()
+    finish({ data: rowFixture })
+    await pending
+    expect(state.current).toBeNull()
+    expect(state.detailLoading).toBe(false)
+  })
+
+  it.each(['token', 'permission'] as const)('会话%s变化时取消详情请求，迟到结果不得恢复', async (change) => {
+    const wrapper = openPage()
+    await flushPromises()
+    let finish!: (value: unknown) => void
+    api.getSystemErrorDetail.mockReturnValueOnce(new Promise((resolve) => { finish = resolve }))
+    const state = setupState(wrapper)
+    const pending = (state.openDetail as (row: typeof rowFixture) => Promise<void>)(rowFixture)
+    const signal = api.getSystemErrorDetail.mock.lastCall?.[1] as AbortSignal
+    if (change === 'token') { session.user!.token = 'different-demo-token' }
+    else { session.user!.permissions = ['log:read'] }
+    expect(signal.aborted).toBe(true)
+    finish({ data: rowFixture })
+    await pending
+    expect(state.current).toBeNull()
+    expect(state.detailVisible).toBe(false)
+    expect(state.detailLoading).toBe(false)
   })
 
   it('详情弹窗带 Request ID 时可跳转访问日志', async () => {

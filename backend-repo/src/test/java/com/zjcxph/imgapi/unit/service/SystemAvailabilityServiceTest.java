@@ -3,6 +3,7 @@ package com.zjcxph.imgapi.unit.service;
 import com.zjcxph.imgapi.repository.SystemAvailabilityRepository;
 import com.zjcxph.imgapi.repository.SystemAvailabilityRepository.Period;
 import com.zjcxph.imgapi.service.SystemAvailabilityService;
+import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
@@ -112,6 +113,55 @@ class SystemAvailabilityServiceTest {
         service.cleanupHistory();
         verify(repository, org.mockito.Mockito.times(2)).deleteEndedBefore(any());
         org.mockito.Mockito.verifyNoInteractions(jdbcTemplate);
+    }
+
+    @Test
+    void retentionMetricsDistinguishNeverRunFailureSuccessAndEmptyBatch() {
+        var service = createService();
+        var registry = new SimpleMeterRegistry();
+        try {
+            service.registerRetentionMetrics(registry);
+            assertEquals(1, registry.get("mrr.status.retention.enabled").gauge().value());
+            assertEquals(0, registry.get("mrr.status.retention.last.success.timestamp").gauge().value());
+            when(repository.deleteEndedBefore(any()))
+                    .thenThrow(new org.springframework.dao.QueryTimeoutException("synthetic"))
+                    .thenReturn(3).thenThrow(new org.springframework.dao.QueryTimeoutException("synthetic"))
+                    .thenReturn(0);
+            service.cleanupHistory();
+            assertEquals(1, registry.get("mrr.status.retention.failures").gauge().value());
+            assertEquals(0, registry.get("mrr.status.retention.last.success.timestamp").gauge().value());
+            service.cleanupHistory();
+            double success = registry.get("mrr.status.retention.last.success.timestamp").gauge().value();
+            assertTrue(success > 0);
+            assertEquals(3, registry.get("mrr.status.retention.last.deleted").gauge().value());
+            assertEquals(3, registry.get("mrr.status.retention.deleted").gauge().value());
+            service.cleanupHistory();
+            assertEquals(2, registry.get("mrr.status.retention.failures").gauge().value());
+            assertEquals(success, registry.get("mrr.status.retention.last.success.timestamp").gauge().value());
+            assertEquals(3, registry.get("mrr.status.retention.last.deleted").gauge().value());
+            service.cleanupHistory();
+            assertEquals(0, registry.get("mrr.status.retention.last.deleted").gauge().value());
+            assertEquals(3, registry.get("mrr.status.retention.deleted").gauge().value());
+            assertEquals(2, registry.get("mrr.status.retention.failures").gauge().value());
+            org.mockito.Mockito.verifyNoInteractions(jdbcTemplate);
+        } finally {
+            registry.close();
+        }
+    }
+
+    @Test
+    void disabledRetentionDoesNotRunOrReportSuccess() {
+        var service = new SystemAvailabilityService(repository, jdbcTemplate, false, 120000, 3000, "", 30, "UTC");
+        var registry = new SimpleMeterRegistry();
+        try {
+            service.registerRetentionMetrics(registry);
+            service.cleanupHistory();
+            assertEquals(0, registry.get("mrr.status.retention.enabled").gauge().value());
+            assertEquals(0, registry.get("mrr.status.retention.last.success.timestamp").gauge().value());
+            org.mockito.Mockito.verifyNoInteractions(repository, jdbcTemplate);
+        } finally {
+            registry.close();
+        }
     }
 
     @Test

@@ -1,10 +1,3 @@
-<route lang="yaml">
-meta:
-  title: 登录
-  constant: true
-  layout: false
-</route>
-
 <script setup lang="ts">
 /* eslint-disable antfu/if-newline, curly, import/consistent-type-specifier-style */
 import { useResizeObserver } from '@vueuse/core'

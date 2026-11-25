@@ -1,13 +1,3 @@
-<route lang="yaml">
-meta:
-  title: 登录页文案
-  auth:
-    - system:read
-  menu: false
-  breadcrumb: false
-  cache: false
-</route>
-
 <script setup lang="ts">
 const router = useRouter()
 

@@ -4,7 +4,7 @@ defineOptions({
 })
 
 const visible = defineModel<boolean>({ default: false })
-const { product, template, dependencies, devDependencies } = __SYSTEM_INFO__
+const { product, template, runtimeDependencies } = __SYSTEM_INFO__
 const shortCommit = computed(() => product.gitCommit === 'unknown' ? 'unknown' : product.gitCommit.slice(0, 12))
 </script>
 
@@ -13,7 +13,7 @@ const shortCommit = computed(() => product.gitCommit === 'unknown' ? 'unknown' :
     <FaDivider>
       产品版本
     </FaDivider>
-    <div class="space-y-2 text-sm">
+    <div class="text-sm space-y-2">
       <div class="flex items-center justify-between gap-4 rounded-lg px-2 py-1.5 hover-bg-secondary">
         <span class="font-bold">MRR</span>
         <span class="font-sans">v{{ product.version }}</span>
@@ -35,7 +35,7 @@ const shortCommit = computed(() => product.gitCommit === 'unknown' ? 'unknown' :
     <FaDivider>
       数据库兼容性
     </FaDivider>
-    <div class="space-y-2 text-sm">
+    <div class="text-sm space-y-2">
       <div class="flex items-center justify-between gap-4 rounded-lg px-2 py-1.5 hover-bg-secondary">
         <span class="font-bold">最低迁移版本</span>
         <span class="font-mono">V{{ product.database.minimumCompatibleMigration }}</span>
@@ -68,24 +68,10 @@ const shortCommit = computed(() => product.gitCommit === 'unknown' ? 'unknown' :
     </div>
 
     <FaDivider>
-      生产环境依赖
+      主要运行时依赖（声明版本范围）
     </FaDivider>
     <ul class="list-none text-sm">
-      <li v-for="(val, key) in dependencies" :key="key" class="flex items-center justify-between rounded-lg px-2 py-1.5 hover-bg-secondary">
-        <div class="font-bold">
-          {{ key }}
-        </div>
-        <div class="font-sans">
-          {{ val }}
-        </div>
-      </li>
-    </ul>
-
-    <FaDivider>
-      开发环境依赖
-    </FaDivider>
-    <ul class="list-none text-sm">
-      <li v-for="(val, key) in devDependencies" :key="key" class="flex items-center justify-between rounded-lg px-2 py-1.5 hover-bg-secondary">
+      <li v-for="(val, key) in runtimeDependencies" :key="key" class="flex items-center justify-between rounded-lg px-2 py-1.5 hover-bg-secondary">
         <div class="font-bold">
           {{ key }}
         </div>

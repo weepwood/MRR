@@ -10,8 +10,7 @@ vi.mock('@/api/modules/settings', () => ({ getSystemSettings: vi.fn(), saveSyste
 /*
  * 分类规则子组件与本用例无关（shallowMount 本来也会把它替换成桩），但模块本身仍会被加载：
  * ClassificationRules → useAuth / api/modules/classification → api/index → user store → @/router
- * → routes.ts → virtual:generated-pages。该虚拟模块只由完整 Vite 配置里的页面插件提供，
- * vitest.config.ts 没有注册，导入即失败。这里直接替换整个子组件模块，切断这条导入链。
+ * → routes.ts。这里隔离无关分类业务和路由初始化，保持设置读写失败用例专注。
  */
 vi.mock('./ClassificationRules.vue', () => ({ default: { name: 'ClassificationRules', render: () => null } }))
 

@@ -78,7 +78,7 @@ OSS 签名缓存按启动时的 `oss.urlExpireSeconds` 计算并预留30秒余�
 **配置文件:**
 ```properties
 spring.cache.type=caffeine
-spring.cache.caffeine.spec=initialCapacity=100,maximumSize=1000,expireAfterWrite=10m
+# 容量和各缓存 TTL 由 CacheConfig 显式定义，不使用自动配置的 spec。
 ```
 
 **依赖添加:**
@@ -249,7 +249,7 @@ public void printCacheStats() {
 # 高负载场景
 spring.datasource.hikari.maximum-pool-size=50
 spring.task.execution.pool.max-size=20
-spring.cache.caffeine.spec=maximumSize=5000,expireAfterWrite=5m
+# 如需调整缓存容量与 TTL，请修改 CacheConfig 并重新进行容量与缓存一致性验收。
 ```
 
 ---

@@ -201,8 +201,13 @@ export default defineConfig(({ mode, command }) => {
         template: {
           version: pkg.version,
         },
-        dependencies: pkg.dependencies,
-        devDependencies: pkg.devDependencies,
+        runtimeDependencies: {
+          'vue': pkg.dependencies.vue,
+          'vue-router': pkg.dependencies['vue-router'],
+          'pinia': pkg.dependencies.pinia,
+          'element-plus': pkg.dependencies['element-plus'],
+          'echarts': pkg.dependencies.echarts,
+        },
       }),
     },
     plugins: createVitePlugins(mode, command === 'build'),

@@ -138,10 +138,8 @@
     "vite-plugin-compression2": "^2.5.4",
     "vite-plugin-env-parse": "^1.0.15",
     "vite-plugin-fake-server": "^2.2.4",
-    "vite-plugin-pages": "^0.33.3",
     "vite-plugin-svg-icons": "^2.0.1",
     "vite-plugin-vue-devtools": "^8.2.1",
-    "vite-plugin-vue-meta-layouts": "^0.6.1",
     "vitest": "^3.2.4",
     "vue-tsc": "^3.3.14"
   },

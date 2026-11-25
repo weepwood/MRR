@@ -24,8 +24,7 @@ declare const __SYSTEM_INFO__: {
   template: {
     version: string
   }
-  dependencies: Record<string, string>
-  devDependencies: Record<string, string>
+  runtimeDependencies: Record<string, string>
 }
 
 declare module '*.vue' {

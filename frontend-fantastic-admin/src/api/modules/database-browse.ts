@@ -59,18 +59,18 @@ export interface DbBrowseRowsParams {
 
 const BASE = '/api/v1/system/database/browse'
 
-export async function getBrowseTables(): Promise<DbBrowseTableSummary[]> {
-  const result = await getRequest<DbBrowseTableSummary[]>(`${BASE}/tables`)
+export async function getBrowseTables(signal?: AbortSignal): Promise<DbBrowseTableSummary[]> {
+  const result = await getRequest<DbBrowseTableSummary[]>(`${BASE}/tables`, { signal, retry: false, skipGlobalError: true })
   return result.data ?? []
 }
 
-export async function getBrowseSchema(tableKey: string): Promise<DbBrowseTableSchema | undefined> {
-  const result = await getRequest<DbBrowseTableSchema>(`${BASE}/tables/${encodeURIComponent(tableKey)}`)
+export async function getBrowseSchema(tableKey: string, signal?: AbortSignal): Promise<DbBrowseTableSchema | undefined> {
+  const result = await getRequest<DbBrowseTableSchema>(`${BASE}/tables/${encodeURIComponent(tableKey)}`, { signal, retry: false, skipGlobalError: true })
   return result.data
 }
 
-export async function getBrowseRows(tableKey: string, params: DbBrowseRowsParams): Promise<DbBrowsePage | undefined> {
-  const result = await getRequest<DbBrowsePage>(`${BASE}/tables/${encodeURIComponent(tableKey)}/rows`, { params })
+export async function getBrowseRows(tableKey: string, params: DbBrowseRowsParams, signal?: AbortSignal): Promise<DbBrowsePage | undefined> {
+  const result = await getRequest<DbBrowsePage>(`${BASE}/tables/${encodeURIComponent(tableKey)}/rows`, { params, signal, retry: false, skipGlobalError: true })
   return result.data
 }
 

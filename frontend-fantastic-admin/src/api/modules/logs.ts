@@ -63,8 +63,8 @@ export async function exportImageAuditLogs(params: ImageAuditFilterParams & {
   }
 }
 
-export function getLogById(id: string | number) {
-  return getRequest<LogRecord>(`/api/v1/logs/${id}`)
+export function getLogById(id: string | number, signal?: AbortSignal) {
+  return getRequest<LogRecord>(`/api/v1/logs/${id}`, { signal, retry: false, skipGlobalError: true })
 }
 
 /** POST /api/v1/logs/retention/cleanup — 运行日志清理 */

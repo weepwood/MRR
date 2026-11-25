@@ -5,7 +5,7 @@ import LogsPage from '../index.vue'
 
 const pushMock = vi.hoisted(() => vi.fn())
 const replaceMock = vi.hoisted(() => vi.fn())
-const access = vi.hoisted(() => ({ profile: { roleCode: 'OPERATOR' }, permissions: ['log:read', 'system:error:read'] }))
+const access = vi.hoisted(() => ({ isSessionVerified: true, token: 'demo-token', profile: { roleCode: 'OPERATOR' }, permissions: ['log:read', 'system:error:read'] }))
 const routeState = vi.hoisted(() => ({ route: null as { path: string, query: Record<string, unknown> } | null }))
 const api = vi.hoisted(() => ({
   searchSystemLogs: vi.fn(),
@@ -18,7 +18,11 @@ vi.mock('vue-router', async () => {
   routeState.route = route
   return { useRoute: () => route, useRouter: () => ({ push: pushMock, replace: replaceMock }) }
 })
-vi.mock('@/store/modules/user', () => ({ useUserStore: () => access }))
+vi.mock('@/store/modules/user', async () => {
+  const { reactive } = await import('vue')
+  const store = reactive(access)
+  return { useUserStore: () => store }
+})
 vi.mock('@vueuse/core', () => ({ useMediaQuery: () => ({ value: false }) }))
 vi.mock('element-plus', () => ({ ElMessage: { success: vi.fn(), error: vi.fn() } }))
 vi.mock('@/api/modules/user', () => ({ default: { getUsers: vi.fn().mockResolvedValue({ data: { list: [], total: 0 } }) } }))
@@ -188,6 +192,39 @@ describe('日志管理', () => {
     await vi.advanceTimersByTimeAsync(30_000)
     expect(wrapper.text()).toContain('req-synthetic-001')
     expect(wrapper.find('.query-error').exists()).toBe(false)
+  })
+
+  it('错位详情及请求失败不以列表摘要冒充详情', async () => {
+    const wrapper = openPage()
+    await flushPromises()
+    const state = setupState(wrapper)
+    const open = state.openDetail as (row: typeof rowFixture) => Promise<void>
+    await open(rowFixture)
+    expect(state.currentLog).toBeNull()
+    expect(wrapper.get('.query-error').text()).toContain('无法读取访问日志详情')
+    api.getLogById.mockRejectedValueOnce(new Error('synthetic'))
+    await open(rowFixture)
+    expect(state.currentLog).toBeNull()
+    api.getLogById.mockResolvedValueOnce({ data: rowFixture })
+    await (state.retryDetail as () => void)()
+    await flushPromises()
+    expect(state.currentLog).toEqual(rowFixture)
+  })
+
+  it('关闭和切换路由后迟到详情不能恢复弹窗', async () => {
+    const wrapper = openPage()
+    await flushPromises()
+    const state = setupState(wrapper)
+    let finish!: (value: unknown) => void
+    api.getLogById.mockReturnValueOnce(new Promise((resolve) => { finish = resolve }))
+    const pending = (state.openDetail as (row: typeof rowFixture) => Promise<void>)(rowFixture)
+    const signal = api.getLogById.mock.lastCall?.[1] as AbortSignal
+    routeState.route!.path = '/runtime-errors'
+    expect(signal.aborted).toBe(true)
+    finish({ data: rowFixture })
+    await pending
+    expect(state.currentLog).toBeNull()
+    expect(state.detailVisible).toBe(false)
   })
 
   it('失败请求详情可一键跳运行错误中心按 Request ID 检索', async () => {

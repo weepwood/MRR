@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import type { InputInstance } from 'element-plus'
+/* eslint-disable antfu/if-newline, curly */
 import type {
   ArchiveRelationDetail,
   ArchiveSearchResult,
@@ -10,7 +12,6 @@ import type {
   RelationCoverage,
   RepairPreview,
 } from '@/api/modules/data-relations'
-/* eslint-disable antfu/if-newline, curly */
 import type { MrrTableAction } from '@/components/MrrTableActions/types'
 import { ElMessage } from 'element-plus'
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
@@ -54,6 +55,12 @@ const qualitySummary = ref<DataQualitySummary | null>(null)
 const issues = ref<DataQualityIssue[]>([])
 const searchType = ref('BAH')
 const searchValue = ref('')
+const archiveSearchInput = ref<InputInstance>()
+const searchPrompt = computed(() => searchType.value === 'ARCHIVE_ID' ? '输入病案主档 ID' : searchType.value === 'SJH' ? '输入上架号' : '输入病案号')
+function focusSearch() {
+  archiveSearchInput.value?.focus()
+}
+
 const searchResults = ref<ArchiveSearchResult[]>([])
 const selectedArchive = ref<ArchiveSearchResult | null>(null)
 const searchError = ref(false)
@@ -402,6 +409,7 @@ onMounted(() => {
   <MrrPageShell class="relation-workbench">
     <MrrPageHeader
       :title="archiveOnly ? '病案工作台' : '数据关系工作台'"
+      :size="archiveOnly ? 'compact' : 'default'"
       :eyebrow="archiveOnly ? 'Medical Records' : 'Data Governance'"
       :description="archiveOnly ? '按病案号、上架号或主档 ID 查找病案，集中核对患者、扫描影像、文件完整性及关联异常。' : '以 mr_archive 为中心查看统计、患者、扫描、装箱和迁移数据，发现缺失关联与字段冲突。关联检查、影像完整性观察与修复预览集中查看。'"
     >
@@ -547,14 +555,14 @@ onMounted(() => {
                 </div>
                 <div class="search-field search-field--value">
                   <label for="relation-search-value">查询值</label>
-                  <el-input id="relation-search-value" v-model="searchValue" aria-label="病案查询值" clearable placeholder="输入主档 ID、病案号或上架号" @keyup.enter="searchArchives" />
+                  <el-input id="relation-search-value" ref="archiveSearchInput" v-model="searchValue" aria-label="病案查询值" clearable :placeholder="searchPrompt" @keyup.enter="searchArchives" />
                 </div>
                 <MrrFilterActionButton type="primary" action="search" :pending="searchLoading" :busy="searchLoading" @click="searchArchives">
                   查询
                 </MrrFilterActionButton>
               </div>
             </MrrSectionCard>
-            <MrrSectionCard v-if="archiveOnly" title="病案主档候选" :description="searchCompleted ? `本次返回 ${searchResults.length} 条，最多 20 条` : '按编号检索后选择病案'">
+            <MrrSectionCard v-if="archiveOnly && (searchLoading || searchCompleted || searchError)" title="病案主档候选" :description="searchCompleted ? `本次返回 ${searchResults.length} 条，最多 20 条` : '按编号检索后选择病案'">
               <AppLoading v-if="searchLoading" />
               <AppError v-else-if="searchError" message="病案查询失败，请重试" @retry="searchArchives" />
               <AppEmpty v-else-if="!searchResults.length" size="compact" :description="searchCompleted ? '当前条件未找到病案主档' : '等待检索'" />
@@ -746,7 +754,24 @@ onMounted(() => {
                 </el-tab-pane>
               </el-tabs>
             </template>
-            <AppEmpty v-else-if="!searchLoading && (archiveOnly || (!searchError && (!searchCompleted || searchResults.length)))" icon="i-lucide:git-fork" description="查询并选择一份病案后查看跨表关系" />
+            <MrrSectionCard v-else-if="archiveOnly && !searchLoading" class="archive-start-card" title="病案详情" description="选择病案后在此核对相关信息">
+              <div class="archive-start-content" role="status">
+                <span class="archive-start-icon" aria-hidden="true"><FaIcon name="i-lucide:folder-search" /></span>
+                <h3>{{ searchError ? '病案查询未完成' : searchCompleted && !searchResults.length ? '未找到匹配病案' : searchResults.length ? '请选择病案主档' : '开始病案核对' }}</h3>
+                <p>{{ searchError ? '请在检索区重试查询。' : searchCompleted && !searchResults.length ? '检查查询类型与原始编号，或换用其他编号重新查询。' : searchResults.length ? '从检索结果选择对应主档，核对其关联记录。' : '使用病案号、上架号或主档 ID 进行检索。选中病案后即可查看当前权限允许的内容。' }}</p>
+                <div v-if="!searchCompleted && !searchError" class="archive-start-capabilities" aria-label="核对内容">
+                  <span><FaIcon name="i-lucide:git-fork" aria-hidden="true" /> 关联记录</span>
+                  <span><FaIcon name="i-lucide:shield-check" aria-hidden="true" /> 文件完整性</span>
+                  <span v-if="hasPermission('record:read')"><FaIcon name="i-lucide:images" aria-hidden="true" /> 影像核对</span>
+                </div>
+              </div>
+              <div v-if="!searchResults.length" class="archive-start-actions">
+                <el-button @click="focusSearch">
+                  返回检索
+                </el-button>
+              </div>
+            </MrrSectionCard>
+            <AppEmpty v-else-if="!archiveOnly && !searchLoading && !searchError && (!searchCompleted || searchResults.length)" icon="i-lucide:git-fork" description="查询并选择一份病案后查看跨表关系" />
           </div>
         </div>
       </el-tab-pane>
@@ -954,6 +979,69 @@ p {
 .archive-stack--workspace {
   grid-template-columns: minmax(220px, 260px) minmax(0, 1fr);
   align-items: start;
+}
+
+.archive-start-content {
+  display: grid;
+  gap: var(--mrr-space-3);
+  justify-items: center;
+  min-width: 0;
+  padding: var(--mrr-space-6) var(--mrr-space-3);
+  text-align: center;
+}
+
+.archive-start-icon {
+  display: grid;
+  place-items: center;
+  width: 48px;
+  height: 48px;
+  font-size: 24px;
+  color: var(--mrr-primary);
+  background: var(--mrr-tone-primary-soft);
+  border: 1px solid var(--mrr-tone-primary-border);
+  border-radius: var(--mrr-radius-lg);
+}
+
+.archive-start-content h3,
+.archive-start-content p {
+  margin: 0;
+}
+
+.archive-start-content h3 {
+  font-size: var(--mrr-font-size-md);
+  color: var(--mrr-card-foreground);
+}
+
+.archive-start-content p {
+  max-width: 420px;
+  font-size: var(--mrr-font-size-sm);
+  line-height: 1.65;
+  color: var(--mrr-muted-foreground);
+  overflow-wrap: anywhere;
+}
+
+.archive-start-capabilities {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--mrr-space-2);
+  justify-content: center;
+}
+
+.archive-start-capabilities span {
+  display: inline-flex;
+  gap: var(--mrr-space-1);
+  align-items: center;
+  padding: var(--mrr-space-1) var(--mrr-space-2);
+  font-size: var(--mrr-font-size-xs);
+  color: var(--mrr-muted-foreground);
+  background: var(--mrr-muted);
+  border-radius: var(--mrr-radius-sm);
+}
+
+.archive-start-actions {
+  display: flex;
+  justify-content: center;
+  padding-bottom: var(--mrr-space-3);
 }
 
 .archive-search-rail {

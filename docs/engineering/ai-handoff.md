@@ -611,3 +611,8 @@
 2026-11-26：#848最终head ca25d1f8修复Linux抽屉边界（按实际遮罩边缘，1px门禁不变），全部远端门禁通过并squash合并c50653f1，tree一致。业务视觉调查10路由×四主题×三宽度120截图，报告[实际业务视觉审查](../design/business-page-visual-audit.md)。样式治理与筛选高度修复集中交付；13个实际单选实例，120组复验、156项高度精确通过、联合21/21；预览run45659383575尚未确认上线。
 
 2026-11-26：#849全部远端门禁通过，head5a70bb74 squash至dcb01928，tree一致。独立业务视觉批次统一筛选标签、查询反馈、记录复选框、两页眉题、错误详情、审计五指标及窄屏网格；首轮37/38修复复选框可访问名称，保留用户无人工等待和游标等业务语义。详见业务视觉审查文档。
+
+## V1.2 业务组合与展厅契约（2026-11-26）
+
+- #849已合并dcb01928，验收head5a70bb74与合并tree一致；main 24152bee、V1.1 92896f7c 保持冻结。前置业务视觉本地70c1290e，剩余审计标签回归须独立收口。
+- P3 独立worktree `v1.2-table-gallery-contract` 基于70c1290e，展厅DataExamples使用MrrFilterActionButton、公共标签和useTableActionLayout，不新增依赖、业务API或权限变更。新增断点回归及实际展厅宽/中/窄屏操作测试，18/18单测、2/2 Chromium含预热、ESLint/类型初验通过。首次隔离端口9037测试因合成认证fixture仍绑定9000而跳登录，临时映射测试origin后通过；临时配置和fixture不提交。日志 `/tmp/mrr-v12-table-gallery-{unit,layout-unit,browser-final,tsc,eslint}.log`。未进行全站跨浏览器、生产部署及真实终端验收。前置批次验收后集中重放本批提交，避免小PR。独立revert即可回滚。

@@ -2,6 +2,7 @@
 import type { ExampleId } from '../catalog'
 import type { MrrTableAction } from '@/components/MrrTableActions/types'
 import { computed, ref, useId } from 'vue'
+import { useTableActionLayout } from '@/composables/useTableActionLayout'
 
 defineProps<{ example: ExampleId }>()
 
@@ -25,6 +26,8 @@ const actions: MrrTableAction[] = [
   { key: 'remove', label: '删除示例', icon: 'i-lucide:trash-2', tone: 'danger', disabled: true, disabledReason: '展示数据不可删除' },
 ]
 
+const { maxInlineActions, actionColumnWidth } = useTableActionLayout(actions.length, 1)
+
 function search(reset = false) {
   if (reset) {
     keyword.value = ''
@@ -44,18 +47,18 @@ function search(reset = false) {
     <MrrDataTablePanel title="组件验收示例" :count="matches.length">
       <template #filters>
         <form @submit.prevent="search()">
-          <MrrFilterBar embedded>
-            <div class="example-field example-full-width">
+          <MrrFilterBar embedded labelled>
+            <div class="mrr-filter-field example-full-width">
               <label :for="`${id}-query`">筛选示例</label>
               <el-input :id="`${id}-query`" v-model="keyword" placeholder="示例编号或名称" class="example-full-width" />
             </div>
             <template #actions>
-              <el-button class="mrr-button-flow" :auto-insert-space="false" native-type="submit">
+              <MrrFilterActionButton action="search" feedback="request" :auto-insert-space="false" native-type="submit">
                 查询示例
-              </el-button>
-              <el-button class="mrr-button-flow" :auto-insert-space="false" native-type="button" @click="search(true)">
+              </MrrFilterActionButton>
+              <MrrFilterActionButton action="reset" feedback="request" :auto-insert-space="false" native-type="button" @click="search(true)">
                 重置筛选
-              </el-button>
+              </MrrFilterActionButton>
             </template>
           </MrrFilterBar>
         </form>
@@ -68,9 +71,9 @@ function search(reset = false) {
             <MrrStatusTag :status="row.status" :label="row.label" />
           </template>
         </el-table-column>
-        <el-table-column label="操作" width="116" fixed="right">
+        <el-table-column label="操作" :width="actionColumnWidth" fixed="right" align="center">
           <template #default="{ row }">
-            <MrrTableActions :actions="actions" :max-inline="1" @select="key => message = `${row.id}：已触发${key === 'view' ? '查看' : '编辑'}示例`" />
+            <MrrTableActions :actions="actions" :max-inline="maxInlineActions" @select="key => message = `${row.id}：已触发${key === 'view' ? '查看' : '编辑'}示例`" />
           </template>
         </el-table-column>
       </el-table>
@@ -82,7 +85,7 @@ function search(reset = false) {
       {{ message }}
     </p>
     <p class="example-note">
-      业务状态使用状态标签；分类、计数和可关闭项使用普通标签。
+      业务状态使用状态标签；分类、计数和可关闭项使用普通标签。操作列按业务页面规则响应：宽屏直显，中屏保留首项，窄屏收入更多操作；禁用操作不可执行。
     </p>
     <div class="example-row" aria-label="状态标签示例">
       <MrrStatusTag status="completed" label="已完成" />

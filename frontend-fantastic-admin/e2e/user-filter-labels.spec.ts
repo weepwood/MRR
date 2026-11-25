@@ -99,7 +99,14 @@ test('用户列表单一计数、身份信息合并及筛选层级保持一致',
     const total = el.querySelector('.el-pagination__total')!.getBoundingClientRect()
     return Math.abs(total.left - el.getBoundingClientRect().left) <= 1
   })).toBe(true)
-  await panel.getByRole('button', { name: '创建用户', exact: true }).click()
+  const create = panel.getByRole('button', { name: '创建用户', exact: true })
+  await expect(panel.locator('.el-card__header').getByRole('button', { name: '创建用户', exact: true })).toHaveCount(0)
+  await expect.poll(() => panel.locator('.users-toolbar').evaluate((el) => {
+    const create = el.querySelector('.users-toolbar__create')!.getBoundingClientRect()
+    const query = el.querySelector('.mrr-filter-bar__actions .el-button')!.getBoundingClientRect()
+    return Math.abs(create.top - query.top) <= 1 && Math.abs(create.height - query.height) <= 1 && Math.abs(create.right - el.getBoundingClientRect().right) <= 1
+  })).toBe(true)
+  await create.click()
   await expect(page.getByRole('dialog', { name: '创建用户' })).toBeVisible()
   await page.getByRole('dialog', { name: '创建用户' }).getByRole('button', { name: '取消' }).click()
   await expect(page.getByRole('dialog', { name: '创建用户' })).not.toBeVisible()

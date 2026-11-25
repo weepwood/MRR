@@ -690,3 +690,7 @@
 ## Quiet Enterprise UI 用户列表（2026-11-26）
 
 基线 a997cf5b。参考 Carbon Data Table、Atlassian Spacing、SAP Fiori Responsive Table，定义本项目克制型业务表格视觉语言（DESIGN.md 附录）。共享 MrrDataTablePanel / MrrTableActions 新增 opt-in appearance="quiet"，仅用户页启用；统一单一表面、表头36px/普通行52px、公共左对齐线、无底色普通操作、角色纯文字、中性头像、正常凭据中性点/启用绿点，异常语义保留。筛选组480px上限/144px枚举/相邻按钮，实际截图发现初版非必要折行，改为有界网格；窄屏自然换行。未改变API、查询、审批、密码或权限语义。初轮31/31双引擎含凭据生命周期；最终布局定向11/11（含预热），双引擎四主题五视口40/40，1024及以上筛选同排、公共对齐0px偏差、无筛选/分页横溢；TypeScript通过。日志 /tmp/mrr-quiet-{browser,recheck,final-visual,tsc}.log，最终截图 /tmp/mrr-quiet-final-*.png。未执行全量CI、生产构建、Chrome86实机及所有异常状态视觉矩阵。9037保持运行；不推送、不合并、不发布，其他列表不自动推广。
+
+## 用户列表主操作工具栏调整（2026-11-26）
+
+基线 08961e80。维护者确认 Quiet 外观，将创建用户从卡头移到筛选工具栏最右侧，和查询/重置保持同高，保留 canManage 条件、原创建弹窗和提交逻辑。宽度不足时创建按钮换行且仍右对齐。Chromium/WebKit 四主题五宽度40/40几何检查通过，1440/2400px同排，1024/768/375px允许换行，均无溢出；TypeScript及定向浏览器9/9（含预热）通过。截图 /tmp/mrr-users-toolbar-final.png；日志 /tmp/mrr-users-toolbar-{visual,e2e,tsc}.log。未执行全量CI、生产构建、Chrome86实机。仅本地9037，不推送、不创建PR、不合并、不发布。

@@ -586,32 +586,33 @@ onMounted(loadData)
     </section>
 
     <MrrDataTablePanel class="users-table-panel" appearance="quiet" title="用户列表" :loading="loading" :result-key="users">
-      <!-- 「创建用户」是对列表的写操作，放在卡头操作区；筛选栏只保留查询 / 重置，不再把增删与查询混在一组。 -->
-      <template v-if="canManage" #actions>
-        <el-button type="primary" @click="openCreate"><FaIcon name="i-lucide:user-round-plus" />创建用户</el-button>
-      </template>
       <template #filters>
-        <MrrFilterBar class="users-filter-bar" embedded :focus-ring="false">
-          <div class="users-filter__field users-filter__keyword">
-            <el-input id="users-filter-keyword" v-model="filters.keyword" aria-label="关键词" clearable placeholder="搜索用户名、显示名、联系方式或角色…" @keyup.enter="handleSearch">
-              <template #prefix><FaIcon name="i-lucide:search" aria-hidden="true" /></template>
-            </el-input>
-          </div>
-          <div class="users-filter__field users-filter__select">
-            <el-select id="users-filter-role" v-model="filters.roleCode" class="mrr-single-select" aria-label="角色" clearable placeholder="全部角色">
-              <el-option v-for="role in roles" :key="role.code" :label="role.name || role.code" :value="role.code!" />
-            </el-select>
-          </div>
-          <div class="users-filter__field users-filter__select">
-            <el-select id="users-filter-status" v-model="filters.status" class="mrr-single-select" aria-label="账号状态" clearable placeholder="全部状态">
-              <el-option v-for="option in statusOptions" :key="option.value" v-bind="option" />
-            </el-select>
-          </div>
-          <template #actions>
-            <MrrFilterActionButton action="search" feedback="request" :pending="dataLoadingAction === 'search'" :busy="loading || dataLoadingAction !== null" @click="handleSearch">查询</MrrFilterActionButton>
-            <MrrFilterActionButton action="reset" feedback="request" :pending="dataLoadingAction === 'reset'" :busy="loading || dataLoadingAction !== null" @click="resetFilters">重置</MrrFilterActionButton>
-          </template>
-        </MrrFilterBar>
+        <div class="users-toolbar">
+          <MrrFilterBar class="users-filter-bar" embedded :focus-ring="false">
+            <div class="users-filter__field users-filter__keyword">
+              <el-input id="users-filter-keyword" v-model="filters.keyword" aria-label="关键词" clearable placeholder="搜索用户名、显示名、联系方式或角色…" @keyup.enter="handleSearch">
+                <template #prefix><FaIcon name="i-lucide:search" aria-hidden="true" /></template>
+              </el-input>
+            </div>
+            <div class="users-filter__field users-filter__select">
+              <el-select id="users-filter-role" v-model="filters.roleCode" class="mrr-single-select" aria-label="角色" clearable placeholder="全部角色">
+                <el-option v-for="role in roles" :key="role.code" :label="role.name || role.code" :value="role.code!" />
+              </el-select>
+            </div>
+            <div class="users-filter__field users-filter__select">
+              <el-select id="users-filter-status" v-model="filters.status" class="mrr-single-select" aria-label="账号状态" clearable placeholder="全部状态">
+                <el-option v-for="option in statusOptions" :key="option.value" v-bind="option" />
+              </el-select>
+            </div>
+            <template #actions>
+              <MrrFilterActionButton action="search" feedback="request" :pending="dataLoadingAction === 'search'" :busy="loading || dataLoadingAction !== null" @click="handleSearch">查询</MrrFilterActionButton>
+              <MrrFilterActionButton action="reset" feedback="request" :pending="dataLoadingAction === 'reset'" :busy="loading || dataLoadingAction !== null" @click="resetFilters">重置</MrrFilterActionButton>
+            </template>
+          </MrrFilterBar>
+          <el-button v-if="canManage" type="primary" class="users-toolbar__create" @click="openCreate">
+            <FaIcon name="i-lucide:user-round-plus" aria-hidden="true" />创建用户
+          </el-button>
+        </div>
       </template>
 
       <div v-if="loading && !hasLoaded" class="users-state"><AppLoading type="table" :rows="8" /></div>
@@ -763,7 +764,9 @@ onMounted(loadData)
 .users-filter__field { display: grid; min-width: 0; }
 .users-filter-bar :deep(.mrr-filter-bar__fields > .users-filter__keyword) { width: 100%; max-width: none; min-width: 0; }
 .users-filter-bar :deep(.mrr-filter-bar__fields > .users-filter__select) { width: 100%; max-width: none; min-width: 0; }
-.users-filter-bar { justify-content: flex-start; }
+.users-toolbar { display: flex; flex-wrap: wrap; align-items: flex-start; gap: var(--mrr-space-3); padding-bottom: var(--mrr-space-3); }
+.users-toolbar > .users-filter-bar.mrr-filter-bar--embedded { flex: 1 1 640px; min-width: 0; padding-bottom: 0; justify-content: flex-start; }
+.users-toolbar__create { flex: none; margin-inline-start: auto; }
 .users-filter-bar :deep(.mrr-filter-bar__fields) { display: grid; flex: 0 1 784px; grid-template-columns: minmax(0, 1fr) 144px 144px; }
 .users-filter-bar :deep(.mrr-filter-bar__actions) { flex-shrink: 0; align-self: flex-end; padding-left: 0; border-left: 0; }
 

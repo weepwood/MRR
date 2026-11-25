@@ -5,7 +5,7 @@ import type {
 } from '@/api/modules/system-errors'
 /* eslint-disable vue/singleline-html-element-content-newline */
 import { RefreshCw as Refresh } from 'lucide-vue-next'
-import { computed, onMounted, ref, watch } from 'vue'
+import { computed, onBeforeUnmount, onDeactivated, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import {
   getSystemErrorDetail,
@@ -43,6 +43,16 @@ const canReadAccessLogs = computed(() => checkSessionPermission(
 const error = ref('')
 const detailVisible = ref(false)
 const detailLoading = ref(false)
+const detailError = ref('')
+const detailTarget = ref<SystemErrorEvent | null>(null)
+const canReadErrors = computed(() => checkSessionPermission(
+  userStore.profile.roleCode,
+  userStore.permissions,
+  'system:error:read',
+))
+let detailGeneration = 0
+let detailController: AbortController | undefined
+
 const current = ref<SystemErrorEvent | null>(null)
 const lastRefreshedAt = ref<Date | null>(null)
 
@@ -162,19 +172,58 @@ onMounted(() => {
 // 隐藏标签页、KeepAlive 失活时暂停，卸载自动清理；见 DESIGN.md §7。
 useVisibleInterval(silentRefresh, REFRESH_INTERVAL_MS)
 
+function clearDetail() {
+  detailGeneration++
+  detailController?.abort()
+  detailController = undefined
+  current.value = null
+  detailTarget.value = null
+  detailLoading.value = false
+  detailError.value = ''
+}
+
+function closeDetail() {
+  detailVisible.value = false
+  clearDetail()
+}
+
+watch(detailVisible, (visible) => { if (!visible) { clearDetail() } }, { flush: 'sync' })
+watch([() => userStore.token, canReadErrors, () => route.path], closeDetail, { flush: 'sync' })
+onDeactivated(closeDetail)
+onBeforeUnmount(closeDetail)
+
 async function openDetail(row: SystemErrorEvent) {
+  if (!canReadErrors.value || route.path !== '/runtime-errors') { return }
+  clearDetail()
+  const generation = detailGeneration
+  const controller = new AbortController()
+  detailController = controller
+  detailTarget.value = row
   detailVisible.value = true
   detailLoading.value = true
-  current.value = row
+  const isCurrent = () => generation === detailGeneration && detailVisible.value
+    && canReadErrors.value && route.path === '/runtime-errors'
   try {
-    const response = await getSystemErrorDetail(row.id)
-    if (response.data) {
-      current.value = response.data
+    const response = await getSystemErrorDetail(row.id, controller.signal)
+    if (!isCurrent()) { return }
+    if (!response.data || response.data.id !== row.id || response.data.errorId !== row.errorId) {
+      throw new Error('Unexpected system error identity')
     }
+    current.value = response.data
+  }
+  catch {
+    if (isCurrent()) { detailError.value = '无法读取运行错误详情，请重试' }
   }
   finally {
-    detailLoading.value = false
+    if (isCurrent()) {
+      detailLoading.value = false
+      detailController = undefined
+    }
   }
+}
+
+function retryDetail() {
+  if (detailTarget.value) { void openDetail(detailTarget.value) }
 }
 
 function openAccessLog(requestId?: string) {
@@ -367,6 +416,7 @@ function levelTagType(level: string) {
         </el-button>
       </div>
       <AppLoading v-if="detailLoading" type="card" :cols="1" />
+      <AppError v-else-if="detailError" :message="detailError" @retry="retryDetail" />
       <el-descriptions v-else-if="current" :column="2" border>
         <el-descriptions-item label="错误编号">
           <code class="detail-code">{{ current.errorId }}</code>

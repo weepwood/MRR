@@ -63,8 +63,8 @@ export function listSystemErrorModules() {
   return getRequest<string[]>('/api/v1/system-errors/modules')
 }
 
-export function getSystemErrorDetail(id: number) {
-  return getRequest<SystemErrorEvent>(`/api/v1/system-errors/${id}`)
+export function getSystemErrorDetail(id: number, signal?: AbortSignal) {
+  return getRequest<SystemErrorEvent>(`/api/v1/system-errors/${id}`, { signal, retry: false, skipGlobalError: true })
 }
 
 export function updateSystemErrorStatus(id: number, status: SystemErrorStatus) {

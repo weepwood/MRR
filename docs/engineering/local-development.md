@@ -102,3 +102,7 @@ python -m scripts.smoke_dev
 执行Python治理测试、test_inventory、release_baseline、文档一致性、git diff检查，以及PowerShell5.1解析和上述实际启停/Compose命令。P1合并前需独立规格和代码审查，记录实际远端CI，不以本机结果替代。
 
 回滚按工具链、开发入口、CI接入三个独立提交revert。回滚前先执行开发down；命名开发数据卷和本地密钥保留。无业务数据变更和数据库回退。
+
+### 开发服务器网络边界
+
+前端 Vite 默认绑定 127.0.0.1；仅在可信隔离网络确有跨设备调试需要时，显式使用 `pnpm dev --host <可信网卡IP>`（Mock 模式同理），不要将开发或测试服务器暴露到不可信网络。此设置不改变正式 Nginx 入口、生产构建或后端授权。Vitest UI/API 服务器不作为常规开发入口开放。

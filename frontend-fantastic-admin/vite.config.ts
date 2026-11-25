@@ -127,7 +127,8 @@ export default defineConfig(({ mode, command }) => {
     // 开发服务器选项 https://cn.vitejs.dev/config/server-options
     server: {
       open: true,
-      host: true,
+      // Local by default; trusted LAN debugging requires an explicit --host override.
+      host: '127.0.0.1',
       port: 9200,
       // Mock 模式由 vite-plugin-fake-server 直接处理 /proxy 请求，不再创建后端代理。
       proxy: env.VITE_BUILD_MOCK === 'true'

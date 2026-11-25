@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import type { AuthProfile } from '@/utils/auth-storage'
-import { toTypedSchema } from '@vee-validate/zod'
 import { ElMessage } from 'element-plus'
 import { Eye, EyeOff, KeyRound as Key, UserRound as UserFilled } from 'lucide-vue-next'
 import { useForm } from 'vee-validate'
@@ -9,6 +8,7 @@ import * as z from 'zod'
 import apiUser from '@/api/modules/user'
 import { FormControl, FormField, FormItem, FormMessage } from '@/ui/shadcn/ui/form'
 import { readRememberedAccount, writeRememberedAccount } from '@/utils/auth-storage'
+import { toAccountSchema } from './account-schema'
 
 defineOptions({ name: 'LoginForm' })
 
@@ -33,7 +33,7 @@ function resolveMessage(payload: any, fallback: string): string {
 }
 
 const form = useForm({
-  validationSchema: toTypedSchema(z.object({
+  validationSchema: toAccountSchema(z.object({
     account: z.string().trim().min(1, '请输入用户名'),
     password: z.string().min(1, '请输入密码'),
     remember: z.boolean(),

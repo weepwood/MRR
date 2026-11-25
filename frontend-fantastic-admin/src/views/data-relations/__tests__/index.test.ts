@@ -261,7 +261,7 @@ describe('dataRelationWorkbenchPage', () => {
     apiMocks.getArchiveRelationDetail.mockResolvedValueOnce({ data: { archive: { id: 7 }, statistics: [], patients: [], boxes: [], scanSummary: {}, scanSamples: [], comparisons: [], warnings: [] } })
     await wrapper.findAll('button').find(button => button.text() === '重试')!.trigger('click')
     await flushPromises()
-    expect(apiMocks.getArchiveRelationDetail).toHaveBeenLastCalledWith(7)
+    expect(apiMocks.getArchiveRelationDetail).toHaveBeenLastCalledWith(7, expect.any(AbortSignal))
     expect(wrapper.text()).toContain('病案主档 #7')
   })
 
@@ -280,6 +280,71 @@ describe('dataRelationWorkbenchPage', () => {
     expect(wrapper.text()).not.toContain('病案主档候选')
     expect(wrapper.text()).toContain('病案查询失败')
     expect(wrapper.text()).not.toContain('当前条件未找到病案主档')
+  })
+
+  it('单候选检索独立结束，详情仍加载，重复点击不重发', async () => {
+    const wrapper = mountPage(true)
+    const vm = wrapper.vm as any
+    let resolveDetail!: (value: unknown) => void
+    apiMocks.searchDataRelationArchives.mockResolvedValueOnce({ data: [{ id: 1, matchType: 'EXACT' }] })
+    apiMocks.getArchiveRelationDetail.mockReturnValueOnce(new Promise((resolve) => { resolveDetail = resolve }))
+    vm.searchValue = '00001'
+    void vm.searchArchives()
+    await flushPromises()
+    expect(vm.searchLoading).toBe(false)
+    expect(vm.detailLoading).toBe(true)
+    const candidate = wrapper.get('.archive-candidate')
+    expect(candidate.attributes('aria-pressed')).toBe('true')
+    await candidate.trigger('click')
+    expect(apiMocks.getArchiveRelationDetail).toHaveBeenCalledTimes(1)
+    resolveDetail({ data: { archive: { id: 1 }, statistics: [], patients: [], boxes: [], scanSummary: {}, scanSamples: [], comparisons: [], warnings: [] } })
+    await flushPromises()
+    await candidate.trigger('click')
+    expect(apiMocks.getArchiveRelationDetail).toHaveBeenCalledTimes(1)
+    wrapper.unmount()
+  })
+
+  it('编辑查询条件立即隐藏旧候选和详情，未提交的新条件不会触发请求', async () => {
+    const wrapper = mountPage(true)
+    const vm = wrapper.vm as any
+    let resolveSearch!: (value: unknown) => void
+    vm.searchValue = '00001'
+    apiMocks.searchDataRelationArchives.mockReturnValueOnce(new Promise((resolve) => { resolveSearch = resolve }))
+    void vm.searchArchives()
+    await flushPromises()
+    const signal = apiMocks.searchDataRelationArchives.mock.calls[0][3] as AbortSignal
+    vm.searchValue = '00002'
+    await flushPromises()
+    expect(signal.aborted).toBe(true)
+    expect(vm.searchLoading).toBe(false)
+    resolveSearch({ data: [{ id: 1, matchType: 'EXACT' }] })
+    await flushPromises()
+    expect(wrapper.find('.archive-candidate').exists()).toBe(false)
+    expect(apiMocks.getArchiveRelationDetail).not.toHaveBeenCalled()
+    expect(apiMocks.searchDataRelationArchives).toHaveBeenCalledTimes(1)
+    wrapper.unmount()
+  })
+
+  it('清空检索取消在途详情，不允许迟到响应重新打开病案', async () => {
+    const wrapper = mountPage(true)
+    const vm = wrapper.vm as any
+    let resolveDetail!: (value: unknown) => void
+    vm.searchValue = '00001'
+    apiMocks.searchDataRelationArchives.mockResolvedValueOnce({ data: [{ id: 1, matchType: 'EXACT' }] })
+    apiMocks.getArchiveRelationDetail.mockReturnValueOnce(new Promise((resolve) => { resolveDetail = resolve }))
+    void vm.searchArchives()
+    await flushPromises()
+    const signal = apiMocks.getArchiveRelationDetail.mock.calls[0][1] as AbortSignal
+    vm.searchValue = ''
+    await flushPromises()
+    expect(signal.aborted).toBe(true)
+    expect(wrapper.find('.archive-candidate').exists()).toBe(false)
+    expect(vm.detailLoading).toBe(false)
+    resolveDetail({ data: { archive: { id: 1 }, statistics: [], patients: [], boxes: [], scanSummary: {}, scanSamples: [], comparisons: [], warnings: [] } })
+    await flushPromises()
+    expect(wrapper.text()).not.toContain('病案主档 #1')
+    expect(vm.relationDetail).toBeNull()
+    wrapper.unmount()
   })
 
   it('新查询使旧查询和旧病案详情失效，并区分无匹配结果', async () => {

@@ -100,7 +100,7 @@ test('用户列表单一计数、身份信息合并及筛选层级保持一致',
     return Math.abs(total.left - el.getBoundingClientRect().left) <= 1
   })).toBe(true)
   const create = panel.getByRole('button', { name: '创建用户', exact: true })
-  await expect(panel.locator('.el-card__header').getByRole('button', { name: '创建用户', exact: true })).toHaveCount(0)
+  await expect(panel.locator('.el-card__header')).toHaveCount(0)
   await expect.poll(() => panel.locator('.users-toolbar').evaluate((el) => {
     const create = el.querySelector('.users-toolbar__create')!.getBoundingClientRect()
     const query = el.querySelector('.mrr-filter-bar__actions .el-button')!.getBoundingClientRect()

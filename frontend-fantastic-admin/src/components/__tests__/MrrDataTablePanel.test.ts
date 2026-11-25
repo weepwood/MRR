@@ -29,6 +29,20 @@ const LoadingProbe = defineComponent({
 })
 
 describe('mrrDataTablePanel 刷新反馈', () => {
+  it('无可见标题的面板保留区域名称，并标记独立留白合同', () => {
+    const wrapper = mount(MrrDataTablePanel, {
+      props: { appearance: 'quiet' },
+      attrs: { 'role': 'region', 'aria-label': '用户列表' },
+      slots: { default: '<div class="table-stub" />', filters: '<input aria-label="关键词" />' },
+      global: { stubs },
+    })
+    expect(wrapper.classes()).toContain('mrr-data-table-panel--headerless')
+    expect(wrapper.attributes('aria-label')).toBe('用户列表')
+    expect(wrapper.find('h2').exists()).toBe(false)
+    expect(wrapper.get('input').exists()).toBe(true)
+    expect(mountPanel().classes()).not.toContain('mrr-data-table-panel--headerless')
+  })
+
   it('默认不显示进度条，也不标记忙碌', () => {
     const wrapper = mountPanel()
     expect(wrapper.find('.mrr-data-table-panel__progress').exists()).toBe(false)

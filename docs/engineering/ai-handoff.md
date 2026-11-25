@@ -694,3 +694,7 @@
 ## 用户列表主操作工具栏调整（2026-11-26）
 
 基线 08961e80。维护者确认 Quiet 外观，将创建用户从卡头移到筛选工具栏最右侧，和查询/重置保持同高，保留 canManage 条件、原创建弹窗和提交逻辑。宽度不足时创建按钮换行且仍右对齐。Chromium/WebKit 四主题五宽度40/40几何检查通过，1440/2400px同排，1024/768/375px允许换行，均无溢出；TypeScript及定向浏览器9/9（含预热）通过。截图 /tmp/mrr-users-toolbar-final.png；日志 /tmp/mrr-users-toolbar-{visual,e2e,tsc}.log。未执行全量CI、生产构建、Chrome86实机。仅本地9037，不推送、不创建PR、不合并、不发布。
+
+## 用户列表无标题与查询布局稳定性（2026-11-26）
+
+基线 89743b87。根据维护者截图取消用户列表可见分区标题，保留 role=region / aria-label；MrrDataTablePanel title 改为可选，quiet headerless 恢复顶部16px/窄屏12px真实留白，保留外层圆角裁切、原生焦点环及浮层。删除 users 的全零隐藏规则，四卡持续占位；首次加载/失败显示—，查询在途保留上次成功数值，成功空结果显示0。未改查询参数、权限、计数口径或创建流程。Chromium/WebKit 19/19（含预热）覆盖首次、延迟查询、空结果、失败、恢复、焦点、选择器浮层及其他有标题分区；16/16公共组件单测与TypeScript通过。Chromium四主题×五宽度20/20，工具栏顶边搜索前后偏差≤1px，输入框距离顶部17px/窄屏13px（含边框），无工具栏溢出；实际空态截图 /tmp/mrr-users-stable-empty-*.png，日志 /tmp/mrr-users-stable-{browser,visual,unit,tsc}.log。其他页面的零值收纳规则暂保留，未运行全量CI、生产构建与Chrome86实机。保持9037，不推送、不创建PR、不合并、不发布。

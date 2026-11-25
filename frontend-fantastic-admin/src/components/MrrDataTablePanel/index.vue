@@ -6,7 +6,7 @@ import { mrrDataTablePanelLoadingKey } from './context'
 defineOptions({ name: 'MrrDataTablePanel' })
 
 const props = defineProps<{
-  title: string
+  title?: string
   description?: string
   icon?: string
   count?: number
@@ -28,6 +28,7 @@ provide(mrrDataTablePanelLoadingKey, computed(() => Boolean(props.loading)))
 
 const slots = useSlots()
 const hasActions = computed(() => props.count !== undefined || Boolean(slots.actions))
+const headerless = computed(() => !props.title && !props.description && !props.icon && !hasActions.value)
 const countText = computed(() => Number(props.count ?? 0).toLocaleString('zh-CN'))
 
 function blockClickWhileLoading(event: Event) {
@@ -54,7 +55,7 @@ watch(() => props.resultKey, (next, previous) => {
 
 <template>
   <MrrSectionCard
-    :class="{ 'mrr-data-table-panel--quiet': props.appearance === 'quiet' }"
+    :class="{ 'mrr-data-table-panel--quiet': props.appearance === 'quiet', 'mrr-data-table-panel--headerless': headerless }"
     :title="props.title"
     :description="props.description"
     :icon="props.icon"
@@ -242,6 +243,18 @@ watch(() => props.resultKey, (next, previous) => {
 
 .mrr-data-table-panel--quiet .mrr-data-table-panel__filters {
   padding-top: 0;
+}
+
+/* A titleless panel has no header to provide clearance for the first row's
+ * external focus ring. Keep the rounded clipping boundary, reserve actual space. */
+.mrr-data-table-panel--quiet.mrr-data-table-panel--headerless .mrr-data-table-panel__filters {
+  padding-top: var(--mrr-space-4);
+}
+
+@media (max-width: 760px) {
+  .mrr-data-table-panel--quiet.mrr-data-table-panel--headerless .mrr-data-table-panel__filters {
+    padding-top: var(--mrr-space-3);
+  }
 }
 
 .mrr-data-table-panel--quiet .mrr-data-table-panel__filters :deep(.mrr-filter-bar--embedded) {

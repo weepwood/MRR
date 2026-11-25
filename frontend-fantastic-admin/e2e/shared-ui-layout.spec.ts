@@ -74,7 +74,7 @@ for (const theme of ['light', 'dark'] as const) {
     ]) {
       await page.setViewportSize(viewport)
       await expect.poll(() => page.evaluate(() => document.body.dataset.mode)).toBe(viewport.width < 1024 ? 'mobile' : 'pc')
-      await expectContained(page, '.mrr-page-header, .mrr-filter-bar, .mrr-section-card__header, .mrr-data-table-panel__pagination')
+      await expectContained(page, '.mrr-page-header, .mrr-filter-bar, .mrr-data-table-panel__pagination')
       await expect.poll(() => page.locator('.users-table-panel').evaluate((panel) => {
         const filters = panel.querySelector('.users-filter-bar')!.getBoundingClientRect()
         const cell = panel.querySelector('.el-table__header th:first-child .cell')!
@@ -91,17 +91,25 @@ for (const theme of ['light', 'dark'] as const) {
   })
 }
 
-test('长分区标题与操作区在中等宽度仍可完整呈现', async ({ page }) => {
+test('其他带标题分区在中等宽度仍可完整呈现', async ({ page }) => {
   await page.setViewportSize({ width: 1024, height: 900 })
   await openUsers(page)
-  // 只扩展显示文案来检验共享容器，不改变业务数据或权限。
-  await page.locator('.mrr-section-card h2').evaluate((element) => {
-    element.textContent = 'LongSectionTitle'.repeat(12)
-  })
+  await page.goto('/records')
+  const heading = page.locator('.mrr-section-card h2').first()
+  await expect(heading).toBeVisible()
+  await heading.evaluate((el) => { el.textContent = 'LongSectionTitle'.repeat(12) })
   await expectContained(page, '.mrr-section-card__header, .mrr-section-card__heading')
-  await expect(page.locator('.mrr-data-table-panel__count')).toHaveCount(0)
-  await expect(page.getByRole('button', { name: '创建用户', exact: true })).toBeVisible()
-  await expect(page.locator('.el-pagination__total')).toBeVisible()
+})
+
+test('无标题用户列表保持区域名称与完整筛选焦点留白', async ({ page }) => {
+  await page.setViewportSize({ width: 1024, height: 900 })
+  await openUsers(page)
+  const panel = page.getByRole('region', { name: '用户列表', exact: true })
+  await expect(panel.locator('.el-card__header')).toHaveCount(0)
+  await expect(panel.locator('.mrr-data-table-panel__count')).toHaveCount(0)
+  await expect(panel.getByRole('button', { name: '创建用户', exact: true })).toBeVisible()
+  await expect(panel.locator('.el-pagination__total')).toBeVisible()
+  await expectContained(page, '.users-toolbar, .mrr-filter-bar')
 })
 
 test('窄屏大量分页的前后翻页按钮与页码保持同一导航区', async ({ page }) => {

@@ -61,6 +61,20 @@ describe('修复工单异常重开', () => {
     wrapper.unmount()
   })
 
+  it('装箱工单保留独立实体标识，不将同号影像当成目标', async () => {
+    const wrapper = panel()
+    await flushPromises()
+    const box = { ...proposed, scanId: null, entityType: 'mr_archive_box_record', entityId: '9007199254740993' }
+    api.proposeRepairOrder.mockResolvedValue({ data: box })
+    api.listRepairOrders.mockResolvedValue({ data: { enabled: true, actorId: 13, orders: [box] } })
+    await wrapper.findAll('button').find(b => b.text() === '重新提交工单')!.trigger('click')
+    await flushPromises()
+    expect(wrapper.text()).toContain('装箱 #9007199254740993')
+    expect(wrapper.text()).not.toContain('影像 #')
+    expect(api.actOnRepairOrder).not.toHaveBeenCalled()
+    wrapper.unmount()
+  })
+
   it('同一旧异常不能重开已复验工单', async () => {
     const wrapper = panel(10)
     await flushPromises()

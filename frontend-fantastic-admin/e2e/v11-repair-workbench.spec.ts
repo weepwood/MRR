@@ -131,3 +131,47 @@ test('独立病案工作台可从菜单打开，直接查询且兼容旧数据�
   await expect(page).toHaveURL(/archive-workbench$/)
   await expect(search).toBeVisible()
 })
+
+test('异常人工决策明确确认并保留独立历史，不改变修复工单', async ({ page }) => {
+  const issue = { id: 2, check_code: 'SCAN_ARCHIVE_LINK_MISSING_ESTIMATED', check_name: '合成缺失关联', severity: 'WARNING', entity_type: 'mr_scan', entity_id: '3', detail: '合成样本' }
+  let review: Record<string, unknown> | null = null
+  const changes: string[] = []
+  await page.route('**/api/v1/system/data-quality/issues?*', route => route.fulfill({ json: { code: 200, data: [issue] } }))
+  await page.route('**/api/v1/system/data-quality/issues/2/repair-preview', route => route.fulfill({ json: { code: 200, data: {
+    issue,
+    currentEntity: { entityId: '3', archiveId: null },
+    candidateArchives: [],
+    suggestedAction: 'LINK_ARCHIVE_ID',
+    deterministic: false,
+    readOnly: true,
+    canApply: false,
+    reason: '合成预览',
+  } } }))
+  await page.route('**/api/v1/system/data-quality/case-reviews/issue/2**', (route) => {
+    if (route.request().method() === 'POST') {
+      const params = new URL(route.request().url()).searchParams
+      changes.push(params.get('action')!)
+      expect(params.get('expectedRevision')).toBe('0')
+      review = { id: '1', entityType: 'mr_scan', entityId: '3', checkCode: issue.check_code, issueId: '2', runId: '1', status: 'CONFIRMED', revision: 1, actorId: '12', updatedAt: '2026-11-25T00:00:00Z' }
+      return route.fulfill({ json: { code: 200, data: review } })
+    }
+    return route.fulfill({ json: { code: 200, data: { enabled: true, latest: true, reviewedThisSample: !!review, review, events: review ? [{ revision: 1, issueId: '2', runId: '1', status: 'CONFIRMED', reason: 'CONFIRMED_EVIDENCE', actorId: '12', occurredAt: '2026-11-25T00:00:00Z' }] : [] } } })
+  })
+  await page.goto('/data-relations')
+  await page.getByRole('tab', { name: '检查与异常' }).click()
+  await page.getByRole('row').filter({ hasText: '合成缺失关联' }).getByRole('button', { name: '修复预览' }).click()
+  await expect(page.getByText('本次样本尚未记录决策', { exact: false })).toBeVisible()
+  await page.getByRole('button', { name: '确认异常', exact: true }).click()
+  await page.locator('.el-message-box').getByRole('button', { name: '取消', exact: true }).click()
+  expect(changes).toEqual([])
+  await page.getByRole('button', { name: '确认异常', exact: true }).click()
+  await page.locator('.el-message-box').getByRole('button', { name: '确定', exact: true }).click()
+  await expect(page.getByText('本次样本已有决策', { exact: false })).toBeVisible()
+  await expect(page.getByText('已确认样本 · 样本 #2 · 操作者 #12 · v1', { exact: true })).toBeVisible()
+  expect(changes).toEqual(['CONFIRM'])
+  await page.route('**/api/v1/system/data-quality/case-reviews/1/recheck', route => route.fulfill({ json: { code: 200, data: { caseId: '1', revision: 1, status: 'LINK_PRESENT_VERIFIED', observedAt: '2026-11-25T00:00:00Z' } } }))
+  await page.getByRole('button', { name: '逐记录只读复验' }).click()
+  await expect(page.getByRole('status').filter({ hasText: '当前唯一关联已核对' })).toBeVisible()
+  await expect(page.getByText('不关闭案件，不代表其他异常已解决', { exact: false })).toBeVisible()
+  expect(changes).toEqual(['CONFIRM'])
+})

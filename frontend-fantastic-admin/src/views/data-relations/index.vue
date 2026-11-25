@@ -35,6 +35,7 @@ import { formatDateTime } from '@/utils/display-format'
 import { hasPermission } from '@/utils/session'
 import ArchiveManifestCard from './ArchiveManifestCard.vue'
 import ArchiveScanInspector from './components/ArchiveScanInspector.vue'
+import QualityCaseReview from './components/QualityCaseReview.vue'
 import RepairOrderPanel from './RepairOrderPanel.vue'
 
 defineOptions({ name: 'DataRelationWorkbenchPage' })
@@ -712,6 +713,7 @@ onMounted(() => {
 
       <el-tab-pane v-if="!archiveOnly && canRepair" label="修复工单" name="repairs">
         <RepairOrderPanel v-if="activeTab === 'repairs'" />
+        <QualityCaseReview v-if="activeTab === 'repairs'" />
       </el-tab-pane>
       <el-tab-pane v-if="!archiveOnly" label="检查与异常" name="quality">
         <div class="quality-stack">
@@ -831,7 +833,7 @@ onMounted(() => {
 
           <h4>当前记录</h4>
           <el-descriptions :column="1" border>
-            <el-descriptions-item v-for="field in ['entityId', 'archiveId', 'bah', 'sjh', 'pages', 'uploadFlag']" :key="field" :label="field">
+            <el-descriptions-item v-for="field in (issueEntityType(repairPreview.issue) === 'mr_archive_box_record' ? ['entityId', 'archiveId', 'bah', 'sjh', 'boxNo', 'status'] : ['entityId', 'archiveId', 'bah', 'sjh', 'pages', 'uploadFlag'])" :key="field" :label="field">
               {{ repairPreview.currentEntity[field] ?? '—' }}
             </el-descriptions-item>
           </el-descriptions>
@@ -843,7 +845,8 @@ onMounted(() => {
             <el-table-column prop="sjh" label="SJH" />
             <el-table-column prop="matchType" label="匹配方式" width="120" />
           </el-table>
-          <RepairOrderPanel v-if="canRepair && repairPreview.issue.id" :key="repairPreview.issue.id" :issue-id="repairPreview.issue.id" :deterministic="repairPreview.deterministic && issueCode(repairPreview.issue) === 'SCAN_ARCHIVE_LINK_MISSING_ESTIMATED' && issueEntityType(repairPreview.issue) === 'mr_scan'" />
+          <QualityCaseReview v-if="canRepair && repairPreview.issue.id && ((issueCode(repairPreview.issue) === 'SCAN_ARCHIVE_LINK_MISSING_ESTIMATED' && issueEntityType(repairPreview.issue) === 'mr_scan') || (issueCode(repairPreview.issue) === 'BOX_ARCHIVE_LINK_MISSING' && issueEntityType(repairPreview.issue) === 'mr_archive_box_record'))" :key="`case-${repairPreview.issue.id}`" :issue-id="repairPreview.issue.id" />
+          <RepairOrderPanel v-if="canRepair && repairPreview.issue.id" :key="repairPreview.issue.id" :issue-id="repairPreview.issue.id" :deterministic="repairPreview.deterministic && ((issueCode(repairPreview.issue) === 'SCAN_ARCHIVE_LINK_MISSING_ESTIMATED' && issueEntityType(repairPreview.issue) === 'mr_scan') || (issueCode(repairPreview.issue) === 'BOX_ARCHIVE_LINK_MISSING' && issueEntityType(repairPreview.issue) === 'mr_archive_box_record'))" />
         </template>
       </div>
     </el-drawer>

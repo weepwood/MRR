@@ -54,7 +54,7 @@ function manifestVersion(version: number) {
   }
 }
 
-const demoOrders = [{ id: 1, issueId: 2, scanId: 3, targetArchiveId: 2, status: 'PROPOSED', proposedBy: 2, approvedBy: null }]
+const demoOrders = [{ id: 1, issueId: 2, scanId: 3, entityType: 'mr_scan', entityId: '3', targetArchiveId: 2, status: 'PROPOSED', proposedBy: 2, approvedBy: null }]
 export default defineFakeRoute([
   {
     url: '/api/v1/system/data-relations/overview',
@@ -215,6 +215,11 @@ export default defineFakeRoute([
       return row ? demoOk(row) : demoError(404, '演示工单不存在')
     },
   },
+  { url: '/api/v1/system/data-quality/case-reviews', response: () => demoOk({ enabled: false, reviews: [] }) },
+  { url: '/api/v1/system/data-quality/case-reviews/issue/:issueId', response: () => demoOk({ enabled: false, latest: false, reviewedThisSample: false, review: null, events: [] }) },
+  { url: '/api/v1/system/data-quality/case-reviews/:id/recheck', response: () => demoError(404, '演示无可复验案件') },
+  { url: '/api/v1/system/data-quality/case-reviews/:id/events', response: () => demoError(404, '演示无人工决策历史') },
+  { url: '/api/v1/system/data-quality/case-reviews/issue/:issueId', method: 'POST', response: () => demoError(503, '演示不写入真实决策') },
   { url: '/api/v1/system/data-quality/repair-orders', method: 'POST', response: () => demoError(503, '演示不执行真实修复') },
   { url: '/api/v1/system/data-quality/repair-orders/:id/approve', method: 'POST', response: () => demoError(503, '演示不执行真实修复') },
   { url: '/api/v1/system/data-quality/repair-orders/:id/apply', method: 'POST', response: () => demoError(503, '演示不执行真实修复') },

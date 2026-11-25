@@ -135,6 +135,60 @@ class DataQualityRepairOrderPostgresqlIT extends PostgresqlIntegrationTestSuppor
         assertThat(service.approve(next.id(),15L).status()).isEqualTo("APPROVED");
     }
 
+    @Test
+    void normalBoxAssociationUsesSameApprovalWithoutTouchingScanOrBoxFacts() {
+        var service=service(true);
+        long scanIssue=fixture();
+        var scanOrder=service.propose(scanIssue,11L);
+        long box=jdbc.queryForObject("INSERT INTO app.mr_archive_box_record(id,bah,box_no,status) VALUES (?,'654321','synthetic-box','NORMAL') RETURNING id",Long.class,scanOrder.scanId());
+        long target=jdbc.queryForObject("INSERT INTO app.mr_archive(bah) VALUES ('654321') RETURNING id",Long.class);
+        long issue=boxIssue(box,"BOX_ARCHIVE_LINK_MISSING","mr_archive_box_record","654321");
+        var order=service.propose(issue,11L);
+        assertThat(order.scanId()).isNull();
+        assertThat(order.entityType()).isEqualTo("mr_archive_box_record");
+        assertThat(order.entityId()).isEqualTo(Long.toString(box));
+        assertThat(order.targetArchiveId()).isEqualTo(target);
+        assertThat(service.list(null,issue,null,11L).orders()).extracting(DataQualityRepairOrderService.Order::id).containsExactly(order.id());
+        assertThat(service.list(null,scanIssue,null,11L).orders()).extracting(DataQualityRepairOrderService.Order::id).containsExactly(scanOrder.id());
+        assertThatThrownBy(()->service.approve(order.id(),11L)).hasMessageContaining("不同");
+        service.approve(order.id(),12L);
+        assertThat(service.apply(order.id(),12L).status()).isEqualTo("APPLIED");
+        assertThat(service.verify(order.id(),13L).status()).isEqualTo("VERIFIED");
+        assertThat(jdbc.queryForObject("SELECT archive_id FROM app.mr_archive_box_record WHERE id=?",Long.class,box)).isEqualTo(target);
+        assertThat(jdbc.queryForObject("SELECT box_no FROM app.mr_archive_box_record WHERE id=?",String.class,box)).isEqualTo("synthetic-box");
+        assertThat(jdbc.queryForObject("SELECT archive_id FROM app.mr_scan WHERE id=?",Long.class,scanOrder.scanId())).isNull();
+        assertThatThrownBy(()->service.compensate(order.id(),12L)).hasMessageContaining("重新关联");
+        jdbc.update("INSERT INTO app.mr_archive(bah) VALUES ('654321')");
+        assertThat(service.compensate(order.id(),12L).status()).isEqualTo("COMPENSATED");
+        assertThat(jdbc.queryForObject("SELECT archive_id FROM app.mr_archive_box_record WHERE id=?",Long.class,box)).isNull();
+    }
+
+    @Test
+    void nonNormalBoxAndUnsupportedStatisticsCannotBeRepaired() {
+        var service=service(true);
+        long box=jdbc.queryForObject("INSERT INTO app.mr_archive_box_record(bah,box_no,status) VALUES ('654321','synthetic-box','MISPLACED') RETURNING id",Long.class);
+        jdbc.update("INSERT INTO app.mr_archive(bah) VALUES ('654321')");
+        long issue=boxIssue(box,"BOX_ARCHIVE_LINK_MISSING","mr_archive_box_record","654321");
+        assertThatThrownBy(()->service.propose(issue,11L)).hasMessageContaining("确定性");
+        long unsupported=boxIssue(box,"STATISTICS_ARCHIVE_LINK_MISSING","mr_statistics","654321");
+        assertThatThrownBy(()->service.propose(unsupported,11L)).hasMessageContaining("仅支持");
+        jdbc.update("UPDATE app.mr_archive_box_record SET status='NORMAL' WHERE id=?",box);
+        var order=service.propose(issue,11L);
+        service.approve(order.id(),12L);
+        jdbc.update("UPDATE app.mr_archive_box_record SET box_no='changed' WHERE id=?",box);
+        assertThatThrownBy(()->service.apply(order.id(),12L)).hasMessageContaining("变化");
+        assertThat(service.get(order.id()).status()).isEqualTo("APPROVED");
+        assertThat(jdbc.queryForObject("SELECT archive_id FROM app.mr_archive_box_record WHERE id=?",Long.class,box)).isNull();
+    }
+
+    private long boxIssue(long entity,String check,String type,String bah) {
+        long run=jdbc.queryForObject("INSERT INTO app.mrr_data_quality_run(status,triggered_by) VALUES ('SUCCESS','test') RETURNING id",Long.class);
+        return jdbc.queryForObject("""
+                INSERT INTO app.mrr_data_quality_issue(run_id,check_code,check_name,severity,entity_type,entity_id,bah,detail)
+                VALUES (?,?,'synthetic','WARNING',?,?,?,'synthetic') RETURNING id
+                """,Long.class,run,check,type,Long.toString(entity),bah);
+    }
+
     private DataQualityRepairOrderService service(boolean enabled) {
         return new DataQualityRepairOrderService(jdbc, new DataQualityServiceImpl(jdbc, new SimpleMeterRegistry()),
                 mock(DeploymentReadinessService.class), mock(MaintenanceModeService.class), enabled);

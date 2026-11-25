@@ -29,8 +29,32 @@ public class DataQualityRepairOrderService {
         this.enabled = enabled;
     }
 
-    public record Order(long id, long issueId, int scanId, long targetArchiveId,
-                        String status, long proposedBy, Long approvedBy, Long reopenedFrom) {}
+    public record Order(long id, long issueId, Integer scanId, long targetArchiveId,
+                        String status, long proposedBy, Long approvedBy, Long reopenedFrom, String entityType, String entityId) {}
+    // Fixed allowlist; table identifiers never originate from an HTTP parameter.
+    private enum Scope {
+        SCAN("mr_scan","SCAN_ARCHIVE_LINK_MISSING_ESTIMATED","app.mr_scan","uploadflag"),
+        BOX("mr_archive_box_record","BOX_ARCHIVE_LINK_MISSING","app.mr_archive_box_record","CASE WHEN status='NORMAL' THEN 1 ELSE 0 END");
+        final String type, check, table, active;
+        Scope(String type,String check,String table,String active) {
+            this.type=type;this.check=check;this.table=table;this.active=active;
+        }
+        static Scope from(Object type,Object check) {
+            for(var scope:values()) if(scope.type.equals(type) && scope.check.equals(check)) return scope;
+            throw conflict("仅支持成功检查中的扫描或正常装箱缺失关联");
+        }
+        static Scope of(Order order) {
+            for(var scope:values()) if(scope.type.equals(order.entityType())) return scope;
+            throw conflict("不支持的工单类型");
+        }
+        long parse(Object raw) {
+            try {
+                long id=Long.parseLong(String.valueOf(raw));
+                if(id<=0 || (this==SCAN && id>Integer.MAX_VALUE)) throw new NumberFormatException();
+                return id;
+            } catch(NumberFormatException invalid) { throw conflict("无效关联记录"); }
+        }
+    }
     private record Source(Long archiveId, String fingerprint, String revision, String bah, String sjh, Integer active) {}
     private record Candidate(long archiveId, String fingerprint) {}
     private record State(Order order, String sourceFingerprint, String targetFingerprint, String appliedRevision, boolean fresh) {}
@@ -43,25 +67,26 @@ public class DataQualityRepairOrderService {
     public Workbench list(Long archiveId, Long issueId, Long before, long actor) {
         if (actor<=0 || (archiveId!=null && archiveId<=0) || (issueId!=null && issueId<=0) || (before!=null && before<=0))
             throw new BusinessException(400,"无效查询参数");
-        StringBuilder sql=new StringBuilder("SELECT id,issue_id,scan_id,target_archive_id,status,proposed_by,approved_by,reopened_from FROM app.mrr_data_quality_repair_order WHERE true");
+        StringBuilder sql=new StringBuilder("SELECT id,issue_id,scan_id,target_archive_id,status,proposed_by,approved_by,reopened_from,entity_type,entity_id FROM app.mrr_data_quality_repair_order WHERE true");
         java.util.ArrayList<Object> args=new java.util.ArrayList<>();
         if (archiveId!=null) { sql.append(" AND target_archive_id=?"); args.add(archiveId); }
         if (issueId!=null) {
-            // Include prior orders for this exact scan only when the current issue is the supported check.
-            Integer scanId = jdbc.query("""
-                    SELECT entity_id FROM app.mrr_data_quality_issue
-                    WHERE id=? AND entity_id IS NOT NULL AND entity_type='mr_scan' AND check_code='SCAN_ARCHIVE_LINK_MISSING_ESTIMATED'
-                    """,(rs,n)->rs.getString(1),issueId).stream().findFirst().map(value -> {
-                        try { return Integer.valueOf(value); } catch (NumberFormatException invalid) { return null; }
-                    }).orElse(null);
-            if (scanId != null && scanId > 0) {
-                sql.append(" AND (issue_id=? OR scan_id=?)"); args.add(issueId); args.add(scanId);
+            var rows=jdbc.queryForList("SELECT entity_type,check_code,entity_id FROM app.mrr_data_quality_issue WHERE id=?",issueId);
+            Scope scope=null; long entity=0;
+            if (!rows.isEmpty()) {
+                var row=rows.getFirst();
+                try { scope=Scope.from(row.get("entity_type"),row.get("check_code")); entity=scope.parse(row.get("entity_id")); }
+                catch(BusinessException invalid) { scope=null; }
+            }
+            if(scope!=null) {
+                sql.append(" AND (issue_id=? OR (entity_type=? AND entity_id=?))");
+                args.add(issueId);args.add(scope.type);args.add(entity);
             } else { sql.append(" AND issue_id=?"); args.add(issueId); }
         }
         if (before!=null) { sql.append(" AND id<?"); args.add(before); }
         sql.append(" ORDER BY id DESC LIMIT 50");
-        List<Order> orders=jdbc.query(sql.toString(),(rs,n)->new Order(rs.getLong(1),rs.getLong(2),rs.getInt(3),
-                rs.getLong(4),rs.getString(5),rs.getLong(6),rs.getObject(7,Long.class),rs.getObject(8,Long.class)),args.toArray());
+        List<Order> orders=jdbc.query(sql.toString(),(rs,n)->new Order(rs.getLong(1),rs.getLong(2),rs.getObject(3,Integer.class),
+                rs.getLong(4),rs.getString(5),rs.getLong(6),rs.getObject(7,Long.class),rs.getObject(8,Long.class),rs.getString(9),rs.getString(10)),args.toArray());
         return new Workbench(enabled && !readiness.isReadOnly() && !maintenance.isEnabled(),actor,orders);
     }
 
@@ -83,23 +108,20 @@ public class DataQualityRepairOrderService {
     public Order propose(long issueId, long actor) {
         guard(actor);
         var issue = quality.getIssue(issueId);
-        if (!"SUCCESS".equals(issue.get("runStatus")) || !"mr_scan".equals(issue.get("entityType"))
-                || !"SCAN_ARCHIVE_LINK_MISSING_ESTIMATED".equals(issue.get("checkCode")))
-            throw conflict("仅支持成功检查中的扫描缺失关联");
-        int scanId;
-        try { scanId = Integer.parseInt(String.valueOf(issue.get("entityId"))); }
-        catch (NumberFormatException e) { throw conflict("无效扫描记录"); }
+        if (!"SUCCESS".equals(issue.get("runStatus"))) throw conflict("仅支持成功检查中的缺失关联");
+        Scope scope=Scope.from(issue.get("entityType"),issue.get("checkCode"));
+        long entity=scope.parse(issue.get("entityId"));
         lockArchive();
-        var source = source(scanId);
+        var source=source(scope,entity);
         var preview = quality.previewRepair(issueId);
         if (!Boolean.TRUE.equals(preview.get("deterministic"))) throw conflict("不存在确定性修复候选");
         var candidate = uniqueCandidate(source);
-        if (source.archiveId() != null) throw conflict("扫描已有主档关联");
+        if (source.archiveId() != null) throw conflict("记录已有主档关联");
         Long prior = jdbc.query("""
                 SELECT id FROM app.mrr_data_quality_repair_order
-                WHERE scan_id=? AND status IN ('PROPOSED','APPROVED','APPLIED','VERIFIED')
+                WHERE entity_type=? AND entity_id=? AND status IN ('PROPOSED','APPROVED','APPLIED','VERIFIED')
                 FOR UPDATE NOWAIT
-                """,(rs,n)->rs.getLong(1),scanId).stream().findFirst().orElse(null);
+                """,(rs,n)->rs.getLong(1),scope.type,entity).stream().findFirst().orElse(null);
         if (prior != null) {
             // A fresh successful run must have started after verification, not merely completed later.
             // Reopen only a real recurrence (the current source was locked and confirmed unlinked above).
@@ -108,20 +130,20 @@ public class DataQualityRepairOrderService {
                       JOIN app.mrr_data_quality_issue i ON i.id=?
                       JOIN app.mrr_data_quality_run r ON r.id=i.run_id
                       WHERE o.id=? AND o.status='VERIFIED' AND o.issue_id<>i.id
-                        AND i.entity_type='mr_scan' AND i.entity_id=CAST(o.scan_id AS text)
-                        AND i.check_code='SCAN_ARCHIVE_LINK_MISSING_ESTIMATED'
+                        AND i.entity_type=o.entity_type AND i.entity_id=CAST(o.entity_id AS text)
+                        AND i.check_code=?
                         AND r.status='SUCCESS' AND r.started_at>o.updated_at
                         AND r.completed_at IS NOT NULL AND i.detected_at>=r.started_at)
-                    """,Boolean.class,issueId,prior));
-            if (!recurrent) throw conflict("该扫描已有有效修复工单，需在复验后重新成功检查");
+                    """,Boolean.class,issueId,prior,scope.check));
+            if (!recurrent) throw conflict("该记录已有有效修复工单，需在复验后重新成功检查");
             change(prior,"SUPERSEDED");
             // This event records an order transition, not a modification of the medical link.
             audit(prior,actor,"SUPERSEDED",null,null);
         }
         Long id = jdbc.queryForObject("""
-                INSERT INTO app.mrr_data_quality_repair_order(issue_id,scan_id,target_archive_id,source_fingerprint,target_fingerprint,status,proposed_by,reopened_from)
-                VALUES (?,?,?,?,?,'PROPOSED',?,?) RETURNING id
-                """, Long.class, issueId, scanId, candidate.archiveId(), source.fingerprint(), candidate.fingerprint(), actor,prior);
+                INSERT INTO app.mrr_data_quality_repair_order(issue_id,scan_id,target_archive_id,source_fingerprint,target_fingerprint,status,proposed_by,reopened_from,entity_type,entity_id)
+                VALUES (?,?,?,?,?,'PROPOSED',?,?,?,?) RETURNING id
+                """, Long.class, issueId, scope==Scope.SCAN ? (int)entity : null, candidate.archiveId(), source.fingerprint(), candidate.fingerprint(), actor,prior,scope.type,entity);
         audit(id, actor, "PROPOSED", null, null);
         return get(id);
     }
@@ -151,9 +173,10 @@ public class DataQualityRepairOrderService {
         lockArchive();
         recheck(s, false);
         var o = s.order();
-        int updated = jdbc.update("UPDATE app.mr_scan SET archive_id=? WHERE id=? AND archive_id IS NULL", o.targetArchiveId(), o.scanId());
+        Scope scope=Scope.of(o); long entity=scope.parse(o.entityId());
+        int updated = jdbc.update("UPDATE "+scope.table+" SET archive_id=? WHERE id=? AND archive_id IS NULL", o.targetArchiveId(), entity);
         if (updated != 1) throw conflict("关联执行冲突");
-        var after = source(o.scanId());
+        var after = source(scope,entity);
         if (!Objects.equals(after.archiveId(), o.targetArchiveId()) || !after.fingerprint().equals(s.sourceFingerprint()))
             throw conflict("实际执行结果与审批不一致");
         jdbc.update("UPDATE app.mrr_data_quality_repair_order SET status='APPLIED',applied_revision=?,updated_at=clock_timestamp() WHERE id=?", after.revision(), id);
@@ -192,7 +215,8 @@ public class DataQualityRepairOrderService {
         if (!Objects.equals(s.order().approvedBy(), actor)) throw conflict("仅原审批人可补偿");
         lockArchive();
         var o = s.order();
-        Source row = source(o.scanId());
+        Scope scope=Scope.of(o); long entity=scope.parse(o.entityId());
+        Source row = source(scope,entity);
         if (!Objects.equals(row.archiveId(), o.targetArchiveId()) || !row.fingerprint().equals(s.sourceFingerprint())
                 || !row.revision().equals(s.appliedRevision()) || !target(o.targetArchiveId()).fingerprint().equals(s.targetFingerprint()))
             throw conflict("关联事实已变化，禁止补偿");
@@ -200,9 +224,9 @@ public class DataQualityRepairOrderService {
         if (row.sjh() != null && !row.sjh().isBlank()) throw conflict("现有上架号触发器不允许安全补偿");
         Long resolved = jdbc.queryForObject("SELECT app.resolve_archive_id(?,?,false)", Long.class, row.bah(), row.sjh());
         if (resolved != null) throw conflict("现有触发器将重新关联，禁止补偿");
-        if (jdbc.update("UPDATE app.mr_scan SET archive_id=NULL WHERE id=? AND archive_id=?", o.scanId(), o.targetArchiveId()) != 1)
+        if (jdbc.update("UPDATE "+scope.table+" SET archive_id=NULL WHERE id=? AND archive_id=?", entity, o.targetArchiveId()) != 1)
             throw conflict("补偿冲突");
-        Source after = source(o.scanId());
+        Source after = source(scope,entity);
         if (after.archiveId() != null || !after.fingerprint().equals(s.sourceFingerprint())) throw conflict("补偿结果不一致");
         change(id, "COMPENSATED");
         audit(id, actor, "COMPENSATED", o.targetArchiveId(), null);
@@ -220,14 +244,14 @@ public class DataQualityRepairOrderService {
         jdbc.execute("LOCK TABLE app.mr_archive IN SHARE MODE NOWAIT");
     }
 
-    private Source source(int scanId) {
+    private Source source(Scope scope,long entity) {
         return jdbc.query("""
                 SELECT archive_id,encode(sha256(convert_to((to_jsonb(s)-'archive_id')::text,'UTF8')),'hex') AS fingerprint,
-                       s.xmin::text AS revision,bah,sjh,uploadflag
-                FROM app.mr_scan s WHERE id=? FOR UPDATE NOWAIT
-                """, (rs,n) -> new Source(rs.getObject("archive_id",Long.class),rs.getString("fingerprint"),
-                rs.getString("revision"),rs.getString("bah"),rs.getString("sjh"),rs.getObject("uploadflag",Integer.class)),scanId)
-                .stream().findFirst().orElseThrow(() -> conflict("扫描记录不存在"));
+                       s.xmin::text AS revision,bah,sjh,%s AS active
+                FROM %s s WHERE id=? FOR UPDATE NOWAIT
+                """.formatted(scope.active,scope.table), (rs,n) -> new Source(rs.getObject("archive_id",Long.class),rs.getString("fingerprint"),
+                rs.getString("revision"),rs.getString("bah"),rs.getString("sjh"),rs.getObject("active",Integer.class)),entity)
+                .stream().findFirst().orElseThrow(() -> conflict("关联记录不存在"));
     }
 
     private Candidate target(long archiveId) {
@@ -256,9 +280,10 @@ public class DataQualityRepairOrderService {
 
     private void recheck(State s, boolean applied) {
         var o=s.order();
-        Source row=source(o.scanId());
+        Scope scope=Scope.of(o);
+        Source row=source(scope,scope.parse(o.entityId()));
         if (!row.fingerprint().equals(s.sourceFingerprint()) || !Objects.equals(row.archiveId(),applied?o.targetArchiveId():null)
-                || (applied && !row.revision().equals(s.appliedRevision()))) throw conflict("扫描记录已变化");
+                || (applied && !row.revision().equals(s.appliedRevision()))) throw conflict("关联记录已变化");
         Candidate c=uniqueCandidate(row);
         if (c.archiveId()!=o.targetArchiveId() || !c.fingerprint().equals(s.targetFingerprint())) throw conflict("目标主档已变化");
     }
@@ -268,8 +293,8 @@ public class DataQualityRepairOrderService {
                 SELECT *, approved_at > clock_timestamp()-interval '24 hours' AS fresh
                 FROM app.mrr_data_quality_repair_order WHERE id=?
                 """+(lock?" FOR UPDATE NOWAIT":""),(rs,n)->new State(
-                new Order(rs.getLong("id"),rs.getLong("issue_id"),rs.getInt("scan_id"),rs.getLong("target_archive_id"),
-                        rs.getString("status"),rs.getLong("proposed_by"),rs.getObject("approved_by",Long.class),rs.getObject("reopened_from",Long.class)),
+                new Order(rs.getLong("id"),rs.getLong("issue_id"),rs.getObject("scan_id",Integer.class),rs.getLong("target_archive_id"),
+                        rs.getString("status"),rs.getLong("proposed_by"),rs.getObject("approved_by",Long.class),rs.getObject("reopened_from",Long.class),rs.getString("entity_type"),rs.getString("entity_id")),
                 rs.getString("source_fingerprint"),rs.getString("target_fingerprint"),rs.getString("applied_revision"),rs.getBoolean("fresh")),id)
                 .stream().findFirst().orElseThrow(()->new BusinessException(404,"工单不存在"));
     }

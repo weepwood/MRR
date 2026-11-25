@@ -37,6 +37,11 @@ const recurrence = computed(() => orders.value.find(row => row.status === 'VERIF
 const canPropose = computed(() => enabled.value && props.deterministic && props.issueId && !orders.value.some(row =>
   !['CANCELLED', 'COMPENSATED', 'SUPERSEDED'].includes(row.status) && row.id !== recurrence.value?.id))
 
+function entityLabel(row: RepairOrder) {
+  const kind = row.entityType === 'mr_archive_box_record' ? '装箱' : '影像'
+  return `${kind} #${row.entityId ?? row.scanId ?? '—'}`
+}
+
 function actions(row: RepairOrder): RepairAction[] {
   if (!enabled.value || !actor.value) {
     return []
@@ -153,8 +158,8 @@ async function change(action: RepairAction | 'propose', row?: RepairOrder) {
   try {
     const label = action === 'propose' ? (recurrence.value ? '重新提交修复工单' : '提交修复工单') : actionLabels[action]
     const message = action === 'propose'
-      ? (recurrence.value ? `为异常 #${issue} 重新提交工单，必须是复验后新成功检查发现的同一影像缺失关联；保留旧工单与审计，新工单独立审批，不修改病案。` : `为异常 #${issue} 提交唯一关联候选，提交本身不会修改病案。`)
-      : `工单 #${row?.id}：影像 #${row?.scanId}，目标主档 #${row?.targetArchiveId}。后端将重新检查身份、状态和关联事实。`
+      ? (recurrence.value ? `为异常 #${issue} 重新提交工单，必须是复验后新成功检查发现的同一记录缺失关联；保留旧工单与审计，新工单独立审批，不修改病案。` : `为异常 #${issue} 提交唯一关联候选，提交本身不会修改病案。`)
+      : `工单 #${row?.id}：${row ? entityLabel(row) : '—'}，目标主档 #${row?.targetArchiveId}。后端将重新检查身份、状态和关联事实。`
     try {
       await ElMessageBox.confirm(message, label, { type: action === 'apply' || action === 'compensate' ? 'warning' : 'info', confirmButtonText: label, cancelButtonText: '返回' })
     }
@@ -203,7 +208,11 @@ onBeforeUnmount(clear)
     <el-alert v-if="!enabled" title="修复写入不可用，现有工单仅供查看" type="info" :closable="false" />
     <el-table v-if="orders.length" :data="orders" row-key="id" highlight-current-row @row-click="select">
       <el-table-column prop="id" label="工单" width="90" />
-      <el-table-column prop="scanId" label="影像" width="100" />
+      <el-table-column label="关联记录" min-width="140">
+        <template #default="{ row }">
+          {{ entityLabel(row as RepairOrder) }}
+        </template>
+      </el-table-column>
       <el-table-column label="前序工单" width="105">
         <template #default="{ row }">
           {{ row.reopenedFrom ? `#${row.reopenedFrom}` : '—' }}
@@ -234,6 +243,7 @@ onBeforeUnmount(clear)
     </el-button>
     <section v-if="selected" class="repair-audit">
       <h3>工单 #{{ selected.id }} · 事务审计</h3>
+      <p>{{ entityLabel(selected) }} · 目标主档 #{{ selected.targetArchiveId }}</p>
       <p v-if="selected.reopenedFrom">
         前序工单 #{{ selected.reopenedFrom }} · 新工单独立审批
       </p>

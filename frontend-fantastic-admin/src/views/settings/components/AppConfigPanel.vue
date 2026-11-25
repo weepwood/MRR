@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import type { Settings } from '#/global'
-import { useId } from 'vue'
 import settingsDefault from '@/settings.default'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/ui/components/FaTabs/tabs'
 import { notify } from '@/utils/notification'
@@ -20,7 +19,6 @@ const settingsStore = useSettingsStore()
 const autoSaveState = ref<'idle' | 'saving' | 'saved'>('idle')
 const activeGroup = ref<string | number>('theme')
 const importInput = ref<HTMLInputElement>()
-const radiusLabelId = useId()
 let autoSaveTimer: ReturnType<typeof setTimeout> | undefined
 
 const appearanceGroups = [
@@ -56,12 +54,12 @@ const supportsCornerShape = typeof CSS !== 'undefined'
   && typeof CSS.supports === 'function'
   && CSS.supports('corner-shape', 'squircle')
 
-const appRadius = computed<number[]>({
+const appRadius = computed<number>({
   get() {
-    return [settingsStore.settings.app.radius]
+    return settingsStore.settings.app.radius
   },
   set(value) {
-    settingsStore.settings.app.radius = value[0]
+    settingsStore.settings.app.radius = value
   },
 })
 
@@ -308,11 +306,11 @@ function handleReset() {
 
           <div class="setting-item">
             <div class="label-copy">
-              <strong :id="radiusLabelId">圆角系数</strong>
+              <strong>圆角系数</strong>
               <small>{{ activeThemePalette === 'gr8r' ? '统一调整页面卡片与面板的圆角程度；暖色扁平风格会把上限收敛到 10px。' : '统一调整页面卡片与面板的圆角程度。' }}</small>
             </div>
             <div class="radius-control">
-              <FaSlider v-model="appRadius" :aria-labelledby="radiusLabelId" :min="0" :max="1" :step="0.25" class="slider-field" />
+              <el-slider v-model="appRadius" aria-label="圆角系数" :min="0" :max="1" :step="0.25" class="slider-field mrr-compact-slider" />
               <span class="radius-value">{{ settingsStore.settings.app.radius }}</span>
             </div>
           </div>

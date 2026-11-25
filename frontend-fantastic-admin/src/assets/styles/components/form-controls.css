@@ -2,7 +2,7 @@
  * Element Plus 只在这里桥接 MRR 的尺寸令牌；颜色、边框、圆角和状态
  * 继续由 element-plus-overrides.css 统一维护，避免两套全局规则互相覆盖。
  * 单行输入统一使用 --mrr-input-height，大小号保留字体、间距和圆角差异。
- * Fantastic Admin 自带的 FaInput / FaSelect 使用同一输入高度令牌。
+ * Fantastic Admin 自带的 FaInput 使用同一输入高度令牌。
  */
 .el-input,
 .el-select,
@@ -99,8 +99,7 @@
   }
 }
 
-.fa-input-control,
-.fa-select-trigger {
+.fa-input-control {
   box-sizing: border-box;
   height: var(--mrr-input-height);
   min-height: var(--mrr-input-height);
@@ -115,29 +114,23 @@
   transition: color var(--mrr-motion-feedback) var(--mrr-ease-out), background-color var(--mrr-motion-feedback) var(--mrr-ease-out), border-color var(--mrr-motion-feedback) var(--mrr-ease-out), box-shadow var(--mrr-motion-feedback) var(--mrr-ease-out);
 }
 
-.fa-input-control::placeholder,
-.fa-select-trigger[data-placeholder] {
+.fa-input-control::placeholder {
   color: var(--mrr-muted-foreground);
 }
 
-.fa-input-control:hover:not(:disabled),
-.fa-select-trigger:hover:not([data-disabled]) {
+.fa-input-control:hover:not(:disabled) {
   background: var(--mrr-control-bg-hover);
   border-color: var(--mrr-control-border-hover);
 }
 
-.fa-input-control:focus-visible,
-.fa-select-trigger:focus-visible,
-.fa-select-trigger[data-state="open"] {
+.fa-input-control:focus-visible {
   outline: none;
   background: var(--mrr-field-focus-bg);
   border-color: var(--mrr-ring);
   box-shadow: var(--mrr-focus-ring);
 }
 
-.fa-input-control:disabled,
-.fa-select-trigger:disabled,
-.fa-select-trigger[data-disabled] {
+.fa-input-control:disabled {
   color: var(--mrr-muted-foreground);
   cursor: not-allowed;
   background: var(--mrr-control-bg-disabled);
@@ -209,8 +202,7 @@
 
 /* Keep the existing registration error class compatible and add semantic aria-invalid. */
 .fa-input-control[aria-invalid="true"]:not(:disabled),
-.fa-input-control.border-destructive:not(:disabled),
-.fa-select-trigger[aria-invalid="true"]:not([data-disabled]) {
+.fa-input-control.border-destructive:not(:disabled) {
   background: var(--mrr-field-focus-bg);
   border-color: var(--mrr-destructive);
   box-shadow: var(--mrr-danger-focus-ring);
@@ -220,14 +212,6 @@
 .fa-textarea-control.border-destructive:not(:disabled) {
   background: var(--mrr-field-focus-bg);
   box-shadow: 0 0 0 1px var(--mrr-destructive) inset, var(--mrr-danger-focus-ring);
-}
-
-.fa-select-chevron {
-  flex: 0 0 auto;
-  width: 16px;
-  height: 16px;
-  color: var(--mrr-muted-foreground);
-  transition: color var(--mrr-motion-feedback) var(--mrr-ease-out), transform var(--mrr-motion-move) var(--mrr-ease-out);
 }
 
 /*
@@ -408,7 +392,66 @@
   border-top-right-radius: 0;
 }
 
-.fa-select-trigger[data-state="open"] .fa-select-chevron {
+/* Existing compact settings/preview sliders: preserve the 8px rail and
+ * 20px thumb without changing the default business slider density. */
+.mrr-compact-slider.el-slider {
+  --el-slider-height: 8px;
+  --el-slider-border-radius: 9999px;
+  --el-slider-button-size: 20px;
+  --el-slider-button-wrapper-offset: -14px;
+  --el-slider-main-bg-color: hsl(var(--primary));
+  --el-slider-runway-bg-color: hsl(var(--secondary));
+
+  height: 8px;
+  font-size: 14px;
+  font-weight: 400;
   color: var(--mrr-foreground);
-  transform: rotate(180deg);
+}
+
+.mrr-compact-slider .el-slider__button {
+  background: hsl(var(--background));
+  border-radius: 9999px;
+}
+
+.mrr-compact-slider .el-slider__button:hover,
+.mrr-compact-slider .el-slider__button.hover,
+.mrr-compact-slider .el-slider__button.dragging {
+  transform: none;
+}
+
+.mrr-compact-slider .el-slider__button-wrapper:focus-visible .el-slider__button {
+  box-shadow: var(--mrr-focus-ring);
+}
+
+/* Single-value compact selects use the field contract; leave multiple-value
+ * controls free to grow and wrap. */
+.el-select.mrr-single-select .el-select__wrapper {
+  box-sizing: border-box;
+  height: var(--mrr-input-height);
+  min-height: var(--mrr-input-height);
+  padding-block: 0;
+  padding-inline: var(--mrr-field-padding-x);
+  font-size: var(--mrr-field-font-size);
+  box-shadow: 0 0 0 1px var(--mrr-control-border) inset, var(--mrr-field-shadow);
+}
+
+.el-select.mrr-single-select .el-select__wrapper:hover {
+  box-shadow: 0 0 0 1px var(--mrr-control-border-hover) inset, var(--mrr-field-shadow);
+}
+
+.el-select.mrr-single-select .el-select__wrapper.is-focused {
+  box-shadow: 0 0 0 1px var(--mrr-ring) inset, var(--mrr-focus-ring);
+}
+
+.el-select.mrr-single-select .el-select__wrapper.is-disabled {
+  box-shadow: 0 0 0 1px var(--mrr-border) inset;
+}
+
+.el-select.mrr-single-select .el-select__selected-item:not(.is-transparent) {
+  color: var(--mrr-foreground);
+}
+
+.el-select.mrr-single-select .el-select__caret {
+  font-size: 16px;
+  color: var(--mrr-muted-foreground);
 }

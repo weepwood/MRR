@@ -26,7 +26,7 @@ async function maxScreenshotChannelDifference(page: Page, first: Buffer, second:
     const [before, after] = images
     try {
       if (before.width !== after.width || before.height !== after.height) {
-        return Infinity
+        return { max: Infinity, changed: -1, aboveThreshold: -1, width: before.width, height: before.height, examples: [] }
       }
       const canvas = new OffscreenCanvas(before.width, before.height)
       const context = canvas.getContext('2d')!
@@ -34,7 +34,23 @@ async function maxScreenshotChannelDifference(page: Page, first: Buffer, second:
       const pixels = context.getImageData(0, 0, before.width, before.height).data
       context.drawImage(after, 0, 0)
       const nextPixels = context.getImageData(0, 0, before.width, before.height).data
-      return nextPixels.reduce((max, value, index) => Math.max(max, Math.abs(value - pixels[index])), 0)
+      let max = 0
+      let changed = 0
+      let aboveThreshold = 0
+      const examples: Array<{ x: number, y: number, channel: number, before: number, after: number }> = []
+      for (let index = 0; index < nextPixels.length; index++) {
+        const delta = Math.abs(nextPixels[index] - pixels[index])
+        max = Math.max(max, delta)
+        if (delta > 0) { changed++ }
+        if (delta > 3) {
+          aboveThreshold++
+          if (examples.length < 20) {
+            const pixel = Math.floor(index / 4)
+            examples.push({ x: pixel % before.width, y: Math.floor(pixel / before.width), channel: index % 4, before: pixels[index], after: nextPixels[index] })
+          }
+        }
+      }
+      return { max, changed, aboveThreshold, width: before.width, height: before.height, examples }
     }
     finally {
       images.forEach(image => image.close())
@@ -101,11 +117,11 @@ test.describe('界面外观 · 圆角曲线', () => {
    * 把手柄压成圆角方块（见 components/corner-shape.css 的分组说明）。
    *
    * 项目里有两套控件：Element Plus 的 .el-switch / .el-slider，以及界面外观页
-   * 自己在用的 reka-ui 封装 .fa-slider。现存控件都必须退出 G2，否则
+   * 现存 Element Plus 控件都必须退出 G2，否则
    * 用户就在“圆角曲线”旁边看到开关变形。这里同时锁住计算值与像素：
    * 两种曲线下比较同一个开关/滑块的逐像素颜色，允许背景抗锯齿的微小误差。
    */
-  test('开关与滑块在 G2 模式下保持标准圆弧（两套控件体系）', async ({ page }) => {
+  test('开关与滑块在 G2 模式下保持标准圆弧（唯一控件体系）', async ({ page }, testInfo) => {
     // 这条用例要跑两轮「切页 + 等设置加载」，默认 30s 容易被冷启动的 dev server 吃掉。
     test.setTimeout(90_000)
     await page.setViewportSize({ width: 1440, height: 900 })
@@ -128,22 +144,55 @@ test.describe('界面外观 · 圆角曲线', () => {
     // 主题色块是 50% 正圆。
     expect(await cornerShapeOf(page, '.theme-swatch')).toBe('round')
 
-    // 统一 Element Plus 开关与仍保留的 reka-ui 滑块：根节点、轨道、手柄逐层都要是圆弧。
-    for (const selector of ['.el-switch', '.el-switch__core', '.el-switch__action', '.fa-slider', '.fa-slider__track', '.fa-slider__thumb']) {
+    // 统一 Element Plus 开关与滑块：根节点、轨道、手柄逐层都要是圆弧。
+    for (const selector of ['.el-switch', '.el-switch__core', '.el-switch__action', '.el-slider', '.el-slider__runway', '.el-slider__button']) {
       expect(await cornerShapeOf(page, selector), `${selector} 应为标准圆弧`).toBe('round')
     }
 
     const switchEl = page.locator('.el-switch').first()
-    const sliderEl = page.locator('.fa-slider').first()
-    const sqSwitch = await switchEl.screenshot()
-    const sqSlider = await sliderEl.screenshot()
+    const sliderEl = page.locator('.slider-field').first()
+    async function captureControl(control: typeof switchEl) {
+      await control.scrollIntoViewIfNeeded()
+      await page.mouse.move(0, 0)
+      await page.evaluate(() => new Promise<void>(resolve => requestAnimationFrame(() => requestAnimationFrame(() => resolve()))))
+      // The compact slider root is only 8px high; its 20px thumb overflows.
+      // Include the entire visible control in an integer-aligned clip.
+      const clip = await control.evaluate((root) => {
+        const bounds = [root, ...root.querySelectorAll('.el-switch__core, .el-switch__action, .el-slider__runway, .el-slider__button')].map(node => node.getBoundingClientRect())
+        const x = Math.floor(Math.min(...bounds.map(b => b.left)) + window.scrollX)
+        const y = Math.floor(Math.min(...bounds.map(b => b.top)) + window.scrollY)
+        const right = Math.ceil(Math.max(...bounds.map(b => b.right)) + window.scrollX)
+        const bottom = Math.ceil(Math.max(...bounds.map(b => b.bottom)) + window.scrollY)
+        return { x, y, width: right - x, height: bottom - y }
+      })
+      return page.screenshot({ fullPage: true, clip, animations: 'disabled' })
+    }
+    const sqSwitch = await captureControl(switchEl)
+    const sqSlider = await captureControl(sliderEl)
 
     // 父级圆角会改变截图边缘的 3 个抗锯齿背景像素，实测单通道最多相差 3/255。
     // 比较解码后的像素，仍要求图片尺寸一致，并对每个像素应用同一上限。
     await options.getByRole('button', { name: '标准圆弧' }).click()
     await expect(page.locator('html')).toHaveAttribute('data-radius-shape', 'round')
-    expect(await maxScreenshotChannelDifference(page, sqSwitch, await switchEl.screenshot()), '统一开关的像素差异').toBeLessThanOrEqual(3)
-    expect(await maxScreenshotChannelDifference(page, sqSlider, await sliderEl.screenshot()), 'reka-ui 滑块的像素差异').toBeLessThanOrEqual(3)
+    for (const [name, control, before] of [['switch', switchEl, sqSwitch], ['slider', sliderEl, sqSlider]] as const) {
+      const after = await captureControl(control)
+      const difference = await maxScreenshotChannelDifference(page, before, after)
+      if (difference.max > 3) {
+        const geometry = await control.evaluate((root) => {
+          const r = root.getBoundingClientRect()
+          const parts = [root, ...root.querySelectorAll('.el-switch__core, .el-switch__action, .el-slider__runway, .el-slider__bar, .el-slider__button')].map((node) => {
+            const b = node.getBoundingClientRect()
+            const css = getComputedStyle(node)
+            return { class: node.className, x: b.x - r.x, y: b.y - r.y, width: b.width, height: b.height, background: css.backgroundColor, borderRadius: css.borderRadius, corner: css.getPropertyValue('corner-shape') }
+          })
+          return { x: r.x, y: r.y, width: r.width, height: r.height, dpr: window.devicePixelRatio, parts }
+        })
+        console.error('G2 pixel diagnostic', JSON.stringify({ name, difference, geometry }))
+        await testInfo.attach(`${name}-squircle`, { body: before, contentType: 'image/png' })
+        await testInfo.attach(`${name}-round`, { body: after, contentType: 'image/png' })
+      }
+      expect(difference.max, `${name} 原阈值逐像素差异`).toBeLessThanOrEqual(3)
+    }
 
     // Element Plus 版开关与滑块：直接跳到该页会重新拉取设置（未保存的修改被丢弃），
     // 所以这里直接写根节点属性，只校验 CSS 的生效范围本身。

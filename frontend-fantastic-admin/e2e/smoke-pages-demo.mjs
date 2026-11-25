@@ -87,6 +87,30 @@ async function smokePagesDemo() {
       }
     }
 
+    // Patient analytics uses the same synthetic records as the list.
+    const patientAnalytics = await page.evaluate(async () => {
+      const get = path => fetch(`/proxy/api/v1/${path}`).then(response => response.json())
+      const [summary, missing, groups, confirmed, departments, invalidYear] = await Promise.all([
+        get('patients/analytics/summary'),
+        get('patients/analytics/missing-idcard?page=1&size=1'),
+        get('patients/analytics/multi-record-groups?page=1&size=20&includeSuspected=true'),
+        get('patients/analytics/multi-record-groups?page=1&size=20&includeSuspected=false'),
+        get('statistics/departments'),
+        get('patients/analytics/summary?year=1899'),
+      ])
+      return { summary, missing, groups, confirmed, departments, invalidYear }
+    })
+    assert.equal(patientAnalytics.summary.data.totalRecords, allPatients.length)
+    assert.equal(patientAnalytics.summary.data.missingIdCardRecords, allPatients.filter(row => !row.idCard).length)
+    assert.equal(patientAnalytics.missing.data.total, patientAnalytics.summary.data.missingIdCardRecords)
+    assert.equal(patientAnalytics.missing.data.list.length, 1)
+    assert.equal(patientAnalytics.groups.data.total, 2)
+    assert.equal(patientAnalytics.confirmed.data.total, 1)
+    assert.equal(patientAnalytics.confirmed.data.list[0].matchType, 'IDCARD')
+    assert.match(patientAnalytics.confirmed.data.list[0].maskedIdCard, /^000\*+\d{4}$/)
+    assert.deepEqual(patientAnalytics.departments.data, [...new Set(allPatients.map(row => row.department))].sort())
+    assert.equal(patientAnalytics.invalidYear.code, 400)
+
     // A historical year and type must produce the same rows in details,
     // daily aggregates and the actual downloadable CSV.
     const historical = await page.evaluate(async () => {

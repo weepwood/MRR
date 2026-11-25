@@ -46,6 +46,14 @@ public class ArchiveManifestController {
         return Result.success(service.history(archiveId,before));
     }
 
+    @GetMapping("/compare")
+    public Result<com.zjcxph.imgapi.repository.ArchiveManifestRepository.Comparison> compare(
+            @RequestParam long archiveId, @RequestParam long baseVersion, @RequestParam long targetVersion,
+            HttpServletResponse response) {
+        noStore(response);
+        return Result.success(service.compare(archiveId,baseVersion,targetVersion));
+    }
+
     @GetMapping("/{version}")
     public Result<ArchiveManifestService.Observation> get(@PathVariable long version, HttpServletResponse response) {
         noStore(response);

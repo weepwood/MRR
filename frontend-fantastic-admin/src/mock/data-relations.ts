@@ -41,10 +41,17 @@ function coverage(tableName: string, label: string, total: number, linked: numbe
 
 const key = (value: unknown) => String(value ?? '').trim().replace(/^0+(?=\d)/, '')
 
-function manifest(id: number) {
-  const archive = archives().find(row => row.id === id)
-  if (!archive) { return null }
-  return { version: id, archiveId: id, status: 'COMPLETED', processed: archive.scanCount ?? 0, verified: 0, anomalies: archive.scanCount ?? 0, snapshotCount: archive.scanCount ?? 0, completeDigestAvailable: false, createdAt: hoursAgo(2), updatedAt: hoursAgo(1) }
+const manifestMembers = new Map(demoRecords.patients.map(patient => [patient.id, activeScans(patient.id).map(scan => scan.id)]))
+
+function manifestVersion(version: number) {
+  const archiveId = version > 1000 ? version - 1000 : version
+  const members = manifestMembers.get(archiveId)
+  if (!members) { return null }
+  const ids = version > 1000 ? members : members.slice(0, Math.max(0, members.length - 1))
+  return {
+    ids,
+    observation: { version, archiveId, status: 'COMPLETED', processed: ids.length, verified: 0, anomalies: ids.length, snapshotCount: ids.length, completeDigestAvailable: false, createdAt: hoursAgo(version > 1000 ? 2 : 26), updatedAt: hoursAgo(version > 1000 ? 1 : 25) },
+  }
 }
 
 const demoOrders = [{ id: 1, issueId: 2, scanId: 3, targetArchiveId: 2, status: 'PROPOSED', proposedBy: 2, approvedBy: null }]
@@ -110,29 +117,48 @@ export default defineFakeRoute([
     url: '/api/v1/operations/archive-manifests',
     response: ({ query }) => {
       const id = Number(query?.archiveId)
-      const latest = manifest(id)
+      const latest = manifestVersion(1000 + id)?.observation
       return latest ? demoOk({ enabled: false, latest }) : demoError(404, '演示病案不存在')
     },
   },
   {
     url: '/api/v1/operations/archive-manifests/history',
     response: ({ query }) => {
-      const row = manifest(Number(query?.archiveId))
-      return demoOk(row && (!query?.before || row.version < Number(query.before)) ? [row] : [])
+      const id = Number(query?.archiveId)
+      const rows = [manifestVersion(1000 + id), manifestVersion(id)].flatMap(row => row ? [row.observation] : [])
+      return demoOk(rows.filter(row => !query?.before || row.version < Number(query.before)))
+    },
+  },
+  {
+    url: '/api/v1/operations/archive-manifests/compare',
+    response: ({ query }) => {
+      const archiveId = Number(query?.archiveId)
+      const baseVersion = Number(query?.baseVersion)
+      const targetVersion = Number(query?.targetVersion)
+      if (![archiveId, baseVersion, targetVersion].every(id => Number.isSafeInteger(id) && id > 0) || baseVersion === targetVersion) {
+        return demoError(400, '请选择不同版本')
+      }
+      const base = manifestVersion(baseVersion)
+      const target = manifestVersion(targetVersion)
+      if (!base || !target || base.observation.archiveId !== archiveId || target.observation.archiveId !== archiveId) {
+        return demoError(409, '版本不属于同一病案或不存在')
+      }
+      const unchanged = target.ids.filter(id => base.ids.includes(id)).length
+      return demoOk({ archiveId, baseVersion, targetVersion, baseCount: base.ids.length, targetCount: target.ids.length, added: target.ids.length - unchanged, removed: base.ids.length - unchanged, changed: 0, unchanged, digestComparison: 'UNAVAILABLE' })
     },
   },
   {
     url: '/api/v1/operations/archive-manifests/:version',
     response: ({ params }) => {
-      const row = manifest(Number(params.version))
+      const row = manifestVersion(Number(params.version))?.observation
       return row ? demoOk(row) : demoError(404, '演示版本不存在')
     },
   },
   {
     url: '/api/v1/operations/archive-manifests/:version/anomalies',
-    response: ({ params, query }) => demoOk(activeScans(Number(params.version)).map((scan, i) => ({
+    response: ({ params, query }) => demoOk((manifestVersion(Number(params.version))?.ids ?? []).map((id, i) => ({
       cursor: i + 1,
-      scanId: scan.id,
+      scanId: id,
       status: 'UNVERIFIED',
       bytesRead: 0,
       digestAvailable: false,

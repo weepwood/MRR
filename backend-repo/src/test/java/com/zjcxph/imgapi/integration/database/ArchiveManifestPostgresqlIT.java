@@ -126,6 +126,33 @@ class ArchiveManifestPostgresqlIT extends PostgresqlIntegrationTestSupport {
         assertThat(repo.get(newer)).isPresent();
     }
 
+    @Test
+    void compareFixedMembershipWithoutReadingCurrentScanFacts() {
+        long archive=archive();
+        int changed=scan(archive,1,1), removed=scan(archive,2,1), unchanged=scan(archive,3,1);
+        var repo=new ArchiveManifestRepository(jdbc);
+        long base=repo.create(archive,7L).orElseThrow();
+        assertThat(repo.cancel(base,7L)).isTrue();
+        jdbc.update("UPDATE app.mr_scan SET pages=99 WHERE id=?",changed);
+        jdbc.update("UPDATE app.mr_scan SET uploadflag=0 WHERE id=?",removed);
+        int added=scan(archive,4,1);
+        long target=repo.create(archive,7L).orElseThrow();
+        var comparison=repo.compare(archive,base,target).orElseThrow();
+        assertThat(comparison.baseCount()).isEqualTo(3);
+        assertThat(comparison.targetCount()).isEqualTo(3);
+        assertThat(comparison.added()).isEqualTo(1);
+        assertThat(comparison.removed()).isEqualTo(1);
+        assertThat(comparison.changed()).isEqualTo(1);
+        assertThat(comparison.unchanged()).isEqualTo(1);
+        assertThat(comparison.digestComparison()).isEqualTo("UNAVAILABLE");
+        jdbc.update("UPDATE app.mr_scan SET pages=100 WHERE id IN (?,?)",unchanged,added);
+        assertThat(repo.compare(archive,base,target)).contains(comparison);
+        assertThat(repo.compare(archive+999,base,target)).isEmpty();
+        assertThat(repo.compare(archive,base,base)).isEmpty();
+        jdbc.update("UPDATE app.mrr_archive_manifest SET snapshot_count=NULL WHERE id=?",base);
+        assertThat(repo.compare(archive,base,target)).isEmpty();
+    }
+
     private long archive() {
         return jdbc.queryForObject("INSERT INTO app.mr_archive(bah) VALUES ('123456') RETURNING id", Long.class);
     }

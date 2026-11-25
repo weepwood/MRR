@@ -47,3 +47,20 @@ export function getManifestHistory(archiveId: number, before?: number) {
 export function getManifestVersion(version: number) {
   return getRequest<ManifestObservation>(`${base}/${version}`)
 }
+
+export interface ManifestComparison {
+  archiveId: number
+  baseVersion: number
+  targetVersion: number
+  baseCount: number
+  targetCount: number
+  added: number
+  removed: number
+  changed: number
+  unchanged: number
+  digestComparison: 'SAME' | 'DIFFERENT' | 'UNAVAILABLE'
+}
+
+export function getManifestComparison(archiveId: number, baseVersion: number, targetVersion: number) {
+  return getRequest<ManifestComparison>(`${base}/compare`, { params: { archiveId, baseVersion, targetVersion } })
+}

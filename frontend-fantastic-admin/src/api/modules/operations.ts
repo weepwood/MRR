@@ -463,3 +463,23 @@ export function getNginxRuntime(signal?: AbortSignal) {
 export function getNginxLogTail(kind: 'access' | 'error', signal?: AbortSignal) {
   return unwrap(getRequest<NginxLogTail>('/api/v1/operations/nginx/logs', { params: { kind, limit: 50 }, signal, skipGlobalError: true }), 'Nginx 脱敏日志')
 }
+
+export interface NginxVersion {
+  state: string
+  version: string | null
+  observedAt: string
+}
+
+export interface NginxListenerHints {
+  state: string
+  ports: number[]
+  observedAt: string
+}
+
+export function getNginxListenerHints(signal?: AbortSignal) {
+  return unwrap(getRequest<NginxListenerHints>('/api/v1/operations/nginx/listener-hints', { signal, skipGlobalError: true }), 'Nginx 监听文本提示')
+}
+
+export function readNginxVersion(signal?: AbortSignal) {
+  return unwrap(postRequest<NginxVersion>('/api/v1/operations/nginx/version', undefined, { signal, retry: false, skipGlobalError: true }), 'Nginx 安装程序版本')
+}

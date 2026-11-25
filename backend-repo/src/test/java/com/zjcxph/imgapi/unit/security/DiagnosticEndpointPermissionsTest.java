@@ -26,6 +26,30 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 class DiagnosticEndpointPermissionsTest {
     @Test
+    void nginxVersionRequiresManageAndListenerHintsReadOnly() throws Exception {
+        var service=mock(NginxConfigurationDiagnostics.class);
+        var controller=new com.zjcxph.imgapi.controller.NginxConfigurationDiagnosticsController(service);
+        var auth=new AuthorizationInterceptor();
+        var version=new HandlerMethod(controller,controller.getClass().getMethod("version",jakarta.servlet.http.HttpServletResponse.class));
+        var hints=new HandlerMethod(controller,controller.getClass().getMethod("listenerHints",jakarta.servlet.http.HttpServletResponse.class));
+        for(var permissions:List.of(List.<String>of(),List.of("system:read"),List.of("log:read"))) {
+            var response=new MockHttpServletResponse();
+            assertThat(auth.preHandle(request("POST","/api/v1/operations/nginx/version",permissions),response,version)).isFalse();
+            assertThat(response.getStatus()).isEqualTo(403);
+        }
+        assertThat(auth.preHandle(request("POST","/api/v1/operations/nginx/version",List.of("system:manage")),new MockHttpServletResponse(),version)).isTrue();
+        var denied=new MockHttpServletResponse();
+        assertThat(auth.preHandle(request("GET","/api/v1/operations/nginx/listener-hints",List.of("log:read")),denied,hints)).isFalse();
+        assertThat(auth.preHandle(request("GET","/api/v1/operations/nginx/listener-hints",List.of("system:read")),new MockHttpServletResponse(),hints)).isTrue();
+        verifyNoInteractions(service);
+        var response=new MockHttpServletResponse();
+        controller.version(response);
+        controller.listenerHints(response);
+        verify(service).version();verify(service).listenerHints();
+        assertThat(response.getHeader("Cache-Control")).isEqualTo("private, no-store");
+    }
+
+    @Test
     void nginxLogsRequireSystemAndLogReadAndNeverCache() throws Exception {
         var service=mock(NginxRuntimeObservation.class);
         var controller=new com.zjcxph.imgapi.controller.NginxRuntimeObservationController(service);

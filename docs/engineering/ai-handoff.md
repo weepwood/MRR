@@ -402,6 +402,10 @@
 
 - 后续 feat/v1.1-nginx-observation 基于 #808 830ff23a，详见 [Nginx运行观察](v1.1-nginx-runtime-observation.md)：固定PID/程序时点核对，64KiB日志白名单字段投影，默认关闭，双日志权限，无启停、重载、原文或网络探测。25后端、3组件、15 Chromium（含预热），190/228 Mock；#808父PR完整候选仍运行，不重复创建依赖PR。main冻结，Windows现场、版本和监听未验收。
 
+## 19 V1.1 Nginx安装版本与监听文本（2026-11-25）
+
+- 上一轮48f41634远端推送与Pages静态冒烟已核实。后续新增固定 -v、与 -t 共享许可及有界版本投影；主配置仅提取数字listen文本提示，不能视作生效监听。后端28/28、最新权限16/16（重叠）、组件13/13、Chromium2/2含预热，严格Mock192/230。详见 [Nginx专项](v1.1-nginx-runtime-observation.md)。#808完整候选仍运行，main冻结，SCM及实际Windows现场仍待。
+
 ## 每轮交接模板
 
 - 更新时间、任务、风险、目标及非目标：

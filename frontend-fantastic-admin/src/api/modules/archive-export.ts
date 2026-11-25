@@ -1,5 +1,5 @@
 import type { AxiosRequestConfig } from 'axios'
-import { ARCHIVE_EXPORT_MAX_BYTES, ArchiveExportBudgetError, requireArchiveExportBlob } from '@/utils/archive-export-budget'
+import { ARCHIVE_EXPORT_MAX_BYTES, ArchiveExportBudgetError, ArchiveExportIntegrityError, requireArchiveExportBlob } from '@/utils/archive-export-budget'
 import api, { getRequest, postRequest } from '../index'
 
 export type ArchiveExportMode = 'CLIENT_PDF' | 'BACKEND_STREAM' | 'BACKEND_JOB'
@@ -123,11 +123,40 @@ async function downloadWithinBudget(request: (config: AxiosRequestConfig) => Pro
   }
 }
 
-export function downloadArchiveExportJob(id: string, range?: string): Promise<Blob> {
+export interface ArchiveExportRepresentation {
+  bytes: number
+  sha256?: string
+}
+
+export function downloadArchiveExportJob(id: string, range?: string, representation?: ArchiveExportRepresentation): Promise<Blob> {
+  const digest = representation?.sha256
+  const tag = digest && /^[a-f0-9]{64}$/i.test(digest) ? `"${digest}"` : undefined
+  let integrityError: ArchiveExportIntegrityError | undefined
   return downloadWithinBudget(config => api.get<Blob, Blob>(`/api/v1/archive-exports/jobs/${encodeURIComponent(id)}/download`, {
     ...config,
-    headers: range ? { Range: range } : undefined,
-  }))
+    headers: range ? { Range: range, ...(tag ? { 'If-Range': tag } : {}) } : undefined,
+    // Inspect HTTP metadata before the shared interceptor unwraps the Blob.
+    // Preserve non-2xx responses for the existing permission/error handler.
+    ...(representation
+      ? { transformResponse: [(data, headers, status) => {
+          if (status == null || status < 200 || status >= 300) { return data }
+          if (tag && headers.get('etag') !== tag) { integrityError = new ArchiveExportIntegrityError('导出文件版本已变化，请刷新任务后重试') }
+          if (range) {
+            const match = /^bytes=(\d+)-(\d+)$/.exec(range)
+            if (!match || status !== 206 || headers.get('content-range') !== `bytes ${match[1]}-${match[2]}/${representation.bytes}`) {
+              integrityError ??= new ArchiveExportIntegrityError('导出区间响应与任务不一致，请刷新任务后重试')
+            }
+          }
+          else if (status !== 200) {
+            integrityError ??= new ArchiveExportIntegrityError('导出文件响应不完整')
+          }
+          return data
+        }] }
+      : {}),
+  })).then((blob) => {
+    if (integrityError) { throw integrityError }
+    return blob
+  })
 }
 
 export function downloadArchiveZip(bah?: string, sjh?: string): Promise<Blob> {

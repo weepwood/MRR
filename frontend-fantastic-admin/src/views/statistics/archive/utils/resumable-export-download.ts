@@ -1,10 +1,9 @@
 import type { ArchiveExportJob } from '@/api/modules/archive-export'
 import { downloadArchiveExportJob } from '@/api/modules/archive-export'
-import { ArchiveExportBudgetError, requireArchiveExportSize } from '@/utils/archive-export-budget'
+import { ArchiveExportBudgetError, ArchiveExportIntegrityError, requireArchiveExportSize } from '@/utils/archive-export-budget'
 import { isRequestCanceled } from '@/utils/request-retry'
 
 const DOWNLOAD_CHUNK_BYTES = 8 * 1024 * 1024
-const PREFIX_VERIFY_BYTES = 64 * 1024
 
 interface FileSystemWritableFileStreamLike {
   write: (data: Blob | { type: 'write', position: number, data: Blob }) => Promise<void>
@@ -65,29 +64,28 @@ function assertCurrent(isCurrent: () => boolean) {
   }
 }
 
-async function hasMatchingPrefix(jobId: string, existingFile: File, isCurrent: () => boolean): Promise<boolean> {
-  assertCurrent(isCurrent)
-  if (existingFile.size <= 0) {
-    return true
-  }
-  const verifyLength = Math.min(existingFile.size, PREFIX_VERIFY_BYTES)
-  const [localBuffer, remoteBlob] = await Promise.all([
-    readBlobAsArrayBuffer(existingFile.slice(0, verifyLength)),
-    downloadArchiveExportJob(jobId, `bytes=0-${verifyLength - 1}`),
-  ])
-  assertCurrent(isCurrent)
-  if (remoteBlob.size !== verifyLength) {
-    return false
-  }
-  const local = new Uint8Array(localBuffer)
-  const remote = new Uint8Array(await readBlobAsArrayBuffer(remoteBlob))
-  assertCurrent(isCurrent)
-  if (local.length !== remote.length) {
-    return false
-  }
-  for (let index = 0; index < local.length; index++) {
-    if (local[index] !== remote[index]) {
-      return false
+function representation(job: ArchiveExportJob) {
+  return { bytes: job.outputBytes, sha256: job.sha256 }
+}
+
+async function hasMatchingPrefix(job: ArchiveExportJob, existingFile: File, isCurrent: () => boolean): Promise<boolean> {
+  // Verify every existing byte, not just the first block. At most two 8 MiB
+  // buffers are compared at once, without changing the selected local file.
+  for (let offset = 0; offset < existingFile.size; offset += DOWNLOAD_CHUNK_BYTES) {
+    assertCurrent(isCurrent)
+    const end = Math.min(existingFile.size, offset + DOWNLOAD_CHUNK_BYTES)
+    const [localBuffer, remoteBlob] = await Promise.all([
+      readBlobAsArrayBuffer(existingFile.slice(offset, end)),
+      downloadArchiveExportJob(job.id, `bytes=${offset}-${end - 1}`, representation(job)),
+    ])
+    assertCurrent(isCurrent)
+    if (remoteBlob.size !== end - offset) { throw new ArchiveExportIntegrityError('导出前缀响应长度不一致') }
+    const local = new Uint8Array(localBuffer)
+    const remote = new Uint8Array(await readBlobAsArrayBuffer(remoteBlob))
+    assertCurrent(isCurrent)
+    if (local.length !== remote.length) { return false }
+    for (let index = 0; index < local.length; index++) {
+      if (local[index] !== remote[index]) { return false }
     }
   }
   return true
@@ -96,7 +94,7 @@ async function hasMatchingPrefix(jobId: string, existingFile: File, isCurrent: (
 async function downloadAsBlob(job: ArchiveExportJob, fileName: string, isCurrent: () => boolean): Promise<'blob'> {
   assertCurrent(isCurrent)
   const expectedBytes = requireArchiveExportSize(job.outputBytes)
-  const blob = await downloadArchiveExportJob(job.id)
+  const blob = await downloadArchiveExportJob(job.id, undefined, representation(job))
   assertCurrent(isCurrent)
   if (!(blob instanceof Blob) || blob.size <= 0) {
     throw new Error('服务器返回的导出文件为空')
@@ -177,7 +175,7 @@ export async function downloadExportJobWithResume(job: ArchiveExportJob, isCurre
     originalSize = existingFile.size
 
     // 文件不是当前任务的有效前缀时，不修改用户选择的原文件，直接走普通下载。
-    if (originalSize > totalBytes || !(await hasMatchingPrefix(job.id, existingFile, isCurrent))) {
+    if (originalSize > totalBytes || !(await hasMatchingPrefix(job, existingFile, isCurrent))) {
       return downloadAsBlob(job, fileName, isCurrent)
     }
 
@@ -189,10 +187,10 @@ export async function downloadExportJobWithResume(job: ArchiveExportJob, isCurre
       assertCurrent(isCurrent)
       const end = Math.min(totalBytes - 1, offset + DOWNLOAD_CHUNK_BYTES - 1)
       const expectedLength = end - offset + 1
-      const chunk = await downloadArchiveExportJob(job.id, `bytes=${offset}-${end}`)
+      const chunk = await downloadArchiveExportJob(job.id, `bytes=${offset}-${end}`, representation(job))
       assertCurrent(isCurrent)
       if (!(chunk instanceof Blob) || chunk.size !== expectedLength) {
-        throw new Error(`断点下载区间长度不一致：期望 ${expectedLength}，实际 ${chunk instanceof Blob ? chunk.size : 0}`)
+        throw new ArchiveExportIntegrityError(`断点下载区间长度不一致：期望 ${expectedLength}，实际 ${chunk instanceof Blob ? chunk.size : 0}`)
       }
       await writable.write({ type: 'write', position: offset, data: chunk })
       assertCurrent(isCurrent)
@@ -210,7 +208,7 @@ export async function downloadExportJobWithResume(job: ArchiveExportJob, isCurre
     const restored = await restoreWritable()
     // 普通网络错误也可能在操作失效后返回；恢复等待期间同样可能切页。
     assertCurrent(isCurrent)
-    if (error instanceof ArchiveExportBudgetError || (error as { name?: string })?.name === 'AbortError' || isRequestCanceled(error)
+    if (error instanceof ArchiveExportBudgetError || error instanceof ArchiveExportIntegrityError || (error as { name?: string })?.name === 'AbortError' || isRequestCanceled(error)
       || (error as { response?: { status?: number } })?.response?.status !== undefined) {
       throw error
     }

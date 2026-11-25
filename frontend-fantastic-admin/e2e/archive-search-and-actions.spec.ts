@@ -97,3 +97,49 @@ test('底部操作区：选中数量只显示一次，选择前三项导出禁�
   })
   expect(overflow).toBe(false)
 })
+
+test('异步导出下载拒绝过期内容版本，手动重试正确版本后保存', async ({ page }) => {
+  await mockArchive(page)
+  await page.addInitScript(() => Object.defineProperty(window, 'showSaveFilePicker', { configurable: true, value: undefined }))
+  const id = 'synthetic-representation-job'
+  const sha256 = 'a'.repeat(64)
+  const payload = Buffer.from('synthetic-export')
+  const job = {
+    id,
+    format: 'ZIP',
+    scope: 'SELECTED_IMAGES',
+    plannedCount: 1,
+    processedCount: 1,
+    failedCount: 0,
+    estimatedBytes: payload.length,
+    outputBytes: payload.length,
+    sha256,
+    cancelRequested: false,
+    fileName: 'synthetic.zip',
+  }
+  await page.route('**/api/v1/archive-exports/jobs', route => route.fulfill({ json: reply({ ...job, status: 'PENDING' }) }))
+  await page.route(`**/api/v1/archive-exports/jobs/${id}`, route => route.fulfill({ json: reply({ ...job, status: 'SUCCESS' }) }))
+  let downloads = 0
+  let matching = false
+  await page.route(`**/api/v1/archive-exports/jobs/${id}/download`, (route) => {
+    downloads++
+    return route.fulfill({ status: 200, contentType: 'application/zip', headers: { etag: `"${matching ? sha256 : 'b'.repeat(64)}"` }, body: payload })
+  })
+  let saved = 0
+  page.on('download', () => { saved++ })
+  await page.goto('/archive?bah=00009401')
+  await page.locator('.thumb-check').first().click()
+  await page.getByRole('button', { name: /导出选中 ZIP（1）/ }).click()
+  await expect(page.getByText('导出文件已生成，但下载未完成：导出文件版本已变化，请刷新任务后重试', { exact: true })).toBeVisible()
+  expect(downloads).toBe(1)
+  expect(saved).toBe(0)
+  matching = true
+  const result = page.waitForEvent('download')
+  await page.getByRole('button', { name: '重新下载选中 ZIP', exact: true }).click()
+  const download = await result
+  const stream = await download.createReadStream()
+  const chunks = []
+  for await (const chunk of stream) { chunks.push(chunk) }
+  expect(Buffer.concat(chunks)).toEqual(payload)
+  expect(downloads).toBe(2)
+})

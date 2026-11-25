@@ -378,6 +378,10 @@
 
 - [专项记录](v1.1-storage-circuit-history.md)：既有状态机脱敏事件采集、UUID+sequence去重、七天有界历史；PG12/12、权限12/12、组件3/3、Chromium14/14及静态冒烟通过。#806 候选build通过，Windows恢复待确认；main冻结。
 
+## 13 V1.1 导出版本与断点校验（2026-11-25）
+
+- #806 完整候选及Windows恢复通过，已合并 integration/v1.1 c3e6bdba。上一轮熔断历史已推送9966fb50。新增 [导出版本与断点校验](v1.1-export-representation.md)，全部已有前缀分块核验、If-Range/ETag/Content-Range及总长度校验，保留128MiB预算与权限。61 Vitest、4 Chromium（含预热）通过。后续集中PR基于c3e6bdba，main冻结。
+
 ## 每轮交接模板
 
 - 更新时间、任务、风险、目标及非目标：

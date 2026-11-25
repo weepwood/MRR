@@ -50,5 +50,13 @@ test('演示病案完整性显示固定成员与版本，写操作关闭', async
   await expect(page.getByText(/固定成员 2 \/ 2/)).toBeVisible()
   await expect(page.getByText('后台校验功能尚未启用')).toBeVisible()
   await expect(page.getByRole('button', { name: '开始校验', exact: true })).toHaveCount(0)
+  await page.getByRole('combobox', { name: '完整性比较基准版本' }).selectOption('1')
+  await page.getByRole('button', { name: '比较版本', exact: true }).click()
+  await expect(page.getByText('新增成员', { exact: true })).toBeVisible()
+  await expect(page.getByText('完整摘要不可比较', { exact: false })).toBeVisible()
+  const downloadPromise = page.waitForEvent('download')
+  await page.getByRole('button', { name: '下载比较摘要 JSON' }).click()
+  const download = await downloadPromise
+  expect(download.suggestedFilename()).toBe('manifest-comparison-1-1001.json')
   await page.screenshot({ path: test.info().outputPath('manifest-workbench.png'), fullPage: true })
 })

@@ -68,6 +68,13 @@ public class ArchiveManifestService {
         return repository.history(archiveId,before).stream().map(Observation::from).toList();
     }
 
+    public ArchiveManifestRepository.Comparison compare(long archiveId, long baseVersion, long targetVersion) {
+        if (archiveId <= 0 || baseVersion <= 0 || targetVersion <= 0 || baseVersion == targetVersion)
+            throw new BusinessException(400, "请选择同一病案的两个不同版本");
+        return repository.compare(archiveId,baseVersion,targetVersion)
+                .orElseThrow(() -> new BusinessException(409, "版本不存在、已清理或不具备完整固定成员快照"));
+    }
+
     @Scheduled(fixedDelay = 3600000, initialDelay = 3600000)
     public void pruneHistory() {
         if (enabled && !readiness.isReadOnly() && !maintenance.isEnabled()) repository.pruneExpired(90);

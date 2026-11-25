@@ -579,7 +579,7 @@ onMounted(loadData)
       description="管理系统账号、注册申请审核、角色、凭据状态、启停状态与最近登录信息。"
     />
 
-    <section v-if="hasMetricActivity" class="mrr-metric-grid">
+    <section v-if="hasMetricActivity" class="mrr-metric-grid mrr-metric-grid--header-aligned">
       <MrrMetricCard v-for="item in summaryCards" :key="item.label" v-bind="item" />
     </section>
 

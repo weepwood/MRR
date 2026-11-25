@@ -659,3 +659,7 @@
 - 基线 30b8b550。系统设置、帮助中心迁入 MrrPageHeader + fluid MrrPageShell，其他后台页删除 size 分档；page-header.css 收口唯一几何。保留保存/重置/重新加载、权限状态、长说明、实时元信息与 plain/card 风格。独立登录、强制改密、公开状态和外部任务页保留专用壳。
 - 实际 26 路由 × Chromium/WebKit = 52 组几何；2400px 视口下均1720px宽、x=456、22px标题/13px描述/上下16px/左右20px，无溢出；设置、用户、帮助等90.39px高。数据关系说明及日志/错误中心元信息自然增高。用户、设置、帮助四主题五宽度共60组截图及几何通过。39/39浏览器用例（含预热），91/91定向单测，类型、生产构建与Chrome86静态门禁通过；存量103处color-mix提示、31处选择器、1处容器查询及8处动效时长提示。未执行真实Chrome86、全站四主题窄屏矩阵或全量Linux验收。
 - 证据 /tmp/mrr-header-unify-{browser,visual,unit,tsc-final,build,chrome86}.log；截图 /tmp/mrr-header-unify-screenshots。仅本地提交，9037持续运行，9041测试隔离，禁止推送/合并/发布。
+
+## 用户管理指标卡等高试验（2026-11-26）
+
+仅用户管理页 opt-in `mrr-metric-grid--header-aligned`，card 页头模式下指标卡最小高度按公共页头的单行标题/说明、留白及边框计算；图标块44→40px，上下留白16→8px，缩小标签与说明间距，保留26px数值、12px说明及本页口径徽标。2400/1440px 下实测页头与四卡均90.39px（旧指标卡110px）；Chromium/WebKit × MRR/GR8R 明暗 × 2400/1440/1024/760/375共40组，未发现内容溢出；窄屏自然增高，不强制等高。其他页面和plain模式不变。用户尚未确认推广，不视为全站标准；未执行全量回归或Chrome86实机测试。证据 /tmp/mrr-user-metrics-trial.log、/tmp/mrr-user-metrics-trial-webkit.log、/tmp/mrr-user-metrics-before.png、/tmp/mrr-user-metrics-after-*.png。9037已打开用户管理，禁止远端操作。

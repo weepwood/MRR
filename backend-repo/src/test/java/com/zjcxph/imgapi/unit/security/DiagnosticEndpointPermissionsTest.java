@@ -25,6 +25,44 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 class DiagnosticEndpointPermissionsTest {
+    @Test
+    void nginxCheckRequiresBothOperationsPermissions() throws Exception {
+        var service = mock(NginxConfigurationDiagnostics.class);
+        var controller = new com.zjcxph.imgapi.controller.NginxConfigurationDiagnosticsController(service);
+        var handler = new HandlerMethod(controller,controller.getClass().getMethod("check",jakarta.servlet.http.HttpServletResponse.class));
+        var authorization = new AuthorizationInterceptor();
+        String path = "/api/v1/operations/nginx/check";
+        for (var permissions : List.of(List.of("system:read"),List.of("system:manage"),List.of("log:read"))) {
+            var response = new MockHttpServletResponse();
+            assertThat(authorization.preHandle(request("POST",path,permissions),response,handler)).isFalse();
+            assertThat(response.getStatus()).isEqualTo(403);
+        }
+        assertThat(authorization.preHandle(request("POST",path,List.of("system:read","system:manage")),
+                new MockHttpServletResponse(),handler)).isTrue();
+        verifyNoInteractions(service);
+    }
+
+    @Test
+    void operationsHistoryRequiresReadPermissionAndNoStore() throws Exception {
+        var service = mock(OperationsHistoryService.class);
+        var controller = new com.zjcxph.imgapi.controller.OperationsHistoryController(service);
+        var handler = new HandlerMethod(controller, controller.getClass().getMethod("history",int.class,jakarta.servlet.http.HttpServletResponse.class));
+        var auth = new AuthorizationInterceptor();
+        var path = "/api/v1/operations/history";
+        var anonymous = new MockHttpServletResponse();
+        assertThat(auth.preHandle(new MockHttpServletRequest("GET",path),anonymous,handler)).isFalse();
+        assertThat(anonymous.getStatus()).isEqualTo(401);
+        var forbidden = new MockHttpServletResponse();
+        assertThat(auth.preHandle(request("GET",path,List.of("record:read")),forbidden,handler)).isFalse();
+        assertThat(forbidden.getStatus()).isEqualTo(403);
+        assertThat(auth.preHandle(request("GET",path,List.of("system:read")),new MockHttpServletResponse(),handler)).isTrue();
+        verifyNoInteractions(service);
+        var response = new MockHttpServletResponse();
+        controller.history(24,response);
+        verify(service).history(24);
+        assertThat(response.getHeader("Cache-Control")).isEqualTo("private, no-store");
+    }
+
     @Test void anonymousRequestGets401WithoutExistenceEvidence() throws Exception {
         var login = new LoginInterceptor(mock(TokenBlacklist.class), mock(AuthUserMapper.class), mock(DeveloperModeService.class), mock(DeveloperApiAccessService.class));
         var response = new MockHttpServletResponse();

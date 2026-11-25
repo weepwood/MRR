@@ -61,6 +61,36 @@ public class OperationsCenterService {
         httpSource = http; nginxSource = nginx; ossSource = oss;
     }
 
+    /** Read only cached readiness, JVM and in-process storage counters; no new source probes or scan queries. */
+    public com.zjcxph.imgapi.repository.OperationsHistoryRepository.Sample historySample(Instant sampledAt) {
+        Map<String,Object> ready = effectiveReadiness(readinessService.getSnapshot());
+        Instant checkedAt = Instant.parse(String.valueOf(ready.get("checkedAt")));
+        if (Instant.EPOCH.equals(checkedAt) || checkedAt.isAfter(sampledAt)) return null;
+        var checks = castChecks(ready.get("checks"));
+        int critical = (int) checks.stream().filter(c -> "CRITICAL".equals(c.get("severity"))
+                && !Boolean.TRUE.equals(c.get("passed"))).count();
+        Long bytes = checks.stream().filter(c -> "scan-code-key-indexes".equals(c.get("code")))
+                .map(this::safeOverviewDetails).map(c -> c.get("totalBytes"))
+                .filter(Number.class::isInstance).map(Number.class::cast).map(Number::longValue)
+                .findFirst().orElse(null);
+        Map<String,Object> runtime = runtimeInfo();
+        Integer open = null, waiting = null;
+        if (nasSource != null && httpSource != null && nginxSource != null && ossSource != null) {
+            open = 0; waiting = 0;
+            for (var source : List.of(nasSource.runtimeSnapshot(), httpSource.runtimeSnapshot(),
+                    nginxSource.runtimeSnapshot(), ossSource.runtimeSnapshot())) {
+                if (!(source.get("nodes") instanceof List<?> nodes) || !(source.get("waiting") instanceof Number count)) {
+                    open = null; waiting = null; break;
+                }
+                open += (int) nodes.stream().filter(n -> n instanceof Map<?,?> m && "OPEN".equals(m.get("state"))).count();
+                waiting += count.intValue();
+            }
+        }
+        return new com.zjcxph.imgapi.repository.OperationsHistoryRepository.Sample(sampledAt,checkedAt,
+                String.valueOf(ready.get("mode")),critical,((Number)runtime.get("heapUsedBytes")).longValue(),
+                ((Number)runtime.get("heapMaxBytes")).longValue(),bytes,open,waiting);
+    }
+
     public Map<String, Object> overview() {
         Map<String, Object> readiness = overviewReadiness(effectiveReadiness(readinessService.getSnapshot()));
         Long recentErrors = recentServerErrorCount();

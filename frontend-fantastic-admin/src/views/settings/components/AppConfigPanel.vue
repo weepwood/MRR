@@ -396,20 +396,21 @@ function handleReset() {
               <small>智能选择会根据可访问菜单数量自动判断。</small>
             </div>
             <div class="button-options">
-              <FaButton
+              <el-button
                 v-for="(item, index) in [
                   { label: '切换', value: 'switch' },
                   { label: '跳转', value: 'jump' },
                   { label: '智能选择', value: 'smart' },
                 ]"
                 :key="index"
-                :variant="settingsStore.settings.menu.mainMenuClickMode === item.value ? 'default' : 'outline'"
+                :type="settingsStore.settings.menu.mainMenuClickMode === item.value ? 'primary' : 'default'"
+                :auto-insert-space="false"
                 :aria-pressed="settingsStore.settings.menu.mainMenuClickMode === item.value"
-                size="sm"
+                size="small"
                 @click="settingsStore.settings.menu.mainMenuClickMode = (item.value as any)"
               >
                 {{ item.label }}
-              </FaButton>
+              </el-button>
             </div>
           </div>
 
@@ -451,20 +452,21 @@ function handleReset() {
               <small>控制滚动页面时顶栏的显示方式。</small>
             </div>
             <div class="button-options">
-              <FaButton
+              <el-button
                 v-for="(item, index) in [
                   { label: '静止', value: 'static' },
                   { label: '固定', value: 'fixed' },
                   { label: '粘性', value: 'sticky' },
                 ]"
                 :key="index"
-                :variant="settingsStore.settings.topbar.mode === item.value ? 'default' : 'outline'"
+                :type="settingsStore.settings.topbar.mode === item.value ? 'primary' : 'default'"
+                :auto-insert-space="false"
                 :aria-pressed="settingsStore.settings.topbar.mode === item.value"
-                size="sm"
+                size="small"
                 @click="settingsStore.settings.topbar.mode = (item.value as any)"
               >
                 {{ item.label }}
-              </FaButton>
+              </el-button>
             </div>
           </div>
         </div>
@@ -582,7 +584,7 @@ function handleReset() {
               <div class="label-copy">
                 <strong>主页名称</strong>
               </div>
-              <FaInput v-model="settingsStore.settings.home.title" />
+              <el-input v-model="settingsStore.settings.home.title" class="appearance-field" aria-label="主页名称" />
             </div>
           </div>
         </div>
@@ -603,25 +605,25 @@ function handleReset() {
               <div class="label-copy">
                 <strong>日期</strong>
               </div>
-              <FaInput v-model="settingsStore.settings.copyright.dates" :disabled="!settingsStore.settings.copyright.enable" />
+              <el-input v-model="settingsStore.settings.copyright.dates" :disabled="!settingsStore.settings.copyright.enable" class="appearance-field" aria-label="日期" />
             </div>
             <div class="setting-item">
               <div class="label-copy">
                 <strong>公司</strong>
               </div>
-              <FaInput v-model="settingsStore.settings.copyright.company" :disabled="!settingsStore.settings.copyright.enable" />
+              <el-input v-model="settingsStore.settings.copyright.company" :disabled="!settingsStore.settings.copyright.enable" class="appearance-field" aria-label="公司" />
             </div>
             <div class="setting-item">
               <div class="label-copy">
                 <strong>网址</strong>
               </div>
-              <FaInput v-model="settingsStore.settings.copyright.website" :disabled="!settingsStore.settings.copyright.enable" />
+              <el-input v-model="settingsStore.settings.copyright.website" :disabled="!settingsStore.settings.copyright.enable" class="appearance-field" aria-label="网址" />
             </div>
             <div class="setting-item">
               <div class="label-copy">
                 <strong>备案号</strong>
               </div>
-              <FaInput v-model="settingsStore.settings.copyright.beian" :disabled="!settingsStore.settings.copyright.enable" />
+              <el-input v-model="settingsStore.settings.copyright.beian" :disabled="!settingsStore.settings.copyright.enable" class="appearance-field" aria-label="备案号" />
             </div>
           </div>
         </div>
@@ -1107,6 +1109,17 @@ function handleReset() {
 
 .setting-item > :not(.label-copy) {
   max-width: 100%;
+}
+
+/* Preserve the existing 200px field column rather than ElInput's default 100% width. */
+.appearance-field {
+  width: 200px;
+  max-width: 100%;
+}
+
+/* The existing flex gap is the only spacing owner for this option group. */
+.button-options :deep(.el-button + .el-button) {
+  margin-left: 0;
 }
 
 .button-options {

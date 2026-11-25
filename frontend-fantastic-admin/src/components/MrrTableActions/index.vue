@@ -7,6 +7,7 @@ const props = withDefaults(defineProps<{
   actions: MrrTableAction[]
   maxInline?: number
   moreLabel?: string
+  appearance?: 'quiet' | 'default'
   permissionChecker?: (permission: string | string[]) => boolean
 }>(), {
   maxInline: 2,
@@ -64,7 +65,7 @@ defineExpose({ availableActions, inlineActions, overflowActions })
 </script>
 
 <template>
-  <div v-if="availableActions.length" class="mrr-table-actions" @click.stop>
+  <div v-if="availableActions.length" class="mrr-table-actions" :class="{ 'mrr-table-actions--quiet': props.appearance === 'quiet' }" @click.stop>
     <el-tooltip
       v-for="action in inlineActions"
       :key="action.key"
@@ -261,5 +262,20 @@ defineExpose({ availableActions, inlineActions, overflowActions })
   .mrr-table-actions__button--danger {
     background: var(--mrr-tone-danger-soft);
   }
+}
+
+/* Quiet rows: same footprint and icon weight; destructive/approval colors remain semantic. */
+.mrr-table-actions--quiet .mrr-table-actions__button {
+  background: transparent;
+  border-radius: var(--mrr-radius-sm);
+}
+
+.mrr-table-actions--quiet .mrr-table-actions__button--primary {
+  color: var(--mrr-muted-foreground);
+}
+
+.mrr-table-actions--quiet .mrr-table-actions__button:not(.is-disabled):hover,
+.mrr-table-actions--quiet .mrr-table-actions__button:not(.is-disabled):focus-visible {
+  background: var(--mrr-muted);
 }
 </style>

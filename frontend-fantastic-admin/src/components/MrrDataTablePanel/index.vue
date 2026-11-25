@@ -11,6 +11,7 @@ const props = defineProps<{
   icon?: string
   count?: number
   countLabel?: string
+  appearance?: 'quiet' | 'default'
   /**
    * 已有结果上的再次查询（刷新、翻页、改条件）。保留表格，200ms 后在表格上方显示进度条并把结果变暗。
    * 首次加载请继续在默认插槽里放 AppLoading 骨架；两者可以同时为真。
@@ -53,6 +54,7 @@ watch(() => props.resultKey, (next, previous) => {
 
 <template>
   <MrrSectionCard
+    :class="{ 'mrr-data-table-panel--quiet': props.appearance === 'quiet' }"
     :title="props.title"
     :description="props.description"
     :icon="props.icon"
@@ -227,6 +229,72 @@ watch(() => props.resultKey, (next, previous) => {
   .mrr-data-table-panel__pagination {
     justify-content: flex-start;
     padding-inline: var(--mrr-card-inset-compact);
+  }
+}
+
+/* Quiet: a single surface with aligned content, not a card inside a card.
+ * Opt-in until visual and business acceptance; shared interaction stays intact. */
+.mrr-data-table-panel--quiet :deep(.el-card__header) {
+  padding-block: var(--mrr-space-3);
+  background: var(--mrr-card);
+  border-bottom: 0;
+}
+
+.mrr-data-table-panel--quiet .mrr-data-table-panel__filters {
+  padding-top: 0;
+}
+
+.mrr-data-table-panel--quiet .mrr-data-table-panel__filters :deep(.mrr-filter-bar--embedded) {
+  padding-bottom: var(--mrr-space-3);
+  border-bottom: 0;
+}
+
+.mrr-data-table-panel--quiet .mrr-data-table-panel__content {
+  padding-block: 0;
+  padding-inline: 0;
+}
+
+.mrr-data-table-panel--quiet .mrr-data-table-panel__content :deep(.el-table) {
+  --el-table-header-bg-color: var(--mrr-card);
+  --el-table-border-color: var(--mrr-shell-divider);
+
+  border-radius: 0;
+}
+
+.mrr-data-table-panel--quiet .mrr-data-table-panel__content :deep(.el-table th.el-table__cell) {
+  height: 36px;
+  background: var(--mrr-card);
+  border-top: 1px solid var(--mrr-shell-divider);
+}
+
+.mrr-data-table-panel--quiet .mrr-data-table-panel__content :deep(.el-table td.el-table__cell) {
+  height: 52px;
+}
+
+.mrr-data-table-panel--quiet .mrr-data-table-panel__content :deep(.el-table tr > .el-table__cell:first-child > .cell) {
+  padding-left: var(--mrr-card-inset);
+}
+
+.mrr-data-table-panel--quiet .mrr-data-table-panel__content :deep(.el-table__inner-wrapper::before) {
+  display: none;
+}
+
+.mrr-data-table-panel--quiet .mrr-data-table-panel__content :deep(.el-table__body tr:last-child > td.el-table__cell) {
+  border-bottom: 0;
+}
+
+.mrr-data-table-panel--quiet .mrr-data-table-panel__progress {
+  top: 0;
+  z-index: 4;
+}
+
+.mrr-data-table-panel--quiet .mrr-data-table-panel__pagination {
+  background: var(--mrr-card);
+}
+
+@media (max-width: 760px) {
+  .mrr-data-table-panel--quiet .mrr-data-table-panel__content :deep(.el-table tr > .el-table__cell:first-child > .cell) {
+    padding-left: var(--mrr-card-inset-compact);
   }
 }
 

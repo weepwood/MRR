@@ -78,7 +78,11 @@ test('用户列表单一计数、身份信息合并及筛选层级保持一致',
   await page.setViewportSize({ width: 1440, height: 900 })
   await openUsers(page)
   const panel = page.locator('.users-table-panel')
+  await expect(panel).toHaveClass(/mrr-data-table-panel--quiet/)
   await expect(panel.locator('.mrr-data-table-panel__count')).toHaveCount(0)
+  await expect(panel.locator('.user-role')).toHaveCount(3)
+  await expect(panel.locator('.el-table .el-tag')).toHaveCount(0)
+  await expect(panel.locator('.mrr-table-actions--quiet')).toHaveCount(3)
   await expect(panel.locator('.el-pagination__total')).toHaveCount(1)
   await expect(panel.locator('.el-pagination__total')).toHaveText('共 3 条')
   await expect(panel.locator('.el-pagination__jump')).toHaveCount(0)
@@ -88,7 +92,8 @@ test('用户列表单一计数、身份信息合并及筛选层级保持一致',
   await expect(panel.getByRole('columnheader', { name: '用户', exact: true })).toBeVisible()
   await expect.poll(() => panel.locator('.users-filter__field').evaluateAll((els) => {
     const widths = els.map(el => el.getBoundingClientRect().width)
-    return widths[0] > widths[1] * 1.5 && Math.abs(widths[1] - widths[2]) <= 1
+    const tops = els.map(el => el.getBoundingClientRect().top)
+    return widths[0] > widths[1] * 1.5 && Math.abs(widths[1] - widths[2]) <= 1 && Math.max(...tops) - Math.min(...tops) <= 1
   })).toBe(true)
   await expect.poll(() => panel.locator('.el-pagination').evaluate((el) => {
     const total = el.querySelector('.el-pagination__total')!.getBoundingClientRect()

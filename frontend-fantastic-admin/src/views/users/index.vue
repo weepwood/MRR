@@ -585,7 +585,7 @@ onMounted(loadData)
       <MrrMetricCard v-for="item in summaryCards" :key="item.label" v-bind="item" />
     </section>
 
-    <MrrDataTablePanel class="users-table-panel" title="用户列表" :loading="loading" :result-key="users">
+    <MrrDataTablePanel class="users-table-panel" appearance="quiet" title="用户列表" :loading="loading" :result-key="users">
       <!-- 「创建用户」是对列表的写操作，放在卡头操作区；筛选栏只保留查询 / 重置，不再把增删与查询混在一组。 -->
       <template v-if="canManage" #actions>
         <el-button type="primary" @click="openCreate"><FaIcon name="i-lucide:user-round-plus" />创建用户</el-button>
@@ -619,7 +619,7 @@ onMounted(loadData)
       <div v-else-if="!users.length" class="users-state"><AppEmpty description="暂无符合条件的用户记录" /></div>
 
       <el-table v-else :data="users" row-key="id">
-        <el-table-column prop="username" label="用户" min-width="200" show-overflow-tooltip>
+        <el-table-column prop="username" label="用户" min-width="220" show-overflow-tooltip>
           <template #default="{ row }">
             <div class="user-identity">
               <span class="user-avatar" aria-hidden="true">{{ String(row.displayName || row.username || '?').slice(0, 1) }}</span>
@@ -630,7 +630,7 @@ onMounted(loadData)
             </div>
           </template>
         </el-table-column>
-        <el-table-column label="申请信息" min-width="130">
+        <el-table-column label="申请信息" min-width="180">
           <template #default="{ row }">
             <div v-if="row.appliedAt || row.contactInfo || row.applyRemark" class="application-info">
               <span v-if="row.contactInfo">{{ row.contactInfo }}</span>
@@ -641,10 +641,10 @@ onMounted(loadData)
             <span v-else class="user-source">管理员创建</span>
           </template>
         </el-table-column>
-        <el-table-column label="角色" min-width="100" show-overflow-tooltip><template #default="{ row }"><el-tag size="small" type="info" effect="plain" round>{{ row.roleName || row.roleCode }}</el-tag></template></el-table-column>
-        <el-table-column label="凭据状态" min-width="140" show-overflow-tooltip><template #default="{ row }"><MrrStatusTag :class="{ 'user-credential-normal': credentialStatus(row).label === '正常' }" :label="credentialStatus(row).label" :tone="credentialStatus(row).tone" /></template></el-table-column>
-        <el-table-column label="账号状态" width="110"><template #default="{ row }"><MrrStatusTag :status="row.status" :label="statusDisplay(row.status).label" :tone="statusDisplay(row.status).tone" /></template></el-table-column>
-        <el-table-column prop="lastLoginAt" label="最后登录" min-width="150" show-overflow-tooltip><template #default="{ row }"><span class="user-last-login">{{ formatDateTime(row.lastLoginAt) }}</span></template></el-table-column>
+        <el-table-column label="角色" width="112" show-overflow-tooltip><template #default="{ row }"><span class="user-role">{{ row.roleName || row.roleCode }}</span></template></el-table-column>
+        <el-table-column label="凭据状态" width="152" show-overflow-tooltip><template #default="{ row }"><MrrStatusTag :class="{ 'user-credential-normal': credentialStatus(row).label === '正常' }" :label="credentialStatus(row).label" :tone="credentialStatus(row).tone" /></template></el-table-column>
+        <el-table-column label="账号状态" width="110"><template #default="{ row }"><MrrStatusTag :class="{ 'user-status-quiet': normalizeStatus(row.status) === 'active' }" :status="row.status" :label="statusDisplay(row.status).label" :tone="statusDisplay(row.status).tone" /></template></el-table-column>
+        <el-table-column prop="lastLoginAt" label="最后登录" width="184" show-overflow-tooltip><template #default="{ row }"><span class="user-last-login">{{ formatDateTime(row.lastLoginAt) }}</span></template></el-table-column>
         <el-table-column
           v-if="canManage"
           label="操作"
@@ -655,6 +655,7 @@ onMounted(loadData)
           <template #default="{ row }">
             <MrrTableActions
               v-if="userHasActions(row)"
+              appearance="quiet"
               :actions="userActions(row)"
               :max-inline="userInlineLimit(row)"
               @select="handleUserAction($event, row)"
@@ -760,18 +761,22 @@ onMounted(loadData)
 /* Search is the primary field; enumerated filters need only predictable width.
  * Retain the shared filter bar and its mobile wrapping contract. */
 .users-filter__field { display: grid; min-width: 0; }
-.users-filter-bar :deep(.mrr-filter-bar__fields > .users-filter__keyword) { flex: 1 1 280px; max-width: none; min-width: 0; }
-.users-filter-bar :deep(.mrr-filter-bar__fields > .users-filter__select) { flex: 0 1 176px; width: 176px; min-width: 0; }
-.users-filter-bar :deep(.mrr-filter-bar__actions) { align-self: flex-end; }
+.users-filter-bar :deep(.mrr-filter-bar__fields > .users-filter__keyword) { width: 100%; max-width: none; min-width: 0; }
+.users-filter-bar :deep(.mrr-filter-bar__fields > .users-filter__select) { width: 100%; max-width: none; min-width: 0; }
+.users-filter-bar { justify-content: flex-start; }
+.users-filter-bar :deep(.mrr-filter-bar__fields) { display: grid; flex: 0 1 784px; grid-template-columns: minmax(0, 1fr) 144px 144px; }
+.users-filter-bar :deep(.mrr-filter-bar__actions) { flex-shrink: 0; align-self: flex-end; padding-left: 0; border-left: 0; }
 
 .users-state { display: grid; min-height: 280px; padding: var(--mrr-space-5); place-items: center; }
 .user-identity { display: flex; gap: var(--mrr-space-3); align-items: center; min-width: 0; }
-.user-avatar { display: grid; flex: 0 0 32px; width: 32px; height: 32px; font-size: var(--mrr-font-size-xs); font-weight: 700; color: var(--color-primary); background: var(--mrr-tone-primary-soft); border: 1px solid var(--mrr-border); border-radius: 50%; place-items: center; }
+.user-avatar { display: grid; flex: 0 0 32px; width: 32px; height: 32px; font-size: var(--mrr-font-size-xs); font-weight: 700; color: var(--mrr-muted-foreground); background: var(--mrr-muted); border: 1px solid transparent; border-radius: var(--mrr-radius-md); place-items: center; }
 .user-identity__copy { display: flex; flex-direction: column; min-width: 0; gap: 2px; line-height: 1.3; }
 .user-identity__copy strong { overflow: hidden; font-weight: 600; text-overflow: ellipsis; white-space: nowrap; }
 .user-identity__name { overflow: hidden; font-size: var(--mrr-font-size-xs); color: var(--mrr-muted-foreground); text-overflow: ellipsis; white-space: nowrap; }
 .user-source { font-size: var(--mrr-font-size-xs); color: var(--mrr-muted-foreground); }
-.user-credential-normal { padding-inline: 0; background: transparent; border-color: transparent; }
+.user-role { font-size: var(--mrr-font-size-sm); color: var(--mrr-card-foreground); }
+.user-credential-normal, .user-status-quiet { padding-inline: 0; background: transparent; border-color: transparent; }
+.user-credential-normal { color: var(--mrr-muted-foreground); }
 .user-last-login { font-variant-numeric: tabular-nums; color: var(--mrr-muted-foreground); }
 .users-table-panel :deep(.el-pagination) { width: 100%; }
 .users-table-panel :deep(.el-pagination__total) { margin-inline-end: auto; color: var(--mrr-muted-foreground); }
@@ -793,7 +798,8 @@ onMounted(loadData)
 .acknowledge { margin-top: var(--mrr-space-4); }
 @media (max-width: 760px) {
   .users-filter-bar :deep(.mrr-filter-bar__fields > .users-filter__keyword),
-  .users-filter-bar :deep(.mrr-filter-bar__fields > .users-filter__select) { flex: 1 1 100%; width: 100%; }
+  .users-filter-bar :deep(.mrr-filter-bar__fields > .users-filter__select) { flex: 1 1 100%; width: 100%; max-width: 100%; min-width: 0; }
+  .users-filter-bar :deep(.mrr-filter-bar__fields) { flex: 1 1 auto; grid-template-columns: minmax(0, 1fr); }
   .users-table-panel :deep(.el-pagination__total) { margin-inline-end: 0; }
   .credential-actions { flex-direction: column; }
 }

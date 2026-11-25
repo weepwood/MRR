@@ -877,3 +877,14 @@ V1.2 当前实施顺序与证据台账见 [全站 UI 规范与组件治理](../d
 ### 2026-11-26 · 用户列表信息层级
 
 有完整分页总数的业务列表不重复显示卡头数量；保留单一底栏总数，桌面左侧总数与右侧分页操作分组。单页不显示跳页输入，多页保留。用户身份将用户名与显示名在头像旁分层呈现，搜索框优先分配剩余宽度，枚举筛选按内容尺寸约束。角色为中性信息，正常凭据使用轻量语义点与文字，异常保留状态标签；账号状态独立显示，时间等宽数字。保留固定操作列、权限、申请信息及原查询参数，窄屏使用既有共享布局。先在用户管理验收，不直接全站替换。
+
+### 2026-11-26 · Quiet Enterprise UI：克制型业务表格
+
+本项目自己的可选表格视觉语言，不是第三方设计系统的官方名称。参考 [IBM Carbon Data Table](https://www.carbondesignsystem.com/building-blocks/core/components/data-table/guidelines)、[Atlassian Spacing](https://atlassian.design/foundations/spacing)、[SAP Fiori Responsive Table](https://www.sap.com/design-system/fiori-design-web/v1-108/ui-elements/responsive-table/responsive-table-content-formatting-cheat-sheet)。
+
+- **单一表面**：MrrDataTablePanel 的 appearance="quiet" 统一卡头、表头、分页表面色；表格铺至卡片边界，去掉内层圆角、重复分隔和表格末行重复边线。通过行分隔、字号和留白而非嵌套色块建立结构。
+- **共同关键线**：标题、搜索区、首列表头/数据与底栏数量共用 card-inset（窄屏 compact）。表头36px、普通双行身份记录52px，内容复杂自然增高，固定操作列保留。搜索宽度最大480px，枚举筛选144px，操作相邻；窄屏换行，避免横向溢出。
+- **语义克制**：身份头像中性32px圆角方块；用户名600字重、显示名12px次级字。角色使用普通正文；正常凭据用中性点/文字、启用状态用绿色点/文字；异常保留完整语义标签。仅创建按钮使用实色主色。
+- **同一交互语法**：MrrTableActions appearance="quiet" 的普通行内编辑及更多使用同尺寸、无底色图标，悬停/键盘聚焦出现浅底，危险和审核语义仍保留；不替换权限、确认或菜单合同。
+- **单一总数与渐进披露**：分页总数在底栏左侧，导航在右侧；仅多页显示跳转。不删除申请信息、拒绝原因、最近登录或任何业务字段。
+- 此版仅用户管理启用，其他共享面板及行操作保持原默认外观；需维护者确认并按业务风险验收后再推广。

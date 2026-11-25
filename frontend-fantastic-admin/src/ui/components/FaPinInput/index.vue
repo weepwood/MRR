@@ -23,11 +23,19 @@ const modelValue = defineModel<string>()
 const value = ref<string[]>([])
 
 watch(modelValue, (val) => {
-  value.value = val?.split('') ?? []
-})
+  // External reset / preset, without collapsing the internal empty slot array on our own update.
+  if ((val ?? '') !== value.value.join('')) {
+    value.value = val?.split('') ?? []
+  }
+}, { immediate: true })
+
+function handleInput(next: string[]) {
+  value.value = next
+  modelValue.value = next.join('')
+}
 
 function handleComplete(e: string[]) {
-  modelValue.value = e.join('')
+  handleInput(e)
   emit('complete')
 }
 
@@ -35,9 +43,9 @@ const id = useId()
 </script>
 
 <template>
-  <PinInput :id v-model="value" placeholder="○" otp @complete="handleComplete">
+  <PinInput :id :model-value="value" placeholder="○" otp @update:model-value="handleInput" @complete="handleComplete">
     <PinInputGroup>
-      <PinInputSlot v-for="(item, index) in length" :key="item" :index="index" />
+      <PinInputSlot v-for="(item, index) in length" :key="item" :index="index" :aria-label="`验证码第 ${index + 1} 位`" />
     </PinInputGroup>
   </PinInput>
 </template>

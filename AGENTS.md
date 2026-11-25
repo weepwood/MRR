@@ -353,3 +353,5 @@ python scripts/release_baseline.py validate
 2026-11-26：V1.2 本地残余控件专项（工作区 v1.2-table-gallery-contract），以 [本地控件归属审计](docs/design/local-ui-ownership-audit.md) 为逐项基线。普通业务命令/字段统一到 Element Plus，保留原生文件输入和有独特交互合同的内容按钮；不得为了消除 Fa 前缀重写滚动、PIN、返回顶部或外链容器。主题测试隔离共享 Mock UI 配置，不修改生产同步优先级；实际剪贴板自动化仅 Chromium 验证。9037 用户预览保持运行，测试用独立端口。仅本地提交，未授权不得推送、创建/合并 PR 或部署。
 
 2026-11-26：V1.2 本地公共组件深化第二批基于 2a10a360。数据浏览采用 MrrFilterBar grid 与 MrrDataTablePanel 的首次加载/旧结果刷新合同，保留真实游标、脱敏及重试；公开状态页、追踪编号及主色入口迁移普通按钮，四处业务页图标统一资源入口。Chrome86 主/危险按钮、导航模式及分类选中态明确回退。定向双引擎26项通过（含预热）、1项剪贴板权限跳过且 Chromium 已实际验证，116项单测通过。仅本地提交、保持9037，不触发远端操作；不把现代引擎证据视为真实Chrome86或Linux完整矩阵验收。
+
+2026-11-26：V1.2 本地专用组件治理以 e6e89159 为基线。FaScrollArea 公开 viewport/scrollTo、动态边缘测量和滚轮边界，保留 Reka；FaPinInput 同步部分值、预设和清空，FaBackToTop 焦点保持及计时器回收，明确导航链接 tabindex。新增真实展厅示例，不启用未上线的验证码业务；FaPageMain 外链确认页缺可达视觉基线，保留。仅本地迭代，9037 预览不停止；测试独立9041，验收结论以工程交接日志为准。

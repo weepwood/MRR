@@ -81,6 +81,7 @@ defineExpose({
             ...(subMenu && { 'type': 'button', 'aria-expanded': expand, 'aria-controls': popupId }),
             ...(!subMenu && {
               href: item.meta?.link ? item.meta.link : href,
+              tabindex: 0,
               target: item.meta?.link ? '_blank' : '_self',
               class: 'no-underline',
             }),

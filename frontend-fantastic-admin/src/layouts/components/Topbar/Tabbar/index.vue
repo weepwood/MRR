@@ -36,7 +36,7 @@ watch(() => route.fullPath, () => {
       const index = tabbarStore.list.findIndex(item => item.tabId === activedTabId.value)
       if (index !== -1) {
         const tabEl = tabRef.value?.find(item => Number.parseInt(item.dataset.index!) === index)
-        const containerEl = tabsRef.value?.ref?.$el
+        const containerEl = tabsRef.value?.viewport
         if (tabEl && containerEl) {
           const tabLeft = tabEl.offsetLeft
           const tabWidth = tabEl.offsetWidth
@@ -53,7 +53,7 @@ watch(() => route.fullPath, () => {
 })
 function tabbarScrollTip() {
   // localStorage.getItem 缺失时返回 null 而不是 undefined；原判断恒为 false，提示从未出现过。
-  if (tabContainerRef.value?.$el.clientWidth > (tabsRef.value?.ref?.$el.clientWidth ?? 0) && localStorage.getItem('tabbarScrollTip') === null) {
+  if (tabContainerRef.value?.$el.clientWidth > (tabsRef.value?.viewport?.clientWidth ?? 0) && localStorage.getItem('tabbarScrollTip') === null) {
     localStorage.setItem('tabbarScrollTip', '')
     notify.info('温馨提示', {
       description: '标签栏数量超过展示区域范围，可以将鼠标移到标签栏上，通过鼠标滚轮滑动浏览',
@@ -146,8 +146,8 @@ function restoreContextFocus(event: KeyboardEvent) {
 
 const visibleTabIndex = ref<number[]>([])
 function getVisibleTabs() {
-  const containerWidth = tabsRef.value?.ref?.$el.clientWidth ?? 0
-  const scrollLeft = tabsRef.value?.ref?.el?.viewportElement?.scrollLeft ?? 0
+  const containerWidth = tabsRef.value?.viewport?.clientWidth ?? 0
+  const scrollLeft = tabsRef.value?.viewport?.scrollLeft ?? 0
   visibleTabIndex.value = []
   if (tabRef.value) {
     for (let i = 0; i < tabRef.value.length; i++) {

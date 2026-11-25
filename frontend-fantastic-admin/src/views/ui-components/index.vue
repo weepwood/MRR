@@ -5,6 +5,7 @@ import BasicExamples from './components/BasicExamples.vue'
 import DataExamples from './components/DataExamples.vue'
 import FeedbackExamples from './components/FeedbackExamples.vue'
 import PatternExamples from './components/PatternExamples.vue'
+import SpecialExamples from './components/SpecialExamples.vue'
 import TokenExamples from './components/TokenExamples.vue'
 
 defineOptions({ name: 'UiComponentGallery' })
@@ -77,7 +78,8 @@ function resetExamples() {
             </div>
           </header>
           <div class="gallery-preview">
-            <BasicExamples v-if="['buttons', 'navigation', 'fields', 'selection'].includes(example.id)" :example="example.id" />
+            <SpecialExamples v-if="example.id === 'special-controls'" />
+            <BasicExamples v-else-if="['buttons', 'navigation', 'fields', 'selection'].includes(example.id)" :example="example.id" />
             <DataExamples v-else-if="['metrics', 'table'].includes(example.id)" :example="example.id" />
             <FeedbackExamples v-else-if="['feedback', 'overlays', 'glass'].includes(example.id)" :example="example.id" />
             <PatternExamples v-else-if="['page-header', 'motion'].includes(example.id)" :example="example.id" />

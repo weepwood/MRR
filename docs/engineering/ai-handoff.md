@@ -646,3 +646,10 @@
 
 - 基线 2a10a360；数据浏览共享筛选、刷新、首次骨架与分页，四处普通按钮及四页业务图标归一。新增公开状态页匿名刷新/日期筛选和数据表延迟游标 E2E；Chrome86 基础按钮及导航/分类回退守护。无业务API、数据库、权限变更。
 - Chromium/WebKit 定向26 passed / 1 skipped（含warmup；WebKit剪贴板权限不支持，Chromium实际复制通过）；116/116单测。最终生产构建及 Chrome86 静态门禁通过；未包在 @supports 内的 color-mix 产物提示由107降至104，完全无 @supports not 回退块的分块为无，仍有1处容器查询、29处选择器及8处动效时长提示。证据 /tmp/mrr-v12-next-{browser,unit,tsc,build,chrome86}.log。保持9037预览、独立9041测试，不推送、不创建PR、不合并、不发布。后续对剩余普通命令、专用FA滚动和PIN行为及真实Chrome86、视觉基线集中验收。
+
+## V1.2 本地专用组件交互深化（2026-11-26）
+
+- 基线 e6e89159；FaScrollArea 实际尺寸检测、稳定 viewport API、边界/水平滚轮及单次事件映射，Tabbar/NavSearch 解耦嵌套引用；FaPinInput 初始化、部分输入和外部值同步；FaBackToTop 焦点保持及计时器清理。导航链接 tabindex=0。保留成熟 Reka 底层及未启用的真实重置密码业务，FaPageMain 替换因确认页缺可达视觉基线而撤回。展厅增加专用交互及合成游标示例。
+- 首轮双引擎19项：15通过、4失败（2 WebKit Tab 焦点、2 switch 隐藏输入点击）；补显式 tabindex、隔离本地外观、真实键盘切换后23项中21通过、2失败（aria-checked=true/实际批次正确，但原生 checked 不一致）。最终以可访问状态与完整业务断言、单次120px映射/边界不消费/原生水平滚动、新增三类交互双引擎7/7（含预热）。最终变更后的宽范围导航组合尚未整体重跑，不宣称全矩阵通过。
+- 类型、116/116定向单测、生产构建、Chrome86静态校验通过；CSS静态提示104处未包裹 color-mix、31处Selectors Level4（前批29，增加2处产物选择器，待真实兼容对照）、1处容器查询、8处动效时长。未验证实际医院Chrome86、Linux全矩阵、真实验证码粘贴/提交、外链确认页及全部四主题像素对照。证据 /tmp/mrr-v12-special-{browser,final,target,unit,tsc3,build,chrome86}.log。
+- 本地9037持续运行，测试9041独立；不改API、数据库、权限、正式版本或远端草稿#850。临时配置及合成认证fixture不提交；证据迁出工作区。

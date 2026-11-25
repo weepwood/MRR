@@ -10,6 +10,7 @@ const id = useId()
 const keyword = ref('')
 const query = ref('')
 const page = ref(1)
+const cursorMode = ref(false)
 const message = ref('表格数据仅用于组件演示。')
 const rows = [
   { id: 'DEMO-001', name: '按钮样式验收', status: 'completed', label: '已完成' },
@@ -44,10 +45,14 @@ function search(reset = false) {
     <MrrMetricCard label="演示状态" value="等待复核" compact-value note="长文本值按内容排版" tone="amber" />
   </div>
   <div v-else class="example-stack">
-    <MrrDataTablePanel title="组件验收示例" :count="matches.length">
+    <div class="example-row">
+      <el-switch v-model="cursorMode" aria-label="游标分页示例" @change="page = 1" />
+      <span>游标分页示例（仅合成数据，不假设总页数）</span>
+    </div>
+    <MrrDataTablePanel title="组件验收示例" :count="cursorMode ? undefined : matches.length" :result-key="visibleRows">
       <template #filters>
         <form @submit.prevent="search()">
-          <MrrFilterBar embedded labelled>
+          <MrrFilterBar embedded labelled layout="grid">
             <div class="mrr-filter-field example-full-width">
               <label :for="`${id}-query`">筛选示例</label>
               <el-input :id="`${id}-query`" v-model="keyword" placeholder="示例编号或名称" class="example-full-width" />
@@ -78,7 +83,16 @@ function search(reset = false) {
         </el-table-column>
       </el-table>
       <template #pagination>
-        <el-pagination v-model:current-page="page" :page-size="3" :total="matches.length" layout="total, prev, pager, next" small />
+        <div v-if="cursorMode" class="example-row">
+          <span role="status">第 {{ page }} 批 · 本批 {{ visibleRows.length }} 项 · 总数未知</span>
+          <el-button :disabled="page <= 1" @click="page--">
+            上一批示例
+          </el-button>
+          <el-button :disabled="page * 3 >= matches.length" @click="page++">
+            下一批示例
+          </el-button>
+        </div>
+        <el-pagination v-else v-model:current-page="page" :page-size="3" :total="matches.length" layout="total, prev, pager, next" small />
       </template>
     </MrrDataTablePanel>
     <p class="example-note" role="status">

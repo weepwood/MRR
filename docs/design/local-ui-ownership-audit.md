@@ -179,3 +179,11 @@ Manifest 两个选择器改 ElSelect，数值版本、空值、已加载异常�
 - 数据浏览使用 MrrFilterBar grid、MrrDataTablePanel loading / result-key、独立首次加载骨架和共享分页槽；原 cursorStack、activeFilter、权限清理和请求取消逻辑不变。不用总页数伪造游标。
 - Chrome86：危险按钮 hover、主/危险 plain 边界与焦点补回退；导航示意第二分区使用主色+透明度，容器基线采用语义底色；影像分类选中态提供基础阴影。已有 token 层及其他 @supports not 回退仍有效，静态产物 warning 总数不是实际未回退缺陷数量。
 - 实际浏览器定向26项通过（含预热），1项 WebKit 剪贴板权限按既有策略跳过；Chromium 实际复制通过。116项单测通过。未做所有页面的1px几何基线对比或旧浏览器实机验证，专用FA后续仍需单独交互合同验收。
+
+## 第三批：专用组件交互与展厅深化（基线 e6e89159）
+
+- FaScrollArea 保留 Reka 底层，统一公开 viewport / scrollTo；导航标签和搜索结果不再读取嵌套私有引用。观察实际视口和内容尺寸；事件只交给 viewport，滚轮按方向、单位、边界及修饰键处理。FaBackToTop 保留 ElButton、自动隐藏和减弱动效，焦点期间保持可见，退出清理计时器。
+- FaPinInput 保留 Reka 底层，外部预设、部分输入、删除和清空实时同步，保留前导零，补充逐位可访问名称。实际重置密码业务仍未启用；不添加发送验证码或重置接口，不视为真实认证验收。
+- FaPageMain：调查现有唯一引用 LinkView，当前常用外链菜单直接打开链接；未找到实际可达确认路由并建立视觉基线，撤回本轮容器替换，保留旧实现。ElScrollbar / ElInputOtp 未完成完整行为对照，不强制迁移。
+- 展厅新增专用滚动、PIN、紧凑动作与游标模拟。示例数据仅本地，不写入 API 或真实剪贴板；游标模式表达批次未知总数，非生产后端游标算法。现有业务路由和权限不改。
+- 导航链接明确 tabindex=0；视觉与导航用例隔离共享 Mock UI 设置。首轮两项 WebKit Tab 聚焦失败，后续复验通过；两项游标测试观察到 aria-checked=true 且实际批次已切换，但原生 input checked 读值不同，改为校验可访问状态加原有业务结果断言。

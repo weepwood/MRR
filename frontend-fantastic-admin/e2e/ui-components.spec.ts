@@ -1,8 +1,10 @@
 import type { Page } from '@playwright/test'
 import { expect, test } from '@playwright/test'
 import { examples } from '../src/views/ui-components/catalog'
+import { isolateLocalVisualSettings } from './helpers/local-visual-settings'
 
 async function openGallery(page: Page, theme = 'light') {
+  await isolateLocalVisualSettings(page)
   await page.addInitScript(theme => localStorage.setItem('MRR-ADMIN:app-settings', JSON.stringify({
     app: { colorScheme: theme, enableMotion: false },
     menu: { mode: 'single' },
@@ -219,4 +221,93 @@ test('未登录访问仍进入既有登录流程', async ({ browser, baseURL }) 
   finally {
     await context.close()
   }
+})
+
+test('专用滚动区域随内容增减更新遮罩，保留原生水平滚动与验证码部分输入', async ({ page }) => {
+  await openGallery(page)
+  await page.getByLabel('查找组件', { exact: true }).fill('专用交互')
+  const scroll = page.getByTestId('special-scroll')
+  await expect(scroll).toHaveAttribute('data-mask-start', 'false')
+  await expect(scroll).toHaveAttribute('data-mask-end', 'false')
+  await page.getByRole('button', { name: '增加滚动内容' }).click()
+  await expect(scroll).toHaveAttribute('data-mask-end', 'true')
+  const viewport = scroll.locator('.scroll-area-viewport')
+  await viewport.hover()
+  await page.mouse.wheel(0, 200)
+  await expect.poll(() => viewport.evaluate(el => el.scrollLeft)).toBeGreaterThan(0)
+  await expect(scroll).toHaveAttribute('data-mask-start', 'true')
+  await page.getByRole('button', { name: '回到起点' }).click()
+  await expect.poll(() => viewport.evaluate(el => el.scrollLeft)).toBe(0)
+  // A single wheel event must not be processed by both viewport and Reka root.
+  const mapped = await viewport.evaluate((el) => {
+    const event = new WheelEvent('wheel', { deltaY: 120, bubbles: true, cancelable: true })
+    el.dispatchEvent(event)
+    return { offset: el.scrollLeft, consumed: event.defaultPrevented }
+  })
+  expect(mapped).toEqual({ offset: 120, consumed: true })
+  await viewport.hover()
+  await page.mouse.wheel(100, 0)
+  await expect.poll(() => viewport.evaluate(el => el.scrollLeft)).toBeGreaterThan(120)
+  await page.getByRole('button', { name: '回到起点' }).click()
+  await expect.poll(() => viewport.evaluate(el => el.scrollLeft)).toBe(0)
+  const boundaryConsumed = await viewport.evaluate((el) => {
+    const event = new WheelEvent('wheel', { deltaY: -120, bubbles: true, cancelable: true })
+    el.dispatchEvent(event)
+    return event.defaultPrevented
+  })
+  expect(boundaryConsumed).toBe(false)
+  await page.getByRole('button', { name: '缩减滚动内容' }).click()
+  await expect(scroll).toHaveAttribute('data-mask-end', 'false')
+  const first = page.getByRole('textbox', { name: '验证码第 1 位' })
+  const last = page.getByRole('textbox', { name: '验证码第 6 位' })
+  await expect(first).toHaveValue('1')
+  await expect(last).toHaveValue('6')
+  await last.focus()
+  await last.press('Backspace')
+  await expect(page.getByText(/当前已输入 5 位/)).toBeVisible()
+  await last.fill('9')
+  await expect(page.getByText(/当前已输入 6 位/)).toBeVisible()
+  await page.getByRole('button', { name: '清空验证码' }).click()
+  await expect(first).toHaveValue('')
+  await expect(last).toHaveValue('')
+  await page.getByRole('button', { name: '填入合成验证码' }).click()
+  await expect(first).toHaveValue('0')
+  await expect(last).toHaveValue('5')
+  const compact = page.getByRole('button', { name: '触发紧凑示例操作' })
+  await compact.focus()
+  await compact.press('Enter')
+  await expect(page.getByText(/已触发紧凑操作 1 次/)).toBeVisible()
+})
+
+test('展厅游标示例仅展示实际批次，查询与重置回到首批', async ({ page }) => {
+  await openGallery(page)
+  await page.getByRole('button', { name: /数据与组合/ }).click()
+  const cursor = page.getByRole('switch', { name: '游标分页示例' })
+  await cursor.focus()
+  await cursor.press('Space')
+  await expect(cursor).toHaveAttribute('aria-checked', 'true')
+  await expect(page.getByText('第 1 批 · 本批 3 项 · 总数未知')).toBeVisible()
+  await page.getByRole('button', { name: '下一批示例' }).click()
+  await expect(page.getByText('第 2 批 · 本批 2 项 · 总数未知')).toBeVisible()
+  await expect(page.getByRole('button', { name: '下一批示例' })).toBeDisabled()
+  await page.getByLabel('筛选示例', { exact: true }).fill('暗色')
+  await page.getByLabel('筛选示例', { exact: true }).press('Enter')
+  await expect(page.getByText('第 1 批 · 本批 1 项 · 总数未知')).toBeVisible()
+  await page.getByRole('button', { name: '重置筛选', exact: true }).click()
+  await expect(page.getByText('第 1 批 · 本批 3 项 · 总数未知')).toBeVisible()
+})
+
+test('返回顶部在隐藏计时后仍可通过键盘聚焦与触发', async ({ page }) => {
+  await openGallery(page)
+  await page.evaluate(() => document.documentElement.scrollTo({ top: 800, behavior: 'instant' }))
+  await expect.poll(() => page.evaluate(() => document.documentElement.scrollTop)).toBeGreaterThanOrEqual(200)
+  const back = page.getByRole('button', { name: '回到顶部', exact: true })
+  await expect(back).toBeVisible()
+  await expect.poll(() => back.evaluate(el => el.getBoundingClientRect().left >= window.innerWidth), { timeout: 6000 }).toBe(true)
+  await back.focus()
+  await expect(back).toBeFocused()
+  await expect.poll(() => back.evaluate(el => el.getBoundingClientRect().right <= window.innerWidth)).toBe(true)
+  await back.press('Enter')
+  await expect.poll(() => page.evaluate(() => document.documentElement.scrollTop)).toBe(0)
+  await expect(back).toHaveCount(0)
 })

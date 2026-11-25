@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import type { HTMLAttributes } from 'vue'
-import { useElementSize, useScroll } from '@vueuse/core'
+import { useResizeObserver, useScroll } from '@vueuse/core'
 import { cn } from '@/utils'
 import { isMotionEnabled } from '@/utils/motion-preference'
 import { ScrollArea, ScrollBar } from './scroll-area'
@@ -32,65 +32,55 @@ const emits = defineEmits<{
 
 const scrollAreaRef = useTemplateRef('scrollAreaRef')
 
-const arrivedState = ref<{
-  left: boolean
-  right: boolean
-  top: boolean
-  bottom: boolean
-}>()
-const showMaskStart = computed(() => {
-  if (props.horizontal) {
-    return !arrivedState.value?.left
+// Consumers depend on this stable viewport contract, not the nested Reka refs.
+const viewport = computed(() => scrollAreaRef.value?.el?.viewportElement)
+const content = computed(() => viewport.value?.firstElementChild as HTMLElement | null)
+const { arrivedState, measure } = useScroll(viewport)
+const measured = ref(false)
+function measureViewport() {
+  if (viewport.value) {
+    measure()
+    measured.value = true
   }
-  return !arrivedState.value?.top
-})
-const showMaskEnd = computed(() => {
-  if (props.horizontal) {
-    return !arrivedState.value?.right
-  }
-  return !arrivedState.value?.bottom
-})
+}
+watch(viewport, measureViewport, { flush: 'post' })
+useResizeObserver([viewport, content], measureViewport)
+
+const showMaskStart = computed(() => measured.value && !(props.horizontal ? arrivedState.left : arrivedState.top))
+const showMaskEnd = computed(() => measured.value && !(props.horizontal ? arrivedState.right : arrivedState.bottom))
 
 function onScroll(event: Event) {
   emits('onScroll', event)
 }
 
 function onWheel(event: WheelEvent) {
-  if (props.horizontal) {
-    scrollAreaRef.value?.el?.viewportElement?.scrollBy({
-      left: event.deltaY || event.detail,
-    })
-  }
+  const el = viewport.value
+  // Preserve native horizontal trackpad gestures and browser zoom.
+  if (!props.horizontal || !el || event.defaultPrevented || event.ctrlKey || event.metaKey || event.shiftKey || Math.abs(event.deltaX) >= Math.abs(event.deltaY)) { return }
+  const unit = event.deltaMode === 1 ? 16 : event.deltaMode === 2 ? el.clientWidth : 1
+  const direction = getComputedStyle(el).direction === 'rtl' ? -1 : 1
+  const delta = event.deltaY * unit * direction
+  const max = Math.max(0, el.scrollWidth - el.clientWidth)
+  const target = direction === 1
+    ? Math.max(0, Math.min(max, el.scrollLeft + delta))
+    : Math.min(0, Math.max(-max, el.scrollLeft + delta))
+  // Only consume a wheel gesture when the strip can actually scroll.
+  if (Math.abs(target - el.scrollLeft) < 0.5) { return }
+  event.preventDefault()
+  el.scrollLeft = target
 }
-
-const scrollContainerRef = useTemplateRef('scrollContainerRef')
-
-onMounted(() => {
-  const { arrivedState: arrivedStateValue } = useScroll(scrollAreaRef.value?.el?.viewportElement)
-  watch(arrivedStateValue, (value) => {
-    arrivedState.value = value
-  }, {
-    immediate: true,
-  })
-  const { width, height } = useElementSize(scrollContainerRef.value)
-  watch([width, height], () => {
-    scrollAreaRef.value?.el?.viewportElement?.dispatchEvent(new Event('scroll'))
-  }, {
-    immediate: true,
-  })
-})
 
 function scrollTo(scrollNumber: number) {
   // JS 的 behavior 选项不受 CSS scroll-behavior 约束，必须在这里单独读取开关。
   const behavior = isMotionEnabled() ? 'smooth' : 'auto'
   if (props.horizontal) {
-    scrollAreaRef.value?.el?.viewportElement?.scrollTo({
+    viewport.value?.scrollTo({
       left: scrollNumber,
       behavior,
     })
   }
   else {
-    scrollAreaRef.value?.el?.viewportElement?.scrollTo({
+    viewport.value?.scrollTo({
       top: scrollNumber,
       behavior,
     })
@@ -99,13 +89,14 @@ function scrollTo(scrollNumber: number) {
 
 defineExpose({
   ref: scrollAreaRef,
+  viewport,
   scrollTo,
 })
 </script>
 
 <template>
   <div
-    ref="scrollContainerRef" :class="cn('relative flex overflow-hidden after:(pointer-events-none absolute z-1 from-transparent to-[var(--mask-scroll-container-gradient-color)] opacity-0 transition-opacity content-empty) before:(pointer-events-none absolute z-1 from-transparent to-[var(--mask-scroll-container-gradient-color)] opacity-0 transition-opacity content-empty)', {
+    :data-mask-start="props.mask && showMaskStart" :data-mask-end="props.mask && showMaskEnd" :class="cn('relative flex overflow-hidden after:(pointer-events-none absolute z-1 from-transparent to-[var(--mask-scroll-container-gradient-color)] opacity-0 transition-opacity content-empty) before:(pointer-events-none absolute z-1 from-transparent to-[var(--mask-scroll-container-gradient-color)] opacity-0 transition-opacity content-empty)', {
       'after:(bg-gradient-to-r rtl:bg-gradient-to-l h-full w-12 end-0) before:(bg-gradient-to-l rtl:bg-gradient-to-r h-full w-12 start-0)': props.horizontal,
       'after:(bg-gradient-to-b h-12 w-full bottom-0) before:(bg-gradient-to-t h-12 w-full)': !props.horizontal,
       'before:(opacity-100!)': props.mask && showMaskStart,

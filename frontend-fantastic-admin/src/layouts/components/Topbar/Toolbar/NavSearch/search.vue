@@ -166,8 +166,8 @@ function keyEnter() {
   searchResultItemRef.value?.find(item => Number.parseInt(item.dataset.index!) === actived.value)?.click()
 }
 function handleScroll() {
-  if (searchResultRef.value?.ref?.el?.viewportElement) {
-    const contentDom = searchResultRef.value.ref.el.viewportElement
+  if (searchResultRef.value?.viewport) {
+    const contentDom = searchResultRef.value.viewport
     let scrollTo = 0
     if (resultList.value.length > 0) {
       scrollTo = contentDom.scrollTop

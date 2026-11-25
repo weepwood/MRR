@@ -44,7 +44,8 @@ export function createDemoRecords(clock = demoClock, scenario: DemoScenario = 's
   const patients = Array.from({ length: 32 }, (_, index) => ({
     id: index + 1,
     brxh: String(320001 + index * 2),
-    idCard: `00000020000101${String(index + 101).padStart(4, '0')}`,
+    // Two missing-ID records share a name; two distinct archives share one synthetic ID.
+    idCard: [24, 30].includes(index) ? '' : `00000020000101${String((index === 31 ? 25 : index) + 101).padStart(4, '0')}`,
     bah: String(26070000 + index).padStart(8, '0'),
     name: names[index % names.length],
     admissiontime: clock.dateTime(archiveAge(index) + 3, 2),

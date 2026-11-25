@@ -474,6 +474,10 @@
 
 - 独立feat/v1.1-dependency-security基线28d9ca60，Zod4.6.6与四账号表单兼容适配，Handlebars4.7.10、shell-quote1.12.0，Vitest3.2.6覆盖率原门禁通过；双override同步后正常冻结安装及exec通过。兼容1033/1033、函数73.84%、认证Chromium19/19、生产构建/Chrome86静态通过；默认Vite仅回环。官方prod0、all53/critical2，Tinypool及Vitest4覆盖率口径迁移仍待处理；Vitest4试验1033/1033但原门禁失败，未修改基线。详见[依赖安全](v1.1-dependency-security.md)。#818另行验收，产品变化须重新资格验证，不改变main或VERSION。
 
+## V1.1 影像核对逐张跨组导航（2026-11-25）
+
+- #822，基线1c9dc516；独立worktree v1.1-workbench-navigation，显式跨组、专注模式、故障重试、焦点和身份隔离，普通翻组不选图。31/31、Chromium2/2含预热、类型和lint通过。详见[工作台布局](v1.1-archive-workbench-layout.md)，待PR门禁及最新产品验收，不修改main。
+
 ## 每轮交接模板
 
 - 更新时间、任务、风险、目标及非目标：

@@ -1,8 +1,10 @@
 import { defineFakeRoute } from 'vite-plugin-fake-server/client'
 import { MEDICAL_RECORD_TYPES } from '@/constants/medical-record-types'
 import { requiresSjhForBah, toMedicalRecordCodeSearchTerm } from '@/utils/medical-record-code'
+import { ARCHIVE_BAH, archiveImages } from '../mock-support/archive-images'
 import { pageSvg } from '../mock-support/image'
 import { demoRecords } from '../mock-support/records'
+import { demoError, demoOk } from '../mock-support/response'
 
 /**
  * 影像查询页（/idcard/:idCard，views/scan-img）与影像档案袋（/archive，views/statistics/archive）的合成数据。
@@ -63,25 +65,6 @@ function buildImages(bah: string, recordIndex: number) {
 const imagesByBah = new Map(records.map((record, index) => [record.bah, buildImages(record.bah, index)]))
 
 // ==================== 影像档案袋 ====================
-const ARCHIVE_BAH = '00800001'
-
-const archiveImages = Array.from({ length: 14 }, (_, index) => {
-  const page = index + 1
-  const type = usedTypes[index % usedTypes.length]
-  return {
-    id: 91000 + page,
-    brxh: '991000',
-    bah: ARCHIVE_BAH,
-    sjh: '',
-    filename: `${String(page).padStart(4, '0')}.jpg`,
-    btype: type.value,
-    pages: page,
-    openerNo: 'scanner-mock',
-    uploadDate: '2026-07-13 08:00:00',
-    uploadFlag: 1,
-    img_url: pageSvg(ARCHIVE_BAH, page, type.label),
-  }
-})
 
 let archiveHistoryId = 1
 const archiveHistory: Array<{
@@ -132,6 +115,28 @@ export default defineFakeRoute([
       }
       const images = sharedArchiveImages(bah, sjh)
       return { ...ok(images), meta: lookupMeta(images.length ? undefined : 'NO_MATCHING_IMAGES') }
+    },
+  },
+  {
+    url: '/api/v1/img/image/:bah/:brxh/:folder/:filename',
+    response: ({ params }) => {
+      const bah = String(params.bah)
+      if (requiresSjhForBah(bah)) { return demoError(400, '旧路径无法唯一识别该病案') }
+      const match = archiveImages.filter(row => toMedicalRecordCodeSearchTerm(row.bah) === toMedicalRecordCodeSearchTerm(bah)
+        && row.brxh === String(params.brxh) && row.filename === String(params.filename) && String(params.folder) === '26.07.13')
+      return match.length === 1 ? demoOk({ svg: decodeURIComponent(match[0].img_url.split(',')[1]) }) : demoError(404, '未找到唯一演示影像')
+    },
+  },
+  {
+    url: '/api/v1/img/image/:cx',
+    response: () => demoError(410, '旧 CX 路径不再提供影像，请使用扫描记录 ID'),
+  },
+  {
+    url: '/api/v1/img/oss-image/:id',
+    response: ({ params }) => {
+      const id = Number(params.id)
+      const scan = demoRecords.scans.find(row => row.id === id && row.uploadFlag !== 0)
+      return scan ? demoOk({ svg: svgMarkup(scan.bah, scan.id, MEDICAL_RECORD_TYPES.find(type => type.value === scan.btype)?.label ?? '未分类') }) : demoError(404, '未找到有效演示影像')
     },
   },
   {

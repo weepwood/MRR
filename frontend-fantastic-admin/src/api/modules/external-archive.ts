@@ -94,6 +94,10 @@ export function getExternalArchiveImages(bah: string, sjh?: string, forceRefresh
 }
 
 export function downloadExternalArchive(bah: string, sjh?: string) {
+  // Static demos cannot issue a real external archive session or return a real ZIP.
+  if (import.meta.env.MODE === 'pages' || import.meta.env.MODE === 'mock') {
+    return Promise.reject(new Error('静态演示不支持外部影像档案下载'))
+  }
   return externalApi.get<Blob, AxiosResponse<Blob>>('/api/v1/external/archive/download', {
     params: {
       bah,

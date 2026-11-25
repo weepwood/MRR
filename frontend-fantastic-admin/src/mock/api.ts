@@ -1,8 +1,11 @@
 import type { MockScanRecord } from '../mock-support/records'
 import { defineFakeRoute } from 'vite-plugin-fake-server/client'
 import { MEDICAL_RECORD_TYPES } from '@/constants/medical-record-types'
+import { createCsvText } from '@/utils/file-download'
 import { demoClock } from '../mock-support/clock'
 import { demoRecords, matchesLegacyScan } from '../mock-support/records'
+import { demoError, demoOk } from '../mock-support/response'
+import { registeredRuntimeSetting, runtimeSchema, validateRuntimeSetting } from '../mock-support/runtime-settings'
 
 type QueryValue = string | string[] | undefined
 
@@ -333,6 +336,9 @@ function filterLogs(query: Record<string, QueryValue>, onlyAudit = false) {
     const responseStatus = normalize(firstQuery(query.responseStatus))
 
     if (onlyAudit && !item.auditAction) { return false }
+    const start = String(firstQuery(query.startTime) ?? '').replace('T', ' ')
+    const end = String(firstQuery(query.endTime) ?? '').replace('T', ' ')
+    if ((start && item.accessTime < start) || (end && item.accessTime > end)) { return false }
     if (keyword && ![
       item.username,
       item.clientIp,
@@ -754,6 +760,19 @@ export default defineFakeRoute([
     response: ({ query }) => ok(paginate(filterLogs(query, true), query.page, query.size)),
   },
   {
+    url: '/api/v1/logs/audit/images/export',
+    response: ({ query }) => {
+      const scope = String(query.scope ?? 'all')
+      const value = String(query.value ?? '')
+      if (!['all', 'user', 'target'].includes(scope) || (scope !== 'all' && !value)) { return demoError(400, '无效审计导出范围') }
+      const rows = filterLogs(query, true).filter(row => scope === 'all' || (scope === 'user' ? row.username === value : row.auditTarget === value))
+      return demoOk({
+        name: 'mrr-demo-image-audit.csv',
+        text: createCsvText(['id', 'username', 'auditAction', 'auditTarget', 'responseStatus', 'accessTime', 'executeTime'], rows.map(row => [row.id, row.username, row.auditAction, row.auditTarget, row.responseStatus, row.accessTime, row.executeTime])),
+      })
+    },
+  },
+  {
     url: '/api/v1/logs/audit/images/analytics',
     response: ({ query }) => ok(imageAuditAnalytics(filterLogs(query, true))),
   },
@@ -864,6 +883,7 @@ export default defineFakeRoute([
     url: '/api/v1/settings',
     method: 'PUT',
     response: ({ body }) => {
+      if (!body || typeof body !== 'object' || Array.isArray(body) || !Object.entries(body).every(([key, value]) => validateRuntimeSetting(key, value))) { return demoError(400, '无效演示设置值') }
       settings = { ...settings, ...body }
       return ok(null, '设置保存成功')
     },
@@ -873,6 +893,20 @@ export default defineFakeRoute([
     response: () => ok(settings.adminAppSettings ? { adminAppSettings: settings.adminAppSettings } : {}),
   },
   {
+    url: '/api/v1/settings/schema',
+    response: () => ok(runtimeSchema(settings)),
+  },
+  {
+    url: '/api/v1/settings/:key',
+    method: 'DELETE',
+    response: ({ params }) => {
+      const key = decodeURIComponent(String(params.key))
+      if (!registeredRuntimeSetting(key)) { return demoError(400, '仅支持恢复已登记的演示运行参数') }
+      delete settings[key]
+      return ok(null, '演示参数已恢复默认')
+    },
+  },
+  {
     url: '/api/v1/settings/:key',
     response: ({ params }) => ok(settings[decodeURIComponent(String(params.key))] ?? ''),
   },
@@ -880,7 +914,10 @@ export default defineFakeRoute([
     url: '/api/v1/settings/:key',
     method: 'PUT',
     response: ({ params, body }) => {
-      settings[decodeURIComponent(String(params.key))] = String(body.value ?? '')
+      const key = decodeURIComponent(String(params.key))
+      const value = String(body.value ?? '')
+      if (!validateRuntimeSetting(key, value)) { return demoError(400, '无效演示设置值') }
+      settings[key] = value
       return ok(null, '设置保存成功')
     },
   },

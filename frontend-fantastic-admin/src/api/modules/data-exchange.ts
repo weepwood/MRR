@@ -1,4 +1,5 @@
-import { postRequest } from '../index'
+import { demoCsvResponse, isDemoFileMode } from '../demo-file'
+import { getRequest, postRequest } from '../index'
 import { getRawRequest } from '../raw-response'
 
 export type DataExchangeDataset = 'patients' | 'statistics' | 'archive-boxes' | 'scan'
@@ -78,6 +79,7 @@ export function importDataExchangeFile(dataset: DataExchangeDataset, file: File,
 }
 
 export function downloadDataExchangeTemplate(dataset: DataExchangeDataset) {
+  if (isDemoFileMode) { return getRequest<{ text: string, name: string }>(`/api/v1/data-exchange/${dataset}/template`).then(r => demoCsvResponse(r.data)) }
   return getRawRequest<Blob>(`/api/v1/data-exchange/${dataset}/template`, {
     responseType: 'blob',
   })
@@ -87,6 +89,7 @@ export function exportDataExchangeCsv(
   dataset: DataExchangeExportDataset,
   params: Record<string, string | number | undefined>,
 ) {
+  if (isDemoFileMode) { return getRequest<{ text: string, name: string }>(`/api/v1/data-exchange/${dataset}/export/csv`, { params }).then(r => demoCsvResponse(r.data)) }
   return getRawRequest<Blob>(`/api/v1/data-exchange/${dataset}/export/csv`, {
     params,
     responseType: 'blob',

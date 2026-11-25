@@ -63,14 +63,18 @@ export function downloadBlob(blobValue: Blob | BlobPart, fileName: string) {
   window.setTimeout(() => URL.revokeObjectURL(url), 0)
 }
 
-export function createCsvBlob(
+export function createCsvText(
   headers: string[],
   rows: Array<Array<string | number | null | undefined>>,
 ) {
   const lines = [headers, ...rows]
     .map(row => row.map(escapeCsvCell).join(','))
     .join('\r\n')
-  return new Blob([`\uFEFF${lines}\r\n`], { type: 'text/csv;charset=utf-8' })
+  return `\uFEFF${lines}\r\n`
+}
+
+export function createCsvBlob(headers: string[], rows: Array<Array<string | number | null | undefined>>) {
+  return new Blob([createCsvText(headers, rows)], { type: 'text/csv;charset=utf-8' })
 }
 
 function escapeCsvCell(value: string | number | null | undefined) {

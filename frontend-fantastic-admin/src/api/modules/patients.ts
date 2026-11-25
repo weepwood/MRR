@@ -1,4 +1,5 @@
 import type { PaginatedResult } from '../types'
+import { demoWorkbookBlob, isDemoFileMode } from '../demo-file'
 import api, { getRequest, postRequest, putRequest } from '../index'
 
 export interface PatientRecord {
@@ -122,6 +123,7 @@ export function importPatients(file: File, dryRun: boolean) {
 
 /** GET /api/v1/patients/export/excel — 导出患者列表 */
 export function exportPatientsExcel(keyword?: string) {
+  if (isDemoFileMode) { return getRequest<{ base64: string, name: string }>('/api/v1/patients/export/excel', { params: keyword ? { keyword } : undefined }).then(r => demoWorkbookBlob(r.data)) }
   return api.get<Blob>('/api/v1/patients/export/excel', {
     params: keyword ? { keyword } : undefined,
     responseType: 'blob',

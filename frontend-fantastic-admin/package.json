@@ -16,7 +16,7 @@
     "dev:mock": "vite --mode mock",
     "mock:check": "node scripts/mock-coverage.mjs",
     "mock:check:test": "node --test scripts/mock-coverage.test.mjs",
-    "mock:check:strict": "node scripts/mock-coverage.mjs --strict=archive-boxes,ocr,ocr-batches,operations,database-monitoring,system-errors,data-relations,archive-manifest,repair-orders,quality-case-review,classification,client-environment,login-page-settings,documentation-settings,documentation,query-diagnostics",
+    "mock:check:strict": "node scripts/mock-coverage.mjs --strict=archive-boxes,ocr,ocr-batches,operations,database-monitoring,system-errors,data-relations,archive-manifest,repair-orders,quality-case-review,classification,client-environment,login-page-settings,documentation-settings,documentation,query-diagnostics,database-browse,external-archive,search,user,archive-export,data-exchange,image,logs,patients,settings",
     "build": "vue-tsc -b && vite build",
     "build:test": "vue-tsc -b && vite build --mode test",
     "build:mock": "vue-tsc -b && vite build --mode mock",

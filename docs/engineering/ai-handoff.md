@@ -346,6 +346,10 @@
 - [专项实施、真实测试、77项开放 Issue 分类与回滚](v1.1-workbench-snapshot.md)。基于 b22f7964，独立分支 feat/v1.1-workbench-snapshot；#801/#802/#803 已关闭且原提交保留于 integration/v1.1。main 24152bee 冻结。P1，仅向集成分支提交 PR；最终门禁及合并状态以 GitHub 为准。
 - 50条迁移的隔离 PG16 与真实事务代理/多连接竞争通过；工单及成员历史 UI、共享影像核对、OCR Mock、gsap/FaHoverCard 清理；48 路由缺口及医院现场验收仍待。禁止真实修复、正式发布和重复性能基准。
 
+## 08 V1.1 #804 门禁修复（2026-11-25）
+
+- 旧 head e678ce6a 实际失败三项；已修复六个工单双权限方法声明、OCR Pages 合成状态契约、固定校验和 Wrapper 引导有限重试。真实 Java21 12项、工具链12项、静态 Pages 构建和 Chromium 全冒烟成功；Docker 干净镜像待远端验证。详见 [专项证据](v1.1-workbench-snapshot.md)。不得在最新门禁通过前合并，不动冻结 main 或生产。
+
 ## 每轮交接模板
 
 - 更新时间、任务、风险、目标及非目标：

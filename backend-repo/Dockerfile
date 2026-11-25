@@ -24,7 +24,14 @@ RUN apt-get update && apt-get install -y --no-install-recommends unzip \
 COPY backend-repo/mvnw ./mvnw
 COPY backend-repo/.mvn ./.mvn
 COPY backend-repo/pom.xml ./
-RUN bash mvnw -q -B -ntp dependency:go-offline
+# Retry only the pinned, checksum-verified Wrapper bootstrap, not build/test failures.
+RUN set -eu; \
+    for attempt in 1 2 3; do \
+        if bash mvnw -q -B -ntp --version; then break; fi; \
+        test "$attempt" -lt 3; \
+        sleep "$((attempt * 3))"; \
+    done; \
+    bash mvnw -q -B -ntp dependency:go-offline
 COPY backend-repo/src ./src
 COPY --from=frontend-build /workspace/frontend-fantastic-admin/dist /workspace/frontend-dist
 RUN set -eux; \

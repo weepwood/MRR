@@ -1438,3 +1438,198 @@ body .el-image-viewer__actions__divider {
     background: rgb(0 0 0 / 78%);
   }
 }
+
+/* Preserve the migrated shell layout while Element Plus owns focus and lifecycle. */
+body .el-overlay.mrr-dialog-mask {
+  background-color: rgb(0 0 0 / 50%);
+}
+
+body .el-overlay.mrr-dialog-mask.mrr-vscode-overlay {
+  background-color: rgb(15 23 42 / 40%);
+}
+
+body .el-overlay.mrr-dialog-mask.mrr-vscode-search-overlay {
+  background-color: rgb(15 23 42 / 28%);
+}
+
+body .el-dialog.mrr-dialog-shell,
+body .el-drawer.mrr-drawer-shell {
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  padding: 0;
+  font-size: 14px;
+  color: hsl(var(--foreground));
+  background: hsl(var(--background));
+}
+
+body .el-dialog.mrr-dialog-shell {
+  width: min(512px, 100%);
+  max-height: 90vh;
+  margin: 5vh auto 0;
+  border: 1px solid var(--mrr-border);
+  border-radius: var(--radius);
+}
+
+body .el-dialog.mrr-dialog-shell.is-align-center {
+  margin: auto;
+}
+
+body .el-dialog.mrr-dialog-shell.mrr-profile-dialog {
+  width: min(576px, 100%);
+  height: 500px;
+}
+
+body .el-dialog.mrr-dialog-shell.mrr-vscode-search {
+  width: min(640px, 100%);
+  background: var(--mrr-popover);
+  border-radius: var(--mrr-radius-dialog);
+}
+
+body .el-drawer.mrr-drawer-shell {
+  max-width: 384px;
+  border-radius: 0;
+  box-shadow: -1px 0 0 0 hsl(var(--border));
+}
+
+body .el-drawer.mrr-drawer-shell.mrr-settings-drawer {
+  max-width: 520px;
+  background: var(--mrr-popover);
+  border: 1px solid var(--mrr-border);
+  box-shadow: var(--mrr-shadow-lg);
+}
+
+body .mrr-dialog-shell > .mrr-dialog-header,
+body .mrr-drawer-shell > .mrr-drawer-header {
+  position: relative;
+  display: flex;
+  flex-shrink: 0;
+  flex-direction: column;
+  gap: 6px;
+  align-items: stretch;
+  padding: 16px;
+  margin: 0;
+  color: inherit;
+  border: 0;
+}
+
+body .mrr-drawer-shell > .mrr-drawer-header {
+  gap: 8px;
+}
+
+.mrr-drawer-heading {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  width: 100%;
+}
+
+.mrr-overlay-title {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 600;
+  line-height: 1;
+  color: inherit;
+  letter-spacing: -0.025em;
+}
+
+.mrr-drawer-heading .mrr-overlay-title {
+  line-height: 28px;
+  letter-spacing: normal;
+}
+
+.mrr-overlay-description {
+  margin: 0;
+  font-size: 14px;
+  line-height: 20px;
+  color: hsl(var(--muted-foreground));
+}
+
+body .mrr-dialog-shell > .mrr-dialog-header-hidden {
+  padding: 0;
+}
+
+body .mrr-vscode-search > .mrr-dialog-header {
+  padding: 0;
+}
+
+body .mrr-dialog-shell > .mrr-dialog-body,
+body .mrr-drawer-shell > .mrr-drawer-body {
+  position: relative;
+  flex: 1;
+  padding: 16px;
+  overflow-y: auto;
+  color: inherit;
+}
+
+body .mrr-dialog-shell > .mrr-dialog-body {
+  min-height: 160px;
+}
+
+body .mrr-dialog-shell.mrr-profile-dialog > .mrr-dialog-body,
+body .mrr-dialog-shell.mrr-vscode-search > .mrr-dialog-body {
+  min-height: 0;
+  padding: 0;
+}
+
+body .mrr-dialog-shell > .mrr-overlay-footer,
+body .mrr-drawer-shell > .mrr-overlay-footer {
+  display: flex;
+  flex-shrink: 0;
+  gap: 8px;
+  align-items: center;
+  justify-content: flex-end;
+  padding: 12px;
+  background: transparent;
+  border: 0;
+}
+
+body .mrr-vscode-search > .mrr-overlay-footer {
+  padding: 0;
+}
+
+body .mrr-dialog-shell > .mrr-overlay-border-bottom,
+body .mrr-drawer-shell > .mrr-overlay-border-bottom {
+  border-bottom: 1px solid var(--mrr-border);
+}
+
+body .mrr-dialog-shell > .mrr-overlay-border-top,
+body .mrr-drawer-shell > .mrr-overlay-border-top {
+  border-top: 1px solid var(--mrr-border);
+}
+
+body .mrr-dialog-shell .el-dialog__headerbtn,
+body .mrr-drawer-shell .el-drawer__close-btn {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  z-index: 1;
+  width: 16px;
+  height: 16px;
+  padding: 0;
+  margin: 0;
+  font-size: 16px;
+  color: hsl(var(--muted-foreground));
+  border-radius: calc(var(--radius) - 4px);
+  opacity: 0.7;
+}
+
+@media (max-width: 767px) {
+  body .el-dialog.mrr-dialog-shell {
+    min-height: 100vh;
+    max-height: 100vh;
+    margin: 0 auto;
+  }
+}
+
+@media (max-width: 639px) {
+  body .el-dialog.mrr-dialog-shell {
+    border-radius: 0;
+  }
+
+  body .mrr-dialog-shell > .mrr-overlay-footer,
+  body .mrr-drawer-shell > .mrr-overlay-footer {
+    flex-direction: column-reverse;
+    align-items: stretch;
+  }
+}

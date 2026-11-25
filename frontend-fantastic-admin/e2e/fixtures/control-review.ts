@@ -1,8 +1,8 @@
 import { ElButton, ElInput, ElOption, ElSelect } from 'element-plus'
 import { createPinia } from 'pinia'
 import { createApp, h, ref } from 'vue'
+import MrrDrawer from '../../src/components/MrrDrawer/index.vue'
 import { useSettingsStore } from '../../src/store/modules/settings'
-import FaDrawer from '../../src/ui/components/FaDrawer/index.vue'
 import '@unocss/reset/tailwind-compat.css'
 import 'virtual:uno.css'
 import 'element-plus/dist/index.css'
@@ -35,7 +35,7 @@ createApp({
       ]),
       h('p', { role: 'status', style: 'margin-top:24px' }, `已操作 ${count.value} 次`),
       h('p', { 'data-testid': 'drawer-closed' }, `关闭完成 ${closed.value} 次`),
-      h(FaDrawer, { 'modelValue': drawer.value, 'onUpdate:modelValue': (v: boolean) => drawer.value = v, 'title': '合成设置抽屉', 'destroyOnClose': false, 'onClosed': () => closed.value++ }, { default: () => '合成内容' }),
+      h(MrrDrawer, { 'modelValue': drawer.value, 'onUpdate:modelValue': (v: boolean) => drawer.value = v, 'title': '合成设置抽屉', 'destroyOnClose': false, 'onClosed': () => closed.value++ }, { default: () => '合成内容' }),
     ])
   },
 }).mount('#app')

@@ -130,6 +130,13 @@ FaIcon、FaKbd、FaPinInput、FaScrollArea、FaSmartFixedBlock、FaPasswordStren
 - 原基准首次采集节点消失、后续发现入场缩放95%，不使用不稳定数据；等待动画结束后的16对真实截图（四主题×1440/760×两浮层），基线5/5（24.1秒），初次替换尺寸5/5但窄屏Popover位置差约196~214px，新增实际位置断言，联合26/32（登录、展厅等通过，2处导航aria被覆盖、4组窄屏位置失败）。修复禁用分支与Popover固有宽度后最终定向10/10（35.7秒），16对同尺寸，所测相对x/y/宽高最大0px、圆角/颜色/背景/字号/留白/边框一致，RGB任一通道差>8比例全0%，非所有像素完全相等。单测80/80（76样式+4菜单），vue-tsc、lint通过。未重跑最终32全套、医院Chrome86及完整跨浏览器。日志/tmp/mrr-v12-tooltip-{before-stable,after,closure,final,unit,tsc2}.log，证据/tmp/mrr-v12-tooltip-stable-f693。
 - 本地检查点保留，未合并。后续先处理#844实际合并，再集中迁移Dialog/Drawer/Dropdown；保留账户、搜索与设置关闭及焦点语义。
 
+## 对话框与抽屉统一（2026-11-26）
+
+- #844 已合并2dff0e4b，原head f6934742 tree一致；#845 head6b59857、远端1071/1071（159文件）、Pages5/5、230/230路由及治理全部通过，首次合并超时后重新确认OPEN、精确head及base，第二次GitHub连接器成功合并3cff46b1，tree一致。预览dispatch HTTP500，未确认新版本上线。
+- 4处旧Modal、3处旧Drawer及独立交互夹具迁移MrrDialog/MrrDrawer，唯一底层为ElDialog/ElDrawer；删除23个旧Reka实现文件。保留旧表面几何、标题/正文/按钮、遮罩色、设置抽屉持久挂载、导航搜索opened后聚焦、个人设置原关闭限制（保留props）。不再维护无调用的最大化/自研拖拽接口。焦点陷阱与关闭生命周期由EP承担，去除未实际实现的旧openAutoFocus参数，属于焦点策略变化。未迁移账户Dropdown。
+- 24组旧/新真实视觉（四主题×1440/760×展厅Dialog/Drawer/设置Drawer），基线5/5（26.6s）；首轮1/5，暖色间距覆盖和滑入采集错误，修正后5/5（32.4s）；联合39/40（1.0m）仅一例入场位移20px，修复祖先动画等待；实际截图发现设置标题下方5px偏移，恢复旧4px间距及20px描述行高。最终21/21（44.2s），24对同尺寸，所测几何最大0px、属性一致，RGB任一通道差>8中位0.010995%、最大0.470486%，非像素完全相同；77/77样式，vue-tsc及lint通过。覆盖关闭事件正常/减弱/关闭动效、搜索权限、设置保存、独立标识、改密失败恢复/重复提交/退出。未重跑最终40全套；尚未独立对照快捷键介绍、系统信息、导航搜索、个人设置全表面截图及其遮罩/Escape限制专项，医院Chrome86与全站跨浏览器未执行。
+- 日志 /tmp/mrr-v12-dialog-{before,after,after2,closure,final,unit-final,final-tsc}.log；证据 /tmp/mrr-v12-dialog-visual-6b。新批基线6b59857与3cff46b1代码树一致，重放至合并基线后提交。下一批账户下拉菜单及历史样式/依赖清理。
+
 ## 逐文件原始引用清单
 
 | 源文件（相对 src/） | Fa 标签 | Element Plus 标签 |

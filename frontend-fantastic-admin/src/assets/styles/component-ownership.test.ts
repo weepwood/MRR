@@ -13,6 +13,16 @@ function sources(dir: string): string[] {
 }
 
 describe('唯一基础控件归属', () => {
+  it('对话框和抽屉使用唯一底层实现', () => {
+    for (const component of ['FaModal', 'FaDrawer']) {
+      expect(fs.existsSync(path.join(root, 'ui/components', component))).toBe(false)
+    }
+    const legacy = sources(root).filter(file => /\bFa(?:Modal|Drawer)\b/.test(fs.readFileSync(file, 'utf8')))
+    expect(legacy.map(file => path.relative(root, file))).toEqual([])
+    expect(fs.readFileSync(path.join(root, 'components/MrrDialog/index.vue'), 'utf8')).toContain('<el-dialog')
+    expect(fs.readFileSync(path.join(root, 'components/MrrDrawer/index.vue'), 'utf8')).toContain('<el-drawer')
+  })
+
   it('提示与轻量气泡不恢复旧浮层实现', () => {
     for (const component of ['FaTooltip', 'FaPopover']) {
       expect(fs.existsSync(path.join(root, 'ui/components', component))).toBe(false)

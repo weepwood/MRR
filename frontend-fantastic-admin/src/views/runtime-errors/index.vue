@@ -70,6 +70,22 @@ function emptyOverview(): SystemErrorOverview {
   }
 }
 const overview = ref<SystemErrorOverview>(emptyOverview())
+const overviewReady = ref(false)
+const overviewLoading = ref(false)
+const overviewError = ref(false)
+let overviewGeneration = 0
+
+function resetOverview() {
+  overviewGeneration++
+  overview.value = emptyOverview()
+  overviewReady.value = false
+  overviewLoading.value = false
+  overviewError.value = false
+}
+
+function overviewValue(value: number) {
+  return overviewReady.value ? value : '—'
+}
 
 const defaultQuery = {
   keyword: '',
@@ -113,26 +129,21 @@ function rangeStart(range: string) {
 }
 
 const { clearResults, query, list, total, loading, resultVersion, pageNum: page, pageSize: size, loadData, handleSearch } = useCrudList<SystemErrorEvent, typeof defaultQuery>({
-  session: { resetQuery: defaultQuery, key: () => userStore.token, allowed: () => canReadErrors.value, onReset: () => { overview.value = emptyOverview(); lastRefreshedAt.value = null; error.value = ''; linkedRequestId.value = ''; moduleGeneration++; moduleOptions.value = []; closeDetail() } },
+  session: { resetQuery: defaultQuery, key: () => userStore.token, allowed: () => canReadErrors.value, onReset: () => { resetOverview(); lastRefreshedAt.value = null; error.value = ''; linkedRequestId.value = ''; moduleGeneration++; moduleOptions.value = []; closeDetail() } },
   defaultQuery: { ...defaultQuery, keyword: linkedRequestId.value },
   fetchApi: async ({ page, size, keyword, level, module, range }, { isCurrent, silent }) => {
+    void loadOverview()
     try {
-      const [pageResult, overviewResult] = await Promise.all([
-        searchSystemErrors({
-          page,
-          size,
-          keyword: keyword.trim() || undefined,
-          level: level || undefined,
-          module: module.trim() || undefined,
-          since: rangeStart(range),
-        }, userStore.token),
-        getSystemErrorOverview(userStore.token),
-      ])
+      const pageResult = await searchSystemErrors({
+        page,
+        size,
+        keyword: keyword.trim() || undefined,
+        level: level || undefined,
+        module: module.trim() || undefined,
+        since: rangeStart(range),
+      }, userStore.token)
       if (isCurrent()) {
         error.value = ''
-        if (overviewResult.data) {
-          overview.value = overviewResult.data
-        }
         lastRefreshedAt.value = new Date()
       }
       return pageResult
@@ -150,6 +161,35 @@ const { clearResults, query, list, total, loading, resultVersion, pageNum: page,
     }
   },
 })
+
+async function loadOverview() {
+  if (!canReadErrors.value || route.path !== '/runtime-errors') { return }
+  const generation = ++overviewGeneration
+  const token = userStore.token
+  const isCurrent = () => generation === overviewGeneration && token === userStore.token
+    && canReadErrors.value && route.path === '/runtime-errors'
+  overviewLoading.value = true
+  try {
+    const response = await getSystemErrorOverview(token)
+    if (!isCurrent()) { return }
+    if (!response.data) { throw new Error('Missing runtime error overview') }
+    overview.value = response.data
+    overviewReady.value = true
+    overviewError.value = false
+  }
+  catch (exception) {
+    if (!isCurrent()) { return }
+    if (isSessionAccessDenied(exception)) {
+      clearResults()
+      error.value = exception instanceof Error ? exception.message : '访问权限不足，请重试'
+      return
+    }
+    overviewError.value = true
+  }
+  finally {
+    if (isCurrent()) { overviewLoading.value = false }
+  }
+}
 
 function searchFromStart(keyword = '') {
   Object.assign(query, defaultQuery, { keyword })
@@ -203,8 +243,15 @@ function closeDetail() {
 
 watch(detailVisible, (visible) => { if (!visible) { clearDetail() } }, { flush: 'sync' })
 watch([() => userStore.token, canReadErrors, () => route.path], closeDetail, { flush: 'sync' })
-onDeactivated(closeDetail)
-onBeforeUnmount(closeDetail)
+onDeactivated(() => {
+  overviewGeneration++
+  overviewLoading.value = false
+  closeDetail()
+})
+onBeforeUnmount(() => {
+  resetOverview()
+  closeDetail()
+})
 
 async function openDetail(row: SystemErrorEvent) {
   if (!canReadErrors.value || route.path !== '/runtime-errors') { return }
@@ -288,7 +335,7 @@ function levelTagType(level: string) {
       description="集中查看后端 WARN / ERROR，按指纹合并重复事件，并通过错误编号、Request ID 关联接口访问日志。"
     >
       <template #meta>
-        <span class="auto-refresh-note" aria-live="polite">每 30 秒自动刷新<template v-if="lastRefreshedAt"> · 上次 {{ formatDateTime(lastRefreshedAt) }}</template></span>
+        <span class="auto-refresh-note" aria-live="polite">每 30 秒自动刷新<template v-if="lastRefreshedAt"> · 列表上次 {{ formatDateTime(lastRefreshedAt) }}</template></span>
       </template>
       <template #actions>
         <el-button :loading="loading" @click="loadData()">
@@ -298,18 +345,22 @@ function levelTagType(level: string) {
       </template>
     </MrrPageHeader>
 
-    <section class="mrr-metric-grid mrr-metric-grid--four">
+    <section class="mrr-metric-grid mrr-metric-grid--four" :aria-busy="overviewLoading" aria-label="运行错误概览">
       <button type="button" class="metric-action" title="点击仅看 ERROR 错误组" @click="applyLevelFilter('ERROR')">
-        <MrrMetricCard label="ERROR 错误组" :value="loading || error ? '—' : overview.errorGroups" value-tone="danger" note="点击仅看 ERROR" />
+        <MrrMetricCard label="ERROR 错误组" :value="overviewValue(overview.errorGroups)" value-tone="danger" note="点击仅看 ERROR" />
       </button>
       <button type="button" class="metric-action" title="点击仅看 WARN 错误组" @click="applyLevelFilter('WARN')">
-        <MrrMetricCard label="WARN 错误组" :value="loading || error ? '—' : overview.warnGroups" value-tone="warning" note="点击仅看 WARN" />
+        <MrrMetricCard label="WARN 错误组" :value="overviewValue(overview.warnGroups)" value-tone="warning" note="点击仅看 WARN" />
       </button>
-      <MrrMetricCard label="近24小时活跃错误组" :value="loading || error ? '—' : overview.recentOccurrences" note="按最后发生时间统计" />
+      <MrrMetricCard label="近24小时活跃错误组" :value="overviewValue(overview.recentOccurrences)" note="按最后发生时间统计" />
       <button type="button" class="metric-action" title="点击查看全部错误组" @click="resetFilters">
-        <MrrMetricCard label="累计错误组" :value="loading || error ? '—' : overview.totalGroups" :note="`累计 ${overview.totalOccurrences} 次 · 点击查看全部`" />
+        <MrrMetricCard label="累计错误组" :value="overviewValue(overview.totalGroups)" :note="overviewReady ? `累计 ${overview.totalOccurrences} 次 · 点击查看全部` : '点击查看全部'" />
       </button>
     </section>
+    <div v-if="overviewError" class="overview-status">
+      <span role="status">{{ overviewReady ? '概览刷新失败，显示上次成功的数据。' : '概览加载失败，不影响错误列表。' }}</span>
+      <el-button size="small" :loading="overviewLoading" @click="loadOverview">重试概览</el-button>
+    </div>
 
     <MrrDataTablePanel title="运行错误组" :count="total" :loading="loading" :result-key="resultVersion" class="runtime-errors-panel">
       <template #filters>
@@ -534,6 +585,16 @@ function levelTagType(level: string) {
   /* 统一走等宽令牌：Windows 上 Consolas 无汉字，令牌里排了中文回退，避免落到宋体。 */
   font-family: var(--mrr-font-mono);
   overflow-wrap: anywhere;
+}
+
+.overview-status {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--mrr-space-2);
+  color: var(--el-text-color-secondary);
+  font-size: var(--mrr-font-size-xs);
 }
 
 .auto-refresh-note {

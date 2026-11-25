@@ -10,6 +10,7 @@ import AppEmpty from '@/components/AppEmpty/index.vue'
 import AppError from '@/components/AppError/index.vue'
 import AppLoading from '@/components/AppLoading/index.vue'
 import MrrDataTablePanel from '@/components/MrrDataTablePanel/index.vue'
+import MrrDialog from '@/components/MrrDialog/index.vue'
 import MrrFilterActionButton from '@/components/MrrFilterActionButton/index.vue'
 import MrrFilterBar from '@/components/MrrFilterBar/index.vue'
 import MrrMetricCard from '@/components/MrrMetricCard/index.vue'
@@ -75,6 +76,22 @@ const createForm = reactive({
   roleCode: '',
   temporaryPasswordValidHours: 24,
 })
+
+const applicationVisible = ref(false)
+const applicationTarget = ref<CredentialAwareUser | null>(null)
+
+function hasApplication(row: CredentialAwareUser) {
+  return Boolean(row.appliedAt || row.contactInfo?.trim() || row.applyRemark?.trim() || row.rejectReason?.trim() || row.reviewedAt || row.reviewedBy != null || ['pending', 'rejected'].includes(normalizeStatus(row.status)))
+}
+
+function applicationPreview(row: CredentialAwareUser) {
+  return (row.applyRemark?.trim() || row.contactInfo?.trim() || row.rejectReason?.trim() || (row.appliedAt ? `申请于 ${formatDateTime(row.appliedAt)}` : '注册申请')).replace(/\s+/g, ' ')
+}
+
+function openApplication(row: CredentialAwareUser) {
+  applicationTarget.value = row
+  applicationVisible.value = true
+}
 
 const approveVisible = ref(false)
 const approveSaving = ref(false)
@@ -642,12 +659,17 @@ onMounted(loadData)
         </el-table-column>
         <el-table-column label="申请信息" min-width="180">
           <template #default="{ row }">
-            <div v-if="row.appliedAt || row.contactInfo || row.applyRemark" class="application-info">
-              <span v-if="row.contactInfo">{{ row.contactInfo }}</span>
-              <small v-if="row.applyRemark">{{ row.applyRemark }}</small>
-              <small v-if="row.appliedAt">申请于 {{ formatDateTime(row.appliedAt) }}</small>
-              <small v-if="row.rejectReason" class="reject-reason">拒绝原因：{{ row.rejectReason }}</small>
-            </div>
+            <el-button
+              v-if="hasApplication(row)"
+              text
+              class="application-preview"
+              :aria-label="`查看 ${row.username || row.displayName || '用户'} 的申请详情`"
+              aria-haspopup="dialog"
+              @click.stop="openApplication(row)"
+            >
+              <span class="application-preview__text">{{ applicationPreview(row) }}</span>
+              <FaIcon name="i-lucide:arrow-up-right" class="application-preview__icon" aria-hidden="true" />
+            </el-button>
             <span v-else class="user-source">管理员创建</span>
           </template>
         </el-table-column>
@@ -690,6 +712,35 @@ onMounted(loadData)
         </el-pagination>
       </template>
     </MrrDataTablePanel>
+
+    <MrrDialog v-model="applicationVisible" title="申请详情" @closed="applicationTarget = null">
+      <div v-if="applicationTarget" class="application-detail">
+        <div class="application-detail__identity">
+          <div class="user-identity">
+            <span class="user-avatar" aria-hidden="true">{{ String(applicationTarget.displayName || applicationTarget.username || '?').slice(0, 1) }}</span>
+            <div class="user-identity__copy">
+              <strong>{{ applicationTarget.username }}</strong>
+              <span v-if="applicationTarget.displayName" class="user-identity__name">{{ applicationTarget.displayName }}</span>
+            </div>
+          </div>
+          <MrrStatusTag :label="statusDisplay(applicationTarget.status).label" :tone="statusDisplay(applicationTarget.status).tone" />
+        </div>
+        <dl class="application-detail__fields">
+          <div><dt>联系方式</dt><dd>{{ applicationTarget.contactInfo || '未填写' }}</dd></div>
+          <div><dt>申请时间</dt><dd>{{ formatDateTime(applicationTarget.appliedAt) }}</dd></div>
+          <div v-if="applicationTarget.reviewedAt"><dt>审核时间</dt><dd>{{ formatDateTime(applicationTarget.reviewedAt) }}</dd></div>
+        </dl>
+        <section class="application-detail__section">
+          <h3>申请说明</h3>
+          <p>{{ applicationTarget.applyRemark || '未填写' }}</p>
+        </section>
+        <section v-if="applicationTarget.rejectReason" class="application-detail__section application-detail__section--rejected">
+          <h3>拒绝原因</h3>
+          <p>{{ applicationTarget.rejectReason }}</p>
+        </section>
+      </div>
+      <template #footer><el-button @click="applicationVisible = false">关闭</el-button></template>
+    </MrrDialog>
 
     <el-dialog v-model="createVisible" title="创建用户" width="520px" :close-on-click-modal="false">
       <el-alert type="info" :closable="false" show-icon title="管理员创建的用户默认启用。系统将生成一次性临时密码，首次登录后必须修改。" />
@@ -834,10 +885,21 @@ onMounted(loadData)
 .users-pagination .users-pagination__size.el-button:not(.is-disabled):hover { color: var(--mrr-foreground); }
 .users-table-panel :deep(.el-pagination__total) { margin-inline-end: auto; color: var(--mrr-muted-foreground); }
 
-.application-info { display: grid; gap: 3px; min-width: 0; }
-.application-info span { font-size: var(--mrr-font-size-xs); color: var(--mrr-foreground); }
-.application-info small { overflow: hidden; font-size: var(--mrr-font-size-xs); line-height: 1.45; color: var(--mrr-muted-foreground); text-overflow: ellipsis; }
-.application-info .reject-reason { color: var(--mrr-destructive); }
+/* One line for scanning; the read-only dialog preserves the original text. */
+.application-preview.el-button { justify-content: flex-start; width: 100%; max-width: 100%; min-width: 0; height: 32px; padding: 0; color: var(--mrr-muted-foreground); border: 0; box-shadow: none; }
+.application-preview.el-button :deep(> span) { display: flex; gap: var(--mrr-space-2); align-items: center; width: 100%; min-width: 0; }
+.application-preview__text { overflow: hidden; font-size: var(--mrr-font-size-xs); text-overflow: ellipsis; white-space: nowrap; }
+.application-preview__icon { flex: none; font-size: 14px; }
+.application-preview.el-button:not(.is-disabled):hover { color: var(--mrr-primary); background: transparent; }
+.application-preview.el-button:focus-visible { outline: 2px solid var(--mrr-primary); outline-offset: -2px; }
+.application-detail { display: grid; min-width: 0; gap: var(--mrr-space-4); }
+.application-detail__identity { display: flex; gap: var(--mrr-space-3); align-items: center; justify-content: space-between; min-width: 0; }
+.application-detail__fields { display: grid; gap: var(--mrr-space-3); margin: 0; padding-block: var(--mrr-space-4); border-block: 1px solid var(--mrr-border); }
+.application-detail__fields > div { display: grid; grid-template-columns: 80px minmax(0, 1fr); gap: var(--mrr-space-3); align-items: start; }
+.application-detail__fields dt, .application-detail__section h3 { margin: 0; font-size: var(--mrr-font-size-xs); font-weight: 600; color: var(--mrr-muted-foreground); }
+.application-detail__fields dd, .application-detail__section p { min-width: 0; margin: 0; line-height: 1.65; overflow-wrap: anywhere; white-space: pre-wrap; }
+.application-detail__section { display: grid; min-width: 0; gap: var(--mrr-space-2); }
+.application-detail__section--rejected h3 { color: var(--mrr-destructive); }
 .no-perm, .unit { margin-left: var(--mrr-space-2); font-size: var(--mrr-font-size-xs); color: var(--mrr-muted-foreground); }
 .dialog-form { display: grid; gap: 2px; margin-top: var(--mrr-space-4); }
 .readonly-field { display: flex; align-items: center; width: 100%; min-height: var(--mrr-control-height); padding: 0 var(--mrr-space-3); color: var(--mrr-muted-foreground); background: var(--mrr-muted); border: 1px solid var(--mrr-border); border-radius: var(--mrr-radius-md); }
@@ -845,7 +907,7 @@ onMounted(loadData)
 .review-summary, .credential-panel { display: grid; gap: var(--mrr-space-3); padding: var(--mrr-space-4); margin-top: var(--mrr-space-4); background: var(--mrr-muted); border: 1px solid var(--mrr-border); border-radius: var(--mrr-radius-lg); }
 .review-summary > div, .credential-panel > div { display: grid; grid-template-columns: 90px 1fr; gap: var(--mrr-space-3); align-items: start; }
 .review-summary span, .credential-panel span { font-size: var(--mrr-font-size-xs); color: var(--mrr-muted-foreground); }
-.review-summary p { margin: 0; line-height: 1.6; white-space: pre-wrap; }
+.review-summary p, .review-summary strong { min-width: 0; margin: 0; line-height: 1.6; overflow-wrap: anywhere; white-space: pre-wrap; }
 .credential-panel code { padding: var(--mrr-space-2) var(--mrr-space-3); font-family: var(--mrr-font-mono); font-size: var(--mrr-font-size-md); letter-spacing: 0.02em; font-weight: 700; word-break: break-all; background: var(--mrr-card); border-radius: var(--mrr-radius-md); }
 .credential-actions { display: flex; gap: var(--mrr-space-2); margin-top: var(--mrr-space-4); }
 .acknowledge { margin-top: var(--mrr-space-4); }

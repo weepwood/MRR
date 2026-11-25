@@ -717,6 +717,7 @@ onMounted(loadData)
         >
           <template #default="{ row }">
             <MrrTableActions
+              appearance="quiet"
               :actions="userActions(row)"
               :max-inline="1"
               @select="handleUserAction($event, row)"
@@ -873,7 +874,7 @@ onMounted(loadData)
 .users-filter-bar :deep(.mrr-filter-bar__fields > .users-filter__keyword) { width: 100%; max-width: none; min-width: 0; }
 .users-filter-bar :deep(.mrr-filter-bar__fields > .users-filter__select) { width: 100%; max-width: none; min-width: 0; }
 .users-toolbar { display: flex; flex-wrap: wrap; align-items: flex-start; gap: var(--mrr-space-3); }
-.users-toolbar > .users-filter-bar.mrr-filter-bar--embedded { flex: 1 1 640px; min-width: 0; padding-bottom: 0; justify-content: flex-start; }
+.users-toolbar > .users-filter-bar.mrr-filter-bar--embedded { flex: 1 1 640px; min-width: 0; padding-bottom: 0; justify-content: flex-start; border-bottom: 0; }
 .users-toolbar__create { flex: none; margin-inline-start: auto; }
 .users-filter-bar :deep(.mrr-filter-bar__fields) { display: grid; flex: 0 1 784px; grid-template-columns: minmax(0, 1fr) 144px 144px; }
 .users-filter-bar :deep(.mrr-filter-bar__actions) { flex-shrink: 0; align-self: flex-end; padding-left: 0; border-left: 0; }

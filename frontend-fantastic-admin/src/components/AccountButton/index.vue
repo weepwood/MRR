@@ -94,7 +94,7 @@ function closeOnEscape(event: KeyboardEvent) {
       </el-dropdown-menu>
     </template>
   </el-dropdown>
-  <MrrDialog v-model="isProfileShow" title="个人设置" align-center :header="false" :footer="false" :close-on-click-overlay="false" :close-on-press-escape="false" class="mrr-profile-dialog overflow-hidden" content-class="min-h-full p-0 flex">
+  <MrrDialog v-model="isProfileShow" title="个人设置" appearance="custom" align-center :header="false" :footer="false" :close-on-click-overlay="false" :close-on-press-escape="false" class="mrr-profile-dialog overflow-hidden" content-class="min-h-full p-0 flex">
     <Profile />
   </MrrDialog>
 </template>

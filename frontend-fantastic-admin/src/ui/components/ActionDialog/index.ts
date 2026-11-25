@@ -21,6 +21,7 @@ export interface DialogDetail {
 interface DialogOptions {
   type?: 'info' | 'warning'
   confirmButtonText?: string
+  confirmButtonType?: 'primary' | 'danger'
   cancelButtonText?: string
   /** 可选变更清单，用于「确认保存」这类需要先看清影响的场景。 */
   details?: DialogDetail[]

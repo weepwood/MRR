@@ -445,7 +445,7 @@ onMounted(loadData)
       <template #pagination><el-pagination v-model:current-page="pageNum" v-model:page-size="pageSize" :page-sizes="[10, 20, 50, 100]" :total="total" layout="total, sizes, prev, pager, next, jumper" @size-change="handleSizeChange" @current-change="handlePageChange" /></template>
     </MrrDataTablePanel>
 
-    <el-dialog v-model="detailVisible" title="审计详情" width="min(820px, 92vw)" class="audit-detail">
+    <el-dialog v-model="detailVisible" align-center title="审计详情" width="min(820px, 92vw)" class="audit-detail">
       <AppLoading v-if="detailLoading" />
       <AppError v-else-if="detailError" :message="detailError" @retry="retryDetail" />
       <el-descriptions v-else-if="currentLog" :column="isNarrowScreen ? 1 : 2" border>

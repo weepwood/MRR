@@ -143,5 +143,30 @@ test('窄屏大量分页的前后翻页按钮与页码保持同一导航区', as
   await footer.locator('.btn-next').click()
   await nextBatch
   await expect(footer.locator('.el-pager .is-active')).toHaveText('2')
+  for (const width of [375, 1440]) {
+    await page.setViewportSize({ width, height: 812 })
+    const jump = footer.locator('.el-pagination__jump')
+    const editor = jump.locator('input')
+    const wrapper = jump.locator('.el-input__wrapper')
+    await expect.poll(() => footer.locator('.el-pager').evaluate(el => Number.parseFloat(getComputedStyle(el).columnGap))).toBe(4)
+    await expect(wrapper).toHaveCSS('box-shadow', 'none')
+    await expect(wrapper).toHaveCSS('background-color', 'rgba(0, 0, 0, 0)')
+    await expect.poll(() => jump.evaluate((el) => {
+      const rect = el.getBoundingClientRect()
+      const pager = el.parentElement!.querySelector('.el-pager')!.getBoundingClientRect()
+      return rect.top < pager.bottom && rect.bottom > pager.top
+    })).toBe(true)
+    await editor.click()
+    await expect(editor).toBeFocused()
+    await expect.poll(() => wrapper.evaluate(el => getComputedStyle(el).boxShadow)).not.toBe('none')
+    const target = width === 375 ? '3' : '4'
+    await editor.fill(target)
+    await editor.press('Enter')
+    await expect(footer.locator('.el-pager .is-active')).toHaveText(target)
+    await footer.locator('.el-pagination__total').click()
+    await expect(editor).not.toBeFocused()
+    await expect(wrapper).toHaveCSS('box-shadow', 'none')
+    await expectContained(page, '.mrr-data-table-panel__pagination, .el-pager')
+  }
   await page.unrouteAll({ behavior: 'wait' })
 })

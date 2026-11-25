@@ -123,6 +123,7 @@ watch(
 
 <template>
   <el-dialog
+    align-center
     :model-value="modelValue"
     title="编辑患者信息"
     width="min(720px, 92vw)"

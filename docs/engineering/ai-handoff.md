@@ -730,3 +730,7 @@
 ## 注册申请弹窗与审核外观归一（2026-11-26）
 
 基线 40f6cc17。原详情/恢复为 MrrDialog，审核为直接 ElDialog，底层均 Element Plus。改为一个 MrrDialog 实例的 detail/review/reopen 三模式，共享 review-summary 双列语义字段及公共 overlay-shells.css 的 opt-in business 外观；无需新组件，540px宽度上限、16px标题、桌面20px/窄屏16px水平内边距、卡片底色、内容可滚动和对齐底栏。保留详情只读、审核角色及原拒绝原因 prompt、恢复待审核，统一忙态防关闭/重复提交，未改变后端/API。实际 Chromium 截图 /tmp/mrr-registration-{detail,review}-v2.png；四主题双宽度三模式双引擎48组布局检查及既有长文本、审核、恢复、拒绝业务回归共9/9含预热；TypeScript、ESLint、Stylelint定向通过。日志 /tmp/mrr-registration-dialog-{browser,tsc,lint,style}.log。其他普通用户编辑/创建/密码对话框和全局默认 MrrDialog 未迁移，未运行全量CI/生产构建/Chrome86实机；仅本地9037，不推送、不发布。
+
+## 全站业务弹窗与分页微交互（2026-11-26）
+
+基线 2ce2ad95。MrrDialog 默认 business 外观、水平垂直居中；ActionDialog 和剩余五个用户管理弹窗复用已有封装，14处直接 ElDialog 启用原生 align-center 并共享 overlay-shells.css 外壳，原宽度、回调及业务权限不变。移除原固定5vh及局部双层边距，长内容内部滚动。个人设置与导航搜索保留 custom，搜索保留顶部命令面板位置；抽屉与直接 ElMessageBox 确认框未迁移。拒绝确认采用 danger。分页统一页码4px间距，原生 jumper 无边框数字静止态，实际 focus-within 控制编辑样式，窄屏同导航区，保留原分页请求；返回顶部24px→16px，不改点击区域。弹窗双浏览器25/25含预热，含四主题48组申请弹窗几何、拒绝校验、凭据、诊断与运行设置。分页首轮3通过2失败（原生内部焦点类残留），调整焦点判定并模拟点击外部后复验5/5含预热，含真实跳页及键盘返回顶部。定向单测30/30，类型及样式检查。日志 /tmp/mrr-dialog-global-*.log、/tmp/mrr-dialog-pagination-final-*.log、/tmp/mrr-pagination-refine-*.log。未逐一打开全部原生业务弹窗，未运行全量CI/生产构建及Chrome86实机。仅本地9037，不改后端、不推送、不发布。

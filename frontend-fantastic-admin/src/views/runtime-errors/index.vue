@@ -474,7 +474,7 @@ function levelTagType(level: string) {
       </template>
     </MrrDataTablePanel>
 
-    <el-dialog v-model="detailVisible" title="运行错误详情" width="880px" top="5vh">
+    <el-dialog v-model="detailVisible" align-center title="运行错误详情" width="880px">
       <div v-if="current && canReadAccessLogs && current?.requestId" class="detail-links">
         <el-button size="small" @click="openAccessLog(current?.requestId)">
           查看访问记录

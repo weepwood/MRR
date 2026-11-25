@@ -341,7 +341,7 @@ function typeLabel(value: unknown) {
       </template>
     </MrrDataTablePanel>
 
-    <el-dialog v-model="detailVisible" title="记录详情" width="720px" :close-on-click-modal="false">
+    <el-dialog v-model="detailVisible" align-center title="记录详情" width="720px" :close-on-click-modal="false">
       <el-descriptions v-if="currentRecord" :column="2" border>
         <el-descriptions-item label="病案号">
           {{ currentRecord.bah || '-' }}

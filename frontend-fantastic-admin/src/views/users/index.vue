@@ -450,6 +450,7 @@ async function handleReject(row: CredentialAwareUser) {
       '拒绝注册申请',
       {
         confirmButtonText: '确认拒绝',
+        confirmButtonType: 'danger',
         cancelButtonText: '取消',
         type: 'warning',
         inputType: 'textarea',
@@ -737,7 +738,6 @@ onMounted(loadData)
     <MrrDialog
       v-model="registrationVisible"
       :title="registrationTitle"
-      class="mrr-dialog-shell--business"
       :close-on-click-overlay="registrationMode === 'detail' && !registrationBusy"
       :close-on-press-escape="!registrationBusy"
       :closable="!registrationBusy"
@@ -792,7 +792,7 @@ onMounted(loadData)
       </template>
     </MrrDialog>
 
-    <el-dialog v-model="createVisible" title="创建用户" width="520px" :close-on-click-modal="false">
+    <MrrDialog v-model="createVisible" title="创建用户" width="520px" :close-on-click-overlay="false">
       <el-alert type="info" :closable="false" show-icon title="管理员创建的用户默认启用。系统将生成一次性临时密码，首次登录后必须修改。" />
       <el-form ref="createFormRef" :model="createForm" :rules="createRules" label-position="top" class="dialog-form">
         <el-form-item label="用户名" prop="username"><el-input v-model="createForm.username" autocomplete="off" placeholder="例如 zhangsan" /></el-form-item>
@@ -801,9 +801,9 @@ onMounted(loadData)
         <el-form-item label="临时密码有效期"><el-input-number v-model="createForm.temporaryPasswordValidHours" :min="1" :max="168" /><span class="unit">小时</span></el-form-item>
       </el-form>
       <template #footer><el-button @click="createVisible = false">取消</el-button><el-button type="primary" :loading="createSaving" @click="handleCreate">创建用户</el-button></template>
-    </el-dialog>
+    </MrrDialog>
 
-    <el-dialog v-model="editVisible" title="编辑用户" width="480px" :close-on-click-modal="false">
+    <MrrDialog v-model="editVisible" title="编辑用户" width="480px" :close-on-click-overlay="false">
       <el-form ref="editFormRef" :model="editForm" :rules="editRules" label-position="top" class="dialog-form">
         <el-form-item label="用户名"><div class="readonly-field">{{ editTarget?.username }}</div></el-form-item>
         <el-form-item label="显示名称"><el-input v-model="editForm.displayName" /></el-form-item>
@@ -811,24 +811,24 @@ onMounted(loadData)
         <el-form-item label="状态" prop="status"><el-select v-model="editForm.status" class="full-width"><el-option v-for="option in editableStatusOptions" :key="option.value" v-bind="option" /></el-select></el-form-item>
       </el-form>
       <template #footer><el-button @click="editVisible = false">取消</el-button><el-button type="primary" :loading="editSaving" @click="handleSaveEdit">保存修改</el-button></template>
-    </el-dialog>
+    </MrrDialog>
 
-    <el-dialog v-model="resetVisible" title="重置用户密码" width="500px" :close-on-click-modal="false">
+    <MrrDialog v-model="resetVisible" title="重置用户密码" width="500px" :close-on-click-overlay="false">
       <el-alert type="warning" :closable="false" show-icon :title="`重置后「${resetTarget?.displayName || resetTarget?.username}」的旧 Token 将立即失效，下次登录必须修改密码。`" />
       <el-form ref="resetFormRef" :model="resetForm" :rules="resetRules" label-position="top" class="dialog-form">
         <el-form-item label="当前管理员密码" prop="administratorPassword"><el-input v-model="resetForm.administratorPassword" type="password" autocomplete="current-password" show-password /></el-form-item>
         <el-form-item label="临时密码有效期"><el-input-number v-model="resetForm.temporaryPasswordValidHours" :min="1" :max="168" /><span class="unit">小时</span></el-form-item>
       </el-form>
       <template #footer><el-button @click="resetVisible = false">取消</el-button><el-button type="danger" :icon="KeyRound" :loading="showResetLoading" :disabled="resetSaving" @click="handleResetPassword">确认重置</el-button></template>
-    </el-dialog>
+    </MrrDialog>
 
-    <el-dialog
+    <MrrDialog
       v-model="disableVisible"
       title="禁用用户"
       width="min(480px, calc(100vw - 32px))"
-      :close-on-click-modal="!disableSaving"
+      :close-on-click-overlay="!disableSaving"
       :close-on-press-escape="!disableSaving"
-      :show-close="!disableSaving"
+      :closable="!disableSaving"
       @closed="disableTarget = null"
     >
       <el-alert
@@ -842,9 +842,9 @@ onMounted(loadData)
         <el-button :disabled="disableSaving" @click="disableVisible = false">取消</el-button>
         <el-button type="danger" :loading="disableSaving" @click="handleDisable">确认禁用</el-button>
       </template>
-    </el-dialog>
+    </MrrDialog>
 
-    <el-dialog v-model="credentialVisible" :title="credentialTitle" width="520px" :close-on-click-modal="false" :show-close="false" :close-on-press-escape="false">
+    <MrrDialog v-model="credentialVisible" :title="credentialTitle" width="520px" :close-on-click-overlay="false" :closable="false" :close-on-press-escape="false">
       <el-alert type="warning" :closable="false" show-icon title="临时密码关闭窗口后无法再次查看，请通过安全方式交付。" />
       <div class="credential-panel">
         <div><span>用户名</span><strong>{{ credentialResult?.user.username }}</strong></div>
@@ -854,7 +854,7 @@ onMounted(loadData)
       <div class="credential-actions"><el-button @click="copyCredentialSummary">复制账号信息</el-button><el-button type="primary" @click="copyText(credentialResult?.temporaryPassword || '', '临时密码已复制')">复制临时密码</el-button></div>
       <el-checkbox v-model="credentialAcknowledged" class="acknowledge">我已通过安全方式保存或交付临时密码</el-checkbox>
       <template #footer><el-button type="primary" :disabled="!credentialAcknowledged" @click="closeCredentialResult">完成</el-button></template>
-    </el-dialog>
+    </MrrDialog>
   </MrrPageShell>
 </template>
 
@@ -950,7 +950,12 @@ onMounted(loadData)
   .users-filter-bar :deep(.mrr-filter-bar__fields > .users-filter__select) { flex: 1 1 100%; width: 100%; max-width: 100%; min-width: 0; }
   .users-filter-bar :deep(.mrr-filter-bar__fields) { flex: 1 1 auto; grid-template-columns: minmax(0, 1fr); }
   .users-table-panel :deep(.el-pagination__total) { margin-inline-end: 0; }
-  .users-pagination .users-pagination__size.el-button { grid-row: 1; grid-column: 2 / 4; justify-self: end; margin-right: 0; }
+  .users-pagination .users-pagination__size.el-button { grid-row: 1; grid-column: 3 / -1; justify-self: end; margin-right: 0; }
+
+  .users-table-panel :deep(.users-pagination.el-pagination) {
+    --el-pagination-button-width: 32px;
+    --el-pagination-button-height: 32px;
+  }
   .users-pagination :deep(.btn-prev), .users-pagination :deep(.btn-next), .users-pagination :deep(.el-pager li) { min-width: 32px; height: 32px; line-height: 32px; }
   .credential-actions { flex-direction: column; }
 }

@@ -321,7 +321,7 @@ async function skipRollbackPage() {
       <ClassificationReview v-if="selectedJob" :job-id="selectedJob" />
     </MrrSectionCard>
 
-    <el-dialog v-model="rollbackOpen" title="自动归类回退预览" width="min(900px, 95vw)">
+    <el-dialog v-model="rollbackOpen" align-center title="自动归类回退预览" width="min(900px, 95vw)">
       <el-alert
         type="warning"
         :closable="false"

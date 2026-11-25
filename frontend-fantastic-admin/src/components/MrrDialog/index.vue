@@ -14,6 +14,8 @@ const props = withDefaults(defineProps<{
   footerClass?: string
   overlayClass?: string
   alignCenter?: boolean
+  appearance?: 'business' | 'custom'
+  width?: string | number
   border?: boolean
   header?: boolean
   footer?: boolean
@@ -22,6 +24,9 @@ const props = withDefaults(defineProps<{
   closeOnPressEscape?: boolean
   showCancelButton?: boolean
 }>(), {
+  alignCenter: true,
+  appearance: 'business',
+  width: '540px',
   border: true,
   header: true,
   footer: true,
@@ -44,7 +49,8 @@ function confirm() {
     append-to-body
     destroy-on-close
     :title="title"
-    :class="cn('mrr-dialog-shell', props.class)"
+    :class="cn('mrr-dialog-shell', { 'mrr-dialog-shell--business': appearance === 'business' }, props.class)"
+    :width="width"
     :modal-class="cn('mrr-dialog-mask', overlayClass)"
     :align-center="alignCenter"
     :show-close="closable"

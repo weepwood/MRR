@@ -41,6 +41,14 @@ test('免登录模式下可以查看扫描记录详情', async ({ page }) => {
   const detail = page.getByRole('dialog', { name: '记录详情' })
   await expect(detail).toContainText('synthetic-record.pdf', { timeout: 20_000 })
   await expect(detail.locator('.mrr-status-tag--success')).toHaveText('已验证')
+  for (const width of [1440, 375]) {
+    await page.setViewportSize({ width, height: 812 })
+    await expect.poll(() => detail.locator('.el-dialog').evaluate((el) => {
+      const r = el.getBoundingClientRect()
+      return Math.abs(r.left + r.width / 2 - innerWidth / 2) <= 1
+        && Math.abs(r.top + r.height / 2 - innerHeight / 2) <= 1
+    })).toBe(true)
+  }
 })
 
 test('迁移状态保留已知文案、未知值和缺失值', async ({ page }) => {

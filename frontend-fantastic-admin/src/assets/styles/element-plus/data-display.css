@@ -166,7 +166,7 @@ body .el-pagination {
 @media (max-width: 760px) {
   body .el-pagination {
     display: grid;
-    grid-template-columns: auto minmax(0, 1fr) auto;
+    grid-template-columns: auto minmax(0, 1fr) auto auto;
     width: 100%;
   }
 
@@ -178,7 +178,7 @@ body .el-pagination {
 
   .el-pagination .el-pagination__sizes {
     grid-row: 1;
-    grid-column: 2 / 4;
+    grid-column: 3 / -1;
     justify-self: end;
     margin-left: 0;
   }
@@ -203,10 +203,78 @@ body .el-pagination {
   }
 
   .el-pagination .el-pagination__jump {
-    grid-row: 3;
-    grid-column: 1 / -1;
-    justify-self: start;
+    grid-row: 2;
+    grid-column: 4;
+    justify-self: end;
     margin-left: 0;
+  }
+}
+
+/* Page cells are discrete targets, including the native jumper. Keep the
+ * native number input and change event; only its resting appearance is quiet. */
+body .el-pagination .el-pager {
+  gap: 4px;
+}
+
+body .el-pagination.is-background .el-pager li {
+  margin-inline: 0;
+}
+
+body .el-pagination .el-pagination__jump {
+  gap: 4px;
+  margin-inline-start: 0;
+  font-size: var(--mrr-font-size-xs);
+  color: var(--mrr-muted-foreground);
+  white-space: nowrap;
+}
+
+body .el-pagination .el-pagination__goto,
+body .el-pagination .el-pagination__classifier {
+  margin-inline: 0;
+}
+
+body .el-pagination .el-pagination__editor.el-input {
+  width: max(var(--el-pagination-button-width), calc(4ch + 8px));
+  height: var(--el-pagination-button-height);
+  font-size: inherit;
+}
+
+body .el-pagination .el-pagination__editor .el-input__wrapper {
+  height: 100%;
+  min-height: 0;
+  padding: 0 4px;
+  background: transparent;
+  border-radius: var(--mrr-radius-sm);
+  box-shadow: none;
+}
+
+body .el-pagination .el-pagination__editor:not(.is-disabled) .el-input__wrapper:not(:focus-within):hover {
+  background: var(--mrr-accent);
+}
+
+body .el-pagination .el-pagination__editor .el-input__wrapper:focus-within {
+  background: var(--mrr-field-focus-bg);
+  box-shadow: inset 0 0 0 1px var(--mrr-ring), var(--mrr-focus-ring);
+}
+
+body .el-pagination .el-pagination__editor .el-input__inner {
+  height: 100%;
+  font-size: inherit;
+  line-height: var(--el-pagination-button-height);
+  color: var(--mrr-muted-foreground);
+  text-align: center;
+  appearance: textfield;
+  cursor: pointer;
+}
+
+body .el-pagination .el-pagination__editor .el-input__inner:focus {
+  color: var(--mrr-foreground);
+  cursor: text;
+}
+
+@media (max-width: 760px) {
+  body .el-pagination .el-pagination__classifier {
+    display: none;
   }
 }
 

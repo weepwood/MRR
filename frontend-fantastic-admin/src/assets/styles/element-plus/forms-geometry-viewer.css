@@ -33,29 +33,7 @@
   background: var(--mrr-primary);
 }
 
-/* ===== Dialogs, forms and tabs ===== */
-body .el-dialog {
-  overflow: hidden;
-  color: var(--mrr-card-foreground);
-  background: var(--mrr-card);
-  border: 1px solid var(--mrr-border);
-  border-radius: var(--mrr-radius-dialog);
-  box-shadow: var(--mrr-shadow-dialog);
-}
-
-.el-dialog__header {
-  padding: 20px 24px 16px;
-  margin-right: 0;
-  border-bottom: 1px solid var(--mrr-border);
-}
-
-/* 17px 不在字号阶梯上；对话框标题与分区标题同档，正文 13–14px 之上只高一级。 */
-.el-dialog__title {
-  font-size: var(--mrr-font-size-lg);
-  font-weight: 650;
-  color: var(--mrr-card-foreground);
-  letter-spacing: -0.01em;
-}
+/* ===== Forms and tabs (dialog geometry owned by overlay-shells.css) ===== */
 
 /*
  * ===== 表面圆角 =====
@@ -99,16 +77,6 @@ body .el-table__inner-wrapper,
 body .el-descriptions__body,
 body .el-descriptions__table {
   border-radius: inherit;
-}
-
-.el-dialog__body {
-  padding: 20px 24px;
-}
-
-.el-dialog__footer {
-  padding: 16px 24px;
-  background: color-mix(in srgb, var(--mrr-muted) 42%, var(--mrr-card));
-  border-top: 1px solid var(--mrr-border);
 }
 
 .el-form-item__label {
@@ -194,10 +162,6 @@ body .el-descriptions__table {
 
   body .el-button--danger.is-plain:not(.is-disabled):hover {
     border-color: var(--mrr-destructive);
-  }
-
-  .el-dialog__footer {
-    background: var(--mrr-card);
   }
 
   .el-button--danger:focus-visible {

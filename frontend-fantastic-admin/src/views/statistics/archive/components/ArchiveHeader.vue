@@ -299,7 +299,7 @@ defineExpose({ openAllHistory })
             </div>
           </el-popover>
 
-          <el-dialog v-model="allHistoryVisible" width="min(560px, calc(100vw - 32px))">
+          <el-dialog v-model="allHistoryVisible" align-center width="min(560px, calc(100vw - 32px))">
             <template #header>
               <div class="history-dialog-header">
                 <div class="history-filter-actions" role="group" aria-label="筛选搜索记录">

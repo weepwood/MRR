@@ -1425,7 +1425,7 @@ onMounted(() => {
       </MrrSectionCard>
     </template>
 
-    <el-dialog v-model="uploadResultVisible" title="手工上传结果" width="min(900px, 92vw)">
+    <el-dialog v-model="uploadResultVisible" align-center title="手工上传结果" width="min(900px, 92vw)">
       <div v-if="uploadResult" class="upload-summary">
         <el-tag type="info">
           总数 {{ uploadResult.total ?? uploadResult.results.length }}

@@ -415,7 +415,7 @@ function statusTagType(status: string | number) {
       </template>
     </MrrDataTablePanel>
 
-    <el-dialog v-model="detailVisible" title="接口访问审计详情" width="min(900px, 92vw)" class="log-detail">
+    <el-dialog v-model="detailVisible" align-center title="接口访问审计详情" width="min(900px, 92vw)" class="log-detail">
       <AppLoading v-if="detailLoading" />
       <AppError v-else-if="detailError" :message="detailError" @retry="retryDetail" />
       <el-descriptions v-else-if="currentLog" :column="isNarrowScreen ? 1 : 2" border>
@@ -498,8 +498,6 @@ function statusTagType(status: string | number) {
   display: flex;
   flex-direction: column;
   max-height: calc(100vh - 48px);
-  margin-top: 24px;
-  margin-bottom: 24px;
 }
 
 :global(.log-detail .el-dialog__header) {
@@ -515,8 +513,6 @@ function statusTagType(status: string | number) {
 @media (max-width: 760px) {
   :global(.log-detail.el-dialog) {
     max-height: calc(100vh - 32px);
-    margin-top: 16px;
-    margin-bottom: 16px;
   }
 
   :global(.log-detail .el-descriptions__label) {

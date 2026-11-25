@@ -218,6 +218,12 @@ test.describe('用户凭据生命周期', () => {
       await page.getByRole('menuitem', { name: '拒绝申请' }).click()
       await expect(dialog).toHaveClass(/\bel-overlay-dialog\b/)
       await expect(reason).toBeFocused()
+      await expect(dialog.getByRole('button', { name: '确认拒绝' })).toHaveClass(/el-button--danger/)
+      await expect.poll(() => dialog.locator('.mrr-dialog-shell--business').evaluate((el) => {
+        const r = el.getBoundingClientRect()
+        return Math.abs(r.left + r.width / 2 - innerWidth / 2) <= 1
+          && Math.abs(r.top + r.height / 2 - innerHeight / 2) <= 1
+      })).toBe(true)
     }
 
     await openReject()

@@ -666,9 +666,9 @@ onMounted(refreshAll)
 
     <el-dialog
       v-model="dialogVisible"
+      align-center
       :title="dialogTitle"
       width="min(620px, calc(100% - 24px))"
-      top="min(15vh, 6rem)"
       destroy-on-close
       @closed="resetForm"
     >

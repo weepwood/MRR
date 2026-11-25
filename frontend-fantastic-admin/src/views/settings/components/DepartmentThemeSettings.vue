@@ -322,7 +322,7 @@ onMounted(() => {
     </div>
   </el-card>
 
-  <el-dialog v-model="historyVisible" title="历史配色" width="min(680px, calc(100% - 32px))">
+  <el-dialog v-model="historyVisible" align-center title="历史配色" width="min(680px, calc(100% - 32px))">
     <div v-if="hasHistory" class="theme-history-list">
       <article v-for="item in history" :key="item.savedAt" class="theme-history-item">
         <div class="theme-history-summary">

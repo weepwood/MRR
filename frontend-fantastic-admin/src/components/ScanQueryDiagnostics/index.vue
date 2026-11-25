@@ -396,12 +396,7 @@ onBeforeUnmount(resetReport)
   display: flex;
   min-width: 0;
   min-height: 0;
-  padding: 0;
   overflow: hidden;
-}
-
-:global(.query-diagnostics > .el-dialog__footer) {
-  padding: 12px 0 0;
 }
 
 .diagnostics-body {

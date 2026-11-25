@@ -40,6 +40,7 @@ test('申请详情审核恢复共用业务弹窗与字段布局，四主题窄�
             labelsAligned: Math.max(...labels) - Math.min(...labels) <= 1,
             valuesAligned: Math.max(...values) - Math.min(...values) <= 1,
             fits: r.left >= -1 && r.right <= innerWidth + 1 && r.bottom <= innerHeight + 1,
+            centered: Math.abs(r.left + r.width / 2 - innerWidth / 2) <= 1 && Math.abs(r.top + r.height / 2 - innerHeight / 2) <= 1,
             scrollFits: body.scrollWidth <= body.clientWidth + 1,
             footerVisible: footer.getBoundingClientRect().bottom <= innerHeight + 1,
           }
@@ -48,7 +49,7 @@ test('申请详情审核恢复共用业务弹窗与字段布局，四主题窄�
         await expect(summary).toBeVisible()
         await expect(summary.getByRole('heading', { name: '申请详情' })).toBeVisible()
         await expect(summary.getByText('授予角色', { exact: true })).toHaveCount(0)
-        await expect.poll(async () => { const g = await readGeometry(); return g.fits && g.scrollFits && g.footerVisible && g.labelsAligned && g.valuesAligned }).toBe(true)
+        await expect.poll(async () => { const g = await readGeometry(); return g.centered && g.fits && g.scrollFits && g.footerVisible && g.labelsAligned && g.valuesAligned }).toBe(true)
         const detail = await readGeometry()
         expect(detail.headerPadding).toBe(detail.bodyPadding)
         expect(detail.bodyPadding).toBe(detail.footerPadding)

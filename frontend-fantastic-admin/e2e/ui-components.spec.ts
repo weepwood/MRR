@@ -306,6 +306,12 @@ test('返回顶部在隐藏计时后仍可通过键盘聚焦与触发', async ({
   await expect.poll(() => back.evaluate(el => el.getBoundingClientRect().left >= window.innerWidth), { timeout: 6000 }).toBe(true)
   await back.focus()
   await expect(back).toBeFocused()
+  await expect.poll(() => back.evaluate((el) => {
+    const glyph = el.querySelector('svg, i')!
+    const button = el.getBoundingClientRect()
+    const icon = glyph.getBoundingClientRect()
+    return icon.width <= 16.5 && icon.height <= 16.5 && button.width - icon.width >= 10
+  })).toBe(true)
   await expect.poll(() => back.evaluate(el => el.getBoundingClientRect().right <= window.innerWidth)).toBe(true)
   await back.press('Enter')
   await expect.poll(() => page.evaluate(() => document.documentElement.scrollTop)).toBe(0)

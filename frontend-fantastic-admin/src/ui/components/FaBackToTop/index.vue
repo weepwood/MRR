@@ -78,7 +78,7 @@ function handleBackToTop() {
   <Teleport to="body">
     <Transition v-bind="transitionClass">
       <el-button v-if="scrollTop >= 200" :auto-insert-space="false" aria-label="回到顶部" class="mrr-button-flow mrr-button-square mrr-button-round transition-[right,inset-inline-end,opacity,transform] fixed inset-b-4 z-1000 rounded-full -inset-e-9" :class="{ 'inset-e-3!': show }" @mouseenter="handleMouseenter" @mouseleave="handleMouseleave" @focus="handleFocus" @blur="handleBlur" @click="handleBackToTop">
-        <FaIcon name="i-lucide:arrow-up-to-line" class="size-6" />
+        <FaIcon name="i-lucide:arrow-up-to-line" class="size-4" aria-hidden="true" />
       </el-button>
     </Transition>
   </Teleport>

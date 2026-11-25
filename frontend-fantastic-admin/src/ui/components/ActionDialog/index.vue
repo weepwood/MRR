@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import type { ElInput } from 'element-plus'
 import { onBeforeUnmount, ref, useTemplateRef, watch } from 'vue'
+import MrrDialog from '@/components/MrrDialog/index.vue'
 import { ACTION_DIALOG_EXTRA, ACTION_DIALOG_Z_INDEX, cancelActionDialogs, currentActionDialog, finishActionDialog } from './index'
 
 const visible = ref(false)
@@ -57,18 +58,14 @@ onBeforeUnmount(cancelActionDialogs)
 </script>
 
 <template>
-  <el-dialog
-    :model-value="visible"
+  <MrrDialog
+    v-model="visible"
     :title="currentActionDialog?.title"
-    :close-on-click-modal="currentActionDialog?.options.closeOnClickModal ?? true"
+    :close-on-click-overlay="currentActionDialog?.options.closeOnClickModal ?? true"
     :close-on-press-escape="currentActionDialog?.options.closeOnPressEscape ?? true"
     :width="currentActionDialog?.options.details ? 'min(560px, calc(100vw - 32px))' : 'min(480px, calc(100vw - 32px))'"
     :z-index="ACTION_DIALOG_Z_INDEX"
-    align-center
-    append-to-body
-    destroy-on-close
     @opened="focusInput"
-    @close="visible = false"
     @closed="handleClosed"
   >
     <template v-if="currentActionDialog">
@@ -127,14 +124,14 @@ onBeforeUnmount(cancelActionDialogs)
       <el-button v-if="currentActionDialog?.options.extraButtonText" @click="chooseExtra">
         {{ currentActionDialog.options.extraButtonText }}
       </el-button>
-      <el-button @click="visible = false">
+      <el-button :auto-insert-space="false" @click="visible = false">
         {{ currentActionDialog?.options.cancelButtonText ?? '取消' }}
       </el-button>
-      <el-button type="primary" @click="confirm">
+      <el-button :type="currentActionDialog?.options.confirmButtonType ?? 'primary'" :auto-insert-space="false" @click="confirm">
         {{ currentActionDialog?.options.confirmButtonText ?? '确定' }}
       </el-button>
     </template>
-  </el-dialog>
+  </MrrDialog>
 </template>
 
 <style scoped>

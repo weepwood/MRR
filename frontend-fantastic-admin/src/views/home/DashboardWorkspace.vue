@@ -690,7 +690,7 @@ watch(storageKey, loadPreferences, { immediate: true })
       </div>
     </section>
 
-    <el-dialog v-model="managerVisible" title="管理小组件" width="860px">
+    <el-dialog v-model="managerVisible" align-center title="管理小组件" width="860px">
       <p class="dialog-description">
         选择首页需要展示的模块，并设置大小、颜色和置顶状态。配置只保存在当前浏览器和当前账号下。
       </p>
@@ -755,7 +755,7 @@ watch(storageKey, loadPreferences, { immediate: true })
       </template>
     </el-dialog>
 
-    <el-dialog v-model="editorVisible" title="编辑小组件" width="540px">
+    <el-dialog v-model="editorVisible" align-center title="编辑小组件" width="540px">
       <el-form label-position="top" class="widget-editor-form">
         <el-form-item label="组件名称">
           <el-input v-model="editorForm.title" maxlength="30" show-word-limit />

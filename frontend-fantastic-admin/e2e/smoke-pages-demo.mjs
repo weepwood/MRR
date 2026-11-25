@@ -431,7 +431,7 @@ async function smokePagesDemo() {
     await archiveInput.waitFor({ timeout: 20000 })
     await archiveInput.fill('26070000')
     await archiveInput.press('Enter')
-    const samples = workbench.getByRole('group', { name: '有效影像样本' })
+    const samples = workbench.getByRole('group', { name: '有效影像列表' })
     await samples.getByRole('button').first().click({ timeout: 20000 })
     const scanImage = workbench.getByAltText('待核对影像')
     await scanImage.waitFor({ timeout: 20000 })
@@ -441,7 +441,7 @@ async function smokePagesDemo() {
     })
     assert.match(await scanImage.getAttribute('src'), /^blob:/)
     await workbench.getByRole('button', { name: '识别文字', exact: true }).click()
-    await workbench.getByRole('dialog', { name: '影像文字识别' }).waitFor({ timeout: 15000 })
+    await workbench.getByRole('region', { name: '影像文字识别' }).waitFor({ timeout: 15000 })
     await workbench.close()
 
     // Use the actual bundled browser Mock, not Playwright page.route stubs.

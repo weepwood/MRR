@@ -46,6 +46,18 @@ public class DataRelationController {
                 .data(dataRelationService.searchArchives(type, value, limit));
     }
 
+    @GetMapping("/archives/{archiveId}/scans")
+    @RequirePermissions({"system:read","record:read"})
+    public Result<com.zjcxph.imgapi.repository.DataRelationRepository.ScanPage> activeScans(
+            @PathVariable long archiveId,
+            @RequestParam(required=false) Integer afterPage,
+            @RequestParam(required=false) Integer afterId,
+            @RequestParam(defaultValue="50") int limit,
+            jakarta.servlet.http.HttpServletResponse response) {
+        response.setHeader("Cache-Control","private, no-store");
+        return Result.success(dataRelationService.activeScanPage(archiveId,afterPage,afterId,limit));
+    }
+
     @Operation(summary = "获取一份病案的跨表关系详情")
     @GetMapping("/archives/{archiveId}")
     public Result<Map<String, Object>> archiveRelation(@PathVariable long archiveId) {

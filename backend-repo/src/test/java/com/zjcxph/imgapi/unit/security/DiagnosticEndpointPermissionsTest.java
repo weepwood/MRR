@@ -174,6 +174,28 @@ class DiagnosticEndpointPermissionsTest {
     }
 
     @Test
+    void archiveScanPageRequiresBothReadPermissionsAndNoStore() throws Exception {
+        var service=mock(DataRelationService.class);
+        var controller=new com.zjcxph.imgapi.controller.DataRelationController(service);
+        var handler=new HandlerMethod(controller,controller.getClass().getMethod("activeScans",long.class,
+                Integer.class,Integer.class,int.class,jakarta.servlet.http.HttpServletResponse.class));
+        var auth=new AuthorizationInterceptor();
+        String path="/api/v1/system/data-relations/archives/7/scans";
+        for(var permissions:List.of(List.<String>of(),List.of("system:read"),List.of("record:read"))) {
+            var response=new MockHttpServletResponse();
+            assertThat(auth.preHandle(request("GET",path,permissions),response,handler)).isFalse();
+            assertThat(response.getStatus()).isEqualTo(403);
+        }
+        assertThat(auth.preHandle(request("GET",path,List.of("system:read","record:read")),
+                new MockHttpServletResponse(),handler)).isTrue();
+        verifyNoInteractions(service);
+        var response=new MockHttpServletResponse();
+        controller.activeScans(7,null,null,50,response);
+        verify(service).activeScanPage(7,null,null,50);
+        assertThat(response.getHeader("Cache-Control")).isEqualTo("private, no-store");
+    }
+
+    @Test
     void manifestUsesDualPermissionsAndTrustedActor() throws Exception {
         var service = mock(ArchiveManifestService.class);
         var controller = new ArchiveManifestController(service);

@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import type { OcrFact } from '@/api/modules/ocr'
-import { ElMessage } from 'element-plus'
+import { ElDrawer, ElMessage } from 'element-plus'
 import { computed, onBeforeUnmount, ref, watch } from 'vue'
 import { cancelOcrJob, createOcrJob, getOcrFact, getOcrJobs } from '@/api/modules/ocr'
 import { Z_INDEX } from '@/constants/z-index'
@@ -8,7 +8,7 @@ import useAuth from '@/utils/composables/useAuth'
 import { useOcrJob } from '../composables/useOcrJob'
 import ClassificationReview from './ClassificationReview.vue'
 
-const props = defineProps<{ scanId: number, imageUrl?: string, unclassified: boolean, expectedArchiveId?: number }>()
+const props = defineProps<{ scanId: number, imageUrl?: string, unclassified: boolean, expectedArchiveId?: number, inline?: boolean }>()
 const { auth } = useAuth()
 const { job, error: pollingError, follow, stop } = useOcrJob()
 const open = ref(false)
@@ -81,9 +81,9 @@ async function cancel() {
 
 watch(open, (value) => {
   if (value) {
-    void load(true)
+    if (auth('ocr:read')) { void load(true) }
   }
-  else { generation++; stop(); fact.value = null; job.value = null }
+  else { generation++; actionGeneration++; stop(); fact.value = null; job.value = null; busy.value = false; loadError.value = '' }
 })
 watch(() => [props.scanId, props.expectedArchiveId], () => {
   generation++
@@ -92,7 +92,7 @@ watch(() => [props.scanId, props.expectedArchiveId], () => {
   job.value = null
   fact.value = null
   busy.value = false
-  if (open.value) { void load(true) }
+  if (open.value && auth('ocr:read')) { void load(true) }
 })
 function clearSession() {
   generation++
@@ -113,10 +113,16 @@ watch(() => job.value?.status, (status) => {
 
 <template>
   <el-config-provider :z-index="Z_INDEX.ocrDrawer">
-    <el-button v-if="auth('ocr:read')" size="small" @click="open = true">
+    <el-button v-if="auth('ocr:read') && (!inline || !open)" size="small" @click="open = true">
       识别文字
     </el-button>
-    <el-drawer v-model="open" title="影像文字识别" size="min(960px, 95vw)" append-to-body>
+    <component :is="inline ? 'section' : ElDrawer" v-if="!inline || open" v-bind="inline ? { 'aria-label': '影像文字识别', 'class': 'ocr-inline' } : { modelValue: open, title: '影像文字识别', size: 'min(960px, 95vw)', appendToBody: true }" @update:model-value="open = $event">
+      <div v-if="inline" class="ocr-inline-heading">
+        <strong>影像文字识别</strong>
+        <el-button size="small" @click="open = false">
+          收起识别
+        </el-button>
+      </div>
       <el-alert v-if="loadError || pollingError" :title="loadError || pollingError" type="error" :closable="false" />
       <p>识别文字供病案整理参考，请对照原图核实。</p>
       <div class="ocr-actions">
@@ -153,11 +159,15 @@ watch(() => job.value?.status, (status) => {
         </div>
       </div>
       <ClassificationReview v-if="job && auth('classification:read')" :job-id="job.id" />
-    </el-drawer>
+    </component>
   </el-config-provider>
 </template>
 
 <style scoped>
+.ocr-inline { min-width: 0; padding: 12px; border: 1px solid var(--el-border-color-light); border-radius: var(--el-border-radius-base); }
+.ocr-inline-heading { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; justify-content: space-between; }
+.ocr-inline .ocr-compare { grid-template-columns: 1fr; }
+.ocr-inline textarea { min-height: 240px; }
 .ocr-actions { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin: 16px 0; }
 .ocr-compare { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-top: 16px; }
 .ocr-compare img { align-self: start; width: 100%; height: auto; object-fit: contain; }

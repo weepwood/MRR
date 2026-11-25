@@ -91,6 +91,21 @@ export default defineFakeRoute([
     },
   },
   {
+    url: '/api/v1/system/data-relations/archives/:archiveId/scans',
+    response: ({ params, query }) => {
+      const archiveId = Number(params.archiveId)
+      const limit = Number(query?.limit ?? 50)
+      const afterId = query?.afterId == null ? null : Number(query.afterId)
+      const afterPage = query?.afterPage == null ? null : Number(query.afterPage)
+      if (!Number.isSafeInteger(archiveId) || archiveId <= 0 || !Number.isInteger(limit) || limit < 1 || limit > 100 || (afterId != null && (!Number.isSafeInteger(afterId) || afterId <= 0)) || (afterPage != null && (afterId == null || !Number.isInteger(afterPage)))) { return demoError(400, '无效分页') }
+      const rows = activeScans(archiveId).sort((a, b) => a.pages - b.pages || a.id - b.id).filter(row => afterId == null || (afterPage != null && (row.pages > afterPage || (row.pages === afterPage && row.id > afterId)))).slice(0, limit + 1)
+      const more = rows.length > limit
+      if (more) { rows.pop() }
+      const last = rows.at(-1)
+      return demoOk({ archiveId, rows: rows.map(s => ({ id: s.id, archiveId: s.archiveId, uploadFlag: s.uploadFlag, pages: s.pages, btype: s.btype, migrationStatus: s.migrationStatus })), nextCursor: more && last ? { pages: last.pages, id: last.id } : null })
+    },
+  },
+  {
     url: '/api/v1/system/data-relations/archives/:archiveId',
     response: ({ params }) => {
       const archive = archives().find(row => row.id === Number(params.archiveId))

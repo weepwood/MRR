@@ -23,7 +23,7 @@ function panel() {
       stubs: {
         'el-config-provider': { template: '<div><slot /></div>' },
         'el-button': { template: '<button><slot /></button>' },
-        'el-drawer': { props: ['modelValue'], template: '<div v-if="modelValue"><slot /></div>' },
+        'ElDrawer': { props: ['modelValue'], template: '<div v-if="modelValue"><slot /></div>' },
         'el-alert': { props: ['title'], template: '<p>{{ title }}</p>' },
         'el-tag': true,
         'el-progress': true,
@@ -44,6 +44,26 @@ describe('病案工作台 OCR 身份隔离', () => {
     expect(api.getOcrJobs).not.toHaveBeenCalled()
     await (wrapper.vm as any).run(false)
     expect(api.createOcrJob).not.toHaveBeenCalled()
+    wrapper.unmount()
+  })
+
+  it('内嵌面板切换已选影像时保留展开状态但不接受旧文本', async () => {
+    vi.clearAllMocks()
+    let resolve!: (value: unknown) => void
+    api.getOcrFact.mockImplementationOnce(() => new Promise(r => resolve = r))
+    const wrapper = panel()
+    await wrapper.setProps({ inline: true })
+    await wrapper.get('button').trigger('click')
+    api.getOcrFact.mockResolvedValueOnce({ data: { scanId: 12, archiveId: 1, status: 'SUCCEEDED', text: '新影像合成文本' } })
+    api.getOcrJobs.mockResolvedValue({ data: [] })
+    await wrapper.setProps({ scanId: 12 })
+    await flushPromises()
+    resolve({ data: { scanId: 11, archiveId: 1, status: 'SUCCEEDED', text: '旧影像合成文本' } })
+    await flushPromises()
+    expect(wrapper.get('section[aria-label="影像文字识别"]').exists()).toBe(true)
+    expect(wrapper.get('textarea').element.value).toBe('新影像合成文本')
+    await wrapper.findAll('button').find(b => b.text() === '收起识别')!.trigger('click')
+    expect(wrapper.find('textarea').exists()).toBe(false)
     wrapper.unmount()
   })
 

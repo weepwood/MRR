@@ -84,6 +84,13 @@ public class DataRelationServiceImpl implements DataRelationService {
     }
 
     @Override
+    public DataRelationRepository.ScanPage activeScanPage(long archiveId,Integer afterPage,Integer afterId,int limit) {
+        if(archiveId<=0 || limit<1 || limit>100 || (afterId!=null && afterId<=0) || (afterPage!=null && afterId==null))
+            throw new BusinessException(400,"无效影像分页参数");
+        return repository.activeScanPage(archiveId,afterPage,afterId,limit);
+    }
+
+    @Override
     public Map<String, Object> getArchiveRelation(long archiveId) {
         Map<String, Object> archive = repository.findArchive(archiveId);
         if (archive == null) {

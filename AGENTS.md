@@ -147,7 +147,7 @@ MRR/
 - 每轮开始先读交接索引及关联任务文档，再以 GitHub Issue、PR、实际分支 SHA 和最新 CI 核对状态；不得仅依赖聊天记忆。
 - 每个独立任务在仓库内维护可接续的进度记录：目标与非目标、已完成/待办、Issue/PR/分支/提交、实际验证及未执行项、阻塞、关键决策、下一步及回滚入口。
 - 在阶段交付、暂停、切换工具或上下文前更新记录；代码变更随任务 PR 更新对应实施文档，合并状态以实时 GitHub 为准，避免把待合并写成已完成。仅交接变更可独立 P3 PR。
-- V1.1 当前专题入口：[Manifest任务恢复及公开演示配置](docs/engineering/v1.1-manifest-recovery.md)、[工单异常重开与完整性报告](docs/engineering/v1.1-repair-manifest-report.md)、[运维历史及Nginx受控检查](docs/engineering/v1.1-operations-history.md)、[独立病案工作台与集中可靠性增量](docs/engineering/v1.1-workbench-entry.md)、[工作台、成员快照及工程欠账](docs/engineering/v1.1-workbench-snapshot.md)，最终 PR、SHA 和验收以实际 GitHub 状态为准。
+- V1.1 当前专题入口：[病案工作台影像分页与内嵌OCR](docs/engineering/v1.1-workbench-scan-pagination.md)、[Manifest任务恢复及公开演示配置](docs/engineering/v1.1-manifest-recovery.md)、[工单异常重开与完整性报告](docs/engineering/v1.1-repair-manifest-report.md)、[运维历史及Nginx受控检查](docs/engineering/v1.1-operations-history.md)、[独立病案工作台与集中可靠性增量](docs/engineering/v1.1-workbench-entry.md)、[工作台、成员快照及工程欠账](docs/engineering/v1.1-workbench-snapshot.md)，最终 PR、SHA 和验收以实际 GitHub 状态为准。
 - AGENTS.md 保持稳定的规则和入口，不堆积逐轮日志。长篇历史归档到关联 Issue 或专题文档；交接索引保留当前任务及指向。
 - 不记录真实患者数据、令牌、密钥、生产配置或其他敏感信息；不擅自提交用户未保存的改动。若不能写入仓库，如实报告并保留可复制交接内容。
 

@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import type { ExampleId } from '../catalog'
 import { computed, ref, useId } from 'vue'
+import { handleSegmentedTabKey } from '@/utils/segmented-tabs'
 
 defineProps<{ example: ExampleId }>()
 
@@ -118,7 +119,7 @@ const options = [{ label: '本地示例', value: 'local' }, { label: '归档示�
   </div>
 
   <div v-else-if="example === 'navigation'" class="example-stack">
-    <el-tabs v-model="activeTab" class="mrr-segmented-tabs">
+    <el-tabs v-model="activeTab" class="mrr-segmented-tabs" @keydown="handleSegmentedTabKey">
       <el-tab-pane :name="`${id}-preview`" label="组件预览" lazy>
         <p class="example-note">
           正在展示页签的预览内容，可以使用方向键切换页签。

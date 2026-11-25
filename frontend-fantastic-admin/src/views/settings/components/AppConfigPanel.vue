@@ -4,6 +4,7 @@ import type { Settings } from '#/global'
 import settingsDefault from '@/settings.default'
 import { notify } from '@/utils/notification'
 import { diffTwoObj } from '@/utils/object'
+import { handleSegmentedTabKey } from '@/utils/segmented-tabs'
 import { normalizeThemeColor, readableInkOn, themeColorPresets } from '@/utils/theme-color'
 import { gr8rPrimary, normalizeThemePalette, themePalettePresets } from '@/utils/theme-palette'
 
@@ -212,7 +213,7 @@ function handleReset() {
     </div>
     <input ref="importInput" class="import-input" type="file" accept="application/json,.json" @change="handleImport">
 
-    <el-tabs ref="groupTabsRef" v-model="groupTab" class="mrr-segmented-tabs appearance-tabs">
+    <el-tabs ref="groupTabsRef" v-model="groupTab" class="mrr-segmented-tabs appearance-tabs" @keydown="handleSegmentedTabKey">
       <el-tab-pane :name="`${tabsId}-group-theme`" lazy>
         <template #label>
           <span data-settings-search-target="theme" class="appearance-tab-label">
@@ -270,7 +271,7 @@ function handleReset() {
                 <strong>颜色主题</strong>
                 <small>可固定明亮、暗黑模式，或跟随操作系统。</small>
               </div>
-              <el-tabs v-model="themeTab" class="theme-tabs mrr-segmented-tabs">
+              <el-tabs v-model="themeTab" class="theme-tabs mrr-segmented-tabs" @keydown="handleSegmentedTabKey">
                 <el-tab-pane v-for="option in themeOptions" :key="option.value" :name="`${tabsId}-theme-${option.value}`">
                   <template #label>
                     <span class="mrr-segmented-label">
@@ -362,7 +363,7 @@ function handleReset() {
                 <strong>页面标题风格</strong>
                 <small>页面同级更简洁，卡片风格层次更突出。</small>
               </div>
-              <el-tabs v-model="titleTab" class="title-style-tabs mrr-segmented-tabs">
+              <el-tabs v-model="titleTab" class="title-style-tabs mrr-segmented-tabs" @keydown="handleSegmentedTabKey">
                 <el-tab-pane v-for="option in titleOptions" :key="option.value" :name="`${tabsId}-title-${option.value}`" :label="option.label" />
               </el-tabs>
             </div>
@@ -870,6 +871,12 @@ function handleReset() {
 
 .theme-tabs {
   width: 240px;
+}
+
+/* The old 240px option bar contained 238px of intrinsic-width segments.
+ * Its centered flex row therefore started 1px from the outer edge. */
+.theme-tabs > :deep(.el-tabs__header .el-tabs__nav) {
+  padding-inline: 1px;
 }
 
 /* 配色预览始终显示方案自身的真实色值，而非当前主题的颜色。 */

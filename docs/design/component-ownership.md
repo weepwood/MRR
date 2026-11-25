@@ -102,6 +102,12 @@ FaIcon、FaKbd、FaPinInput、FaScrollArea、FaSmartFixedBlock、FaPasswordStren
 - 原版4主题×2宽度×4场景共32组实际截图/计算样式，基线5/5含预热（29.4秒），目录 /tmp/mrr-v12-tabs-visual-993。首轮 nested tablist 定位冲突已修；四套桌面分类实际几何及样式一致；主题首尾padding修复后原70/70/98px宽度一致，但三个标签仍整体偏右3px，超过原1px几何门禁，取消EP滚动平移仍未解决。最终 after4 为1/5（4个主题用例失败，预热通过），只采集到8组替换后数据，剩余标题/展厅/窄屏未完成对照。72/72样式单测、vue-tsc 通过；未扩大生产代码范围。日志 /tmp/mrr-v12-tabs-{before,after,after2,after3,after4,tsc,tsc2,unit}.log。
 - 本地检查点不推送、不建PR；后续先收口#841，按准确新基线重放，继续实际主题位置诊断及全量32组比较，不放宽阈值；注意ElTabs键盘Home/End差异和Chrome86兼容。
 
+## 标签页视觉与键盘收口（2026-11-25）
+
+- 主题组原240px容器含238px内在内容，恢复1px左右内边距，四套主题全32组相对几何最大差0px、所测字号/字重/颜色/圆角无差，全部截图同尺寸。初次像素最大3.4859%，抽查确认旧UnoCSS shadow-sm为0 1px 2px 0 rgba(0,0,0,.05)，误用卡片阴影；恢复共享分段标签轻阴影后，32对任一RGB通道差>8的像素比例均0%，不宣称所有像素完全一致。保留两列/四列分类及原组宽。
+- 新增仅处理Home/End的辅助键盘函数，方向键仍由Element Plus拥有；实际设置搜索、目标焦点、主题空字符串跟随系统、标题设置、抽屉独立ID、保存与离开确认通过。联合40/40（1.0m，阴影修正前），最终阴影修正后定向6/6（29.8秒，含预热），样式72/72、vue-tsc、lint通过。日志 /tmp/mrr-v12-tabs-{after5,closure,closure-tsc,final-unit,shadow-final}.log。
+- #841 head40786f77远端待门禁；本地标签分支基线仍993f7427，不包含之后的G2诊断与修复；先确保#841合并后再重放，不覆盖原工程文档。未执行Chrome86现场与完整跨浏览器。
+
 ## 逐文件原始引用清单
 
 | 源文件（相对 src/） | Fa 标签 | Element Plus 标签 |

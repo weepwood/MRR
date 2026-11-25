@@ -459,6 +459,8 @@
 /* Segmented appearance for existing settings and gallery tabs. The single
  * Element Plus implementation retains its tab/panel and keyboard semantics. */
 .mrr-segmented-tabs.el-tabs {
+  --mrr-segmented-tab-shadow: 0 1px 2px 0 rgb(0 0 0 / 5%);
+
   flex-direction: column;
   min-width: 0;
 }
@@ -531,7 +533,7 @@
 .mrr-segmented-tabs > .el-tabs__header .el-tabs__item.is-active {
   color: hsl(var(--foreground));
   background: hsl(var(--background));
-  box-shadow: var(--mrr-shadow-sm);
+  box-shadow: var(--mrr-segmented-tab-shadow);
 }
 
 .mrr-segmented-tabs > .el-tabs__header .el-tabs__item:focus-visible {

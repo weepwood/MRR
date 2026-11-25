@@ -566,7 +566,7 @@ onMounted(() => {
       <el-tab-pane label="病案工作台" name="archive">
         <div class="archive-stack" :class="{ 'archive-stack--workspace': archiveOnly }" :style="archiveOnly ? { '--archive-rail-width': `${railWidth}px` } : undefined">
           <div class="archive-search-rail" :class="{ 'archive-search-rail--legacy': !archiveOnly }" role="region" aria-label="病案检索及候选">
-            <MrrSectionCard title="查找病案" :description="archiveOnly ? undefined : '选择编号类型，查询病案主档及其跨表关系。'">
+            <MrrSectionCard :body-padding="archiveOnly ? 'compact' : 'normal'" title="查找病案" :description="archiveOnly ? undefined : '选择编号类型，查询病案主档及其跨表关系。'">
               <div v-if="archiveOnly" class="archive-rail-controls">
                 <label for="archive-rail-width">检索栏目标宽度</label>
                 <output for="archive-rail-width">{{ railWidth }}px</output>
@@ -596,7 +596,7 @@ onMounted(() => {
                 </el-button>
               </div>
             </MrrSectionCard>
-            <MrrSectionCard v-if="archiveOnly && (searchLoading || searchCompleted || searchError)" title="病案主档候选" :description="searchCompleted ? `本次返回 ${searchResults.length} 条，最多 20 条` : '按编号检索后选择病案'">
+            <MrrSectionCard v-if="archiveOnly && (searchLoading || searchCompleted || searchError)" body-padding="compact" title="病案主档候选" :description="searchCompleted ? `本次返回 ${searchResults.length} 条，最多 20 条` : '按编号检索后选择病案'">
               <AppLoading v-if="searchLoading" />
               <AppError v-else-if="searchError" message="病案查询失败，请重试" @retry="searchArchives" />
               <AppEmpty v-else-if="!searchResults.length" size="compact" :description="searchCompleted ? '当前条件未找到病案主档' : '等待检索'" />
@@ -1012,6 +1012,7 @@ p {
 /* The standalone workspace keeps search context beside the current record. */
 .archive-stack--workspace {
   grid-template-columns: minmax(220px, min(var(--archive-rail-width, 260px), 34%)) minmax(0, 1fr);
+  gap: var(--mrr-space-3);
   align-items: start;
 }
 
@@ -1112,6 +1113,7 @@ p {
 .archive-candidates {
   display: grid;
   gap: var(--mrr-space-2);
+  align-content: start;
   max-height: 540px;
   overflow: auto;
 }
@@ -1121,7 +1123,7 @@ p {
   gap: var(--mrr-space-1);
   justify-items: start;
   min-width: 0;
-  padding: var(--mrr-space-3);
+  padding: var(--mrr-space-2);
   color: var(--el-text-color-regular);
   text-align: left;
   overflow-wrap: anywhere;

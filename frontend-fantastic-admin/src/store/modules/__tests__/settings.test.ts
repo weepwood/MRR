@@ -83,6 +83,17 @@ describe('settings store — 全站界面配置同步', () => {
     document.documentElement.removeAttribute('data-motion')
   })
 
+  it.each(['filesystem', 'backend', 'unknown'])('旧路由来源%s安全回到显式登记路由，保留外观配置', (routeBaseOn) => {
+    localStorage.setItem('MRR-ADMIN:app-settings', JSON.stringify({ app: { routeBaseOn, colorScheme: 'dark' } }))
+    const store = useSettingsStore()
+    expect(store.settings.app.routeBaseOn).toBe('frontend')
+    expect(store.settings.app.colorScheme).toBe('dark')
+    store.updateSettings({ app: { routeBaseOn: 'filesystem' } })
+    expect(store.settings.app.routeBaseOn).toBe('frontend')
+    store.saveAppSettings()
+    expect(JSON.parse(localStorage.getItem('MRR-ADMIN:app-settings')!).app.routeBaseOn).toBe('frontend')
+  })
+
   it('默认开启动态效果，并允许用户在本机关闭', async () => {
     vi.stubGlobal('matchMedia', vi.fn().mockReturnValue({
       matches: true,

@@ -103,6 +103,8 @@ function getInitialSettings(): RecursiveRequired<Settings.all> {
   try {
     const savedSettings = localStorage.getItem(APP_SETTINGS_STORAGE_KEY)
     const initialSettings = savedSettings ? merge(JSON.parse(savedSettings), defaults) : defaults
+    // Legacy generated routing has no reviewed permission/menu registry.
+    initialSettings.app.routeBaseOn = 'frontend'
     initialSettings.app.pageTitleStyle = normalizePageTitleStyle(initialSettings.app.pageTitleStyle)
     initialSettings.app.themePalette = normalizeThemePalette(initialSettings.app.themePalette)
     return initialSettings
@@ -338,6 +340,7 @@ export const useSettingsStore = defineStore(
     // 更新应用配置
     function updateSettings(data: Settings.all, fromBase = false) {
       settings.value = merge(data, fromBase ? getInitialSettings() : settings.value)
+      settings.value.app.routeBaseOn = 'frontend'
     }
 
     function writeLocalAppSettings() {
@@ -437,6 +440,7 @@ export const useSettingsStore = defineStore(
           return true
         }
         settings.value = merge(parsed as Partial<Settings.all>, settings.value)
+        settings.value.app.routeBaseOn = 'frontend'
         writeLocalAppSettings()
         lastSyncedUiSettings = JSON.stringify(collectUiSettings(settings.value))
         return true

@@ -1,9 +1,8 @@
 import type { RouteRecordRaw } from 'vue-router'
 import { createRouter, createWebHashHistory, createWebHistory } from 'vue-router'
-import pinia from '@/store'
 import setupExtensions from './extensions'
 import setupGuards from './guards'
-import { constantRoutes, constantRoutesByFilesystem, systemRoutes } from './routes'
+import { constantRoutes, systemRoutes } from './routes'
 
 const passwordChangeRequiredRoute: RouteRecordRaw = {
   path: '/password/change-required',
@@ -14,15 +13,12 @@ const passwordChangeRequiredRoute: RouteRecordRaw = {
   },
 }
 
-const settingsStore = useSettingsStore(pinia)
 const router = createRouter({
   // Pages 无服务端 SPA 回退，使用 hash 路由支持刷新和深链。
   history: import.meta.env.MODE === 'pages'
     ? createWebHashHistory(import.meta.env.BASE_URL)
     : createWebHistory(),
-  routes: settingsStore.settings.app.routeBaseOn === 'filesystem'
-    ? constantRoutesByFilesystem
-    : [...constantRoutes, passwordChangeRequiredRoute, ...systemRoutes],
+  routes: [...constantRoutes, passwordChangeRequiredRoute, ...systemRoutes],
 })
 
 setupGuards(router)

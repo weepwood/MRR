@@ -1,14 +1,3 @@
-<route lang="yaml">
-name: dataExchange
-meta:
-  title: 数据导入导出
-  icon: i-lucide:arrow-left-right
-  auth:
-    - record:read
-    - statistics:read
-  cache: true
-</route>
-
 <script setup lang="ts">
 import type {
   ArchiveBoxExchangeFilters,

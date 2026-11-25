@@ -1,10 +1,3 @@
-<route lang="yaml">
-meta:
-  title: UI 组件
-  icon: i-lucide:component
-  cache: false
-</route>
-
 <script setup lang="ts">
 import { computed, ref } from 'vue'
 import { categories, examples } from './catalog'

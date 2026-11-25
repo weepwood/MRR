@@ -1,7 +1,5 @@
 import type { RouteRecordRaw } from 'vue-router'
 import type { Route } from '#/global'
-import generatedRoutes from 'virtual:generated-pages'
-import { setupLayouts } from 'virtual:meta-layouts'
 import { useSettingsStore } from '@/store/modules/settings'
 
 const publicStatusRoute: RouteRecordRaw = {
@@ -47,18 +45,6 @@ const archiveWorkbenchRoute: RouteRecordRaw = {
     icon: 'i-lucide:layout-dashboard',
     auth: ['system:read'],
     cache: false,
-  },
-}
-
-const monitoringFilesystemRoute: RouteRecordRaw = {
-  path: '/monitoring',
-  name: 'monitoring',
-  component: () => import('@/views/monitoring-dashboard/index.vue'),
-  meta: {
-    title: '系统监控',
-    icon: 'i-lucide:activity',
-    auth: ['system:read'],
-    cache: true,
   },
 }
 
@@ -356,51 +342,8 @@ const asyncRoutes: Route.recordMainRaw[] = [
   },
 ]
 
-const externalArchiveGeneratedPaths = [
-  '/archive/external',
-  '/statistics/external-archive',
-  '/statistics/external-archive-viewer',
-]
-
-const generatedConstantRoutes = generatedRoutes.filter(
-  item => !['/status', ...externalArchiveGeneratedPaths].includes(item.path)
-    && item.meta?.enabled !== false
-    && item.meta?.constant === true,
-)
-const constantRoutesByFilesystem = [publicStatusRoute, externalArchiveRoute, archiveStandaloneRoute, ...generatedConstantRoutes]
-
-const generatedAsyncRoutes = generatedRoutes.filter(
-  item => ![
-    '/status',
-    '/auth-test',
-    '/ui-components',
-    '/data-relations',
-    '/archive-workbench',
-    '/nginx-browser',
-    '/operations-center',
-    ...externalArchiveGeneratedPaths,
-    '/statistics/archive',
-    '/monitoring',
-    '/monitoring-dashboard',
-  ].includes(item.path)
-  && item.meta?.enabled !== false
-  && item.meta?.constant !== true
-  && item.meta?.layout !== false,
-)
-const asyncRoutesByFilesystem = [
-  ...setupLayouts(generatedAsyncRoutes),
-  archiveEmbeddedRoute,
-  archiveWorkbenchRoute,
-  monitoringFilesystemRoute,
-  authenticationTestRoute,
-  nginxBrowserRoute,
-  uiComponentsRoute,
-]
-
 export {
   asyncRoutes,
-  asyncRoutesByFilesystem,
   constantRoutes,
-  constantRoutesByFilesystem,
   systemRoutes,
 }

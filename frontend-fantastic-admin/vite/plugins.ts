@@ -18,10 +18,8 @@ import banner from 'vite-plugin-banner'
 import { compression } from 'vite-plugin-compression2'
 import { envParse, parseLoadedEnv } from 'vite-plugin-env-parse'
 import { vitePluginFakeServer } from 'vite-plugin-fake-server'
-import Pages from 'vite-plugin-pages'
 import { createSvgIconsPlugin } from 'vite-plugin-svg-icons'
 import VueDevTools from 'vite-plugin-vue-devtools'
-import Layouts from 'vite-plugin-vue-meta-layouts'
 import { browserPolyfillTargets } from './browser-targets'
 
 export default function createVitePlugins(mode: string, isBuild = false) {
@@ -120,25 +118,6 @@ export default function createVitePlugins(mode: string, isBuild = false) {
       basename: '/proxy',
       timeout: 120,
       enableProd: isBuild,
-    }),
-
-    // https://github.com/dishait/vite-plugin-vue-meta-layouts
-    Layouts({
-      defaultLayout: 'index',
-    }),
-
-    // https://github.com/hannoeru/vite-plugin-pages
-    Pages({
-      dirs: 'src/views',
-      // 顶层 index 默认会被同步导入；统一设为异步，避免与手写首页路由
-      // 重复引用时破坏动态分包。
-      importMode: 'async',
-      exclude: [
-        '**/components/**/*.vue',
-        '**/__tests__/**',
-        '**/*.test.*',
-        '**/*.spec.*',
-      ],
     }),
 
     // https://github.com/nonzzz/vite-plugin-compression

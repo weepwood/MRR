@@ -1,12 +1,3 @@
-<route lang="yaml">
-name: passwordChangeRequired
-path: /password/change-required
-meta:
-  title: 修改初始密码
-  constant: true
-  layout: false
-</route>
-
 <script setup lang="ts">
 /* eslint-disable antfu/if-newline, curly, vue/singleline-html-element-content-newline */
 import { ElMessage } from 'element-plus'

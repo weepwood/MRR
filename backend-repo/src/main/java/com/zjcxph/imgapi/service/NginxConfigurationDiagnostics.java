@@ -42,7 +42,7 @@ public class NginxConfigurationDiagnostics {
         this.launcher = launcher;
     }
 
-    private static Path localWindowsRoot(String value) {
+    static Path localWindowsRoot(String value) {
         // Windows local drive only; no UNC, relative path, device path or HTTP input.
         if (value == null || !value.matches("^[A-Za-z]:[\\\\/].*")) return null;
         try {

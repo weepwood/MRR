@@ -869,6 +869,10 @@ export default defineFakeRoute([
     },
   },
   {
+    url: '/api/v1/settings/ui',
+    response: () => ok(settings.adminAppSettings ? { adminAppSettings: settings.adminAppSettings } : {}),
+  },
+  {
     url: '/api/v1/settings/:key',
     response: ({ params }) => ok(settings[decodeURIComponent(String(params.key))] ?? ''),
   },

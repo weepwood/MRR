@@ -665,3 +665,9 @@
 仅用户管理页 opt-in `mrr-metric-grid--header-aligned`，card 页头模式下指标卡最小高度按公共页头的单行标题/说明、留白及边框计算；图标块44→40px，上下留白16→8px，缩小标签与说明间距，保留26px数值、12px说明及本页口径徽标。2400/1440px 下实测页头与四卡均90.39px（旧指标卡110px）；Chromium/WebKit × MRR/GR8R 明暗 × 2400/1440/1024/760/375共40组，未发现内容溢出；窄屏自然增高，不强制等高。其他页面和plain模式不变。用户尚未确认推广，不视为全站标准；未执行全量回归或Chrome86实机测试。证据 /tmp/mrr-user-metrics-trial.log、/tmp/mrr-user-metrics-trial-webkit.log、/tmp/mrr-user-metrics-before.png、/tmp/mrr-user-metrics-after-*.png。9037已打开用户管理，禁止远端操作。
 
 用户管理等高试验第二版：根据维护者反馈，移除四张普通状态卡第三行 note（总数仍显示于用户列表），保留本页口径与原始值；图标块40→48px、字形20→24px，间距12→16px、上下留白8→12px，保持卡片页头等高试验。仅 users 采用该两行展示，其他页未推广。Chromium/WebKit × 四主题 × 五视口共40组通过，1440/2400px 等高，所有样本无内容溢出。真实截图 /tmp/mrr-user-metrics-two-line-*.png，日志 /tmp/mrr-user-metrics-two-line.log。尚未进行全量回归及 Chrome86 实机验收；等待维护者查看后决定是否推广，9037保持运行，不推送。
+
+## V1.2 全站公共指标卡统一（2026-11-26）
+
+- 基线 b98ef069；按维护者反馈取消重复「本页」徽标及无图标模式。用户页头统一说明当前页口径；记录管理增加三种图标并移除重复说明，装箱、统计详情等精简冗余文本，必要估算、样本范围、动态状态、附加操作保留。所有公共 MrrMetricCard 调用显式 icon，统一48px图标块/24px字形、26px数值、约90.39px最小高度，不强制裁剪复杂卡。删除 scope 类型、无图标与试验局部覆盖；dense仅控制网格间距。独立公开服务状态页保留专用摘要。
+- Chromium/WebKit，14个后台业务路由桌面/窄屏及用户/记录/运维四主题重点矩阵共92组无溢出，65种图标资源全部存在。TypeScript、100项定向单测通过；首轮19个浏览器用例18通过/1失败（移动视口模式已切换但侧栏几何过渡未结束，瞬时正文21px），等待实际原宽度断言稳定后复验7/7含预热及记录查询游标。生产构建、Chrome86静态校验通过，未完成全量Linux跨浏览器/真实Chrome86验收或所有条件态截图。证据 /tmp/mrr-metric-unify-{matrix,e2e,recheck,unit,tsc2,build,chrome86}.log；截图 /tmp/mrr-metric-unify-{users,records}.png。
+- 保持9037预览、仅本地开发；不推送、不创建/合并PR、不发布。不提交临时9041配置和认证fixture。

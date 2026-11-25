@@ -14,7 +14,7 @@ const stubs = {
 
 function mountCard(props: Record<string, unknown> = {}, slots: Record<string, string> = {}) {
   return mount(MrrMetricCard, {
-    props: { label: '指标名称', value: 42, ...props },
+    props: { label: '指标名称', value: 42, icon: 'i-lucide:chart-no-axes-combined', ...props },
     slots,
     global: { stubs },
   })
@@ -36,17 +36,10 @@ describe('mrrMetricCard', () => {
     expect(wrapper.find('.mrr-metric-card__value').text()).toBe('42')
   })
 
-  it('无图标时不渲染图标区并占用整行', () => {
-    const wrapper = mountCard()
-    expect(wrapper.find('.mrr-metric-card__icon').exists()).toBe(false)
-    expect(wrapper.classes()).toContain('mrr-metric-card--no-icon')
-  })
-
-  it('有图标时渲染图标区且不加无图标修饰类', () => {
+  it('所有指标渲染语义图标，调用方可指定图标', () => {
+    expect(mountCard().find('.mrr-metric-card__icon').exists()).toBe(true)
     const wrapper = mountCard({ icon: 'i-lucide:user-round' })
-    expect(wrapper.find('.mrr-metric-card__icon').exists()).toBe(true)
     expect(wrapper.find('.icon-stub').attributes('data-icon')).toBe('i-lucide:user-round')
-    expect(wrapper.classes()).not.toContain('mrr-metric-card--no-icon')
   })
 
   it('缺省 tone 不追加语义修饰类，非缺省 tone 追加对应类', () => {
@@ -92,15 +85,9 @@ describe('mrrMetricCard', () => {
     expect(wrapper.find('.mrr-metric-card__value').classes()).not.toContain('is-updated')
   })
 
-  it('scope 徽标区分本页与全库口径，未传时不渲染', () => {
-    const withScope = mountCard({ label: '已启用', value: '3', scope: 'total' })
-    expect(withScope.get('.mrr-metric-card__scope').attributes('data-scope')).toBe('total')
-    expect(withScope.get('.mrr-metric-card__scope').text()).toBe('全库')
-
-    const pageScope = mountCard({ label: '待审核', value: '0', scope: 'page' })
-    expect(pageScope.get('.mrr-metric-card__scope').text()).toBe('本页')
-
-    const bare = mountCard({ label: '已拒绝', value: '0' })
-    expect(bare.find('.mrr-metric-card__scope').exists()).toBe(false)
+  it('普通指标仅展示名称和数值，不渲染冗余说明或口径徽标', () => {
+    const wrapper = mountCard()
+    expect(wrapper.find('.mrr-metric-card__note').exists()).toBe(false)
+    expect(wrapper.find('.mrr-metric-card__scope').exists()).toBe(false)
   })
 })

@@ -40,9 +40,9 @@ function search(reset = false) {
 
 <template>
   <div v-if="example === 'metrics'" class="mrr-metric-grid mrr-metric-grid--three">
-    <MrrMetricCard label="演示项目" :value="24" suffix="项" note="合成数据，用于检查数字与单位" icon="i-lucide:layers" />
-    <MrrMetricCard label="演示通过率" :value="92" suffix="%" note="合成指标，示例分母为 100 项" tone="green" value-tone="success" />
-    <MrrMetricCard label="演示状态" value="等待复核" compact-value note="长文本值按内容排版" tone="amber" />
+    <MrrMetricCard label="演示项目" :value="24" suffix="项" icon="i-lucide:layers" />
+    <MrrMetricCard icon="i-lucide:circle-check" label="演示通过率" :value="92" suffix="%" note="合成指标，示例分母为 100 项" tone="green" value-tone="success" />
+    <MrrMetricCard icon="i-lucide:clock" label="演示状态" value="等待复核" compact-value tone="amber" />
   </div>
   <div v-else class="example-stack">
     <div class="example-row">

@@ -1,7 +1,9 @@
 import type { Page } from '@playwright/test'
 import { expect, test } from '@playwright/test'
+import { isolateLocalVisualSettings } from './helpers/local-visual-settings'
 
 async function openUsers(page: Page, colorScheme = 'light') {
+  await isolateLocalVisualSettings(page)
   await page.addInitScript((colorScheme) => {
     localStorage.setItem('MRR-ADMIN:app-settings', JSON.stringify({
       app: { colorScheme },
@@ -15,11 +17,10 @@ async function openUsers(page: Page, colorScheme = 'light') {
 for (const theme of ['light', 'dark']) {
   test(`${theme} 筛选标签关联真实控件，宽窄屏保持可用`, async ({ page }) => {
     await openUsers(page, theme)
-    // 口径哨兵：四张指标卡全部为「本页」口径（当页 filter 计数），锁死现状；
-    // 未来若引入全库口径卡需同步更新该断言与「已启用」卡的 note 文案。
-    await expect(page.locator('.mrr-metric-card__scope[data-scope="page"]')).toHaveCount(4)
-    const enabledCard = page.locator('.mrr-metric-card').filter({ hasText: '已启用' })
-    await expect(enabledCard.locator('.mrr-metric-card__note')).toContainText('当前条件共')
+    await expect(page.getByRole('region', { name: '当前页账号状态' }).locator('.mrr-metric-card__icon')).toHaveCount(4)
+    await expect(page.locator('.mrr-metric-card__scope, .mrr-metric-card__note')).toHaveCount(0)
+    await expect(page.locator('.mrr-page-header__description')).toContainText('下方状态按当前页统计')
+    await expect(page.locator('.mrr-metric-card').filter({ hasText: '已启用' }).locator('.mrr-metric-card__value')).toHaveText('3')
     const bar = page.locator('.users-filter-bar')
     const keyword = bar.getByRole('textbox', { name: '关键词', exact: true })
     const role = bar.getByRole('combobox', { name: '角色', exact: true })

@@ -138,16 +138,19 @@ onMounted(reloadAll)
     <AppLoading v-else-if="summaryLoading && !summary" type="stats" />
     <section v-if="summary" v-loading="summaryLoading" class="mrr-metric-grid mrr-metric-grid--four mrr-metric-grid--dense" aria-label="患者数据概况">
       <MrrMetricCard
+        icon="i-lucide:users-round"
         label="患者数据行"
         :value="summary.totalRecords"
         :note="`去重病案号 ${summary.totalArchives} 个`"
       />
       <MrrMetricCard
+        icon="i-lucide:calendar-days"
         :label="`${currentYear} 年病案`"
         :value="summary.yearArchives"
         note="按入院日期去重统计"
       />
       <MrrMetricCard
+        icon="i-lucide:id-card"
         label="身份证号为空"
         tone="warning"
         :value-tone="summary.missingIdCardRecords ? 'warning' : 'default'"
@@ -155,6 +158,7 @@ onMounted(reloadAll)
         note="需要补录或人工核对"
       />
       <MrrMetricCard
+        icon="i-lucide:files"
         label="同一患者多病案"
         :value="summary.confirmedMultiRecordGroups"
         :note="`另有疑似 ${summary.suspectedMultiRecordGroups} 组`"

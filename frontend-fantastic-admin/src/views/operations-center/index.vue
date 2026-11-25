@@ -638,10 +638,10 @@ onMounted(async () => {
 
             <MrrSectionCard v-if="indexCapacity" title="编号索引与容量" description="最近一次数据库目录快照 · 非服务器磁盘余量">
               <div class="mrr-metric-grid">
-                <MrrMetricCard label="索引状态" compact-value :value="indexState" />
-                <MrrMetricCard label="估算扫描记录" compact-value :value="capacityValue('estimatedRows')" />
-                <MrrMetricCard label="扫描表及索引" compact-value :value="capacityValue('totalBytes', true)" />
-                <MrrMetricCard label="两索引容量参考" compact-value :value="capacityValue('twoIndexReferenceBytes', true)" />
+                <MrrMetricCard icon="i-lucide:database" label="索引状态" compact-value :value="indexState" />
+                <MrrMetricCard icon="i-lucide:scan-line" label="估算扫描记录" compact-value :value="capacityValue('estimatedRows')" />
+                <MrrMetricCard icon="i-lucide:hard-drive" label="扫描表及索引" compact-value :value="capacityValue('totalBytes', true)" />
+                <MrrMetricCard icon="i-lucide:database" label="两索引容量参考" compact-value :value="capacityValue('twoIndexReferenceBytes', true)" />
               </div>
               <p class="overview-hint">
                 容量参考按三千万合成实测换算，不是可用空间或峰值上限；部署前需在服务器核验各卷、WAL 和临时空间。
@@ -712,9 +712,9 @@ onMounted(async () => {
 
             <MrrSectionCard v-if="storageHistory.available" title="存储异常事件" description="进程内累计计数与最近事件 · 重启清空，非持久审计">
               <div class="mrr-metric-grid">
-                <MrrMetricCard label="进入熔断次数" compact-value :value="storageHistory.opened" />
-                <MrrMetricCard label="半开探针次数" compact-value :value="storageHistory.probes" />
-                <MrrMetricCard label="恢复次数" compact-value :value="storageHistory.recovered" />
+                <MrrMetricCard icon="i-lucide:shield-alert" label="进入熔断次数" compact-value :value="storageHistory.opened" />
+                <MrrMetricCard icon="i-lucide:activity" label="半开探针次数" compact-value :value="storageHistory.probes" />
+                <MrrMetricCard icon="i-lucide:refresh-cw" label="恢复次数" compact-value :value="storageHistory.recovered" />
               </div>
               <div v-if="storageHistory.events.length" class="storage-trend">
                 <p class="overview-hint">
@@ -855,10 +855,10 @@ onMounted(async () => {
         />
         <template v-else>
           <section class="mrr-metric-grid mrr-metric-grid--four metric-row">
-            <MrrMetricCard label="检查总数" :value="diagnosticRun.summary.total" />
-            <MrrMetricCard label="通过" value-tone="success" :value="diagnosticRun.summary.passed" />
-            <MrrMetricCard label="严重故障" value-tone="danger" :value="diagnosticRun.summary.critical" />
-            <MrrMetricCard label="警告" value-tone="warning" :value="diagnosticRun.summary.warnings" />
+            <MrrMetricCard icon="i-lucide:clipboard-check" label="检查总数" :value="diagnosticRun.summary.total" />
+            <MrrMetricCard icon="i-lucide:circle-check" label="通过" value-tone="success" :value="diagnosticRun.summary.passed" />
+            <MrrMetricCard icon="i-lucide:circle-x" label="严重故障" value-tone="danger" :value="diagnosticRun.summary.critical" />
+            <MrrMetricCard icon="i-lucide:triangle-alert" label="警告" value-tone="warning" :value="diagnosticRun.summary.warnings" />
           </section>
           <div class="diagnostic-list">
             <el-card
@@ -937,13 +937,14 @@ onMounted(async () => {
         <template v-if="imageDiagnosis">
           <section class="mrr-metric-grid mrr-metric-grid--three metric-row">
             <MrrMetricCard
+              icon="i-lucide:scan-eye"
               label="诊断结果"
               compact-value
               :value="imageDiagnosis.found ? '找到图片' : '未找到图片'"
               :value-tone="imageDiagnosis.found ? 'success' : 'danger'"
             />
-            <MrrMetricCard label="最终来源" compact-value :value="imageDiagnosis.selectedSource || '-'" />
-            <MrrMetricCard label="回退原因" compact-value :value="imageDiagnosis.fallbackReason || '未发生回退'" />
+            <MrrMetricCard icon="i-lucide:folder-search" label="最终来源" compact-value :value="imageDiagnosis.selectedSource || '-'" />
+            <MrrMetricCard icon="i-lucide:undo-2" label="回退原因" compact-value :value="imageDiagnosis.fallbackReason || '未发生回退'" />
           </section>
           <MrrSectionCard class="section-card" title="解析与回退过程">
             <el-timeline>
@@ -968,12 +969,12 @@ onMounted(async () => {
         <el-alert v-if="integrity && integrity.status !== 'READY'" title="完整性快照尚未就绪或检查失败，不能判断为无异常" type="warning" :closable="false" />
         <template v-if="integrity?.status === 'READY'">
           <section class="mrr-metric-grid mrr-metric-grid--three metric-row">
-            <MrrMetricCard label="样本 archive_id 覆盖率" :value="formatPercent(integrity.archiveCoverage)" />
-            <MrrMetricCard label="样本 OSS 覆盖率" :value="formatPercent(integrity.ossCoverage)" />
-            <MrrMetricCard label="样本缺失上架号" :value="formatNumber(integrity.missingSjh)" />
-            <MrrMetricCard label="样本断链记录" value-tone="danger" :value="formatNumber(integrity.brokenLinks)" />
-            <MrrMetricCard label="重复病案组" value-tone="danger" :value="formatNumber(integrity.duplicateArchiveGroups)" />
-            <MrrMetricCard label="样本有效扫描图片" :value="formatNumber(integrity.totalActiveScans)" :note="integrity.sampleScope" />
+            <MrrMetricCard icon="i-lucide:file-check" label="样本 archive_id 覆盖率" :value="formatPercent(integrity.archiveCoverage)" />
+            <MrrMetricCard icon="i-lucide:cloud" label="样本 OSS 覆盖率" :value="formatPercent(integrity.ossCoverage)" />
+            <MrrMetricCard icon="i-lucide:file-question" label="样本缺失上架号" :value="formatNumber(integrity.missingSjh)" />
+            <MrrMetricCard icon="i-lucide:unlink" label="样本断链记录" value-tone="danger" :value="formatNumber(integrity.brokenLinks)" />
+            <MrrMetricCard icon="i-lucide:files" label="重复病案组" value-tone="danger" :value="formatNumber(integrity.duplicateArchiveGroups)" />
+            <MrrMetricCard icon="i-lucide:images" label="样本有效扫描图片" :value="formatNumber(integrity.totalActiveScans)" :note="integrity.sampleScope" />
           </section>
           <MrrSectionCard class="section-card" title="各业务表关联情况">
             <el-table :data="integrity.tables" border>
@@ -1006,9 +1007,9 @@ onMounted(async () => {
           </el-button>
         </div>
         <section class="mrr-metric-grid mrr-metric-grid--three task-summary">
-          <MrrMetricCard label="等待与处理中" value-tone="warning" :value="tasksAvailable ? formatNumber(overview?.taskSummary.active) : '不可用'" />
-          <MrrMetricCard label="失败" value-tone="danger" :value="tasksAvailable ? formatNumber(overview?.taskSummary.failed) : '不可用'" />
-          <MrrMetricCard label="已完成" value-tone="success" :value="tasksAvailable ? formatNumber(taskCounts.SUCCESS) : '不可用'" />
+          <MrrMetricCard icon="i-lucide:list-todo" label="等待与处理中" value-tone="warning" :value="tasksAvailable ? formatNumber(overview?.taskSummary.active) : '不可用'" />
+          <MrrMetricCard icon="i-lucide:circle-x" label="失败" value-tone="danger" :value="tasksAvailable ? formatNumber(overview?.taskSummary.failed) : '不可用'" />
+          <MrrMetricCard icon="i-lucide:circle-check" label="已完成" value-tone="success" :value="tasksAvailable ? formatNumber(taskCounts.SUCCESS) : '不可用'" />
         </section>
         <el-table :data="filteredExportJobs" border height="600" class="section-card">
           <el-table-column prop="created_at" label="创建时间" width="180">
@@ -1118,14 +1119,16 @@ onMounted(async () => {
           </template>
         </el-alert>
         <section class="mrr-metric-grid mrr-metric-grid--three section-card">
-          <MrrMetricCard label="有效模式" compact-value :value="modeLabel(readiness?.mode)" :value-tone="modeType(readiness?.mode)" />
+          <MrrMetricCard icon="i-lucide:activity" label="有效模式" compact-value :value="modeLabel(readiness?.mode)" :value-tone="modeType(readiness?.mode)" />
           <MrrMetricCard
+            icon="i-lucide:shield-alert"
             label="自动降级"
             compact-value
             :value="readiness?.automaticReadOnly ? '已触发' : '未触发'"
             :value-tone="readiness?.automaticReadOnly ? 'danger' : 'success'"
           />
           <MrrMetricCard
+            icon="i-lucide:wrench"
             label="主动维护"
             compact-value
             :value="maintenance?.enabled ? '已启用' : '未启用'"

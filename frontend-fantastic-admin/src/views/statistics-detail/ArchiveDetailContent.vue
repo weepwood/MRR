@@ -121,7 +121,7 @@ const currentSort = computed(() => sortOptions.find(item => item.key === sortKey
 interface SummaryCard {
   label: string
   value: string
-  note: string
+  note?: string
   tone: MetricTone
   icon: string
 }
@@ -132,10 +132,10 @@ function formatSummaryValue(value: unknown) {
 }
 
 const summaryCards = computed<SummaryCard[]>(() => [
-  { label: '档案袋总数', value: formatSummaryValue(listData.value.total || 0), note: '符合当前筛选条件的统计记录', tone: 'blue', icon: 'i-lucide:folder-open' },
-  { label: '病案数量', value: formatSummaryValue(summaryData.value?.uniqueBAHCount ?? 0), note: '系统内已归档病案号数量', tone: 'green', icon: 'i-lucide:contact-round' },
-  { label: '总页数', value: formatSummaryValue(summaryData.value?.total?.totalPages ?? 0), note: '统计表累计扫描页数', tone: 'violet', icon: 'i-lucide:file-text' },
-  { label: '当前患者', value: selectedArchive.value?.patientName ? normalizeText(selectedArchive.value.patientName) : '未选择', note: '当前选中档案袋对应患者', tone: 'amber', icon: 'i-lucide:user-round' },
+  { label: '档案袋总数（当前筛选）', value: formatSummaryValue(listData.value.total || 0), tone: 'blue', icon: 'i-lucide:folder-open' },
+  { label: '病案数量（已归档）', value: formatSummaryValue(summaryData.value?.uniqueBAHCount ?? 0), tone: 'green', icon: 'i-lucide:contact-round' },
+  { label: '总页数（累计）', value: formatSummaryValue(summaryData.value?.total?.totalPages ?? 0), tone: 'violet', icon: 'i-lucide:file-text' },
+  { label: '当前患者', value: selectedArchive.value?.patientName ? normalizeText(selectedArchive.value.patientName) : '未选择', tone: 'amber', icon: 'i-lucide:user-round' },
 ])
 
 function normalizeText(value: unknown) {

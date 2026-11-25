@@ -352,14 +352,14 @@ function levelTagType(level: string) {
 
     <section class="mrr-metric-grid mrr-metric-grid--four" :aria-busy="overviewLoading" aria-label="运行错误概览">
       <button type="button" class="metric-action" title="点击仅看 ERROR 错误组" @click="applyLevelFilter('ERROR')">
-        <MrrMetricCard label="ERROR 错误组" :value="overviewValue(overview.errorGroups)" value-tone="danger" note="点击仅看 ERROR" />
+        <MrrMetricCard icon="i-lucide:circle-x" label="ERROR 错误组" :value="overviewValue(overview.errorGroups)" value-tone="danger" />
       </button>
       <button type="button" class="metric-action" title="点击仅看 WARN 错误组" @click="applyLevelFilter('WARN')">
-        <MrrMetricCard label="WARN 错误组" :value="overviewValue(overview.warnGroups)" value-tone="warning" note="点击仅看 WARN" />
+        <MrrMetricCard icon="i-lucide:triangle-alert" label="WARN 错误组" :value="overviewValue(overview.warnGroups)" value-tone="warning" />
       </button>
-      <MrrMetricCard label="近24小时活跃错误组" :value="overviewValue(overview.recentOccurrences)" note="按最后发生时间统计" />
+      <MrrMetricCard icon="i-lucide:activity" label="近24小时活跃错误组" :value="overviewValue(overview.recentOccurrences)" note="按最后发生时间统计" />
       <button type="button" class="metric-action" title="点击查看全部错误组" @click="resetFilters">
-        <MrrMetricCard label="累计错误组" :value="overviewValue(overview.totalGroups)" :note="overviewReady ? `累计 ${overview.totalOccurrences} 次 · 点击查看全部` : '点击查看全部'" />
+        <MrrMetricCard icon="i-lucide:layers" label="累计错误组" :value="overviewValue(overview.totalGroups)" :note="overviewReady ? `累计 ${overview.totalOccurrences} 次` : undefined" />
       </button>
     </section>
     <div v-if="overviewError" class="overview-status">

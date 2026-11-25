@@ -16,16 +16,21 @@ test.beforeEach(async ({ page }) => {
   await expect(page.getByRole('heading', { name: '数据关系工作台' })).toBeVisible()
 })
 
-test('无图标指标在移动视口使用整行正文', async ({ page }) => {
+test('指标卡在移动视口保留图标与完整正文', async ({ page }) => {
   await page.setViewportSize({ width: 375, height: 812 })
   await expect.poll(() => page.evaluate(() => document.body.dataset.mode)).toBe('mobile')
-  const card = page.locator('.mrr-metric-card--no-icon').first()
+  const card = page.locator('.mrr-metric-card').first()
   await expect(card).toBeVisible()
+  // 移动 mode 属性先于侧栏过渡结束，等待实际工作区几何达到可读宽度。
+  await expect.poll(() => card.locator('.mrr-metric-card__body').evaluate(el => el.getBoundingClientRect().width)).toBeGreaterThan(160)
   const widths = await card.evaluate(element => ({
     card: element.getBoundingClientRect().width,
+    icon: element.querySelector('.mrr-metric-card__icon')!.getBoundingClientRect().width,
     body: element.querySelector('.mrr-metric-card__body')!.getBoundingClientRect().width,
   }))
-  expect(widths.body).toBeGreaterThan(widths.card - 40)
+  expect(widths.icon).toBe(48)
+  expect(widths.body).toBeGreaterThan(160)
+  await expect.poll(() => card.evaluate(el => el.scrollWidth <= el.clientWidth + 1)).toBe(true)
 })
 
 test('工作台字段有可访问名称，窄屏筛选与表格不撑开页面', async ({ page }) => {

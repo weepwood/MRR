@@ -2,7 +2,6 @@
 /* eslint-disable antfu/consistent-list-newline, antfu/if-newline, curly, regexp/prefer-w, regexp/use-ignore-case, vue/singleline-html-element-content-newline */
 import type { AuthRole, AuthUserUpdatePayload } from '@/api/types'
 import type { CredentialAwareUser, UserCredentialResult } from '@/api/user-credential-types'
-import type { MetricScope } from '@/components/MrrMetricCard/types'
 import type { MrrTableAction } from '@/components/MrrTableActions/types'
 import { ElMessage } from 'element-plus'
 import { KeyRound } from 'lucide-vue-next'
@@ -106,22 +105,22 @@ const summaryCards = computed(() => [
   {
     label: '待审核', value: users.value.filter(item => normalizeStatus(item.status) === 'pending').length,
     tone: 'violet' as MetricTone,
-    icon: 'i-lucide:user-round-check', scope: 'page' as MetricScope,
+    icon: 'i-lucide:user-round-check',
   },
   {
     label: '已启用', value: users.value.filter(item => normalizeStatus(item.status) === 'active').length,
     tone: 'green' as MetricTone,
-    icon: 'i-lucide:circle-check', scope: 'page' as MetricScope,
+    icon: 'i-lucide:circle-check',
   },
   {
     label: '已拒绝', value: users.value.filter(item => normalizeStatus(item.status) === 'rejected').length,
     tone: 'danger' as MetricTone,
-    icon: 'i-lucide:user-round-x', scope: 'page' as MetricScope,
+    icon: 'i-lucide:user-round-x',
   },
   {
     label: '已禁用', value: users.value.filter(item => normalizeStatus(item.status) === 'disabled').length,
     tone: 'blue' as MetricTone,
-    icon: 'i-lucide:circle-stop', scope: 'page' as MetricScope,
+    icon: 'i-lucide:circle-stop',
   },
 ])
 
@@ -576,10 +575,10 @@ onMounted(loadData)
     <MrrPageHeader
       eyebrow="User Management"
       title="用户管理"
-      description="管理系统账号、注册申请审核、角色、凭据状态、启停状态与最近登录信息。"
+      description="管理系统账号、注册申请审核、角色、凭据状态、启停状态与最近登录信息。下方状态按当前页统计。"
     />
 
-    <section v-if="hasMetricActivity" class="mrr-metric-grid mrr-metric-grid--header-aligned">
+    <section v-if="hasMetricActivity" class="mrr-metric-grid mrr-metric-grid--four" aria-label="当前页账号状态">
       <MrrMetricCard v-for="item in summaryCards" :key="item.label" v-bind="item" />
     </section>
 

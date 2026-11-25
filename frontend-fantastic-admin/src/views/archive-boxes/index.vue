@@ -130,7 +130,8 @@ const isMissing = computed(() => form.status === 'MISSING')
 interface MetricCard {
   label: string
   value: number
-  note: string
+  note?: string
+  icon: string
   tone: MetricTone
   valueTone?: MetricValueTone
 }
@@ -139,25 +140,26 @@ const metricCards = computed<MetricCard[]>(() => [
   {
     label: '装箱病案',
     value: summary.value.totalRecords,
-    note: '已登记实体病案数量',
+    icon: 'i-lucide:folder-archive',
     tone: 'blue',
   },
   {
     label: '已用箱数',
     value: summary.value.totalBoxes,
-    note: '存在实际存放记录的箱号',
+    icon: 'i-lucide:package',
     tone: 'green',
   },
   {
     label: '缺失病案',
     value: summary.value.missingCount,
-    note: '尚未确认实际存放位置',
+    icon: 'i-lucide:file-question',
     tone: 'danger',
     valueTone: summary.value.missingCount > 0 ? 'danger' : 'default',
   },
   {
     label: '异常记录',
     value: summary.value.abnormalCount,
+    icon: 'i-lucide:triangle-alert',
     note: '缺失、错箱、冲突及其他异常',
     tone: 'amber',
     valueTone: summary.value.abnormalCount > 0 ? 'warning' : 'default',

@@ -49,23 +49,26 @@ function record(event: AuthTestHistoryEvent) {
 
     <section class="mrr-metric-grid" aria-label="认证测试环境概览">
       <MrrMetricCard
+        icon="i-lucide:user-round"
         label="当前账号"
         compact-value
         :value="userStore.profile.displayName || userStore.profile.username || userStore.account || '未登录'"
         :note="userStore.profile.roleName || userStore.profile.roleCode || '无角色信息'"
       />
       <MrrMetricCard
+        icon="i-lucide:shield-check"
         label="当前权限"
         :value="permissionCount"
-        note="后端按数据库当前权限实时校验"
       />
       <MrrMetricCard
+        icon="i-lucide:link"
         label="API Base URL"
         compact-value
         :value="apiBaseUrl"
-        note="测试台不允许请求外部域名"
+        note="仅允许本服务地址"
       />
       <MrrMetricCard
+        icon="i-lucide:network"
         label="本页请求"
         :value="history.length"
         note="仅保存在页面内存，刷新后清空"

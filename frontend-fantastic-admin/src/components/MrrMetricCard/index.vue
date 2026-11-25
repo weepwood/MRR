@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import type { MetricScope, MetricTone, MetricValueTone } from './types'
+import type { MetricTone, MetricValueTone } from './types'
 
 defineOptions({ name: 'MrrMetricCard' })
 
@@ -8,11 +8,10 @@ const props = withDefaults(defineProps<{
   value: string | number
   note?: string
   suffix?: string
-  icon?: string
+  icon: string
   tone?: MetricTone
   valueTone?: MetricValueTone
   compactValue?: boolean
-  scope?: MetricScope
   anchor?: string
 }>(), {
   tone: 'blue',
@@ -20,11 +19,8 @@ const props = withDefaults(defineProps<{
   compactValue: false,
 })
 
-const hasIcon = computed(() => Boolean(props.icon))
-
 const cardClass = computed(() => [
   props.tone === 'blue' ? '' : `mrr-metric-card--${props.tone}`,
-  hasIcon.value ? '' : 'mrr-metric-card--no-icon',
   props.anchor ? 'mrr-metric-card--anchor' : '',
 ])
 
@@ -64,13 +60,12 @@ function navigateAnchor(event: MouseEvent) {
       class="mrr-metric-card__anchor"
       @click="navigateAnchor"
     />
-    <div v-if="hasIcon" class="mrr-metric-card__icon" aria-hidden="true">
-      <FaIcon :name="props.icon ?? ''" />
+    <div class="mrr-metric-card__icon" aria-hidden="true">
+      <FaIcon :name="props.icon" />
     </div>
     <div class="mrr-metric-card__body">
       <span class="mrr-metric-card__label">
         {{ props.label }}
-        <span v-if="props.scope" class="mrr-metric-card__scope" :data-scope="props.scope">{{ props.scope === 'page' ? '本页' : '全库' }}</span>
       </span>
       <div class="mrr-metric-card__value-row">
         <strong :key="updateRevision" class="mrr-metric-card__value" :class="valueClass">

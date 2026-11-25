@@ -128,7 +128,7 @@ const summaryCards = computed(() => [
   {
     label: '当前批记录数',
     value: list.value.length,
-    note: '当前筛选结果中已加载的数据条数',
+    icon: 'i-lucide:files',
     tone: 'blue' as MetricTone,
   },
   {
@@ -136,13 +136,13 @@ const summaryCards = computed(() => [
     // 读取方式说明保留在筛选栏下方提示文案中。
     label: '已选记录',
     value: selectedRows.value.length,
-    note: '可用于批量打包下载',
+    icon: 'i-lucide:list-checks',
     tone: 'violet' as MetricTone,
   },
   {
     label: '当前批次',
     value: pageNum.value,
-    note: `每批 ${pageSize.value} 条`,
+    icon: 'i-lucide:layers',
     tone: 'amber' as MetricTone,
   },
 ])

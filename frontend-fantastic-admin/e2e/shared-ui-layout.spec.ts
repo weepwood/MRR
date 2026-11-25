@@ -34,12 +34,14 @@ test('共享页头、分区卡和指标卡跟随同一圆角设置', async ({ pa
   }
 })
 
-test('静态指标保持稳定，说明文字完整换行', async ({ page }) => {
+test('静态指标保持稳定，必要说明完整换行', async ({ page }) => {
   await page.setViewportSize({ width: 1366, height: 768 })
   await openUsers(page)
   const card = page.locator('.mrr-metric-card').first()
   await card.hover()
   await expect(card).toHaveCSS('transform', 'none')
+  await expect(page.locator('.mrr-metric-card__note')).toHaveCount(0)
+  await page.goto('/data-relations')
   await expect(page.locator('.mrr-metric-card__note').first()).toHaveCSS('white-space', 'normal')
   await expectContained(page, '.mrr-metric-card__note')
 })

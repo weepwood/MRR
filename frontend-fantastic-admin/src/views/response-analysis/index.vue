@@ -91,7 +91,7 @@ onMounted(loadData)
         <MrrMetricCard
           label="总请求数"
           icon="i-lucide:network"
-          note="最近 365 天完成的请求总量"
+
           :value="formatNumber(analysis?.overview.totalRequests)"
         />
         <MrrMetricCard
@@ -110,7 +110,7 @@ onMounted(loadData)
         <MrrMetricCard
           label="服务端平均耗时"
           icon="i-lucide:layout-dashboard"
-          note="最近一年服务端请求处理平均值"
+
           :value="formatDuration(analysis?.overview.avgServerDurationMs)"
         />
       </section>

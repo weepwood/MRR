@@ -203,42 +203,49 @@ const recordFilters = reactive<RecordFilterState>({
 const summaryCards = computed(() => ([
   {
     label: '总图片记录',
+    icon: 'i-lucide:images',
     value: stats.value.totalCount ?? 0,
     note: 'uploadflag 有效的扫描图片',
     tone: 'blue',
   },
   {
     label: '已迁移',
+    icon: 'i-lucide:cloud-check',
     value: stats.value.migratedCount ?? 0,
     note: `整体完成 ${stats.value.percentage ?? 0}%`,
     tone: 'green',
   },
   {
     label: '当前可领取',
+    icon: 'i-lucide:list-checks',
     value: stats.value.pendingCount ?? 0,
     note: '上架号完整且已到重试时间',
     tone: 'amber',
   },
   {
     label: '等待上架号',
+    icon: 'i-lucide:clock',
     value: stats.value.waitingSjhCount ?? 0,
     note: '保留原图，补齐后自动恢复',
     tone: 'blue',
   },
   {
     label: '等待重试',
+    icon: 'i-lucide:refresh-cw',
     value: stats.value.retryWaitCount ?? 0,
     note: '后续任务到期后可再次领取',
     tone: 'amber',
   },
   {
     label: '正在迁移',
+    icon: 'i-lucide:cloud-upload',
     value: stats.value.migratingCount ?? 0,
     note: '已原子领取、正在处理',
     tone: 'blue',
   },
   {
     label: '永久失败',
+    icon: 'i-lucide:circle-x',
     value: stats.value.failedCount ?? 0,
     note: '核对 Nginx 原图或对象冲突',
     tone: 'danger',
@@ -908,6 +915,7 @@ onMounted(() => {
           :value="formatNumber(item.value)"
           :note="item.note"
           :tone="item.tone"
+          :icon="item.icon"
         />
       </section>
 

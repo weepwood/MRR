@@ -6,7 +6,7 @@
 }
 
 .mrr-metric-grid--compact {
-  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
   gap: var(--mrr-space-3);
 }
 
@@ -33,7 +33,7 @@
   grid-template-columns: repeat(4, minmax(0, 1fr));
 }
 
-@media (max-width: 1100px) {
+@media (max-width: 1280px) {
   .mrr-metric-grid--four {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
@@ -68,24 +68,19 @@
   position: relative;
   z-index: 1;
   display: grid;
-  grid-template-columns: 44px minmax(0, 1fr);
+  grid-template-columns: 48px minmax(0, 1fr);
   gap: var(--mrr-space-4);
   align-items: center;
   min-height: calc(var(--mrr-summary-min-height) - 2px);
-  padding: var(--mrr-space-4) var(--mrr-card-inset);
+  padding: var(--mrr-space-3) var(--mrr-card-inset);
 }
 
 .mrr-metric-card__icon {
   display: grid;
   place-items: center;
-
-  /*
-   * 图标块 52 → 44px、字形 26 → 22px：原尺寸与 26px 主值同高，图标与数字抢第一眼；
-   * 收小后视线先落在数值上，图标只做类别提示。圆角同步降一档，与 44px 尺寸成比例。
-   */
-  width: 44px;
-  height: 44px;
-  font-size: 22px;
+  width: 48px;
+  height: 48px;
+  font-size: 24px;
   color: var(--mrr-metric-accent);
 
   /* 与 tones.css 的 -soft（10%）/ -border（22%，混入 --mrr-border）同一配方，页头、分区卡、指标卡三处图标块不再各用一套比例。 */
@@ -102,11 +97,6 @@
   min-width: 0;
 }
 
-/* 无图标时文案区占满整行，不再保留 52px 空列。 */
-.mrr-metric-card--no-icon .el-card__body {
-  grid-template-columns: minmax(0, 1fr);
-}
-
 /* 值下方的附加内容（进度条、状态标签等），与 note 保持一致的节奏。 */
 .mrr-metric-card__extra {
   margin-top: var(--mrr-space-3);
@@ -115,27 +105,12 @@
 .mrr-metric-card__label {
   display: block;
   margin: 0 0 4px;
-  overflow: hidden;
-  text-overflow: ellipsis;
   font-size: 12px;
   font-weight: 550;
   line-height: 1.35;
   color: var(--mrr-muted-foreground);
-  white-space: nowrap;
-}
-
-/* 口径徽标：区分「本页计数」与「系统总数」，避免扫读时看错口径。
- * 徽标文字用 muted-foreground，在 surface-alt 上明暗主题均 ≥4.5:1；弱化档 --text-tertiary 会低于基线。 */
-.mrr-metric-card__scope {
-  display: inline-flex;
-  align-items: center;
-  padding: 1px 6px;
-  margin-left: var(--mrr-space-2);
-  font-size: var(--mrr-font-size-xs);
-  font-weight: 500;
-  color: var(--mrr-muted-foreground);
-  background: var(--surface-alt);
-  border-radius: var(--mrr-radius-pill);
+  overflow-wrap: anywhere;
+  white-space: normal;
 }
 
 .mrr-metric-card__value-row {
@@ -238,71 +213,11 @@
   .mrr-metric-card .el-card__body {
     padding: var(--mrr-space-3) var(--mrr-card-inset-compact);
   }
-
-  .mrr-metric-card:not(.mrr-metric-card--no-icon) .el-card__body {
-    grid-template-columns: 40px minmax(0, 1fr);
-  }
-
-  .mrr-metric-card__icon {
-    width: 40px;
-    height: 40px;
-    font-size: 20px;
-    border-radius: var(--mrr-radius-lg);
-  }
 }
 
-/* 可选试验：两行摘要与单行说明的卡片页头对齐。
- * 使用最小高度而不是固定高度；窄屏或长文案仍自然撑开。
- * 仅 card 模式启用，不改变其他指标卡及指标口径。 */
-html[data-page-title-style="card"] .mrr-metric-grid--header-aligned {
-  --mrr-summary-min-height: calc(2px + var(--mrr-space-4) * 2 + var(--mrr-font-size-title-compact) * 1.3 + 7px + var(--mrr-font-size-sm) * 1.6);
-}
-
-html[data-page-title-style="card"] .mrr-metric-grid--header-aligned .mrr-metric-card .el-card__body {
-  grid-template-columns: 48px minmax(0, 1fr);
-  gap: var(--mrr-space-4);
-  padding-block: var(--mrr-space-3);
-}
-
-html[data-page-title-style="card"] .mrr-metric-grid--header-aligned .mrr-metric-card--no-icon .el-card__body {
-  grid-template-columns: minmax(0, 1fr);
-}
-
-html[data-page-title-style="card"] .mrr-metric-grid--header-aligned .mrr-metric-card__icon {
-  width: 48px;
-  height: 48px;
-  font-size: 24px;
-}
-
-html[data-page-title-style="card"] .mrr-metric-grid--header-aligned .mrr-metric-card__label {
-  margin-bottom: var(--mrr-space-1);
-  overflow-wrap: anywhere;
-  white-space: normal;
-}
-
-/* 查询工作区用紧凑摘要保留窄屏结果空间。该变体搭配无图标指标卡。 */
+/* Compact grids differ only in column spacing, never in metric typography or icon size. */
 .mrr-metric-grid--dense {
-  --mrr-summary-min-height: 84px;
-
   gap: var(--mrr-space-3);
-}
-
-.mrr-metric-grid--dense .mrr-metric-card .el-card__body {
-  padding: var(--mrr-space-3) var(--mrr-card-inset-compact);
-}
-
-.mrr-metric-grid--dense .mrr-metric-card__label {
-  white-space: normal;
-}
-
-.mrr-metric-grid--dense .mrr-metric-card__value {
-  font-size: 22px;
-}
-
-@media (max-width: 600px) {
-  .mrr-metric-grid--dense {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
 }
 
 /* Five-item analytical summaries: avoid a 4+1 orphan without changing other grids.

@@ -463,22 +463,26 @@ onMounted(() => {
 
     <section v-if="!archiveOnly" class="mrr-metric-grid mrr-metric-grid--four" aria-label="数据关系健康总览">
       <MrrMetricCard
+        icon="i-lucide:heart-pulse"
         label="关系健康度"
         :value="formatPercent(overview?.healthScore)"
         note="基于可用统计估算；未知项不计入"
       />
       <MrrMetricCard
+        icon="i-lucide:folders"
         label="病案主档（估算）"
         :value="formatNumber(overview?.archiveCount)"
         note="PostgreSQL统计快照，非实时COUNT"
       />
       <MrrMetricCard
+        icon="i-lucide:circle-x"
         label="严重异常"
         tone="danger"
         :value="formatNumber(latestRun?.criticalCount ?? latestRun?.critical_count)"
         note="最近一次质量检查结果"
       />
       <MrrMetricCard
+        icon="i-lucide:triangle-alert"
         label="警告异常"
         tone="warning"
         :value="formatNumber(latestRun?.warningCount ?? latestRun?.warning_count)"

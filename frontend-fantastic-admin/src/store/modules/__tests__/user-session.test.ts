@@ -92,3 +92,17 @@ describe('会话代次与注销', () => {
     expect(store.isLogin).toBe(false)
   })
 })
+
+it('另一标签页切换令牌时仅清除本页，不删除共享存储新令牌', async () => {
+  setActivePinia(createPinia())
+  push.mockResolvedValue(undefined)
+  const store = useUserStore()
+  store.setSession({ token: 'a', user: user('alpha') })
+  storage.clear.mockClear()
+  await store.invalidateExternalSession('a')
+  expect(store.token).toBe('a')
+  await store.invalidateExternalSession('b')
+  expect(store.token).toBe('')
+  expect(store.profile).toEqual({})
+  expect(storage.clear).not.toHaveBeenCalled()
+})

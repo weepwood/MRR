@@ -118,6 +118,21 @@ afterEach(() => {
 })
 
 describe('日志管理', () => {
+  it('服务端403静默刷新清除上次成功结果，普通网络失败保持结果', async () => {
+    const wrapper = openPage()
+    await flushPromises()
+    const state = setupState(wrapper)
+    expect((state.list as unknown[]).length).toBeGreaterThan(0)
+    api.searchSystemLogs.mockRejectedValueOnce(new Error('temporary network failure'))
+    await (state.loadData as (options: { silent: boolean }) => Promise<void>)({ silent: true })
+    expect((state.list as unknown[]).length).toBeGreaterThan(0)
+    api.searchSystemLogs.mockRejectedValueOnce(Object.assign(new Error('synthetic denied'), { response: { status: 403 } }))
+    await (state.loadData as (options: { silent: boolean }) => Promise<void>)({ silent: true })
+    expect(state.list).toEqual([])
+    expect(state.total).toBe(0)
+    expect(state.error).toBe('synthetic denied')
+  })
+
   it('缓存页面打开追踪链接时清除旧筛选，重置可清除链接中的编号', async () => {
     const wrapper = openPage()
     await flushPromises()

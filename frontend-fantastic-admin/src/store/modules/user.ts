@@ -123,11 +123,19 @@ export const useUserStore = defineStore('user', () => {
     await router.push({ name: 'login' }).catch(() => {})
   }
 
-  function clearSession() {
+  /** Another tab owns the shared storage now; never delete its replacement token. */
+  async function invalidateExternalSession(storedToken: string) {
+    if (!token.value || storedToken === token.value) { return }
+    clearSession({ preserveStorage: true })
+    if (isDemoMode) { writeDemoLoggedOut(true) }
+    await router.push({ name: 'login' }).catch(() => {})
+  }
+
+  function clearSession(options?: { preserveStorage?: boolean }) {
     sessionEpoch.value++
     sessionGeneration++
     profileGeneration++
-    clearAuthSessionStorage()
+    if (!options?.preserveStorage) { clearAuthSessionStorage() }
     token.value = ''
     account.value = ''
     avatar.value = ''
@@ -218,6 +226,7 @@ export const useUserStore = defineStore('user', () => {
     setSession,
     logout,
     requestLogout,
+    invalidateExternalSession,
     clearSession,
     verifySession,
     getPermissions,

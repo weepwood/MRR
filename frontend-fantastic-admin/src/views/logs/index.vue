@@ -25,6 +25,7 @@ import useVisibleInterval from '@/utils/composables/useVisibleInterval'
 import { copyText as copyToClipboard } from '@/utils/copy-text'
 import { formatDateTime, isRedactedLogText } from '@/utils/display-format'
 import { checkSessionPermission } from '@/utils/permission'
+import { isSessionAccessDenied } from '@/utils/session-access-denied'
 
 defineOptions({ name: 'LogsPage' })
 
@@ -102,11 +103,11 @@ const defaultQuery: LogsQuery = {
 const routeRequestId = computed(() => typeof route.query.requestId === 'string' ? route.query.requestId.trim() : '')
 const linkedRequestId = ref(routeRequestId.value)
 
-const { list, total, loading, resultVersion, pageNum, pageSize, query, handleSearch, handlePageChange, loadData } = useCrudList<
+const { clearResults, list, total, loading, resultVersion, pageNum, pageSize, query, handleSearch, handlePageChange, loadData } = useCrudList<
   LogRecord,
   LogsQuery
 >({
-  session: { resetQuery: defaultQuery, key: () => userStore.token, allowed: () => canReadLogs.value, onReset: () => { error.value = ''; lastRefreshedAt.value = ''; linkedRequestId.value = '' } },
+  session: { resetQuery: defaultQuery, key: () => userStore.token, allowed: () => canReadLogs.value, onReset: () => { error.value = ''; lastRefreshedAt.value = ''; linkedRequestId.value = ''; closeDetail() } },
   fetchApi: async (params, { isCurrent, silent }) => {
     const { page, size, keyword, username, clientIp, requestUri, method, responseStatus, timeRange } = params
     const apiParams: Parameters<typeof searchSystemLogs>[0] = { page, size }
@@ -129,6 +130,11 @@ const { list, total, loading, resultVersion, pageNum, pageSize, query, handleSea
       return response
     }
     catch (e: unknown) {
+      if (isCurrent() && isSessionAccessDenied(e)) {
+        clearResults()
+        error.value = e instanceof Error ? e.message : '访问权限不足，请重试'
+        return undefined
+      }
       // 静默轮询失败返回 undefined：useCrudList 保留现有列表，不进空态/错误态。
       if (silent) { return undefined }
       const msg = e instanceof Error ? e.message : '加载日志记录失败'

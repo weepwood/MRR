@@ -28,6 +28,7 @@ import useVisibleInterval from '@/utils/composables/useVisibleInterval'
 import { copyText as copyToClipboard } from '@/utils/copy-text'
 import { formatDateTime, isRedactedLogText } from '@/utils/display-format'
 import { checkSessionPermission } from '@/utils/permission'
+import { isSessionAccessDenied } from '@/utils/session-access-denied'
 
 defineOptions({ name: 'RuntimeErrorsPage' })
 
@@ -111,8 +112,8 @@ function rangeStart(range: string) {
   return undefined
 }
 
-const { query, list, total, loading, resultVersion, pageNum: page, pageSize: size, loadData, handleSearch } = useCrudList<SystemErrorEvent, typeof defaultQuery>({
-  session: { resetQuery: defaultQuery, key: () => userStore.token, allowed: () => canReadErrors.value, onReset: () => { overview.value = emptyOverview(); lastRefreshedAt.value = null; error.value = ''; linkedRequestId.value = ''; moduleGeneration++; moduleOptions.value = [] } },
+const { clearResults, query, list, total, loading, resultVersion, pageNum: page, pageSize: size, loadData, handleSearch } = useCrudList<SystemErrorEvent, typeof defaultQuery>({
+  session: { resetQuery: defaultQuery, key: () => userStore.token, allowed: () => canReadErrors.value, onReset: () => { overview.value = emptyOverview(); lastRefreshedAt.value = null; error.value = ''; linkedRequestId.value = ''; moduleGeneration++; moduleOptions.value = []; closeDetail() } },
   defaultQuery: { ...defaultQuery, keyword: linkedRequestId.value },
   fetchApi: async ({ page, size, keyword, level, module, range }, { isCurrent, silent }) => {
     try {
@@ -137,6 +138,11 @@ const { query, list, total, loading, resultVersion, pageNum: page, pageSize: siz
       return pageResult
     }
     catch (exception: unknown) {
+      if (isCurrent() && isSessionAccessDenied(exception)) {
+        clearResults()
+        error.value = exception instanceof Error ? exception.message : '访问权限不足，请重试'
+        return undefined
+      }
       if (isCurrent() && !silent) {
         error.value = exception instanceof Error ? exception.message : '加载运行错误失败'
       }

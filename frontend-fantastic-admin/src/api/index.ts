@@ -230,11 +230,16 @@ declare module 'axios' {
   export interface AxiosRequestConfig {
     /** Bind sensitive queued work to its verified originating session. */
     authSessionToken?: string
+    /** Identity captured when the request first enters the interceptor; preserved across retries. */
+    authOriginToken?: string
+    authOriginEpoch?: number
   }
 }
 
 function isStaleSession(config: import('axios').AxiosRequestConfig | undefined) {
   const user = useUserStore()
+  if (config?.authOriginToken !== undefined
+    && (config.authOriginToken !== (user.token ?? '') || config.authOriginEpoch !== (user.sessionEpoch ?? 0))) { return true }
   return config?.authSessionToken !== undefined
     && (config.authSessionToken !== user.token || (!user.isSessionVerified && config.url !== '/api/v1/auth/me'))
 }
@@ -297,6 +302,7 @@ async function handleError(error: unknown) {
     // Blob 下载的 HTTP 错误仍可能携带 JSON 业务提示；统一解码后再交给现有页面 catch。
     normalizedError.message = await getRequestErrorMessageAsync(error)
   }
+  if (isStaleSession(config)) { return Promise.reject(new axios.CanceledError('会话已变更，请重新操作')) }
   if (!config?.skipGlobalError) { showGlobalError(normalizedError) }
   return Promise.reject(normalizedError)
 }
@@ -309,6 +315,8 @@ api.interceptors.request.use((request) => {
   if (isStaleSession(request)) {
     throw new axios.CanceledError('会话已变更，请重新操作')
   }
+  request.authOriginToken ??= userStore.token ?? ''
+  request.authOriginEpoch ??= userStore.sessionEpoch ?? 0
   if (userStore.isLogin) { request.headers.set('Authorization', `Bearer ${userStore.token}`) }
   return request
 })

@@ -41,6 +41,9 @@ const roles = ref<AuthRole[]>([])
 const total = ref(0)
 const page = ref(1)
 const size = ref(20)
+const paginationLayout = computed(() => total.value > size.value
+  ? 'total, sizes, prev, pager, next, jumper'
+  : 'total, sizes, prev, pager, next')
 const filters = reactive({ keyword: '', roleCode: '', status: '' })
 
 const statusOptions = [
@@ -582,7 +585,7 @@ onMounted(loadData)
       <MrrMetricCard v-for="item in summaryCards" :key="item.label" v-bind="item" />
     </section>
 
-    <MrrDataTablePanel class="users-table-panel" title="用户列表" :count="total" :loading="loading" :result-key="users">
+    <MrrDataTablePanel class="users-table-panel" title="用户列表" :loading="loading" :result-key="users">
       <!-- 「创建用户」是对列表的写操作，放在卡头操作区；筛选栏只保留查询 / 重置，不再把增删与查询混在一组。 -->
       <template v-if="canManage" #actions>
         <el-button type="primary" @click="openCreate"><FaIcon name="i-lucide:user-round-plus" />创建用户</el-button>
@@ -590,7 +593,9 @@ onMounted(loadData)
       <template #filters>
         <MrrFilterBar class="users-filter-bar" embedded :focus-ring="false">
           <div class="users-filter__field users-filter__keyword">
-            <el-input id="users-filter-keyword" v-model="filters.keyword" aria-label="关键词" clearable placeholder="搜索用户名、显示名、联系方式或角色…" @keyup.enter="handleSearch" />
+            <el-input id="users-filter-keyword" v-model="filters.keyword" aria-label="关键词" clearable placeholder="搜索用户名、显示名、联系方式或角色…" @keyup.enter="handleSearch">
+              <template #prefix><FaIcon name="i-lucide:search" aria-hidden="true" /></template>
+            </el-input>
           </div>
           <div class="users-filter__field users-filter__select">
             <el-select id="users-filter-role" v-model="filters.roleCode" class="mrr-single-select" aria-label="角色" clearable placeholder="全部角色">
@@ -614,10 +619,17 @@ onMounted(loadData)
       <div v-else-if="!users.length" class="users-state"><AppEmpty description="暂无符合条件的用户记录" /></div>
 
       <el-table v-else :data="users" row-key="id">
-        <el-table-column prop="username" label="用户名" min-width="130" show-overflow-tooltip>
-          <template #default="{ row }"><div class="user-identity"><span class="user-avatar">{{ String(row.displayName || row.username || '?').slice(0, 1) }}</span><strong>{{ row.username }}</strong></div></template>
+        <el-table-column prop="username" label="用户" min-width="200" show-overflow-tooltip>
+          <template #default="{ row }">
+            <div class="user-identity">
+              <span class="user-avatar" aria-hidden="true">{{ String(row.displayName || row.username || '?').slice(0, 1) }}</span>
+              <div class="user-identity__copy">
+                <strong>{{ row.username }}</strong>
+                <span v-if="row.displayName && row.displayName !== row.username" class="user-identity__name">{{ row.displayName }}</span>
+              </div>
+            </div>
+          </template>
         </el-table-column>
-        <el-table-column prop="displayName" label="显示名称" min-width="110" show-overflow-tooltip />
         <el-table-column label="申请信息" min-width="130">
           <template #default="{ row }">
             <div v-if="row.appliedAt || row.contactInfo || row.applyRemark" class="application-info">
@@ -626,13 +638,13 @@ onMounted(loadData)
               <small v-if="row.appliedAt">申请于 {{ formatDateTime(row.appliedAt) }}</small>
               <small v-if="row.rejectReason" class="reject-reason">拒绝原因：{{ row.rejectReason }}</small>
             </div>
-            <span v-else class="no-perm">管理员创建</span>
+            <span v-else class="user-source">管理员创建</span>
           </template>
         </el-table-column>
-        <el-table-column label="角色" min-width="100" show-overflow-tooltip><template #default="{ row }"><el-tag size="small" effect="plain" round>{{ row.roleName || row.roleCode }}</el-tag></template></el-table-column>
-        <el-table-column label="凭据状态" min-width="140" show-overflow-tooltip><template #default="{ row }"><MrrStatusTag :label="credentialStatus(row).label" :tone="credentialStatus(row).tone" /></template></el-table-column>
+        <el-table-column label="角色" min-width="100" show-overflow-tooltip><template #default="{ row }"><el-tag size="small" type="info" effect="plain" round>{{ row.roleName || row.roleCode }}</el-tag></template></el-table-column>
+        <el-table-column label="凭据状态" min-width="140" show-overflow-tooltip><template #default="{ row }"><MrrStatusTag :class="{ 'user-credential-normal': credentialStatus(row).label === '正常' }" :label="credentialStatus(row).label" :tone="credentialStatus(row).tone" /></template></el-table-column>
         <el-table-column label="账号状态" width="110"><template #default="{ row }"><MrrStatusTag :status="row.status" :label="statusDisplay(row.status).label" :tone="statusDisplay(row.status).tone" /></template></el-table-column>
-        <el-table-column prop="lastLoginAt" label="最后登录" min-width="150" show-overflow-tooltip><template #default="{ row }">{{ formatDateTime(row.lastLoginAt) }}</template></el-table-column>
+        <el-table-column prop="lastLoginAt" label="最后登录" min-width="150" show-overflow-tooltip><template #default="{ row }"><span class="user-last-login">{{ formatDateTime(row.lastLoginAt) }}</span></template></el-table-column>
         <el-table-column
           v-if="canManage"
           label="操作"
@@ -653,7 +665,7 @@ onMounted(loadData)
       </el-table>
 
       <template #pagination>
-        <el-pagination v-model:current-page="page" v-model:page-size="size" :page-sizes="[10, 20, 50, 100]" :total="total" layout="total, sizes, prev, pager, next, jumper" @size-change="handleSearch" @current-change="handlePageChange" />
+        <el-pagination v-model:current-page="page" v-model:page-size="size" :page-sizes="[10, 20, 50, 100]" :total="total" :layout="paginationLayout" @size-change="handleSearch" @current-change="handlePageChange" />
       </template>
     </MrrDataTablePanel>
 
@@ -744,26 +756,26 @@ onMounted(loadData)
 
 <style scoped>
 /* stylelint-disable @stylistic/block-closing-brace-newline-after, @stylistic/selector-list-comma-newline-after, at-rule-empty-line-before, order/properties-order */
+
+/* Search is the primary field; enumerated filters need only predictable width.
+ * Retain the shared filter bar and its mobile wrapping contract. */
 .users-filter__field { display: grid; min-width: 0; }
-.users-filter__keyword { flex: 1 1 320px; min-width: 260px; }
-.users-filter__select { flex: 0 1 190px; width: 190px; }
+.users-filter-bar :deep(.mrr-filter-bar__fields > .users-filter__keyword) { flex: 1 1 280px; max-width: none; min-width: 0; }
+.users-filter-bar :deep(.mrr-filter-bar__fields > .users-filter__select) { flex: 0 1 176px; width: 176px; min-width: 0; }
 .users-filter-bar :deep(.mrr-filter-bar__actions) { align-self: flex-end; }
 
-/*
- * 已删除的局部覆盖：卡片上下边框、卡头与分页分隔线（!important 清零）、30px 页码、去掉焦点光晕。
- * 这些让用户页成为唯一「没有分区线、页码矮一截」的列表页；现在回到共享面板的统一外观，
- * 输入框聚焦也恢复全站一致的焦点环（DESIGN.md §5.2）。
- */
 .users-state { display: grid; min-height: 280px; padding: var(--mrr-space-5); place-items: center; }
-.user-identity { display: flex; gap: var(--mrr-space-2); align-items: center; min-width: 0; }
-.user-avatar { display: grid; flex: 0 0 30px; width: 30px; height: 30px; font-size: var(--mrr-font-size-xs); font-weight: 700; color: var(--color-primary); background: color-mix(in srgb, var(--color-primary) 9%, var(--mrr-card)); border: 1px solid var(--mrr-border); border-radius: 50%; place-items: center; }
+.user-identity { display: flex; gap: var(--mrr-space-3); align-items: center; min-width: 0; }
+.user-avatar { display: grid; flex: 0 0 32px; width: 32px; height: 32px; font-size: var(--mrr-font-size-xs); font-weight: 700; color: var(--color-primary); background: var(--mrr-tone-primary-soft); border: 1px solid var(--mrr-border); border-radius: 50%; place-items: center; }
+.user-identity__copy { display: flex; flex-direction: column; min-width: 0; gap: 2px; line-height: 1.3; }
+.user-identity__copy strong { overflow: hidden; font-weight: 600; text-overflow: ellipsis; white-space: nowrap; }
+.user-identity__name { overflow: hidden; font-size: var(--mrr-font-size-xs); color: var(--mrr-muted-foreground); text-overflow: ellipsis; white-space: nowrap; }
+.user-source { font-size: var(--mrr-font-size-xs); color: var(--mrr-muted-foreground); }
+.user-credential-normal { padding-inline: 0; background: transparent; border-color: transparent; }
+.user-last-login { font-variant-numeric: tabular-nums; color: var(--mrr-muted-foreground); }
+.users-table-panel :deep(.el-pagination) { width: 100%; }
+.users-table-panel :deep(.el-pagination__total) { margin-inline-end: auto; color: var(--mrr-muted-foreground); }
 
-/* Chrome 86 回退：头像块的浅色底失效后缩写文字会裸浮在表格底色上。 */
-@supports not (color: color-mix(in srgb, #000 50%, #fff)) {
-  .user-avatar {
-    background: var(--mrr-tone-primary-soft);
-  }
-}
 .application-info { display: grid; gap: 3px; min-width: 0; }
 .application-info span { font-size: var(--mrr-font-size-xs); color: var(--mrr-foreground); }
 .application-info small { overflow: hidden; font-size: var(--mrr-font-size-xs); line-height: 1.45; color: var(--mrr-muted-foreground); text-overflow: ellipsis; }
@@ -779,5 +791,10 @@ onMounted(loadData)
 .credential-panel code { padding: var(--mrr-space-2) var(--mrr-space-3); font-family: var(--mrr-font-mono); font-size: var(--mrr-font-size-md); letter-spacing: 0.02em; font-weight: 700; word-break: break-all; background: var(--mrr-card); border-radius: var(--mrr-radius-md); }
 .credential-actions { display: flex; gap: var(--mrr-space-2); margin-top: var(--mrr-space-4); }
 .acknowledge { margin-top: var(--mrr-space-4); }
-@media (max-width: 760px) { .users-filter__keyword, .users-filter__select { flex: 1 1 100%; width: 100%; } .credential-actions { flex-direction: column; } }
+@media (max-width: 760px) {
+  .users-filter-bar :deep(.mrr-filter-bar__fields > .users-filter__keyword),
+  .users-filter-bar :deep(.mrr-filter-bar__fields > .users-filter__select) { flex: 1 1 100%; width: 100%; }
+  .users-table-panel :deep(.el-pagination__total) { margin-inline-end: 0; }
+  .credential-actions { flex-direction: column; }
+}
 </style>

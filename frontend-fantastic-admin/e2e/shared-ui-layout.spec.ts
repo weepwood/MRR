@@ -83,7 +83,8 @@ for (const theme of ['light', 'dark'] as const) {
       const contentWidth = await page.evaluate(() => document.documentElement.scrollWidth)
       expect(contentWidth).toBeLessThanOrEqual(viewport.width)
       await expect(page.getByRole('button', { name: '查询', exact: true })).toBeVisible()
-      await expect(page.locator('.el-pagination__jump')).toBeVisible()
+      await expect(page.locator('.el-pagination__jump')).toHaveCount(0)
+      await expect(page.locator('.el-pagination__total')).toContainText('3')
     }
   })
 }
@@ -96,7 +97,9 @@ test('长分区标题与操作区在中等宽度仍可完整呈现', async ({ pa
     element.textContent = 'LongSectionTitle'.repeat(12)
   })
   await expectContained(page, '.mrr-section-card__header, .mrr-section-card__heading')
-  await expect(page.locator('.mrr-data-table-panel__count')).toBeVisible()
+  await expect(page.locator('.mrr-data-table-panel__count')).toHaveCount(0)
+  await expect(page.getByRole('button', { name: '创建用户', exact: true })).toBeVisible()
+  await expect(page.locator('.el-pagination__total')).toBeVisible()
 })
 
 test('窄屏大量分页的前后翻页按钮与页码保持同一导航区', async ({ page }) => {
@@ -110,6 +113,7 @@ test('窄屏大量分页的前后翻页按钮与页码保持同一导航区', as
   await openUsers(page)
   const footer = page.locator('.mrr-data-table-panel__pagination')
   await expect(footer.locator('.el-pagination__total')).toContainText('1000')
+  await expect(footer.locator('.el-pagination__jump')).toBeVisible()
   const [previous, pager, next] = await Promise.all([
     footer.locator('.btn-prev').boundingBox(),
     footer.locator('.el-pager').boundingBox(),

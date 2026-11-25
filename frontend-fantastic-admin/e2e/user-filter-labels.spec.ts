@@ -73,3 +73,29 @@ test('字段选值后名称不变，Enter查询与重置保留原参数', async 
   }
   await expect(keyword).toHaveValue('')
 })
+
+test('用户列表单一计数、身份信息合并及筛选层级保持一致', async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 })
+  await openUsers(page)
+  const panel = page.locator('.users-table-panel')
+  await expect(panel.locator('.mrr-data-table-panel__count')).toHaveCount(0)
+  await expect(panel.locator('.el-pagination__total')).toHaveCount(1)
+  await expect(panel.locator('.el-pagination__total')).toHaveText('共 3 条')
+  await expect(panel.locator('.el-pagination__jump')).toHaveCount(0)
+  const identity = panel.locator('.user-identity').filter({ hasText: 'admin' })
+  await expect(identity.getByText('admin', { exact: true })).toBeVisible()
+  await expect(identity.getByText('系统管理员', { exact: true })).toBeVisible()
+  await expect(panel.getByRole('columnheader', { name: '用户', exact: true })).toBeVisible()
+  await expect.poll(() => panel.locator('.users-filter__field').evaluateAll((els) => {
+    const widths = els.map(el => el.getBoundingClientRect().width)
+    return widths[0] > widths[1] * 1.5 && Math.abs(widths[1] - widths[2]) <= 1
+  })).toBe(true)
+  await expect.poll(() => panel.locator('.el-pagination').evaluate((el) => {
+    const total = el.querySelector('.el-pagination__total')!.getBoundingClientRect()
+    return Math.abs(total.left - el.getBoundingClientRect().left) <= 1
+  })).toBe(true)
+  await panel.getByRole('button', { name: '创建用户', exact: true }).click()
+  await expect(page.getByRole('dialog', { name: '创建用户' })).toBeVisible()
+  await page.getByRole('dialog', { name: '创建用户' }).getByRole('button', { name: '取消' }).click()
+  await expect(page.getByRole('dialog', { name: '创建用户' })).not.toBeVisible()
+})

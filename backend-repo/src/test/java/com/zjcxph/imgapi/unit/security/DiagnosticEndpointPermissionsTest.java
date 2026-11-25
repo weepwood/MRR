@@ -26,6 +26,26 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 class DiagnosticEndpointPermissionsTest {
     @Test
+    void windowsGatewayObservationRequiresManageAndNoStore() throws Exception {
+        var service=mock(com.zjcxph.imgapi.service.WindowsGatewayObservation.class);
+        var controller=new com.zjcxph.imgapi.controller.WindowsGatewayObservationController(service);
+        var handler=new HandlerMethod(controller,controller.getClass().getMethod("observe",jakarta.servlet.http.HttpServletResponse.class));
+        var auth=new AuthorizationInterceptor();
+        String path="/api/v1/operations/nginx/windows-observation";
+        for(var permissions:List.of(List.<String>of(),List.of("system:read"),List.of("log:read"))) {
+            var response=new MockHttpServletResponse();
+            assertThat(auth.preHandle(request("POST",path,permissions),response,handler)).isFalse();
+            assertThat(response.getStatus()).isEqualTo(403);
+        }
+        assertThat(auth.preHandle(request("POST",path,List.of("system:manage")),new MockHttpServletResponse(),handler)).isTrue();
+        verifyNoInteractions(service);
+        var response=new MockHttpServletResponse();
+        controller.observe(response);
+        verify(service).observe();
+        assertThat(response.getHeader("Cache-Control")).isEqualTo("private, no-store");
+    }
+
+    @Test
     void nginxVersionRequiresManageAndListenerHintsReadOnly() throws Exception {
         var service=mock(NginxConfigurationDiagnostics.class);
         var controller=new com.zjcxph.imgapi.controller.NginxConfigurationDiagnosticsController(service);

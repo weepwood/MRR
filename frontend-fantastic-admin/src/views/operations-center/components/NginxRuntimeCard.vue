@@ -1,19 +1,38 @@
 <script setup lang="ts">
-import type { NginxLogTail, NginxRuntimeStatus } from '@/api/modules/operations'
+import type { NginxLogTail, NginxRuntimeStatus, WindowsGatewayStatus } from '@/api/modules/operations'
 import { computed, onBeforeUnmount, ref, watch } from 'vue'
-import { getNginxLogTail, getNginxRuntime } from '@/api/modules/operations'
+import { getNginxLogTail, getNginxRuntime, observeWindowsGateway } from '@/api/modules/operations'
 import AppError from '@/components/AppError/index.vue'
 import MrrSectionCard from '@/components/MrrSectionCard/index.vue'
 import { formatDateTime } from '@/utils/display-format'
 import { hasPermission } from '@/utils/session'
 
 const canRead = computed(() => hasPermission('system:read'))
+const canManage = computed(() => canRead.value && hasPermission('system:manage'))
+const gateway = ref<WindowsGatewayStatus>()
 const canLogs = computed(() => canRead.value && hasPermission('log:read'))
 const runtime = ref<NginxRuntimeStatus>()
 const tail = ref<NginxLogTail>()
 const kind = ref<'access' | 'error'>('access')
 const busy = ref(false)
 const failed = ref(false)
+const serviceLabels: Record<string, string> = {
+  RUNNING: '运行中',
+  STOPPED: '已停止',
+  PAUSED: '已暂停',
+  START_PENDING: '正在启动',
+  STOP_PENDING: '正在停止',
+  CONTINUE_PENDING: '正在继续',
+  PAUSE_PENDING: '正在暂停',
+  NOT_FOUND: '未找到固定服务',
+  UNAVAILABLE: '无法核对',
+}
+const listenerLabels: Record<string, string> = {
+  UNVERIFIED: '未核实本地进程身份',
+  UNAVAILABLE: 'TCP 监听查询不可用',
+  TRUNCATED: '监听数量超限，未返回部分结果',
+  IDENTITY_CHANGED: '查询期间进程身份变化，请重新核对',
+}
 const labels: Record<string, string> = {
   DISABLED: '未启用',
   UNSUPPORTED_PLATFORM: '仅支持 Windows 本地网关',
@@ -25,7 +44,10 @@ const labels: Record<string, string> = {
   PROCESS_MATCHED: 'PID 对应本地安装程序正在运行',
   AVAILABLE: '已读取脱敏日志',
   LOG_UNAVAILABLE: '固定日志文件不可读',
-  BUSY: '日志读取忙',
+  BUSY: '查询忙',
+  TIMEOUT: '查询超时',
+  INTERRUPTED: '查询中断',
+  UNAVAILABLE: '查询不可用',
 }
 let generation = 0
 let controller: AbortController | undefined
@@ -34,12 +56,13 @@ function clear() {
   controller?.abort()
   controller = undefined
   runtime.value = undefined
+  gateway.value = undefined
   tail.value = undefined
   busy.value = false
   failed.value = false
 }
-async function load(mode: 'runtime' | 'logs') {
-  if (!canRead.value || (mode === 'logs' && !canLogs.value) || busy.value) { return }
+async function load(mode: 'runtime' | 'logs' | 'gateway') {
+  if (!canRead.value || (mode === 'logs' && !canLogs.value) || (mode === 'gateway' && !canManage.value) || busy.value) { return }
   const current = ++generation
   controller?.abort()
   controller = new AbortController()
@@ -48,11 +71,19 @@ async function load(mode: 'runtime' | 'logs') {
   if (mode === 'logs') {
     tail.value = undefined
   }
+  else if (mode === 'gateway') { gateway.value = undefined }
   else { runtime.value = undefined }
   try {
     if (mode === 'runtime') {
       const result = await getNginxRuntime(controller.signal)
       if (current === generation) { runtime.value = result }
+    }
+    else if (mode === 'gateway') {
+      const result = await observeWindowsGateway(controller.signal)
+      if (current !== generation) { return }
+      if (!Array.isArray(result.ports) || result.ports.length > 32 || result.ports.some(port => !Number.isInteger(port) || port < 1 || port > 65535)
+        || (result.listenerState !== 'OBSERVED' && result.ports.length)) { throw new Error('Invalid gateway observation') }
+      gateway.value = result
     }
     else {
       const result = await getNginxLogTail(kind.value, controller.signal)
@@ -68,7 +99,7 @@ async function load(mode: 'runtime' | 'logs') {
     if (current === generation) { busy.value = false }
   }
 }
-watch([canRead, canLogs], clear, { flush: 'sync' })
+watch([canRead, canLogs, canManage], clear, { flush: 'sync' })
 watch(kind, clear, { flush: 'sync' })
 watch(() => useUserStore().token, clear, { flush: 'sync' })
 onBeforeUnmount(clear)
@@ -85,6 +116,23 @@ onBeforeUnmount(clear)
       </el-tag>
       <span v-if="runtime">{{ formatDateTime(runtime.observedAt) }}</span>
     </div>
+    <template v-if="canManage">
+      <div class="runtime-actions">
+        <el-button :loading="busy" @click="load('gateway')">
+          核对 Windows 服务与 TCP 监听
+        </el-button>
+      </div>
+      <div v-if="gateway" role="status" class="gateway-observation">
+        <p v-if="gateway.state !== 'OBSERVED'">
+          {{ labels[gateway.state] ?? '查询不可用' }}
+        </p>
+        <template v-else>
+          <p>MRR-Gateway 服务：{{ serviceLabels[gateway.serviceState] ?? '未知状态' }}</p>
+          <p>已核对 Nginx 进程的本地 TCP 监听：{{ gateway.listenerState === 'OBSERVED' ? (gateway.ports.length ? gateway.ports.join('、') : '本次未观察到监听') : (listenerLabels[gateway.listenerState] ?? '未知状态') }}</p>
+        </template>
+        <p>观察时间 {{ formatDateTime(gateway.observedAt) }}。服务状态与进程监听为独立观察，不证明两者属于同一启动链或服务可访问。</p>
+      </div>
+    </template>
     <template v-if="canLogs">
       <div class="runtime-actions">
         <el-radio-group v-model="kind" :disabled="busy" aria-label="Nginx 日志类型">
@@ -118,6 +166,13 @@ onBeforeUnmount(clear)
 </template>
 
 <style scoped>
+.gateway-observation {
+  padding: var(--mrr-space-2);
+  margin-bottom: var(--mrr-space-2);
+  border: 1px solid var(--el-border-color-light);
+  border-radius: var(--el-border-radius-base);
+}
+
 .runtime-actions {
   display: flex;
   flex-wrap: wrap;

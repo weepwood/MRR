@@ -73,18 +73,62 @@ public class NginxRuntimeObservation {
         if(state!=null) return new RuntimeStatus(state,Instant.now());
         try {
             Path executable=fixed("runtime/nginx/nginx.exe");
-            Path pidFile=fixed("state/nginx.pid");
-            try(var channel=Files.newByteChannel(pidFile,StandardOpenOption.READ,LinkOption.NOFOLLOW_LINKS)) {
-                ByteBuffer bytes=ByteBuffer.allocate(65);
-                while(bytes.hasRemaining()&&channel.read(bytes)>0) {}
-                if(bytes.position()>64) return new RuntimeStatus("PID_UNVERIFIABLE",Instant.now());
-                String pid=new String(bytes.array(),0,bytes.position(),StandardCharsets.US_ASCII).trim();
-                if(!pid.matches("[1-9][0-9]{0,9}")) return new RuntimeStatus("PID_UNVERIFIABLE",Instant.now());
-                state=lookup.state(Long.parseLong(pid),executable);
-            }
+            long pid=readPid();
+            state=pid==0?"PID_UNVERIFIABLE":lookup.state(pid,executable);
         } catch(IOException|RuntimeException ignored) { state="PROCESS_UNVERIFIABLE"; }
         return new RuntimeStatus(state,Instant.now());
     }
+    private long readPid() throws IOException {
+        Path pidFile=fixed("state/nginx.pid");
+        try(var channel=Files.newByteChannel(pidFile,StandardOpenOption.READ,LinkOption.NOFOLLOW_LINKS)) {
+            ByteBuffer bytes=ByteBuffer.allocate(65);
+            while(bytes.hasRemaining()&&channel.read(bytes)>0) {}
+            if(bytes.position()>64) return 0;
+            String pid=new String(bytes.array(),0,bytes.position(),StandardCharsets.US_ASCII).trim();
+            return pid.matches("[1-9][0-9]{0,9}")?Long.parseLong(pid):0;
+        }
+    }
+
+    record ProcessIdentity(long pid,Instant startedAt) {}
+
+    /** Only the verified master and its same-executable direct workers, with start identities. */
+    List<ProcessIdentity> ownedProcesses() {
+        if(unavailable()!=null) return List.of();
+        try {
+            Path executable=fixed("runtime/nginx/nginx.exe");
+            long pid=readPid();
+            if(pid==0) return List.of();
+            var master=ProcessHandle.of(pid).orElse(null);
+            if(master==null) return List.of();
+            return matchedProcessTree(master,executable);
+        } catch(IOException|RuntimeException ignored) {return List.of();}
+    }
+
+    static List<ProcessIdentity> matchedProcessTree(ProcessHandle master,Path executable) {
+        var identity=identity(master,executable);
+        if(identity==null) return List.of();
+        List<ProcessHandle> children;
+        try(var stream=master.children()) {children=stream.limit(17).toList();}
+        if(children.size()>16) return List.of();
+        var result=new ArrayList<ProcessIdentity>();
+        result.add(identity);
+        for(var child:children) {
+            var worker=identity(child,executable);
+            // Unknown children prevent a complete ownership snapshot.
+            if(worker==null) return List.of();
+            result.add(worker);
+        }
+        return result.stream().sorted(Comparator.comparingLong(ProcessIdentity::pid)).toList();
+    }
+
+    private static ProcessIdentity identity(ProcessHandle process,Path expected) {
+        if(!process.isAlive()) return null;
+        var info=process.info();
+        if(info.command().isEmpty()||info.startInstant().isEmpty()
+                ||!Path.of(info.command().get()).normalize().equals(expected)) return null;
+        return process.isAlive()?new ProcessIdentity(process.pid(),info.startInstant().get()):null;
+    }
+
     public LogTail logs(String kind,int limit) {
         if(kind==null||!Set.of("access","error").contains(kind)||limit<1||limit>100) throw new BusinessException(400,"无效日志类型或条数");
         String state=unavailable();

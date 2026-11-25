@@ -345,4 +345,13 @@ test('Nginx 按需观察进程并仅展示投影日志，切换类别清除旧�
   await page.getByRole('button', { name: '读取脱敏日志' }).click()
   await expect(page.getByRole('cell', { name: 'error', exact: true })).toBeVisible()
   expect(reads).toBe(2)
+  await page.route('**/api/v1/operations/nginx/windows-observation', (route) => {
+    expect(route.request().method()).toBe('POST')
+    expect(route.request().postData()).toBeNull()
+    return route.fulfill({ json: { code: 200, data: { state: 'OBSERVED', serviceState: 'RUNNING', listenerState: 'OBSERVED', ports: [80], observedAt: snapshotTime } } })
+  })
+  await page.getByRole('button', { name: '核对 Windows 服务与 TCP 监听' }).click()
+  await expect(page.getByText('MRR-Gateway 服务：运行中', { exact: true })).toBeVisible()
+  await expect(page.getByText('已核对 Nginx 进程的本地 TCP 监听：80', { exact: true })).toBeVisible()
+  await expect(page.getByText('不证明两者属于同一启动链', { exact: false })).toBeVisible()
 })

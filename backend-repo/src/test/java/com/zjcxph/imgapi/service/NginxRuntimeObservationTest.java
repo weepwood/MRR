@@ -43,6 +43,35 @@ class NginxRuntimeObservationTest {
         assertThat(service.runtime().state()).isEqualTo("PID_UNVERIFIABLE");
         verifyNoMoreInteractions(lookup);
     }
+    @Test void workerOwnershipRequiresSameExecutableAndStartIdentity() throws Exception {
+        Path executable=fixture().resolve("runtime/nginx/nginx.exe");
+        var master=handle(100,executable,java.time.Instant.EPOCH);
+        var worker=handle(101,executable,java.time.Instant.EPOCH.plusSeconds(1));
+        when(master.children()).thenAnswer(call->java.util.stream.Stream.of(worker));
+        assertThat(NginxRuntimeObservation.matchedProcessTree(master,executable)).containsExactly(
+                new NginxRuntimeObservation.ProcessIdentity(100,java.time.Instant.EPOCH),
+                new NginxRuntimeObservation.ProcessIdentity(101,java.time.Instant.EPOCH.plusSeconds(1)));
+        var wrong=handle(102,executable.resolveSibling("other.exe"),java.time.Instant.EPOCH);
+        when(master.children()).thenAnswer(call->java.util.stream.Stream.of(wrong));
+        assertThat(NginxRuntimeObservation.matchedProcessTree(master,executable)).isEmpty();
+        var unknown=handle(103,executable,null);
+        when(master.children()).thenAnswer(call->java.util.stream.Stream.of(unknown));
+        assertThat(NginxRuntimeObservation.matchedProcessTree(master,executable)).isEmpty();
+        when(master.children()).thenAnswer(call->java.util.stream.Stream.generate(()->worker).limit(17));
+        assertThat(NginxRuntimeObservation.matchedProcessTree(master,executable)).isEmpty();
+    }
+
+    private ProcessHandle handle(long pid,Path executable,java.time.Instant started) {
+        var handle=mock(ProcessHandle.class);
+        var info=mock(ProcessHandle.Info.class);
+        when(handle.isAlive()).thenReturn(true);
+        when(handle.pid()).thenReturn(pid);
+        when(handle.info()).thenReturn(info);
+        when(info.command()).thenReturn(java.util.Optional.of(executable.toString()));
+        when(info.startInstant()).thenReturn(java.util.Optional.ofNullable(started));
+        return handle;
+    }
+
     @Test void logProjectionNeverReturnsRawTextAndDropsPartialLines() throws Exception {
         Path root=fixture();
         String valid="{\"time\":\"2026-11-25T10:00:00+08:00\",\"method\":\"GET\",\"status\":502,\"request_time\":0.25,\"remote_addr\":\"synthetic-secret\",\"uri\":\"/private/synthetic-secret\",\"user_agent\":\"synthetic-secret\"}";

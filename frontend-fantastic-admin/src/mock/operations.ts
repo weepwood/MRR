@@ -121,6 +121,7 @@ export default defineFakeRoute([
   { url: '/api/v1/operations/overview', response: () => demoOk(overview()) },
   { url: '/api/v1/operations/query-diagnostics', method: 'POST', response: () => demoError(503, '静态演示不执行真实数据库查询诊断') },
   { url: '/api/v1/operations/nginx', response: () => demoOk({ enabled: false, state: 'DISABLED', configBytes: null, configModifiedAt: null }) },
+  { url: '/api/v1/operations/nginx/windows-observation', method: 'POST', response: () => demoOk({ state: 'DISABLED', serviceState: 'UNAVAILABLE', listenerState: 'UNAVAILABLE', ports: [], observedAt: new Date().toISOString() }) },
   { url: '/api/v1/operations/nginx/runtime', response: () => demoOk({ state: 'DISABLED', observedAt: new Date().toISOString() }) },
   { url: '/api/v1/operations/nginx/logs', response: ({ query }) => demoOk({ state: 'DISABLED', kind: query?.kind ?? 'access', observedAt: new Date().toISOString(), truncated: false, omitted: 0, entries: [] }) },
   { url: '/api/v1/operations/nginx/listener-hints', response: () => demoOk({ state: 'DISABLED', ports: [], observedAt: new Date().toISOString() }) },

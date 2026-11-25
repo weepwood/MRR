@@ -483,3 +483,15 @@ export function getNginxListenerHints(signal?: AbortSignal) {
 export function readNginxVersion(signal?: AbortSignal) {
   return unwrap(postRequest<NginxVersion>('/api/v1/operations/nginx/version', undefined, { signal, retry: false, skipGlobalError: true }), 'Nginx 安装程序版本')
 }
+
+export interface WindowsGatewayStatus {
+  state: string
+  serviceState: string
+  listenerState: string
+  ports: number[]
+  observedAt: string
+}
+
+export function observeWindowsGateway(signal?: AbortSignal) {
+  return unwrap(postRequest<WindowsGatewayStatus>('/api/v1/operations/nginx/windows-observation', undefined, { signal, retry: false, skipGlobalError: true }), 'Windows 网关运行核对')
+}

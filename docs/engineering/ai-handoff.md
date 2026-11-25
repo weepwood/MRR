@@ -406,6 +406,10 @@
 
 - 上一轮48f41634远端推送与Pages静态冒烟已核实。后续新增固定 -v、与 -t 共享许可及有界版本投影；主配置仅提取数字listen文本提示，不能视作生效监听。后端28/28、最新权限16/16（重叠）、组件13/13、Chromium2/2含预热，严格Mock192/230。详见 [Nginx专项](v1.1-nginx-runtime-observation.md)。#808完整候选仍运行，main冻结，SCM及实际Windows现场仍待。
 
+## 20 V1.1 Windows 网关状态与 TCP 监听（2026-11-25）
+
+- #808 最新830ff23a 完整候选45548967642及Windows恢复/Pages/治理/pr-gate通过，已合并7b28a5d5，远端树一致。集中吸收Nginx两批增量，新分支 feat/v1.1-gateway-diagnostics；[Windows网关观察](v1.1-windows-gateway-observation.md) 增加固定本地服务状态及已核验进程的TCP监听，只读、默认关闭、无网络探测和启停；服务名与进程监听独立。实际Windows Server现场尚未验证，#636保持开放。main冻结。
+
 ## 每轮交接模板
 
 - 更新时间、任务、风险、目标及非目标：

@@ -382,6 +382,10 @@
 
 - #806 完整候选及Windows恢复通过，已合并 integration/v1.1 c3e6bdba。上一轮熔断历史已推送9966fb50。新增 [导出版本与断点校验](v1.1-export-representation.md)，全部已有前缀分块核验、If-Range/ETag/Content-Range及总长度校验，保留128MiB预算与权限。61 Vitest、4 Chromium（含预热）通过。后续集中PR基于c3e6bdba，main冻结。
 
+## 14 V1.1 正常装箱关联修复（2026-11-25）
+
+- 后续 feat/v1.1-box-repair 基于 #807 6e675c00，详见 [正常装箱关联修复](v1.1-box-repair.md)：显式类型+实体ID、正常装箱唯一候选、原审批与条件补偿；统计触发器涉及主档事实，不开放。PG及权限22/22、56迁移验证、预览17/17、前端18/18、Chromium4/4（含预热）。#807 最新Pages/development/governance通过，完整候选待确认。main冻结，暂不重复创建依赖PR。
+
 ## 每轮交接模板
 
 - 更新时间、任务、风险、目标及非目标：

@@ -177,7 +177,8 @@ public class DataQualityServiceImpl implements DataQualityService {
                 && currentEntity.get("entityId") != null
                 && java.util.Objects.equals(bah, currentBah)
                 && java.util.Objects.equals(sjh, currentSjh)
-                && (!"mr_scan".equals(entityType) || currentEntity.get("uploadFlag") instanceof Number flag && flag.intValue() != 0);
+                && (!"mr_scan".equals(entityType) || currentEntity.get("uploadFlag") instanceof Number flag && flag.intValue() != 0)
+                && (!"mr_archive_box_record".equals(entityType) || "NORMAL".equals(currentEntity.get("status")));
         boolean validCodes = currentBah != null && currentBah.matches("[0-9]+")
                 && (currentSjh == null || currentSjh.matches("[0-9]+"))
                 && (!com.zjcxph.imgapi.utils.MedicalRecordCodeUtils.requiresSjhForBah(currentBah)
@@ -190,6 +191,8 @@ public class DataQualityServiceImpl implements DataQualityService {
                 && com.zjcxph.imgapi.utils.MedicalRecordCodeUtils.toSearchTerm(currentBah).equals(
                     com.zjcxph.imgapi.utils.MedicalRecordCodeUtils.toSearchTerm(normalize(candidates.getFirst().get("bah"))));
 
+        boolean supportedRepair = ("mr_scan".equals(entityType) && "SCAN_ARCHIVE_LINK_MISSING_ESTIMATED".equals(checkCode))
+                || ("mr_archive_box_record".equals(entityType) && "BOX_ARCHIVE_LINK_MISSING".equals(checkCode));
         Map<String, Object> result = new LinkedHashMap<>();
         result.put("issue", issue);
         result.put("currentEntity", currentEntity);
@@ -199,7 +202,7 @@ public class DataQualityServiceImpl implements DataQualityService {
         result.put("readOnly", true);
         result.put("canApply", false);
         result.put("reason", !current ? "历史异常与当前记录不一致或记录已失效，请重新检查" : !validCodes ? "当前编号不满足安全关联规则" : deterministic
-                ? "存在唯一候选主档；预览不授权写入，实际关联须通过受控修复工单"
+                ? (supportedRepair ? "存在唯一候选主档；预览不授权写入，实际关联须通过受控修复工单" : "存在唯一候选主档，但该异常类型尚未开放修复工单，仅供人工核对")
                 : "候选关系不唯一或异常类型需要人工判断，禁止自动修改");
         return result;
     }

@@ -360,21 +360,21 @@ body .el-button--info.is-plain:not(.is-disabled):hover {
 .el-input__wrapper,
 .el-select__wrapper {
   min-height: var(--mrr-input-height);
-  padding-inline: 11px;
-  box-shadow: 0 0 0 1px var(--mrr-control-border) inset, var(--mrr-shadow-xs);
+  padding-inline: var(--mrr-field-padding-x);
+  box-shadow: 0 0 0 1px var(--mrr-control-border) inset, var(--mrr-field-shadow);
 }
 
 .el-input--small .el-input__wrapper,
 .el-select--small .el-select__wrapper {
   min-height: var(--mrr-input-height);
-  padding-inline: 9px;
+  padding-inline: var(--mrr-field-padding-x-sm);
   border-radius: var(--mrr-radius-sm);
 }
 
 .el-input--large .el-input__wrapper,
 .el-select--large .el-select__wrapper {
   min-height: var(--mrr-input-height);
-  padding-inline: 12px;
+  padding-inline: var(--mrr-field-padding-x-lg);
   border-radius: var(--mrr-radius-lg);
 }
 
@@ -391,35 +391,35 @@ body .el-button--info.is-plain:not(.is-disabled):hover {
 .el-select__wrapper:hover,
 .el-textarea__inner:hover {
   background: var(--mrr-control-bg-hover);
-  box-shadow: 0 0 0 1px var(--mrr-control-border-hover) inset, var(--mrr-shadow-xs);
+  box-shadow: 0 0 0 1px var(--mrr-control-border-hover) inset, var(--mrr-field-shadow);
 }
 
 .el-input__wrapper.is-focus,
 .el-select__wrapper.is-focused,
 .el-date-editor.el-input__wrapper.is-active,
 .el-date-editor.el-input__wrapper:focus-within {
-  background: var(--mrr-background);
+  background: var(--mrr-field-focus-bg);
   box-shadow: 0 0 0 1px var(--mrr-ring) inset, var(--mrr-focus-ring);
 }
 
 .el-textarea__inner {
-  min-height: 92px;
-  padding: 9px 11px;
-  line-height: 1.55;
+  min-height: var(--mrr-textarea-min-height);
+  padding: var(--mrr-textarea-padding-y) var(--mrr-field-padding-x);
+  line-height: var(--mrr-textarea-line-height);
   border: 0;
-  box-shadow: 0 0 0 1px var(--mrr-control-border) inset, var(--mrr-shadow-xs);
+  box-shadow: 0 0 0 1px var(--mrr-control-border) inset, var(--mrr-field-shadow);
 }
 
 .el-textarea__inner:focus {
   outline: none;
-  background: var(--mrr-background);
+  background: var(--mrr-field-focus-bg);
   box-shadow: 0 0 0 1px var(--mrr-ring) inset, var(--mrr-focus-ring);
 }
 
 .el-input__inner,
 .el-select__selected-item,
 .el-textarea__inner {
-  font-size: 13px;
+  font-size: var(--mrr-field-font-size);
   color: var(--mrr-foreground);
 }
 
@@ -1061,7 +1061,7 @@ body .el-descriptions__table {
 
 .el-form-item__label {
   padding-bottom: 6px;
-  font-size: 13px;
+  font-size: var(--mrr-field-font-size);
   font-weight: 500;
   line-height: 1.35;
   color: var(--mrr-foreground);
@@ -1069,7 +1069,7 @@ body .el-descriptions__table {
 
 .el-form-item__error {
   padding-top: 5px;
-  font-size: 12px;
+  font-size: var(--mrr-font-size-xs);
   line-height: 1.4;
   color: var(--mrr-destructive);
 }

@@ -76,7 +76,7 @@ test('组件目录准确索引两套控件，表单对照保留标签、只读�
   await expect(fields.getByLabel('原生只读名称', { exact: true })).toHaveAttribute('readonly', '')
   await expect(fields.getByLabel('校验示例', { exact: true })).toHaveAttribute('aria-invalid', 'true')
   await expect(fields.getByLabel('校验示例', { exact: true })).toHaveAccessibleDescription('请输入示例名称')
-  await expect(fields.getByText('请输入示例名称', { exact: true })).toBeVisible()
+  await expect(fields.getByText('请输入示例名称', { exact: true })).toHaveCount(2)
   await fields.getByLabel('校验示例', { exact: true }).fill('有效示例')
   await expect(fields.getByLabel('校验示例', { exact: true })).not.toHaveAttribute('aria-invalid', 'true')
   await expect(fields.getByText('请输入示例名称', { exact: true })).toHaveCount(0)

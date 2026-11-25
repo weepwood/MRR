@@ -273,6 +273,11 @@ function resetExamples() {
   max-width: 400px;
 }
 
+.gallery-preview :deep(.example-field-error) {
+  font-size: var(--mrr-font-size-xs);
+  color: var(--mrr-destructive);
+}
+
 .gallery-preview :deep(.example-note) {
   margin: 0;
   font-size: 13px;

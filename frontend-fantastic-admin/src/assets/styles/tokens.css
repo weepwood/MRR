@@ -113,6 +113,15 @@
 
   /* 控件尺寸 */
   --mrr-input-height: 33px;
+  --mrr-field-font-size: var(--mrr-font-size-sm);
+  --mrr-field-padding-x: 11px;
+  --mrr-field-padding-x-sm: 9px;
+  --mrr-field-padding-x-lg: 12px;
+  --mrr-textarea-min-height: 92px;
+  --mrr-textarea-padding-y: 9px;
+  --mrr-textarea-line-height: 1.55;
+  --mrr-field-focus-bg: var(--mrr-background);
+  --mrr-field-shadow: var(--mrr-shadow-xs);
   --mrr-control-height: var(--mrr-input-height);
   --mrr-control-height-compact: var(--mrr-control-height);
   --mrr-control-height-large: var(--mrr-control-height);

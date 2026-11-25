@@ -338,6 +338,12 @@ Element Plus `el-button` 与 reka-ui `FaButton`（`.fa-button-control`）**尺�
 
 同一组控件里不混用方、圆两种图标按钮。加载态保留变体配色并阻止点击、设置 `aria-busy`；禁用态不只降低透明度，需可读出原因。守护测试：[button-consistency.test.ts](src/assets/styles/button-consistency.test.ts)、[button-parity.spec.ts](e2e/button-parity.spec.ts)。
 
+### 4.2.1 字段控件的统一视觉契约
+
+- `--mrr-field-font-size`、`--mrr-field-padding-x(-sm/-lg)`、`--mrr-textarea-padding-y`、`--mrr-textarea-line-height`、`--mrr-textarea-min-height`、`--mrr-field-focus-bg`、`--mrr-field-shadow` 与既有输入高度/圆角/颜色令牌同源。Element Plus 在 element-plus-overrides.css、Fa 在 form-controls.css 引用；主题仅改令牌，不重写同一字段选择器。默认文本域最小高度为未明确行数时的基准，显式 rows 尊重组件自身测量。
+- 只读仍可聚焦/复制，不等于禁用；错误样式支持 `aria-invalid="true"` 与原注册表单 `border-destructive`，错误说明需关联真实字段，不能只用红色。保持既有权限、提交和校验行为。
+- 归属与实际视觉守护：[form-control-consistency](src/assets/styles/form-control-consistency.test.ts)、[form-control-parity](e2e/form-control-parity.spec.ts)，经典/暖色与明暗均验；现代浏览器证据不替代医院 Chrome86。
+
 ### 4.3 筛选栏
 
 - 字段标签说明"这是什么条件"，placeholder 只补充格式或示例；标签关联到真实可聚焦的控件。

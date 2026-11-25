@@ -2,6 +2,7 @@ import assert from 'node:assert/strict'
 import { readFile } from 'node:fs/promises'
 import process from 'node:process'
 import { chromium } from '@playwright/test'
+import JSZip from 'jszip'
 import { preview } from 'vite'
 
 async function smokePagesDemo() {
@@ -48,7 +49,9 @@ async function smokePagesDemo() {
     const publicConfig = await page.evaluate(async () => {
       const get = path => fetch(`/proxy/api/v1/public/config/${path}`).then(response => response.json())
       const [login, environment, docs, session] = await Promise.all([
-        get('login-page'), get('client-environment'), get('documentation'),
+        get('login-page'),
+        get('client-environment'),
+        get('documentation'),
         fetch('/proxy/api/v1/documentation/session', { method: 'POST' }).then(response => response.json()),
       ])
       return { login, environment, docs, session }
@@ -65,12 +68,12 @@ async function smokePagesDemo() {
     const queryDiagnostics = await page.evaluate(() => fetch('/proxy/api/v1/operations/query-diagnostics', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ bah: 'synthetic' }) }).then(response => response.json()))
     assert.equal(queryDiagnostics.code, 503, '静态演示不得伪造数据库诊断结果')
     const demoBrowse = await page.evaluate(async () => {
-      const get = path => fetch('/proxy/api/v1/system/database/browse/tables' + path).then(response => response.json())
+      const get = path => fetch(`/proxy/api/v1/system/database/browse/tables${path}`).then(response => response.json())
       const tables = await get('')
       const schema = await get('/scan')
       const first = await get('/scan/rows?page=1&size=50')
-      const second = await get('/scan/rows?page=2&size=50&cursor=' + encodeURIComponent(first.data.nextCursor))
-      const filtered = await get('/scan/rows?filter=' + encodeURIComponent('bah:EQ:26070000'))
+      const second = await get(`/scan/rows?page=2&size=50&cursor=${encodeURIComponent(first.data.nextCursor)}`)
+      const filtered = await get(`/scan/rows?filter=${encodeURIComponent('bah:EQ:26070000')}`)
       const unknown = await get('/unknown')
       return { tables, schema, first, second, filtered, unknown }
     })
@@ -83,13 +86,10 @@ async function smokePagesDemo() {
     assert.ok(demoBrowse.filtered.data.rows.every(row => row.bah === '26****00'))
     assert.equal(demoBrowse.unknown.code, 404)
     const denied = await page.evaluate(async () => {
-      const call = (path, method = 'GET') => fetch('/proxy/api/v1/' + path, { method }).then(response => response.json())
-      return Promise.all([call('external/archive/session','POST'), call('external/archive/context'), call('external/archive/images'), call('auth/users','POST'), call('auth/password/required-change','POST'), call('search/archive-cases','POST'), call('patients/1','PUT'), call('data-exchange/patients/import','POST')])
+      const call = (path, method = 'GET') => fetch(`/proxy/api/v1/${path}`, { method }).then(response => response.json())
+      return Promise.all([call('external/archive/session', 'POST'), call('external/archive/context'), call('external/archive/images'), call('auth/users', 'POST'), call('auth/password/required-change', 'POST'), call('search/archive-cases', 'POST'), call('patients/1', 'PUT'), call('data-exchange/patients/import', 'POST')])
     })
     assert.ok(denied.every(result => result.code === 503 && result.data === undefined), '不得伪造真实认证或医疗写入成功')
-
-
-
 
     // Verify shared records through the actual static browser Mock.
     const relations = await page.evaluate(async () => {
@@ -190,8 +190,11 @@ async function smokePagesDemo() {
     const migration = await page.evaluate(async () => {
       const get = path => fetch(`/proxy/api/v1/oss/migration/${path}`).then(response => response.json())
       const [stats, pending, waiting, folders, readiness] = await Promise.all([
-        get('statistics'), get('pending?limit=100'), get('management/waiting-sjh?limit=100'),
-        get('pending-folders'), get('readiness?sampleSize=2'),
+        get('statistics'),
+        get('pending?limit=100'),
+        get('management/waiting-sjh?limit=100'),
+        get('pending-folders'),
+        get('readiness?sampleSize=2'),
       ])
       return { stats, pending, waiting, folders, readiness }
     })
@@ -240,9 +243,13 @@ async function smokePagesDemo() {
     assert.ok(archiveAssets.loaded.every(Boolean), '档案袋影像必须在真实 Pages 浏览器中成功解码')
 
     const writes = await page.evaluate(async () => {
-      const req = (path, body) => fetch(`/proxy/api/v1/${path}`, body === undefined ? undefined : {
-        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body),
-      }).then(response => response.json())
+      const req = (path, body) => fetch(`/proxy/api/v1/${path}`, body === undefined
+        ? undefined
+        : {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(body),
+          }).then(response => response.json())
       const before = await req('oss/migration/statistics')
       const upload = await req('oss/upload', { scanIds: [1, 1, 99999] })
       const scan = await req('scan/1')
@@ -286,7 +293,9 @@ async function smokePagesDemo() {
       const key = prefix + filename
       const get = (path, params) => fetch(`/proxy/api/v1/oss/browser${path}?${new URLSearchParams(params)}`).then(response => response.json())
       const [listing, signed, missing] = await Promise.all([
-        get('', { prefix }), get('/url', { key }), get('/url', { key: prefix + 'missing.jpg' }),
+        get('', { prefix }),
+        get('/url', { key }),
+        get('/url', { key: `${prefix}missing.jpg` }),
       ])
       const image = new Image()
       image.src = signed.data.ossUrl
@@ -302,7 +311,9 @@ async function smokePagesDemo() {
     const execution = await page.evaluate(async () => {
       const get = path => fetch(`/proxy/api/v1/${path}`).then(response => response.json())
       const post = (path, body) => fetch(`/proxy/api/v1/${path}`, {
-        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body),
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
       }).then(response => response.json())
       const before = await get('oss/migration/statistics')
       const scan = (await get('scan/13')).data
@@ -332,7 +343,8 @@ async function smokePagesDemo() {
 
     const boxes = await page.evaluate(async () => {
       const request = (path, method = 'GET', body) => fetch(`/proxy/api/v1/archive-box-records${path}`, {
-        method, ...(body ? { headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) } : {}),
+        method,
+        ...(body ? { headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) } : {}),
       }).then(response => response.json())
       const before = await request('/summary')
       const rows = await request('?page=1&size=100')
@@ -359,9 +371,13 @@ async function smokePagesDemo() {
     assert.deepEqual(boxes.before.data, boxes.after.data)
 
     const ocr = await page.evaluate(async () => {
-      const request = (path, body) => fetch(`/proxy/api/v1/${path}`, body === undefined ? undefined : {
-        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body),
-      }).then(response => response.json())
+      const request = (path, body) => fetch(`/proxy/api/v1/${path}`, body === undefined
+        ? undefined
+        : {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(body),
+          }).then(response => response.json())
       const before = await request('scan/3/ocr')
       const created = await request('archive-records/2/ocr/jobs', { idempotencyKey: 'pages-ocr' })
       const reused = await request('archive-records/2/ocr/jobs', { idempotencyKey: 'pages-ocr' })
@@ -371,8 +387,11 @@ async function smokePagesDemo() {
         detail = await request(`ocr/jobs/${created.data.id}`)
       }
       const [full, hidden, items, scan, list, suggestions] = await Promise.all([
-        request('scan/3/ocr?full=true'), request('scan/3/ocr'),
-        request(`ocr/jobs/${created.data.id}/items`), request('scan/3'), request('archive-records/2/ocr/jobs'),
+        request('scan/3/ocr?full=true'),
+        request('scan/3/ocr'),
+        request(`ocr/jobs/${created.data.id}/items`),
+        request('scan/3'),
+        request('archive-records/2/ocr/jobs'),
         request(`classification/jobs/${created.data.id}/suggestions`),
       ])
       const another = await request('archive-records/6/ocr/jobs', { idempotencyKey: 'pages-cancel' })
@@ -453,6 +472,33 @@ async function smokePagesDemo() {
     assert.equal(download.suggestedFilename(), '存储说明.txt')
     assert.match(await readFile(await download.path(), 'utf8'), /MRR 文件浏览演示数据/)
 
+    // Verify real downloads rather than treating a mock success envelope as a file.
+    const exportsPage = await browser.newPage()
+    exportsPage.on('pageerror', error => pageErrors.push(error.message))
+    await exportsPage.goto(`${appUrl}#/archive?bah=00800001`)
+    const exportActions = exportsPage.locator('.archive-bottom-actions')
+    const wholeButton = exportActions.getByRole('button', { name: /下载病案/ })
+    await wholeButton.waitFor({ timeout: 20000 })
+    const [wholeZipDownload] = await Promise.all([exportsPage.waitForEvent('download', { timeout: 20000 }), wholeButton.click()])
+    const wholeZip = await JSZip.loadAsync(await readFile(await wholeZipDownload.path()))
+    assert.equal(Object.keys(wholeZip.files).length, 15)
+    assert.match(await wholeZip.file('image-91001.svg').async('string'), /合成影像 · 非真实病案/)
+    await exportsPage.locator('.thumb-check').first().click()
+    const [selectedZipDownload] = await Promise.all([
+      exportsPage.waitForEvent('download', { timeout: 20000 }),
+      exportActions.getByRole('button', { name: /导出选中 ZIP（1）/ }).click(),
+    ])
+    assert.equal(Object.keys((await JSZip.loadAsync(await readFile(await selectedZipDownload.path()))).files).length, 2)
+    const [pdfDownload] = await Promise.all([
+      exportsPage.waitForEvent('download', { timeout: 20000 }),
+      exportActions.getByRole('button', { name: /导出选中 PDF（1）/ }).click(),
+    ])
+    const pdfBytes = await readFile(await pdfDownload.path())
+    assert.equal(pdfBytes.subarray(0, 8).toString(), '%PDF-1.4')
+    assert.match(pdfBytes.toString('latin1'), /\/Type \/Pages \/Count 1/)
+    assert.match(pdfBytes.toString('latin1'), /%%EOF\s*$/)
+    await exportsPage.close()
+
     // Exercise the independent workbench and real bundled binary Mock end to end.
     const workbench = await browser.newPage()
     workbench.on('pageerror', error => pageErrors.push(error.message))
@@ -497,9 +543,13 @@ async function smokePagesDemo() {
 
     const simulated = await opsPage.evaluate(async () => {
       async function request(path, body) {
-        const options = body === undefined ? undefined : {
-          method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body),
-        }
+        const options = body === undefined
+          ? undefined
+          : {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify(body),
+            }
         return fetch(`/proxy/api/v1/${path}`, options).then(response => response.json())
       }
       const database = await request('system/database/overview')

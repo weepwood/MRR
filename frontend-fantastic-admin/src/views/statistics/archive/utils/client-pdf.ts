@@ -22,6 +22,13 @@ function formatNumber(value: number): string {
 }
 
 async function fetchImageBlob(imageUrl: string): Promise<Blob> {
+  // Pages CSP forbids network access, including fetch(data:). The synthetic SVG
+  // is already inline; decode its bounded payload without a network request.
+  const demoPrefix = 'data:image/svg+xml;charset=utf-8,'
+  if ((import.meta.env.MODE === 'pages' || import.meta.env.MODE === 'mock') && imageUrl.startsWith(demoPrefix)) {
+    if (imageUrl.length > 65536) { throw new Error('演示影像超出大小限制') }
+    return new Blob([decodeURIComponent(imageUrl.slice(demoPrefix.length))], { type: 'image/svg+xml' })
+  }
   const resolvedUrl = new URL(imageUrl, window.location.href)
   const response = await fetch(resolvedUrl.toString(), imageFetchInit(resolvedUrl))
 
@@ -42,7 +49,9 @@ async function loadImageSource(blob: Blob): Promise<{
   height: number
   cleanup: () => void
 }> {
-  if (typeof createImageBitmap === 'function') {
+  // Some Chromium builds reject SVG blobs in createImageBitmap. SVG is
+  // decoded through the ordinary image element, which also matches its preview.
+  if (typeof createImageBitmap === 'function' && blob.type !== 'image/svg+xml') {
     const bitmap = await createImageBitmap(blob)
     return {
       source: bitmap,
@@ -55,7 +64,8 @@ async function loadImageSource(blob: Blob): Promise<{
   const objectUrl = URL.createObjectURL(blob)
   const image = new Image()
   image.src = objectUrl
-  await image.decode()
+  try { await image.decode() }
+  catch (error) { URL.revokeObjectURL(objectUrl); throw error }
   return {
     source: image,
     width: image.naturalWidth,

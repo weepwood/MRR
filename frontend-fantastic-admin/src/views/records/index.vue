@@ -2,7 +2,6 @@
 import type { ScanRecord } from '@/api/types'
 import type { MetricTone } from '@/components/MrrMetricCard/types'
 import type { MrrTableAction } from '@/components/MrrTableActions/types'
-import { Download } from 'lucide-vue-next'
 import { computed, onBeforeUnmount, onMounted, reactive, ref } from 'vue'
 import { batchDownloadRecords, getScanCursor } from '@/api/modules/records'
 import AppEmpty from '@/components/AppEmpty/index.vue'
@@ -265,7 +264,7 @@ function typeLabel(value: unknown) {
         <div class="records-batch-actions">
           <span v-if="selectedRows.length" class="records-batch-actions__count">已选 {{ selectedRows.length }} 条</span>
           <el-button type="primary" :loading="downloading" @click="handleBatchDownload">
-            <el-icon><Download /></el-icon>
+            <FaIcon name="i-lucide:download" aria-hidden="true" />
             批量下载
           </el-button>
         </div>

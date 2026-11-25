@@ -5,7 +5,6 @@ import type { ImageAuditAnalytics, LogRecord } from '@/api/types'
 import type { MrrTableAction } from '@/components/MrrTableActions/types'
 import { useMediaQuery } from '@vueuse/core'
 import { ElMessage } from 'element-plus'
-import { Download, RefreshCw as Refresh } from 'lucide-vue-next'
 import { computed, onMounted, onScopeDispose, ref, watch } from 'vue'
 import { exportImageAuditLogs, getImageAuditAnalytics, getLogById, searchImageAuditLogs } from '@/api/modules/logs'
 import AppEmpty from '@/components/AppEmpty/index.vue'
@@ -391,7 +390,7 @@ onMounted(loadData)
   <MrrPageShell>
     <MrrPageHeader size="compact" title="病历访问审计可视化" eyebrow="Medical Record Audit" description="按用户和病历双向追溯访问关系，并导出完整审计证据。">
       <template #actions>
-        <el-button :loading="loading || analyticsLoading" @click="() => loadData()"><el-icon><Refresh /></el-icon>刷新</el-button>
+        <el-button :loading="loading || analyticsLoading" @click="() => loadData()"><FaIcon name="i-lucide:refresh-cw" aria-hidden="true" />刷新</el-button>
       </template>
     </MrrPageHeader>
 
@@ -418,7 +417,7 @@ onMounted(loadData)
         只保留明细卡头这一处：导出的就是这张表的当前筛选结果，按钮应紧挨它的对象。
       -->
       <template #actions>
-        <el-button :loading="exportLoading" @click="exportAudit('all')"><el-icon><Download /></el-icon>导出当前明细</el-button>
+        <el-button :loading="exportLoading" @click="exportAudit('all')"><FaIcon name="i-lucide:download" aria-hidden="true" />导出当前明细</el-button>
       </template>
       <AppLoading v-if="loading && !list.length" type="table" :rows="8" />
       <AppError v-else-if="error" :message="error" @retry="loadListData" />

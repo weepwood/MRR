@@ -19,3 +19,35 @@ test('演示数据表浏览共享记录、脱敏字段、分页与精确过滤',
   await page.getByRole('button', { name: '重置', exact: true }).click()
   await expect(page.getByText('第 1 页 · 本页 50 行', { exact: false })).toBeVisible()
 })
+
+test('游标结果刷新期间保留上一页，首次查询使用独立骨架', async ({ page }) => {
+  let release: (() => void) | undefined
+  await page.route('**/api/v1/system/database/browse/tables/scan/rows**', async (route) => {
+    await new Promise<void>((resolve) => { release = resolve })
+    await route.fallback()
+  })
+  try {
+    await page.goto('/database-browse')
+    await page.getByRole('button', { name: '浏览影像记录（合成）' }).click()
+    await expect.poll(() => Boolean(release)).toBe(true)
+    await expect(page.locator('.mrr-data-table-panel__content .app-loading')).toBeVisible()
+    await expect(page.locator('.result-table')).toHaveCount(0)
+    release?.()
+    release = undefined
+    await expect(page.getByText('第 1 页 · 本页 50 行', { exact: false })).toBeVisible()
+
+    await page.getByRole('button', { name: '下一页', exact: true }).click()
+    await expect.poll(() => Boolean(release)).toBe(true)
+    await expect(page.locator('.mrr-data-table-panel__content')).toHaveAttribute('aria-busy', 'true')
+    await expect(page.locator('.result-table').getByText('26****31', { exact: true }).first()).toBeVisible()
+    await expect(page.getByText('第 1 页 · 本页 50 行', { exact: false })).toBeVisible()
+    await expect(page.getByRole('button', { name: '下一页', exact: true })).toBeDisabled()
+    release?.()
+    release = undefined
+    await expect(page.getByText('第 2 页 · 本页 14 行', { exact: false })).toBeVisible()
+    await expect(page.locator('.mrr-data-table-panel__content')).not.toHaveAttribute('aria-busy', 'true')
+  }
+  finally {
+    release?.()
+  }
+})

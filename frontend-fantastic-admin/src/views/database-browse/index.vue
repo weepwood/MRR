@@ -364,9 +364,9 @@ onMounted(loadTables)
         title="该表必须提供至少一个过滤条件，后端才会返回数据"
       />
 
-      <div v-if="schema" class="filters">
-        <div v-for="column in filterableColumns" :key="column.name" class="filter-item">
-          <label class="filter-label" :for="`db-filter-${column.name}`">{{ column.label }}</label>
+      <MrrFilterBar v-if="schema" class="filters" embedded labelled layout="grid">
+        <div v-for="column in filterableColumns" :key="column.name" class="mrr-filter-field">
+          <label :for="`db-filter-${column.name}`">{{ column.label }}</label>
           <el-input
             :id="`db-filter-${column.name}`"
             v-model="filterValues[column.name]"
@@ -377,19 +377,20 @@ onMounted(loadTables)
             @keyup.enter="search"
           />
         </div>
-        <div class="filter-actions">
+        <template #actions>
           <MrrFilterActionButton action="search" type="primary" feedback="request" :pending="loading" :busy="loading" :disabled="loading" @click="search">
             查询
           </MrrFilterActionButton>
           <MrrFilterActionButton action="reset" feedback="request" :busy="loading" :disabled="loading" @click="resetFilters">
             重置
           </MrrFilterActionButton>
-        </div>
-      </div>
+        </template>
+      </MrrFilterBar>
     </MrrSectionCard>
 
-    <MrrSectionCard v-if="schema" title="查询结果" :description="currentTable?.label" body-padding="normal">
-      <el-table v-loading="loading" :data="rows" stripe border class="result-table">
+    <MrrDataTablePanel v-if="schema" title="查询结果" :description="currentTable?.label" :loading="loading && Boolean(page)" :result-key="page">
+      <AppLoading v-if="loading && !page" type="table" :rows="3" />
+      <el-table v-else :data="rows" stripe border class="result-table">
         <el-table-column
           v-for="column in columns"
           :key="column.name"
@@ -406,29 +407,10 @@ onMounted(loadTables)
           </template>
         </el-table-column>
         <template #empty>
-          <AppLoading v-if="loading" type="table" :rows="3" />
-          <AppEmpty v-else-if="!errorMessage || page" size="compact" :description="emptyText" />
+          <AppEmpty v-if="!errorMessage || page" size="compact" :description="emptyText" />
           <span v-else class="empty-hint">查询未完成，请重试</span>
         </template>
       </el-table>
-
-      <div class="pager">
-        <span class="pager-note" role="status">
-          第 {{ pageIndex }} 页 · 本页 {{ rows.length }} 行 · 总行数 {{ estimateText }}<template v-if="page"> · 耗时 {{ page.tookMs }} ms</template>
-          <template v-if="errorMessage && page"> · 保留上次成功结果</template>
-          <template v-if="page?.omittedColumnCount">
-            · {{ page.omittedColumnCount }} 列未展示
-          </template>
-        </span>
-        <div class="pager-actions">
-          <el-button :disabled="pageIndex <= 1 || loading" @click="prevPage">
-            上一页
-          </el-button>
-          <el-button :disabled="!page?.hasMore || loading" @click="nextPage">
-            下一页
-          </el-button>
-        </div>
-      </div>
 
       <el-alert
         v-if="page?.truncatedColumns?.length"
@@ -438,7 +420,26 @@ onMounted(loadTables)
         show-icon
         :title="`以下列内容过长已截断：${page.truncatedColumns.join('、')}`"
       />
-    </MrrSectionCard>
+      <template #pagination>
+        <div class="pager">
+          <span class="pager-note" role="status">
+            第 {{ pageIndex }} 页 · 本页 {{ rows.length }} 行 · 总行数 {{ estimateText }}<template v-if="page"> · 耗时 {{ page.tookMs }} ms</template>
+            <template v-if="errorMessage && page"> · 保留上次成功结果</template>
+            <template v-if="page?.omittedColumnCount">
+              · {{ page.omittedColumnCount }} 列未展示
+            </template>
+          </span>
+          <div class="pager-actions">
+            <el-button :disabled="pageIndex <= 1 || loading" @click="prevPage">
+              上一页
+            </el-button>
+            <el-button :disabled="!page?.hasMore || loading" @click="nextPage">
+              下一页
+            </el-button>
+          </div>
+        </div>
+      </template>
+    </MrrDataTablePanel>
   </MrrPageShell>
 </template>
 
@@ -580,46 +581,24 @@ onMounted(loadTables)
 }
 
 .filters {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--mrr-space-3);
-  align-items: flex-end;
+  padding-bottom: 0;
   margin-top: var(--mrr-space-4);
+  border-bottom: 0;
 }
 
 .retry-row {
   margin-top: var(--mrr-space-3);
 }
 
-.filter-item {
-  display: flex;
-  flex: 1 1 180px;
-  flex-direction: column;
-  gap: var(--mrr-space-1);
-  min-width: min(100%, 180px);
-  max-width: 100%;
-}
-
-.filter-label {
-  font-size: var(--mrr-font-size-xs);
-  color: var(--mrr-muted-foreground);
-}
-
-.filter-actions {
-  display: flex;
-  gap: var(--mrr-space-2);
-}
-
-/* 与其他列表页的分页栏一致：上方一条分隔线，把「表格」和「翻页状态」分成两层。 */
+/* Cursor pagination must keep the actual server result rather than invent a total page count. */
 .pager {
   display: flex;
   flex-wrap: wrap;
   gap: var(--mrr-space-2);
   align-items: center;
   justify-content: space-between;
-  padding-top: var(--mrr-space-3);
-  margin-top: var(--mrr-space-3);
-  border-top: 1px solid var(--mrr-shell-divider);
+  width: 100%;
+  min-width: 0;
 }
 
 .pager-note {
@@ -630,7 +609,12 @@ onMounted(loadTables)
 
 .pager-actions {
   display: flex;
+  flex-wrap: wrap;
   gap: var(--mrr-space-2);
+}
+
+.pager-actions :deep(.el-button + .el-button) {
+  margin-left: 0;
 }
 
 .empty-hint {

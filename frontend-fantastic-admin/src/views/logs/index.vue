@@ -3,7 +3,6 @@ import type { LogRecord, PaginatedResult } from '@/api/types'
 /* eslint-disable antfu/if-newline, curly, vue/singleline-html-element-content-newline */
 import type { MrrTableAction } from '@/components/MrrTableActions/types'
 import { useMediaQuery } from '@vueuse/core'
-import { Copy as CopyIcon, RefreshCw as Refresh } from 'lucide-vue-next'
 import { computed, onBeforeUnmount, onDeactivated, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { getLogById, searchSystemLogs } from '@/api/modules/logs'
@@ -273,7 +272,7 @@ function statusTagType(status: string | number) {
       </template>
       <template #actions>
         <el-button :loading="loading" @click="loadData()">
-          <el-icon><Refresh /></el-icon>
+          <FaIcon name="i-lucide:refresh-cw" aria-hidden="true" />
           刷新
         </el-button>
       </template>
@@ -359,7 +358,7 @@ function statusTagType(status: string | number) {
                 link type="primary" class="copy-link" aria-label="复制 Request ID"
                 @click="copyText(row.requestId, 'Request ID 已复制')"
               >
-                <el-icon><CopyIcon /></el-icon>
+                <FaIcon name="i-lucide:copy" aria-hidden="true" />
               </el-button>
             </template>
             <template v-else>-</template>

@@ -2,7 +2,6 @@
 import type { PatientRecord } from '@/api/modules/patients'
 import type { MrrTableAction } from '@/components/MrrTableActions/types'
 import type { EffectiveSystemSettings } from '@/utils/system-settings'
-import { RefreshCw as Refresh, Search, Upload } from 'lucide-vue-next'
 import { computed, onMounted, onUnmounted, reactive, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { getPatients } from '@/api/modules/patients'
@@ -198,10 +197,12 @@ onUnmounted(() => {
       description="查询和编辑患者基本信息，并查看身份证完整性与重复患者情况。"
     >
       <template #actions>
-        <el-button :loading="loading" :icon="Refresh" @click="refreshAll">
+        <el-button :loading="loading" @click="refreshAll">
+          <FaIcon v-if="!loading" name="i-lucide:refresh-cw" aria-hidden="true" />
           刷新
         </el-button>
-        <el-button :icon="Upload" @click="openDataExchange">
+        <el-button @click="openDataExchange">
+          <FaIcon name="i-lucide:upload" aria-hidden="true" />
           数据导入导出
         </el-button>
       </template>
@@ -229,7 +230,7 @@ onUnmounted(() => {
                   @keyup.enter="handleSearch"
                 >
                   <template #prefix>
-                    <el-icon><Search /></el-icon>
+                    <FaIcon name="i-lucide:search" aria-hidden="true" />
                   </template>
                 </el-input>
               </div>

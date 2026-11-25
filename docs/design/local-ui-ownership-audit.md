@@ -171,3 +171,11 @@ Manifest 两个选择器改 ElSelect，数值版本、空值、已加载异常�
 
 - P2 公共控件/布局与 P1 病案完整性、只读权限及操作语义；无后端、API、数据库或鉴权变更。原 11 项 WebKit 失败隔离复现 12/12（含预热），扩大验证后定向 WebKit 19/20、Chromium 11/12，唯一剩余版本比较经可用状态及真实键盘展开修复，双引擎 3/3（含预热）。实际剪贴板仅 Chromium；不宣称 Linux 完整矩阵已修复。
 - 类型、114 项定向单测、生产构建与 Chrome86 静态门禁通过；尚无本轮所有页面迁移前后像素对照、真实 Chrome86、完整 Linux/Firefox 证据。共用样式及三处按钮可随本提交 revert；后续逐项补齐剩余按钮与专用 FA 几何/交互验收，避免盲目删除。
+
+## 第二批本地公共组件深化（基线 2a10a360）
+
+- 基线清单中继续迁移 refresh-button、clear-date-filter、trace-copy、theme-palette-accent__reset 四处普通命令；内容型 day-cell、主题预设卡片、密码字段专用触发器仍保留。上批原生按钮清单是历史基线而非当前剩余计数。
+- 日志、审计、记录、患者四页的业务 Lucide 图标统一 FaIcon 资源入口；已有 EP 原生加载不强行替代。复合字段紧凑按钮由 form-controls.css 的 mrr-embedded-icon-action 持有尺寸，页面仅指定局部 24px / 13px。
+- 数据浏览使用 MrrFilterBar grid、MrrDataTablePanel loading / result-key、独立首次加载骨架和共享分页槽；原 cursorStack、activeFilter、权限清理和请求取消逻辑不变。不用总页数伪造游标。
+- Chrome86：危险按钮 hover、主/危险 plain 边界与焦点补回退；导航示意第二分区使用主色+透明度，容器基线采用语义底色；影像分类选中态提供基础阴影。已有 token 层及其他 @supports not 回退仍有效，静态产物 warning 总数不是实际未回退缺陷数量。
+- 实际浏览器定向26项通过（含预热），1项 WebKit 剪贴板权限按既有策略跳过；Chromium 实际复制通过。116项单测通过。未做所有页面的1px几何基线对比或旧浏览器实机验证，专用FA后续仍需单独交互合同验收。

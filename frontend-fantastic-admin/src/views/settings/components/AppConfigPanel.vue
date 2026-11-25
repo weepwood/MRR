@@ -317,9 +317,9 @@ function handleReset() {
                   <strong>{{ gr8rAccent }}</strong>
                   <small>原 MRR 主色设置已保留</small>
                 </span>
-                <button type="button" class="theme-palette-accent__reset" @click="settingsStore.settings.app.themePalette = 'mrr'">
+                <el-button size="small" text class="theme-palette-accent__reset mrr-button-secondary" :auto-insert-space="false" @click="settingsStore.settings.app.themePalette = 'mrr'">
                   自定义主色
-                </button>
+                </el-button>
               </div>
             </div>
 
@@ -1032,15 +1032,9 @@ function handleReset() {
   color: var(--mrr-muted-foreground);
 }
 
-.theme-palette-accent__reset {
-  padding: var(--mrr-space-2) var(--mrr-space-2);
+.theme-palette-accent__reset.el-button {
   margin-inline-start: auto;
-  font-size: var(--mrr-font-size-xs);
   color: var(--mrr-navigation-active-foreground);
-  cursor: pointer;
-  background: var(--mrr-muted);
-  border: 1px solid var(--mrr-border);
-  border-radius: var(--mrr-radius-md);
 }
 
 .title-style-tabs {
@@ -1245,12 +1239,19 @@ function handleReset() {
 }
 
 .mode::after {
-  background: color-mix(in srgb, var(--el-color-primary) 60%, transparent);
+  background: var(--el-color-primary);
+  opacity: 0.6;
 }
 
 .mode-container {
-  background: color-mix(in srgb, var(--el-color-primary) 12%, transparent);
+  background: var(--mrr-tone-primary-soft);
   border: 1px dashed var(--el-color-primary);
+}
+
+@supports (color: color-mix(in srgb, #000 50%, #fff)) {
+  .mode-container {
+    background: color-mix(in srgb, var(--el-color-primary) 12%, transparent);
+  }
 }
 
 .mode-side::before {

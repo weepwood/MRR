@@ -356,6 +356,10 @@ Element Plus 是同类基础业务控件的唯一目标，禁止新增重复 Fa 
 
 共享布局由对应公共组件或共享样式承担。设置滑块共用 `mrr-settings-slider-control`；局部字段单位宽度、复合字段及导航几何可以保留，需记录理由。服务端主题偏好优先级不因视觉测试修改；指定本地视觉状态的 Mock 用例须隔离共享 UI 配置，真实同步用例仍验证服务端行为。
 
+复合字段内部的小型命令采用 ElButton text + `mrr-embedded-icon-action`，以 `--mrr-embedded-action-size` 和 `--mrr-embedded-action-icon-size` 明确局部尺寸，保留可访问名称和外层字段焦点。普通业务图标优先经 FaIcon 使用 Lucide 名称，不再新增相同含义的独立导入；Element Plus 原生加载与功能图标仍由组件自身管理。
+
+兼容旧浏览器时，危险操作悬停文字、主次操作描边及当前选择状态必须具有独立回退；优先复用语义令牌，现代效果由 @supports 增强或在 @supports not 中明确降级。装饰性效果可降级，但不能导致边界或文字消失。
+
 ### 4.2.1 字段控件的统一视觉契约
 
 - `--mrr-field-font-size`、`--mrr-field-padding-x(-sm/-lg)`、`--mrr-textarea-padding-y`、`--mrr-textarea-line-height`、`--mrr-textarea-min-height`、`--mrr-field-focus-bg`、`--mrr-field-shadow` 与既有输入高度/圆角/颜色令牌同源。Element Plus 在 element-plus-overrides.css 引用；主题仅改令牌，不重写同一字段选择器。默认文本域最小高度为未明确行数时的基准，显式 rows 尊重组件自身测量。
@@ -383,6 +387,8 @@ Element Plus 是同类基础业务控件的唯一目标，禁止新增重复 Fa 
 列宽优先用 `min-width`，固定操作列通过 `useTableActionLayout` 计算宽度及可见按钮数量。选中行使用公共语义色，固定单元格与 hover 保持一致。行内提示浮层不拦截按钮的 Enter / Space 默认激活。行点击、复选、单行按钮、"更多操作"职责分离，点击按钮不会同时切换选中行。
 
 - Select 浮层关闭须严格匹配控件展开状态；快速开合及窄屏重排后不得留有可见浮层。公共桥接不使用 Select 浮层缩放过渡，保留选项反馈、键盘及其他浮层动效。
+
+游标列表（如授权数据表浏览）同样使用 MrrDataTablePanel 与 MrrFilterBar，但不以 ElPagination 的总页数替代后端游标。首屏没有结果时显示骨架；已有结果的再次查询用 loading / result-key，保留上次成功页码与行，提交成功才更新。未知总行数继续标为未统计；请求失败不得伪造空结果。局部分页只负责前后导航及真实状态文案。
 
 ### 4.5 指标卡
 

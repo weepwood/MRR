@@ -398,6 +398,10 @@
 
 - 基于 #807 merge 0b094976 无冲突集中吸收装箱、人工决策和交接增量，feat/v1.1-quality-governance。新增 [逐记录只读复验](v1.1-quality-case-recheck.md)，仅保留样本与当前唯一关联一致时报告已核对，不自动关闭案件。PG28/28、最新权限/访问策略16/16（有重叠）、组件22/22、Chromium5/5含预热、完整Vitest978/978及原覆盖率门禁、Pages静态冒烟通过，186/226路由。完整候选及Windows恢复以新PR结果为准，main冻结。
 
+## 18 V1.1 Nginx运行观察与脱敏日志（2026-11-25）
+
+- 后续 feat/v1.1-nginx-observation 基于 #808 830ff23a，详见 [Nginx运行观察](v1.1-nginx-runtime-observation.md)：固定PID/程序时点核对，64KiB日志白名单字段投影，默认关闭，双日志权限，无启停、重载、原文或网络探测。25后端、3组件、15 Chromium（含预热），190/228 Mock；#808父PR完整候选仍运行，不重复创建依赖PR。main冻结，Windows现场、版本和监听未验收。
+
 ## 每轮交接模板
 
 - 更新时间、任务、风险、目标及非目标：

@@ -433,3 +433,33 @@ export interface StorageCircuitHistory {
 export function getStorageCircuitHistory(hours: 24 | 168, signal?: AbortSignal) {
   return unwrap(getRequest<StorageCircuitHistory>('/api/v1/operations/storage-circuit-history', { params: { hours }, signal, skipGlobalError: true }), '存储熔断历史')
 }
+
+export interface NginxRuntimeStatus {
+  state: string
+  observedAt: string
+}
+
+export interface NginxLogEntry {
+  time: string
+  method: string | null
+  status: number | null
+  requestSeconds: number | null
+  severity: string | null
+}
+
+export interface NginxLogTail {
+  state: string
+  kind: 'access' | 'error'
+  observedAt: string
+  truncated: boolean
+  omitted: number
+  entries: NginxLogEntry[]
+}
+
+export function getNginxRuntime(signal?: AbortSignal) {
+  return unwrap(getRequest<NginxRuntimeStatus>('/api/v1/operations/nginx/runtime', { signal, skipGlobalError: true }), 'Nginx 运行观察')
+}
+
+export function getNginxLogTail(kind: 'access' | 'error', signal?: AbortSignal) {
+  return unwrap(getRequest<NginxLogTail>('/api/v1/operations/nginx/logs', { params: { kind, limit: 50 }, signal, skipGlobalError: true }), 'Nginx 脱敏日志')
+}

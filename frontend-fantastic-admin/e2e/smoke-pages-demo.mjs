@@ -59,6 +59,12 @@ async function smokePagesDemo() {
     assert.equal(publicConfig.environment.data, undefined)
     assert.deepEqual(publicConfig.docs.data, { documentationUserGuideUrl: '', documentationDeveloperUrl: '', documentationOperationsUrl: '' })
     assert.equal(publicConfig.session.code, 503)
+    const uiSettings = await page.evaluate(() => fetch('/proxy/api/v1/settings/ui').then(response => response.json()))
+    assert.equal(uiSettings.code, 200)
+    assert.ok(Object.keys(uiSettings.data).every(key => key === 'adminAppSettings'), 'UI设置接口只暴露界面配置')
+    const queryDiagnostics = await page.evaluate(() => fetch('/proxy/api/v1/operations/query-diagnostics', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ bah: 'synthetic' }) }).then(response => response.json()))
+    assert.equal(queryDiagnostics.code, 503, '静态演示不得伪造数据库诊断结果')
+
 
 
     // Verify shared records through the actual static browser Mock.

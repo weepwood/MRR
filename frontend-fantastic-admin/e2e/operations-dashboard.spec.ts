@@ -313,3 +313,25 @@ test('持久存储熔断事件区分真实状态机事件与采样变化', async
   expect((await (await response).json()).data.hours).toBe(168)
   await expect(page.getByRole('cell', { name: '节点恢复', exact: true })).toBeVisible()
 })
+
+test('Nginx 按需观察进程并仅展示投影日志，切换类别清除旧结果', async ({ page }) => {
+  let reads = 0
+  await page.route('**/api/v1/operations/nginx/runtime', route => route.fulfill({ json: { code: 200, data: { state: 'PROCESS_MATCHED', observedAt: snapshotTime } } }))
+  await page.route('**/api/v1/operations/nginx/logs?*', (route) => {
+    reads++
+    const kind = new URL(route.request().url()).searchParams.get('kind')
+    return route.fulfill({ json: { code: 200, data: { state: 'AVAILABLE', kind, observedAt: snapshotTime, truncated: true, omitted: 1, entries: [kind === 'access' ? { time: snapshotTime, method: 'GET', status: 502, requestSeconds: 0.25, severity: null } : { time: '2026-11-02T01:00:00', method: null, status: null, requestSeconds: null, severity: 'error' }] } } })
+  })
+  await page.goto('/operations-center')
+  await expect(page.getByRole('heading', { name: 'Nginx 运行观察与脱敏日志' })).toBeVisible()
+  expect(reads).toBe(0)
+  await page.getByRole('button', { name: '核对本地进程' }).click()
+  await expect(page.getByText('PID 对应本地安装程序正在运行', { exact: true })).toBeVisible()
+  await page.getByRole('button', { name: '读取脱敏日志' }).click()
+  await expect(page.getByRole('cell', { name: '502', exact: true })).toBeVisible()
+  await page.getByText('错误级别', { exact: true }).click()
+  await expect(page.getByRole('cell', { name: '502', exact: true })).toHaveCount(0)
+  await page.getByRole('button', { name: '读取脱敏日志' }).click()
+  await expect(page.getByRole('cell', { name: 'error', exact: true })).toBeVisible()
+  expect(reads).toBe(2)
+})

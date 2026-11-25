@@ -1,4 +1,5 @@
 import type { MockScanRecord } from '../mock-support/records'
+import type { MockUser } from '../mock-support/users'
 import { defineFakeRoute } from 'vite-plugin-fake-server/client'
 import { MEDICAL_RECORD_TYPES } from '@/constants/medical-record-types'
 import { createCsvText } from '@/utils/file-download'
@@ -6,19 +7,9 @@ import { demoClock } from '../mock-support/clock'
 import { demoRecords, matchesLegacyScan } from '../mock-support/records'
 import { demoError, demoOk } from '../mock-support/response'
 import { registeredRuntimeSetting, runtimeSchema, validateRuntimeSetting } from '../mock-support/runtime-settings'
+import { createAdditionalMockUsers, createBaseMockUsers, filterMockUsers } from '../mock-support/users'
 
 type QueryValue = string | string[] | undefined
-
-interface MockUser {
-  id: number
-  username: string
-  displayName: string
-  roleCode: string
-  roleName: string
-  permissions: string[]
-  status: string
-  lastLoginAt: string
-}
 
 const typeNames: Record<number, string> = Object.fromEntries(
   [[0, '未分类'], ...MEDICAL_RECORD_TYPES.map(item => [item.value, item.label] as const)],
@@ -27,38 +18,8 @@ const typeNames: Record<number, string> = Object.fromEntries(
 const mockTimestamp = demoClock.iso()
 const { patients, scans } = demoRecords
 
-let users: MockUser[] = [
-  {
-    id: 1,
-    username: 'admin',
-    displayName: '系统管理员',
-    roleCode: 'ADMIN',
-    roleName: '管理员',
-    permissions: ['*'],
-    status: 'ACTIVE',
-    lastLoginAt: mockTimestamp,
-  },
-  {
-    id: 2,
-    username: 'auditor',
-    displayName: '审计员',
-    roleCode: 'AUDITOR',
-    roleName: '审计员',
-    permissions: ['audit:read', 'logs:read', 'statistics:read'],
-    status: 'ACTIVE',
-    lastLoginAt: demoClock.iso(1),
-  },
-  {
-    id: 3,
-    username: 'operator',
-    displayName: '扫描操作员',
-    roleCode: 'OPERATOR',
-    roleName: '操作员',
-    permissions: ['scan:read', 'scan:write', 'statistics:read'],
-    status: 'ACTIVE',
-    lastLoginAt: demoClock.iso(2),
-  },
-]
+const baseUsers = createBaseMockUsers()
+let users: MockUser[] = [...baseUsers, ...createAdditionalMockUsers()]
 
 let roles = [
   {
@@ -103,7 +64,7 @@ const logs = Array.from({ length: 72 }, (_, index) => {
 
   return {
     id: index + 1,
-    username: users[index % users.length].username,
+    username: baseUsers[index % baseUsers.length].username,
     clientIp: `10.10.${Math.floor(index / 20)}.${20 + index % 20}`,
     requestUri: action === 'DOWNLOAD'
       ? `/api/v1/img/download/${target}`
@@ -507,12 +468,7 @@ export default defineFakeRoute([
       const keyword = normalize(firstQuery(query.keyword))
       const roleCode = normalize(firstQuery(query.roleCode))
       const status = normalize(firstQuery(query.status))
-      const filtered = users.filter((item) => {
-        if (keyword && !normalize(`${item.username} ${item.displayName}`).includes(keyword)) { return false }
-        if (roleCode && normalize(item.roleCode) !== roleCode) { return false }
-        if (status && normalize(item.status) !== status) { return false }
-        return true
-      })
+      const filtered = filterMockUsers(users, { keyword, roleCode, status })
       return ok(paginate(filtered, query.page, query.size))
     },
   },

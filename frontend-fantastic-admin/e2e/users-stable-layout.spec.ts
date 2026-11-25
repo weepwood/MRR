@@ -1,5 +1,10 @@
 import { expect, test } from '@playwright/test'
+import { useBaseUserFixture } from './helpers/base-user-fixture'
 import { isolateLocalVisualSettings } from './helpers/local-visual-settings'
+
+test.beforeEach(async ({ page }) => {
+  await useBaseUserFixture(page)
+})
 
 test('用户筛选从首次加载到空结果及恢复均保持顶部指标与工具栏位置', async ({ page }) => {
   await isolateLocalVisualSettings(page)

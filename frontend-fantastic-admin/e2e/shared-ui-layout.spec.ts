@@ -1,8 +1,10 @@
 import type { Page } from '@playwright/test'
 import { expect, test } from '@playwright/test'
+import { useBaseUserFixture } from './helpers/base-user-fixture'
 import { isolateLocalVisualSettings } from './helpers/local-visual-settings'
 
 test.beforeEach(async ({ page }) => {
+  await useBaseUserFixture(page)
   await isolateLocalVisualSettings(page)
 })
 

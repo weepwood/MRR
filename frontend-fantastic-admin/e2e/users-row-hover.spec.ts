@@ -1,5 +1,10 @@
 import { expect, test } from '@playwright/test'
+import { useBaseUserFixture } from './helpers/base-user-fixture'
 import { isolateLocalVisualSettings } from './helpers/local-visual-settings'
+
+test.beforeEach(async ({ page }) => {
+  await useBaseUserFixture(page)
+})
 
 for (const palette of ['mrr', 'gr8r']) {
   for (const theme of ['light', 'dark']) {

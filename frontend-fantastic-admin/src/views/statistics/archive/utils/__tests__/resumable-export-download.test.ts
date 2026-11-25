@@ -1,5 +1,6 @@
 import type { ArchiveExportJob } from '@/api/modules/archive-export'
 import { afterEach, describe, expect, it, vi } from 'vitest'
+import { ArchiveExportIntegrityError } from '@/utils/archive-export-budget'
 import { downloadExportJobToBrowser, downloadExportJobWithResume } from '../resumable-export-download'
 
 const api = vi.hoisted(() => ({
@@ -110,8 +111,8 @@ describe('resumable archive export download', () => {
 
     await expect(downloadExportJobWithResume(currentJob)).resolves.toBe('resumable')
 
-    expect(api.downloadArchiveExportJob).toHaveBeenNthCalledWith(1, currentJob.id, 'bytes=0-3')
-    expect(api.downloadArchiveExportJob).toHaveBeenNthCalledWith(2, currentJob.id, 'bytes=4-9')
+    expect(api.downloadArchiveExportJob).toHaveBeenNthCalledWith(1, currentJob.id, 'bytes=0-3', { bytes: 10, sha256: undefined })
+    expect(api.downloadArchiveExportJob).toHaveBeenNthCalledWith(2, currentJob.id, 'bytes=4-9', { bytes: 10, sha256: undefined })
     expect(write).toHaveBeenCalledWith(expect.objectContaining({
       type: 'write',
       position: 4,
@@ -141,7 +142,41 @@ describe('resumable archive export download', () => {
     expect(createWritable).not.toHaveBeenCalled()
     expect(truncate).not.toHaveBeenCalled()
     expect(write).not.toHaveBeenCalled()
-    expect(api.downloadArchiveExportJob).toHaveBeenNthCalledWith(2, currentJob.id)
+    expect(api.downloadArchiveExportJob).toHaveBeenNthCalledWith(2, currentJob.id, undefined, { bytes: 10, sha256: undefined })
+  })
+
+  it('refuses to append to a file with matching first 8 MiB but corrupted later bytes', async () => {
+    mockBlobDownloadDom()
+    const chunk = 8 * 1024 * 1024
+    const first = new Uint8Array(chunk)
+    const existing = new File([first, new Uint8Array([9, 9])], 'partial.zip')
+    const createWritable = vi.fn()
+    ;(window as Window & { showSaveFilePicker?: unknown }).showSaveFilePicker = vi.fn().mockResolvedValue({
+      getFile: vi.fn().mockResolvedValue(existing),
+      createWritable,
+    })
+    const currentJob = { ...job(chunk + 4), sha256: 'a'.repeat(64) }
+    api.downloadArchiveExportJob.mockResolvedValueOnce(new Blob([first]))
+      .mockResolvedValueOnce(new Blob([new Uint8Array([1, 2])]))
+      .mockResolvedValueOnce(new Blob([new Uint8Array(chunk + 4)]))
+    await expect(downloadExportJobWithResume(currentJob)).resolves.toBe('blob')
+    expect(createWritable).not.toHaveBeenCalled()
+    expect(api.downloadArchiveExportJob).toHaveBeenNthCalledWith(2, currentJob.id, `bytes=${chunk}-${chunk + 1}`, { bytes: chunk + 4, sha256: currentJob.sha256 })
+  })
+
+  it('does not fall back when the downloaded representation changes mid-transfer', async () => {
+    const write = vi.fn()
+    const truncate = vi.fn().mockResolvedValue(undefined)
+    const close = vi.fn().mockResolvedValue(undefined)
+    ;(window as Window & { showSaveFilePicker?: unknown }).showSaveFilePicker = vi.fn().mockResolvedValue({
+      getFile: vi.fn().mockResolvedValue(new File([], 'partial.zip')),
+      createWritable: vi.fn().mockResolvedValue({ write, truncate, close }),
+    })
+    api.downloadArchiveExportJob.mockRejectedValueOnce(new ArchiveExportIntegrityError('版本已变化'))
+    await expect(downloadExportJobWithResume(job())).rejects.toThrow('版本已变化')
+    expect(write).not.toHaveBeenCalled()
+    expect(truncate).toHaveBeenCalledWith(0)
+    expect(api.downloadArchiveExportJob).toHaveBeenCalledOnce()
   })
 
   it('restores an empty target when the proxy rejects the first Range request', async () => {
@@ -161,8 +196,8 @@ describe('resumable archive export download', () => {
 
     await expect(downloadExportJobWithResume(currentJob)).resolves.toBe('blob')
 
-    expect(api.downloadArchiveExportJob).toHaveBeenNthCalledWith(1, currentJob.id, 'bytes=0-9')
-    expect(api.downloadArchiveExportJob).toHaveBeenNthCalledWith(2, currentJob.id)
+    expect(api.downloadArchiveExportJob).toHaveBeenNthCalledWith(1, currentJob.id, 'bytes=0-9', { bytes: 10, sha256: undefined })
+    expect(api.downloadArchiveExportJob).toHaveBeenNthCalledWith(2, currentJob.id, undefined, { bytes: 10, sha256: undefined })
     expect(truncate).toHaveBeenCalledWith(0)
     expect(close).toHaveBeenCalled()
   })
@@ -190,6 +225,6 @@ describe('resumable archive export download', () => {
 
     expect(truncate).toHaveBeenCalledWith(existing.size)
     expect(close).toHaveBeenCalled()
-    expect(api.downloadArchiveExportJob).toHaveBeenLastCalledWith('12345678-abcd')
+    expect(api.downloadArchiveExportJob).toHaveBeenLastCalledWith('12345678-abcd', undefined, { bytes: totalBytes, sha256: undefined })
   })
 })

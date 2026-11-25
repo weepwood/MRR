@@ -219,14 +219,14 @@ function removeFile(idx: number) {
         <div v-else-if="item.status === 'error'" class="size-10 flex-center">
           <FaIcon name="i-lucide:circle-x" class="text-lg text-red-600" />
         </div>
-        <FaButtonGroup v-if="!props.disabled" class="absolute inset-e-2 top-1/2 opacity-0 transition-opacity -translate-y-1/2 group-hover/file-upload-item:opacity-100">
-          <FaButton v-if="item.status === 'error'" variant="outline" size="icon" @click.stop="uploadFile(item.file!, index)">
+        <el-button-group v-if="!props.disabled" class="mrr-joined-buttons absolute inset-e-2 top-1/2 opacity-0 transition-opacity -translate-y-1/2 group-hover/file-upload-item:opacity-100">
+          <el-button v-if="item.status === 'error'" class="mrr-button-flow mrr-button-square" :auto-insert-space="false" @click.stop="uploadFile(item.file!, index)">
             <FaIcon name="i-lucide:upload" class="cursor-pointer text-lg" />
-          </FaButton>
-          <FaButton v-if="item.status !== 'uploading'" variant="outline" size="icon" @click.stop="removeFile(index)">
+          </el-button>
+          <el-button v-if="item.status !== 'uploading'" class="mrr-button-flow mrr-button-square" :auto-insert-space="false" @click.stop="removeFile(index)">
             <FaIcon name="i-lucide:trash-2" class="cursor-pointer text-lg text-red-500" />
-          </FaButton>
-        </FaButtonGroup>
+          </el-button>
+        </el-button-group>
       </div>
     </div>
   </div>

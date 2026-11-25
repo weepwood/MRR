@@ -57,16 +57,16 @@ function confirm(kind: string) {
   </div>
   <div v-else-if="example === 'overlays'" class="example-stack">
     <div class="example-row">
-      <FaButton ref="modalTrigger" variant="outline" @click="modalOpen = true">
+      <el-button ref="modalTrigger" class="mrr-button-flow" :auto-insert-space="false" @click="modalOpen = true">
         打开对话框
-      </FaButton>
-      <FaButton ref="drawerTrigger" variant="outline" @click="drawerOpen = true">
+      </el-button>
+      <el-button ref="drawerTrigger" class="mrr-button-flow" :auto-insert-space="false" @click="drawerOpen = true">
         打开抽屉
-      </FaButton>
+      </el-button>
       <FaPopover side="bottom" align="start" :collision-padding="12">
-        <FaButton variant="outline">
+        <el-button class="mrr-button-flow" :auto-insert-space="false">
           打开气泡
-        </FaButton>
+        </el-button>
         <template #panel>
           <p>气泡用于补充轻量说明，点击外部或按 Escape 关闭。</p>
         </template>

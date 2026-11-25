@@ -2,15 +2,9 @@ import type { Page } from '@playwright/test'
 import { expect, test } from '@playwright/test'
 
 /*
- * 两套按钮的同视觉契约（浏览器侧）。
- *
- * 项目并存 Element Plus 的 `el-button` 与界面封装的 `FaButton`（`.fa-button-control`）。
- * 静态契约测试只能守住「都引用了同一组令牌」，真正会不会读成同一种控件，
- * 必须比对渲染后的计算样式——尤其在主题层把圆角/密度整体换掉之后。
- *
- * 展示页把两族按钮按同一角色逐一对位摆了四组：
- * 静置、尺寸、禁用、加载。这里逐对读取 height / font-size / padding / radius /
- * 边框与底色，任何一项不同都说明某一侧又写回了自己的数值。
+ * 单一 Element Plus 按钮实现的不同上下文视觉契约。
+ * 比对同一语义在迁移实例及其他实例中的实际计算样式，
+ * 历史迁移前截图另由 button-migration-visual 保护。
  */
 
 // 单个用例要在两套调色板之间来回切换（设置页 + 展示页各两次整页导航），
@@ -35,13 +29,13 @@ interface ButtonStyle {
 
 /** 静置态逐对对位；右列是展示页里的 Element Plus 版本。 */
 const VARIANTS = [
-  ['fa-primary', 'el-primary'],
-  ['fa-outline', 'el-outline'],
-  ['fa-ghost', 'el-ghost'],
-  ['fa-destructive', 'el-destructive'],
-  ['fa-link', 'el-link'],
-  ['fa-sm', 'el-sm'],
-  ['fa-lg', 'el-lg'],
+  ['role-primary', 'el-primary'],
+  ['role-outline', 'el-outline'],
+  ['role-ghost', 'el-ghost'],
+  ['role-destructive', 'el-destructive'],
+  ['role-link', 'el-link'],
+  ['role-sm', 'el-sm'],
+  ['role-lg', 'el-lg'],
 ] as const
 
 function readStyle(page: Page, testId: string) {
@@ -83,7 +77,7 @@ async function selectPalette(page: Page, name: RegExp, expected: 'mrr' | 'gr8r')
 
 async function openGallery(page: Page) {
   await page.goto('/ui-components', { waitUntil: 'domcontentloaded' })
-  await expect(page.getByTestId('fa-primary')).toBeVisible()
+  await expect(page.getByTestId('role-primary')).toBeVisible()
   // 圆角/内边距有 120ms 过渡，等一轮动画再读，避免读到中间值。
   await page.waitForTimeout(400)
 }
@@ -97,7 +91,7 @@ async function expectParity(page: Page) {
   }
 }
 
-test('界面封装按钮与 Element Plus 按钮在两套调色板下外观一致', async ({ page }) => {
+test('同一实现的按钮角色与上下文在两套调色板下外观一致', async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 900 })
 
   await selectPalette(page, /MRR 经典/, 'mrr')
@@ -122,7 +116,7 @@ test('禁用与加载状态同样由同一份状态层驱动', async ({ page }) 
   const stateSwitch = page.getByRole('radiogroup', { name: '按钮示例状态' })
 
   await stateSwitch.getByText('禁用', { exact: true }).click()
-  await expect.poll(async () => (await readStyle(page, 'fa-outline')).background).not.toBe('rgb(255, 255, 255)')
+  await expect.poll(async () => (await readStyle(page, 'role-outline')).background).not.toBe('rgb(255, 255, 255)')
   await expectParity(page)
   // 禁用的默认按钮必须退出可用的白底，否则看起来仍可点击。
   const disabled = await readStyle(page, 'el-outline')
@@ -132,7 +126,7 @@ test('禁用与加载状态同样由同一份状态层驱动', async ({ page }) 
   await stateSwitch.getByText('加载', { exact: true }).click()
   await expectParity(page)
   // 加载态保留主按钮配色（与 el-button 的处理一致），只降透明度。
-  const loading = await readStyle(page, 'fa-primary')
+  const loading = await readStyle(page, 'role-primary')
   expect(loading.background).toBe('rgb(83, 98, 206)')
 
   await stateSwitch.getByText('默认', { exact: true }).click()

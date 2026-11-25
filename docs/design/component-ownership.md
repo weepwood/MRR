@@ -115,6 +115,14 @@ FaIcon、FaKbd、FaPinInput、FaScrollArea、FaSmartFixedBlock、FaPasswordStren
 - 预览仓库0831685增加当前运行及尝试精确制品元数据可见性门禁（发布job actions:read），实际45646958524成功，独立no-cache根及V1.2身份bec3cd9a、V1.1保持92896f7c；未证明未来所有调度正常。
 - 尚存29处FaButton调用（展厅、链接/404及无入口找回密码），FaInput/FaTextarea等另批；不将专用菜单或业务组件机械改写。移动搜索原图标按钮无显式可访问名称的历史问题另行修复；未执行医院现场/完整跨浏览器。
 
+## 按钮、按钮组、输入与文本域全量归一（2026-11-25）
+
+- #843 已合并 fc2a56f7，head e4a55ba1，159文件1068/1068、Pages10/10、tree一致。GitHub GraphQL/评论API错误、merge返回502但之后查询实际MERGED；不重复合并。预览触发HTTP500，无新运行确认，公网仍以已核验bec3cd9a为准。
+- 重新全源码扫描而非仅页面：45处按钮、3处按钮组、8处输入及1处文本域，含公共组件内部、展厅、无路由旧找回密码表单、独立验收夹具。全部迁ElButton/ElButtonGroup/ElInput，删除4+6=10个旧实现文件、双轨样式及类型声明；新增唯一归属守护。保留原方形/圆形图标、中性辅助、加载图标与按钮组共享边缘；明确native-type提交，不启用旧找回密码功能。展厅仍保留原示例布局，文案和目录更改为唯一实现。DESIGN.md与ENGINEERING.md更新。
+- 输入旧基线48组（四主题×1440/760×6类），基线5/5，替换5/5，前一轮字段专项联合33/33（51.2秒）；所测宽高0px、计算属性一致，48对同尺寸，RGB任一通道差>8中位1.7149%、最大13.7575%（窄屏独立校验），实际抽查边框、字边缘与搜索位置有轻微差异，不宣称像素完全相同。只读显式样式锚点保护Chrome86无:has场景，显式rows保留原高度；统一校验反馈及无障碍属性。
+- 按钮64组行级真实前后对照（四主题×1440/760×默认/禁用/加载及尺寸），基线5/5（24.5s），首两轮1/5，定位Element Plus文字禁用背景!important覆盖辅助底色，局部恢复原中性背景而不修改普通文字按钮；第三轮5/5（27.7秒）。最大几何差1px仅按钮组相邻边缘，所测属性0差；64对同尺寸，RGB任一通道差>8比例中位0%、最大14.3231%（窄屏尺寸/按钮组），实际抽查外观相近，非像素完全相等。75/75样式测试、vue-tsc、lint通过；联合35/36（1.0m），唯一失败为独立验收夹具迁ElButton后未显式aria-busy；生产原Fa加载调用已显式传入。补齐夹具后交互专项7/7（20.3秒），保留原忙碌断言，未重跑全部36项。日志 /tmp/mrr-v12-base-controls-accessibility.log。
+- 证据目录 /tmp/mrr-v12-fields-visual-e4、/tmp/mrr-v12-buttons-visual-e4；日志 /tmp/mrr-v12-fields-{before,after,closure,unit,tsc}.log、/tmp/mrr-v12-buttons-{before,after,after2,after3,unit-final,tsc}.log、/tmp/mrr-v12-base-controls-closure.log。尚未验收无路由旧找回密码、文件上传/旧图片预览专用组件的完整交互与真实截图、医院Chrome86及全站跨浏览器。后续集中处理浮层、菜单与提示；不机械替换业务组合组件。
+
 ## 逐文件原始引用清单
 
 | 源文件（相对 src/） | Fa 标签 | Element Plus 标签 |

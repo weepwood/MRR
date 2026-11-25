@@ -47,9 +47,9 @@ function goBack() {
         抱歉，你无权访问该页面
       </div>
       <div>
-        <FaButton @click="goBack">
+        <el-button class="mrr-button-flow" type="primary" :auto-insert-space="false" @click="goBack">
           {{ `${data.countdown} 秒后，返回主页` }}
-        </FaButton>
+        </el-button>
       </div>
     </div>
   </div>

@@ -39,29 +39,28 @@ const options = [{ label: '本地示例', value: 'local' }, { label: '归档示�
       </el-radio-button>
     </el-radio-group>
     <div class="example-row">
-      <FaButton data-testid="fa-primary" :disabled="buttonState === 'disabled'" :loading="buttonState === 'loading'" @click="clicks++">
+      <el-button class="mrr-button-flow" type="primary" :auto-insert-space="false" data-testid="role-primary" :disabled="buttonState === 'disabled'" :loading="buttonState === 'loading'" :aria-busy="(buttonState === 'loading') || undefined" @click="clicks++">
+        <template #loading>
+          <FaIcon name="i-lucide:loader-circle" class="animate-spin" aria-hidden="true" />
+        </template>
         主要操作
-      </FaButton>
-      <FaButton data-testid="fa-outline" variant="outline" :disabled="buttonState === 'disabled'" @click="clicks++">
+      </el-button>
+      <el-button class="mrr-button-flow" :auto-insert-space="false" data-testid="role-outline" :disabled="buttonState === 'disabled'" @click="clicks++">
         次要操作
-      </FaButton>
-      <FaButton variant="secondary" :disabled="buttonState === 'disabled'" @click="clicks++">
+      </el-button>
+      <el-button class="mrr-button-flow mrr-button-secondary" text :auto-insert-space="false" :disabled="buttonState === 'disabled'" @click="clicks++">
         辅助操作
-      </FaButton>
-      <FaButton data-testid="fa-ghost" variant="ghost" :disabled="buttonState === 'disabled'" @click="clicks++">
+      </el-button>
+      <el-button class="mrr-button-flow" text :auto-insert-space="false" data-testid="role-ghost" :disabled="buttonState === 'disabled'" @click="clicks++">
         轻量操作
-      </FaButton>
-      <FaButton data-testid="fa-destructive" variant="destructive" :disabled="buttonState === 'disabled'" @click="clicks++">
+      </el-button>
+      <el-button class="mrr-button-flow" type="danger" :auto-insert-space="false" data-testid="role-destructive" :disabled="buttonState === 'disabled'" @click="clicks++">
         危险操作示例
-      </FaButton>
-      <FaButton data-testid="fa-link" variant="link" :disabled="buttonState === 'disabled'" @click="clicks++">
+      </el-button>
+      <el-button class="mrr-button-flow" link type="primary" :auto-insert-space="false" data-testid="role-link" :disabled="buttonState === 'disabled'" @click="clicks++">
         文字操作
-      </FaButton>
+      </el-button>
     </div>
-    <!--
-      与上一排逐一对位：同一角色在 Element Plus 与界面封装里应当是同一个控件的样子。
-      「辅助操作」是界面封装独有的中性实心底，Element Plus 没有等价变体，因此不参与对照。
-    -->
     <div class="example-row" data-testid="el-button-parity">
       <el-button data-testid="el-primary" type="primary" :disabled="buttonState === 'disabled'" :loading="buttonState === 'loading'" @click="clicks++">
         主要操作
@@ -80,27 +79,27 @@ const options = [{ label: '本地示例', value: 'local' }, { label: '归档示�
       </el-button>
     </div>
     <p class="example-note">
-      上排为界面封装（FaButton），下排为 Element Plus 原生按钮：两族共用同一组尺寸与状态令牌。
-      图标按钮是唯一保留差异的形态——Element Plus 用 <code>circle</code>（正圆），界面封装用 <code>size="icon"</code>（随控件圆角），两者同为控件高度见方。
+      所有按钮均使用 Element Plus；主次、危险、辅助、文字操作共享尺寸与状态令牌。
+      图标按钮可选择随控件圆角的方形或正圆入口，同一工具栏保持一种形态。
     </p>
     <div class="example-row">
-      <FaButton size="sm" variant="outline" data-testid="fa-sm" @click="clicks++">
+      <el-button class="mrr-button-flow" size="small" :auto-insert-space="false" data-testid="role-sm" @click="clicks++">
         紧凑按钮
-      </FaButton>
-      <FaButton size="lg" variant="outline" data-testid="fa-lg" @click="clicks++">
+      </el-button>
+      <el-button class="mrr-button-flow" size="large" :auto-insert-space="false" data-testid="role-lg" @click="clicks++">
         宽按钮
-      </FaButton>
-      <FaButton size="icon" variant="outline" data-testid="fa-icon" aria-label="图标按钮示例" @click="clicks++">
+      </el-button>
+      <el-button class="mrr-button-flow mrr-button-square" :auto-insert-space="false" data-testid="role-icon" aria-label="图标按钮示例" @click="clicks++">
         <FaIcon name="i-lucide:plus" aria-hidden="true" />
-      </FaButton>
-      <FaButtonGroup>
-        <FaButton variant="outline" @click="clicks++">
+      </el-button>
+      <el-button-group class="mrr-joined-buttons">
+        <el-button class="mrr-button-flow" :auto-insert-space="false" @click="clicks++">
           上一项
-        </FaButton>
-        <FaButton variant="outline" @click="clicks++">
+        </el-button>
+        <el-button class="mrr-button-flow" :auto-insert-space="false" @click="clicks++">
           下一项
-        </FaButton>
-      </FaButtonGroup>
+        </el-button>
+      </el-button-group>
     </div>
     <div class="example-row" data-testid="el-size-parity">
       <el-button size="small" data-testid="el-sm" @click="clicks++">
@@ -133,9 +132,9 @@ const options = [{ label: '本地示例', value: 'local' }, { label: '归档示�
     </el-tabs>
     <div class="example-row">
       <FaTooltip text="这是组件说明提示，支持键盘聚焦。">
-        <FaButton variant="outline">
+        <el-button class="mrr-button-flow" :auto-insert-space="false">
           查看提示
-        </FaButton>
+        </el-button>
       </FaTooltip>
       <span class="example-note">快捷键样式 <FaKbd>Ctrl</FaKbd> + <FaKbd>K</FaKbd></span>
     </div>
@@ -144,7 +143,7 @@ const options = [{ label: '本地示例', value: 'local' }, { label: '归档示�
   <div v-else-if="example === 'fields'" class="example-field-grid">
     <div class="example-field">
       <label :for="`${id}-name`">示例名称</label>
-      <FaInput :id="`${id}-name`" v-model="name" placeholder="输入示例名称" class="example-full-width" />
+      <el-input :id="`${id}-name`" v-model="name" placeholder="输入示例名称" class="example-full-width" />
     </div>
     <div class="example-field">
       <label :for="`${id}-native-name`">原生名称</label>
@@ -172,7 +171,7 @@ const options = [{ label: '本地示例', value: 'local' }, { label: '归档示�
     </div>
     <div class="example-field">
       <label :for="`${id}-disabled`">禁用输入</label>
-      <FaInput :id="`${id}-disabled`" model-value="当前不可编辑" disabled class="example-full-width" />
+      <el-input :id="`${id}-disabled`" model-value="当前不可编辑" disabled class="example-full-width" />
     </div>
     <div class="example-field">
       <label :for="`${id}-native-disabled`">原生禁用输入</label>
@@ -180,11 +179,11 @@ const options = [{ label: '本地示例', value: 'local' }, { label: '归档示�
     </div>
     <div class="example-field">
       <label :for="`${id}-readonly`">只读名称</label>
-      <FaInput :id="`${id}-readonly`" model-value="可以选择复制" readonly class="example-full-width" />
+      <el-input :id="`${id}-readonly`" model-value="可以选择复制" readonly class="example-full-width mrr-readonly-field" />
     </div>
     <div class="example-field">
       <label :for="`${id}-native-readonly`">原生只读名称</label>
-      <el-input :id="`${id}-native-readonly`" model-value="可以选择复制" readonly class="example-full-width" />
+      <el-input :id="`${id}-native-readonly`" model-value="可以选择复制" readonly class="example-full-width mrr-readonly-field" />
     </div>
     <div class="example-field">
       <el-form label-position="top">
@@ -198,15 +197,15 @@ const options = [{ label: '本地示例', value: 'local' }, { label: '归档示�
     </div>
     <div class="example-field">
       <label :for="`${id}-note`">示例说明</label>
-      <FaTextarea :id="`${id}-note`" v-model="note" :rows="2" />
+      <el-input :id="`${id}-note`" v-model="note" type="textarea" class="mrr-textarea-rows" :rows="2" />
     </div>
     <div class="example-field">
       <label :for="`${id}-native-note`">原生说明</label>
-      <el-input :id="`${id}-native-note`" v-model="nativeNote" type="textarea" :rows="2" />
+      <el-input :id="`${id}-native-note`" v-model="nativeNote" type="textarea" class="mrr-textarea-rows" :rows="2" />
     </div>
     <div class="example-field">
-      <label :for="`${id}-fa-validation`">封装校验示例</label>
-      <FaInput :id="`${id}-fa-validation`" v-model="validationName" :aria-invalid="!!validationError" :aria-describedby="validationError ? `${id}-fa-validation-error` : undefined" class="example-full-width" />
+      <label :for="`${id}-fa-validation`">独立校验示例</label>
+      <el-input :id="`${id}-fa-validation`" v-model="validationName" :class="{ 'account-field-invalid': !!validationError }" :aria-invalid="!!validationError" :aria-describedby="validationError ? `${id}-fa-validation-error` : undefined" class="example-full-width" />
       <span v-if="validationError" :id="`${id}-fa-validation-error`" class="example-field-error">{{ validationError }}</span>
     </div>
   </div>

@@ -63,9 +63,9 @@ function handleBackToTop() {
 <template>
   <Teleport to="body">
     <Transition v-bind="transitionClass">
-      <FaButton v-if="scrollTop >= 200" variant="outline" size="icon" aria-label="回到顶部" class="transition-[right,inset-inline-end,opacity,transform] fixed inset-b-4 z-1000 rounded-full -inset-e-9" :class="{ 'inset-e-3!': show }" @mouseenter="handleMouseenter" @mouseleave="handleMouseleave" @click="handleBackToTop">
+      <el-button v-if="scrollTop >= 200" :auto-insert-space="false" aria-label="回到顶部" class="mrr-button-flow mrr-button-square mrr-button-round transition-[right,inset-inline-end,opacity,transform] fixed inset-b-4 z-1000 rounded-full -inset-e-9" :class="{ 'inset-e-3!': show }" @mouseenter="handleMouseenter" @mouseleave="handleMouseleave" @click="handleBackToTop">
         <FaIcon name="i-lucide:arrow-up-to-line" class="size-6" />
-      </FaButton>
+      </el-button>
     </Transition>
   </Teleport>
 </template>

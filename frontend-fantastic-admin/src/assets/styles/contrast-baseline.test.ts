@@ -150,10 +150,11 @@ describe('占位符与提示文字（规则锁定）', () => {
     expect(elementPlusOverrides, 'select 未选提示（is-transparent）需同组覆盖').toMatch(/body \.el-select \.el-select__selected-item\.is-transparent,/)
   })
 
-  it('占位符（Fa 控件）不得在 muted 之上叠加透明度', () => {
-    const matched = formControls.match(/\.fa-input-control::placeholder[\s\S]{0,80}?\{([^}]*)\}/)
-    expect(matched, 'form-controls.css 缺少占位符规则').toBeTruthy()
-    expect(matched![1]).not.toMatch(/opacity/)
+  it('统一输入和文本域占位符不叠加透明度', () => {
+    const match = elementPlusOverrides.match(/body \.el-input__inner::placeholder,[\s\S]*?body \.el-select__placeholder\s*\{([^}]*)\}/)
+    expect(match).toBeTruthy()
+    expect(match![1]).toContain('var(--mrr-muted-foreground)')
+    expect(match![1]).not.toMatch(/opacity/)
   })
 
   it('顶栏搜索提示文字不得使用透明度弱化的 muted', () => {

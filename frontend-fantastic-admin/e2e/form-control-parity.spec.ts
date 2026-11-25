@@ -2,7 +2,7 @@ import { expect, test } from '@playwright/test'
 
 for (const palette of ['mrr', 'gr8r'] as const) {
   for (const theme of ['light', 'dark'] as const) {
-    test(`${palette} / ${theme} 双族输入与文本域共享尺寸、表面和只读错误状态`, async ({ page }) => {
+    test(`${palette} / ${theme} 统一输入与文本域共享尺寸、表面和只读错误状态`, async ({ page }) => {
       await page.setViewportSize({ width: 1440, height: 900 })
       await page.addInitScript(({ palette, theme }) => localStorage.setItem('MRR-ADMIN:app-settings', JSON.stringify({
         app: { colorScheme: theme, themePalette: palette, enableMotion: false },
@@ -28,10 +28,10 @@ for (const palette of ['mrr', 'gr8r'] as const) {
         const { height: _b, ...nativeStyle } = b
         expect(faStyle, `${fa} 视觉契约`).toEqual(nativeStyle)
       }
-      const invalid = page.getByLabel('封装校验示例', { exact: true })
+      const invalid = page.getByLabel('独立校验示例', { exact: true })
       await expect(invalid).toHaveAccessibleDescription('请输入示例名称')
       await expect(invalid).toHaveAttribute('aria-invalid', 'true')
-      await expect.poll(() => invalid.evaluate(el => getComputedStyle(el).borderColor)).toBe(await page.locator('html').evaluate((el) => {
+      await expect.poll(() => invalid.evaluate(el => getComputedStyle(el.closest('.el-input__wrapper')!).boxShadow)).toContain(await page.locator('html').evaluate((el) => {
         const probe = document.createElement('span')
         probe.style.color = 'var(--mrr-destructive)'
         el.append(probe)

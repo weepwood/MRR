@@ -102,7 +102,7 @@ html[data-mrr-palette="gr8r"] .topbar-container.mask {
 
 /*
  * 按钮密度只有一处定义：--mrr-button-* 令牌。
- * el-button 与 FaButton 都读这组变量，所以这里不再分别给两族写 padding / font-size ——
+ * el-button 读取这组变量，所以这里不再重写 padding / font-size ——
  * 之前两族各写一套（el 12.5px / Fa 14px），同一条工具栏里立刻能看出两种字号。
  */
 html[data-mrr-palette="gr8r"] {
@@ -162,7 +162,7 @@ html[data-mrr-palette="gr8r"] .el-button:not(.is-disabled):not(.is-loading):acti
   transform: var(--mrr-motion-decor, scale(0.97));
 }
 
-/* ===== 4.1 shadcn 原语（FaButton / FaTextarea / FaPinInput）===== */
+/* ===== 4.1 shadcn 原语（FaPinInput）===== */
 
 /*
  * 输入类控件的边线使用较深的令牌，确保白底输入区的边界可辨认。
@@ -174,38 +174,6 @@ html[data-mrr-palette="gr8r"] .border-input {
 /* 文本域仍是画布色底，坐在白卡片上会显脏；换成卡片白与输入框对齐。 */
 html[data-mrr-palette="gr8r"] textarea.bg-background {
   background: var(--mrr-card);
-}
-
-/* FaButton 与 el-button 同源：扁平层只去掉投影，几何与配色继续走共用令牌。 */
-html[data-mrr-palette="gr8r"] .fa-button-control {
-  box-shadow: none;
-}
-
-/* outline 变体与 el-button 默认按钮同底同边：白卡片 + 发丝描边。 */
-html[data-mrr-palette="gr8r"] .fa-button-control[data-variant="outline"] {
-  background: var(--mrr-card);
-  border-color: var(--mrr-border-strong);
-}
-
-/* 悬停只加深底色，描边维持不动：描边再深一档会被读成「选中态」。 */
-html[data-mrr-palette="gr8r"] .fa-button-control[data-variant="outline"]:not(:disabled):hover {
-  color: var(--mrr-foreground);
-  background: var(--mrr-muted);
-  border-color: var(--mrr-border-strong);
-}
-
-/* 主按钮的 inset 底高光，与 .el-button--primary 用同一条声明。 */
-html[data-mrr-palette="gr8r"] .fa-button-control[data-variant="default"]:not(:disabled) {
-  box-shadow: inset 0 -1px 0 rgb(0 0 0 / 12%);
-}
-
-html[data-mrr-palette="gr8r"] .fa-button-control[data-variant="default"]:not(:disabled):hover {
-  box-shadow: inset 0 -1px 0 rgb(0 0 0 / 16%);
-}
-
-/* 按压回弹与 el-button 相同，两族按钮的手感才一致。 */
-html[data-mrr-palette="gr8r"] .fa-button-control:not(:disabled):not([data-loading]):active {
-  transform: var(--mrr-motion-decor, scale(0.97));
 }
 
 /* ===== 5. 输入、下拉与文本域 ===== */

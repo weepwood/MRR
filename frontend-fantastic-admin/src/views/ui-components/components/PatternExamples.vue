@@ -159,10 +159,10 @@ onBeforeUnmount(() => {
       </h3>
       <div class="pattern-metric">
         <MrrMetricCard label="待复核影像" :value="pendingPages.toLocaleString('zh-CN')" suffix="页" note="合成数据，每次更新随机增加" icon="i-lucide:scan-eye" tone="amber" />
-        <FaButton variant="outline" @click="updateMetric">
+        <el-button class="mrr-button-flow" :auto-insert-space="false" @click="updateMetric">
           <FaIcon name="i-lucide:refresh-cw" aria-hidden="true" />
           模拟数据更新
-        </FaButton>
+        </el-button>
       </div>
       <p class="example-note" role="status">
         {{ metricMessage }}
@@ -175,15 +175,15 @@ onBeforeUnmount(() => {
       </h3>
       <MrrDataTablePanel title="刷新反馈示例" :count="tableRows.length || undefined" :loading="tableLoading" :result-key="resultVersion">
         <template #actions>
-          <FaButton variant="outline" size="sm" :disabled="tableLoading" @click="runQuery(600)">
+          <el-button class="mrr-button-flow" size="small" :auto-insert-space="false" :disabled="tableLoading" @click="runQuery(600)">
             模拟慢查询
-          </FaButton>
-          <FaButton variant="outline" size="sm" :disabled="tableLoading" @click="runQuery(120)">
+          </el-button>
+          <el-button class="mrr-button-flow" size="small" :auto-insert-space="false" :disabled="tableLoading" @click="runQuery(120)">
             模拟快查询
-          </FaButton>
-          <FaButton variant="ghost" size="sm" :disabled="tableLoading" @click="runQuery(600, true)">
+          </el-button>
+          <el-button class="mrr-button-flow" size="small" text :auto-insert-space="false" :disabled="tableLoading" @click="runQuery(600, true)">
             清空后首次加载
-          </FaButton>
+          </el-button>
         </template>
         <AppLoading v-if="tableLoading && !tableRows.length" type="table" :rows="4" :cols="3" />
         <el-table v-else :data="tableRows" row-key="id">
@@ -219,10 +219,10 @@ onBeforeUnmount(() => {
         <span class="pattern-enter__block pattern-enter__block--body">主体</span>
       </div>
       <div class="example-row">
-        <FaButton variant="outline" @click="enterRun += 1">
+        <el-button class="mrr-button-flow" :auto-insert-space="false" @click="enterRun += 1">
           <FaIcon name="i-lucide:play" aria-hidden="true" />
           重播入场
-        </FaButton>
+        </el-button>
       </div>
       <p class="example-note">
         与 MrrPageShell 相同的关键帧和间隔：每块淡入并上移 4px，间隔 30ms，总长 240ms。切换页面时自动播放；本页本身在壳层内，嵌套壳层不重复播放，所以这里单独演示。

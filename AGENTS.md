@@ -58,6 +58,7 @@ MRR/
 - #836已合并dbd81c50；字段令牌、双族文本域和只读/错误归属已集中实施，68项样式守护、49项业务浏览器回归通过，待远端门禁。
 - #838已合并3c93d1f0；登录/注册控件归一按[归属清单](docs/design/component-ownership.md)24组实际视觉基线，保留表单合同、原布局、冻结分支。
 - #839已合并968bc901；复选框唯一实现及个人修改密码迁移见[归属清单](docs/design/component-ownership.md)，按P1认证风险验收，保持原视觉、表单与注销合同。
+- #843已合并fc2a56f7；基础按钮/组/输入/文本域本地全量归一，见[归属清单](docs/design/component-ownership.md)，以最终联合及远端门禁为准。
 - #842已合并bec3cd9a；全局9处按钮归一，按[归属清单](docs/design/component-ownership.md)保护工具栏和展开/收起状态，保持冻结分支。
 - #841已合并2e9db6ef，标签页32组视觉、40/40联合与6/6最终专项通过，重放新基线；保留原视觉门禁，详见[归属清单](docs/design/component-ownership.md)。
 - #840已合并ef5e5e35；滑块/选择器按唯一实现归一、共享紧凑规格、保留实际视觉，详见[归属清单](docs/design/component-ownership.md)。

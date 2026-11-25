@@ -63,7 +63,7 @@ function handleSendCaptcha() {
       <FormField v-slot="{ componentField, errors }" name="account">
         <FormItem class="relative pb-6 space-y-0">
           <FormControl>
-            <FaInput type="text" placeholder="请输入用户名" class="w-full" :class="errors.length > 0 && 'border-destructive'" v-bind="componentField" />
+            <el-input type="text" placeholder="请输入用户名" class="w-full" :class="{ 'account-field-invalid': errors.length > 0 }" :aria-invalid="errors.length > 0" v-bind="componentField" />
           </FormControl>
           <Transition enter-active-class="transition-opacity" enter-from-class="opacity-0" leave-active-class="transition-opacity" leave-to-class="opacity-0">
             <FormMessage class="absolute bottom-1 text-xs" />
@@ -81,27 +81,30 @@ function handleSendCaptcha() {
             </Transition>
           </FormItem>
         </FormField>
-        <FaButton variant="outline" size="lg" :disabled="countdown > 0" class="flex-1 px-4" @click="handleSendCaptcha">
+        <el-button size="large" :auto-insert-space="false" :disabled="countdown > 0" class="mrr-button-flow flex-1 px-4" @click="handleSendCaptcha">
           {{ countdown === 0 ? '发送验证码' : `${countdown} 秒后可重新发送` }}
-        </FaButton>
+        </el-button>
       </div>
       <FormField v-slot="{ componentField, errors }" name="newPassword">
         <FormItem class="relative pb-6 space-y-0">
           <FormControl>
-            <FaInput type="password" placeholder="请输入 6 到 64 位新密码" class="w-full" :class="errors.length > 0 && 'border-destructive'" v-bind="componentField" />
+            <el-input type="password" placeholder="请输入 6 到 64 位新密码" class="w-full" :class="{ 'account-field-invalid': errors.length > 0 }" :aria-invalid="errors.length > 0" v-bind="componentField" />
           </FormControl>
           <Transition enter-active-class="transition-opacity" enter-from-class="opacity-0" leave-active-class="transition-opacity" leave-to-class="opacity-0">
             <FormMessage class="absolute bottom-1 text-xs" />
           </Transition>
         </FormItem>
       </FormField>
-      <FaButton :loading="loading" size="lg" class="mt-4 w-full" type="submit">
+      <el-button size="large" type="primary" :auto-insert-space="false" :loading="loading" :aria-busy="(loading) || undefined" class="mrr-button-flow mt-4 w-full" native-type="submit">
+        <template #loading>
+          <FaIcon name="i-lucide:loader-circle" class="animate-spin" aria-hidden="true" />
+        </template>
         确认
-      </FaButton>
+      </el-button>
       <div class="mt-4 flex-center gap-2 text-sm color-[var(--el-text-color-secondary)]">
-        <FaButton variant="link" class="p-0" @click="emits('onLogin', form.values.account)">
+        <el-button link type="primary" :auto-insert-space="false" class="mrr-button-flow p-0" @click="emits('onLogin', form.values.account)">
           去登录
-        </FaButton>
+        </el-button>
       </div>
     </form>
   </div>

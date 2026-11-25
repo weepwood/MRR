@@ -13,6 +13,22 @@ function sources(dir: string): string[] {
 }
 
 describe('唯一基础控件归属', () => {
+  it('所有按钮与按钮组已迁移，不恢复旧实现或样式', () => {
+    for (const component of ['FaButton', 'FaButtonGroup']) {
+      expect(fs.existsSync(path.join(root, 'ui/components', component))).toBe(false)
+    }
+    const legacy = sources(root).filter(file => /\bFaButton(?:Group)?\b|\.fa-button-(?:control|group)\b/.test(fs.readFileSync(file, 'utf8')))
+    expect(legacy.map(file => path.relative(root, file))).toEqual([])
+  })
+
+  it('输入和文本域已迁移，不恢复旧实现', () => {
+    for (const component of ['FaInput', 'FaTextarea']) {
+      expect(fs.existsSync(path.join(root, 'ui/components', component))).toBe(false)
+    }
+    const legacy = sources(root).filter(file => /\bFa(?:Input|Textarea)\b|\.fa-(?:input|textarea)-control\b/.test(fs.readFileSync(file, 'utf8')))
+    expect(legacy.map(file => path.relative(root, file))).toEqual([])
+  })
+
   it('已迁移的全局按钮调用不得恢复 FaButton', () => {
     const migrated = [
       'components/AccountButton/index.vue',

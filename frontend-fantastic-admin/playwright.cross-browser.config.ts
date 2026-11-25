@@ -10,6 +10,7 @@ export default defineConfig({
   ...base,
   workers: 2,
   forbidOnly: true,
+  use: { ...base.use, trace: 'retain-on-failure' },
   retries: 0,
   outputDir: 'test-results-cross-browser',
   reporter: [

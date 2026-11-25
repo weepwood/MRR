@@ -470,6 +470,10 @@
 
 - #817 59eeba00全部必要CI成功，合并28d9ca60树一致；main冻结24152bee。Release dry-run 45577278120精确集成SHA、retain_candidate=true，identity成功，完整验证执行中，不发布。独立分支feat/v1.1-candidate-qualification新增可选矩阵/工作流：22入口双主题双宽度、Chromium45/45含预热、88张截图；Firefox/WebKit179项含预热尚未执行。本机下载慢已停止专用安装，改手动CI，默认PR/Chromium门禁不变。464项测试资产清单及定向3/3、文档通过。详见[候选验收](v1.1-candidate-qualification.md)，待候选制品、远端跨浏览器和实际缺陷收口，不更改VERSION或main。
 
+## 36 V1.1 完整候选通过及WebKit复验（2026-11-25）
+
+- 28d9ca60完整dry-run 45577278120/1全部通过（Windows实际备份恢复、精确制品文件SHA256校验，publish跳过），保留artifact15005671535；本地下载未完成。#818首轮45578342299 176/179，Firefox89/89、WebKit86/89；显式焦点与长用例拆分，失败trace，Chromium17/17，待WebKit复验。#389官方审计见Issue评论；#624不凭JaCoCo报告关闭。产品源码/版本/main保持冻结。详见[候选验收](v1.1-candidate-qualification.md)。
+
 ## 每轮交接模板
 
 - 更新时间、任务、风险、目标及非目标：

@@ -83,8 +83,13 @@ for (const item of pages) {
     await form.getByLabel('用户', { exact: true }).fill('synthetic-user')
     await page.locator('.el-select-dropdown__item').filter({ hasText: 'synthetic-user' }).first().click()
     const waitQuery = () => page.waitForRequest(request => request.method() === 'GET' && new URL(request.url()).pathname.endsWith(item.endpoint))
+    // Move focus explicitly from the teleported select popup back to the keyword.
+    // WebKit may keep the select's focus restoration queued after choosing a created option.
+    await expect(page.locator('.el-select-dropdown__item').filter({ hasText: 'synthetic-user' })).not.toBeVisible()
+    await keyword.click()
+    await expect(keyword).toBeFocused()
     const query = waitQuery()
-    await keyword.press('Enter')
+    await page.keyboard.press('Enter')
     expect(Object.fromEntries(new URL((await query).url()).searchParams)).toMatchObject({ keyword: 'synthetic-filter', username: 'synthetic-user', page: '1', size: '20' })
     await expect(page.getByText(item.empty, { exact: true })).toBeVisible()
     const reset = waitQuery()

@@ -76,7 +76,7 @@ test('演示病案完整性显示固定成员与版本，写操作关闭', async
   await page.screenshot({ path: test.info().outputPath('manifest-workbench.png'), fullPage: true })
 })
 
-test('独立病案工作台可从菜单打开，直接查询且兼容旧数据治理入口', async ({ page }) => {
+test('独立病案工作台直接查询、影像核对及窄屏布局', async ({ page }) => {
   const globalRequests: string[] = []
   page.on('request', (request) => {
     const path = new URL(request.url()).pathname
@@ -149,6 +149,15 @@ test('独立病案工作台可从菜单打开，直接查询且兼容旧数据�
   await page.setViewportSize({ width: 1440, height: 1000 })
   await page.getByRole('button', { name: '关闭原图' }).click()
   await expect(image).toHaveCount(0)
+})
+
+test('独立病案工作台可从菜单打开，且兼容旧数据治理入口', async ({ page }) => {
+  await page.goto('/archive-workbench')
+  const search = page.getByRole('textbox', { name: '病案查询值', exact: true })
+  await expect(search).toBeVisible()
+  await search.fill('26070000')
+  await search.press('Enter')
+  await expect(page.getByText('病案主档 #1', { exact: true })).toBeVisible()
   await page.getByRole('link', { name: '数据关系工作台', exact: true }).last().click()
   await expect(page).toHaveURL(/data-relations$/)
   await expect(page.getByRole('tab', { name: '关系总览', exact: true })).toBeVisible()

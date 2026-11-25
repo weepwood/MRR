@@ -371,25 +371,14 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <div class="settings-page">
-    <header class="page-header">
-      <div class="header-title">
-        <div>
-          <p class="eyebrow">
-            System Settings
-          </p>
-          <div class="title-line">
-            <h1>系统设置</h1>
-            <el-tag v-if="settings.developerModeEnabled" type="danger" effect="dark" round>
-              开发者模式已启用
-            </el-tag>
-          </div>
-          <p class="subtitle">
-            统一管理系统标识、登录支持、帮助文档、档案浏览、OCR 分类、安全策略与界面外观。
-          </p>
-        </div>
-      </div>
-      <div v-if="isServerSettingSection" class="header-actions">
+  <MrrPageShell class="settings-page">
+    <MrrPageHeader eyebrow="System Settings" title="系统设置" description="统一管理系统标识、登录支持、帮助文档、档案浏览、OCR 分类、安全策略与界面外观。">
+      <template #badge>
+        <el-tag v-if="settings.developerModeEnabled" type="danger" effect="dark" round>
+          开发者模式已启用
+        </el-tag>
+      </template>
+      <template v-if="isServerSettingSection" #actions>
         <el-button :disabled="loading || saving" @click="handleReload">
           <FaIcon name="i-lucide:refresh-cw" class="mrr-icon-interactive" />重新加载
         </el-button>
@@ -409,8 +398,8 @@ onUnmounted(() => {
           />
           {{ savedRecently ? '已保存' : '保存设置' }}
         </el-button>
-      </div>
-    </header>
+      </template>
+    </MrrPageHeader>
 
     <div ref="layoutRef" class="settings-layout" :class="{ 'settings-layout--compact': compactLayout, 'settings-layout--narrow': narrowLayout }">
       <aside class="settings-sidebar" aria-label="设置目录">
@@ -572,7 +561,7 @@ onUnmounted(() => {
         </div>
       </div>
     </div>
-  </div>
+  </MrrPageShell>
 </template>
 
 <style scoped src="./unified-settings.css"></style>

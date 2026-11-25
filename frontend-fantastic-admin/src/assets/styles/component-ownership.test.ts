@@ -155,4 +155,15 @@ describe('唯一基础控件归属', () => {
       expect(source).not.toMatch(/\.slider-control\s*:deep/)
     }
   })
+  it('业务页头只允许公共实现和唯一尺寸', () => {
+    const css = fs.readFileSync(path.join(root, 'assets/styles/components/page-header.css'), 'utf8')
+    expect(css).not.toContain('mrr-page-header--compact')
+    expect(css).not.toContain('--mrr-summary-min-height')
+    for (const file of ['views/settings/components/UnifiedSettingsPage.vue', 'views/help/index.vue']) {
+      const source = fs.readFileSync(path.join(root, file), 'utf8')
+      expect(source).toContain('<MrrPageShell')
+      expect(source).toContain('<MrrPageHeader')
+      expect(source).not.toMatch(/<header class="(?:page-header|help-header)"/)
+    }
+  })
 })

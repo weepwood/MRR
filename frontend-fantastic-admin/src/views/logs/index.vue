@@ -265,7 +265,7 @@ function statusTagType(status: string | number) {
 
 <template>
   <MrrPageShell>
-    <MrrPageHeader size="compact" title="日志管理" eyebrow="Operation Logs" description="按请求 ID、真实 URI、接口模板、业务参数、用户、IP、状态码和时间范围追溯接口访问。">
+    <MrrPageHeader title="日志管理" eyebrow="Operation Logs" description="按请求 ID、真实 URI、接口模板、业务参数、用户、IP、状态码和时间范围追溯接口访问。">
       <!-- 自动刷新说明放 #meta（DESIGN.md §3.3），与运行错误中心一致；原来与刷新按钮挤在操作区，窄屏下把按钮推出页头。 -->
       <template #meta>
         <span class="auto-refresh-note" aria-live="polite">每 30 秒自动刷新<template v-if="lastRefreshedAt"> · 上次 {{ lastRefreshedAt }}</template></span>

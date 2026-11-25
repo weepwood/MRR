@@ -442,7 +442,6 @@ onMounted(() => {
   <MrrPageShell class="relation-workbench">
     <MrrPageHeader
       :title="archiveOnly ? '病案工作台' : '数据关系工作台'"
-      :size="archiveOnly ? 'compact' : 'default'"
       :eyebrow="archiveOnly ? 'Medical Records' : 'Data Governance'"
       :description="archiveOnly ? '按病案号、上架号或主档 ID 查找病案，集中核对患者、扫描影像、文件完整性及关联异常。' : '以 mr_archive 为中心查看统计、患者、扫描、装箱和迁移数据，发现缺失关联与字段冲突。关联检查、影像完整性观察与修复预览集中查看。'"
     >

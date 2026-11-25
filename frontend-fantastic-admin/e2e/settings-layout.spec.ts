@@ -66,7 +66,7 @@ test.describe('系统设置分类布局', () => {
     await expect(page.getByText('系统管理员与技术支持', { exact: true })).toBeVisible()
     // 左侧不再展示配置状态，未保存状态只由页头保存按钮的可用性表达。
     await expect(page.locator('.settings-sidebar')).not.toContainText('配置状态')
-    await expect(page.locator('.page-header .header-actions').getByRole('button', { name: '保存设置' })).toBeDisabled()
+    await expect(page.locator('.mrr-page-header .mrr-page-header__aside').getByRole('button', { name: '保存设置' })).toBeDisabled()
 
     await page.locator('.settings-nav-item').filter({ hasText: '档案浏览' }).click()
     await expect(page.locator('.section-header').getByRole('heading', { name: '档案浏览' })).toBeVisible()
@@ -192,7 +192,7 @@ test.describe('系统设置分类布局', () => {
     await page.goto('/settings?section=archive', { waitUntil: 'domcontentloaded' })
 
     const content = page.locator('.settings-content')
-    await expect(page.locator('.settings-page > .page-header')).toBeInViewport()
+    await expect(page.locator('.settings-page > .mrr-page-header')).toBeInViewport()
     await expect(page.getByRole('navigation', { name: '设置分类' })).toBeInViewport()
     await expect(content).toHaveCSS('overflow-y', 'visible')
     await expect(content.getByText('默认图片来源', { exact: true })).toBeVisible()
@@ -200,7 +200,7 @@ test.describe('系统设置分类布局', () => {
     await expect(page.getByRole('heading', { name: '目录路由规则' })).toBeVisible()
 
     // 保存入口固定在页头，排序为「重新加载 → 恢复默认 → 保存设置」，页面底部不再有保存行。
-    await expect(page.locator('.page-header .header-actions').getByRole('button')).toHaveText(['重新加载', '恢复默认', '保存设置'])
+    await expect(page.locator('.mrr-page-header .mrr-page-header__aside').getByRole('button')).toHaveText(['重新加载', '恢复默认', '保存设置'])
     await expect(page.locator('.settings-save-action')).toHaveCount(0)
 
     await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight))
@@ -216,7 +216,7 @@ test.describe('系统设置分类布局', () => {
     await expect(systemName).toBeVisible({ timeout: 20_000 })
     const originalName = await systemName.inputValue()
     await systemName.fill(`${originalName}-临时`)
-    await expect(page.locator('.page-header .header-actions').getByRole('button', { name: '保存设置' })).toBeEnabled()
+    await expect(page.locator('.mrr-page-header .mrr-page-header__aside').getByRole('button', { name: '保存设置' })).toBeEnabled()
 
     const userMenu = page.locator('.menu-item-container').filter({ hasText: '用户管理' }).first()
     const dialog = page.getByRole('dialog', { name: '有未保存的设置' })
@@ -244,7 +244,7 @@ test.describe('系统设置分类布局', () => {
     await expect(page).toHaveURL(/\/settings/)
     await expect(page.locator('.settings-content[aria-busy="false"]')).toBeVisible({ timeout: 20_000 })
     await expect(page.getByRole('textbox', { name: '系统名称', exact: true })).toHaveValue(originalName)
-    await expect(page.locator('.page-header .header-actions').getByRole('button', { name: '保存设置' })).toBeDisabled()
+    await expect(page.locator('.mrr-page-header .mrr-page-header__aside').getByRole('button', { name: '保存设置' })).toBeDisabled()
   })
 
   test('保存设置先列出修改项，取消则不写入', async ({ page }) => {
@@ -256,7 +256,7 @@ test.describe('系统设置分类布局', () => {
 
     const originalName = await systemName.inputValue()
     const editedName = `${originalName}-保存确认`
-    const saveButton = page.locator('.page-header .header-actions').getByRole('button', { name: '保存设置' })
+    const saveButton = page.locator('.mrr-page-header .mrr-page-header__aside').getByRole('button', { name: '保存设置' })
     const dialog = page.getByRole('dialog', { name: '确认保存设置' })
 
     await systemName.fill(editedName)
@@ -297,7 +297,7 @@ test.describe('系统设置分类布局', () => {
     await expect(systemName).toBeVisible({ timeout: 20_000 })
     const originalName = await systemName.inputValue()
     const editedName = `${originalName}-离开保存`
-    const saveButton = page.locator('.page-header .header-actions').getByRole('button', { name: '保存设置' })
+    const saveButton = page.locator('.mrr-page-header .mrr-page-header__aside').getByRole('button', { name: '保存设置' })
 
     await systemName.fill(editedName)
     await page.locator('.menu-item-container').filter({ hasText: '用户管理' }).first().click()

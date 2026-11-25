@@ -437,7 +437,6 @@ onMounted(refreshAll)
 <template>
   <MrrPageShell compact>
     <MrrPageHeader
-      size="compact"
       eyebrow="Archive Box Management"
       title="档案装箱管理"
       description="维护实体病案与箱号的对应关系，支持按病案反查位置和按箱号查看箱内病案。"

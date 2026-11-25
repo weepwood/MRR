@@ -574,7 +574,6 @@ onMounted(loadData)
 <template>
   <MrrPageShell width="fluid">
     <MrrPageHeader
-      size="compact"
       eyebrow="User Management"
       title="用户管理"
       description="管理系统账号、注册申请审核、角色、凭据状态、启停状态与最近登录信息。"

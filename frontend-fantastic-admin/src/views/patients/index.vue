@@ -191,7 +191,6 @@ onUnmounted(() => {
 <template>
   <MrrPageShell compact>
     <MrrPageHeader
-      size="compact"
       eyebrow="Patient Management"
       title="患者管理"
       description="查询和编辑患者基本信息，并查看身份证完整性与重复患者情况。"

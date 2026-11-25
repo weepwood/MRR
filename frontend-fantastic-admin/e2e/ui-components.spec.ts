@@ -143,7 +143,7 @@ test('失败与空态可恢复，对话框和抽屉可确认与关闭', async ({
   await expect(page.getByText('抽屉示例已确认。')).toBeVisible()
 })
 
-test('页头尺寸示例：紧凑页头更矮，长说明折行后仍完整显示', async ({ page }) => {
+test('页头尺寸示例：相同内容的业务页头等高，长说明折行后仍完整显示', async ({ page }) => {
   await openGallery(page)
   await page.setViewportSize({ width: 1920, height: 900 })
   await page.getByRole('button', { name: /基础与导航/ }).click()
@@ -160,7 +160,7 @@ test('页头尺寸示例：紧凑页头更矮，长说明折行后仍完整显�
   const heights = () => page.locator('.pattern-sample .mrr-page-header').evaluateAll(nodes => nodes.map(node => node.getBoundingClientRect().height))
   await expect.poll(async () => {
     const [standard, compact] = await heights()
-    return compact < standard
+    return Math.abs(compact - standard) <= 1
   }).toBe(true)
   const longDescription = page.getByRole('switch', { name: '使用长说明（检查折行）', exact: true })
   await expect(longDescription).toHaveAttribute('aria-checked', 'false')

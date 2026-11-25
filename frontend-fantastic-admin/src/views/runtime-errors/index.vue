@@ -335,7 +335,6 @@ function levelTagType(level: string) {
 <template>
   <MrrPageShell class="runtime-errors-page">
     <MrrPageHeader
-      size="compact"
       eyebrow="Runtime Error Center"
       title="运行错误中心"
       description="集中查看后端 WARN / ERROR，按指纹合并重复事件，并通过错误编号、Request ID 关联接口访问日志。"

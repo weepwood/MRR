@@ -114,8 +114,8 @@ tokens.css（语义令牌，唯一数值源）
 
 | 层级 | 令牌 | 当前值 | 来源 |
 | --- | --- | --- | --- |
-| 页面标题 | `--mrr-font-size-title` / `-title-compact` | 26px / 22px（≤760px），700 | [page-header.css](src/assets/styles/components/page-header.css) |
-| 页头说明 | `--mrr-font-size-md` / `-sm` | plain 14px；card 13px | 同上 |
+| 页面标题 | `--mrr-font-size-title-compact` | 22px，700 | [page-header.css](src/assets/styles/components/page-header.css) |
+| 页头说明 | `--mrr-font-size-sm` | 13px | 同上 |
 | 分区标题 | `--mrr-font-size-md` | 14px，650 | [MrrSectionCard](src/components/MrrSectionCard/index.vue) |
 | 正文 / 表格 | `--mrr-font-size-md` / `-sm` | 14px / 13px | base.css、Element Plus 桥接 |
 | 标签、说明、表头 | `--mrr-font-size-xs` | 12px | metric-card.css 等 |
@@ -259,7 +259,7 @@ tokens.css（语义令牌，唯一数值源）
 | --- | --- | --- |
 | `fluid`（默认） | 1720px | 列表、统计、监控 |
 | `standard` | 1440px | 详情、双栏 |
-| `narrow` | 1120px | 设置、表单 |
+| `narrow` | 1120px | 独立表单（不用于后台业务页头） |
 
 `MrrPageShell` 负责单列可收缩网格与块间距，所有业务页面共用，切换页面时内容宽度与节奏不跳变。布局按扣除侧栏、留白、滚动条后的实际宽度自适应，不按窗口宽度假设列数。嵌套使用时（如监控聚合页的外层壳 + 内嵌监控页）两层宽度上限相同，不会产生双重收窄。
 
@@ -267,13 +267,10 @@ tokens.css（语义令牌，唯一数值源）
 
 `MrrPageHeader` 有 title / description / eyebrow / icon，以及 badge / meta / actions 插槽，有两种模式（`app.pageTitleStyle`，默认 card）：
 
-- **card**：实色细边框卡片，最小高度与指标卡一致（110px），隐藏英文 eyebrow，说明 13px。
+- **card**：实色细边框卡片，按内容自然撑开，隐藏英文 eyebrow，说明 13px。
 - **plain**：标题位于内容层级，显示 eyebrow，底部留白只有 4px，与下一块的距离交给壳层间距。
 
-**尺寸**（`size`，与模式正交）：
-
-- **default**：上述两种模式的原样。用于首页、分析与监控、工作台、详情、设置等「页头本身承载概览」的页面。
-- **compact**：查询列表、游标大表、存储浏览、审计、导入导出等「页头只做定位」的页面。card 模式下取消 110px 最小高度，标题 22px（`--mrr-font-size-title-compact`）；说明始终位于标题下方并自然折行，不截断。紧凑尺寸只调整留白、字号和图标，不改变标题与说明的上下顺序；plain 模式本身已经紧凑，不受影响。图标降为 32px。当前使用者：用户、记录、患者、档案装箱、日志、运行错误中心、权限、病历访问审计、OCR 批次、OSS 浏览、Nginx 浏览、数据表浏览、数据导入导出。
+**唯一尺寸**：所有后台业务页使用 22px / 700 标题、13px 说明、7px 标题说明间距、32px 可选图标。card 模式上下 16px（≤760px 为12px），左右使用公共卡片 inset；取消固定最小高度及 size 参数。plain 保留无卡面和可选英文眉题，字号与 card 相同。业务页壳层统一 fluid（1720px 上限），设置和帮助页同样使用 MrrPageShell；内部可按内容另设宽度。状态、长说明或操作换行允许自然增高，不裁切。禁止页面单独覆盖页头几何。
 
 页面标题使用 `<h1>`。辅助信息（自动刷新时间、数据范围）放 `#meta`，提示图标放 `#badge`，操作放 `#actions`。页头图标为实色浅底，不用渐变。
 
@@ -290,7 +287,7 @@ tokens.css（语义令牌，唯一数值源）
 
 病案号、上架号按原字符串呈现，保留前导零，不加千分位。窄屏重排先定义"识别对象 → 判断状态 → 执行操作"的阅读顺序。
 
-**系统设置**沿用共享页头，标题层级与业务页对齐：页面 `h1`（26px）→ 分区 `h2`（16px / 650，32px 图标）→ 分组卡标题（14px / 650，与 `MrrSectionCard` 同档）→ 设置项标题（13px / 600）→ 说明（12px）。分组卡圆角用 `--mrr-radius-card`、内边距 `--mrr-card-inset`；分组标题样式只在 [UnifiedSettingsPage](src/views/settings/components/UnifiedSettingsPage.vue) 定义一次，各分区不再各写一份。左侧目录只显示图标和分类名；右侧逐组卡片自然滚动。保存入口固定在页头，顺序为"重新加载 → 恢复默认 → 保存设置"。保存前在弹窗中列出"旧值 → 新值"。离开时如有未保存修改，提示"保存并离开 / 放弃修改 / 取消"。界面外观与顶部抽屉共用分组标签页；全站外观同步只推送白名单键，内容未变化时不重复写服务端。
+**系统设置**沿用共享页头，标题层级与业务页对齐：页面 `h1`（22px）→ 分区 `h2`（16px / 650，32px 图标）→ 分组卡标题（14px / 650，与 `MrrSectionCard` 同档）→ 设置项标题（13px / 600）→ 说明（12px）。分组卡圆角用 `--mrr-radius-card`、内边距 `--mrr-card-inset`；分组标题样式只在 [UnifiedSettingsPage](src/views/settings/components/UnifiedSettingsPage.vue) 定义一次，各分区不再各写一份。左侧目录只显示图标和分类名；右侧逐组卡片自然滚动。保存入口固定在页头，顺序为"重新加载 → 恢复默认 → 保存设置"。保存前在弹窗中列出"旧值 → 新值"。离开时如有未保存修改，提示"保存并离开 / 放弃修改 / 取消"。界面外观与顶部抽屉共用分组标签页；全站外观同步只推送白名单键，内容未变化时不重复写服务端。
 
 ### 3.5 换行、滚动与窄屏
 
@@ -394,7 +391,7 @@ Element Plus 是同类基础业务控件的唯一目标，禁止新增重复 Fa 
 
 ### 4.5 指标卡
 
-实色卡面 + 图标语义色块 + 数值色（`valueTone`），没有顶部色条和斜向渐变。图标桌面 52px、≤600px 时 46px，保持正方形；无图标卡只保留正文列。最小高度 110px，与 card 页头一致。网格变体用 `mrr-metric-grid--compact/three/four/wide/dense`，不在页面复制布局。只读指标卡不做悬停位移；可点击的指标卡（如运行错误中心的"仅看 ERROR"）外层是 `<button>`，焦点用 outline。
+实色卡面 + 图标语义色块 + 数值色（`valueTone`），没有顶部色条和斜向渐变。图标桌面 52px、≤600px 时 46px，保持正方形；无图标卡只保留正文列。最小高度 110px；指标卡高度独立于页头。网格变体用 `mrr-metric-grid--compact/three/four/wide/dense`，不在页面复制布局。只读指标卡不做悬停位移；可点击的指标卡（如运行错误中心的"仅看 ERROR"）外层是 `<button>`，焦点用 outline。
 
 ### 4.6 对话框、抽屉与消息
 
@@ -571,12 +568,12 @@ V1.2 当前实施顺序与证据台账见 [全站 UI 规范与组件治理](../d
 
 | 状态 | 页面 |
 | --- | --- |
-| 已用 `MrrPageShell` + `MrrPageHeader` | 首页、用户、记录、患者、档案装箱、影像审计、日志、数据关系、OCR 批次、Nginx 浏览、OSS 浏览、UI 组件、接口响应分析、权限管理、运行错误中心、扫描统计、**系统与数据库监控（含监控聚合页）、运维诊断中心、OSS 迁移管理、数据导入导出、病案明细档案袋、认证测试台、数据表浏览** |
-| 独立外壳（不迁移） | 登录、强制改密、公共状态页、病案查询 / 影像查询、外部调阅、档案袋独立页、系统设置（`.settings-page`）、帮助中心（`.help-center`） |
+| 已用 `MrrPageShell` + `MrrPageHeader` | 首页、用户、记录、患者、档案装箱、影像审计、日志、数据关系、OCR 批次、Nginx 浏览、OSS 浏览、UI 组件、接口响应分析、权限管理、运行错误中心、扫描统计、**系统与数据库监控（含监控聚合页）、运维诊断中心、OSS 迁移管理、数据导入导出、病案明细档案袋、认证测试台、数据表浏览**、系统设置、帮助中心 |
+| 独立外壳（不迁移） | 登录、强制改密、公共状态页、病案查询 / 影像查询、外部调阅、档案袋独立页 |
 
 业务页面中已没有手写 `.page-shell` / `.page-header` 的使用者，全局 `.page-shell` 兜底样式已删除。
 
-两个页面给 `MrrPageHeader` 额外加了 `class="page-header"`（运维诊断中心、Nginx 浏览），这是为了保留 [page-header-style.spec.ts](e2e/page-header-style.spec.ts) 对 `.page-header h1` 与卡片样式的断言入口；新页面不需要这个类，E2E 优先使用 `getByRole('heading')` 或 `.mrr-page-header`。
+全站后台页头仅使用 `.mrr-page-header`；历史 `.page-header` / `.help-header` 兼容选择器已移除，E2E 使用公共类及语义标题。
 
 仍待逐页处理的是**页面内部**的旧写法，而不是页头：
 

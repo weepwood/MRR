@@ -355,3 +355,5 @@ python scripts/release_baseline.py validate
 2026-11-26：V1.2 本地公共组件深化第二批基于 2a10a360。数据浏览采用 MrrFilterBar grid 与 MrrDataTablePanel 的首次加载/旧结果刷新合同，保留真实游标、脱敏及重试；公开状态页、追踪编号及主色入口迁移普通按钮，四处业务页图标统一资源入口。Chrome86 主/危险按钮、导航模式及分类选中态明确回退。定向双引擎26项通过（含预热）、1项剪贴板权限跳过且 Chromium 已实际验证，116项单测通过。仅本地提交、保持9037，不触发远端操作；不把现代引擎证据视为真实Chrome86或Linux完整矩阵验收。
 
 2026-11-26：V1.2 本地专用组件治理以 e6e89159 为基线。FaScrollArea 公开 viewport/scrollTo、动态边缘测量和滚轮边界，保留 Reka；FaPinInput 同步部分值、预设和清空，FaBackToTop 焦点保持及计时器回收，明确导航链接 tabindex。新增真实展厅示例，不启用未上线的验证码业务；FaPageMain 外链确认页缺可达视觉基线，保留。仅本地迭代，9037 预览不停止；测试独立9041，验收结论以工程交接日志为准。
+
+2026-11-26：根据维护者明确要求，全站后台业务页头统一 MrrPageHeader + fluid MrrPageShell，去掉 default/compact 分档及历史选择器，设置与帮助迁入公共组件。唯一标题22px/说明13px/card 上下16px（窄屏12px）、左右公共 inset、1720px 宽度上限；长文案及元信息自然撑开。独立任务页面保持原壳；详见 DESIGN.md §3.3 和本地归属审计。保持9037，不推送、不合并、不发布。

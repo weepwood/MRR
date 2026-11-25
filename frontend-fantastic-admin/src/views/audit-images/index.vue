@@ -388,7 +388,7 @@ onMounted(loadData)
 
 <template>
   <MrrPageShell>
-    <MrrPageHeader size="compact" title="病历访问审计可视化" eyebrow="Medical Record Audit" description="按用户和病历双向追溯访问关系，并导出完整审计证据。">
+    <MrrPageHeader title="病历访问审计可视化" eyebrow="Medical Record Audit" description="按用户和病历双向追溯访问关系，并导出完整审计证据。">
       <template #actions>
         <el-button :loading="loading || analyticsLoading" @click="() => loadData()"><FaIcon name="i-lucide:refresh-cw" aria-hidden="true" />刷新</el-button>
       </template>

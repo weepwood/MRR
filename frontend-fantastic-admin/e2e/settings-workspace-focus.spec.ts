@@ -5,7 +5,7 @@ test('搜索保留原有页头，已在屏内的设置不滚动，屏外设置�
   await page.emulateMedia({ reducedMotion: 'reduce' })
   await page.goto('/settings', { waitUntil: 'domcontentloaded' })
 
-  const hero = page.locator('.settings-page > .page-header')
+  const hero = page.locator('.settings-page > .mrr-page-header')
   const search = page.getByRole('textbox', { name: '搜索设置' })
   await expect(hero.getByRole('heading', { name: '系统设置', exact: true })).toBeInViewport()
   await expect(hero.getByText('统一管理系统标识', { exact: false })).toBeVisible()

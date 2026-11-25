@@ -418,8 +418,6 @@ onBeforeUnmount(cancelRequests)
 <template>
   <MrrPageShell>
     <MrrPageHeader
-      size="compact"
-      class="page-header"
       title="Nginx 文件浏览"
       description="浏览已配置图片节点中的目录与文件。"
     >

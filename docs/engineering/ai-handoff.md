@@ -653,3 +653,9 @@
 - 首轮双引擎19项：15通过、4失败（2 WebKit Tab 焦点、2 switch 隐藏输入点击）；补显式 tabindex、隔离本地外观、真实键盘切换后23项中21通过、2失败（aria-checked=true/实际批次正确，但原生 checked 不一致）。最终以可访问状态与完整业务断言、单次120px映射/边界不消费/原生水平滚动、新增三类交互双引擎7/7（含预热）。最终变更后的宽范围导航组合尚未整体重跑，不宣称全矩阵通过。
 - 类型、116/116定向单测、生产构建、Chrome86静态校验通过；CSS静态提示104处未包裹 color-mix、31处Selectors Level4（前批29，增加2处产物选择器，待真实兼容对照）、1处容器查询、8处动效时长。未验证实际医院Chrome86、Linux全矩阵、真实验证码粘贴/提交、外链确认页及全部四主题像素对照。证据 /tmp/mrr-v12-special-{browser,final,target,unit,tsc3,build,chrome86}.log。
 - 本地9037持续运行，测试9041独立；不改API、数据库、权限、正式版本或远端草稿#850。临时配置及合成认证fixture不提交；证据迁出工作区。
+
+## V1.2 后台页头全站统一（2026-11-26）
+
+- 基线 30b8b550。系统设置、帮助中心迁入 MrrPageHeader + fluid MrrPageShell，其他后台页删除 size 分档；page-header.css 收口唯一几何。保留保存/重置/重新加载、权限状态、长说明、实时元信息与 plain/card 风格。独立登录、强制改密、公开状态和外部任务页保留专用壳。
+- 实际 26 路由 × Chromium/WebKit = 52 组几何；2400px 视口下均1720px宽、x=456、22px标题/13px描述/上下16px/左右20px，无溢出；设置、用户、帮助等90.39px高。数据关系说明及日志/错误中心元信息自然增高。用户、设置、帮助四主题五宽度共60组截图及几何通过。39/39浏览器用例（含预热），91/91定向单测，类型、生产构建与Chrome86静态门禁通过；存量103处color-mix提示、31处选择器、1处容器查询及8处动效时长提示。未执行真实Chrome86、全站四主题窄屏矩阵或全量Linux验收。
+- 证据 /tmp/mrr-header-unify-{browser,visual,unit,tsc-final,build,chrome86}.log；截图 /tmp/mrr-header-unify-screenshots。仅本地提交，9037持续运行，9041测试隔离，禁止推送/合并/发布。

@@ -551,7 +551,6 @@ watch(storageKey, loadPreferences, { immediate: true })
       不再占据页面最显眼的位置。
     -->
     <MrrPageHeader
-      size="compact"
       title="管理概览"
       :description="welcomeDescription"
     />

@@ -196,7 +196,6 @@ function typeLabel(value: unknown) {
 <template>
   <MrrPageShell class="records-page">
     <MrrPageHeader
-      size="compact"
       title="记录管理"
       eyebrow="Scan Records"
       description="默认按完整编号检索，也可选择兼容包含查询；结果分批加载，不做同步总数统计。"

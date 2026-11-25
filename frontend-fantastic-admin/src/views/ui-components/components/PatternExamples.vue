@@ -111,7 +111,7 @@ onBeforeUnmount(() => {
     -->
     <figure class="pattern-figure">
       <figcaption>
-        <strong>默认</strong>首页、监控、统计、运维诊断等「页头本身承载概览」的页面
+        <strong>统一规格 A</strong>系统与数据库监控
         <span v-if="headerHeights.default" class="pattern-measure">{{ headerHeights.default }}px</span>
       </figcaption>
       <div ref="defaultHeader" aria-hidden="true" class="pattern-sample">
@@ -120,15 +120,15 @@ onBeforeUnmount(() => {
     </figure>
     <figure class="pattern-figure">
       <figcaption>
-        <strong>紧凑 size="compact"</strong>查询列表、游标大表、存储浏览、审计、导入导出
+        <strong>统一规格 B</strong>记录管理
         <span v-if="headerHeights.compact" class="pattern-measure">{{ headerHeights.compact }}px</span>
       </figcaption>
       <div ref="compactHeader" aria-hidden="true" class="pattern-sample">
-        <MrrPageHeader size="compact" title="记录管理" :description="longDescription ? longText : shortText" />
+        <MrrPageHeader title="记录管理" :description="longDescription ? longText : shortText" />
       </div>
     </figure>
     <p class="example-note">
-      两种尺寸都按「标题在上、说明在下」显示；紧凑尺寸只改变卡片留白、字号与图标。当前为{{ titleStyle === 'plain' ? '页面同级风格，两种尺寸看起来相同' : '卡片风格' }}，可在「界面外观 → 页面标题风格」切换后对照。
+      所有业务页头采用同一尺寸，文案或操作换行时自然增高。当前为{{ titleStyle === 'plain' ? '页面同级风格' : '卡片风格' }}，可在「界面外观 → 页面标题风格」切换后对照。
     </p>
   </div>
 

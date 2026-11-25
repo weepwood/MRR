@@ -187,3 +187,9 @@ Manifest 两个选择器改 ElSelect，数值版本、空值、已加载异常�
 - FaPageMain：调查现有唯一引用 LinkView，当前常用外链菜单直接打开链接；未找到实际可达确认路由并建立视觉基线，撤回本轮容器替换，保留旧实现。ElScrollbar / ElInputOtp 未完成完整行为对照，不强制迁移。
 - 展厅新增专用滚动、PIN、紧凑动作与游标模拟。示例数据仅本地，不写入 API 或真实剪贴板；游标模式表达批次未知总数，非生产后端游标算法。现有业务路由和权限不改。
 - 导航链接明确 tabindex=0；视觉与导航用例隔离共享 Mock UI 设置。首轮两项 WebKit Tab 聚焦失败，后续复验通过；两项游标测试观察到 aria-checked=true 且实际批次已切换，但原生 input checked 读值不同，改为校验可访问状态加原有业务结果断言。
+
+## 全站后台页头唯一规格（2026-11-26）
+
+- 用户反馈系统设置与用户管理页头尺寸不同。基线 30b8b550：设置/帮助仍是手写容器，其他业务页采用 default/compact 分档。统一为 MrrPageShell fluid（1720px）及 MrrPageHeader，移除 size prop 与历史 page-header/help-header 选择器；保留设置操作、开发者徽标、帮助状态及各页元信息。标题22px、描述13px、card 上下16px/窄屏12px，左右共享 inset，无固定最小高度。plain 与 card 仍可切换。
+- 26个后台入口在 Chromium/WebKit 各完成一次 2400px 几何检查（52组），宽度1720px、x=456px、标题22px、说明13px、上下16px/左右20px、圆角12px，均无页头横向溢出；设置、用户、帮助等普通页头同为90.39px。数据关系长文案及日志/错误中心实时元信息自然增高，不人为裁剪。独立登录、强制改密、公开状态、身份查询和外部调阅不是后台业务页头，不修改。
+- Chromium 对用户、设置、帮助完成四主题×五视口（2400/1440/1024/760/375）共60组截图及几何检查，无超宽/操作越界；证据 /tmp/mrr-header-unify-screenshots 与 /tmp/mrr-header-unify-visual.log。设置分类、保存、异常恢复、plain/card、展厅等高断言均保留并改为真实公共组件定位。未做全26页四主题窄屏截图或 Chrome86 实机验收。

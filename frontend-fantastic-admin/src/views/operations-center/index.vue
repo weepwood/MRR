@@ -538,9 +538,7 @@ onMounted(async () => {
 
 <template>
   <MrrPageShell class="operations-center">
-    <!-- class="page-header"：保留 e2e/page-header-style.spec 对 .page-header h1 与卡片样式的断言入口（Nginx 浏览页同做法）。 -->
     <MrrPageHeader
-      class="page-header"
       eyebrow="Operations & Diagnostics"
       title="运维诊断中心"
       description="集中发现问题、执行维护、跳转处理、重新验证并保留操作记录。"

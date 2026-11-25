@@ -18,7 +18,7 @@ function card() {
       'MrrScanContentDialog': { props: ['scanId'], template: '<div data-test="image">{{ scanId }}</div>' },
       'OcrPanel': { props: { scanId: Number, inline: Boolean }, template: '<div data-test="ocr">{{ scanId }} {{ inline }}</div>' },
       'AppEmpty': true,
-      'AppError': { props: ['message'], template: '<p>{{ message }}</p>' },
+      'AppError': { name: 'AppError', props: ['message'], emits: ['retry'], template: '<p>{{ message }}<button @click="$emit(\'retry\')">重试</button></p>' },
       'el-skeleton': true,
       'el-button': { props: ['disabled'], template: '<button :disabled="disabled"><slot /></button>' },
     } },
@@ -72,6 +72,100 @@ describe('病案影像核对', () => {
     expect(api.getArchiveScanPage).toHaveBeenCalledOnce()
     wrapper.unmount()
   })
+  it('显式逐张跨组导航保持专注模式，选择下一组首张和上一组末张', async () => {
+    const first = { data: { archiveId: 1, rows: [row(11), row(12)], nextCursor: { pages: 1, id: 12 } } }
+    const second = { data: { archiveId: 1, rows: [row(13), row(14)], nextCursor: null } }
+    api.getArchiveScanPage.mockResolvedValueOnce(first).mockResolvedValueOnce(second).mockResolvedValueOnce(first)
+    const wrapper = card()
+    await flushPromises()
+    const button = (label: string) => wrapper.findAll('button').find(b => b.text() === label)!
+    await wrapper.findAll('.scan-row')[1].trigger('click')
+    await button('专注原图').trigger('click')
+    expect(button('下一张').attributes('disabled')).toBeUndefined()
+    await button('下一张').trigger('click')
+    await flushPromises()
+    expect(wrapper.get('[data-test="image"]').text()).toBe('13')
+    expect(wrapper.find('[data-test="ocr"]').exists()).toBe(false)
+    expect(api.getArchiveScanPage.mock.calls[1].slice(0, 2)).toEqual([1, { pages: 1, id: 12 }])
+    await button('上一张').trigger('click')
+    await flushPromises()
+    expect(wrapper.get('[data-test="image"]').text()).toBe('12')
+    expect(wrapper.find('[data-test="ocr"]').exists()).toBe(false)
+    wrapper.unmount()
+  })
+
+  it('跨组失败不显示旧原图，重试保留显式导航意图，普通翻组仍不选图', async () => {
+    const first = { data: { archiveId: 1, rows: [row(11)], nextCursor: { pages: 1, id: 11 } } }
+    const second = { data: { archiveId: 1, rows: [row(12)], nextCursor: null } }
+    api.getArchiveScanPage.mockResolvedValueOnce(first).mockRejectedValueOnce(new Error('synthetic failure')).mockResolvedValueOnce(second).mockResolvedValueOnce(first)
+    const wrapper = card()
+    await flushPromises()
+    const button = (label: string) => wrapper.findAll('button').find(b => b.text() === label)!
+    await wrapper.get('.scan-row').trigger('click')
+    await button('下一张').trigger('click')
+    await flushPromises()
+    expect(wrapper.find('[data-test="image"]').exists()).toBe(false)
+    expect(wrapper.text()).toContain('影像列表读取失败')
+    await button('重试').trigger('click')
+    await flushPromises()
+    expect(wrapper.get('[data-test="image"]').text()).toBe('12')
+    await button('上一页').trigger('click')
+    await flushPromises()
+    expect(wrapper.find('[data-test="image"]').exists()).toBe(false)
+    wrapper.unmount()
+  })
+
+  it('跨组途中换病案，旧导航响应不能自动打开新病案影像', async () => {
+    let resolve!: (value: unknown) => void
+    api.getArchiveScanPage.mockResolvedValueOnce({ data: { archiveId: 1, rows: [row(11)], nextCursor: { pages: 1, id: 11 } } })
+      .mockImplementationOnce(() => new Promise((r) => { resolve = r }))
+      .mockResolvedValueOnce({ data: { archiveId: 2, rows: [row(21, 2)], nextCursor: null } })
+    const wrapper = card()
+    await flushPromises()
+    await wrapper.get('.scan-row').trigger('click')
+    await wrapper.findAll('button').find(b => b.text() === '下一张')!.trigger('click')
+    expect(wrapper.find('[data-test="image"]').exists()).toBe(false)
+    await wrapper.setProps({ archiveId: 2 })
+    await flushPromises()
+    resolve({ data: { archiveId: 1, rows: [row(12)], nextCursor: null } })
+    await flushPromises()
+    expect(wrapper.get('.scan-row').text()).toContain('21')
+    expect(wrapper.find('[data-test="image"]').exists()).toBe(false)
+    wrapper.unmount()
+  })
+
+  it('实时数据变化导致相邻组为空时不选择旧影像或猜测下一游标', async () => {
+    api.getArchiveScanPage.mockResolvedValueOnce({ data: { archiveId: 1, rows: [row(11)], nextCursor: { pages: 1, id: 11 } } })
+      .mockResolvedValueOnce({ data: { archiveId: 1, rows: [], nextCursor: null } })
+    const wrapper = card()
+    await flushPromises()
+    await wrapper.get('.scan-row').trigger('click')
+    await wrapper.findAll('button').find(b => b.text() === '下一张')!.trigger('click')
+    await flushPromises()
+    expect(wrapper.find('[data-test="image"]').exists()).toBe(false)
+    expect(wrapper.findAll('button').find(b => b.text() === '下一页')!.attributes('disabled')).toBeDefined()
+    expect(wrapper.findAll('button').find(b => b.text() === '上一页')!.attributes('disabled')).toBeUndefined()
+    wrapper.unmount()
+  })
+
+  it('跨组途中会话改变后取消导航，不自动选择影像', async () => {
+    let resolve!: (value: unknown) => void
+    api.getArchiveScanPage.mockResolvedValueOnce({ data: { archiveId: 1, rows: [row(11)], nextCursor: { pages: 1, id: 11 } } })
+      .mockImplementationOnce(() => new Promise((r) => { resolve = r }))
+    const wrapper = card()
+    await flushPromises()
+    await wrapper.get('.scan-row').trigger('click')
+    await wrapper.findAll('button').find(b => b.text() === '下一张')!.trigger('click')
+    const signal = api.getArchiveScanPage.mock.calls[1][2] as AbortSignal
+    session.token = 'different-synthetic-session'
+    resolve({ data: { archiveId: 1, rows: [row(12)], nextCursor: null } })
+    await flushPromises()
+    expect(signal.aborted).toBe(true)
+    expect(wrapper.find('.scan-row').exists()).toBe(false)
+    expect(wrapper.find('[data-test="image"]').exists()).toBe(false)
+    wrapper.unmount()
+  })
+
   it.each([
     { rows: [row(12), row(11)], nextCursor: null },
     { rows: [row(11)], nextCursor: { pages: 2, id: 11 } },

@@ -123,6 +123,13 @@ FaIcon、FaKbd、FaPinInput、FaScrollArea、FaSmartFixedBlock、FaPasswordStren
 - 按钮64组行级真实前后对照（四主题×1440/760×默认/禁用/加载及尺寸），基线5/5（24.5s），首两轮1/5，定位Element Plus文字禁用背景!important覆盖辅助底色，局部恢复原中性背景而不修改普通文字按钮；第三轮5/5（27.7秒）。最大几何差1px仅按钮组相邻边缘，所测属性0差；64对同尺寸，RGB任一通道差>8比例中位0%、最大14.3231%（窄屏尺寸/按钮组），实际抽查外观相近，非像素完全相等。75/75样式测试、vue-tsc、lint通过；联合35/36（1.0m），唯一失败为独立验收夹具迁ElButton后未显式aria-busy；生产原Fa加载调用已显式传入。补齐夹具后交互专项7/7（20.3秒），保留原忙碌断言，未重跑全部36项。日志 /tmp/mrr-v12-base-controls-accessibility.log。
 - 证据目录 /tmp/mrr-v12-fields-visual-e4、/tmp/mrr-v12-buttons-visual-e4；日志 /tmp/mrr-v12-fields-{before,after,closure,unit,tsc}.log、/tmp/mrr-v12-buttons-{before,after,after2,after3,unit-final,tsc}.log、/tmp/mrr-v12-base-controls-closure.log。尚未验收无路由旧找回密码、文件上传/旧图片预览专用组件的完整交互与真实截图、医院Chrome86及全站跨浏览器。后续集中处理浮层、菜单与提示；不机械替换业务组合组件。
 
+## 提示与轻量气泡统一（2026-11-26）
+
+- #844精确head f6934742，base fc2a56f7，治理45649948054、质量45649947924（159文件1070/1070）、Pages45649947825（230/230路由、31/31定向浏览器）全部成功。自审评论/合并GraphQL异常、REST尝试响应不完整，最后查询仍OPEN，不能宣称合并。该分支基于已验收f6934742独立开发，须在#844确认合并且tree一致后重放，不绕过保护。
+- 8处FaTooltip、1处FaPopover迁移Element Plus，删除11个旧实现文件及类型，新增唯一归属守护。MrrTooltip为单一ElTooltip的薄策略封装，保留300/200/1000ms延迟、hover/focus、Escape不吞掉上层关闭、原触发节点及原有键盘激活。禁用时直接渲染触发器，防止EP覆盖导航分组aria-expanded/aria-controls。既有直接ElTooltip仍使用同一底层实现，其暗色/箭头等业务差异暂保留。Popover使用EP的定位/关闭，保留点击外部、Escape、固有宽度及12px碰撞余量。
+- 原基准首次采集节点消失、后续发现入场缩放95%，不使用不稳定数据；等待动画结束后的16对真实截图（四主题×1440/760×两浮层），基线5/5（24.1秒），初次替换尺寸5/5但窄屏Popover位置差约196~214px，新增实际位置断言，联合26/32（登录、展厅等通过，2处导航aria被覆盖、4组窄屏位置失败）。修复禁用分支与Popover固有宽度后最终定向10/10（35.7秒），16对同尺寸，所测相对x/y/宽高最大0px、圆角/颜色/背景/字号/留白/边框一致，RGB任一通道差>8比例全0%，非所有像素完全相等。单测80/80（76样式+4菜单），vue-tsc、lint通过。未重跑最终32全套、医院Chrome86及完整跨浏览器。日志/tmp/mrr-v12-tooltip-{before-stable,after,closure,final,unit,tsc2}.log，证据/tmp/mrr-v12-tooltip-stable-f693。
+- 本地检查点保留，未合并。后续先处理#844实际合并，再集中迁移Dialog/Drawer/Dropdown；保留账户、搜索与设置关闭及焦点语义。
+
 ## 逐文件原始引用清单
 
 | 源文件（相对 src/） | Fa 标签 | Element Plus 标签 |

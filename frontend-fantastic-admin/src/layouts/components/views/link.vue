@@ -29,11 +29,11 @@ function open() {
           </div>
           <!-- 复制链接改为真实按钮：原 div 无法用键盘聚焦和触发。 -->
           <button type="button" class="link-copy my-2 max-w-[300px] cursor-pointer text-center text-[14px] text-secondary-foreground/50" aria-label="复制链接" @click="route.meta.link && copy(route.meta.link)">
-            <FaTooltip text="复制链接">
+            <MrrTooltip content="复制链接">
               <div class="line-clamp-3">
                 {{ route.meta.link }}
               </div>
-            </FaTooltip>
+            </MrrTooltip>
           </button>
           <el-button type="primary" :auto-insert-space="false" class="mrr-button-flow my-4" @click="open">
             <FaIcon name="i-lucide:external-link" />

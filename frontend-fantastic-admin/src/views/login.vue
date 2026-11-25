@@ -359,14 +359,15 @@ onBeforeUnmount(() => {
                     >
                       <dt>
                         <span>{{ item.label }}</span>
-                        <FaTooltip
+                        <MrrTooltip
                           v-if="group.key === 'address' && item.label === '客户端 IP'"
-                          text="客户端 IP 由服务端识别；若与预期不符，请联系管理员核对反向代理配置。"
+                          aria-label="客户端 IP"
+                          content="客户端 IP 由服务端识别；若与预期不符，请联系管理员核对反向代理配置。"
                         >
                           <button type="button" class="environment-item-info" aria-label="客户端 IP 说明">
                             <FaIcon name="i-lucide:info" aria-hidden="true" />
                           </button>
-                        </FaTooltip>
+                        </MrrTooltip>
                       </dt>
                       <dd
                         :class="item.tone ? `tone-text-${item.tone}` : undefined"

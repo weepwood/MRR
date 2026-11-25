@@ -75,7 +75,7 @@ defineExpose({
     })"
   >
     <router-link v-slot="{ href, navigate }" custom :to="subMenu ? '' : uniqueKey.at(-1) ?? ''">
-      <FaTooltip :disabled="!rootMenu.isMenuPopup || level !== 0 || subMenu" :text="title" :side="rootMenu.props.mode === 'vertical' ? 'right' : 'bottom'" class="h-full w-full">
+      <MrrTooltip :disabled="!rootMenu.isMenuPopup || level !== 0 || subMenu" :content="title" :placement="rootMenu.props.mode === 'vertical' ? 'right' : 'bottom'" class="h-full w-full">
         <component
           :is="subMenu ? 'button' : 'a'" v-bind="{
             ...(subMenu && { 'type': 'button', 'aria-expanded': expand, 'aria-controls': popupId }),
@@ -124,7 +124,7 @@ defineExpose({
             })"
           />
         </component>
-      </FaTooltip>
+      </MrrTooltip>
     </router-link>
   </div>
 </template>

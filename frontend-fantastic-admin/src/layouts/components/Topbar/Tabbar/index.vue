@@ -198,7 +198,7 @@ onUnmounted(() => {
               <div class="size-full">
                 <div class="tab-dividers" />
                 <div class="tab-background" />
-                <FaTooltip :delay="1000" side="bottom">
+                <MrrTooltip :show-after="1000" placement="bottom">
                   <div class="tab-content">
                     <div :key="element.tabId" class="title" :class="{ 'title--has-action': tabbarStore.list.length > 1 }">
                       <FaIcon v-if="settingsStore.settings.tabbar.enableIcon && element.icon" :name="element.icon" class="icon" />
@@ -223,7 +223,7 @@ onUnmounted(() => {
                       {{ element.fullPath }}
                     </div>
                   </template>
-                </FaTooltip>
+                </MrrTooltip>
               </div>
             </FaContextMenu>
           </div>

@@ -302,3 +302,14 @@ test('Nginx 默认关闭时禁止校验，显式检查仅发送固定请求', as
   await expect(page.getByText('退出码 1', { exact: false })).toBeVisible()
   expect(calls).toBe(1)
 })
+
+test('持久存储熔断事件区分真实状态机事件与采样变化', async ({ page }) => {
+  await page.goto('/operations-center')
+  await expect(page.getByRole('heading', { name: '持久存储熔断事件' })).toBeVisible()
+  await expect(page.getByText('已采集 5 条事件。', { exact: false })).toBeVisible()
+  await expect(page.getByRole('cell', { name: '仅元数据成功', exact: true })).toBeVisible()
+  const response = page.waitForResponse(r => r.url().includes('/storage-circuit-history') && r.url().includes('hours=168'))
+  await page.getByText('近 7 天', { exact: true }).click()
+  expect((await (await response).json()).data.hours).toBe(168)
+  await expect(page.getByRole('cell', { name: '节点恢复', exact: true })).toBeVisible()
+})

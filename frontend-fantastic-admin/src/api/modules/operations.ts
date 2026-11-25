@@ -412,3 +412,24 @@ export function getNginxConfigStatus(signal?: AbortSignal) {
 export function checkNginxConfig(signal?: AbortSignal) {
   return unwrap(postRequest<NginxConfigCheck>('/api/v1/operations/nginx/check', undefined, { signal, retry: false, skipGlobalError: true }), 'Nginx 配置校验')
 }
+
+export interface StorageCircuitEvent {
+  circuitId: string
+  sequence: number
+  sourceKind: 'NAS' | 'HTTP' | 'NGINX' | 'OSS'
+  nodeOrdinal: number
+  eventType: 'OPENED' | 'PROBE_STARTED' | 'METADATA_ONLY' | 'RECOVERED'
+  occurredAt: string
+  collectedAt: string
+}
+
+export interface StorageCircuitHistory {
+  enabled: boolean
+  hours: number
+  truncated: boolean
+  events: StorageCircuitEvent[]
+}
+
+export function getStorageCircuitHistory(hours: 24 | 168, signal?: AbortSignal) {
+  return unwrap(getRequest<StorageCircuitHistory>('/api/v1/operations/storage-circuit-history', { params: { hours }, signal, skipGlobalError: true }), '存储熔断历史')
+}

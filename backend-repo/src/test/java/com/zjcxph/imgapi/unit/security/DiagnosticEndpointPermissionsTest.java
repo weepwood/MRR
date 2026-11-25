@@ -174,6 +174,27 @@ class DiagnosticEndpointPermissionsTest {
     }
 
     @Test
+    void persistentCircuitHistoryRequiresSystemReadAndNoStore() throws Exception {
+        var service=mock(StorageCircuitHistoryService.class);
+        var controller=new com.zjcxph.imgapi.controller.StorageCircuitHistoryController(service);
+        var handler=new HandlerMethod(controller,controller.getClass().getMethod("history",int.class,jakarta.servlet.http.HttpServletResponse.class));
+        var auth=new AuthorizationInterceptor();
+        String path="/api/v1/operations/storage-circuit-history";
+        var anonymous=new MockHttpServletResponse();
+        assertThat(auth.preHandle(new MockHttpServletRequest("GET",path),anonymous,handler)).isFalse();
+        assertThat(anonymous.getStatus()).isEqualTo(401);
+        var forbidden=new MockHttpServletResponse();
+        assertThat(auth.preHandle(request("GET",path,List.of("record:read")),forbidden,handler)).isFalse();
+        assertThat(forbidden.getStatus()).isEqualTo(403);
+        assertThat(auth.preHandle(request("GET",path,List.of("system:read")),new MockHttpServletResponse(),handler)).isTrue();
+        verifyNoInteractions(service);
+        var response=new MockHttpServletResponse();
+        controller.history(24,response);
+        verify(service).history(24);
+        assertThat(response.getHeader("Cache-Control")).isEqualTo("private, no-store");
+    }
+
+    @Test
     void archiveScanPageRequiresBothReadPermissionsAndNoStore() throws Exception {
         var service=mock(DataRelationService.class);
         var controller=new com.zjcxph.imgapi.controller.DataRelationController(service);

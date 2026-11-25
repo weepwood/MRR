@@ -410,6 +410,10 @@
 
 - #808 最新830ff23a 完整候选45548967642及Windows恢复/Pages/治理/pr-gate通过，已合并7b28a5d5，远端树一致。集中吸收Nginx两批增量，新分支 feat/v1.1-gateway-diagnostics；[Windows网关观察](v1.1-windows-gateway-observation.md) 增加固定本地服务状态及已核验进程的TCP监听，只读、默认关闭、无网络探测和启停；服务名与进程监听独立。实际Windows Server现场尚未验证，#636保持开放。main冻结。
 
+## 21 #809 PostgreSQL CI 连接池治理（2026-11-25）
+
+- #809 后端45552190741 真实失败为日志分区锁测试连接耗尽。测试共享 Hikari minIdle=0/maxPool=4；隔离PG16.16 max_connections=100 原失败用例通过，177/178，唯一剩余本机无Docker导致第二实例用例不可执行，不跳过，远端必须完整验收。详见Windows网关专项。main冻结。
+
 ## 每轮交接模板
 
 - 更新时间、任务、风险、目标及非目标：

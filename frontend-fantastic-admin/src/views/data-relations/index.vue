@@ -59,6 +59,7 @@ const selectedArchive = ref<ArchiveSearchResult | null>(null)
 const searchError = ref(false)
 const searchCompleted = ref(false)
 const detailError = ref(false)
+const detailRegion = ref<HTMLElement>()
 let searchVersion = 0
 let detailVersion = 0
 let overviewVersion = 0
@@ -319,6 +320,13 @@ async function openArchive(row: ArchiveSearchResult) {
   }
 }
 
+function focusArchiveSection(section: string) {
+  const target = detailRegion.value?.querySelector<HTMLElement>(`[data-archive-section="${section}"]`)
+  if (!target) return
+  target.focus({ preventScroll: true })
+  target.scrollIntoView({ block: 'start', behavior: 'auto' })
+}
+
 function retryArchive() {
   if (selectedArchive.value) void openArchive(selectedArchive.value)
 }
@@ -525,35 +533,45 @@ onMounted(() => {
       </el-tab-pane>
 
       <el-tab-pane label="病案工作台" name="archive">
-        <div class="archive-stack">
-          <MrrSectionCard class="search-card" title="查找病案" description="选择编号类型，查询病案主档及其跨表关系。">
-            <div class="search-row">
-              <div class="search-field search-field--type">
-                <label for="relation-search-type">查询类型</label>
-                <el-select id="relation-search-type" v-model="searchType" class="search-type" aria-label="查询类型">
-                  <el-option label="病案主档 ID" value="ARCHIVE_ID" />
-                  <el-option label="病案号 BAH" value="BAH" />
-                  <el-option label="上架号 SJH" value="SJH" />
-                </el-select>
+        <div class="archive-stack" :class="{ 'archive-stack--workspace': archiveOnly }">
+          <div class="archive-search-rail" :class="{ 'archive-search-rail--legacy': !archiveOnly }" role="region" aria-label="病案检索及候选">
+            <MrrSectionCard title="查找病案" :description="archiveOnly ? undefined : '选择编号类型，查询病案主档及其跨表关系。'">
+              <div class="search-row">
+                <div class="search-field search-field--type">
+                  <label for="relation-search-type">查询类型</label>
+                  <el-select id="relation-search-type" v-model="searchType" class="search-type" aria-label="查询类型">
+                    <el-option label="病案主档 ID" value="ARCHIVE_ID" />
+                    <el-option label="病案号 BAH" value="BAH" />
+                    <el-option label="上架号 SJH" value="SJH" />
+                  </el-select>
+                </div>
+                <div class="search-field search-field--value">
+                  <label for="relation-search-value">查询值</label>
+                  <el-input id="relation-search-value" v-model="searchValue" aria-label="病案查询值" clearable placeholder="输入主档 ID、病案号或上架号" @keyup.enter="searchArchives" />
+                </div>
+                <MrrFilterActionButton type="primary" action="search" :pending="searchLoading" :busy="searchLoading" @click="searchArchives">
+                  查询
+                </MrrFilterActionButton>
               </div>
-              <div class="search-field search-field--value">
-                <label for="relation-search-value">查询值</label>
-                <el-input
-                  id="relation-search-value"
-                  v-model="searchValue"
-                  aria-label="病案查询值"
-                  clearable
-                  placeholder="输入主档 ID、病案号或上架号"
-                  @keyup.enter="searchArchives"
-                />
+            </MrrSectionCard>
+            <MrrSectionCard v-if="archiveOnly" title="病案主档候选" :description="searchCompleted ? `本次返回 ${searchResults.length} 条，最多 20 条` : '按编号检索后选择病案'">
+              <AppLoading v-if="searchLoading" />
+              <AppError v-else-if="searchError" message="病案查询失败，请重试" @retry="searchArchives" />
+              <AppEmpty v-else-if="!searchResults.length" size="compact" :description="searchCompleted ? '当前条件未找到病案主档' : '等待检索'" />
+              <div v-else class="archive-candidates">
+                <button v-for="candidate in searchResults" :key="candidate.id" type="button" class="archive-candidate" :aria-pressed="selectedArchive?.id === candidate.id" :aria-label="`查看病案主档 ${candidate.id} 的关系`" @click="openArchive(candidate)">
+                  <span class="candidate-heading"><strong>{{ candidate.bah || '未记录病案号' }}</strong><small>#{{ candidate.id }}</small></span>
+                  <span>{{ candidate.patientName || '未记录姓名' }} · {{ candidate.department || '—' }}</span>
+                  <small>上架号 {{ candidate.sjh || '—' }} · {{ candidate.scanCount ?? '未知' }} 张扫描</small>
+                  <el-tag size="small" effect="plain" :type="candidate.matchType === 'EXACT' ? 'success' : 'warning'">
+                    {{ candidate.matchType === 'EXACT' ? '精确匹配' : '格式差异' }}
+                  </el-tag>
+                </button>
               </div>
-              <MrrFilterActionButton type="primary" action="search" :pending="searchLoading" :busy="searchLoading" @click="searchArchives">
-                查询
-              </MrrFilterActionButton>
-            </div>
-          </MrrSectionCard>
+            </MrrSectionCard>
+          </div>
 
-          <MrrSectionCard v-if="searchResults.length" class="section-card" title="病案主档候选" description="精确匹配优先；仅前导零差异标记为格式差异（FORMAT_ONLY）">
+          <MrrSectionCard v-if="!archiveOnly && searchResults.length" class="section-card" title="病案主档候选" description="精确匹配优先；仅前导零差异标记为格式差异（FORMAT_ONLY）">
             <el-table :data="searchResults" highlight-current-row @row-click="openArchive">
               <el-table-column prop="id" label="主档 ID" width="120" />
               <el-table-column prop="bah" label="病案号（BAH）" min-width="150" />
@@ -577,10 +595,10 @@ onMounted(() => {
               </el-table-column>
             </el-table>
           </MrrSectionCard>
-          <AppError v-else-if="searchError" message="病案查询失败，请重试" @retry="searchArchives" />
-          <AppEmpty v-else-if="searchCompleted && !searchLoading" icon="i-lucide:search-x" description="当前条件未找到病案主档" />
+          <AppError v-else-if="!archiveOnly && searchError" message="病案查询失败，请重试" @retry="searchArchives" />
+          <AppEmpty v-else-if="!archiveOnly && searchCompleted && !searchLoading" icon="i-lucide:search-x" description="当前条件未找到病案主档" />
 
-          <div v-loading="detailLoading" class="archive-detail-stack">
+          <div ref="detailRegion" v-loading="detailLoading" class="archive-detail-stack">
             <p v-if="detailLoading && selectedArchive" class="archive-detail-status" role="status">
               正在加载病案主档 #{{ selectedArchive.id }} 的关系…
             </p>
@@ -641,12 +659,34 @@ onMounted(() => {
                 show-icon
               />
 
-              <ArchiveScanInspector v-if="archiveOnly && selectedArchive && hasPermission('record:read')" :key="`scan-${selectedArchive.id}`" :archive-id="selectedArchive.id" />
+              <nav v-if="archiveOnly" class="archive-section-nav" aria-label="病案详情分区">
+                <el-button v-if="hasPermission('record:read')" @click="focusArchiveSection('images')">
+                  影像核对
+                </el-button>
+                <el-button v-if="hasPermission('record:read')" @click="focusArchiveSection('manifest')">
+                  文件完整性
+                </el-button>
+                <el-button v-if="canRepair" @click="focusArchiveSection('repairs')">
+                  修复工单
+                </el-button>
+                <el-button @click="focusArchiveSection('comparison')">
+                  字段对比
+                </el-button>
+                <el-button @click="focusArchiveSection('records')">
+                  关联记录
+                </el-button>
+              </nav>
+              <section v-if="archiveOnly && selectedArchive && hasPermission('record:read')" data-archive-section="images" tabindex="-1" aria-label="影像核对分区">
+                <ArchiveScanInspector :key="`scan-${selectedArchive.id}`" :archive-id="selectedArchive.id" />
+              </section>
+              <section v-if="selectedArchive && hasPermission('system:read') && hasPermission('record:read')" data-archive-section="manifest" tabindex="-1" aria-label="文件完整性分区">
+                <ArchiveManifestCard :key="selectedArchive.id" :archive-id="selectedArchive.id" />
+              </section>
+              <section v-if="selectedArchive && canRepair" data-archive-section="repairs" tabindex="-1" aria-label="修复工单分区">
+                <RepairOrderPanel :key="`repair-${selectedArchive.id}`" :archive-id="selectedArchive.id" />
+              </section>
 
-              <ArchiveManifestCard v-if="selectedArchive && hasPermission('system:read') && hasPermission('record:read')" :key="selectedArchive.id" :archive-id="selectedArchive.id" />
-              <RepairOrderPanel v-if="selectedArchive && canRepair" :key="`repair-${selectedArchive.id}`" :archive-id="selectedArchive.id" />
-
-              <MrrSectionCard class="section-card" title="跨表字段对比" description="区分完全一致、仅前导零差异、字段缺失和真实冲突">
+              <MrrSectionCard data-archive-section="comparison" tabindex="-1" class="section-card" title="跨表字段对比" description="区分完全一致、仅前导零差异、字段缺失和真实冲突">
                 <el-table :data="relationDetail.comparisons" stripe>
                   <el-table-column prop="field" label="字段" width="120" />
                   <el-table-column prop="canonicalValue" label="mr_archive" min-width="150" />
@@ -660,7 +700,7 @@ onMounted(() => {
                 </el-table>
               </MrrSectionCard>
 
-              <el-tabs class="detail-tabs" type="border-card">
+              <el-tabs data-archive-section="records" tabindex="-1" class="detail-tabs" type="border-card">
                 <el-tab-pane :label="`统计记录 (${relationDetail.statistics.length})`">
                   <el-table :data="relationDetail.statistics" max-height="420">
                     <el-table-column prop="id" label="ID" width="90" />
@@ -706,7 +746,7 @@ onMounted(() => {
                 </el-tab-pane>
               </el-tabs>
             </template>
-            <AppEmpty v-else-if="!searchLoading && !searchError && (!searchCompleted || searchResults.length)" icon="i-lucide:git-fork" description="查询并选择一份病案后查看跨表关系" />
+            <AppEmpty v-else-if="!searchLoading && (archiveOnly || (!searchError && (!searchCompleted || searchResults.length)))" icon="i-lucide:git-fork" description="查询并选择一份病案后查看跨表关系" />
           </div>
         </div>
       </el-tab-pane>
@@ -908,6 +948,103 @@ p {
   grid-template-columns: minmax(0, 1fr);
   gap: var(--mrr-space-4);
   min-width: 0;
+}
+
+/* The standalone workspace keeps search context beside the current record. */
+.archive-stack--workspace {
+  grid-template-columns: minmax(220px, 260px) minmax(0, 1fr);
+  align-items: start;
+}
+
+.archive-search-rail {
+  display: grid;
+  gap: var(--mrr-space-3);
+  min-width: 0;
+}
+
+.archive-search-rail:not(.archive-search-rail--legacy) .search-row {
+  flex-direction: column;
+  align-items: stretch;
+}
+
+.archive-search-rail:not(.archive-search-rail--legacy) .search-field {
+  flex: 0 1 auto;
+}
+
+.archive-candidates {
+  display: grid;
+  gap: var(--mrr-space-2);
+  max-height: 540px;
+  overflow: auto;
+}
+
+.archive-candidate {
+  display: grid;
+  gap: var(--mrr-space-1);
+  justify-items: start;
+  min-width: 0;
+  padding: var(--mrr-space-3);
+  color: var(--el-text-color-regular);
+  text-align: left;
+  overflow-wrap: anywhere;
+  cursor: pointer;
+  background: var(--el-fill-color-blank);
+  border: 1px solid var(--el-border-color-light);
+  border-radius: var(--el-border-radius-base);
+}
+
+.archive-candidate[aria-pressed="true"] {
+  background: var(--el-color-primary-light-9);
+  border-color: var(--el-color-primary);
+}
+
+.archive-candidate:focus-visible,
+[data-archive-section]:focus-visible {
+  outline: 2px solid var(--el-color-primary);
+  outline-offset: -2px;
+}
+
+.candidate-heading {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--mrr-space-2);
+  align-items: baseline;
+  justify-content: space-between;
+  width: 100%;
+}
+
+.archive-candidate small {
+  color: var(--el-text-color-secondary);
+}
+
+.archive-section-nav {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--mrr-space-2);
+  padding: var(--mrr-space-2);
+  background: var(--el-fill-color-light);
+  border: 1px solid var(--el-border-color-light);
+  border-radius: var(--mrr-radius-card);
+}
+
+.archive-section-nav :deep(.el-button + .el-button) {
+  margin-left: 0;
+}
+
+[data-archive-section] {
+  min-width: 0;
+  scroll-margin-top: 16px;
+}
+
+@media (max-width: 1050px) {
+  .archive-stack--workspace {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .archive-candidates {
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 190px), 1fr));
+    max-height: 250px;
+  }
 }
 
 .relation-grid {

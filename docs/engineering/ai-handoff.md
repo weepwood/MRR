@@ -410,6 +410,10 @@
 
 - #808 最新830ff23a 完整候选45548967642及Windows恢复/Pages/治理/pr-gate通过，已合并7b28a5d5，远端树一致。集中吸收Nginx两批增量，新分支 feat/v1.1-gateway-diagnostics；[Windows网关观察](v1.1-windows-gateway-observation.md) 增加固定本地服务状态及已核验进程的TCP监听，只读、默认关闭、无网络探测和启停；服务名与进程监听独立。实际Windows Server现场尚未验证，#636保持开放。main冻结。
 
+## 21 V1.1 病案工作台布局及影像导航（2026-11-25）
+
+- 后续分支 feat/v1.1-archive-workbench-layout，详见 [病案工作台布局及导航](v1.1-archive-workbench-layout.md)：独立工作台双栏、候选高亮、分区焦点、当前组影像导航、专注原图及严格游标；旧入口兼容。26组件、5 Chromium含预热、390px窄屏通过。#809实际后端连接耗尽，独立worktree v1.1-gateway-ci处理测试池；待完整PG及远端门禁通过再合并，不重复创建依赖PR。main冻结。
+
 ## 每轮交接模板
 
 - 更新时间、任务、风险、目标及非目标：

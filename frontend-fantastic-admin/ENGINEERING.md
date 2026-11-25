@@ -88,7 +88,7 @@ src/
 | 目录 | 职责 | 约束 |
 |------|------|------|
 | `api/modules/` | 每个后端领域一个文件 | 文件名与后端 API 对应，如 `records.ts` → `/api/v1/scan/*` |
-| `views/` | 每个路由一个目录 | 默认由 `router/routes.ts` 静态表注册 (`routeBaseOn: 'frontend'`)；切换为 `filesystem` 时才由 `vite-plugin-pages` 生成，目录名 kebab-case |
+| `views/` | 每个路由一个目录 | 由 `router/routes.ts` 显式注册，目录名 kebab-case；旧路由模式配置兼容归一为 frontend |
 | `components/` | 业务复用组件 | 每个组件一个目录，`index.vue` 为入口 |
 | `ui/components/` | Fa* 通用 UI 组件 | 遵循框架组件设计规范 |
 | `store/modules/` | 每个领域一个 Store | 组合式 API (`defineStore('name', () => {})`) |
@@ -367,7 +367,7 @@ export const useSomeStore = defineStore('some', () => {
 
 ### 6.1 路由定义 (`router/routes.ts`)
 
-默认配置为 `settings.app.routeBaseOn: 'frontend'`，路由以 `router/routes.ts` 的静态表为准；切换为 `'filesystem'` 时才由 `vite-plugin-pages` 依据 `src/views/` 生成（并过滤部分路径）。两种模式都在守卫中通过 `router.addRoute('layout', childRoute)` 动态注册。以下代码为节选，完整定义见 `router/routes.ts`。
+当前唯一受支持的注册方式为显式 `frontend` 路由表 `router/routes.ts`。历史 filesystem/backend 配置兼容归一为 frontend，守卫通过 `router.addRoute('layout', childRoute)` 动态注册已审核业务路由。以下代码为节选，完整定义见 `router/routes.ts`。
 
 ```typescript
 // 常量路由 (无需登录)

@@ -60,7 +60,7 @@ src/
 ├── store/modules/  # Pinia stores (user, settings, menu, route, tabbar, keepAlive)
 ├── ui/             # Fa* 通用 UI 组件库 (41个组件) + shadcn-vue 组件
 ├── utils/          # 工具函数 + composables + directives
-└── views/          # 页面组件 (vite-plugin-pages 自动注册, kebab-case 目录名)
+└── views/          # 页面组件（router/routes.ts 显式注册，kebab-case 目录名）
 ```
 
 ### Key Patterns

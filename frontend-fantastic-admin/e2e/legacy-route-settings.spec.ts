@@ -21,3 +21,18 @@ test('旧文件系统路由配置回到显式业务菜单，深链刷新正常�
   await expect(page.getByRole('heading', { name: '运维诊断中心', exact: true })).toBeVisible()
   expect(warnings).toEqual([])
 })
+
+test('系统信息仅显示必要的运行时依赖与构建身份', async ({ page }) => {
+  await page.goto('/archive-workbench')
+  await expect(page.getByRole('heading', { name: '病案工作台', exact: true })).toBeVisible()
+  await page.keyboard.press('Control+i')
+  const panel = page.getByRole('dialog', { name: '系统信息' })
+  await expect(panel).toBeVisible()
+  await expect(panel.getByText('Git Commit', { exact: true })).toBeVisible()
+  await expect(panel.getByText('最低迁移版本', { exact: true })).toBeVisible()
+  await expect(panel.getByText('主要运行时依赖（声明版本范围）')).toBeVisible()
+  await expect(panel.getByText('vue', { exact: true })).toBeVisible()
+  await expect(panel.getByText('开发环境依赖', { exact: true })).toHaveCount(0)
+  await expect(panel.getByText('vite-plugin-pages', { exact: true })).toHaveCount(0)
+  await expect(panel.getByText('@playwright/test', { exact: true })).toHaveCount(0)
+})

@@ -29,7 +29,6 @@
         <mybatis.version>4.1.0</mybatis.version>
         <java-jwt.version>4.6.2</java-jwt.version>
         <springdoc.version>3.2.0</springdoc.version>
-        <resilience4j.version>2.4.0</resilience4j.version>
         <itextpdf.version>9.8.1</itextpdf.version>
         <commons-codec.version>1.22.0</commons-codec.version>
         <aws-sdk.version>2.59.5</aws-sdk.version>
@@ -111,13 +110,6 @@
             <groupId>org.springdoc</groupId>
             <artifactId>springdoc-openapi-starter-webmvc-ui</artifactId>
             <version>${springdoc.version}</version>
-        </dependency>
-
-        <!-- Resilience -->
-        <dependency>
-            <groupId>io.github.resilience4j</groupId>
-            <artifactId>resilience4j-ratelimiter</artifactId>
-            <version>${resilience4j.version}</version>
         </dependency>
 
         <!-- PDF Processing -->
@@ -261,8 +253,6 @@
                 <artifactId>maven-compiler-plugin</artifactId>
                 <configuration>
                     <release>${java.version}</release>
-                    <source>${java.version}</source>
-                    <target>${java.version}</target>
                     <encoding>${project.build.sourceEncoding}</encoding>
                     <annotationProcessorPaths>
                         <path>

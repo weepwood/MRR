@@ -64,6 +64,30 @@ async function smokePagesDemo() {
     assert.ok(Object.keys(uiSettings.data).every(key => key === 'adminAppSettings'), 'UI设置接口只暴露界面配置')
     const queryDiagnostics = await page.evaluate(() => fetch('/proxy/api/v1/operations/query-diagnostics', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ bah: 'synthetic' }) }).then(response => response.json()))
     assert.equal(queryDiagnostics.code, 503, '静态演示不得伪造数据库诊断结果')
+    const demoBrowse = await page.evaluate(async () => {
+      const get = path => fetch('/proxy/api/v1/system/database/browse/tables' + path).then(response => response.json())
+      const tables = await get('')
+      const schema = await get('/scan')
+      const first = await get('/scan/rows?page=1&size=50')
+      const second = await get('/scan/rows?page=2&size=50&cursor=' + encodeURIComponent(first.data.nextCursor))
+      const filtered = await get('/scan/rows?filter=' + encodeURIComponent('bah:EQ:26070000'))
+      const unknown = await get('/unknown')
+      return { tables, schema, first, second, filtered, unknown }
+    })
+    assert.equal(demoBrowse.tables.data.length, 2)
+    assert.equal(demoBrowse.schema.data.maxPageSize, 50)
+    assert.equal(demoBrowse.first.data.rows.length, 50)
+    assert.equal(demoBrowse.second.data.rows.length, 14)
+    assert.equal(new Set([...demoBrowse.first.data.rows, ...demoBrowse.second.data.rows].map(row => row.id)).size, 64)
+    assert.equal(demoBrowse.filtered.data.rows.length, 2)
+    assert.ok(demoBrowse.filtered.data.rows.every(row => row.bah === '26****00'))
+    assert.equal(demoBrowse.unknown.code, 404)
+    const denied = await page.evaluate(async () => {
+      const call = (path, method = 'GET') => fetch('/proxy/api/v1/' + path, { method }).then(response => response.json())
+      return Promise.all([call('external/archive/session','POST'), call('external/archive/context'), call('external/archive/images'), call('auth/users','POST'), call('auth/password/required-change','POST'), call('search/archive-cases','POST'), call('patients/1','PUT'), call('data-exchange/patients/import','POST')])
+    })
+    assert.ok(denied.every(result => result.code === 503 && result.data === undefined), '不得伪造真实认证或医疗写入成功')
+
 
 
 

@@ -3,6 +3,7 @@
 import type { AuthRole, AuthUserUpdatePayload } from '@/api/types'
 import type { CredentialAwareUser, UserCredentialResult } from '@/api/user-credential-types'
 import type { MrrTableAction } from '@/components/MrrTableActions/types'
+import { useMediaQuery } from '@vueuse/core'
 import { ElMessage } from 'element-plus'
 import { KeyRound } from 'lucide-vue-next'
 import apiUser from '@/api/modules/user'
@@ -43,6 +44,7 @@ const total = ref(0)
 const page = ref(1)
 const size = ref(20)
 const pageSizes = [10, 20, 50, 100] as const
+const compactPagination = useMediaQuery('(max-width: 760px)')
 const nextPageSize = computed(() => pageSizes[(pageSizes.findIndex(value => value === size.value) + 1) % pageSizes.length]!)
 const paginationLayout = computed(() => total.value > size.value
   ? 'total, slot, prev, pager, next, jumper'
@@ -720,7 +722,7 @@ onMounted(loadData)
       </el-table>
 
       <template #pagination>
-        <el-pagination v-model:current-page="page" v-model:page-size="size" class="users-pagination" :total="total" :layout="paginationLayout" :disabled="loading" @current-change="handlePageChange">
+        <el-pagination v-model:current-page="page" v-model:page-size="size" class="users-pagination" :total="total" :pager-count="compactPagination ? 5 : 7" :layout="paginationLayout" :disabled="loading" @current-change="handlePageChange">
           <el-button
             text
             class="users-pagination__size"
@@ -906,6 +908,7 @@ onMounted(loadData)
   padding: 0 var(--mrr-space-2);
   margin-right: var(--mrr-space-2);
   font-size: var(--mrr-font-size-xs);
+  font-variant-numeric: tabular-nums;
   font-weight: 400;
   color: var(--mrr-muted-foreground);
   border: 0;
@@ -953,10 +956,13 @@ onMounted(loadData)
   .users-pagination .users-pagination__size.el-button { grid-row: 1; grid-column: 3 / -1; justify-self: end; margin-right: 0; }
 
   .users-table-panel :deep(.users-pagination.el-pagination) {
-    --el-pagination-button-width: 32px;
+    --el-pagination-button-width: 28px;
     --el-pagination-button-height: 32px;
   }
-  .users-pagination :deep(.btn-prev), .users-pagination :deep(.btn-next), .users-pagination :deep(.el-pager li) { min-width: 32px; height: 32px; line-height: 32px; }
+  .users-pagination :deep(.btn-prev), .users-pagination :deep(.btn-next), .users-pagination :deep(.el-pager li) { min-width: 28px; height: 32px; line-height: 32px; }
   .credential-actions { flex-direction: column; }
+}
+@media (max-width: 360px) {
+  .users-pagination .users-pagination__size.el-button { grid-column: 2 / -1; }
 }
 </style>

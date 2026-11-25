@@ -734,3 +734,7 @@
 ## 全站业务弹窗与分页微交互（2026-11-26）
 
 基线 2ce2ad95。MrrDialog 默认 business 外观、水平垂直居中；ActionDialog 和剩余五个用户管理弹窗复用已有封装，14处直接 ElDialog 启用原生 align-center 并共享 overlay-shells.css 外壳，原宽度、回调及业务权限不变。移除原固定5vh及局部双层边距，长内容内部滚动。个人设置与导航搜索保留 custom，搜索保留顶部命令面板位置；抽屉与直接 ElMessageBox 确认框未迁移。拒绝确认采用 danger。分页统一页码4px间距，原生 jumper 无边框数字静止态，实际 focus-within 控制编辑样式，窄屏同导航区，保留原分页请求；返回顶部24px→16px，不改点击区域。弹窗双浏览器25/25含预热，含四主题48组申请弹窗几何、拒绝校验、凭据、诊断与运行设置。分页首轮3通过2失败（原生内部焦点类残留），调整焦点判定并模拟点击外部后复验5/5含预热，含真实跳页及键盘返回顶部。定向单测30/30，类型及样式检查。日志 /tmp/mrr-dialog-global-*.log、/tmp/mrr-dialog-pagination-final-*.log、/tmp/mrr-pagination-refine-*.log。未逐一打开全部原生业务弹窗，未运行全量CI/生产构建及Chrome86实机。仅本地9037，不改后端、不推送、不发布。
+
+## 分页数字排版与大量页码（2026-11-26）
+
+基线264e6605。公共 data-display.css 清除 Element Plus 默认16px重复间距，页码4px、桌面组间12px，等宽数字，跳页保留原生焦点编辑与范围校验。用户管理采用既有 VueUse useMediaQuery 切换原生 pager-count 7/5，省略号另计最多2项，360px及以下跳页独立换行。类型检查初次缺少导入已修正。原窄屏双引擎回归2/2，新矩阵两引擎各44组（2/50/500/5000页、1440/768/375/320px、首中尾页），数量断言按原生数字与省略号规则修正，最终请求清理等待后2/2。证据 /tmp/mrr-pagination-spacing-{recheck,final2-browser,tsc-final}.log。未增加永久Mock数据、未全量CI/构建/Chrome86实机。仅本地，不推送或发布。

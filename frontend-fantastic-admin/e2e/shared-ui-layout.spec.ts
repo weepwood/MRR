@@ -170,3 +170,54 @@ test('窄屏大量分页的前后翻页按钮与页码保持同一导航区', as
   }
   await page.unrouteAll({ behavior: 'wait' })
 })
+
+test('分页数字间距在两页至数千页及宽窄屏下保持稳定', async ({ page }) => {
+  test.setTimeout(90_000)
+  let total = 28
+  await page.route('**/api/v1/auth/users?**', async (route) => {
+    const response = await route.fetch()
+    const body = await response.json()
+    body.data.total = total
+    await route.fulfill({ response, json: body })
+  })
+  await page.setViewportSize({ width: 1440, height: 900 })
+  await openUsers(page)
+  const footer = page.locator('.mrr-data-table-panel__pagination')
+  const pager = footer.locator('.el-pager')
+  const jump = footer.locator('.el-pagination__jump input')
+  for (const count of [28, 1000, 10000, 100000]) {
+    total = count
+    await page.reload()
+    await expect(footer.locator('.el-pagination__total')).toContainText(String(count))
+    const last = Math.ceil(count / 20)
+    for (const width of [1440, 768, 375, 320]) {
+      await page.setViewportSize({ width, height: 812 })
+      for (const target of [...new Set([1, Math.ceil(last / 2), last])]) {
+        await jump.fill(String(target))
+        await jump.press('Enter')
+        await expect(pager.locator('.is-active')).toHaveText(String(target))
+        await footer.locator('.el-pagination__total').click()
+        await expect.poll(() => pager.evaluate((el) => {
+          const cells = Array.from(el.children).map(child => child.getBoundingClientRect())
+          return cells.every((cell, i) => {
+            const previous = cells[i - 1]
+            return !previous || Math.abs(cell.y - previous.y) > 1 || cell.x - previous.right >= 3.9
+          })
+        })).toBe(true)
+        await expect.poll(() => pager.locator('li.number').count()).toBeLessThanOrEqual(width <= 760 ? 5 : 7)
+        await expect.poll(() => pager.locator('li.more').count()).toBeLessThanOrEqual(2)
+        await expect.poll(() => pager.locator('li').count()).toBeLessThanOrEqual(width <= 760 ? 7 : 9)
+        await expect(pager.locator('li').first()).toHaveCSS('font-variant-numeric', 'tabular-nums')
+        await expect.poll(() => footer.evaluate((el) => {
+          const container = el.getBoundingClientRect()
+          return Array.from(el.querySelectorAll('.el-pager li, .btn-prev, .btn-next, .el-pagination__jump')).every((child) => {
+            const rect = child.getBoundingClientRect()
+            return rect.left >= container.left - 1 && rect.right <= container.right + 1
+          })
+        })).toBe(true)
+        await expectContained(page, '.mrr-data-table-panel__pagination, .el-pager')
+      }
+    }
+  }
+  await page.unrouteAll({ behavior: 'wait' })
+})

@@ -135,15 +135,21 @@ test.describe('界面外观 · 圆角曲线', () => {
 
     const switchEl = page.locator('.el-switch').first()
     const sliderEl = page.locator('.slider-field').first()
-    const sqSwitch = await switchEl.screenshot()
-    const sqSlider = await sliderEl.screenshot()
+    async function captureControl(control: typeof switchEl) {
+      await control.scrollIntoViewIfNeeded()
+      await page.mouse.move(0, 0)
+      await page.evaluate(() => new Promise<void>(resolve => requestAnimationFrame(() => requestAnimationFrame(() => resolve()))))
+      return control.screenshot({ animations: 'disabled' })
+    }
+    const sqSwitch = await captureControl(switchEl)
+    const sqSlider = await captureControl(sliderEl)
 
     // 父级圆角会改变截图边缘的 3 个抗锯齿背景像素，实测单通道最多相差 3/255。
     // 比较解码后的像素，仍要求图片尺寸一致，并对每个像素应用同一上限。
     await options.getByRole('button', { name: '标准圆弧' }).click()
     await expect(page.locator('html')).toHaveAttribute('data-radius-shape', 'round')
-    expect(await maxScreenshotChannelDifference(page, sqSwitch, await switchEl.screenshot()), '统一开关的像素差异').toBeLessThanOrEqual(3)
-    expect(await maxScreenshotChannelDifference(page, sqSlider, await sliderEl.screenshot()), '统一滑块的像素差异').toBeLessThanOrEqual(3)
+    expect(await maxScreenshotChannelDifference(page, sqSwitch, await captureControl(switchEl)), '统一开关的像素差异').toBeLessThanOrEqual(3)
+    expect(await maxScreenshotChannelDifference(page, sqSlider, await captureControl(sliderEl)), '统一滑块的像素差异').toBeLessThanOrEqual(3)
 
     // Element Plus 版开关与滑块：直接跳到该页会重新拉取设置（未保存的修改被丢弃），
     // 所以这里直接写根节点属性，只校验 CSS 的生效范围本身。

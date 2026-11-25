@@ -6,6 +6,8 @@ UI 与交互专项的事实、首批统一范围及后续检查顺序见 [UI 一
 
 核对日期：2026-11-09；产品版本 `0.8.0`；事实基线 `main` / `322552356bc2f39e2c1984174a127f83ed9c49ad`。关联 [Issue #554](https://github.com/weepwood/MRR/issues/554)，风险 P3，负责人：文档实施代理；分支 `codex/design-docs-consolidation`；worktree `D:/Project/CodexWorkTress/design-docs-consolidation/MRR`。
 
+当前 V1.2 重点见[全站 UI 规范与组件治理](v1.2-ui-system-roadmap.md)。该台账更新实施顺序与实际证据，不另立视觉规则。
+
 ## 1. 按任务选择入口
 
 | 要解决的问题 | 主要文档 | 维护边界 |

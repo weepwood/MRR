@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import type { ExampleId } from '../catalog'
-import { ref, useId } from 'vue'
+import { computed, ref, useId } from 'vue'
 
 defineProps<{ example: ExampleId }>()
 
@@ -9,8 +9,12 @@ const buttonState = ref('normal')
 const clicks = ref(0)
 const activeTab = ref<string | number>('preview')
 const name = ref('组件演示')
+const nativeName = ref('组件演示')
+const validationName = ref('')
+const validationError = computed(() => validationName.value.trim() ? '' : '请输入示例名称')
 const note = ref('这里是可编辑的示例说明。')
 const source = ref('local')
+const nativeSource = ref('local')
 const date = ref('2026-11-12')
 const count = ref(3)
 const checked = ref<boolean | 'indeterminate'>(true)
@@ -141,8 +145,18 @@ const options = [{ label: '本地示例', value: 'local' }, { label: '归档示�
       <FaInput :id="`${id}-name`" v-model="name" placeholder="输入示例名称" class="example-full-width" />
     </div>
     <div class="example-field">
+      <label :for="`${id}-native-name`">原生名称</label>
+      <el-input :id="`${id}-native-name`" v-model="nativeName" placeholder="输入示例名称" class="example-full-width" />
+    </div>
+    <div class="example-field">
       <label :for="`${id}-source`">示例来源</label>
       <FaSelect :id="`${id}-source`" v-model="source" :options="options" class="example-full-width" />
+    </div>
+    <div class="example-field">
+      <label :for="`${id}-native-source`">原生来源</label>
+      <el-select :id="`${id}-native-source`" v-model="nativeSource" class="example-full-width">
+        <el-option v-for="option in options" :key="option.value" :label="option.label" :value="option.value" />
+      </el-select>
     </div>
     <div class="example-field">
       <label :for="`${id}-date`">示例日期</label>
@@ -155,6 +169,28 @@ const options = [{ label: '本地示例', value: 'local' }, { label: '归档示�
     <div class="example-field">
       <label :for="`${id}-disabled`">禁用输入</label>
       <FaInput :id="`${id}-disabled`" model-value="当前不可编辑" disabled class="example-full-width" />
+    </div>
+    <div class="example-field">
+      <label :for="`${id}-native-disabled`">原生禁用输入</label>
+      <el-input :id="`${id}-native-disabled`" model-value="当前不可编辑" disabled class="example-full-width" />
+    </div>
+    <div class="example-field">
+      <label :for="`${id}-readonly`">只读名称</label>
+      <FaInput :id="`${id}-readonly`" model-value="可以选择复制" readonly class="example-full-width" />
+    </div>
+    <div class="example-field">
+      <label :for="`${id}-native-readonly`">原生只读名称</label>
+      <el-input :id="`${id}-native-readonly`" model-value="可以选择复制" readonly class="example-full-width" />
+    </div>
+    <div class="example-field">
+      <el-form label-position="top">
+        <el-form-item label="校验示例" :for="`${id}-validation`" :error="validationError">
+          <el-input :id="`${id}-validation`" v-model="validationName" :aria-invalid="!!validationError" :aria-describedby="validationError ? `${id}-validation-error` : undefined" />
+          <template #error="{ error }">
+            <span :id="`${id}-validation-error`" class="el-form-item__error">{{ error }}</span>
+          </template>
+        </el-form-item>
+      </el-form>
     </div>
     <div class="example-field">
       <label :for="`${id}-note`">示例说明</label>

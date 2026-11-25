@@ -160,7 +160,10 @@ describe('占位符与提示文字（规则锁定）', () => {
     expect(navSearch, '/数字 透明度档会压到 2.4:1').not.toMatch(/muted-foreground\/\d+/)
     expect(navSearch).toMatch(/text-muted-foreground/)
     // group-hover 需要 .group 祖先，否则悬停变色是死代码
-    expect(navSearch).toMatch(/mx-2 px-3 group/)
+    expect(navSearch).toMatch(/mrr-toolbar-search group/)
+    const surface = ruleBody(formControls, '.el-button.mrr-toolbar-search')
+    expect(surface).toContain('padding-inline: 12px')
+    expect(surface).toContain('margin-inline: 8px')
   })
 
   it('置顶徽标文字必须用前景色，避免主色调淡底组合低于 4.5:1', () => {

@@ -552,3 +552,70 @@
   align-items: center;
   justify-content: center;
 }
+
+/* Shared navigation buttons: Element Plus owns the native button and
+ * activation; these variants retain the original shell geometry. */
+.el-button.mrr-migrated-toolbar + .el-button.mrr-migrated-toolbar {
+  margin-left: 0;
+}
+
+.el-button.mrr-migrated-toolbar > span {
+  display: contents;
+}
+
+.el-button.mrr-toolbar-icon.is-text {
+  flex-shrink: 0;
+  width: var(--mrr-control-height);
+  padding: 0;
+  border: 0 solid transparent;
+}
+
+.el-button.mrr-toolbar-search {
+  padding-inline: 12px;
+  margin-inline: 8px;
+}
+
+/* FaIcon declares the size on its outer i; preserve its inherited glyph
+ * geometry instead of applying the generic Element Plus 16px glyph size. */
+.el-button.mrr-migrated-toolbar i > i {
+  width: inherit;
+  height: inherit;
+  font-size: inherit;
+}
+
+.el-button.mrr-toolbar-icon.logo-toggle [class*="logo-toggle-icon"] {
+  width: 17px;
+  height: 17px;
+}
+
+.el-button.mrr-migrated-toolbar.account-trigger.is-text {
+  gap: 8px;
+  min-width: 0;
+  padding: 0 8px;
+  font-size: 13px;
+}
+
+.el-button.mrr-migrated-toolbar.account-trigger.is-text[data-variant="secondary"] {
+  color: var(--mrr-secondary-foreground);
+  background: var(--mrr-secondary);
+  border: 1px solid var(--mrr-border);
+  border-radius: var(--mrr-control-radius);
+}
+
+.el-button.mrr-migrated-toolbar.account-trigger.is-text[data-variant="secondary"]:not(.is-disabled):hover {
+  background: var(--mrr-muted);
+  border-color: var(--mrr-input);
+}
+
+.el-button.mrr-migrated-toolbar.account-trigger.is-text[data-state="open"] {
+  background: var(--mrr-navigation-active);
+}
+
+.el-button.mrr-migrated-toolbar.account-trigger.is-text[data-variant="ghost"] {
+  border: 0 solid transparent;
+}
+
+.el-button.mrr-migrated-toolbar.account-trigger.is-text[data-avatar-only="true"] {
+  width: var(--mrr-control-height);
+  padding: 4px;
+}

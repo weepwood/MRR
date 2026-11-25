@@ -13,6 +13,25 @@ function sources(dir: string): string[] {
 }
 
 describe('唯一基础控件归属', () => {
+  it('已迁移的全局按钮调用不得恢复 FaButton', () => {
+    const migrated = [
+      'components/AccountButton/index.vue',
+      'layouts/components/AppSetting/index.vue',
+      'layouts/components/Logo/index.vue',
+      'layouts/components/SubSidebar/index.vue',
+      'layouts/components/Topbar/Toolbar/ColorScheme/index.vue',
+      'layouts/components/Topbar/Toolbar/Fullscreen/index.vue',
+      'layouts/components/Topbar/Toolbar/NavSearch/index.vue',
+      'layouts/components/Topbar/Toolbar/PageReload/index.vue',
+      'layouts/components/Topbar/Toolbar/leftSide.vue',
+    ]
+    for (const file of migrated) {
+      const source = fs.readFileSync(path.join(root, file), 'utf8')
+      expect(source, file).not.toMatch(/\bFaButton\b/)
+      expect(source, file).toContain('<el-button')
+    }
+  })
+
   it('页签已迁移，不恢复旧实现或直接导入', () => {
     expect(fs.existsSync(path.join(root, 'ui/components/FaTabs'))).toBe(false)
     const legacy = sources(root).filter(file => /\bFaTabs\b/.test(fs.readFileSync(file, 'utf8')))

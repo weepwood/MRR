@@ -19,9 +19,9 @@ async function toggleMobileSidebar(event: MouseEvent) {
 
 <template>
   <div class="flex items-center">
-    <FaButton v-if="settingsStore.mode === 'mobile'" id="mrr-mobile-sidebar-toggle" variant="ghost" size="icon" aria-label="切换侧栏导航" aria-controls="mrr-sidebar" :aria-expanded="!settingsStore.settings.menu.subMenuCollapse" class="-rotate-z-180" @click="toggleMobileSidebar">
+    <el-button v-if="settingsStore.mode === 'mobile'" id="mrr-mobile-sidebar-toggle" text aria-label="切换侧栏导航" aria-controls="mrr-sidebar" :aria-expanded="!settingsStore.settings.menu.subMenuCollapse" class="mrr-migrated-toolbar mrr-toolbar-icon -rotate-z-180" @click="toggleMobileSidebar">
       <FaIcon name="toolbar-collapse" class="size-4" />
-    </FaButton>
+    </el-button>
     <component :is="useSlots('toolbar-start')" />
     <Breadcrumb v-if="settingsStore.settings.toolbar.breadcrumb" />
   </div>

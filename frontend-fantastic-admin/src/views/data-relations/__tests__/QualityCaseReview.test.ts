@@ -88,6 +88,24 @@ describe('异常人工决策', () => {
     expect(w.text()).toContain('决策读取或保存失败')
     w.unmount()
   })
+  it('历史响应缺失时显示失败而不是空白，重新选择案件可恢复', async () => {
+    api.listQualityReviews.mockResolvedValue({ data: { enabled: false, reviews: [old] } })
+    api.getQualityReviewEvents.mockResolvedValueOnce({ data: null }).mockResolvedValueOnce({
+      data: [{ revision: 1, issueId: '10', runId: '1', status: 'CONFIRMED', reason: 'CONFIRMED_EVIDENCE', actorId: '11', occurredAt: '2026-11-01T00:00:00Z' }],
+    })
+    const w = panel()
+    try {
+      await flushPromises()
+      await button(w, '案件 1').trigger('click')
+      await flushPromises()
+      expect(w.text()).toContain('决策读取或保存失败')
+      await button(w, '案件 1').trigger('click')
+      await flushPromises()
+      expect(w.text()).not.toContain('决策读取或保存失败')
+      expect(w.text()).toContain('样本 #10 · 操作者 #11')
+    }
+    finally { w.unmount() }
+  })
   it('案件历史列表可打开审计，样本清理后仍独立展示', async () => {
     api.listQualityReviews.mockResolvedValue({ data: { enabled: false, reviews: [old] } })
     api.getQualityReviewEvents.mockResolvedValue({ data: [{ revision: 1, issueId: '10', runId: '1', status: 'CONFIRMED', reason: 'CONFIRMED_EVIDENCE', actorId: '11', occurredAt: '2026-11-01T00:00:00Z' }] })

@@ -90,7 +90,9 @@ async function history(row: QualityReview, append = false) {
   selected.value = row
   try {
     const { data } = await getQualityReviewEvents(row.id, append ? events.value.at(-1)?.revision : 0, controller.signal)
-    if (generation === current && selected.value?.id === row.id && data) { events.value.push(...data) }
+    if (generation !== current || selected.value?.id !== row.id) { return }
+    if (!Array.isArray(data)) { throw new Error('Invalid review history') }
+    events.value.push(...data)
   }
   catch {
     if (generation === current) { failed.value = true }

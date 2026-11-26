@@ -937,6 +937,7 @@ onUnmounted(() => {
                 :type="downloadButtonType || undefined"
                 :icon="Download"
                 :loading="downloadButtonLoading"
+                :disabled="loading || idCardLoading"
                 @click="handleDownloadAction"
               >
                 {{ downloadButtonLabel }}
@@ -1105,6 +1106,7 @@ onUnmounted(() => {
               :type="downloadButtonType || undefined"
               :icon="Download"
               :loading="downloadButtonLoading"
+              :disabled="loading || idCardLoading"
               @click="handleDownloadAction"
             >
               {{ downloadButtonLabel }}

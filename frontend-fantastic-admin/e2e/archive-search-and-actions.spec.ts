@@ -98,6 +98,25 @@ test('底部操作区：选中数量只显示一次，选择前三项导出禁�
   expect(overflow).toBe(false)
 })
 
+test('影像已返回但病案信息尚在加载时，整份下载等待查询完成', async ({ page }) => {
+  await mockArchive(page)
+  let release!: () => void
+  const gate = new Promise<void>((resolve) => { release = resolve })
+  await page.route(/\/api\/v1\/search\/patient\/[^/?]+/, async (route) => {
+    await gate
+    await route.fulfill({ json: reply([]) }).catch(() => {})
+  })
+  try {
+    await page.goto('/archive?bah=00009401')
+    const whole = page.locator('.archive-bottom-actions').getByRole('button', { name: /下载病案/ })
+    await expect(whole).toBeVisible()
+    await expect(whole).toBeDisabled({ timeout: 1500 })
+    release()
+    await expect(whole).toBeEnabled()
+  }
+  finally { release() }
+})
+
 test('异步导出下载拒绝过期内容版本，手动重试正确版本后保存', async ({ page }) => {
   await mockArchive(page)
   await page.addInitScript(() => Object.defineProperty(window, 'showSaveFilePicker', { configurable: true, value: undefined }))
@@ -118,7 +137,14 @@ test('异步导出下载拒绝过期内容版本，手动重试正确版本后�
     fileName: 'synthetic.zip',
   }
   await page.route('**/api/v1/archive-exports/jobs', route => route.fulfill({ json: reply({ ...job, status: 'PENDING' }) }))
-  await page.route(`**/api/v1/archive-exports/jobs/${id}`, route => route.fulfill({ json: reply({ ...job, status: 'SUCCESS' }) }))
+  let polls = 0
+  await page.route(`**/api/v1/archive-exports/jobs/${id}`, (route) => {
+    polls++
+    if (polls === 1) {
+      return route.fulfill({ status: 503, json: { code: 503, message: 'synthetic transient failure' } })
+    }
+    return route.fulfill({ json: reply({ ...job, status: 'SUCCESS' }) })
+  })
   let downloads = 0
   let matching = false
   await page.route(`**/api/v1/archive-exports/jobs/${id}/download`, (route) => {
@@ -131,6 +157,7 @@ test('异步导出下载拒绝过期内容版本，手动重试正确版本后�
   await page.locator('.thumb-check').first().click()
   await page.getByRole('button', { name: /导出选中 ZIP（1）/ }).click()
   await expect(page.getByText('导出文件已生成，但下载未完成：导出文件版本已变化，请刷新任务后重试', { exact: true })).toBeVisible()
+  expect(polls).toBe(2)
   expect(downloads).toBe(1)
   expect(saved).toBe(0)
   matching = true

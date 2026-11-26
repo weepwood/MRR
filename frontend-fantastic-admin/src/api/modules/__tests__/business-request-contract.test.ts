@@ -122,7 +122,7 @@ describe('实际业务 API 请求契约（仅传输替身）', () => {
       ['/api/v1/archive-exports/plan/zip', { params: { bah: '000123', sjh: undefined } }],
       ['/api/v1/archive-exports/plan/pdf', { params: { bah: '000123', sjh: '000456', selectedCount: 2 } }],
       ['/api/v1/archive-exports/jobs', { params: { format: 'PDF', limit: 5 } }],
-      ['/api/v1/archive-exports/jobs/synthetic%2Fid'],
+      ['/api/v1/archive-exports/jobs/synthetic%2Fid', { retry: true, maxRetryCount: 2, skipGlobalError: true }],
     ])
     expect(http.postRequest.mock.calls).toEqual([
       ['/api/v1/archive-exports/plan/pdf/selection', { ids: ['1', '002'] }],

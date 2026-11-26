@@ -360,3 +360,12 @@ body .el-descriptions.mrr-detail-descriptions .el-descriptions__content pre {
   overflow-wrap: anywhere;
   white-space: pre-wrap;
 }
+
+/* Dense read-only monitoring fields, not editor controls or full detail dialogs. */
+body .el-descriptions.mrr-detail-descriptions--compact .el-descriptions__label.el-descriptions__cell {
+  padding: var(--mrr-space-2) var(--mrr-space-2) var(--mrr-space-1);
+}
+
+body .el-descriptions.mrr-detail-descriptions--compact .el-descriptions__content.el-descriptions__cell {
+  padding: 0 var(--mrr-space-2) var(--mrr-space-2);
+}

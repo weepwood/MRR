@@ -125,7 +125,7 @@ const monthLabels = computed<MonthLabel[]>(() => {
     })
   })
 
-  if (labels.length > 1 && labels[0].weekIndex === labels[1].weekIndex) {
+  if (labels.length > 1 && (labels[1].weekIndex - labels[0].weekIndex) * (props.cellSize + props.cellGap) < 36) {
     labels.shift()
   }
 

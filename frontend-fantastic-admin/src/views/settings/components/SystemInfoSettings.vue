@@ -11,7 +11,7 @@ const settings = defineModel<EffectiveSystemSettings>({ required: true })
         <strong data-settings-search-target="identity" tabindex="-1">系统标识</strong>
         <p>系统名称会用于浏览器标题、登录页和主要品牌区域。</p>
       </div>
-      <div class="control-grid">
+      <div class="control-grid identity-grid">
         <el-form-item label="系统名称">
           <el-input v-model="settings.systemName" maxlength="60" show-word-limit placeholder="例如 MRR 病案文件管理系统" />
         </el-form-item>
@@ -37,7 +37,9 @@ const settings = defineModel<EffectiveSystemSettings>({ required: true })
 .setting-section { display: grid; gap: var(--mrr-space-5); }
 .setting-group { padding: var(--mrr-space-5); background: var(--mrr-card); border: 1px solid var(--mrr-border); border-radius: var(--mrr-radius-card); }
 .group-heading { margin-bottom: var(--mrr-space-4); }
-.control-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--mrr-space-4); }
+.identity-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, max(220px, calc((100% - var(--mrr-space-4)) / 2))), 1fr)); gap: var(--mrr-space-3) var(--mrr-space-4); }
+.identity-grid :deep(.el-form-item) { margin-bottom: 0; }
+.setting-group > .el-form-item { margin-top: var(--mrr-space-4); margin-bottom: 0; }
 
 @media (max-width: 680px) { .control-grid { grid-template-columns: 1fr; } }
 </style>

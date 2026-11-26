@@ -494,3 +494,7 @@ body .el-form.mrr-edit-form .el-input-number .el-input {
   font-size: var(--mrr-font-size-xs);
   color: var(--mrr-muted-foreground);
 }
+
+body .el-form.mrr-edit-form--multi {
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 220px), 1fr));
+}

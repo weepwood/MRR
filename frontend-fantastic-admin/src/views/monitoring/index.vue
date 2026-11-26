@@ -17,6 +17,8 @@ import {
   getSystemMemory,
   getSystemRuntime,
 } from '@/api/modules/system'
+import AppError from '@/components/AppError/index.vue'
+import AppLoading from '@/components/AppLoading/index.vue'
 import MrrPageHeader from '@/components/MrrPageHeader/index.vue'
 import MrrPageShell from '@/components/MrrPageShell/index.vue'
 import MrrSectionCard from '@/components/MrrSectionCard/index.vue'
@@ -50,9 +52,14 @@ const databaseOverview = ref<DatabaseOverview>(emptyDatabase())
 const qualitySummary = ref<DataQualitySummary>({ enabled: true, running: false, latestRun: null, checks: [] })
 const qualityIssues = ref<DataQualityIssue[]>([])
 
+const databaseReady = computed(() => !!sectionRefreshedAt['数据库概览'])
+const qualityReady = computed(() => !!sectionRefreshedAt['数据质量摘要'])
+const issuesReady = computed(() => !!sectionRefreshedAt['数据质量明细'])
+const applicationReady = computed(() => ['健康状态', '运行时间', '内存', '系统信息'].some(key => !!sectionRefreshedAt[key]))
+
 const databaseStatus = computed(() => {
   const component = healthStatus.value.components?.database as { status?: string } | undefined
-  return String(component?.status || healthStatus.value.status || 'UNKNOWN').toUpperCase()
+  return String(component?.status || 'UNKNOWN').toUpperCase()
 })
 
 const connectionUsage = computed(() => {
@@ -83,30 +90,30 @@ interface SummaryCard {
 const summaryCards = computed<SummaryCard[]>(() => [
   {
     label: '数据库状态',
-    value: databaseStatus.value,
+    value: sectionRefreshedAt['健康状态'] ? databaseStatus.value : '待获取',
     note: databaseOverview.value.database?.name || 'PostgreSQL',
-    tone: databaseStatus.value === 'UP' ? 'green' : 'danger',
+    tone: databaseStatus.value === 'UP' ? 'green' : databaseStatus.value === 'UNKNOWN' ? 'slate' : 'danger',
     icon: 'i-lucide:database',
   },
   {
     label: '数据库连接',
-    value: `${databaseOverview.value.connections?.total ?? 0}/${databaseOverview.value.database?.max_connections ?? '-'}`,
-    note: `活跃 ${databaseOverview.value.connections?.active ?? 0} · 等待 ${databaseOverview.value.connections?.waiting ?? 0}`,
+    value: databaseReady.value ? `${databaseOverview.value.connections?.total ?? '—'}/${databaseOverview.value.database?.max_connections ?? '-'}` : '—',
+    note: databaseReady.value ? `活跃 ${databaseOverview.value.connections?.active ?? '—'} · 等待 ${databaseOverview.value.connections?.waiting ?? '—'}` : '尚未取得数据',
     tone: connectionUsage.value >= 90 ? 'danger' : connectionUsage.value >= 80 ? 'amber' : 'blue',
     icon: 'i-lucide:link',
   },
   {
     label: 'Hikari 连接池',
-    value: `${databaseOverview.value.hikari?.active ?? 0}/${databaseOverview.value.hikari?.maximum_pool_size ?? '-'}`,
-    note: `空闲 ${databaseOverview.value.hikari?.idle ?? 0} · 等待 ${databaseOverview.value.hikari?.pending ?? 0}`,
+    value: databaseReady.value ? `${databaseOverview.value.hikari?.active ?? '—'}/${databaseOverview.value.hikari?.maximum_pool_size ?? '-'}` : '—',
+    note: databaseReady.value ? `空闲 ${databaseOverview.value.hikari?.idle ?? '—'} · 等待 ${databaseOverview.value.hikari?.pending ?? '—'}` : '尚未取得数据',
     tone: hikariUsage.value >= 90 ? 'danger' : hikariUsage.value >= 80 ? 'amber' : 'teal',
     icon: 'i-lucide:network',
   },
   {
     label: '严重数据异常',
-    value: formatNumber(criticalIssues.value),
-    note: latestRun.value?.completed_at ? `最近检查 ${formatDate(latestRun.value.completed_at)}` : '尚未执行检查',
-    tone: criticalIssues.value > 0 ? 'danger' : 'green',
+    value: qualityReady.value && latestRun.value ? formatNumber(criticalIssues.value) : '—',
+    note: latestRun.value?.completed_at ? `最近检查 ${formatDate(latestRun.value.completed_at)}` : qualityReady.value ? '尚未执行检查' : '尚未取得检查结果',
+    tone: !qualityReady.value || !latestRun.value ? 'slate' : criticalIssues.value > 0 ? 'danger' : 'green',
     icon: 'i-lucide:triangle-alert',
     anchor: '#monitor-issues',
   },
@@ -167,6 +174,7 @@ function statusType(status?: string) {
   if (status === 'RUNNING') {
     return 'primary'
   }
+  if (!status || status === 'UNKNOWN' || status === 'NOT_RUN') { return 'info' }
   if (status === 'WARNING') {
     return 'warning'
   }
@@ -369,58 +377,62 @@ onUnmounted(pause)
     <div class="monitor-grid monitor-grid--availability">
       <MrrSectionCard class="monitor-card" title="PostgreSQL 运行状态" description="实时连接、事务、锁等待和缓存情况">
         <template #actions>
-          <el-tag :type="databaseStatus === 'UP' ? 'success' : 'danger'">
+          <el-tag :type="statusType(databaseStatus)">
             {{ databaseStatus }}
           </el-tag>
         </template>
 
-        <el-descriptions :column="2" border>
-          <el-descriptions-item label="数据库">
-            {{ databaseOverview.database?.name || '-' }}
-          </el-descriptions-item>
-          <el-descriptions-item label="版本">
-            {{ databaseOverview.database?.version || '-' }}
-          </el-descriptions-item>
-          <el-descriptions-item label="运行时长">
-            {{ formatDuration(databaseOverview.database?.uptime_seconds) }}
-          </el-descriptions-item>
-          <el-descriptions-item label="数据库大小">
-            {{ formatBytes(databaseOverview.database?.size_bytes) }}
-          </el-descriptions-item>
-          <el-descriptions-item label="事务提交">
-            {{ formatNumber(databaseOverview.transactions?.commits) }}
-          </el-descriptions-item>
-          <el-descriptions-item label="事务回滚">
-            {{ formatNumber(databaseOverview.transactions?.rollbacks) }}
-          </el-descriptions-item>
-          <el-descriptions-item label="锁等待">
-            {{ databaseOverview.contention?.lock_waiters ?? 0 }}
-          </el-descriptions-item>
-          <el-descriptions-item label="长事务">
-            {{ databaseOverview.contention?.long_transactions ?? 0 }}
-          </el-descriptions-item>
-          <el-descriptions-item label="死锁累计">
-            {{ databaseOverview.transactions?.deadlocks ?? 0 }}
-          </el-descriptions-item>
-          <el-descriptions-item label="缓存命中率">
-            {{ formatPercent(databaseOverview.transactions?.cache_hit_ratio) }}
-          </el-descriptions-item>
-        </el-descriptions>
+        <AppLoading v-if="loading && !databaseReady" type="stats" :cols="2" />
+        <AppError v-else-if="!databaseReady" size="compact" message="尚未取得数据库概览" @retry="loadAll()" />
+        <template v-else>
+          <el-descriptions :column="2" direction="vertical" class="mrr-detail-descriptions mrr-detail-descriptions--compact" border>
+            <el-descriptions-item label="数据库">
+              {{ databaseOverview.database?.name || '-' }}
+            </el-descriptions-item>
+            <el-descriptions-item label="版本">
+              {{ databaseOverview.database?.version || '-' }}
+            </el-descriptions-item>
+            <el-descriptions-item label="运行时长">
+              {{ formatDuration(databaseOverview.database?.uptime_seconds) }}
+            </el-descriptions-item>
+            <el-descriptions-item label="数据库大小">
+              {{ formatBytes(databaseOverview.database?.size_bytes) }}
+            </el-descriptions-item>
+            <el-descriptions-item label="事务提交">
+              {{ formatNumber(databaseOverview.transactions?.commits) }}
+            </el-descriptions-item>
+            <el-descriptions-item label="事务回滚">
+              {{ formatNumber(databaseOverview.transactions?.rollbacks) }}
+            </el-descriptions-item>
+            <el-descriptions-item label="锁等待">
+              {{ databaseOverview.contention?.lock_waiters ?? 0 }}
+            </el-descriptions-item>
+            <el-descriptions-item label="长事务">
+              {{ databaseOverview.contention?.long_transactions ?? 0 }}
+            </el-descriptions-item>
+            <el-descriptions-item label="死锁累计">
+              {{ databaseOverview.transactions?.deadlocks ?? 0 }}
+            </el-descriptions-item>
+            <el-descriptions-item label="缓存命中率">
+              {{ formatPercent(databaseOverview.transactions?.cache_hit_ratio) }}
+            </el-descriptions-item>
+          </el-descriptions>
 
-        <div class="progress-grid">
-          <div>
-            <div class="progress-label">
-              <span>数据库连接使用率</span><strong>{{ connectionUsage }}%</strong>
+          <div class="progress-grid">
+            <div v-if="Number(databaseOverview.database?.max_connections) > 0">
+              <div class="progress-label">
+                <span>数据库连接使用率</span><strong>{{ connectionUsage }}%</strong>
+              </div>
+              <el-progress :percentage="connectionUsage" :status="connectionUsage >= 90 ? 'exception' : connectionUsage >= 80 ? 'warning' : 'success'" />
             </div>
-            <el-progress :percentage="connectionUsage" :status="connectionUsage >= 90 ? 'exception' : connectionUsage >= 80 ? 'warning' : 'success'" />
-          </div>
-          <div>
-            <div class="progress-label">
-              <span>Hikari 连接池使用率</span><strong>{{ hikariUsage }}%</strong>
+            <div v-if="Number(databaseOverview.hikari?.maximum_pool_size) > 0">
+              <div class="progress-label">
+                <span>Hikari 连接池使用率</span><strong>{{ hikariUsage }}%</strong>
+              </div>
+              <el-progress :percentage="hikariUsage" :status="hikariUsage >= 90 ? 'exception' : hikariUsage >= 80 ? 'warning' : 'success'" />
             </div>
-            <el-progress :percentage="hikariUsage" :status="hikariUsage >= 90 ? 'exception' : hikariUsage >= 80 ? 'warning' : 'success'" />
           </div>
-        </div>
+        </template>
       </MrrSectionCard>
 
       <MrrSectionCard class="monitor-card" title="应用运行状态" description="JVM、内存与运行环境摘要">
@@ -429,7 +441,9 @@ onUnmounted(pause)
             {{ healthStatus.status || 'UNKNOWN' }}
           </el-tag>
         </template>
-        <el-descriptions :column="1" border>
+        <AppLoading v-if="loading && !applicationReady" type="stats" :cols="2" />
+        <AppError v-else-if="!applicationReady" size="compact" message="尚未取得应用运行数据" @retry="loadAll()" />
+        <el-descriptions v-else :column="2" direction="vertical" class="mrr-detail-descriptions mrr-detail-descriptions--compact" border>
           <el-descriptions-item label="应用">
             {{ systemInfo.application?.name || '-' }}
           </el-descriptions-item>
@@ -464,40 +478,46 @@ onUnmounted(pause)
         </div>
       </template>
 
-      <div class="quality-summary mrr-stat-strip mrr-stat-strip--4">
-        <div class="mrr-stat-tile">
-          <span class="mrr-stat-tile__label">严重异常</span><strong class="mrr-stat-tile__value mrr-stat-tile__value--danger">{{ formatNumber(criticalIssues) }}</strong>
+      <AppLoading v-if="loading && !qualityReady" type="stats" :cols="4" />
+      <AppError v-else-if="!qualityReady" size="compact" message="尚未取得数据质量摘要" @retry="loadAll()" />
+      <template v-else>
+        <div class="quality-summary mrr-stat-strip mrr-stat-strip--4">
+          <div class="mrr-stat-tile">
+            <span class="mrr-stat-tile__label">严重异常</span><strong class="mrr-stat-tile__value mrr-stat-tile__value--danger">{{ latestRun ? formatNumber(criticalIssues) : '—' }}</strong>
+          </div>
+          <div class="mrr-stat-tile">
+            <span class="mrr-stat-tile__label">警告</span><strong class="mrr-stat-tile__value mrr-stat-tile__value--warning">{{ latestRun ? formatNumber(warningIssues) : '—' }}</strong>
+          </div>
+          <div class="mrr-stat-tile">
+            <span class="mrr-stat-tile__label">检查项</span><strong class="mrr-stat-tile__value">{{ latestRun?.check_count ?? '—' }}</strong>
+          </div>
+          <div class="mrr-stat-tile">
+            <span class="mrr-stat-tile__label">完成时间</span><strong class="mrr-stat-tile__value mrr-stat-tile__value--text">{{ formatDate(latestRun?.completed_at) }}</strong>
+          </div>
         </div>
-        <div class="mrr-stat-tile">
-          <span class="mrr-stat-tile__label">警告</span><strong class="mrr-stat-tile__value mrr-stat-tile__value--warning">{{ formatNumber(warningIssues) }}</strong>
-        </div>
-        <div class="mrr-stat-tile">
-          <span class="mrr-stat-tile__label">检查项</span><strong class="mrr-stat-tile__value">{{ latestRun?.check_count ?? 0 }}</strong>
-        </div>
-        <div class="mrr-stat-tile">
-          <span class="mrr-stat-tile__label">完成时间</span><strong class="mrr-stat-tile__value mrr-stat-tile__value--text">{{ formatDate(latestRun?.completed_at) }}</strong>
-        </div>
-      </div>
 
-      <el-table :data="qualitySummary.checks" stripe border empty-text="尚未执行数据质量检查">
-        <el-table-column v-bind="tableSequenceColumn()" />
-        <el-table-column prop="check_name" label="检查项" min-width="220" />
-        <el-table-column prop="check_code" label="代码" min-width="210" />
-        <el-table-column label="级别" width="110" class-name="mrr-table-status-column">
-          <template #default="scope">
-            <el-tag :type="scope.row.severity === 'CRITICAL' ? 'danger' : 'warning'">
-              {{ scope.row.severity }}
-            </el-tag>
-          </template>
-        </el-table-column>
-        <el-table-column prop="issue_count" label="异常数" width="110" sortable />
-        <el-table-column prop="sampled_count" label="已保存样本" width="120" />
-      </el-table>
+        <el-table :data="qualitySummary.checks" stripe border empty-text="尚未执行数据质量检查">
+          <el-table-column v-bind="tableSequenceColumn()" />
+          <el-table-column prop="check_name" label="检查项" min-width="220" />
+          <el-table-column prop="check_code" label="代码" min-width="210" />
+          <el-table-column label="级别" width="110" class-name="mrr-table-status-column">
+            <template #default="scope">
+              <el-tag :type="scope.row.severity === 'CRITICAL' ? 'danger' : 'warning'">
+                {{ scope.row.severity }}
+              </el-tag>
+            </template>
+          </el-table-column>
+          <el-table-column prop="issue_count" label="异常数" width="110" sortable />
+          <el-table-column prop="sampled_count" label="已保存样本" width="120" />
+        </el-table>
+      </template>
     </MrrSectionCard>
 
     <div class="monitor-grid monitor-grid--details">
       <MrrSectionCard id="monitor-issues" tabindex="-1" class="monitor-card" title="异常样本" description="最多显示最近 100 条">
-        <el-table :data="qualityIssues" stripe border max-height="460" empty-text="没有异常样本">
+        <AppLoading v-if="loading && !issuesReady" type="table" :rows="4" />
+        <AppError v-else-if="!issuesReady" size="compact" message="尚未取得异常样本" @retry="loadAll()" />
+        <el-table v-else :data="qualityIssues" stripe border max-height="460" empty-text="没有异常样本">
           <el-table-column v-bind="tableSequenceColumn()" />
           <el-table-column prop="severity" label="级别" width="100" class-name="mrr-table-status-column">
             <template #default="scope">
@@ -513,7 +533,9 @@ onUnmounted(pause)
         </el-table>
       </MrrSectionCard>
       <MrrSectionCard class="monitor-card" title="数据库占用最大的表" description="包含表与索引">
-        <el-table :data="databaseOverview.tables" stripe border max-height="460" empty-text="暂无表统计">
+        <AppLoading v-if="loading && !databaseReady" type="table" :rows="4" />
+        <AppError v-else-if="!databaseReady" size="compact" message="尚未取得表容量数据" @retry="loadAll()" />
+        <el-table v-else :data="databaseOverview.tables" stripe border max-height="460" empty-text="暂无表统计">
           <el-table-column v-bind="tableSequenceColumn()" />
           <el-table-column prop="table_name" label="表" min-width="180" />
           <el-table-column label="总大小" width="120">
@@ -546,6 +568,7 @@ onUnmounted(pause)
 .monitor-grid {
   display: grid;
   gap: var(--mrr-space-4);
+  align-items: start;
 }
 
 .monitor-grid--availability,
@@ -556,7 +579,6 @@ onUnmounted(pause)
 .monitor-card {
   width: 100%;
   min-width: 0;
-  height: 100%;
   border-radius: var(--mrr-radius-card);
 }
 
@@ -580,15 +602,13 @@ onUnmounted(pause)
   margin-bottom: var(--mrr-space-4);
 }
 
-@media (min-width: 1200px) {
-  .monitor-grid--availability {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
+.monitor-grid--availability {
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 460px), 1fr));
 }
 
-@media (min-width: 1920px) {
-  .monitor-grid--details {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
+.monitor-grid--details {
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 680px), 1fr));
 }
+.progress-label { flex-wrap: wrap; }
+.progress-grid :deep(.el-progress__text) { min-width: 0; }
 </style>

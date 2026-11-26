@@ -214,7 +214,7 @@ async function skipRollbackPage() {
         </el-button>
       </template>
 
-      <el-form class="ocr-batches__form" label-position="top">
+      <el-form class="ocr-batches__form mrr-edit-form mrr-edit-form--multi" label-position="top">
         <el-form-item label="起点影像 ID（不包含）">
           <el-input-number v-model="form.afterId" :min="0" :max="2147483647" />
         </el-form-item>

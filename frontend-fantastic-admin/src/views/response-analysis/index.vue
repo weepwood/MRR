@@ -17,12 +17,11 @@ const ANALYSIS_DAYS = 365
 
 const loading = ref(false)
 const error = ref('')
+const hasLoaded = ref(false)
 const analysis = ref<ResponseMetricAnalysis | null>(null)
 
 const isEmpty = computed(() => {
-  if (loading.value || error.value || !analysis.value) {
-    return false
-  }
+  if (!analysis.value) { return true }
   return (analysis.value.overview.totalRequests ?? 0) === 0
     && (analysis.value.overview.frontendSampleCount ?? 0) === 0
     && analysis.value.trend.length === 0
@@ -51,9 +50,9 @@ async function loadData() {
   try {
     const response = await getResponseMetricAnalysis(ANALYSIS_DAYS)
     analysis.value = response.data ?? null
+    hasLoaded.value = true
   }
   catch {
-    analysis.value = null
     error.value = '响应分析数据加载失败'
   }
   finally {
@@ -79,15 +78,21 @@ onMounted(loadData)
       </template>
     </MrrPageHeader>
 
-    <AppError v-if="error" :message="`${error}，请稍后重试或检查后端服务状态。`" retry-text="重新加载" @retry="loadData" />
+    <AppError v-if="error && !hasLoaded" :message="`${error}，请稍后重试或检查后端服务状态。`" retry-text="重新加载" @retry="loadData" />
 
-    <AppEmpty v-else-if="isEmpty" icon="i-lucide:activity" description="近一年暂无响应指标数据" />
+    <AppEmpty v-else-if="hasLoaded && isEmpty && !error" icon="i-lucide:activity" description="近一年暂无响应指标数据" />
 
     <!-- 首次加载用骨架屏；刷新时保留上一份结果，只在卡片上叠加 v-loading。 -->
-    <AppLoading v-else-if="loading && !analysis" type="stats" :cols="4" />
+    <AppLoading v-else-if="!hasLoaded" type="stats" :cols="4" />
 
     <template v-else>
-      <section class="mrr-metric-grid" aria-label="近一年响应指标总览">
+      <el-alert v-if="error" type="warning" :closable="false" show-icon title="刷新失败，保留上次响应分析结果。">
+        <el-button text type="primary" @click="loadData">
+          重试分析
+        </el-button>
+      </el-alert>
+      <AppEmpty v-if="isEmpty" icon="i-lucide:activity" description="上次读取暂无响应指标数据" />
+      <section v-else-if="analysis" class="mrr-metric-grid" aria-label="近一年响应指标总览">
         <MrrMetricCard
           label="总请求数"
           icon="i-lucide:network"
@@ -115,7 +120,7 @@ onMounted(loadData)
         />
       </section>
 
-      <div class="analysis-stack">
+      <div v-if="analysis && !isEmpty" class="analysis-stack">
         <MrrSectionCard v-loading="loading" class="analysis-card response-trend-card" title="近一年响应趋势" description="每日请求热力图及客户端、服务端平均耗时">
           <ResponseTrendChart v-if="analysis?.trend.length" :data="analysis.trend" />
           <AppEmpty v-else icon="i-lucide:chart-line" description="近一年暂无趋势数据" />
@@ -188,6 +193,7 @@ onMounted(loadData)
 
 .analysis-stack {
   display: grid;
+  grid-template-columns: minmax(0, 1fr);
   gap: var(--mrr-page-gap);
   min-width: 0;
 }
@@ -198,23 +204,5 @@ onMounted(loadData)
 
 .slow-endpoint-card {
   overflow: hidden;
-}
-
-@media (min-width: 1440px) {
-  .analysis-stack {
-    grid-template-columns: max-content minmax(520px, 1fr);
-    align-items: start;
-  }
-
-  .response-trend-card {
-    justify-self: start;
-    width: max-content;
-    max-width: 100%;
-  }
-
-  .response-trend-card :deep(.el-card__body) {
-    width: max-content;
-    max-width: calc(100vw - 620px);
-  }
 }
 </style>

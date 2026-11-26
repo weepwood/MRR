@@ -24,14 +24,14 @@ const durationSeries = computed<MrrLineSeries[]>(() => [
     name: '客户端耗时',
     data: props.data.map(item => item.avgClientDurationMs ?? 0),
     color: mrrChartColor('primary'),
-    smooth: true,
+    smooth: false,
     area: true,
   },
   {
     name: '服务端耗时',
     data: props.data.map(item => item.avgServerDurationMs ?? 0),
     color: mrrChartColor('neutral'),
-    smooth: true,
+    smooth: false,
     dashed: true,
   },
 ])
@@ -106,7 +106,7 @@ function formatBucket(bucket: string) {
       <div class="section-heading">
         <div>
           <strong id="duration-trend-heading">响应耗时趋势</strong>
-          <span>客户端耗时包含网络和浏览器处理，服务端耗时仅统计后端处理阶段</span>
+          <span>客户端耗时包含网络与浏览器处理；服务端仅统计后端处理。默认展示最近 16 个记录日，滚轮可调整范围。</span>
         </div>
       </div>
       <MrrLineChart
@@ -123,12 +123,14 @@ function formatBucket(bucket: string) {
 <style scoped>
 .chart-shell {
   display: grid;
+  grid-template-columns: minmax(0, 1fr);
   gap: var(--mrr-space-5);
+  min-width: 0;
 }
 
 .chart-overview {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 190px), 1fr));
   gap: 0;
   padding-bottom: var(--mrr-space-4);
   border-bottom: 1px solid var(--el-border-color-lighter);
@@ -177,14 +179,12 @@ function formatBucket(bucket: string) {
 
 .overview-item strong {
   min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
   font-size: 18px;
   font-weight: 650;
   font-variant-numeric: tabular-nums;
   line-height: 1.3;
   color: var(--el-text-color-primary);
-  white-space: nowrap;
+  overflow-wrap: anywhere;
 }
 
 .overview-item i {

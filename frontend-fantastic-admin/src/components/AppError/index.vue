@@ -25,7 +25,7 @@ function handleRetry() {
 
 <template>
   <div class="app-error mrr-content-enter" :class="{ 'is-compact': size === 'compact' }" role="alert">
-    <div class="app-error-icon i-lucide:triangle-alert mrr-status-pop" />
+    <div class="app-error-icon i-lucide:triangle-alert mrr-status-pop" aria-hidden="true" />
     <p class="app-error-text">
       {{ message }}
     </p>
@@ -43,21 +43,25 @@ function handleRetry() {
   justify-content: center;
 
   /* 空态/错误态常出现在表格面板内部，64px 上下留白会把分页条推出首屏；与骨架屏高度更接近。 */
-  padding: 48px var(--mrr-space-4);
+  min-width: 0;
+  padding: var(--mrr-space-8) var(--mrr-space-4);
   text-align: center;
 }
 
 .app-error-icon {
-  margin-bottom: 16px;
-  font-size: 48px;
+  margin-bottom: var(--mrr-space-3);
+  font-size: 36px;
   color: var(--el-color-warning);
   transform-origin: center;
 }
 
 .app-error-text {
-  margin: 0 0 20px;
-  font-size: 14px;
+  max-width: 100%;
+  margin: 0 0 var(--mrr-space-4);
+  font-size: var(--mrr-font-size-sm);
+  line-height: 1.6;
   color: var(--el-text-color-regular);
+  overflow-wrap: anywhere;
 }
 
 .app-error.is-compact {
@@ -66,12 +70,12 @@ function handleRetry() {
 
 .app-error.is-compact .app-error-icon {
   margin-bottom: var(--mrr-space-2);
-  font-size: 32px;
+  font-size: 26px;
 }
 
 .app-error.is-compact .app-error-text {
   margin-bottom: var(--mrr-space-3);
-  font-size: 13px;
+  font-size: var(--mrr-font-size-sm);
 }
 
 .app-error.is-compact .app-error-text:last-child {

@@ -5,6 +5,7 @@ import { useElementSize, useMediaQuery } from '@vueuse/core'
 import { computed, nextTick, onUnmounted, ref, useId, watch } from 'vue'
 import { onBeforeRouteLeave } from 'vue-router'
 import AppError from '@/components/AppError/index.vue'
+import AppLoading from '@/components/AppLoading/index.vue'
 import { actionDialog } from '@/ui/components/ActionDialog'
 import { useUnifiedSettings } from '../composables/useUnifiedSettings'
 import AppConfigPanel from './AppConfigPanel.vue'
@@ -26,9 +27,14 @@ interface DepartmentThemeSettingsRef {
   saving: boolean
   isDirty: boolean
   saveThemes: () => Promise<void>
+  syncState: string
+  loaded: boolean
 }
 
 interface OcrClassificationSettingsRef {
+  loaded: boolean
+  loading: boolean
+  loadError: string
   saving: boolean
   isDirty: boolean
   saveSettings: () => Promise<boolean>
@@ -87,6 +93,21 @@ const {
   handleReset,
   discardUnsavedChanges,
 } = useUnifiedSettings()
+
+const navGroups = [
+  { title: '常规', keys: ['system', 'login-support', 'documentation', 'external-links'] },
+  { title: '业务与档案', keys: ['archive', 'ocr', 'department'] },
+  { title: '安全与运行', keys: ['security', 'runtime', 'developer'] },
+  { title: '个性化', keys: ['appearance'] },
+].map(group => ({ title: group.title, items: settingsNavItems.filter(item => group.keys.includes(item.key)) }))
+
+const serverSaveStatus = computed(() => {
+  if (loading.value) { return '正在读取服务器配置' }
+  if (saving.value) { return '正在保存设置' }
+  if (!loaded.value) { return '尚未取得服务器配置' }
+  if (loadError.value) { return isDirty.value ? '读取失败 · 修改尚未保存' : '读取失败 · 保留上次配置' }
+  return isDirty.value ? '有未保存的修改' : '已与服务器同步'
+})
 
 async function openSearchResult(result: SettingsSearchResult) {
   await requestSection(result.section)
@@ -197,7 +218,7 @@ async function handleDepartmentSave() {
   }
   await panel.saveThemes()
   await nextTick()
-  if (!panel.isDirty) {
+  if (!panel.isDirty && panel.syncState === 'server') {
     showDepartmentSavedFeedback()
   }
 }
@@ -405,18 +426,21 @@ onUnmounted(() => {
       <aside class="settings-sidebar" aria-label="设置目录">
         <SettingsSearch @select="openSearchResult" />
         <nav class="settings-nav" aria-label="设置分类">
-          <button
-            v-for="item in settingsNavItems"
-            :key="item.key"
-            type="button"
-            class="settings-nav-item"
-            :class="{ active: activeSection === item.key, danger: item.key === 'developer' && settings.developerModeEnabled }"
-            :aria-current="activeSection === item.key ? 'true' : undefined"
-            @click="requestSection(item.key)"
-          >
-            <FaIcon :name="item.icon" class="nav-icon" aria-hidden="true" />
-            <strong class="nav-title">{{ item.title }}</strong>
-          </button>
+          <div v-for="group in navGroups" :key="group.title" class="settings-nav-group">
+            <span class="settings-nav-heading">{{ group.title }}</span>
+            <button
+              v-for="item in group.items"
+              :key="item.key"
+              type="button"
+              class="settings-nav-item"
+              :class="{ active: activeSection === item.key, danger: item.key === 'developer' && settings.developerModeEnabled }"
+              :aria-current="activeSection === item.key ? 'true' : undefined"
+              @click="requestSection(item.key)"
+            >
+              <FaIcon :name="item.icon" class="nav-icon" aria-hidden="true" />
+              <strong class="nav-title">{{ item.title }}</strong>
+            </button>
+          </div>
         </nav>
 
         <el-select
@@ -447,6 +471,11 @@ onUnmounted(() => {
               <p>{{ activeMeta.description }}</p>
             </div>
           </div>
+          <div v-if="isServerSettingSection" class="section-save-summary" role="status" :class="{ dirty: isDirty, unavailable: !loaded || !!loadError }">
+            <span class="status-dot" />
+            <span>{{ serverSaveStatus }}</span>
+            <small v-if="isDirty">{{ changedKeys.length }} 项字段待保存</small>
+          </div>
         </header>
 
         <div
@@ -458,14 +487,16 @@ onUnmounted(() => {
           :aria-labelledby="sectionHeadingId"
         >
           <div v-if="isServerSettingSection" v-loading="loading" class="system-panel">
+            <AppLoading v-if="loading && !loaded" type="stats" :cols="4" />
             <!-- 首次读取失败时不展示回退值表单，避免把本地缓存或默认值当作服务器配置保存（DESIGN.md §5.1）。 -->
             <AppError
-              v-if="!loaded && loadError"
+              v-else-if="!loaded && loadError"
               :message="`${loadError}，表单暂不显示，以免把本地缓存或默认值当作服务器配置保存。`"
               retry-text="重新加载"
               @retry="handleReload"
             />
-            <el-form v-else :model="settings" label-position="top">
+            <el-alert v-if="loaded && loadError" type="warning" :closable="false" show-icon title="重新读取失败，当前保留上次读取的配置及本地修改。" />
+            <el-form v-if="loaded" :model="settings" label-position="top" :disabled="loading || saving">
               <SystemInfoSettings v-if="activeSection === 'system'" v-model="settings" />
               <LoginSupportSettings v-else-if="activeSection === 'login-support'" v-model="settings" />
               <DocumentationSettings v-else-if="activeSection === 'documentation'" v-model="settings" />
@@ -482,10 +513,10 @@ onUnmounted(() => {
         </div>
 
         <div v-if="activeSection === 'ocr'" class="settings-actions" :class="{ dirty: ocrSettingsRef?.isDirty }">
-          <div class="save-status" :class="{ dirty: ocrSettingsRef?.isDirty }">
+          <div class="save-status" role="status" :class="{ dirty: ocrSettingsRef?.isDirty, unavailable: !ocrSettingsRef?.loaded || !!ocrSettingsRef?.loadError }">
             <span class="status-dot" />
             <div>
-              <strong>{{ ocrSettingsRef?.isDirty ? 'OCR 配置修改待保存' : 'OCR 配置已保存' }}</strong>
+              <strong>{{ ocrSettingsRef?.loading ? '正在读取 OCR 配置' : !ocrSettingsRef?.loaded ? 'OCR 配置尚未读取' : ocrSettingsRef?.loadError ? 'OCR 配置读取失败 · 保留上次配置' : ocrSettingsRef?.isDirty ? 'OCR 配置修改待保存' : 'OCR 配置已同步' }}</strong>
               <small>保存后写入系统数据库，并由后端再次校验安全阈值。</small>
             </div>
           </div>
@@ -505,7 +536,7 @@ onUnmounted(() => {
         </div>
 
         <div v-else-if="activeSection === 'runtime'" class="settings-actions" :class="{ dirty: runtimeSettingsRef?.isDirty }">
-          <div class="save-status" :class="{ dirty: runtimeSettingsRef?.isDirty }">
+          <div class="save-status" role="status" :class="{ dirty: runtimeSettingsRef?.isDirty, unavailable: !runtimeSettingsRef?.synced }">
             <span class="status-dot" />
             <div>
               <strong>{{ runtimeSettingsRef?.statusLabel || '运行参数尚未读取' }}</strong>
@@ -528,17 +559,17 @@ onUnmounted(() => {
         </div>
 
         <div v-else-if="activeSection === 'department'" class="settings-actions" :class="{ dirty: departmentThemeRef?.isDirty }">
-          <div class="save-status">
+          <div class="save-status" role="status" :class="{ unavailable: departmentThemeRef?.syncState !== 'server' }">
             <span class="status-dot" />
             <div>
-              <strong>{{ departmentThemeRef?.isDirty ? '科室配色修改待保存' : '科室配色已保存' }}</strong>
+              <strong>{{ !departmentThemeRef?.loaded ? '正在读取科室配色' : departmentThemeRef?.isDirty ? '科室配色修改待保存' : departmentThemeRef?.syncState === 'server' ? '科室配色已与服务器同步' : departmentThemeRef?.syncState === 'save-failed' ? '服务器保存失败 · 已保留本地配色' : '当前仅为浏览器本地配色' }}</strong>
               <small>保存后立即应用到档案袋。</small>
             </div>
           </div>
           <el-button
             :type="departmentSavedRecently ? 'success' : 'primary'"
             :loading="departmentThemeRef?.saving"
-            :disabled="!departmentThemeRef?.isDirty"
+            :disabled="!departmentThemeRef?.loaded || (!departmentThemeRef?.isDirty && departmentThemeRef?.syncState !== 'save-failed')"
             @click="handleDepartmentSave"
           >
             <FaIcon
@@ -567,7 +598,7 @@ onUnmounted(() => {
 <style scoped src="./unified-settings.css"></style>
 
 <style scoped>
-.settings-content :deep(.control-grid) {
+.settings-content :deep(.control-grid:not(.identity-grid)) {
   grid-template-columns: repeat(auto-fit, minmax(min(100%, 240px), 1fr));
 }
 

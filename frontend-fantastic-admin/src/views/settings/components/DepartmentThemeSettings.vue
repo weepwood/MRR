@@ -30,6 +30,7 @@ interface EditableDepartmentTheme extends ArchiveDepartmentTheme {
 const loading = ref(false)
 /** 首次读取（服务器或本地回退）完成前，编辑区不展示「自动配色」空态。 */
 const loaded = ref(false)
+const syncState = ref<'unknown' | 'local' | 'server' | 'save-failed'>('unknown')
 const saving = ref(false)
 const rows = ref<EditableDepartmentTheme[]>([])
 const departments = ref<string[]>([])
@@ -133,12 +134,14 @@ function restoreHistory(item: ArchiveDepartmentThemeHistory) {
 async function loadThemes() {
   loading.value = true
   let themes = loadArchiveDepartmentThemesFromLocal()
+  syncState.value = 'local'
   try {
     const response = await getSystemSettings()
     const settings = response.data ?? {}
     if (hasKey(settings, ARCHIVE_DEPARTMENT_THEME_SETTING_KEY)) {
       themes = normalizeArchiveDepartmentThemes(settings[ARCHIVE_DEPARTMENT_THEME_SETTING_KEY])
       saveArchiveDepartmentThemesToLocal(themes)
+      syncState.value = 'server'
     }
   }
   catch {
@@ -175,12 +178,15 @@ async function saveThemes() {
   }
   saveArchiveDepartmentThemesToLocal(themes)
   persistedThemes.value = themes
+  syncState.value = 'local'
   try {
     await setSetting(ARCHIVE_DEPARTMENT_THEME_SETTING_KEY, JSON.stringify(themes))
     setRows(themes)
+    syncState.value = 'server'
     ElMessage.success('科室档案袋配色已保存到服务器')
   }
   catch {
+    syncState.value = 'save-failed'
     ElMessage.error('服务端保存失败，配色已保存到当前浏览器')
   }
   finally {
@@ -228,7 +234,7 @@ async function handleImport(event: Event) {
   }
 }
 
-defineExpose({ isDirty, saving, saveThemes })
+defineExpose({ isDirty, saving, saveThemes, loaded, syncState })
 
 onMounted(() => {
   loadThemes()

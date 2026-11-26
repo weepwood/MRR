@@ -756,7 +756,7 @@ watch(storageKey, loadPreferences, { immediate: true })
     </el-dialog>
 
     <el-dialog v-model="editorVisible" align-center title="编辑小组件" width="540px">
-      <el-form label-position="top" class="widget-editor-form">
+      <el-form label-position="top" class="widget-editor-form mrr-edit-form">
         <el-form-item label="组件名称">
           <el-input v-model="editorForm.title" maxlength="30" show-word-limit />
         </el-form-item>

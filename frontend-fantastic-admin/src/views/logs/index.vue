@@ -303,6 +303,7 @@ function statusTagType(status: string | number) {
                 value-format="YYYY-MM-DD HH:mm:ss"
                 format="YYYY-MM-DD HH:mm:ss"
               />
+              <span class="log-time-hint">{{ query.timeRange?.length === 2 ? '点击查询应用所选时间范围' : '未选择时不限访问时间' }}</span>
             </el-form-item>
             <el-form-item label="用户" for="logs-username">
               <MrrUserSearchSelect
@@ -480,6 +481,13 @@ function statusTagType(status: string | number) {
 </template>
 
 <style scoped>
+.log-time-hint {
+  flex-basis: 100%;
+  font-size: var(--mrr-font-size-xs);
+  line-height: 1.4;
+  color: var(--mrr-muted-foreground);
+}
+
 .auto-refresh-note {
   font-variant-numeric: tabular-nums;
 }

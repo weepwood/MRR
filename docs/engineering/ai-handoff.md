@@ -786,3 +786,7 @@ MrrCursorPagination 改用 ElPagination 原生页码、箭头、跳页、条数�
 ## 第二轮页面级UI精修（2026-11-26）
 
 基线8555ba5c，P2共享UI和页面排版。运维总览、关系、扫描统计、用户/患者编辑、OSS任务布局，见DESIGN.md及路线图。104/104定向单测与样式，新增Chromium/WebKit 8/8，现有Chromium业务36/36；日志 /tmp/mrr-ui-compose-{unit,recheck,regression,final-tsc}.log。首轮患者测试选择器不含原生必填星号，修正为实际可访问名称并复验。截图证据存外置工作区，不提交截图与凭据。未全量CI/生产构建/Chrome86实机、未修改后端/真实数据、未推送发布。
+
+## 第三轮设置与监控UI治理（2026-11-26）
+
+基线6856b202；P2跨页面共享视觉。完成设置分类/状态、监控与响应分析、装箱/OCR/小组件表单及共享反馈，保留原有表格分页与后端契约。150项定向单测，最终10项复验；新增Chromium/WebKit 10/10、累计Chromium37/37；25路由100组截图/几何及最终8组复验，0受检溢出。类型、构建、Chrome86静态检查通过，存在既有CSS依赖降级提示。日志/tmp/mrr-ui-quality-*.log，截图外置artifacts/mrr-ui-quality-20261126，复现脚本scripts/ui-page-matrix.mjs；未全量CI、真实Chrome86、Firefox、生产发布和医疗数据。保持9037 Mock、main 24152bee。

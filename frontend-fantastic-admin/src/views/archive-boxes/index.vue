@@ -682,46 +682,44 @@ onMounted(refreshAll)
       destroy-on-close
       @closed="resetForm"
     >
-      <el-form label-position="top" class="record-form">
-        <div class="form-grid">
-          <el-form-item label="病案号">
-            <el-input v-model="form.bah" clearable placeholder="可与上架号任选其一" />
-          </el-form-item>
-          <el-form-item label="上架号">
-            <el-input v-model="form.sjh" clearable placeholder="纯数字不足 8 位自动补零" />
-          </el-form-item>
-          <el-form-item label="实际箱号" :required="!isMissing">
-            <el-input
-              v-model="form.boxNo"
-              clearable
-              :disabled="isMissing"
-              placeholder="病案当前实际存放箱号"
+      <el-form label-position="top" class="mrr-edit-form mrr-edit-form--paired">
+        <el-form-item label="病案号">
+          <el-input v-model="form.bah" clearable placeholder="可与上架号任选其一" />
+        </el-form-item>
+        <el-form-item label="上架号">
+          <el-input v-model="form.sjh" clearable placeholder="纯数字不足 8 位自动补零" />
+        </el-form-item>
+        <el-form-item label="实际箱号" :required="!isMissing">
+          <el-input
+            v-model="form.boxNo"
+            clearable
+            :disabled="isMissing"
+            placeholder="病案当前实际存放箱号"
+          />
+        </el-form-item>
+        <el-form-item label="原计划箱号">
+          <el-input v-model="form.expectedBoxNo" clearable placeholder="异常记录建议填写" />
+        </el-form-item>
+        <el-form-item label="装箱状态" class="mrr-edit-form__full">
+          <el-select v-model="form.status">
+            <el-option
+              v-for="item in statusOptions"
+              :key="item.value"
+              :label="item.label"
+              :value="item.value"
             />
-          </el-form-item>
-          <el-form-item label="原计划箱号">
-            <el-input v-model="form.expectedBoxNo" clearable placeholder="异常记录建议填写" />
-          </el-form-item>
-          <el-form-item label="装箱状态" class="form-span">
-            <el-select v-model="form.status">
-              <el-option
-                v-for="item in statusOptions"
-                :key="item.value"
-                :label="item.label"
-                :value="item.value"
-              />
-            </el-select>
-          </el-form-item>
-          <el-form-item label="备注" class="form-span">
-            <el-input
-              v-model="form.remark"
-              type="textarea"
-              :rows="4"
-              maxlength="1000"
-              show-word-limit
-              placeholder="记录错箱、冲突、查找过程或其他说明"
-            />
-          </el-form-item>
-        </div>
+          </el-select>
+        </el-form-item>
+        <el-form-item label="备注" class="mrr-edit-form__full">
+          <el-input
+            v-model="form.remark"
+            type="textarea"
+            :rows="4"
+            maxlength="1000"
+            show-word-limit
+            placeholder="记录错箱、冲突、查找过程或其他说明"
+          />
+        </el-form-item>
       </el-form>
       <template #footer>
         <el-button @click="dialogVisible = false">
@@ -793,29 +791,9 @@ onMounted(refreshAll)
   text-underline-offset: 2px;
 }
 
-.form-grid {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 0 var(--mrr-space-4);
-}
-
-.form-span {
-  grid-column: 1 / -1;
-}
-
-.record-form :deep(.el-select) {
-  width: 100%;
-}
-
 @media (max-width: 760px) {
   .archive-filter__keyword {
     flex: 1 1 100%;
-  }
-}
-
-@media (max-width: 640px) {
-  .form-grid {
-    grid-template-columns: minmax(0, 1fr);
   }
 }
 </style>

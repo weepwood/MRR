@@ -42,6 +42,11 @@ public final class EncryptedAuditSpool implements AutoCloseable {
     private static final Pattern HELD = Pattern.compile("[0-9a-f-]{36}\\.held");
     private static final Pattern KEY_ID=Pattern.compile("[A-Za-z0-9_-]{1,32}");
     private int records;
+    public record CapacitySnapshot(int records,long bytes) {}
+    private volatile CapacitySnapshot capacity=new CapacitySnapshot(0,0);
+    public CapacitySnapshot capacitySnapshot(){return capacity;}
+    public synchronized CapacitySnapshot lockedCapacitySnapshot(){return capacity;}
+    private void refreshCapacity(){capacity=new CapacitySnapshot(records,bytes);}
     private long publishedSegments, publishedBytes, fileForces, directoryForces;
     private final FileChannel lockChannel;
     private final FileLock lock;
@@ -96,6 +101,7 @@ public final class EncryptedAuditSpool implements AutoCloseable {
             acquired = lockChannel.tryLock();
             if (acquired == null) throw new IOException("Audit spool already owned");
             load();
+            refreshCapacity();
             syncDirectory();
         } catch (IOException | RuntimeException failure) {
             if (acquired != null) acquired.release();
@@ -134,6 +140,22 @@ public final class EncryptedAuditSpool implements AutoCloseable {
     /** Sealed append-only segment: all callers are acknowledged only after both durable barriers. */
     public synchronized void appendGroup(List<Log> rows) throws IOException {
         publish(rows, activeKeyId==null?GROUP_VERSION:KEYED_VERSION);
+    }
+
+    /** Retry only the identical observed event. A previous rename may have succeeded
+     * before the directory force failed. Re-force before acknowledging the existing segment. */
+    public synchronized void appendOrConfirm(Log event)throws IOException{
+        requireOpen();
+        for(String name:pending.keySet()){
+            for(Log row:decode(name,root.resolve(name))){
+                if(!event.getRequestId().equals(row.getRequestId()))continue;
+                if(!mapper.valueToTree(event).equals(mapper.valueToTree(row)))
+                    throw new IOException("Audit retry identity conflict");
+                syncDirectory();
+                return;
+            }
+        }
+        publish(List.of(event),activeKeyId==null?VERSION:KEYED_VERSION);
     }
 
     private void publish(List<Log> rows, int version) throws IOException {
@@ -179,7 +201,7 @@ public final class EncryptedAuditSpool implements AutoCloseable {
                     channel.force(true);fileForces++;
                 }
                 Files.move(temporary,destination,StandardCopyOption.ATOMIC_MOVE);
-                pending.put(name,new Segment(frame.length,rows.size()));bytes+=frame.length;records+=rows.size();
+                pending.put(name,new Segment(frame.length,rows.size()));bytes+=frame.length;records+=rows.size();refreshCapacity();
                 syncDirectory();
                 publishedSegments++;publishedBytes+=frame.length;
             } finally {Files.deleteIfExists(temporary);}
@@ -206,6 +228,36 @@ public final class EncryptedAuditSpool implements AutoCloseable {
         return result;
     }
 
+    /** The delivery owner reads immutable sealed segments outside the publication monitor.
+     * No plaintext cache. A concurrent removal/close invalidates the read, never an ACK. */
+    public List<Entry> peekConcurrent(int limit)throws IOException{
+        Map<String,Segment> selected=new LinkedHashMap<>();
+        synchronized(this){
+            requireOpen();
+            if(limit<1||limit>200)throw new IllegalArgumentException("Invalid spool batch");
+            int count=0;
+            for(var item:pending.entrySet()){
+                if(count+item.getValue().records()>limit){
+                    if(selected.isEmpty())throw new IOException("Delivery batch smaller than sealed segment");
+                    break;
+                }
+                selected.put(item.getKey(),item.getValue());count+=item.getValue().records();
+            }
+        }
+        List<Entry> result=new ArrayList<>();
+        for(var item:selected.entrySet()){
+            List<Log> rows=decode(item.getKey(),root.resolve(item.getKey()));
+            if(rows.size()!=item.getValue().records())throw new IOException("Audit segment changed");
+            for(Log row:rows)result.add(new Entry(item.getKey(),row));
+        }
+        synchronized(this){
+            requireOpen();
+            for(var item:selected.entrySet())if(pending.get(item.getKey())!=item.getValue())
+                throw new IOException("Audit segment removed during read");
+        }
+        return result;
+    }
+
     /** A sealed segment can only be acknowledged as a whole after database commit. */
     public synchronized void acknowledge(String name) throws IOException {
         acknowledgeSegments(List.of(name));
@@ -218,7 +270,7 @@ public final class EncryptedAuditSpool implements AutoCloseable {
         for(String name:distinct){
             Segment segment=pending.get(name);
             Files.delete(root.resolve(name));
-            pending.remove(name);bytes-=segment.bytes();records-=segment.records();
+            pending.remove(name);bytes-=segment.bytes();records-=segment.records();refreshCapacity();
         }
         if(!distinct.isEmpty())syncDirectory();
     }

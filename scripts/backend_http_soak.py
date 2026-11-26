@@ -84,6 +84,8 @@ def main():
     parser.add_argument("--audit-outage", action="store_true", help="stop only the newly created isolated PG, then verify durable admission and restart")
     parser.add_argument("--grouped-audit", action="store_true", help="use sealed group commit and batched SQL candidate")
     parser.add_argument("--durable-audit", action="store_true", help="opt in to experimental encrypted POSIX spool")
+    parser.add_argument("--medical-fast-capacity",action="store_true",help="use lock-free capacity snapshot and concurrent immutable segment read")
+    parser.add_argument("--external-terminal-fault",action="store_true",help="reject credential success audit in isolated lab")
     parser.add_argument("--medical-grouped",action="store_true",help="enable medical gate group commit and batch delivery")
     parser.add_argument("--external-intent-fault",action="store_true",help="inject dedicated audit rejection only in fresh lab")
     parser.add_argument("--external-strict-intent",action="store_true",help="enable dedicated external intent verification")
@@ -93,6 +95,8 @@ def main():
     parser.add_argument("--signed-external", action="store_true", help="real HMAC ticket and session chain plus role probes")
     parser.add_argument("--external-probes", action="store_true", help="exercise synthetic external session, current scope and privacy headers before load")
     args = parser.parse_args()
+    if args.medical_fast_capacity and not args.medical_admission:parser.error("fast capacity requires medical admission")
+    if args.external_terminal_fault and not args.external_strict_intent:parser.error("terminal fault requires strict external intent")
     if args.medical_grouped and not args.medical_admission:parser.error("medical grouped requires medical admission")
     if args.external_intent_fault and not args.external_strict_intent:parser.error("external fault requires strict intent")
     if args.external_strict_intent and not args.signed_external:parser.error("external strict intent requires signed external probes")
@@ -184,6 +188,7 @@ def main():
             config += f"\nmrr.audit.admission.enabled=true\nmrr.audit.admission.directory={(lab/'medical-spool').resolve()}\n"
             if args.admission_capacity:
                 config += "mrr.audit.admission.max-records=2\n"
+        if args.medical_fast_capacity:config += "\nmrr.audit.admission.fast-capacity=true\n"
         if args.medical_grouped:config += "\nmrr.audit.admission.grouped=true\n"
         if args.external_strict_intent:config += "\nmrr.audit.external.strict-intent=true\n"
         (lab / "application.properties").write_text(config)
@@ -411,6 +416,22 @@ def main():
                             assert sql("SELECT count(*) FROM app.mr_external_archive_ticket WHERE client_id='synthetic-his'")=="0"
                             assert sql("SELECT count(*) FROM app.mr_external_archive_nonce WHERE client_id='synthetic-his'")=="0"
                         finally:restore_intents()
+                    def reject_credential_terminal():
+                        sql("""CREATE FUNCTION app.synthetic_reject_terminal() RETURNS trigger LANGUAGE plpgsql AS $$
+                            BEGIN IF NEW.result='SUCCESS' AND NEW.action IN ('TICKET_CREATE','SESSION_CREATE') THEN
+                            RAISE EXCEPTION 'synthetic terminal rejection'; END IF; RETURN NEW; END $$;
+                            CREATE TRIGGER synthetic_reject_terminal BEFORE INSERT ON app.mr_external_archive_access_log
+                            FOR EACH ROW EXECUTE FUNCTION app.synthetic_reject_terminal()""")
+                    def restore_credential_terminal():
+                        sql("DROP TRIGGER synthetic_reject_terminal ON app.mr_external_archive_access_log; DROP FUNCTION app.synthetic_reject_terminal()")
+                    if args.external_terminal_fault:
+                        reject_credential_terminal()
+                        try:
+                            call("POST",ticket_path,503,signed,body)
+                            assert sql("SELECT count(*) FROM app.mr_external_archive_ticket WHERE client_id='synthetic-his'")=="0"
+                            assert sql("SELECT count(*) FROM app.mr_external_archive_nonce WHERE client_id='synthetic-his'")=="0"
+                            assert sql("SELECT count(*) FROM app.mr_external_archive_access_log WHERE client_id='synthetic-his'")=="0"
+                        finally:restore_credential_terminal()
                     payload,_=call("POST",ticket_path,200,signed,body)
                     ticket=json.loads(payload)["data"]["ticket"]
                     call("POST",ticket_path,409,signed,body)
@@ -422,6 +443,16 @@ def main():
                             assert sql("SELECT count(*) FROM app.mr_external_archive_session WHERE client_id='synthetic-his'")=="0"
                             assert sql("SELECT count(*) FROM app.mr_external_archive_ticket WHERE client_id='synthetic-his' AND used_at IS NULL")=="1"
                         finally:restore_intents()
+                    if args.external_terminal_fault:
+                        reject_credential_terminal()
+                        try:
+                            _,failed_headers=call("POST",prefix+"/session",503,{"Content-Type":"application/json"},exchange)
+                            assert "Set-Cookie" not in failed_headers
+                            assert sql("SELECT count(*) FROM app.mr_external_archive_session WHERE client_id='synthetic-his'")=="0"
+                            assert sql("SELECT count(*) FROM app.mr_external_archive_ticket WHERE client_id='synthetic-his' AND used_at IS NULL")=="1"
+                            assert sql("SELECT count(*) FROM app.mr_external_archive_access_log WHERE client_id='synthetic-his' AND action='SESSION_CREATE'")=="0"
+                        finally:restore_credential_terminal()
+                        print("EXTERNAL_TERMINAL_FAULT actual success-audit rejection rolled back credentials and intent",flush=True)
                     payload,h=call("POST",prefix+"/session",200,{"Content-Type":"application/json"},exchange)
                     cookie=h["Set-Cookie"].split(";",1)[0]
                     assert "HttpOnly" in h["Set-Cookie"] and "SameSite=Lax" in h["Set-Cookie"]

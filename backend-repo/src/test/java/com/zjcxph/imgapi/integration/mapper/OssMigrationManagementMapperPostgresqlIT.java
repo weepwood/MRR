@@ -44,6 +44,32 @@ class OssMigrationManagementMapperPostgresqlIT extends PostgresqlIntegrationTest
 
     @Test
     @org.springframework.transaction.annotation.Transactional(propagation=org.springframework.transaction.annotation.Propagation.NOT_SUPPORTED)
+    void secondServiceStartupDoesNotReleaseLiveClaimOrJob(){
+        int id=jdbcTemplate.queryForObject("""
+            INSERT INTO app.mr_scan(bah,sjh,brxh,filename,folder,uploadflag,source_type,source_ref)
+            VALUES ('8765452','12345678','8765452','synthetic.jpg','synthetic',1,'LOCAL','synthetic.jpg') RETURNING id
+            """,Integer.class);
+        long job=jdbcTemplate.queryForObject("INSERT INTO app.migration_job(status,mode) VALUES ('running','folder') RETURNING id",Long.class);
+        try{
+            Scan snapshot=scanMapper.findById(id);
+            assertThat(scanMapper.markMigrationStarted(snapshot,"live-worker")).isEqualTo(1);
+            var second=new com.zjcxph.imgapi.service.impl.MigrationServiceImpl(
+                org.mockito.Mockito.mock(com.zjcxph.imgapi.service.OssService.class),scanMapper,migrationLogs,migrationJobs,
+                org.mockito.Mockito.mock(com.zjcxph.imgapi.service.impl.MigrationSourceResolver.class),Runnable::run,
+                org.mockito.Mockito.mock(org.springframework.cache.CacheManager.class));
+            second.recoverInterruptedMigrationState();
+            assertThat(jdbcTemplate.queryForObject("SELECT migration_claim_id FROM app.mr_scan WHERE id=?",String.class,id)).isEqualTo("live-worker");
+            assertThat(migrationJobs.findById(job).getStatus()).isEqualTo("running");
+            assertThat(scanMapper.completeClaimedMigration(snapshot,1,"live-worker","synthetic-key",3L,"md5")).isEqualTo(1);
+            System.out.println("MRR_MIGRATION_STARTUP second service left active DB job/claim unchanged");
+        }finally{
+            jdbcTemplate.update("DELETE FROM app.migration_job WHERE id=?",job);
+            jdbcTemplate.update("DELETE FROM app.mr_scan WHERE id=?",id);
+        }
+    }
+
+    @Test
+    @org.springframework.transaction.annotation.Transactional(propagation=org.springframework.transaction.annotation.Propagation.NOT_SUPPORTED)
     void changedSourceCannotInheritOldFailureAndOnlyCurrentClaimCanRelease(){
         int id=jdbcTemplate.queryForObject("""
             INSERT INTO app.mr_scan(bah,sjh,brxh,filename,folder,uploadflag,source_type,source_ref)

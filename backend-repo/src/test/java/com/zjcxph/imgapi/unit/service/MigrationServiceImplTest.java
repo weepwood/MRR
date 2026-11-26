@@ -544,6 +544,12 @@ class MigrationServiceImplTest {
         verify(ossService,never()).generatePresignedUrl(anyString());
     }
 
+    @Test void startupDoesNotReclaimOtherInstanceByDefault(){
+        migrationService.recoverInterruptedMigrationState();
+        verify(migrationJobMapper,never()).interruptActiveJobs();
+        verify(scanMapper,never()).recoverInterruptedMigrations();
+    }
+
     private void prepareSuccessfulMigration(Integer updated) throws Exception {
         Scan scan = legacyScan(3, "00789510", "605748", null);
         Path file = createFile("3.jpg", new byte[]{7, 8, 9});

@@ -100,8 +100,15 @@ public class MigrationServiceImpl implements MigrationService {
         this.cacheManager = cacheManager;
     }
 
+    @org.springframework.beans.factory.annotation.Value("${app.migration.recover-on-startup:false}")
+    private boolean recoverOnStartup;
+
     @PostConstruct
     public void recoverInterruptedMigrationState() {
+        if(!recoverOnStartup){
+            logger.info("Global migration recovery disabled; requires confirmed single-instance maintenance");
+            return;
+        }
         try {
             int interruptedJobs = migrationJobMapper.interruptActiveJobs();
             int releasedScans = scanMapper.recoverInterruptedMigrations();

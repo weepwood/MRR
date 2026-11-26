@@ -941,3 +941,6 @@ cc8dbbc4，65未推送/259文件，集成69/266，main120/707；关键权限、�
 
 ## 后端治理第十一批（2026-11-26）
 基线48de1ea1。分组双阶段/集合精确核对、aged unmatched监控、独立外部严格INTENT、迁移同代次来源保护/提交确认核对/可选条件PUT、迁移历史任务隐私。100定向、PG84首轮/19复验分批覆盖86；真实三轮5063请求3041双阶段配对，最终63.14RPS/P95 117.654ms，默认不切换；外部7类专用配对及真实故障回滚，累计32/276。报告docs/backend/governance-batch11.md，证据/Volumes/data/AI-Development/artifacts/mrr-backend11-20261126/。未完成实际断开、多实例、外部终态、现场OSS与孤儿盘点、剩余权限及长时/Windows/正式门禁。仅本地，不推送合并发布。
+
+## 后端治理第十二批（2026-11-26）
+基线7ea42b78；详见docs/backend/governance-batch12.md及governance-cumulative-review-batch12.md。103定向/89PG、四轮7517请求4510双阶段配对、原分组A63.31/62.12RPS对快照B63.08/60.76，无收益默认不启用。原值OUTCOME恢复、外部凭据SUCCESS事务、本地条件PUT及双实例目录隔离通过；全局迁移启动恢复默认关闭，仅明确独占维护开启。实际客户端断流和外部独立终态缓冲工具操作被拦截未完成；跨主机租约、现场存储/孤儿、剩余权限、平台与长时待验。证据/Volumes/data/AI-Development/artifacts/mrr-backend12-20261126/，仅本地。

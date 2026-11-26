@@ -26,6 +26,7 @@ public class MedicalAuditAdmission implements AutoCloseable {
     private final ObjectMapper json;
     private final GroupedAuditAdmission grouped;
     private final boolean groupedEnabled;
+    private final boolean fastCapacity;
     private final int maxRecords;
     private final long maxBytes;
     private final JdbcTemplate jdbc;
@@ -34,7 +35,8 @@ public class MedicalAuditAdmission implements AutoCloseable {
     private final Map<String,Log> reservations=new HashMap<>();
     private final Set<String> attemptedOutcomes=new HashSet<>();
     private final java.util.concurrent.atomic.AtomicLong deliveryFailures=new java.util.concurrent.atomic.AtomicLong();
-    private boolean unavailable,closing;
+    private boolean unavailable,closing,intentFailure;
+    private final Map<String,Log> failedOutcomes=new HashMap<>();
     private int pendingIntent;
     private int activePublications;
     private final java.util.concurrent.atomic.AtomicLong agedUnpaired=new java.util.concurrent.atomic.AtomicLong(-1);
@@ -51,6 +53,7 @@ public class MedicalAuditAdmission implements AutoCloseable {
         AuditSpoolKeys.requireIndependent(env,"MRR_MEDICAL_AUDIT","MRR_AUDIT_SPOOL",json);
         spool=AuditSpoolKeys.open(env,"MRR_MEDICAL_AUDIT",Path.of(env.getRequiredProperty("mrr.audit.admission.directory")),
                 maxRecords,maxBytes,json);
+        fastCapacity=env.getProperty("mrr.audit.admission.fast-capacity",Boolean.class,false);
         groupedEnabled=env.getProperty("mrr.audit.admission.grouped",Boolean.class,false);
         grouped=groupedEnabled?new GroupedAuditAdmission(spool):null;
         transaction=new TransactionTemplate(manager);
@@ -75,12 +78,20 @@ public class MedicalAuditAdmission implements AutoCloseable {
         event.setMethod(method);event.setAuditTarget(target);event.setAuditAction("INTENT");
         event.setAuditDescription("ADMITTED");event.setAccessTime(new Date());
         validateSize(event);
+        Log sizeProbe=new Log();
+        sizeProbe.setRequestId(correlation+":O");sizeProbe.setUsername(event.getUsername());
+        sizeProbe.setRequestUri(event.getRequestUri());sizeProbe.setEndpointTemplate(event.getEndpointTemplate());
+        sizeProbe.setMethod(event.getMethod());sizeProbe.setAuditTarget(event.getAuditTarget());
+        sizeProbe.setAuditAction("OUTCOME");sizeProbe.setAuditDescription("HTTP_EXCEPTION");
+        sizeProbe.setResponseStatus("-2147483648");sizeProbe.setAccessTime(event.getAccessTime());
+        validateSize(sizeProbe);
         synchronized(this){
             // Include unpublished INTENT plus the future OUTCOME. A publication already
             // visible in spool but not yet acknowledged is deliberately double-counted.
             long reservedSlots=reservations.size()+pendingIntent;
-            if(closing||unavailable||spool.pendingCount()+reservedSlots+2>maxRecords
-                    ||spool.pendingBytes()+(reservedSlots+2)*EVENT_BYTES>maxBytes){
+            var capacity=fastCapacity?spool.capacitySnapshot():spool.lockedCapacitySnapshot();
+            if(closing||unavailable||capacity.records()+reservedSlots+2>maxRecords
+                    ||capacity.bytes()+(reservedSlots+2)*EVENT_BYTES>maxBytes){
                 rejected.increment();throw new IOException("Medical audit unavailable");
             }
             reservations.put(correlation,event);pendingIntent++;activePublications++;
@@ -99,7 +110,7 @@ public class MedicalAuditAdmission implements AutoCloseable {
         }catch(AdmissionStoppedException e){
             throw new IOException("Medical audit unavailable");
         }catch(IOException|RuntimeException e){
-            synchronized(this){pendingIntent--;reservations.remove(correlation);unavailable=true;}
+            synchronized(this){pendingIntent--;reservations.remove(correlation);unavailable=true;intentFailure=true;}
             rejected.increment();failed.increment();
             logger.error("Medical audit intent publication uncertain: type={}",e.getClass().getSimpleName());
             throw new IOException("Medical audit unavailable");
@@ -123,7 +134,7 @@ public class MedicalAuditAdmission implements AutoCloseable {
             validateSize(event);publish(event);
             synchronized(this){reservations.remove(correlation);attemptedOutcomes.remove(correlation);}
         }catch(IOException|RuntimeException e){
-            synchronized(this){unavailable=true;}
+            synchronized(this){unavailable=true;failedOutcomes.put(correlation,event);}
             failed.increment();
             logger.error("Medical audit outcome publication uncertain: type={}",e.getClass().getSimpleName());
         }finally{synchronized(this){activePublications--;notifyAll();}}
@@ -144,8 +155,8 @@ public class MedicalAuditAdmission implements AutoCloseable {
         if(!flushLock.tryLock())return;
         try{
             synchronized(this){if(closing)return;}
-            var entries=spool.peek(50);
-            if(entries.isEmpty())return;
+            var entries=fastCapacity?spool.peekConcurrent(50):spool.peek(50);
+            if(entries.isEmpty()){recoverOneOutcome();return;}
             transaction.executeWithoutResult(status->{
                 jdbc.execute("SET LOCAL lock_timeout='2s'");
                 jdbc.execute("SET LOCAL statement_timeout='3s'");
@@ -153,6 +164,7 @@ public class MedicalAuditAdmission implements AutoCloseable {
                 else for(var entry:entries)deliverOne(entry.log());
             });
             spool.acknowledgeSegments(entries.stream().map(EncryptedAuditSpool.Entry::name).toList());
+            recoverOneOutcome();
         }catch(IOException|RuntimeException e){
             failed.increment();
             long total=deliveryFailures.incrementAndGet();
@@ -161,6 +173,23 @@ public class MedicalAuditAdmission implements AutoCloseable {
             try{synchronized(this){if(closing&&activePublications==0)spool.close();}}catch(IOException e){logger.error("Medical audit close failed");}
             finally{flushLock.unlock();}
         }
+    }
+    // Called only by the single flush owner, after confirmed delivery or on empty spool.
+    private void recoverOneOutcome()throws IOException{
+        String correlation;Log event;
+        synchronized(this){
+            if(closing||failedOutcomes.isEmpty())return;
+            var item=failedOutcomes.entrySet().iterator().next();
+            correlation=item.getKey();event=item.getValue();activePublications++;
+        }
+        try{
+            validateSize(event);
+            spool.appendOrConfirm(event);
+            synchronized(this){
+                failedOutcomes.remove(correlation);reservations.remove(correlation);attemptedOutcomes.remove(correlation);
+                if(failedOutcomes.isEmpty()&&!intentFailure)unavailable=false;
+            }
+        }finally{synchronized(this){activePublications--;notifyAll();}}
     }
     private static final String COLUMNS="event_id,correlation_id,request_id,phase,actor_id,method,route,target,observed_at,observation,http_status";
     private static final String TUPLE="(CAST(? AS varchar),CAST(? AS varchar),CAST(? AS varchar),CAST(? AS varchar),CAST(? AS bigint),CAST(? AS varchar),CAST(? AS varchar),CAST(? AS varchar),CAST(? AS timestamp),CAST(? AS varchar),CAST(? AS varchar))";
@@ -178,9 +207,13 @@ public class MedicalAuditAdmission implements AutoCloseable {
         if(matched==null||matched!=1)throw new IllegalStateException("Medical audit identity conflict");
     }
     private void deliverBatch(List<EncryptedAuditSpool.Entry> entries){
-        var rows=entries.stream().map(EncryptedAuditSpool.Entry::log).sorted(Comparator.comparing(Log::getRequestId)).toList();
-        var ids=new HashSet<String>();
-        for(var row:rows)if(!ids.add(row.getRequestId()))throw new IllegalStateException("Duplicate medical event in batch");
+        var unique=new TreeMap<String,Log>();
+        for(var entry:entries){
+            Log row=entry.log(), prior=unique.putIfAbsent(row.getRequestId(),row);
+            if(prior!=null&&!Arrays.equals(arguments(prior),arguments(row)))
+                throw new IllegalStateException("Conflicting medical event in batch");
+        }
+        var rows=new ArrayList<>(unique.values());
         String incoming="WITH incoming("+COLUMNS+") AS (VALUES "+String.join(",",Collections.nCopies(rows.size(),TUPLE))+") ";
         Object[] args=rows.stream().flatMap(row->Arrays.stream(arguments(row))).toArray();
         jdbc.update(incoming+"INSERT INTO app.medical_audit_event("+COLUMNS+") SELECT "+COLUMNS+" FROM incoming ORDER BY event_id ON CONFLICT DO NOTHING",args);

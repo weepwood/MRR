@@ -108,6 +108,7 @@ public class ExternalArchiveAccessService {
                 expiresAt,
                 clientIp
         );
+        strictTerminal(grant,"TICKET_CREATE",clientIp,"archives="+grant.cases().size());
         return new IssuedTicket(ticket, grant, properties.getTicketTtlSeconds());
     }
 
@@ -142,6 +143,7 @@ public class ExternalArchiveAccessService {
                 expiresAt,
                 clientIp
         );
+        strictTerminal(sessionGrant,"SESSION_CREATE",clientIp,"expiresIn="+properties.getSessionTtlSeconds());
         return new IssuedSession(sessionToken, sessionGrant, properties.getSessionTtlSeconds());
     }
 
@@ -215,12 +217,28 @@ public class ExternalArchiveAccessService {
         catch(BusinessException ignored){logger.error("External revocation audit unavailable; preserving security revocation");}
     }
 
-    private void strictAudit(String client,String user,String bah,String sjh,String action,Integer imageId,String ip){
+    private void strictTerminal(ExternalArchiveGrant grant,String action,String ip,String detail){
         if(!strictIntent)return;
-        String trace=null;
+        try{
+            String trace=trustedTrace();
+            if(trace==null||accessMapper.insertAccessLog(grant.clientId(),grant.externalUserId(),null,null,action,null,
+                    truncate(ip,64),null,"SUCCESS",trace,detail)!=1)throw new IllegalStateException("External terminal not confirmed");
+        }catch(RuntimeException e){
+            logger.warn("External transactional terminal rejected: type={}",e.getClass().getSimpleName());
+            throw new BusinessException(503,"外部医疗审计暂不可用");
+        }
+    }
+
+    private String trustedTrace(){
         if(org.springframework.web.context.request.RequestContextHolder.getRequestAttributes()
                 instanceof org.springframework.web.context.request.ServletRequestAttributes attrs
-                &&attrs.getRequest().getAttribute("requestId") instanceof String id)trace=id;
+                &&attrs.getRequest().getAttribute("requestId") instanceof String id)return id;
+        return null;
+    }
+
+    private void strictAudit(String client,String user,String bah,String sjh,String action,Integer imageId,String ip){
+        if(!strictIntent)return;
+        String trace=trustedTrace();
         try{
             if(trace==null||accessMapper.insertAccessLog(client,user,blankToNull(MedicalRecordCodeUtils.normalizeOrEmpty(bah)),
                     blankToNull(MedicalRecordCodeUtils.normalizeOrEmpty(sjh)),action,imageId,
@@ -246,6 +264,8 @@ public class ExternalArchiveAccessService {
         if (grant == null) {
             return;
         }
+        // Strict credentials and their terminal audit commit atomically in the service transaction.
+        if(strictIntent&&("TICKET_CREATE".equals(action)||"SESSION_CREATE".equals(action)))return;
         try {
             accessMapper.insertAccessLog(
                     grant.clientId(),

@@ -373,7 +373,8 @@ public class OssServiceImpl implements OssService {
                 if (!matches) {
                     logger.error("OSS integrity metadata mismatch");
                 }
-                return matches;
+                if(!matches||!ossProperties.isConditionalCreate())return matches;
+                // Conditional candidate does not trust metadata alone for existing bytes.
             }
 
             try (InputStream inputStream = s3Client.getObject(GetObjectRequest.builder()

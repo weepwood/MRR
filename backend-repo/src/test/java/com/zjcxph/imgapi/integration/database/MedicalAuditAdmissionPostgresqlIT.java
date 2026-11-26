@@ -70,6 +70,7 @@ class MedicalAuditAdmissionPostgresqlIT extends PostgresqlIntegrationTestSupport
 
     @Test void groupedConcurrentReservationsNeverOverrunAndAllAcceptedOutcomesFit()throws Exception{
         var env=configuration().withProperty("mrr.audit.admission.grouped","true")
+                .withProperty("mrr.audit.admission.fast-capacity","true")
                 .withProperty("mrr.audit.admission.max-records","16").withProperty("mrr.audit.admission.max-bytes","262144");
         var metrics=new SimpleMeterRegistry();
         var pool=java.util.concurrent.Executors.newFixedThreadPool(16);
@@ -140,6 +141,57 @@ class MedicalAuditAdmissionPostgresqlIT extends PostgresqlIntegrationTestSupport
             }
             System.out.println("MRR_MEDICAL_BATCH_ACK actual COMMIT reply lost; two durable events reconciled");
         }finally{jdbc.update("DELETE FROM app.medical_audit_event WHERE actor_id=999996");}
+    }
+
+    @Test void actualOutcomeDiskPermissionFailureRecoversOriginalObservation()throws Exception{
+        var env=configuration().withProperty("mrr.audit.admission.grouped","true")
+                .withProperty("mrr.audit.admission.fast-capacity","true");
+        var root=Path.of(env.getRequiredProperty("mrr.audit.admission.directory"));
+        var metrics=new SimpleMeterRegistry();
+        try(var gate=new MedicalAuditAdmission(env,new ObjectMapper(),jdbc,tx,metrics)){
+            String id=gate.admit(999995,"batch12-outcome","GET","/api/v1/img/content/{id}","[REDACTED]");
+            gate.flush();
+            Files.setPosixFilePermissions(root,PosixFilePermissions.fromString("r-x------"));
+            try{
+                gate.complete(id,206,true);
+                assertThat(gate.reserved()).isEqualTo(1);
+                assertThatThrownBy(()->gate.admit(999995,"blocked","GET","/api/v1/img/content/{id}","[REDACTED]")).isInstanceOf(java.io.IOException.class);
+                gate.complete(id,200,false); // duplicate callback must not overwrite original observation
+            }finally{Files.setPosixFilePermissions(root,PosixFilePermissions.fromString("rwx------"));}
+            gate.flush();gate.flush();
+            assertThat(gate.reserved()).isZero();
+            assertThat(jdbc.queryForObject("SELECT observation||':'||http_status FROM app.medical_audit_event WHERE correlation_id=? AND phase='OUTCOME'",String.class,id)).isEqualTo("HTTP_EXCEPTION:206");
+            String next=gate.admit(999995,"after-recovery","GET","/api/v1/img/content/{id}","[REDACTED]");
+            gate.complete(next,200,false);gate.flush();
+            assertThat(jdbc.queryForObject("SELECT count(*) FROM app.medical_audit_event WHERE actor_id=999995",Integer.class)).isEqualTo(4);
+            System.out.println("MRR_OUTCOME_RECOVERY real directory write failure; preserved first observed 206 exception; resumed");
+        }finally{metrics.close();jdbc.update("DELETE FROM app.medical_audit_event WHERE actor_id=999995");}
+    }
+
+    @Test void independentInstanceSpoolsDeliverToSameLedgerWithoutSharedDirectoryOwnership()throws Exception{
+        var first=configuration().withProperty("mrr.audit.admission.grouped","true")
+                .withProperty("mrr.audit.admission.fast-capacity","true");
+        var secondRoot=Files.createDirectory(temp.toRealPath().resolve("second"),PosixFilePermissions.asFileAttribute(PosixFilePermissions.fromString("rwx------")));
+        var second=new MockEnvironment().withProperty("MRR_MEDICAL_AUDIT_KEY",first.getRequiredProperty("MRR_MEDICAL_AUDIT_KEY"))
+                .withProperty("mrr.audit.admission.directory",secondRoot.toString())
+                .withProperty("mrr.audit.admission.max-records","2").withProperty("mrr.audit.admission.max-bytes","65536")
+                .withProperty("mrr.audit.admission.grouped","true").withProperty("mrr.audit.admission.fast-capacity","true");
+        try(var a=service(first);var b=service(second)){
+            assertThatThrownBy(()->service(first)).isInstanceOf(java.io.IOException.class);
+            String one=a.admit(999994,"instance-a","GET","/api/v1/img/content/{id}","[REDACTED]");
+            String two=b.admit(999994,"instance-b","GET","/api/v1/img/content/{id}","[REDACTED]");
+            assertThat(one).isNotEqualTo(two);
+            a.complete(one,200,false);b.complete(two,206,false);
+            var workers=java.util.concurrent.Executors.newFixedThreadPool(2);
+            try{
+                var f=workers.submit(a::flush);var g=workers.submit(b::flush);
+                f.get(10,java.util.concurrent.TimeUnit.SECONDS);g.get(10,java.util.concurrent.TimeUnit.SECONDS);
+            }finally{workers.shutdownNow();}
+            assertThat(jdbc.queryForObject("SELECT count(*) FROM app.medical_audit_event WHERE actor_id=999994",Integer.class)).isEqualTo(4);
+            assertThat(jdbc.queryForObject("SELECT count(DISTINCT correlation_id) FROM app.medical_audit_event WHERE actor_id=999994",Integer.class)).isEqualTo(2);
+            assertThat(a.reserved()).isZero();assertThat(b.reserved()).isZero();
+            System.out.println("MRR_MEDICAL_INSTANCES private spools shared ledger, four exact events; shared directory refused");
+        }finally{jdbc.update("DELETE FROM app.medical_audit_event WHERE actor_id=999994");}
     }
 
     @Test void rejectsCrossDomainKeyReuseBeforeOpeningSpool()throws Exception{

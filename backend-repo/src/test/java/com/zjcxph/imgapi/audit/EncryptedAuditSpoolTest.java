@@ -114,6 +114,25 @@ class EncryptedAuditSpoolTest {
         try(var spool=open(p,100,KEY)){assertThat(spool.peek(50)).hasSize(32);}
     }
 
+    @Test void exactRetryDoesNotDuplicateAndRejectsConflictingObservation()throws Exception{
+        try(var spool=open(directory(),2,KEY)){
+            Log row=log("retry");
+            spool.append(row);
+            var before=spool.capacitySnapshot();
+            long forces=spool.fileForces(),directories=spool.directoryForces();
+            spool.appendOrConfirm(log("retry"));
+            assertThat(spool.capacitySnapshot()).isEqualTo(before);
+            assertThat(spool.fileForces()).isEqualTo(forces);
+            assertThat(spool.directoryForces()).isEqualTo(directories+1);
+            Log conflicting=log("retry");conflicting.setResponseStatus("500");
+            assertThatThrownBy(()->spool.appendOrConfirm(conflicting)).isInstanceOf(java.io.IOException.class);
+            assertThat(spool.peekConcurrent(2)).singleElement().satisfies(e->assertThat(e.log().getResponseStatus()).isEqualTo("200"));
+            spool.acknowledge(spool.peekConcurrent(2).getFirst().name());
+            assertThat(spool.capacitySnapshot().records()).isZero();
+            assertThat(spool.capacitySnapshot().bytes()).isZero();
+        }
+    }
+
     @Test void rotationRequiresOldKeyUntilAllOldSegmentsAreAcknowledged() throws Exception {
         Path p=directory();byte[] old=new byte[32],next=new byte[32];old[0]=11;next[0]=12;
         try(var spool=open(p,10,KEY)){spool.append(log("legacy"));}

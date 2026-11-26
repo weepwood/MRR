@@ -114,6 +114,17 @@ textarea {
   transform: translateY(-50%) scaleY(1);
 }
 
+/* Shared directory surface for settings and component gallery. */
+.mrr-directory-panel {
+  display: grid;
+  gap: var(--mrr-space-3);
+  min-width: 0;
+  padding: var(--mrr-space-3);
+  background: var(--mrr-card);
+  border: 1px solid var(--mrr-border);
+  border-radius: var(--mrr-radius-card);
+}
+
 /* Local directories share the expanded sidebar leaf appearance, not its
  * tree indentation or routing behavior. */
 .mrr-directory-nav-item {

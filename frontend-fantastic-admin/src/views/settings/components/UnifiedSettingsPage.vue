@@ -448,7 +448,7 @@ onUnmounted(() => {
     </MrrPageHeader>
 
     <div ref="layoutRef" class="settings-layout" :class="{ 'settings-layout--compact': compactLayout, 'settings-layout--narrow': narrowLayout }">
-      <aside class="settings-sidebar" aria-label="设置目录">
+      <aside class="settings-sidebar mrr-directory-panel" aria-label="设置目录">
         <SettingsSearch @select="openSearchResult" />
         <nav class="settings-nav" aria-label="设置分类" @keydown="handleNavKey">
           <div v-for="group in navGroups" :key="group.title" class="settings-nav-group">

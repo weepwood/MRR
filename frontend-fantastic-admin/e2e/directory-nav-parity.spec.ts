@@ -37,11 +37,26 @@ for (const palette of ['mrr', 'gr8r']) {
         }
       }
       const expected = await leaf.evaluate(style)
+      const surface = (el: Element) => {
+        const s = getComputedStyle(el)
+        return { background: s.backgroundColor, border: s.border, radius: s.borderRadius, padding: s.padding }
+      }
+      let settingsSurface: ReturnType<typeof surface> | undefined
       for (const [url, selector, active, next] of [
         ['/settings?section=system', '.settings-nav', '[aria-current=true]', '登录与支持'],
         ['/ui-components', '.gallery-categories', '[aria-pressed=true]', '表单与选择'],
       ]) {
         await page.goto(url)
+        const panel = page.locator(url.startsWith('/settings') ? '.settings-sidebar' : '.gallery-directory')
+        await expect(panel).toBeVisible()
+        await expect(panel).toHaveClass(/mrr-directory-panel/)
+        const actualSurface = await panel.evaluate(surface)
+        if (url.startsWith('/settings')) {
+          settingsSurface = actualSurface
+        }
+        else {
+          expect(actualSurface).toEqual(settingsSurface)
+        }
         const nav = page.locator(selector)
         const selected = nav.locator(active)
         await expect(selected).toHaveCount(1)
@@ -64,7 +79,7 @@ for (const palette of ['mrr', 'gr8r']) {
         await expect.poll(() => nav.evaluate(el => [...el.querySelectorAll('.mrr-nav-leaf')].filter(node => getComputedStyle(node, '::after').opacity === '1').length)).toBe(1)
         await expect.poll(() => target.evaluate(el => Math.abs(new DOMMatrixReadOnly(getComputedStyle(el, '::after').transform).d))).toBe(1)
         await page.mouse.move(1000, 500)
-        await nav.screenshot({ path: testInfo.outputPath(url.startsWith('/settings') ? 'settings.png' : 'gallery.png'), animations: 'disabled' })
+        await panel.screenshot({ path: testInfo.outputPath(url.startsWith('/settings') ? 'settings.png' : 'gallery.png'), animations: 'disabled' })
         await page.emulateMedia({ reducedMotion: 'reduce' })
         await expect.poll(() => target.evaluate(el => Number.parseFloat(getComputedStyle(el, '::after').transitionDuration))).toBe(0)
         await page.emulateMedia({ reducedMotion: 'no-preference' })

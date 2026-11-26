@@ -13,15 +13,6 @@
 .settings-content,
 .settings-panel-header { min-width: 0; }
 
-.settings-sidebar {
-  display: grid;
-  gap: var(--mrr-space-3);
-  padding: var(--mrr-space-3);
-  background: var(--mrr-card);
-  border: 1px solid var(--mrr-border);
-  border-radius: var(--mrr-radius-card);
-}
-
 .settings-nav { display: grid; gap: var(--mrr-space-3); }
 .settings-nav-group { display: grid; gap: 4px; }
 

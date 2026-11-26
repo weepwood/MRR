@@ -856,3 +856,6 @@ MrrCursorPagination 改用 ElPagination 原生页码、箭头、跳页、条数�
 
 ## 设置与组件展厅目录导航归一（2026-11-26）
 基线5bb5fd3c，连接本地工作区成功。复用当前实际业务子菜单视觉参数及统一mrr-nav-leaf色条，两个目录共享视觉类、移除旧重复CSS；平级目录不添加树线，保留业务侧栏原缩进/展开。原有20项双引擎回归全部通过；新增8项首轮3/8通过，5项因亚像素及滚动绝对坐标测量差异失败，改为实际行高精度及相对图标几何后最终8/8，覆盖两主题明暗、两目录、点击/hover、减少动效、移动适配。TypeScript、定向ESLint/Stylelint及diff通过。截图/Volumes/data/AI-Development/artifacts/mrr-directory-nav-20261126，日志/tmp/mrr-directory-nav-{e2e,final,tsc}.log。未执行全量CI、生产构建及真实医院终端验收，不推送合并发布。
+
+## 目录容器背景归一（2026-11-26）
+基线8d04a864。设置及展厅使用共享mrr-directory-panel，展厅去除重复外边距；不改变菜单逻辑或响应式契约。Chromium/WebKit 18/18，含四种主题配色下两个目录实际背景、描边、圆角、内距一致性，375px宽度及搜索分类回归。定向ESLint、Stylelint及diff检查通过（首轮注释空行格式修正）。截图/Volumes/data/AI-Development/artifacts/mrr-directory-panel-20261126，日志/tmp/mrr-directory-panel-e2e.log。未执行全量CI、生产构建、类型全检及医院终端验收，不推送合并发布。

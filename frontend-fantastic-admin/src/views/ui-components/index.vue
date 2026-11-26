@@ -41,7 +41,7 @@ function resetExamples() {
     </MrrPageHeader>
 
     <div class="gallery-layout">
-      <aside class="gallery-directory" aria-label="组件目录">
+      <aside class="gallery-directory mrr-directory-panel" aria-label="组件目录">
         <div class="gallery-search">
           <FaIcon name="i-lucide:search" class="gallery-search-icon" aria-hidden="true" />
           <el-input id="gallery-search" v-model="keyword" type="search" placeholder="名称或组件名" aria-label="查找组件" class="gallery-search-input" />
@@ -137,7 +137,6 @@ function resetExamples() {
 .gallery-categories {
   display: grid;
   gap: var(--mrr-space-1);
-  margin-top: var(--mrr-space-5);
 }
 
 .gallery-directory-note,
@@ -146,6 +145,10 @@ function resetExamples() {
   font-size: 12px;
   line-height: 1.7;
   color: var(--mrr-muted-foreground);
+}
+
+.gallery-directory-note {
+  margin: 0;
 }
 
 .gallery-results {
@@ -262,7 +265,6 @@ function resetExamples() {
 
   .gallery-categories {
     grid-template-columns: repeat(3, minmax(0, 1fr));
-    margin-top: var(--mrr-space-3);
   }
 }
 

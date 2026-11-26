@@ -305,3 +305,5 @@ MrrSegmentedTabs拥有原生Element Plus封装、可访问tablist名称和首尾
 
 ## 目录导航（2026-11-26）
 base.css 的 mrr-nav-leaf 负责所有叶子选中色条及动效，按语义ARIA选中状态驱动；mrr-directory-nav-item/icon/label/count 负责本地平级目录的公共视觉样式。Menu/item.vue保留路由行为，SubSidebar保留树层级及展开几何；设置与展厅仅负责各自数据、筛选及交互，不复制色条或选中描边。
+
+目录外层容器由 base.css 的 mrr-directory-panel 统一管理背景、描边、圆角与内边距；页面仅管理目录位置、响应式排列和滚动。

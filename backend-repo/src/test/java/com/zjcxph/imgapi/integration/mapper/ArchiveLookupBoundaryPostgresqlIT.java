@@ -36,6 +36,9 @@ class ArchiveLookupBoundaryPostgresqlIT extends PostgresqlIntegrationTestSupport
     @Autowired
     private ScanMapper scanMapper;
 
+    @Autowired
+    private com.zjcxph.imgapi.mapper.ArchiveRecordMapper archiveRecordMapper;
+
     @Test
     @DisplayName("重复病案号缺少上架号时拒绝猜测，提供上架号后精确解析")
     void resolvesBySjhWhenBahIsAmbiguous() {
@@ -114,6 +117,22 @@ class ArchiveLookupBoundaryPostgresqlIT extends PostgresqlIntegrationTestSupport
                 .extracting(Scan::getFilename)
                 .containsExactly("page-2.jpg", "page-3.jpg");
         assertThat(scanMapper.findByConditionWithPagination(request, 3, 2)).isEmpty();
+    }
+
+    @Test
+    void archiveScanListMatchesActiveCountAndOnlyLoadsBusinessMetadata() {
+        Long archive = insertArchive("10000050", "00005001");
+        insertScan("10000050", "00005001", "active.jpg", 1, "synthetic-folder");
+        insertScan("10000050", "00005001", "inactive.jpg", 2, "synthetic-folder", 0);
+        jdbcTemplate.update("UPDATE app.mr_scan SET archive_id=?, source_type='LOCAL', source_ref='synthetic.jpg' WHERE bah='10000050'", archive);
+        var detail = archiveRecordMapper.findById(archive);
+        var rows = archiveRecordMapper.findScans(archive);
+        assertThat(detail.getScanCount()).isEqualTo(1L);
+        assertThat(rows).extracting(Scan::getFilename).containsExactly("active.jpg");
+        assertThat(rows.getFirst().getArchiveId()).isEqualTo(archive);
+        assertThat(rows.getFirst().getFolder()).isNull();
+        assertThat(rows.getFirst().getSourceRef()).isNull();
+        assertThat(rows.getFirst().getOssUrl()).isNull();
     }
 
     private Long insertArchive(String bah, String sjh) {

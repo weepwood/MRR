@@ -569,7 +569,7 @@ onUnmounted(() => {
             </el-button>
           </div>
 
-          <div v-else-if="activeSection === 'department'" class="settings-actions" :class="{ dirty: departmentThemeRef?.isDirty }">
+          <div v-else-if="activeSection === 'department'" class="settings-actions settings-actions--department" :class="{ dirty: departmentThemeRef?.isDirty }">
             <div class="save-status" role="status" :class="{ unavailable: departmentThemeRef?.syncState !== 'server' }">
               <span class="status-dot" />
               <div>

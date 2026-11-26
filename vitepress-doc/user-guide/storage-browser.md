@@ -134,7 +134,7 @@ medical-records/
 | 查询依据 | 目录/对象路径 | 病案号、上架号、身份证 |
 | 患者信息 | 不展示或仅有限信息 | 展示脱敏病案信息 |
 | 分类浏览 | 按文件结构 | 按病案类型和页序 |
-| 下载权限 | `record:read` 下的只读文件操作 | ZIP 需要 `record:download` |
+| 下载权限 | Nginx 文件操作要求 record:read，OSS 文件浏览及签名地址要求 record:manage；受资源范围约束 | ZIP 需要 record:download |
 | PDF | 不支持 | 需要 `record:pdf:export` |
 | 审计语义 | 运维/存储访问 | 病案业务访问 |
 

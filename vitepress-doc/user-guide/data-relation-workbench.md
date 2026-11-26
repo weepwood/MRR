@@ -1,6 +1,7 @@
 <script setup>
 import figure1 from './assets/archive-records.svg?url'
 import figure2 from './assets/data-quality.svg?url'
+import figure3 from './assets/relations-workspace.svg?url'
 </script>
 
 # 数据关系工作台
@@ -18,6 +19,12 @@ import figure2 from './assets/data-quality.svg?url'
 系统用病案主档作为相对稳定的关联中心，其内部编号叫 `archive_id`。统计、扫描和装箱记录使用它建立关联；患者资料仍按 BAH 作兼容匹配，不能仅因姓名或病案号相似就认定是同一人。用户无需记住表名即可完成查询。
 
 ## 2. 查看总览并找到问题
+
+<p class="doc-figure"><a :href="figure3" target="_blank" rel="noopener noreferrer" aria-label="数据关系工作台总览区域（在新标签页查看原图）"><img :src="figure3" alt="数据关系工作台总览区域" loading="lazy"></a></p>
+
+*图 2 · 基于经典浅色主题 Mock 总览的页头、卡片、页签及表格重绘；数字仅为合成示例，不是医院实时统计。*
+
+① 页头的「打开病案工作台」「刷新」「执行检查」；② 四项汇总指标；③ 关系总览、病案工作台、修复工单、检查与异常页签；④ 关系覆盖卡片；⑤ 检查结果表。覆盖率与异常数来自不同统计口径，不能因覆盖率为 100% 就推断无异常。
 
 总览提供主档数量、关联覆盖情况、最近一次质量检查与异常摘要。大规模扫描表的部分统计来自 PostgreSQL 估算，不能理解为每条记录均已实时检查。
 
@@ -48,7 +55,7 @@ import figure2 from './assets/data-quality.svg?url'
 
 <p class="doc-figure"><a :href="figure2" target="_blank" rel="noopener noreferrer" aria-label="数据治理与证据核对（在新标签页查看原图）"><img :src="figure2" alt="数据治理与证据核对" loading="lazy"></a></p>
 
-*图 2 · 先检查证据，再区分只读预览、人工记录与真正写入。*
+*图 3 · 先检查证据，再区分只读预览、人工记录与真正写入。逻辑流程图，不对应页面布局。*
 
 三种操作必须区分：
 

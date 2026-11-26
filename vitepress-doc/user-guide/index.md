@@ -37,7 +37,7 @@ MRR 用于管理医疗机构的患者、病案主档、扫描记录、病案图�
 | [影像档案袋](./images.md) | 查询、浏览、打印、ZIP/PDF 导出 | `record:read` / `record:download` / `record:pdf:export` |
 | [病案类型](./medical-record-types.md) | 类型 0～15 的含义和使用规则 | 已登录账号 |
 | [统计分析](./statistics.md) | 扫描规模、年度趋势、明细和病案统计 | `statistics:read` |
-| [OSS 迁移管理](./oss-migration.md) | Nginx 原图迁移、等待补齐、重试和校验 | `record:read` |
+| [OSS 迁移管理](./oss-migration.md) | Nginx 原图迁移、等待补齐、重试和校验 | 概览 record:read；创建、取消及重试 record:manage |
 | [存储与文件浏览](./storage-browser.md) | 只读浏览 OSS 和 Nginx 静态资源 | OSS：record:manage；Nginx：record:read |
 | [系统管理](./admin.md) | 用户、权限、系统设置和图片来源 | `user:manage` / `role:read` / `system:read` |
 | [数据交换中心](./data-exchange.md) | 模板、预校验、确认导入及条件导出 | 由数据集和操作权限决定 |

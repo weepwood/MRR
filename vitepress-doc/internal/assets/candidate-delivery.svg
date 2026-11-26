@@ -1,37 +1,37 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 340" role="img" aria-labelledby="title desc">
 <title id="title">候选版本交付门禁</title>
 <desc id="desc">测试证据必须与实际候选提交关联；固定提交：记录 Git SHA，确认安全阻塞；构建验收：按风险执行 CI，校验制品身份；现场演练：Windows 与 ACL，备份恢复 / 存储；授权发布：全部必要门禁，明确回滚边界；任一必要安全或现场门禁未通过：停止发布，不将旧制品或跳过的检查当作通过。</desc>
-<rect width="960" height="340" rx="18" fill="#f5f7fa"/>
+<rect width="960" height="340" rx="18" fill="#f1f5f9"/>
 <g font-family="HarmonyOS Sans SC, Noto Sans CJK SC, PingFang SC, Microsoft YaHei, sans-serif">
-<text x="32" y="44" font-size="26" font-weight="700" fill="#182638">候选版本交付门禁</text>
+<text x="32" y="44" font-size="26" font-weight="700" fill="#020817">候选版本交付门禁</text>
 <text x="32" y="72" font-size="15" fill="#526175">测试证据必须与实际候选提交关联</text>
-<rect x="32.0" y="101" width="206.0" height="163" rx="12" fill="#ffffff" stroke="#d7e0e8"/>
-<rect x="44.0" y="114" width="34" height="27" rx="7" fill="#356c81"/>
+<rect x="32.0" y="101" width="206.0" height="163" rx="12" fill="#ffffff" stroke="#e2e8f0"/>
+<rect x="44.0" y="114" width="34" height="27" rx="7" fill="#2563eb"/>
 <text x="61.0" y="133" font-size="14" font-weight="700" text-anchor="middle" fill="#fff">01</text>
-<text x="46.0" y="164" font-size="20" font-weight="700" fill="#182638">固定提交</text>
+<text x="46.0" y="164" font-size="20" font-weight="700" fill="#020817">固定提交</text>
 <text x="46.0" y="190" font-size="14" fill="#42536a">记录 Git SHA</text>
 <text x="46.0" y="212" font-size="14" fill="#42536a">确认安全阻塞</text>
 <path d="M242.0 182 h16 m-6 -6 6 6 -6 6" stroke="#8194a8" stroke-width="1.7" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
-<rect x="262.0" y="101" width="206.0" height="163" rx="12" fill="#ffffff" stroke="#d7e0e8"/>
+<rect x="262.0" y="101" width="206.0" height="163" rx="12" fill="#ffffff" stroke="#e2e8f0"/>
 <rect x="274.0" y="114" width="34" height="27" rx="7" fill="#367c68"/>
 <text x="291.0" y="133" font-size="14" font-weight="700" text-anchor="middle" fill="#fff">02</text>
-<text x="276.0" y="164" font-size="20" font-weight="700" fill="#182638">构建验收</text>
+<text x="276.0" y="164" font-size="20" font-weight="700" fill="#020817">构建验收</text>
 <text x="276.0" y="190" font-size="14" fill="#42536a">按风险执行 CI</text>
 <text x="276.0" y="212" font-size="14" fill="#42536a">校验制品身份</text>
 <path d="M472.0 182 h16 m-6 -6 6 6 -6 6" stroke="#8194a8" stroke-width="1.7" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
-<rect x="492.0" y="101" width="206.0" height="163" rx="12" fill="#ffffff" stroke="#d7e0e8"/>
+<rect x="492.0" y="101" width="206.0" height="163" rx="12" fill="#ffffff" stroke="#e2e8f0"/>
 <rect x="504.0" y="114" width="34" height="27" rx="7" fill="#5b648d"/>
 <text x="521.0" y="133" font-size="14" font-weight="700" text-anchor="middle" fill="#fff">03</text>
-<text x="506.0" y="164" font-size="20" font-weight="700" fill="#182638">现场演练</text>
+<text x="506.0" y="164" font-size="20" font-weight="700" fill="#020817">现场演练</text>
 <text x="506.0" y="190" font-size="14" fill="#42536a">Windows 与 ACL</text>
 <text x="506.0" y="212" font-size="14" fill="#42536a">备份恢复 / 存储</text>
 <path d="M702.0 182 h16 m-6 -6 6 6 -6 6" stroke="#8194a8" stroke-width="1.7" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
-<rect x="722.0" y="101" width="206.0" height="163" rx="12" fill="#ffffff" stroke="#d7e0e8"/>
+<rect x="722.0" y="101" width="206.0" height="163" rx="12" fill="#ffffff" stroke="#e2e8f0"/>
 <rect x="734.0" y="114" width="34" height="27" rx="7" fill="#987444"/>
 <text x="751.0" y="133" font-size="14" font-weight="700" text-anchor="middle" fill="#fff">04</text>
-<text x="736.0" y="164" font-size="20" font-weight="700" fill="#182638">授权发布</text>
+<text x="736.0" y="164" font-size="20" font-weight="700" fill="#020817">授权发布</text>
 <text x="736.0" y="190" font-size="14" fill="#42536a">全部必要门禁</text>
 <text x="736.0" y="212" font-size="14" fill="#42536a">明确回滚边界</text>
-<rect x="32" y="282" width="896" height="38" rx="8" fill="#e7edf2"/>
+<rect x="32" y="282" width="896" height="38" rx="8" fill="#e2e8f0"/>
 <text x="48" y="306" font-size="14" fill="#34465a">任一必要安全或现场门禁未通过：停止发布，不将旧制品或跳过的检查当作通过。</text>
 </g></svg>

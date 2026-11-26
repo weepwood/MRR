@@ -14,7 +14,7 @@ import type {
 /* eslint-disable antfu/if-newline, curly */
 import type { MrrTableAction } from '@/components/MrrTableActions/types'
 import { ElMessage } from 'element-plus'
-import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
+import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import {
   getArchiveRelationDetail,
   getDataQualityIssues,
@@ -36,6 +36,7 @@ import MrrTableActions from '@/components/MrrTableActions/index.vue'
 import { useTableActionLayout } from '@/composables/useTableActionLayout'
 import { formatDateTime } from '@/utils/display-format'
 import { hasPermission } from '@/utils/session'
+import { isSessionAccessDenied } from '@/utils/session-access-denied'
 import { tableSequenceColumn } from '@/utils/table-sequence'
 import ArchiveManifestCard from './ArchiveManifestCard.vue'
 import ArchiveScanInspector from './components/ArchiveScanInspector.vue'
@@ -56,6 +57,11 @@ const activeTab = ref(props.archiveOnly ? 'archive' : 'overview')
 const overview = ref<DataRelationOverview | null>(null)
 const qualitySummary = ref<DataQualitySummary | null>(null)
 const issues = ref<DataQualityIssue[]>([])
+const qualityLoading = ref(false)
+const qualityFailed = ref(false)
+const qualityLoaded = ref(false)
+const sampleRegion = ref<HTMLElement>()
+
 const railWidth = ref(260)
 const railDivider = ref<InstanceType<typeof MrrResizeHandle>>()
 
@@ -84,16 +90,12 @@ const relationDetail = ref<ArchiveRelationDetail | null>(null)
 const issueSeverity = ref('ALL')
 const issueKeyword = ref('')
 const issueRule = ref('')
-const issueRules = computed(() => [...new Map(issues.value.map(issue => [issueCode(issue), issueName(issue)]))].filter(([code]) => !!code).map(([code, name]) => ({ code, name })))
 const issueFiltersActive = computed(() => issueSeverity.value !== 'ALL' || !!issueRule.value || !!issueKeyword.value.trim())
 function resetIssueFilters() {
   issueSeverity.value = 'ALL'
   issueRule.value = ''
   issueKeyword.value = ''
 }
-watch(issueRules, (rules) => {
-  if (issueRule.value && !rules.some(rule => rule.code === issueRule.value)) issueRule.value = ''
-})
 const repairPreview = ref<RepairPreview | null>(null)
 const previewVisible = ref(false)
 const previewError = ref(false)
@@ -142,6 +144,9 @@ function resetPage() {
   overview.value = null
   qualitySummary.value = null
   issues.value = []
+  qualityLoading.value = false
+  qualityFailed.value = false
+  qualityLoaded.value = false
   resetIssueFilters()
   overviewLoading.value = false
   checking.value = false
@@ -193,6 +198,20 @@ function archiveActions(row: ArchiveSearchResult): MrrTableAction[] {
 
 const latestRun = computed(() => qualitySummary.value?.latestRun ?? overview.value?.latestQualityRun ?? null)
 const checks = computed<QualityCheck[]>(() => qualitySummary.value?.checks ?? overview.value?.relationChecks ?? [])
+const issueRules = computed(() => [...new Map([...checks.value.map(check => [checkCode(check), checkName(check)] as const), ...issues.value.map(issue => [issueCode(issue), issueName(issue)] as const)])].filter(([code]) => !!code).map(([code, name]) => ({ code, name })))
+watch(issueRules, (rules) => {
+  if (issueRule.value && !rules.some(rule => rule.code === issueRule.value)) issueRule.value = ''
+})
+function sampleCountForRule(code: string) {
+  return issues.value.filter(issue => issueCode(issue) === code).length
+}
+async function inspectRule(check: QualityCheck) {
+  resetIssueFilters()
+  issueRule.value = checkCode(check)
+  await nextTick()
+  sampleRegion.value?.focus({ preventScroll: true })
+  sampleRegion.value?.scrollIntoView({ block: 'start' })
+}
 const filteredIssues = computed(() => {
   const keyword = issueKeyword.value.trim().toLowerCase()
   return issues.value.filter((issue) => {
@@ -299,13 +318,38 @@ async function loadOverview() {
 
 async function loadQualityData() {
   const current = ++qualityVersion
-  const [summaryResponse, issueResponse] = await Promise.all([
-    getDataQualitySummary(),
-    getDataQualityIssues(300),
-  ])
-  if (current !== qualityVersion) return
-  qualitySummary.value = summaryResponse.data ?? null
-  issues.value = issueResponse.data ?? []
+  qualityLoading.value = true
+  qualityFailed.value = false
+  try {
+    const [summaryResponse, issueResponse] = await Promise.all([
+      getDataQualitySummary(),
+      getDataQualityIssues(300),
+    ])
+    if (current !== qualityVersion) return
+    if (!summaryResponse.data || !Array.isArray(issueResponse.data)) throw new Error('Invalid quality response')
+    qualitySummary.value = summaryResponse.data
+    issues.value = issueResponse.data
+    qualityLoaded.value = true
+  }
+  catch (error) {
+    if (current === qualityVersion) {
+      qualityFailed.value = true
+      if (isSessionAccessDenied(error)) {
+        qualityLoaded.value = false
+        qualitySummary.value = null
+        issues.value = []
+        resetIssueFilters()
+      }
+    }
+    throw error
+  }
+  finally {
+    if (current === qualityVersion) qualityLoading.value = false
+  }
+}
+
+function retryQualityData() {
+  void loadQualityData().catch(() => {})
 }
 
 async function loadDashboard() {
@@ -398,6 +442,9 @@ async function runChecks() {
     ElMessage.success('数据质量检查已完成')
     await Promise.all([loadOverview(), loadQualityData()])
     if (current === sessionVersion) activeTab.value = 'quality'
+  }
+  catch {
+    if (current === sessionVersion) ElMessage.error('检查或结果读取失败，请核对实际状态')
   }
   finally {
     if (current === sessionVersion) checking.value = false
@@ -848,6 +895,8 @@ onMounted(() => {
       </el-tab-pane>
       <el-tab-pane v-if="!archiveOnly" label="检查与异常" name="quality">
         <div class="quality-stack">
+          <AppError v-if="qualityFailed && !qualityLoaded" message="异常样本读取失败，不能判断当前是否存在异常" @retry="retryQualityData" />
+          <el-alert v-else-if="qualityFailed" title="异常样本刷新失败，以下为上次成功读取的结果" type="warning" :closable="false" />
           <MrrSectionCard class="section-card" title="检查规则结果" description="关联、编号、文件元数据、重复扫描和迁移一致性">
             <template #actions>
               <MrrStatusTag v-if="qualitySummary?.running" label="检查运行中" tone="warning" />
@@ -877,6 +926,14 @@ onMounted(() => {
                   {{ formatNumber(row.sampledCount ?? row.sampled_count) }}
                 </template>
               </el-table-column>
+              <el-table-column label="已加载样本" width="130">
+                <template #default="{ row }">
+                  <el-button v-if="qualityLoaded" link type="primary" :aria-label="`查看规则 ${checkName(row as QualityCheck)} 的样本`" @click="inspectRule(row as QualityCheck)">
+                    {{ sampleCountForRule(checkCode(row as QualityCheck)) }} · 查看
+                  </el-button>
+                  <span v-else>—</span>
+                </template>
+              </el-table-column>
               <el-table-column label="检查时间" min-width="180">
                 <template #default="{ row }">
                   {{ formatDateTime(row.checkedAt ?? row.checked_at) }}
@@ -885,69 +942,76 @@ onMounted(() => {
             </el-table>
           </MrrSectionCard>
 
-          <MrrSectionCard class="section-card" title="异常样本" description="当前显示最近一次检查保存的有界样本，不直接返回全量异常">
-            <MrrFilterBar embedded :focus-ring="false">
-              <div class="mrr-filter-field">
-                <el-select v-model="issueSeverity" aria-label="异常级别筛选">
-                  <el-option label="全部级别" value="ALL" />
-                  <el-option label="严重" value="CRITICAL" />
-                  <el-option label="警告" value="WARNING" />
-                </el-select>
-              </div>
-              <div class="mrr-filter-field mrr-filter-field--code">
-                <el-select v-model="issueRule" aria-label="异常规则筛选" class="issue-rule-select" clearable placeholder="全部规则">
-                  <el-option v-for="rule in issueRules" :key="rule.code" :label="rule.name || rule.code" :value="rule.code" />
-                </el-select>
-              </div>
-              <div class="mrr-filter-field mrr-filter-field--keyword">
-                <el-input v-model="issueKeyword" aria-label="异常关键字筛选" clearable placeholder="筛选规则、表、BAH 或 SJH" />
-              </div>
+          <section ref="sampleRegion" class="quality-samples-region" tabindex="-1" aria-label="异常样本检查区">
+            <MrrSectionCard v-loading="qualityLoading" class="section-card" title="异常样本" description="当前显示最近一次检查保存的有界样本，不直接返回全量异常">
               <template #actions>
-                <MrrFilterActionButton action="reset" feedback="request" :disabled="!issueFiltersActive" aria-label="重置异常样本筛选" @click="resetIssueFilters" />
+                <el-button :loading="qualityLoading" @click="retryQualityData">
+                  刷新样本
+                </el-button>
               </template>
-            </MrrFilterBar>
-            <div class="issue-sample-count" role="status">
-              匹配 {{ filteredIssues.length }} / 已加载 {{ issues.length }} 个样本
-            </div>
-            <el-table :data="filteredIssues" stripe :empty-text="issueFiltersActive && issues.length ? '没有符合筛选条件的样本' : '当前没有异常样本'">
-              <el-table-column v-bind="tableSequenceColumn()" />
-              <el-table-column label="级别" width="95" class-name="mrr-table-status-column">
-                <template #default="{ row }">
-                  <MrrStatusTag :label="row.severity === 'CRITICAL' ? '严重' : '警告'" :tone="row.severity === 'CRITICAL' ? 'danger' : 'warning'" />
+              <MrrFilterBar embedded :focus-ring="false">
+                <div class="mrr-filter-field">
+                  <el-select v-model="issueSeverity" aria-label="异常级别筛选">
+                    <el-option label="全部级别" value="ALL" />
+                    <el-option label="严重" value="CRITICAL" />
+                    <el-option label="警告" value="WARNING" />
+                  </el-select>
+                </div>
+                <div class="mrr-filter-field mrr-filter-field--code">
+                  <el-select v-model="issueRule" aria-label="异常规则筛选" class="issue-rule-select" clearable placeholder="全部规则">
+                    <el-option v-for="rule in issueRules" :key="rule.code" :label="rule.name || rule.code" :value="rule.code" />
+                  </el-select>
+                </div>
+                <div class="mrr-filter-field mrr-filter-field--keyword">
+                  <el-input v-model="issueKeyword" aria-label="异常关键字筛选" clearable placeholder="筛选规则、表、BAH 或 SJH" />
+                </div>
+                <template #actions>
+                  <MrrFilterActionButton action="reset" feedback="request" :disabled="!issueFiltersActive" aria-label="重置异常样本筛选" @click="resetIssueFilters" />
                 </template>
-              </el-table-column>
-              <el-table-column label="规则" min-width="250">
-                <template #default="{ row }">
-                  <strong>{{ issueName(row as DataQualityIssue) }}</strong>
-                  <div class="muted-code">
-                    {{ issueCode(row as DataQualityIssue) }}
-                  </div>
-                </template>
-              </el-table-column>
-              <el-table-column label="记录" min-width="180">
-                <template #default="{ row }">
-                  {{ issueEntityType(row as DataQualityIssue) }} #{{ issueEntityId(row as DataQualityIssue) }}
-                </template>
-              </el-table-column>
-              <el-table-column prop="bah" label="BAH" width="120" />
-              <el-table-column prop="sjh" label="SJH" width="120" />
-              <el-table-column prop="detail" label="说明" min-width="300" show-overflow-tooltip />
-              <el-table-column
-                label="操作"
-                :width="issueActionColumnWidth"
-                fixed="right"
-                align="center"
-              >
-                <template #default="{ row }">
-                  <MrrTableActions
-                    :actions="issueActions"
-                    :max-inline="issueMaxInlineActions"
-                    @select="handleIssueAction($event, row as DataQualityIssue)"
-                  />
-                </template>
-              </el-table-column>
-            </el-table>
-          </MrrSectionCard>
+              </MrrFilterBar>
+              <div class="issue-sample-count" role="status">
+                {{ qualityLoaded ? `匹配 ${filteredIssues.length} / 已加载 ${issues.length} 个样本` : '尚未取得样本' }}
+              </div>
+              <el-table :data="filteredIssues" stripe :empty-text="!qualityLoaded ? '样本尚未取得' : issueFiltersActive ? '没有符合筛选条件的样本' : '当前没有异常样本'">
+                <el-table-column v-bind="tableSequenceColumn()" />
+                <el-table-column label="级别" width="95" class-name="mrr-table-status-column">
+                  <template #default="{ row }">
+                    <MrrStatusTag :label="row.severity === 'CRITICAL' ? '严重' : '警告'" :tone="row.severity === 'CRITICAL' ? 'danger' : 'warning'" />
+                  </template>
+                </el-table-column>
+                <el-table-column label="规则" min-width="250">
+                  <template #default="{ row }">
+                    <strong>{{ issueName(row as DataQualityIssue) }}</strong>
+                    <div class="muted-code">
+                      {{ issueCode(row as DataQualityIssue) }}
+                    </div>
+                  </template>
+                </el-table-column>
+                <el-table-column label="记录" min-width="180">
+                  <template #default="{ row }">
+                    {{ issueEntityType(row as DataQualityIssue) }} #{{ issueEntityId(row as DataQualityIssue) }}
+                  </template>
+                </el-table-column>
+                <el-table-column prop="bah" label="BAH" width="120" />
+                <el-table-column prop="sjh" label="SJH" width="120" />
+                <el-table-column prop="detail" label="说明" min-width="300" show-overflow-tooltip />
+                <el-table-column
+                  label="操作"
+                  :width="issueActionColumnWidth"
+                  fixed="right"
+                  align="center"
+                >
+                  <template #default="{ row }">
+                    <MrrTableActions
+                      :actions="issueActions"
+                      :max-inline="issueMaxInlineActions"
+                      @select="handleIssueAction($event, row as DataQualityIssue)"
+                    />
+                  </template>
+                </el-table-column>
+              </el-table>
+            </MrrSectionCard>
+          </section>
         </div>
       </el-tab-pane>
     </el-tabs>
@@ -1401,6 +1465,16 @@ p {
   .relation-count-grid {
     grid-template-columns: repeat(3, minmax(0, 1fr));
   }
+}
+
+.quality-samples-region {
+  min-width: 0;
+  scroll-margin-top: 12px;
+}
+
+.quality-samples-region:focus-visible {
+  outline: 2px solid var(--mrr-ring);
+  outline-offset: 2px;
 }
 
 .issue-sample-count {

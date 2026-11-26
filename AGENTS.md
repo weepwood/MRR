@@ -60,6 +60,7 @@ MRR/
 - 使用现有成熟 Skills 与开源能力；项目级技能位于 .agents/skills，已安装全局技能只按任务读取，不重复安装、不执行未经审计的脚本。优先 Element Plus、VueUse、ECharts 及已有 Mrr 公共组件；Reka 仅用于专用交互，保留既有组件归属规则。
 - 保留所有稳定 UI 契约（公共分页、筛选、序号、导航、设置、主题、视觉规范）；用户允许以真实功能和专业设计为核心继续深化，不机械重做。Chrome86 核心降级、数据权限与隐私边界保持。
 - 继续当前独立工作区及 9037 Mock，仅本地开发，风险分级验收，中文提交；正式 main 与远端 #850 保持不变，任何推送/合并/发布需明确授权。
+- 第二批产品研发：数据治理规则直达样本与只读审计证据、运维排查入口及存储事件筛选，跨页面主要操作调查见 [产品功能调查](docs/product/product-batch2-audit.md)。下一阶段优先实际阻碍任务的功能缺口，不新建重复监控或关系编辑引擎。
 - [历史优先级及设计决策](docs/engineering/v1.2-agents-history.md)、[已有候选验收](docs/engineering/v1.2-candidate-closure.md)、[候选准备](docs/engineering/v1.2-release-preparation.md) 仅用于查阅，不再作为当前任务队列。旧版独立审查及发布阻塞保留，不能当作已通过。
 
 ## 4. 风险等级

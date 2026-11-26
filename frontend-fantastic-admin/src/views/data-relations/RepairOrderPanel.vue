@@ -37,6 +37,19 @@ const actionLabels: Record<RepairAction, string> = {
 let generation = 0
 let auditGeneration = 0
 const auditBusy = ref(false)
+// Only transaction events that actually observe a relationship carry evidence.
+const relationEvents = computed(() => events.value.filter(event => ['APPLIED', 'VERIFIED', 'COMPENSATED'].includes(event.action)))
+const latestRelationEvent = computed(() => relationEvents.value.at(-1))
+function archiveLabel(id: number | null | undefined) {
+  return id === null ? '未关联' : id === undefined ? '未取得' : `主档 #${id}`
+}
+function evidenceLabel(event: RepairEvent) {
+  if (event.action === 'APPLIED') { return '执行时关联变化' }
+  if (event.action === 'COMPENSATED') { return '补偿时关联变化' }
+  if (event.action === 'VERIFIED') { return '复验时关联观察' }
+  return '流程状态变更'
+}
+
 const auditFailed = ref(false)
 const auditMore = ref(false)
 let auditAppend = false
@@ -288,10 +301,32 @@ onBeforeUnmount(clear)
         前序工单 #{{ selected.reopenedFrom }} · 新工单独立审批
       </p>
       <p>提交人 #{{ selected.proposedBy }} · 审批人 {{ selected.approvedBy ? `#${selected.approvedBy}` : '未审批' }}</p>
+      <section v-if="latestRelationEvent" class="repair-evidence" aria-label="最近已加载关联证据">
+        <div class="repair-audit-heading">
+          <strong>{{ evidenceLabel(latestRelationEvent) }}</strong>
+          <span class="repair-audit-note">{{ formatDateTime(latestRelationEvent.createdAt) }}</span>
+        </div>
+        <div class="repair-evidence-grid">
+          <div><span>事务前 / 观察前</span><strong>{{ archiveLabel(latestRelationEvent.beforeArchiveId) }}</strong></div>
+          <div><span>事务后 / 观察后</span><strong>{{ archiveLabel(latestRelationEvent.afterArchiveId) }}</strong></div>
+          <div><span>工单目标</span><strong>{{ archiveLabel(selected.targetArchiveId) }}</strong></div>
+        </div>
+        <p class="repair-audit-note">
+          仅最近已加载的关联证据，不代表当前数据库状态{{ auditMore || auditFailed || auditBusy ? '；审计尚未完整读取' : '' }}。
+        </p>
+      </section>
+      <p v-else-if="events.length" class="repair-audit-note">
+        已加载流程事件未包含关联观察，不能判断记录当前关联。
+      </p>
       <el-timeline v-if="events.length">
         <el-timeline-item v-for="event in events" :key="event.id" :timestamp="formatDateTime(event.createdAt)">
           {{ labels[event.action] || event.action }} · 操作者 #{{ event.actorId }}
-          <div>{{ event.beforeArchiveId ?? '未关联' }} → {{ event.afterArchiveId ?? '未关联' }}</div>
+          <div v-if="['APPLIED', 'VERIFIED', 'COMPENSATED'].includes(event.action)" class="repair-audit-note">
+            {{ archiveLabel(event.beforeArchiveId) }} → {{ archiveLabel(event.afterArchiveId) }}
+          </div>
+          <div v-else class="repair-audit-note">
+            流程事件，不表示实际关联变化
+          </div>
         </el-timeline-item>
       </el-timeline>
       <p v-if="auditBusy" role="status" class="repair-audit-note">
@@ -328,6 +363,33 @@ onBeforeUnmount(clear)
   gap: var(--mrr-space-2);
   align-items: center;
   justify-content: space-between;
+}
+
+.repair-evidence {
+  display: grid;
+  gap: var(--mrr-space-3);
+  padding: var(--mrr-space-3);
+  background: var(--surface-muted);
+  border: 1px solid var(--mrr-border);
+  border-radius: var(--mrr-radius-md);
+}
+
+.repair-evidence-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 120px), 1fr));
+  gap: var(--mrr-space-3);
+}
+
+.repair-evidence-grid > div {
+  display: grid;
+  gap: var(--mrr-space-1);
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.repair-evidence-grid span {
+  font-size: var(--mrr-font-size-xs);
+  color: var(--mrr-muted-foreground);
 }
 
 .repair-audit-note {

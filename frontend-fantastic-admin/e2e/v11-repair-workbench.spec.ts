@@ -19,7 +19,7 @@ test('修复工单必须显式确认，审批执行复验和审计按服务器�
     }
     if (url.pathname.endsWith('/events')) {
       const events = ['PROPOSED', ...changes.map(action => ({ approve: 'APPROVED', apply: 'APPLIED', verify: 'VERIFIED' } as Record<string, string>)[action])]
-      await route.fulfill({ json: { code: 200, data: events.map((action, i) => ({ id: i + 1, actorId: i ? 12 : 11, action, beforeArchiveId: null, afterArchiveId: i >= 2 ? 2 : null, createdAt: '2026-07-21T00:00:00Z' })) } })
+      await route.fulfill({ json: { code: 200, data: events.map((action, i) => ({ id: i + 1, actorId: i ? 12 : 11, action, beforeArchiveId: action === 'VERIFIED' ? 2 : null, afterArchiveId: ['APPLIED', 'VERIFIED'].includes(action) ? 2 : null, createdAt: '2026-07-21T00:00:00Z' })) } })
       return
     }
     await route.fulfill({ json: { code: 200, data: { enabled: true, actorId: 12, orders: [order()] } } })
@@ -39,6 +39,11 @@ test('修复工单必须显式确认，审批执行复验和审计按服务器�
   }
   expect(changes).toEqual(['approve', 'apply', 'verify'])
   await expect(pane.getByRole('heading', { name: '工单 #901 · 事务审计' })).toBeVisible()
+  await expect(pane.getByRole('region', { name: '最近已加载关联证据' })).toContainText('复验时关联观察')
+  await expect(pane.getByRole('region', { name: '最近已加载关联证据' })).toContainText('不代表当前数据库状态')
+  await expect(pane.getByText('未关联 → 主档 #2', { exact: true })).toBeVisible()
+  await expect(pane.getByText('主档 #2 → 主档 #2', { exact: true })).toBeVisible()
+  await expect(pane.getByText('未关联 → 未关联', { exact: true })).toHaveCount(0)
   await expect(pane.getByText('已复验 · 操作者 #12')).toBeVisible()
   await page.screenshot({ path: test.info().outputPath('repair-workbench.png'), fullPage: true })
 })
@@ -294,4 +299,31 @@ test('异常样本按规则和级别筛选，明确区分无匹配与无样本',
   expect(writes).toBe(0)
   await count.scrollIntoViewIfNeeded()
   await page.screenshot({ path: testInfo.outputPath('quality-samples.png'), animations: 'disabled' })
+})
+
+test('规则直接定位样本，失败时明确保留旧结果并可重试', async ({ page }, testInfo) => {
+  let failed = false
+  await page.route('**/api/v1/system/data-quality/summary', route => route.fulfill({ json: { code: 200, data: {
+    running: false,
+    checks: [{ checkCode: 'A', checkName: '规则甲', severity: 'WARNING', issueCount: 20, sampledCount: 1 }, { checkCode: 'B', checkName: '规则乙', severity: 'CRITICAL', issueCount: 7, sampledCount: 0 }],
+  } } }))
+  await page.route('**/api/v1/system/data-quality/issues?*', route => failed
+    ? route.fulfill({ status: 503, json: { code: 503, message: '合成失败' } })
+    : route.fulfill({ json: { code: 200, data: [{ id: 1, check_code: 'A', check_name: '规则甲', severity: 'WARNING', entity_type: 'mr_scan', entity_id: '1' }] } }))
+  await page.goto('/data-relations')
+  await page.getByRole('tab', { name: '检查与异常' }).click()
+  const region = page.getByRole('region', { name: '异常样本检查区' })
+  await page.getByRole('button', { name: '查看规则 规则乙 的样本' }).click()
+  await expect(region).toBeFocused()
+  await expect(region.getByRole('status')).toContainText('匹配 0 / 已加载 1')
+  await page.getByRole('button', { name: '查看规则 规则甲 的样本' }).click()
+  await expect(region.getByRole('status')).toContainText('匹配 1 / 已加载 1')
+  failed = true
+  await region.getByRole('button', { name: '刷新样本' }).click()
+  await expect(page.getByText('异常样本刷新失败，以下为上次成功读取的结果')).toBeVisible()
+  await expect(region.getByRole('status')).toContainText('匹配 1 / 已加载 1')
+  failed = false
+  await region.getByRole('button', { name: '刷新样本' }).click()
+  await expect(page.getByText('异常样本刷新失败，以下为上次成功读取的结果')).toHaveCount(0)
+  await region.screenshot({ path: testInfo.outputPath('sample-drilldown.png'), animations: 'disabled' })
 })

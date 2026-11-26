@@ -54,7 +54,8 @@ test('患者筛选只作用于患者列表，保留 Enter、重置和病案号',
   await page.goto('/patients')
   await expect(page.getByRole('heading', { name: '患者管理', level: 1 })).toBeVisible()
   const filter = page.getByRole('textbox', { name: '关键词', exact: true })
-  await page.locator('label').filter({ hasText: /^关键词$/ }).click()
+  // DESIGN.md: ordinary keyword fields use an accessible name and placeholder, not an inline label.
+  await filter.click()
   await expect(filter).toBeFocused()
   await expect(page.getByRole('link', { name: '00004217', exact: true })).toHaveAttribute('href', /bah=00004217/)
   await filter.fill('NO-MATCH')
@@ -108,8 +109,8 @@ test('窄屏装箱切换、筛选和表单完整可达', async ({ page }) => {
   await expect(metrics.locator('.mrr-metric-card')).toHaveCount(4)
   const cards = await metrics.locator('.mrr-metric-card').evaluateAll(elements => elements.map(el => el.getBoundingClientRect().top))
   expect(cards).toHaveLength(4)
-  expect(cards[0]).toBe(cards[1])
-  expect(cards[2]).toBe(cards[3])
+  // The current shared metric grid intentionally becomes a single column below 600px.
+  expect(cards.every((top, index) => index === 0 || top > cards[index - 1])).toBe(true)
   await expect(page.getByText('存放在其他箱子', { exact: true }).filter({ visible: true })).toBeVisible()
   await page.getByText('箱号视图', { exact: true }).click()
   await expect(page.getByRole('heading', { name: '箱号列表', level: 2 })).toBeVisible()

@@ -14,3 +14,8 @@
 | 设计资产 | [UI-Vault](https://github.com/weepwood/UI-Vault) a0def2b 本地 | 复用原始设计 Skills 与既有 Token 映射；禁止跨项目外传病案数据 |
 
 新增依赖前核对实际目标版本、许可、维护、包体、旧浏览器、无障碍、隐私和清理成本；本轮不增加 package.json 依赖。
+
+## 第二批复用决策
+- [Vue Flow 概念](https://vueflow.dev/learn/concepts/terms-and-definitions)：MIT，适于节点、边和交互画布；当前修复是少量事务证据而非可编辑图，不引入包。
+- [ECharts graph](https://apache.googlesource.com/echarts-doc/+/refs/heads/master/zh/option/series/graph.md)：适于已证实节点与边；MRR 已有 ECharts 和统一图表生命周期，但 graph 未注册；本批审计对比直接使用语义化文本与现有 Element Plus Timeline，避免把审批、候选和历史观察画成真实当前关系。复杂只读图待有明确任务再原型。
+- [Grafana dashboard links](https://grafana.com/docs/grafana/latest/visualizations/dashboards/build-dashboards/manage-dashboard-links/) / [data links](https://grafana.com/docs/grafana/latest/visualizations/panels-visualizations/configure-data-links/)：借鉴从信号进入专用分析页面的模式，复用 MRR 路由权限、公共卡片及现有历史数据，不引入 Grafana 或构造因果关系。

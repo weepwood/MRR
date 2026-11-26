@@ -13,7 +13,7 @@ import type {
 } from '@/api/modules/operations'
 import { useElementSize } from '@vueuse/core'
 import { ElMessage } from 'element-plus'
-import { computed, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue'
+import { computed, nextTick, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import {
   diagnoseImageSource,
@@ -76,9 +76,30 @@ let overviewRequest: Promise<void> | undefined
 const canManage = computed(() => hasPermission('system:manage'))
 const canViewTasks = computed(() => hasPermission('record:read'))
 const canViewLogs = computed(() => hasPermission('log:read'))
-const quickLinks = computed(() => (overview.value?.quickLinks || []).filter((link) => {
+const storageSection = ref<HTMLElement>()
+const historySection = ref<HTMLElement>()
+const nginxSection = ref<HTMLElement>()
+const storageSource = ref('')
+const investigationLinks = computed(() => [
+  { path: '/runtime-errors', label: '运行错误', description: '按错误组和请求 ID 查看异常原因' },
+  { path: '/response-analysis', label: '接口性能', description: '查看耗时趋势与慢接口排行' },
+  { path: '/logs', label: '访问日志', description: '按请求 ID 追溯访问记录' },
+].filter((link) => {
   const permissions = router.resolve(link.path).meta.auth
   return Array.isArray(permissions) && hasAnyPermission(permissions)
+}))
+async function focusInvestigation(section: 'history' | 'storage' | 'nginx', source = '') {
+  if (section === 'storage') { storageSource.value = source }
+  await nextTick()
+  const target = { history: historySection, storage: storageSection, nginx: nginxSection }[section].value
+  target?.focus({ preventScroll: true })
+  target?.scrollIntoView({ block: 'start' })
+}
+watch(() => useUserStore().token, () => { storageSource.value = '' }, { flush: 'sync' })
+
+const quickLinks = computed(() => (overview.value?.quickLinks || []).filter((link) => {
+  const permissions = router.resolve(link.path).meta.auth
+  return Array.isArray(permissions) && hasAnyPermission(permissions) && !investigationLinks.value.some(item => item.path === link.path)
 }))
 const diagnosticRun = ref<OperationsDiagnosticRun>()
 const readiness = ref<ReadinessSnapshot>()
@@ -625,6 +646,27 @@ onMounted(async () => {
               />
             </section>
 
+            <MrrSectionCard title="故障排查入口" description="从不同证据来源进入专用页面；时间范围及采样口径各自独立，不自动推断故障原因。">
+              <div class="investigation-grid" :class="{ 'investigation-grid--narrow': dashboardWidth > 0 && dashboardWidth < 520 }">
+                <el-button v-for="link in investigationLinks" :key="link.path" class="investigation-link" @click="navigate(link.path)">
+                  <span><strong>{{ link.label }}</strong><small>{{ link.description }}</small></span>
+                  <FaIcon name="i-lucide:arrow-up-right" aria-hidden="true" />
+                </el-button>
+                <el-button class="investigation-link" @click="focusInvestigation('storage')">
+                  <span><strong>存储异常</strong><small>查看已采集的熔断与恢复事件</small></span>
+                  <FaIcon name="i-lucide:arrow-down" aria-hidden="true" />
+                </el-button>
+                <el-button class="investigation-link" @click="focusInvestigation('history')">
+                  <span><strong>运行历史</strong><small>比较相邻采样与运行状态变化</small></span>
+                  <FaIcon name="i-lucide:arrow-down" aria-hidden="true" />
+                </el-button>
+                <el-button class="investigation-link" @click="focusInvestigation('nginx')">
+                  <span><strong>网关诊断</strong><small>检查网关配置与运行观测</small></span>
+                  <FaIcon name="i-lucide:arrow-down" aria-hidden="true" />
+                </el-button>
+              </div>
+            </MrrSectionCard>
+
             <section class="two-column-layout overview-priority" aria-label="当前问题与运行状态">
               <div class="overview-priority__stack">
                 <MrrSectionCard title="待处理问题" description="严重问题优先">
@@ -710,10 +752,16 @@ onMounted(async () => {
               </div>
             </section>
 
-            <OperationsHistoryCard v-if="activeTab === 'overview'" />
-            <StorageCircuitHistoryCard v-if="activeTab === 'overview'" />
-            <NginxConfigurationCard v-if="activeTab === 'overview'" />
-            <NginxRuntimeCard v-if="activeTab === 'overview'" />
+            <section v-if="activeTab === 'overview'" ref="historySection" class="investigation-region" tabindex="-1" aria-label="运行历史排查区">
+              <OperationsHistoryCard />
+            </section>
+            <section v-if="activeTab === 'overview'" ref="storageSection" class="investigation-region" tabindex="-1" aria-label="存储事件排查区">
+              <StorageCircuitHistoryCard v-model:source="storageSource" />
+            </section>
+            <section v-if="activeTab === 'overview'" ref="nginxSection" class="investigation-region investigation-region--stack" tabindex="-1" aria-label="网关诊断区">
+              <NginxConfigurationCard />
+              <NginxRuntimeCard />
+            </section>
 
             <MrrSectionCard v-if="indexCapacity" title="编号索引与容量" description="最近一次数据库目录快照 · 非服务器磁盘余量">
               <div class="mrr-metric-grid">
@@ -742,6 +790,9 @@ onMounted(async () => {
                   </el-tag>
                 </div>
               </div>
+              <el-button text type="primary" @click="focusInvestigation('storage', 'NAS')">
+                查看 NAS 历史事件
+              </el-button>
               <p class="overview-hint">
                 编号按配置键排序，不显示节点名或路径；未熔断不等于现场可用。
               </p>
@@ -772,6 +823,9 @@ onMounted(async () => {
                     </p>
                   </div>
                   <div class="network-node-tags">
+                    <el-button text type="primary" @click="focusInvestigation('storage', source.kind)">
+                      查看 {{ source.kind }} 历史事件
+                    </el-button>
                     <el-tag v-for="node in source.nodes" :key="node.ordinal" :type="node.state === 'OPEN' ? 'danger' : node.state.startsWith('HALF_OPEN') ? 'warning' : 'info'">
                       节点 {{ node.ordinal }} · {{ circuitLabels[node.state] || '未知' }}
                     </el-tag>
@@ -1245,6 +1299,63 @@ onMounted(async () => {
 
 .overview-dashboard,
 .overview-task-states {
+  display: grid;
+  gap: var(--mrr-space-4);
+}
+
+.investigation-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--mrr-space-2);
+}
+
+.overview-dashboard--compact .investigation-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.overview-dashboard .investigation-grid--narrow {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.investigation-grid .investigation-link {
+  justify-content: space-between;
+  height: auto;
+  min-height: 58px;
+  margin: 0;
+  padding: var(--mrr-space-3);
+  white-space: normal;
+}
+
+.investigation-link :deep(> span) {
+  justify-content: space-between;
+  width: 100%;
+  min-width: 0;
+}
+
+.investigation-link :deep(span > span) {
+  display: grid;
+  gap: var(--mrr-space-1);
+  min-width: 0;
+  text-align: left;
+}
+
+.investigation-link small {
+  font-size: var(--mrr-font-size-xs);
+  font-weight: normal;
+  color: var(--mrr-muted-foreground);
+}
+
+.investigation-region {
+  min-width: 0;
+  scroll-margin-top: 12px;
+}
+
+.investigation-region:focus-visible {
+  outline: 2px solid var(--mrr-ring);
+  outline-offset: 2px;
+}
+
+.investigation-region--stack {
   display: grid;
   gap: var(--mrr-space-4);
 }

@@ -308,7 +308,7 @@ test('返回顶部在隐藏计时后仍可通过键盘聚焦与触发', async ({
   await expect.poll(() => page.evaluate(() => document.documentElement.scrollTop)).toBeGreaterThanOrEqual(200)
   const back = page.getByRole('button', { name: '回到顶部', exact: true })
   await expect(back).toBeVisible()
-  await expect.poll(() => back.evaluate(el => el.getBoundingClientRect().left >= window.innerWidth), { timeout: 6000 }).toBe(true)
+  await expect.poll(() => back.evaluate(el => el.getBoundingClientRect().left >= document.documentElement.getBoundingClientRect().right - 1), { timeout: 6000 }).toBe(true)
   await back.focus()
   await expect(back).toBeFocused()
   await expect.poll(() => back.evaluate((el) => {

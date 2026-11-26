@@ -125,9 +125,13 @@ const jobDetailId = ref<number>()
 const jobDetailError = ref(false)
 let historyGeneration = 0
 let detailGeneration = 0
+let recordGeneration = 0
+let logGeneration = 0
 let jobReadsSuspended = false
 let jobReadsDisposed = false
 let resumeHistory = false
+let resumeRecords = false
+let resumeLogs = false
 const jobDrawerVisible = ref(false)
 const logs = ref<MigrationLogRecord[]>([])
 const logTotal = ref(0)
@@ -379,21 +383,24 @@ function recordQuery(): MigrationRecordQuery {
 }
 
 async function loadRecords() {
+  if (jobReadsSuspended || jobReadsDisposed) { return }
+  const generation = ++recordGeneration
   loading.records = true
   try {
     const response = recordTab.value === 'pending'
       ? await getPendingManagementRecords(recordQuery())
       : await getWaitingSjhRecords(recordQuery())
+    if (generation !== recordGeneration) { return }
     records.value = response.data?.list ?? []
     recordReturned.value = response.data?.returned ?? records.value.length
     recordHasMore.value = Boolean(response.data?.hasMore)
     selectedRecords.value = []
   }
   catch (error: unknown) {
-    ElMessage.error(errorMessage(error, '加载迁移记录失败'))
+    if (generation === recordGeneration) { ElMessage.error(errorMessage(error, '加载迁移记录失败')) }
   }
   finally {
-    loading.records = false
+    if (generation === recordGeneration) { loading.records = false }
   }
 }
 
@@ -436,6 +443,8 @@ async function loadJobs() {
 }
 
 async function loadLogs() {
+  if (jobReadsSuspended || jobReadsDisposed) { return }
+  const generation = ++logGeneration
   loading.logs = true
   try {
     const params = {
@@ -445,16 +454,17 @@ async function loadLogs() {
       size: logSize.value,
     }
     const response = await getMigrationLogs(params)
+    if (generation !== logGeneration) { return }
     logs.value = response.data?.list ?? []
     logRowOffset.value = pageRowOffset(response.data?.page ?? params.page, response.data?.size ?? params.size)
     logTotal.value = response.data?.total ?? 0
     selectedLogs.value = []
   }
   catch (error: unknown) {
-    ElMessage.error(errorMessage(error, '加载迁移日志失败'))
+    if (generation === logGeneration) { ElMessage.error(errorMessage(error, '加载迁移日志失败')) }
   }
   finally {
-    loading.logs = false
+    if (generation === logGeneration) { loading.logs = false }
   }
 }
 
@@ -788,8 +798,14 @@ watch(jobDrawerVisible, (visible) => {
 onDeactivated(() => {
   jobReadsSuspended = true
   resumeHistory = loading.jobs
+  resumeRecords = loading.records
+  resumeLogs = loading.logs
   historyGeneration++
+  recordGeneration++
+  logGeneration++
   loading.jobs = false
+  loading.records = false
+  loading.logs = false
   jobDrawerVisible.value = false
   clearJobDetail()
 })
@@ -800,10 +816,20 @@ onActivated(() => {
     resumeHistory = false
     if (!loading.jobs) { void loadJobs() }
   }
+  if (resumeRecords) {
+    resumeRecords = false
+    if (!loading.records) { void loadRecords() }
+  }
+  if (resumeLogs) {
+    resumeLogs = false
+    if (!loading.logs) { void loadLogs() }
+  }
 })
 onBeforeUnmount(() => {
   jobReadsDisposed = true
   historyGeneration++
+  recordGeneration++
+  logGeneration++
   clearJobDetail()
 })
 

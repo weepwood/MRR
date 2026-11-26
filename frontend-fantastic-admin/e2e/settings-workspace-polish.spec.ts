@@ -16,8 +16,11 @@ test('长设置页面目录固定，分区标题自然滚动且不遮挡内容�
   const header = page.locator('.settings-panel-header')
   const sidebar = page.locator('.settings-sidebar')
   await expect(page.getByRole('button', { name: '保存设置', exact: true })).toBeDisabled()
+  await expect(page.locator('.settings-content')).toHaveAttribute('aria-busy', 'false')
+  await expect(page.locator('.settings-content .el-form')).toBeVisible()
   await expect(header).toHaveCSS('position', 'static')
   await expect(sidebar).toHaveCSS('position', 'sticky')
+  await expect.poll(() => page.evaluate(() => document.documentElement.scrollHeight - document.documentElement.clientHeight)).toBeGreaterThan(100)
   const initialTop = (await header.boundingBox())!.y
   await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight))
   await expect.poll(() => page.evaluate(() => window.scrollY)).toBeGreaterThan(100)

@@ -706,11 +706,8 @@ function handleReset() {
 
 <style scoped>
 .app-config-panel {
-  max-width: 1080px;
-}
-
-.app-config-panel--drawer {
-  max-width: none;
+  width: 100%;
+  min-width: 0;
 }
 
 .app-config-panel--drawer .config-summary {

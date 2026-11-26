@@ -68,7 +68,8 @@
 .settings-nav-item.active .nav-title { font-weight: 650; }
 
 .settings-category-select { display: none; }
-.settings-panel { display: grid; gap: var(--mrr-space-4); }
+.settings-panel { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--mrr-space-4); justify-items: stretch; }
+.settings-content { display: grid; grid-template-columns: minmax(0, 1fr); justify-items: stretch; }
 
 .settings-panel-header {
   scroll-margin-top: var(--settings-sticky-top);

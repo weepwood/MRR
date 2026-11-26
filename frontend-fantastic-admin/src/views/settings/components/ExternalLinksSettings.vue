@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { useElementSize } from '@vueuse/core'
 import AppEmpty from '@/components/AppEmpty/index.vue'
 import { actionDialog } from '@/ui/components/ActionDialog'
 import { createExternalLinkId, normalizeExternalLinkUrl } from '@/utils/external-links'
@@ -7,6 +8,10 @@ import { notify } from '@/utils/notification'
 defineOptions({ name: 'ExternalLinksSettings' })
 
 const settingsStore = useSettingsStore()
+const layoutRef = ref<HTMLElement>()
+const { width: layoutWidth } = useElementSize(layoutRef)
+const compactLayout = computed(() => layoutWidth.value > 0 && layoutWidth.value < 720)
+const narrowLayout = computed(() => layoutWidth.value > 0 && layoutWidth.value < 440)
 const draft = reactive({
   title: '',
   url: '',
@@ -107,7 +112,7 @@ function openExternalLink(url: string) {
 </script>
 
 <template>
-  <div class="external-links-settings">
+  <div ref="layoutRef" class="external-links-settings" :class="{ 'external-links-settings--compact': compactLayout, 'external-links-settings--narrow': narrowLayout }">
     <section class="settings-card add-link-card">
       <header class="card-header">
         <div class="header-icon">
@@ -200,20 +205,21 @@ function openExternalLink(url: string) {
 <style scoped>
 .external-links-settings {
   display: grid;
-  gap: 16px;
-  max-width: 920px;
+  gap: var(--mrr-space-4);
+  min-width: 0;
 }
 
 .settings-card {
-  padding: var(--mrr-card-inset);
-  background: var(--el-bg-color);
-  border: 1px solid var(--el-border-color-lighter);
+  min-width: 0;
+  padding: var(--settings-group-inset, var(--mrr-card-inset));
+  background: var(--mrr-card);
+  border: 1px solid var(--mrr-border);
   border-radius: var(--mrr-radius-card);
 }
 
 .card-header {
   display: flex;
-  gap: 12px;
+  gap: var(--mrr-space-3);
   align-items: center;
   margin-bottom: var(--mrr-space-4);
 }
@@ -229,22 +235,17 @@ function openExternalLink(url: string) {
   width: 38px;
   height: 38px;
   font-size: 18px;
-  color: var(--el-color-primary);
-  background: color-mix(in srgb, var(--el-color-primary) 10%, var(--el-bg-color));
+  color: var(--mrr-tone-primary-ink);
+  background: var(--mrr-tone-primary-soft);
   border-radius: var(--mrr-radius-lg);
-}
-
-/* Chrome 86 回退：图标块的浅色底失效后图标会裸浮在卡面上。 */
-@supports not (color: color-mix(in srgb, #000 50%, #fff)) {
-  .header-icon {
-    background: var(--mrr-tone-primary-soft);
-  }
 }
 
 .header-copy {
   flex: 1;
   min-width: 0;
 }
+
+.card-header > div:not(.header-icon) { min-width: 0; }
 
 .card-header h4,
 .card-header p {
@@ -261,14 +262,15 @@ function openExternalLink(url: string) {
   margin-top: 4px;
   font-size: 12px;
   line-height: 1.6;
-  color: var(--el-text-color-secondary);
+  color: var(--mrr-muted-foreground);
 }
 
 .link-form {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(min(100%, 260px), 1fr));
-  gap: 12px;
+  grid-template-columns: minmax(0, 280px) minmax(0, 1fr) max-content;
+  gap: var(--mrr-space-3);
   align-items: end;
+  max-width: 960px;
 }
 
 .field-group {
@@ -285,14 +287,16 @@ function openExternalLink(url: string) {
 
 .add-button {
   gap: var(--mrr-space-2);
+  justify-self: start;
   min-width: 108px;
+  margin: 0;
 }
 
 .form-hint {
   margin: var(--mrr-space-2) 0 0;
   font-size: var(--mrr-font-size-xs);
   line-height: 1.6;
-  color: var(--el-text-color-secondary);
+  color: var(--mrr-muted-foreground);
 }
 
 .external-link-list {
@@ -306,8 +310,8 @@ function openExternalLink(url: string) {
   align-items: center;
   min-width: 0;
   padding: var(--mrr-space-3);
-  background: var(--el-fill-color-extra-light);
-  border: 1px solid var(--el-border-color-extra-light);
+  background: var(--mrr-muted);
+  border: 1px solid var(--mrr-border);
   border-radius: var(--mrr-radius-lg);
 }
 
@@ -347,7 +351,7 @@ function openExternalLink(url: string) {
   text-overflow: ellipsis;
   font-size: var(--mrr-font-size-xs);
   line-height: 1.6;
-  color: var(--el-text-color-secondary);
+  color: var(--mrr-muted-foreground);
   white-space: nowrap;
 }
 
@@ -363,23 +367,31 @@ function openExternalLink(url: string) {
   margin-left: 0;
 }
 
-@media (max-width: 760px) {
-  .link-form {
-    grid-template-columns: 1fr;
-  }
+/* The workspace can shrink independently of the viewport (app sidebar). */
+.external-links-settings--compact .link-form {
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+}
 
-  .add-button {
-    width: 100%;
-  }
+.external-links-settings--compact .add-button {
+  grid-column: 1 / -1;
+  justify-self: end;
+}
 
-  .external-link-item {
-    flex-wrap: wrap;
-    align-items: flex-start;
-  }
+.external-links-settings--narrow .link-form {
+  grid-template-columns: minmax(0, 1fr);
+}
 
-  .link-actions {
-    width: 100%;
-    padding-left: 46px;
-  }
+.external-links-settings--narrow .add-button {
+  width: 100%;
+}
+
+.external-links-settings--narrow .external-link-item {
+  flex-wrap: wrap;
+  align-items: flex-start;
+}
+
+.external-links-settings--narrow .link-actions {
+  justify-content: flex-end;
+  width: 100%;
 }
 </style>

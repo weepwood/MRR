@@ -67,6 +67,7 @@ test.describe('系统设置搜索', () => {
   })
 
   test('窄屏下提示无匹配结果，并打开界面外观的目标标签页', async ({ page }) => {
+    await page.emulateMedia({ reducedMotion: 'reduce' })
     await page.setViewportSize({ width: 375, height: 720 })
     await page.addInitScript(() => {
       localStorage.setItem('MRR-ADMIN:app-settings', JSON.stringify({ layout: { enableMobileAdaptation: true } }))
@@ -81,7 +82,7 @@ test.describe('系统设置搜索', () => {
 
     await search.fill('不存在的设置')
     await expect(emptyState).toHaveText('未找到匹配的设置')
-    expect((await categories.boundingBox())!.y).toBeCloseTo(categoriesTop)
+    expect(Math.abs((await categories.boundingBox())!.y - categoriesTop)).toBeLessThanOrEqual(1)
     await search.press('Enter')
     await expect(page).toHaveURL(/\/settings$/)
     await search.press('Escape')

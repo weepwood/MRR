@@ -44,6 +44,29 @@ class OssMigrationManagementMapperPostgresqlIT extends PostgresqlIntegrationTest
 
     @Test
     @org.springframework.transaction.annotation.Transactional(propagation=org.springframework.transaction.annotation.Propagation.NOT_SUPPORTED)
+    void changedSourceCannotInheritOldFailureAndOnlyCurrentClaimCanRelease(){
+        int id=jdbcTemplate.queryForObject("""
+            INSERT INTO app.mr_scan(bah,sjh,brxh,filename,folder,uploadflag,source_type,source_ref)
+            VALUES ('8765450','12345678','8765450','old.jpg','synthetic',1,'LOCAL','old.jpg') RETURNING id
+            """,Integer.class);
+        try{
+            Scan old=scanMapper.findById(id);
+            assertThat(scanMapper.markMigrationStarted(old,"claim-old")).isEqualTo(1);
+            jdbcTemplate.update("UPDATE app.mr_scan SET source_ref='new.jpg',filename='new.jpg' WHERE id=?",id);
+            assertThat(scanMapper.markMigrationFailed(old,"claim-old","SOURCE_ERROR")).isZero();
+            assertThat(scanMapper.markMigrationRetryWait(old,"claim-old","SOURCE_ERROR",new java.util.Date())).isZero();
+            assertThat(scanMapper.releaseChangedMigration(old,"wrong")).isZero();
+            assertThat(scanMapper.releaseChangedMigration(old,"claim-old")).isEqualTo(1);
+            Scan current=scanMapper.findById(id);
+            assertThat(current.getMigrationAttempts()).isZero();
+            assertThat(scanMapper.markMigrationStarted(current,"claim-new")).isEqualTo(1);
+            assertThat(scanMapper.releaseChangedMigration(old,"claim-old")).isZero();
+            assertThat(scanMapper.completeClaimedMigration(current,1,"claim-new","new-key",3L,"md5")).isEqualTo(1);
+        }finally{jdbcTemplate.update("DELETE FROM app.mr_scan WHERE id=?",id);}
+    }
+
+    @Test
+    @org.springframework.transaction.annotation.Transactional(propagation=org.springframework.transaction.annotation.Propagation.NOT_SUPPORTED)
     void oldClaimCannotCompleteOrFailReusedAttemptNumber(){
         int id=jdbcTemplate.queryForObject("""
             INSERT INTO app.mr_scan(bah,sjh,brxh,filename,folder,uploadflag,source_type,source_ref)
@@ -52,13 +75,13 @@ class OssMigrationManagementMapperPostgresqlIT extends PostgresqlIntegrationTest
         try{
             Scan first=scanMapper.findById(id);
             assertThat(scanMapper.markMigrationStarted(first,"old-claim")).isEqualTo(1);
-            assertThat(scanMapper.markMigrationFailed(id,"old-claim","SYNTHETIC")).isEqualTo(1);
+            assertThat(scanMapper.markMigrationFailed(first,"old-claim","SYNTHETIC")).isEqualTo(1);
             assertThat(scanMapper.resetMigrationFailures(List.of(id))).isEqualTo(1);
             Scan second=scanMapper.findById(id);
             assertThat(scanMapper.markMigrationStarted(second,"new-claim")).isEqualTo(1);
             assertThat(scanMapper.completeClaimedMigration(first,1,"old-claim","old-key",3L,"md5")).isZero();
-            assertThat(scanMapper.markMigrationFailed(id,"old-claim","STALE")).isZero();
-            assertThat(scanMapper.markMigrationRetryWait(id,"old-claim","STALE",new java.util.Date())).isZero();
+            assertThat(scanMapper.markMigrationFailed(first,"old-claim","STALE")).isZero();
+            assertThat(scanMapper.markMigrationRetryWait(first,"old-claim","STALE",new java.util.Date())).isZero();
             assertThat(scanMapper.completeClaimedMigration(second,1,"new-claim","new-key",3L,"md5")).isEqualTo(1);
             assertThat(scanMapper.findById(id).getOssUrl()).isEqualTo("new-key");
         }finally{jdbcTemplate.update("DELETE FROM app.mr_scan WHERE id=?",id);}

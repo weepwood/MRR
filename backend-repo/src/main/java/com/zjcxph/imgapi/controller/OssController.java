@@ -237,6 +237,7 @@ public class OssController {
             if (job == null) {
                 return Result.fail("当前范围没有可迁移文件");
             }
+            com.zjcxph.imgapi.utils.MigrationLogPrivacy.sanitizeJob(job);
             if (Boolean.TRUE.equals(job.getReused())) {
                 return Result.<MigrationJob>success("已有迁移任务正在运行，已返回现有任务").data(job);
             }
@@ -256,6 +257,7 @@ public class OssController {
         if (job == null) {
             return Result.fail("任务不存在");
         }
+        com.zjcxph.imgapi.utils.MigrationLogPrivacy.sanitizeJob(job);
         return Result.<MigrationJob>success("已提交安全取消请求").data(job);
     }
 
@@ -279,6 +281,7 @@ public class OssController {
         if (job == null) {
             return Result.fail("任务不存在");
         }
+        com.zjcxph.imgapi.utils.MigrationLogPrivacy.sanitizeJob(job);
         return Result.success(job);
     }
 
@@ -288,7 +291,9 @@ public class OssController {
             @RequestParam(defaultValue = "1") int page,
             @RequestParam(defaultValue = "20") int size) {
         PaginationUtils.validatePageParams(page, size);
-        return Result.success(migrationService.listMigrationJobs(page, size));
+        var result=migrationService.listMigrationJobs(page,size);
+        result.getList().forEach(com.zjcxph.imgapi.utils.MigrationLogPrivacy::sanitizeJob);
+        return Result.success(result);
     }
 
     private Map<String, Object> uploadSummary(List<OssUploadResult> results) {

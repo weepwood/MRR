@@ -84,12 +84,18 @@ def main():
     parser.add_argument("--audit-outage", action="store_true", help="stop only the newly created isolated PG, then verify durable admission and restart")
     parser.add_argument("--grouped-audit", action="store_true", help="use sealed group commit and batched SQL candidate")
     parser.add_argument("--durable-audit", action="store_true", help="opt in to experimental encrypted POSIX spool")
+    parser.add_argument("--medical-grouped",action="store_true",help="enable medical gate group commit and batch delivery")
+    parser.add_argument("--external-intent-fault",action="store_true",help="inject dedicated audit rejection only in fresh lab")
+    parser.add_argument("--external-strict-intent",action="store_true",help="enable dedicated external intent verification")
     parser.add_argument("--medical-admission",action="store_true",help="enable experimental separate medical event gate")
     parser.add_argument("--admission-capacity",action="store_true",help="test actual first-byte admission and logical capacity rejection, then exit")
     parser.add_argument("--medical-probes", action="store_true", help="exercise synthetic patient, OCR ownership, migration log and export-plan responses")
     parser.add_argument("--signed-external", action="store_true", help="real HMAC ticket and session chain plus role probes")
     parser.add_argument("--external-probes", action="store_true", help="exercise synthetic external session, current scope and privacy headers before load")
     args = parser.parse_args()
+    if args.medical_grouped and not args.medical_admission:parser.error("medical grouped requires medical admission")
+    if args.external_intent_fault and not args.external_strict_intent:parser.error("external fault requires strict intent")
+    if args.external_strict_intent and not args.signed_external:parser.error("external strict intent requires signed external probes")
     if args.admission_capacity and not args.medical_admission:
         parser.error("capacity requires explicit medical admission")
     if args.grouped_audit and not args.durable_audit:
@@ -178,6 +184,8 @@ def main():
             config += f"\nmrr.audit.admission.enabled=true\nmrr.audit.admission.directory={(lab/'medical-spool').resolve()}\n"
             if args.admission_capacity:
                 config += "mrr.audit.admission.max-records=2\n"
+        if args.medical_grouped:config += "\nmrr.audit.admission.grouped=true\n"
+        if args.external_strict_intent:config += "\nmrr.audit.external.strict-intent=true\n"
         (lab / "application.properties").write_text(config)
         env = {"HOME": os.environ["HOME"], "JAVA_HOME": str(args.java_home),
                "PATH": str(args.java_home / "bin") + ":/opt/homebrew/bin:/usr/bin:/bin",
@@ -379,7 +387,7 @@ def main():
                             "X-MRR-Signature":hmac.new(integration_secret.encode(),canonical.encode(),hashlib.sha256).hexdigest(),
                             "Content-Type":"application/json"}
                     def call(method,path,expected,headers=None,body=None):
-                        conn.request(method,path,body=body,headers=headers or {})
+                        conn.request(method,path,body=body,headers={**(headers or {}),"X-Request-Id":"FORGED_SYNTHETIC_TRACE"})
                         response=conn.getresponse()
                         payload=response.read(); h=dict(response.getheaders())
                         assert response.status==expected,(method,path,response.status)
@@ -389,16 +397,46 @@ def main():
                         return payload,h
                     invalid=dict(signed);invalid["X-MRR-Signature"]="0"*64
                     call("POST",ticket_path,401,invalid,body)
+                    def reject_intents():
+                        sql("""CREATE FUNCTION app.synthetic_reject_intent() RETURNS trigger LANGUAGE plpgsql AS $$
+                            BEGIN IF NEW.result='INTENT' THEN RAISE EXCEPTION 'synthetic audit rejection'; END IF; RETURN NEW; END $$;
+                            CREATE TRIGGER synthetic_reject_intent BEFORE INSERT ON app.mr_external_archive_access_log
+                            FOR EACH ROW EXECUTE FUNCTION app.synthetic_reject_intent()""")
+                    def restore_intents():
+                        sql("DROP TRIGGER synthetic_reject_intent ON app.mr_external_archive_access_log; DROP FUNCTION app.synthetic_reject_intent()")
+                    if args.external_intent_fault:
+                        reject_intents()
+                        try:
+                            call("POST",ticket_path,503,signed,body)
+                            assert sql("SELECT count(*) FROM app.mr_external_archive_ticket WHERE client_id='synthetic-his'")=="0"
+                            assert sql("SELECT count(*) FROM app.mr_external_archive_nonce WHERE client_id='synthetic-his'")=="0"
+                        finally:restore_intents()
                     payload,_=call("POST",ticket_path,200,signed,body)
                     ticket=json.loads(payload)["data"]["ticket"]
                     call("POST",ticket_path,409,signed,body)
                     exchange=json.dumps({"ticket":ticket}).encode()
+                    if args.external_intent_fault:
+                        reject_intents()
+                        try:
+                            call("POST",prefix+"/session",503,{"Content-Type":"application/json"},exchange)
+                            assert sql("SELECT count(*) FROM app.mr_external_archive_session WHERE client_id='synthetic-his'")=="0"
+                            assert sql("SELECT count(*) FROM app.mr_external_archive_ticket WHERE client_id='synthetic-his' AND used_at IS NULL")=="1"
+                        finally:restore_intents()
                     payload,h=call("POST",prefix+"/session",200,{"Content-Type":"application/json"},exchange)
                     cookie=h["Set-Cookie"].split(";",1)[0]
                     assert "HttpOnly" in h["Set-Cookie"] and "SameSite=Lax" in h["Set-Cookie"]
                     session={"Cookie":cookie}
                     call("POST",prefix+"/session",401,{"Content-Type":"application/json"},exchange)
                     call("GET",prefix+"/context",200,session)
+                    if args.external_intent_fault:
+                        reject_intents()
+                        try:
+                            payload,_=call("GET",prefix+f"/image/{scan_id}",503,session)
+                            assert payload!=content
+                            payload,_=call("GET",prefix+"/download?bah=7654393",503,session)
+                            assert not payload.startswith(b"PK")
+                        finally:restore_intents()
+                        print("EXTERNAL_INTENT_FAULT ticket/nonce rolled back, exchange rolled back, image and ZIP denied before content",flush=True)
                     payload,_=call("GET",prefix+"/images?bah=7654393",200,session)
                     assert [x["id"] for x in json.loads(payload)["data"]]==[scan_id]
                     payload,_=call("GET",prefix+f"/image/{scan_id}",200,session)
@@ -409,6 +447,15 @@ def main():
                     call("GET",prefix+"/download?bah=7654300",403,session)
                     call("POST",prefix+"/logout",200,session)
                     call("GET",prefix+"/context",401,session)
+                if args.external_strict_intent:
+                    counts=sql("SELECT action,count(*) FILTER (WHERE result='INTENT'),count(*) FILTER (WHERE result='SUCCESS') FROM app.mr_external_archive_access_log WHERE client_id='synthetic-his' GROUP BY action ORDER BY action")
+                    counts={a:[int(i),int(o)] for a,i,o in (line.split("|") for line in counts.splitlines())}
+                    for action in ("TICKET_CREATE","SESSION_CREATE","SESSION_CONTEXT","ARCHIVE_VIEW","IMAGE_VIEW","ARCHIVE_DOWNLOAD","SESSION_LOGOUT"):
+                        assert counts.get(action)==[1,1],(action,counts)
+                    assert sql("SELECT count(*) FROM app.mr_external_archive_access_log WHERE client_id='synthetic-his' AND (request_id IS NULL OR request_id NOT LIKE '________________')")=="0"
+                    assert sql("SELECT count(*) FROM app.mr_external_archive_access_log WHERE request_id='FORGED_SYNTHETIC_TRACE'")=="0"
+                    (lab/"external-intent-counts.json").write_text(json.dumps(counts,indent=2))
+                    print("EXTERNAL_INTENT "+json.dumps(counts),flush=True)
                 sql(f"DELETE FROM app.mr_scan WHERE id={scan_id}")
                 sql("ANALYZE app.mr_scan")
                 (lab/"signed-external-probes.json").write_text(json.dumps(signed_probes,indent=2))
@@ -472,6 +519,7 @@ def main():
                     sql("INSERT INTO app.mr_ocr_batch(id,owner_user_id,created_by,idempotency_key,status,after_id,upper_id,cursor_id,max_pages,config_snapshot,rule_set_version,lexicon_version) "
                         f"VALUES ('{batch_id}',{owner},'synthetic-med-{label}','{batch_id}','PAUSED',0,1,0,1,'{{}}','synthetic','synthetic')")
                 sql(f"INSERT INTO app.image_migration_log(scan_id,local_path,oss_url,migration_status,error_message) VALUES ({scan},'SYNTHETIC_PRIVATE_PATH','SYNTHETIC_HISTORICAL_OBJECT_KEY','success','SYNTHETIC_PRIVATE_ERROR')")
+                job_id=int(sql("INSERT INTO app.migration_job(status,mode,scope_value,error_message) VALUES ('failed','folder','SYNTHETIC_PRIVATE_JOB_SCOPE','SYNTHETIC_PRIVATE_JOB_ERROR') RETURNING id").splitlines()[0])
                 with closing(http.client.HTTPConnection("127.0.0.1",httpport,timeout=10)) as conn:
                     def med(path,label,expected,private=False,forbidden=()):
                         auth=token if label=="load" else actors[label][1]
@@ -498,6 +546,9 @@ def main():
                         med(path,"none",403,True,("SYNTHETIC_HISTORICAL_OBJECT_KEY","SYNTHETIC_PRIVATE_PATH","SYNTHETIC_PRIVATE_ERROR"))
                         rows=med(path,"read",200,True,("SYNTHETIC_HISTORICAL_OBJECT_KEY","SYNTHETIC_PRIVATE_PATH","SYNTHETIC_PRIVATE_ERROR"))["data"]["list"]
                         assert rows and rows[0]["scanId"]==scan and rows[0].get("ossUrl") is None
+                    for job_path in (f"/api/v1/oss/migration/jobs/{job_id}","/api/v1/oss/migration/jobs"):
+                        med(job_path,"none",403,True,("SYNTHETIC_PRIVATE_JOB_SCOPE","SYNTHETIC_PRIVATE_JOB_ERROR"))
+                        med(job_path,"read",200,True,("SYNTHETIC_PRIVATE_JOB_SCOPE","SYNTHETIC_PRIVATE_JOB_ERROR"))
                     med("/api/v1/oss/browser","read",403,True)
                     med("/api/v1/oss/browser","manage",200,True)
                     med("/api/v1/oss/browser/url?key=medical-records/SYNTHETIC_PRIVATE_KEY.jpg","read",403,True,("SYNTHETIC_PRIVATE_KEY",))

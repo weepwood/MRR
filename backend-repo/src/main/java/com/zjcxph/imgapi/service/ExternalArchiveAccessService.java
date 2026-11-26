@@ -45,6 +45,8 @@ public class ExternalArchiveAccessService {
     private static final TypeReference<List<ExternalArchiveCaseDTO>> CASE_LIST_TYPE = new TypeReference<>() { };
     private static final Logger logger = LoggerFactory.getLogger(ExternalArchiveAccessService.class);
 
+    @org.springframework.beans.factory.annotation.Value("${mrr.audit.external.strict-intent:false}")
+    private boolean strictIntent;
     private final IntegrationProperties properties;
     private final SearchService searchService;
     private final ScanService scanService;
@@ -84,7 +86,7 @@ public class ExternalArchiveAccessService {
                 clientId, timestamp, nonce, signature, method, path, rawBody, clientIp
         );
         validateExternalUser(request.getExternalUserId());
-
+        strictAudit(client.getClientId(),request.getExternalUserId().trim(),null,null,"TICKET_CREATE",null,clientIp);
         List<ExternalArchiveCaseDTO> cases = resolveCases(request);
         LocalDateTime expiresAt = LocalDateTime.now().plusSeconds(properties.getTicketTtlSeconds());
         long expiresAtMillis = toEpochMillis(expiresAt);
@@ -119,6 +121,7 @@ public class ExternalArchiveAccessService {
             throw new BusinessException(401, "访问票据无效、已使用或已过期");
         }
 
+        strictAudit(stored.getClientId(),stored.getExternalUserId(),null,null,"SESSION_CREATE",null,clientIp);
         List<ExternalArchiveCaseDTO> cases = deserializeCases(stored.getGrantJson());
         LocalDateTime expiresAt = LocalDateTime.now().plusSeconds(properties.getSessionTtlSeconds());
         ExternalArchiveGrant sessionGrant = new ExternalArchiveGrant(
@@ -196,6 +199,36 @@ public class ExternalArchiveAccessService {
             result.add(dto);
         }
         return result;
+    }
+
+    /** Strict candidate: an audit write failure denies release of credentials/medical bytes.
+     * Ticket/session writes participate in the existing transaction, not an independent commit. */
+    public void requireAuditIntent(ExternalArchiveGrant grant,String bah,String sjh,String action,Integer imageId,String clientIp){
+        if(grant!=null)strictAudit(grant.clientId(),grant.externalUserId(),bah,sjh,action,imageId,clientIp);
+    }
+
+    public void recordContextOutcome(ExternalArchiveGrant grant,String ip,String requestId){
+        if(strictIntent)recordAudit(grant,null,null,"SESSION_CONTEXT",null,ip,null,requestId,"SUCCESS",null);
+    }
+    public void auditRevocationIntent(ExternalArchiveGrant grant,String ip){
+        try{requireAuditIntent(grant,null,null,"SESSION_LOGOUT",null,ip);}
+        catch(BusinessException ignored){logger.error("External revocation audit unavailable; preserving security revocation");}
+    }
+
+    private void strictAudit(String client,String user,String bah,String sjh,String action,Integer imageId,String ip){
+        if(!strictIntent)return;
+        String trace=null;
+        if(org.springframework.web.context.request.RequestContextHolder.getRequestAttributes()
+                instanceof org.springframework.web.context.request.ServletRequestAttributes attrs
+                &&attrs.getRequest().getAttribute("requestId") instanceof String id)trace=id;
+        try{
+            if(trace==null||accessMapper.insertAccessLog(client,user,blankToNull(MedicalRecordCodeUtils.normalizeOrEmpty(bah)),
+                    blankToNull(MedicalRecordCodeUtils.normalizeOrEmpty(sjh)),action,imageId,
+                    truncate(ip,64),null,"INTENT",trace,null)!=1)throw new IllegalStateException("External audit intent not confirmed");
+        }catch(RuntimeException e){
+            logger.warn("External audit intent rejected: type={}",e.getClass().getSimpleName());
+            throw new BusinessException(503,"外部医疗审计暂不可用");
+        }
     }
 
     public void recordAudit(

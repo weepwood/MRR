@@ -44,3 +44,5 @@
 第九批见 [治理报告](governance-batch9.md)、[P1本地提案](governance-batch9-proposal.md)、[准入及生命周期设计](audit-durable-admission-design.md)、[资源响应清单](api-resource-review-batch9.tsv)。分组候选A/B中位95.395RPS/P95 33.496ms，120秒11399请求零漏重及8检查点零逾期；默认不切换。真实双条提交确认丢失、停库、退役分区、迁移对象副作用及来源交错通过；网关历史签发治理、累计25路由。响应前准入/Windows密钥轮换/过期重放/专用审计/异常隔离/OSS浏览器旁路/跨业务事务及余251路由、长时与物理写入待验。
 
 第十批见 [报告](governance-batch10.md)、[P1提案](governance-batch10-proposal.md)、[运维回滚](audit-durable-operations-batch10.md)、[响应清单](api-resource-review-batch10.tsv)。独立双阶段医疗准入显式关闭，真实容量200/503/200、强杀恢复未完成INTENT、v3多代重启/隔离保留、UUID领取与对象ACK丢失、OSS浏览管理权限及网关拒绝。最终1049请求629双阶段配对零漏重，34.59RPS/P95 386.573ms性能未通过；累计30路由。后续重点双阶段分组同步、全资源及外部专用审计、密钥/保留期/Windows、活动段/独立检查点、物理写入和跨实例/对象补偿，正式门禁保留。
+
+第十一批见 [报告](governance-batch11.md)、[P1提案](governance-batch11-proposal.md)、[资源清单](api-resource-review-batch11.tsv)。双阶段分组/集合候选，实际同代码A40.65/B64.06RPS，最终63.14RPS/P95 117.654ms仍不采用；三轮5063请求3041配对零漏重。真实批量医疗事件/迁移提交确认丢失、外部专用失败回滚及历史任务隐私；累计32路由。剩余前置尾延迟、收尾恢复/多实例、外部终态、实际OSS条件写入及孤儿盘点、受控预览/244路由、Windows/长时及正式门禁。

@@ -168,7 +168,7 @@ public class MigrationServiceImpl implements MigrationService {
         }
 
         String ossKey=buildOssKey(scan);
-        if(ossKey==null)return failPermanently(scanId,claimId,sourceResolver.describe(scan),
+        if(ossKey==null)return failPermanently(scan,claimId,sourceResolver.describe(scan),
                 "INVALID_OSS_KEY","无法构建 OSS Object Key");
         int currentAttempt = (scan.getMigrationAttempts() == null ? 0 : scan.getMigrationAttempts()) + 1;
         String sourceDescription = sourceResolver.describe(scan);
@@ -182,7 +182,7 @@ public class MigrationServiceImpl implements MigrationService {
             if (ossService.doesObjectExist(ossKey)) {
                 if (!ossService.verifyUploadIntegrity(ossKey, md5)) {
                     return failPermanently(
-                            scanId,claimId,
+                            scan,claimId,
                             sourceDescription,
                             "OBJECT_CONFLICT",
                             "OSS 已存在同名对象，但内容校验不一致"
@@ -193,11 +193,24 @@ public class MigrationServiceImpl implements MigrationService {
                 ossService.uploadFile(sourcePath, ossKey, md5);
             }
 
-            int updated = scanMapper.completeClaimedMigration(scan, currentAttempt, claimId, ossKey, fileSize, md5);
+            int updated;
+            try{
+                updated=scanMapper.completeClaimedMigration(scan,currentAttempt,claimId,ossKey,fileSize,md5);
+            }catch(RuntimeException uncertain){
+                // A lost commit response is not proof of rollback. Never overwrite a terminal row.
+                try{updated=scanMapper.confirmCompletedMigration(scan,ossKey,fileSize,md5);}
+                catch(RuntimeException unavailable){updated=0;}
+                if(updated!=1){
+                    logger.warn("Migration database outcome unknown: scanId={}",scanId);
+                    return new OssUploadResult(scanId,"failed","迁移提交结果未知，请核对当前记录");
+                }
+                logger.info("Migration completion reconciled after uncertain commit: scanId={}",scanId);
+            }
             if (updated != 1) {
                 // Keep the object for integrity-checked reconciliation; never delete a potentially shared object.
                 logger.warn("Migration object persisted but claim/source changed: scanId={}", scanId);
-                scanMapper.markMigrationRetryWait(scanId,claimId,"MIGRATION_COMMIT_CONFLICT",Date.from(Instant.now().plusSeconds(60)));
+                if(scanMapper.markMigrationRetryWait(scan,claimId,"MIGRATION_COMMIT_CONFLICT",Date.from(Instant.now().plusSeconds(60)))!=1)
+                    scanMapper.releaseChangedMigration(scan,claimId);
                 logMigration(scanId, sourceDescription, null, "failed", "MIGRATION_COMMIT_CONFLICT", fileSize, md5);
                 return new OssUploadResult(scanId,"failed","存储对象已处理，但数据库迁移状态未确认，请复核");
             }
@@ -225,14 +238,14 @@ public class MigrationServiceImpl implements MigrationService {
             logger.warn("Migration source failed: scanId={}, type={}",scanId,exception.getClass().getSimpleName());
             if (exception.isPermanent()) {
                 return failPermanently(
-                        scanId,claimId,
+                        scan,claimId,
                         sourceDescription,
                         "SOURCE_FILE_UNAVAILABLE",
                         "源影像不存在或不可访问"
                 );
             }
             return failTemporarilyOrPermanently(
-                    scanId,claimId,
+                    scan,claimId,
                     sourceDescription,
                     currentAttempt,
                     exception
@@ -240,7 +253,7 @@ public class MigrationServiceImpl implements MigrationService {
         } catch (Exception exception) {
             logger.warn("Migration upload failed: scanId={}, type={}",scanId,exception.getClass().getSimpleName());
             return failTemporarilyOrPermanently(
-                    scanId,claimId,
+                    scan,claimId,
                     sourceDescription,
                     currentAttempt,
                     exception
@@ -786,32 +799,40 @@ public class MigrationServiceImpl implements MigrationService {
         return result;
     }
 
-    private OssUploadResult failPermanently(Integer scanId,String claimId,
+    private OssUploadResult failPermanently(Scan scan,String claimId,
                                              String sourceDescription,
                                              String errorCode,
                                              String message) {
-        if(scanMapper.markMigrationFailed(scanId,claimId,errorCode)!=1)return staleMigrationResult(scanId);
+        Integer scanId=scan.getId();
+        if(scanMapper.markMigrationFailed(scan,claimId,errorCode)!=1)return releaseChangedOrStale(scan,claimId);
         logMigration(scanId, sourceDescription, null, "failed", message, null, null);
         return new OssUploadResult(scanId, "failed", message);
     }
 
-    private OssUploadResult failTemporarilyOrPermanently(Integer scanId,String claimId,
+    private OssUploadResult failTemporarilyOrPermanently(Scan scan,String claimId,
                                                           String sourceDescription,
                                                           int currentAttempt,
                                                           Exception error) {
+        Integer scanId=scan.getId();
         String errorCode = classifyUploadError(error);
         String message = "迁移失败："+errorCode;
         if (currentAttempt >= MAX_ATTEMPTS || "OBJECT_CONFLICT".equals(errorCode)) {
-            if(scanMapper.markMigrationFailed(scanId,claimId,errorCode)!=1)return staleMigrationResult(scanId);
+            if(scanMapper.markMigrationFailed(scan,claimId,errorCode)!=1)return releaseChangedOrStale(scan,claimId);
             logMigration(scanId, sourceDescription, null, "failed", message, null, null);
             return new OssUploadResult(scanId, "failed", message);
         }
 
         long delaySeconds = Math.min(1800L, 60L * (1L << Math.max(0, currentAttempt - 1)));
         Date nextRetryAt = Date.from(Instant.now().plusSeconds(delaySeconds));
-        if(scanMapper.markMigrationRetryWait(scanId,claimId,errorCode,nextRetryAt)!=1)return staleMigrationResult(scanId);
+        if(scanMapper.markMigrationRetryWait(scan,claimId,errorCode,nextRetryAt)!=1)return releaseChangedOrStale(scan,claimId);
         logMigration(scanId, sourceDescription, null, "retry_wait", message, null, null);
         return new OssUploadResult(scanId, "retry_wait", message);
+    }
+
+    private OssUploadResult releaseChangedOrStale(Scan scan,String claimId){
+        if(scanMapper.releaseChangedMigration(scan,claimId)==1)
+            return new OssUploadResult(scan.getId(),"retry_wait","影像来源已改变，原领取已释放");
+        return staleMigrationResult(scan.getId());
     }
 
     private OssUploadResult staleMigrationResult(Integer scanId){

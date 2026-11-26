@@ -13,4 +13,9 @@ public final class MigrationLogPrivacy {
         if(log.getErrorMessage()!=null&&!log.getErrorMessage().isBlank())
             log.setErrorMessage("迁移诊断已保护，请按记录ID核对");
     }
+    public static void sanitizeJob(com.zjcxph.imgapi.entity.MigrationJob job){
+        if(job==null)return;
+        if(job.getErrorMessage()!=null&&!job.getErrorMessage().isBlank())job.setErrorMessage("迁移诊断已保护，请按任务ID核对");
+        if(job.getScopeValue()!=null&&!job.getScopeValue().isBlank())job.setScopeValue("[SCOPE OMITTED]");
+    }
 }

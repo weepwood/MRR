@@ -938,3 +938,6 @@ cc8dbbc4，65未推送/259文件，集成69/266，main120/707；关键权限、�
 
 ## 后端治理第十批（2026-11-26）
 基线a004e4b5。独立医疗INTENT/OUTCOME gate默认关闭，新前向V20261126221000事件账本及UUID领取，v3 key ring重启式轮换/held保留、OSS浏览管理权限与网关Key签发拒绝、诊断字段保护。77定向/81PG、真实HTTP容量200/503/200、实际子JVM强杀、对象本地写入ACK丢失、20医疗探测；最终1049请求629双阶段配对零漏重、P95 386.573ms性能未通过。累计30/276。报告docs/backend/governance-batch10.md、audit-durable-operations-batch10.md；证据/Volumes/data/AI-Development/artifacts/mrr-backend10-20261126/。默认不切换，前置分组、Windows/物理I/O/热轮换/外部专用审计、保留期、活动WAL、完整资源权限与跨实例事务及长时仍待，仅本地。
+
+## 后端治理第十一批（2026-11-26）
+基线48de1ea1。分组双阶段/集合精确核对、aged unmatched监控、独立外部严格INTENT、迁移同代次来源保护/提交确认核对/可选条件PUT、迁移历史任务隐私。100定向、PG84首轮/19复验分批覆盖86；真实三轮5063请求3041双阶段配对，最终63.14RPS/P95 117.654ms，默认不切换；外部7类专用配对及真实故障回滚，累计32/276。报告docs/backend/governance-batch11.md，证据/Volumes/data/AI-Development/artifacts/mrr-backend11-20261126/。未完成实际断开、多实例、外部终态、现场OSS与孤儿盘点、剩余权限及长时/Windows/正式门禁。仅本地，不推送合并发布。

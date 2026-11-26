@@ -176,14 +176,15 @@ public class OssServiceImpl implements OssService {
         }
 
         try {
-            PutObjectRequest putRequest = PutObjectRequest.builder()
+            var builder = PutObjectRequest.builder()
                     .bucket(ossProperties.getBucket())
                     .key(ossKey)
                     .contentLength(file.length())
                     .contentMD5(Base64.getEncoder().encodeToString(Hex.decodeHex(sourceMd5.toCharArray())))
                     .metadata(Map.of(SOURCE_MD5_METADATA, sourceMd5))
-                    .contentType(resolveContentType(file.getName()))
-                    .build();
+                    .contentType(resolveContentType(file.getName()));
+            if(ossProperties.isConditionalCreate())builder.ifNoneMatch("*");
+            PutObjectRequest putRequest=builder.build();
 
             PutObjectResponse result = s3Client.putObject(putRequest, RequestBody.fromFile(file));
             String etag = result.eTag();
@@ -198,6 +199,13 @@ public class OssServiceImpl implements OssService {
 
             logger.info("OSS upload completed");
             return ossKey;
+        } catch (software.amazon.awssdk.services.s3.model.S3Exception e) {
+            // Never downgrade a failed conditional PUT into an unconditional overwrite.
+            if(ossProperties.isConditionalCreate()&&e.statusCode()==412){
+                if(verifyUploadIntegrity(ossKey,sourceMd5))return ossKey;
+                throw new IllegalStateException("OSS 已存在同名对象，但内容校验不一致");
+            }
+            throw new RuntimeException("OSS upload failed",e);
         } catch (Exception exception) {
             logger.error("OSS upload failed: {}", exception.getClass().getSimpleName());
             throw new RuntimeException("OSS upload failed", exception);

@@ -97,8 +97,8 @@ class MigrationServiceImplTest {
             Scan scan = invocation.getArgument(0);
             return "AUTO:scan:" + (scan == null ? "unknown" : scan.getId());
         });
-        lenient().when(scanMapper.markMigrationFailed(anyInt(),anyString(),anyString())).thenReturn(1);
-        lenient().when(scanMapper.markMigrationRetryWait(anyInt(),anyString(),anyString(),any())).thenReturn(1);
+        lenient().when(scanMapper.markMigrationFailed(any(Scan.class),anyString(),anyString())).thenReturn(1);
+        lenient().when(scanMapper.markMigrationRetryWait(any(Scan.class),anyString(),anyString(),any())).thenReturn(1);
         lenient().when(scanMapper.markMigrationWaitingSjh(anyInt())).thenReturn(1);
         lenient().when(scanMapper.markMigrationStarted(any(Scan.class),anyString())).thenReturn(1);
         lenient().when(scanMapper.completeClaimedMigration(any(Scan.class),anyInt(),anyString(),anyString(),anyLong(),anyString())).thenReturn(1);
@@ -290,7 +290,7 @@ class MigrationServiceImplTest {
         assertThat(result.getStatus()).isEqualTo("failed");
         assertThat(result.getErrorMessage()).contains("不存在");
         verify(scanMapper).markMigrationStarted(org.mockito.ArgumentMatchers.argThat(v->v!=null&&v.getId()==1),anyString());
-        verify(scanMapper).markMigrationFailed(eq(1),anyString(),eq("SOURCE_FILE_UNAVAILABLE"));
+        verify(scanMapper).markMigrationFailed(org.mockito.ArgumentMatchers.argThat(v->v!=null&&v.getId()==1),anyString(),eq("SOURCE_FILE_UNAVAILABLE"));
         verify(ossService, never()).uploadFile(anyString(), anyString(), anyString());
     }
 
@@ -310,8 +310,8 @@ class MigrationServiceImplTest {
         OssUploadResult result = migrationService.uploadSingleScan(1);
 
         assertThat(result.getStatus()).isEqualTo("retry_wait");
-        verify(scanMapper).markMigrationRetryWait(eq(1),anyString(), eq("SOURCE_OR_OSS_TIMEOUT"), any());
-        verify(scanMapper, never()).markMigrationFailed(eq(1),anyString(),anyString());
+        verify(scanMapper).markMigrationRetryWait(org.mockito.ArgumentMatchers.argThat(v->v!=null&&v.getId()==1),anyString(), eq("SOURCE_OR_OSS_TIMEOUT"), any());
+        verify(scanMapper, never()).markMigrationFailed(org.mockito.ArgumentMatchers.argThat(v->v!=null&&v.getId()==1),anyString(),anyString());
     }
 
     @Test
@@ -337,8 +337,8 @@ class MigrationServiceImplTest {
         assertThat(result.getStatus()).isEqualTo("success");
         assertThat(result.getOssUrl()).isNull();
         verify(scanMapper).completeClaimedMigration(eq(scan),eq(1),anyString(),eq(ossKey),eq(3L),eq("0123456789abcdef0123456789abcdef"));
-        verify(scanMapper, never()).markMigrationFailed(eq(3),anyString(),anyString());
-        verify(scanMapper, never()).markMigrationRetryWait(eq(3),anyString(), anyString(), any());
+        verify(scanMapper, never()).markMigrationFailed(org.mockito.ArgumentMatchers.argThat(v->v!=null&&v.getId()==3),anyString(),anyString());
+        verify(scanMapper, never()).markMigrationRetryWait(org.mockito.ArgumentMatchers.argThat(v->v!=null&&v.getId()==3),anyString(), anyString(), any());
     }
 
     @Test
@@ -473,7 +473,7 @@ class MigrationServiceImplTest {
 
         assertThat(migrationService.uploadSingleScan(3).getStatus()).isEqualTo("success");
         assertThat(cache.get(3)).isNull();
-        verify(scanMapper, never()).markMigrationRetryWait(eq(3),anyString(), anyString(), any());
+        verify(scanMapper, never()).markMigrationRetryWait(org.mockito.ArgumentMatchers.argThat(v->v!=null&&v.getId()==3),anyString(), anyString(), any());
     }
 
     @Test
@@ -495,7 +495,7 @@ class MigrationServiceImplTest {
         } finally {
             TransactionSynchronizationManager.clearSynchronization();
         }
-        verify(scanMapper, never()).markMigrationRetryWait(eq(3),anyString(), anyString(), any());
+        verify(scanMapper, never()).markMigrationRetryWait(org.mockito.ArgumentMatchers.argThat(v->v!=null&&v.getId()==3),anyString(), anyString(), any());
     }
 
     @Test
@@ -522,14 +522,36 @@ class MigrationServiceImplTest {
         verifyNoInteractions(cacheManager);
     }
 
-    private void prepareSuccessfulMigration(int updated) throws Exception {
+    @Test void uncertainCommitOnlyReportsSuccessAfterExactCurrentStateConfirmation()throws Exception{
+        prepareSuccessfulMigration(null);
+        when(scanMapper.completeClaimedMigration(any(Scan.class),anyInt(),anyString(),anyString(),eq(3L),anyString()))
+                .thenThrow(new RuntimeException("synthetic commit response lost"));
+        when(scanMapper.confirmCompletedMigration(any(Scan.class),anyString(),eq(3L),anyString())).thenReturn(1);
+        assertThat(migrationService.uploadSingleScan(3).getStatus()).isEqualTo("success");
+        verify(scanMapper).confirmCompletedMigration(any(Scan.class),anyString(),eq(3L),anyString());
+    }
+
+    @Test void uncertainCommitWithoutExactConfirmationDoesNotClassifyFailureOrSign()throws Exception{
+        prepareSuccessfulMigration(null);
+        when(scanMapper.completeClaimedMigration(any(Scan.class),anyInt(),anyString(),anyString(),eq(3L),anyString()))
+                .thenThrow(new RuntimeException("synthetic commit response lost"));
+        when(scanMapper.confirmCompletedMigration(any(Scan.class),anyString(),eq(3L),anyString())).thenReturn(0);
+        var result=migrationService.uploadSingleScan(3);
+        assertThat(result.getStatus()).isEqualTo("failed");
+        assertThat(result.getErrorMessage()).contains("结果未知");
+        verify(scanMapper,never()).markMigrationFailed(any(Scan.class),anyString(),anyString());
+        verify(scanMapper,never()).markMigrationRetryWait(any(Scan.class),anyString(),anyString(),any());
+        verify(ossService,never()).generatePresignedUrl(anyString());
+    }
+
+    private void prepareSuccessfulMigration(Integer updated) throws Exception {
         Scan scan = legacyScan(3, "00789510", "605748", null);
         Path file = createFile("3.jpg", new byte[]{7, 8, 9});
         when(scanMapper.findById(3)).thenReturn(scan);
         when(sourceResolver.resolve(scan)).thenReturn(resolved(file));
         when(ossService.calculateMd5(file.toString())).thenReturn("0123456789abcdef0123456789abcdef");
         when(ossService.getFileSize(file.toString())).thenReturn(3L);
-        when(scanMapper.completeClaimedMigration(eq(scan), anyInt(), anyString(), anyString(), eq(3L), anyString())).thenReturn(updated);
+        if(updated!=null)when(scanMapper.completeClaimedMigration(eq(scan), anyInt(), anyString(), anyString(), eq(3L), anyString())).thenReturn(updated);
     }
 
     @Test
@@ -562,8 +584,8 @@ class MigrationServiceImplTest {
         assertThat(result.getStatus()).isEqualTo("waiting_sjh");
         verify(scanMapper).markMigrationWaitingSjh(6);
         verify(scanMapper, never()).markMigrationStarted(org.mockito.ArgumentMatchers.argThat(v->v!=null&&v.getId()==6),anyString());
-        verify(scanMapper, never()).markMigrationFailed(eq(6),anyString(),anyString());
-        verify(scanMapper, never()).markMigrationRetryWait(eq(6),anyString(), anyString(), any());
+        verify(scanMapper, never()).markMigrationFailed(org.mockito.ArgumentMatchers.argThat(v->v!=null&&v.getId()==6),anyString(),anyString());
+        verify(scanMapper, never()).markMigrationRetryWait(org.mockito.ArgumentMatchers.argThat(v->v!=null&&v.getId()==6),anyString(), anyString(), any());
         verify(sourceResolver, never()).resolve(scan);
         verify(ossService, never()).uploadFile(anyString(), anyString(), anyString());
     }

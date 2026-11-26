@@ -209,6 +209,12 @@ public interface ScanMapper {
                                  @Param("ossUrl") String ossUrl,@Param("fileSize") Long fileSize,
                                  @Param("checksumMd5") String checksumMd5);
 
+    @Select("SELECT count(*) FROM mr_scan WHERE id=#{scan.id} AND uploadflag<>0 " +
+            "AND migration_status='migrated' AND migration_claim_id IS NULL " +
+            "AND oss_url=#{ossUrl} AND file_size=#{fileSize} AND checksum_md5=#{checksumMd5} " + MIGRATION_SOURCE_MATCH)
+    int confirmCompletedMigration(@Param("scan") Scan scan,@Param("ossUrl") String ossUrl,
+                                  @Param("fileSize") Long fileSize,@Param("checksumMd5") String checksumMd5);
+
     @Select("SELECT * FROM mr_scan WHERE uploadflag != 0 " +
             "AND (oss_url IS NULL OR oss_url = '') AND " + MIGRATION_ELIGIBLE_EXPRESSION +
             " ORDER BY id LIMIT #{limit}")
@@ -246,12 +252,12 @@ public interface ScanMapper {
             MIGRATION_SOURCE_MATCH)
     int markMigrationStarted(@Param("scan") Scan scan,@Param("claimId") String claimId);
 
-    String CURRENT_MIGRATION_CLAIM = " WHERE id=#{id} AND uploadflag<>0 AND (oss_url IS NULL OR oss_url='')" +
+    String CURRENT_MIGRATION_CLAIM = " WHERE id=#{scan.id} AND uploadflag<>0 AND (oss_url IS NULL OR oss_url='')" +
             " AND migration_status='migrating' AND migration_claim_id=#{claimId}";
 
     @Update("UPDATE mr_scan SET migration_status='failed',migration_error_code=#{errorCode}, " +
-            "migration_claim_id=NULL,migration_next_retry_at=NULL,migration_updated_at=NOW()" + CURRENT_MIGRATION_CLAIM)
-    int markMigrationFailed(@Param("id") Integer id,@Param("claimId") String claimId,@Param("errorCode") String errorCode);
+            "migration_claim_id=NULL,migration_next_retry_at=NULL,migration_updated_at=NOW()" + CURRENT_MIGRATION_CLAIM + MIGRATION_SOURCE_MATCH)
+    int markMigrationFailed(@Param("scan") Scan scan,@Param("claimId") String claimId,@Param("errorCode") String errorCode);
 
     @Update("UPDATE mr_scan SET migration_status='waiting_sjh',migration_error_code='MISSING_SJH', " +
             "migration_claim_id=NULL,migration_next_retry_at=NULL,migration_updated_at=NOW() " +
@@ -260,9 +266,15 @@ public interface ScanMapper {
     int markMigrationWaitingSjh(@Param("id") Integer id);
 
     @Update("UPDATE mr_scan SET migration_status='retry_wait',migration_error_code=#{errorCode}, " +
-            "migration_claim_id=NULL,migration_next_retry_at=#{nextRetryAt},migration_updated_at=NOW()" + CURRENT_MIGRATION_CLAIM)
-    int markMigrationRetryWait(@Param("id") Integer id,@Param("claimId") String claimId,
+            "migration_claim_id=NULL,migration_next_retry_at=#{nextRetryAt},migration_updated_at=NOW()" + CURRENT_MIGRATION_CLAIM + MIGRATION_SOURCE_MATCH)
+    int markMigrationRetryWait(@Param("scan") Scan scan,@Param("claimId") String claimId,
                                @Param("errorCode") String errorCode,@Param("nextRetryAt") Date nextRetryAt);
+
+    // A source change invalidates this claim without classifying the new source as failed.
+    @Update("UPDATE mr_scan SET migration_status='retry_wait',migration_error_code='SOURCE_CHANGED', " +
+            "migration_claim_id=NULL,migration_attempts=0,migration_next_retry_at=NOW(),migration_updated_at=NOW()" +
+            CURRENT_MIGRATION_CLAIM + " AND NOT (TRUE " + MIGRATION_SOURCE_MATCH + ")")
+    int releaseChangedMigration(@Param("scan") Scan scan,@Param("claimId") String claimId);
 
     @Update("UPDATE mr_scan SET migration_status='retry_wait',migration_error_code='APPLICATION_RESTART', " +
             "migration_claim_id=NULL,migration_next_retry_at=NOW(),migration_updated_at=NOW() " +

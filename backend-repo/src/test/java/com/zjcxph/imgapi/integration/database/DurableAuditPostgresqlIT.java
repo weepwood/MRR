@@ -36,6 +36,7 @@ import static org.assertj.core.api.Assertions.*;
 @Transactional(propagation=Propagation.NOT_SUPPORTED)
 class DurableAuditPostgresqlIT extends PostgresqlIntegrationTestSupport {
     @Autowired LogMapper mapper;
+    @Autowired com.zjcxph.imgapi.mapper.ScanMapper scans;
     @Autowired JdbcTemplate jdbc;
     @Autowired PlatformTransactionManager tx;
     @TempDir Path temp;
@@ -155,6 +156,37 @@ class DurableAuditPostgresqlIT extends PostgresqlIntegrationTestSupport {
             }
             System.out.println("MRR_DURABLE_WIRE real server COMMIT acknowledgement intercepted and connection closed; restart replay exactly once");
         } finally {jdbc.update("DELETE FROM app.access_log WHERE request_id IN (?,?)",record.getRequestId(),second.getRequestId());}
+    }
+
+    @Test @EnabledOnOs({OS.MAC,OS.LINUX})
+    void migrationCompletionLostCommitReplyReconcilesExactCurrentSource()throws Exception{
+        int id=jdbc.queryForObject("""
+            INSERT INTO app.mr_scan(bah,sjh,brxh,filename,folder,uploadflag,source_type,source_ref,
+              migration_status,migration_attempts,migration_claim_id)
+            VALUES ('8765451','12345678','8765451','synthetic.jpg','synthetic',1,'LOCAL','synthetic.jpg',
+              'migrating',1,'batch11-claim') RETURNING id
+            """,Integer.class);
+        var scan=scans.findById(id);
+        URI target=URI.create(postgresqlJdbcUrl().substring(5));
+        try{
+            try(var proxy=new DropCommitProxy(target.getHost(),target.getPort())){
+                String url="jdbc:postgresql://127.0.0.1:"+proxy.port()+target.getPath()+"?currentSchema=app&sslmode=disable&gssEncMode=disable&connectTimeout=3&socketTimeout=5";
+                var ds=new DriverManagerDataSource(url,postgresqlUsername(),postgresqlPassword());
+                var factory=new org.mybatis.spring.SqlSessionFactoryBean();factory.setDataSource(ds);
+                var config=new org.apache.ibatis.session.Configuration();config.addMapper(com.zjcxph.imgapi.mapper.ScanMapper.class);factory.setConfiguration(config);
+                var proxied=new org.mybatis.spring.SqlSessionTemplate(factory.getObject()).getMapper(com.zjcxph.imgapi.mapper.ScanMapper.class);
+                var transaction=new org.springframework.transaction.support.TransactionTemplate(new DataSourceTransactionManager(ds));
+                assertThatThrownBy(()->transaction.executeWithoutResult(status->{
+                    assertThat(proxied.completeClaimedMigration(scan,1,"batch11-claim","synthetic-key",4L,"md5")).isEqualTo(1);
+                })).isInstanceOf(RuntimeException.class);
+                assertThat(proxy.dropped.await(5,TimeUnit.SECONDS)).isTrue();
+                assertThat(scans.confirmCompletedMigration(scan,"synthetic-key",4L,"md5")).isEqualTo(1);
+                assertThat(scans.confirmCompletedMigration(scan,"wrong-key",4L,"md5")).isZero();
+                jdbc.update("UPDATE app.mr_scan SET source_ref='changed.jpg' WHERE id=?",id);
+                assertThat(scans.confirmCompletedMigration(scan,"synthetic-key",4L,"md5")).isZero();
+            }
+            System.out.println("MRR_MIGRATION_COMMIT_ACK actual DB commit response lost; exact state confirmed; changed source rejected");
+        }finally{jdbc.update("DELETE FROM app.mr_scan WHERE id=?",id);}
     }
 
     /** Plain PG protocol only on isolated loopback: forwards all frames until real COMMIT CommandComplete. */

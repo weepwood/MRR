@@ -196,6 +196,19 @@ class OssServiceImplTest {
         assertThat(captor.getValue().contentLength()).isEqualTo(3);
     }
 
+    @Test void conditionalCollisionNeverFallsBackToOverwrite()throws Exception{
+        Path file=tempDir.resolve("collision.jpg");Files.write(file,new byte[]{1,2,3});
+        String md5="0123456789abcdef0123456789abcdef";
+        when(ossProperties.isConditionalCreate()).thenReturn(true);
+        when(s3Client.putObject(any(PutObjectRequest.class),any(RequestBody.class))).thenThrow(
+            software.amazon.awssdk.services.s3.model.S3Exception.builder().statusCode(412).build());
+        when(s3Client.headObject(any(HeadObjectRequest.class)))
+            .thenReturn(HeadObjectResponse.builder().metadata(Map.of("source-md5","different")).build());
+        assertThatThrownBy(()->ossService.uploadFile(file.toString(),"medical-records/test.jpg",md5))
+            .isInstanceOf(IllegalStateException.class);
+        verify(s3Client,org.mockito.Mockito.times(1)).putObject(any(PutObjectRequest.class),any(RequestBody.class));
+    }
+
     @Test
     @DisplayName("参数错误不把本地路径或对象键写进异常消息")
     void invalidArgumentsDoNotExposePaths() {
@@ -216,6 +229,7 @@ class OssServiceImplTest {
         AtomicReference<String> putPath = new AtomicReference<>();
         AtomicReference<String> contentMd5 = new AtomicReference<>();
         AtomicReference<String> crc32 = new AtomicReference<>();
+        AtomicReference<String> ifNoneMatch = new AtomicReference<>();
         HttpServer server = HttpServer.create(new InetSocketAddress("127.0.0.1", 0), 0);
         server.createContext("/", exchange -> {
             if ("HEAD".equals(exchange.getRequestMethod())) {
@@ -224,6 +238,7 @@ class OssServiceImplTest {
                 putPath.set(exchange.getRequestURI().getPath());
                 contentMd5.set(exchange.getRequestHeaders().getFirst("Content-MD5"));
                 crc32.set(exchange.getRequestHeaders().getFirst("x-amz-checksum-crc32"));
+                ifNoneMatch.set(exchange.getRequestHeaders().getFirst("If-None-Match"));
                 exchange.getRequestBody().readAllBytes();
                 exchange.getResponseHeaders().add("ETag", "\"etag-test\"");
                 exchange.sendResponseHeaders(200, -1);
@@ -241,6 +256,7 @@ class OssServiceImplTest {
             when(ossProperties.getRegion()).thenReturn("us-east-1");
             when(ossProperties.isPathStyleAccess()).thenReturn(true);
             when(ossProperties.getUrlExpireSeconds()).thenReturn(3600);
+            when(ossProperties.isConditionalCreate()).thenReturn(true);
             realService.init();
 
             assertThat(realService.doesObjectExist("medical-records/missing.jpg")).isFalse();
@@ -254,6 +270,7 @@ class OssServiceImplTest {
             assertThat(putPath.get()).isEqualTo("/test-bucket/medical-records/wire-test.jpg");
             assertThat(contentMd5.get()).isNotBlank();
             assertThat(crc32.get()).isNull();
+            assertThat(ifNoneMatch.get()).isEqualTo("*");
         } finally {
             realService.destroy();
             server.stop(0);

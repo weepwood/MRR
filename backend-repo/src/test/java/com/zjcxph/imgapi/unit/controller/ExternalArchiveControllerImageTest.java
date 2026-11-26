@@ -251,7 +251,7 @@ class ExternalArchiveControllerImageTest {
         servletRequest.setCookies(new Cookie(ExternalArchiveAccessService.SESSION_COOKIE_NAME, "session-token"));
         servletRequest.setRemoteAddr("10.0.0.8");
         servletRequest.addHeader("User-Agent", "JUnit");
-        servletRequest.addHeader("X-Request-Id", "request-42");
+        servletRequest.setAttribute("requestId", "request-42");
         servletRequest.addHeader("Range", "bytes=-2");
         when(externalArchiveAccessService.requireSession("session-token")).thenReturn(grant);
         try (var stream = source.open(path)) {
@@ -281,7 +281,7 @@ class ExternalArchiveControllerImageTest {
         servletRequest.setCookies(new Cookie(ExternalArchiveAccessService.SESSION_COOKIE_NAME, "session-token"));
         servletRequest.setRemoteAddr("10.0.0.8");
         servletRequest.addHeader("User-Agent", "JUnit");
-        servletRequest.addHeader("X-Request-Id", "request-42");
+        servletRequest.setAttribute("requestId", "request-42");
         when(externalArchiveAccessService.requireSession("session-token")).thenReturn(grant);
         TrackingInputStream input = new TrackingInputStream(new byte[]{1});
         when(imageContentService.openExternal(42, grant)).thenReturn(new ImageContentService.ScopedImage(new ImageContentService.ImageContent(
@@ -314,7 +314,7 @@ class ExternalArchiveControllerImageTest {
         });
         when(request.getRemoteAddr()).thenReturn("10.0.0.8");
         when(request.getHeader("User-Agent")).thenReturn("JUnit");
-        when(request.getHeader("X-Request-Id")).thenReturn("request-42");
+        when(request.getAttribute("requestId")).thenReturn("request-42");
         when(externalArchiveAccessService.requireSession("session-token")).thenReturn(grant);
     }
 

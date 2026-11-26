@@ -152,6 +152,8 @@ public class ExternalArchiveController {
     @GetMapping("/api/v1/external/archive/context")
     public Result<ExternalArchiveSessionResponse> context(HttpServletRequest request) {
         ExternalArchiveGrant grant = requireGrant(request);
+        externalArchiveAccessService.requireAuditIntent(grant,null,null,"SESSION_CONTEXT",null,IpUtil.getClientIp(request));
+        externalArchiveAccessService.recordContextOutcome(grant,IpUtil.getClientIp(request),requestId(request));
         int expiresIn = Math.max(0, (int) ((grant.expiresAt() - System.currentTimeMillis()) / 1000L));
         return Result.success(new ExternalArchiveSessionResponse(
                 grant.clientId(), grant.externalUserId(), grant.allowDownload(), expiresIn, grant.cases()
@@ -165,6 +167,8 @@ public class ExternalArchiveController {
             HttpServletRequest request
     ) {
         ExternalArchiveGrant grant = requireGrant(request);
+        if(!grant.allows(bah,sjh))throw new BusinessException(403,"当前外部会话无权访问该病案");
+        externalArchiveAccessService.requireAuditIntent(grant,bah,sjh,"ARCHIVE_VIEW",null,IpUtil.getClientIp(request));
         List<BAHDataResponseDTO> images = externalArchiveAccessService.loadImages(grant, bah, sjh);
         String clientIp = IpUtil.getClientIp(request);
         logger.info(
@@ -194,6 +198,7 @@ public class ExternalArchiveController {
             throw new BusinessException(403, "当前外部会话无权下载该病案");
         }
 
+        externalArchiveAccessService.requireAuditIntent(grant,normalizedBah,normalizedSjh,"ARCHIVE_DOWNLOAD",null,IpUtil.getClientIp(request));
         ArchiveExportService.BatchZipExport export =
                 archiveExportService.prepareExternalArchive(normalizedBah, normalizedSjh);
         if (export.itemCount() == 0) {
@@ -237,6 +242,7 @@ public class ExternalArchiveController {
             HttpServletRequest request
     ) {
         ExternalArchiveGrant grant = requireGrant(request);
+        externalArchiveAccessService.requireAuditIntent(grant,null,null,"IMAGE_VIEW",id,IpUtil.getClientIp(request));
         var scoped = imageContentService.openExternal(id, grant);
         ImageContentService.ImageContent content = scoped.content();
         String clientIp = IpUtil.getClientIp(request);
@@ -262,6 +268,7 @@ public class ExternalArchiveController {
             } catch (BusinessException ignored) {
                 // Cookie 仍需清理。
             }
+            externalArchiveAccessService.auditRevocationIntent(grant,IpUtil.getClientIp(request));
             externalArchiveAccessService.revokeSession(sessionToken);
         }
         ResponseCookie cookie = ResponseCookie.from(ExternalArchiveAccessService.SESSION_COOKIE_NAME, "")
@@ -295,7 +302,7 @@ public class ExternalArchiveController {
     }
 
     private String requestId(HttpServletRequest request) {
-        return request.getHeader("X-Request-Id");
+        return request.getAttribute("requestId") instanceof String id ? id : null;
     }
 
     private boolean isSecureRequest(HttpServletRequest request) {

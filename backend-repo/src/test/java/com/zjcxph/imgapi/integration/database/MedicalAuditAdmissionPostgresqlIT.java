@@ -68,6 +68,80 @@ class MedicalAuditAdmissionPostgresqlIT extends PostgresqlIntegrationTestSupport
         }finally{jdbc.update("DELETE FROM app.medical_audit_event WHERE actor_id=999999");}
     }
 
+    @Test void groupedConcurrentReservationsNeverOverrunAndAllAcceptedOutcomesFit()throws Exception{
+        var env=configuration().withProperty("mrr.audit.admission.grouped","true")
+                .withProperty("mrr.audit.admission.max-records","16").withProperty("mrr.audit.admission.max-bytes","262144");
+        var metrics=new SimpleMeterRegistry();
+        var pool=java.util.concurrent.Executors.newFixedThreadPool(16);
+        var start=new java.util.concurrent.CountDownLatch(1);
+        try(var gate=new MedicalAuditAdmission(env,new ObjectMapper(),jdbc,tx,metrics)){
+            var futures=new ArrayList<java.util.concurrent.Future<String>>();
+            for(int i=0;i<16;i++){
+                int n=i;
+                futures.add(pool.submit(()->{start.await();try{return gate.admit(999998,"batch11-"+n,"GET","/api/v1/img/content/{id}","[REDACTED]");}
+                catch(java.io.IOException rejected){return null;}}));
+            }
+            start.countDown();
+            var accepted=new ArrayList<String>();
+            for(var future:futures){String id=future.get(10,java.util.concurrent.TimeUnit.SECONDS);if(id!=null)accepted.add(id);}
+            assertThat(accepted).hasSizeBetween(1,8);
+            assertThat(gate.reserved()).isEqualTo(accepted.size());
+            var done=new ArrayList<java.util.concurrent.Future<?>>();
+            for(String id:accepted)done.add(pool.submit(()->gate.complete(id,200,false)));
+            for(var future:done)future.get(10,java.util.concurrent.TimeUnit.SECONDS);
+            gate.flush();
+            assertThat(gate.reserved()).isZero();
+            assertThat(jdbc.queryForObject("SELECT count(*) FROM app.medical_audit_event WHERE actor_id=999998",Integer.class)).isEqualTo(accepted.size()*2);
+            assertThat(jdbc.queryForObject("SELECT count(*) FROM (SELECT correlation_id FROM app.medical_audit_event WHERE actor_id=999998 GROUP BY correlation_id HAVING count(*)=2) pairs",Integer.class)).isEqualTo(accepted.size());
+            System.out.println("MRR_GROUPED_GATE accepted="+accepted.size()+" rejected="+(16-accepted.size())+" forces="+metrics.get("mrr.medical.audit.file.forces").gauge().value());
+        }finally{pool.shutdownNow();metrics.close();jdbc.update("DELETE FROM app.medical_audit_event WHERE actor_id=999998");}
+    }
+
+    @Test void agedUnpairedMonitorDistinguishesUnknownFromCompleted()throws Exception{
+        var env=configuration().withProperty("mrr.audit.admission.grouped","true");
+        var metrics=new SimpleMeterRegistry();
+        try(var gate=new MedicalAuditAdmission(env,new ObjectMapper(),jdbc,tx,metrics)){
+            String id=gate.admit(999997,"batch11-aged","GET","/api/v1/img/content/{id}","[REDACTED]");
+            gate.flush();
+            jdbc.update("UPDATE app.medical_audit_event SET observed_at=NOW()-interval '11 minutes' WHERE correlation_id=?",id);
+            gate.monitorUnpaired();
+            assertThat(metrics.get("mrr.medical.audit.aged.unpaired").gauge().value()).isEqualTo(1);
+            gate.complete(id,200,false);gate.flush();gate.monitorUnpaired();
+            assertThat(metrics.get("mrr.medical.audit.aged.unpaired").gauge().value()).isZero();
+        }finally{metrics.close();jdbc.update("DELETE FROM app.medical_audit_event WHERE actor_id=999997");}
+    }
+
+    @Test void actualBatchCommitAcknowledgementLossKeepsCiphertextAndReplaysExactly()throws Exception{
+        var env=configuration().withProperty("mrr.audit.admission.grouped","true")
+                .withProperty("mrr.audit.admission.max-records","16");
+        var target=java.net.URI.create(postgresqlJdbcUrl().substring(5));
+        String id;
+        try{
+            try(var proxy=new DurableAuditPostgresqlIT.DropCommitProxy(target.getHost(),target.getPort())){
+                String url="jdbc:postgresql://127.0.0.1:"+proxy.port()+target.getPath()+"?currentSchema=app&sslmode=disable&gssEncMode=disable&connectTimeout=3&socketTimeout=5";
+                var ds=new org.springframework.jdbc.datasource.DriverManagerDataSource(url,postgresqlUsername(),postgresqlPassword());
+                var metrics=new SimpleMeterRegistry();
+                try(var gate=new MedicalAuditAdmission(env,new ObjectMapper(),new JdbcTemplate(ds),
+                    new org.springframework.jdbc.datasource.DataSourceTransactionManager(ds),metrics)){
+                    id=gate.admit(999996,"batch11-wire","GET","/api/v1/img/content/{id}","[REDACTED]");
+                    gate.complete(id,200,false);
+                    gate.flush();
+                    assertThat(proxy.dropped.await(5,java.util.concurrent.TimeUnit.SECONDS)).isTrue();
+                    assertThat(jdbc.queryForObject("SELECT count(*) FROM app.medical_audit_event WHERE correlation_id=?",Integer.class,id)).isEqualTo(2);
+                    assertThat(metrics.get("mrr.medical.audit.pending").gauge().value()).isEqualTo(2);
+                }finally{metrics.close();}
+            }
+            try(var reopened=service(env)){
+                reopened.flush();
+                assertThat(jdbc.queryForObject("SELECT count(*) FROM app.medical_audit_event WHERE correlation_id=?",Integer.class,id)).isEqualTo(2);
+                try(var files=Files.list(Path.of(env.getRequiredProperty("mrr.audit.admission.directory")))){
+                    assertThat(files.noneMatch(x->x.toString().endsWith(".pending"))).isTrue();
+                }
+            }
+            System.out.println("MRR_MEDICAL_BATCH_ACK actual COMMIT reply lost; two durable events reconciled");
+        }finally{jdbc.update("DELETE FROM app.medical_audit_event WHERE actor_id=999996");}
+    }
+
     @Test void rejectsCrossDomainKeyReuseBeforeOpeningSpool()throws Exception{
         var env=configuration();
         String key=env.getRequiredProperty("MRR_MEDICAL_AUDIT_KEY");

@@ -18,6 +18,7 @@ public class OssProperties {
     private String baseUrl;
     private int urlExpireSeconds = 3600;
     private boolean pathStyleAccess = false;
+    private boolean conditionalCreate = false;
 
     @AssertTrue(message = "OSS Access Key ID 与 Secret 必须同时配置")
     public boolean isCredentialPairValid() {

@@ -15,6 +15,28 @@ import {
 import { applyMrrChartTheme, mrrChartColor } from '@/config/chart-theme'
 import { echarts } from '@/plugins/echarts'
 
+/** Preserve interaction only for theme-only redraws; a new query/range still uses its own options. */
+export function preserveChartView(option: ECOption, current: ECOption): ECOption {
+  const array = (value: unknown) => Array.isArray(value) ? value : value ? [value] : []
+  const zooms = array(current.dataZoom)
+  const legends = array(current.legend)
+  const dataZoom = array(option.dataZoom).map((zoom, index) => {
+    const old = zooms[index]
+    if (!old || old.type !== zoom.type || !Number.isFinite(old.start) || !Number.isFinite(old.end)) { return zoom }
+    const { startValue: _startValue, endValue: _endValue, ...rest } = zoom
+    return { ...rest, start: old.start, end: old.end }
+  })
+  const legend = array(option.legend).map((item, index) => ({
+    ...item,
+    ...(legends[index]?.selected ? { selected: legends[index].selected } : {}),
+  }))
+  return {
+    ...option,
+    ...(dataZoom.length ? { dataZoom } : {}),
+    ...(legend.length ? { legend } : {}),
+  }
+}
+
 export function useMrrChart(
   option: MaybeRefOrGetter<ECOption>,
   loading: MaybeRefOrGetter<boolean> = false,
@@ -34,6 +56,7 @@ export function useMrrChart(
   let themeFrame: number | null = null
   let themeSignature = ''
   let retryTimer: number | null = null
+  let lastRenderedOption: ECOption | undefined
 
   /**
    * 只有「影响图表配色」的根节点变化才需要重绘：明暗模式、主色、配色方案。
@@ -67,7 +90,7 @@ export function useMrrChart(
         return
       }
       themeSignature = next
-      render()
+      render(true)
     })
   }
 
@@ -121,16 +144,21 @@ export function useMrrChart(
     }
   }
 
-  function render() {
+  function render(preserveView = false) {
+    const existing = chartInstance.value
     const chart = ensureChart()
     if (!chart) {
       return
     }
 
-    chart.setOption(applyMrrChartTheme(toValue(option)), {
+    const source = toValue(option)
+    const themed = applyMrrChartTheme(source)
+    const next = preserveView && source === lastRenderedOption && existing === chart ? preserveChartView(themed, chart.getOption() as ECOption) : themed
+    chart.setOption(next, {
       notMerge: true,
       lazyUpdate: false,
     })
+    lastRenderedOption = source
     syncLoading()
   }
 
@@ -179,7 +207,7 @@ export function useMrrChart(
     // 缓存期间可能切换过主题：激活时的 render 会按当前主题重绘，这里同步签名避免重复绘制。
     themeSignature = readThemeSignature()
     nextTick(() => {
-      render()
+      render(true)
       resize()
     })
   })

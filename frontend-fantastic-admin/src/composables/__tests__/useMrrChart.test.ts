@@ -1,7 +1,7 @@
 import { mount } from '@vue/test-utils'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { defineComponent, h, nextTick } from 'vue'
-import { useMrrChart } from '../useMrrChart'
+import { preserveChartView, useMrrChart } from '../useMrrChart'
 
 const mocks = vi.hoisted(() => ({ init: vi.fn(), observe: vi.fn(), setOption: vi.fn(), resize: vi.fn(), dispose: vi.fn(), showLoading: vi.fn(), hideLoading: vi.fn() }))
 vi.mock('@/plugins/echarts', () => ({ echarts: { init: mocks.init } }))
@@ -120,5 +120,20 @@ describe('共享图表按尺寸初始化', () => {
     await vi.advanceTimersByTimeAsync(80)
     expect(mocks.init).toHaveBeenCalledTimes(2)
     expect(mocks.resize).toHaveBeenCalledTimes(1)
+  })
+})
+
+describe('图表外观重绘保留交互', () => {
+  it('保留实际缩放百分比与图例选择，不修改原始查询选项', () => {
+    const initial = { dataZoom: [{ type: 'inside' as const, startValue: 16, endValue: 31 }], legend: { type: 'scroll' as const, data: ['A', 'B'] }, series: [{ type: 'line' as const, data: [1, 2] }] }
+    const result = preserveChartView(initial, { dataZoom: [{ type: 'inside', start: 20, end: 60 }], legend: [{ selected: { A: true, B: false } }] })
+    expect(result.dataZoom).toEqual([{ type: 'inside', start: 20, end: 60 }])
+    expect(result.legend).toEqual([{ type: 'scroll', data: ['A', 'B'], selected: { A: true, B: false } }])
+    expect(result.series).toBe(initial.series)
+    expect(initial.dataZoom[0].startValue).toBe(16)
+  })
+  it('没有匹配缩放配置时保留调用方初始范围', () => {
+    const initial = { dataZoom: [{ type: 'inside' as const, startValue: 16, endValue: 31 }] }
+    expect(preserveChartView(initial, {}).dataZoom).toEqual(initial.dataZoom)
   })
 })

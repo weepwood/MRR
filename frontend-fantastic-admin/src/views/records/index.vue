@@ -271,8 +271,8 @@ function typeLabel(value: unknown) {
           原来放在页头，与勾选框隔着指标卡和筛选栏，用户不容易把两者联系起来。
         -->
         <div class="records-batch-actions">
-          <span v-if="selectedRows.length" class="records-batch-actions__count">已选 {{ selectedRows.length }} 条</span>
-          <el-button type="primary" :loading="downloading" @click="handleBatchDownload">
+          <span class="records-batch-actions__count" role="status">已选 {{ selectedRows.length }} 条</span>
+          <el-button type="primary" :loading="downloading" :disabled="loading || !selectedRows.length" @click="handleBatchDownload">
             <FaIcon name="i-lucide:download" aria-hidden="true" />
             批量下载
           </el-button>
@@ -429,6 +429,7 @@ function typeLabel(value: unknown) {
 .records-batch-actions {
   display: flex;
   flex: 0 0 auto;
+  flex-wrap: wrap;
   gap: var(--mrr-space-3);
   align-items: center;
 }

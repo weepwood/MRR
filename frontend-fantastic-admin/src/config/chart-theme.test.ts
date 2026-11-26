@@ -2,6 +2,9 @@ import { afterEach, describe, expect, it } from 'vitest'
 import { applyMrrChartTheme, getMrrChartThemeTokens, mrrChartColorToken } from './chart-theme'
 
 afterEach(() => {
+  document.documentElement.classList.remove('dark')
+  document.documentElement.style.removeProperty('--mrr-tone-success-ink')
+  document.documentElement.style.removeProperty('--mrr-tone-primary-ink')
   delete document.documentElement.dataset.motion
   document.documentElement.style.removeProperty('--mrr-chart-axis-font-size')
   document.documentElement.style.removeProperty('--mrr-chart-legend-font-size')
@@ -24,6 +27,12 @@ describe('图表视觉契约', () => {
     expect(first.series).toMatchObject([{ data: [0, 2], lineStyle: { color: '#123456' }, itemStyle: { color: '#112233' } }])
     expect(second.series).toMatchObject([{ data: [0, 2], lineStyle: { color: '#654321' } }])
     expect(option.series[0].lineStyle.color).toBe('var(--color-primary)')
+  })
+
+  it('暗色图表使用语义前景而非按钮填充色', () => {
+    document.documentElement.classList.add('dark')
+    document.documentElement.style.setProperty('--mrr-tone-primary-ink', '#adc6ff')
+    expect(getMrrChartThemeTokens().palette[0]).toBe('#adc6ff')
   })
 
   it('坐标与图例读取公共字号，保持调用方明确的轴和数据范围', () => {

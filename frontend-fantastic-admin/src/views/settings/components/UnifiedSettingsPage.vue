@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import type { SettingsSection } from '../composables/useUnifiedSettings'
 import type { SettingsSearchResult } from '../settings-search'
-import { useElementSize, useMediaQuery } from '@vueuse/core'
+import { until, useElementSize, useMediaQuery } from '@vueuse/core'
 import { computed, nextTick, onUnmounted, ref, useId, watch } from 'vue'
 import { onBeforeRouteLeave } from 'vue-router'
 import AppError from '@/components/AppError/index.vue'
@@ -110,10 +110,18 @@ const serverSaveStatus = computed(() => {
   return isDirty.value ? '有未保存的修改' : '已与服务器同步'
 })
 
+let searchNavigationId = 0
+
 async function openSearchResult(result: SettingsSearchResult) {
+  const navigationId = ++searchNavigationId
   await requestSection(result.section)
   await nextTick()
-  if (activeSection.value !== result.section) { return }
+  // 首次配置读取时表单尚未挂载，不能提前退回页标题并丢失搜索锚点。
+  if (isServerSettingSection.value && !loaded.value && loading.value) {
+    await until(loading).toBe(false, { timeout: 15000 })
+    await nextTick()
+  }
+  if (navigationId !== searchNavigationId || activeSection.value !== result.section) { return }
 
   if (result.section === 'appearance' && result.anchor) {
     appConfigRef.value?.openGroup(result.anchor)
@@ -377,6 +385,7 @@ watch(() => runtimeSettingsRef.value?.isDirty, (dirty) => {
 })
 
 onUnmounted(() => {
+  searchNavigationId++
   if (saveFeedbackTimer !== undefined) {
     window.clearTimeout(saveFeedbackTimer)
   }

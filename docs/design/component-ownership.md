@@ -291,3 +291,7 @@ FaIcon、FaKbd、FaPinInput、FaScrollArea、FaSmartFixedBlock、FaPasswordStren
 ## 本地残余控件与 CSS 审查（2026-11-26）
 
 详见[本地控件归属审计](local-ui-ownership-audit.md)：以 0161abbd 为基线的 71 处原生按钮、475 处外部 Element Plus 引用逐项分类；三处普通业务按钮、Manifest 两个选择器、OCR 文本域和两个输入字段改用统一底层，保留内容按钮及文件输入。共享图标令牌、设置滑块和行内命令样式，以及授权浏览查询反馈采用明确归属。不将所有 475 处引用视为冲突，不将剩余专用 FA 视为重复基础控件。实际验收边界见工程交接。
+
+## 视觉令牌及图表归属最终补充（2026-11-26）
+
+表面及交替行归 data-display.css 和 tokens.css；状态与指标语义前景归 tones.css，各组件仅消费 ink 令牌；图表色值解析、坐标与提示归 chart-theme.ts，图表实例与同配置交互保留归 useMrrChart.ts。仅业务字段换行和批量选中反馈保留页面级样式。不要新增重复的 Element Plus 暗色覆盖、逐页硬编码颜色或全局重置表格。

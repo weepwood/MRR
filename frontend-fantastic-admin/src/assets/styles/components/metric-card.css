@@ -41,6 +41,7 @@
 
 .mrr-metric-card {
   --mrr-metric-accent: var(--mrr-tone-primary);
+  --mrr-metric-ink: var(--mrr-tone-primary-ink);
 
   position: relative;
   height: 100%;
@@ -80,7 +81,7 @@
   width: 48px;
   height: 48px;
   font-size: 28px;
-  color: var(--mrr-metric-accent);
+  color: var(--mrr-metric-ink);
 
   /* 与 tones.css 的 -soft（10%）/ -border（22%，混入 --mrr-border）同一配方，页头、分区卡、指标卡三处图标块不再各用一套比例。 */
   background: color-mix(in srgb, var(--mrr-metric-accent) 10%, var(--mrr-card));
@@ -185,44 +186,51 @@
 /* 值语义色：只改变数字本身的颜色，不改变整张卡片的表面与边框，
  * 避免同一业务含义在不同页面出现「整卡变色」与「仅数字变色」两种做法。 */
 .mrr-metric-card__value--success {
-  color: var(--mrr-tone-success);
+  color: var(--mrr-tone-success-ink);
 }
 
 .mrr-metric-card__value--warning {
-  color: var(--mrr-tone-warning);
+  color: var(--mrr-tone-warning-ink);
 }
 
 .mrr-metric-card__value--danger {
-  color: var(--mrr-tone-danger);
+  color: var(--mrr-tone-danger-ink);
 }
 
 .mrr-metric-card--rose {
   --mrr-metric-accent: var(--mrr-tone-rose);
+  --mrr-metric-ink: var(--mrr-tone-rose-ink);
 }
 
 .mrr-metric-card--green {
   --mrr-metric-accent: var(--mrr-tone-success);
+  --mrr-metric-ink: var(--mrr-tone-success-ink);
 }
 
 .mrr-metric-card--amber,
 .mrr-metric-card--warning {
   --mrr-metric-accent: var(--mrr-tone-warning);
+  --mrr-metric-ink: var(--mrr-tone-warning-ink);
 }
 
 .mrr-metric-card--violet {
   --mrr-metric-accent: var(--mrr-tone-violet);
+  --mrr-metric-ink: var(--mrr-tone-violet-ink);
 }
 
 .mrr-metric-card--teal {
   --mrr-metric-accent: var(--mrr-tone-teal);
+  --mrr-metric-ink: var(--mrr-tone-teal-ink);
 }
 
 .mrr-metric-card--slate {
   --mrr-metric-accent: var(--mrr-tone-neutral);
+  --mrr-metric-ink: var(--mrr-tone-neutral-ink);
 }
 
 .mrr-metric-card--danger {
   --mrr-metric-accent: var(--mrr-tone-danger);
+  --mrr-metric-ink: var(--mrr-tone-danger-ink);
 }
 
 @media (max-width: 600px) {

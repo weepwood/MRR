@@ -44,6 +44,8 @@ const option = computed<ECOption>(() => ({
   legend: {
     top: 0,
     right: 0,
+    left: 0,
+    type: 'scroll',
     data: [...props.bars, ...props.lines].map(item => item.name),
   },
   grid: {
@@ -93,6 +95,7 @@ const option = computed<ECOption>(() => ({
       name: item.name,
       type: 'bar' as const,
       yAxisIndex: 0,
+      tooltip: { valueFormatter: (value: unknown) => `${Number(value).toLocaleString('zh-CN')}${props.leftUnit ? ` ${props.leftUnit}` : ''}` },
       data: item.data,
       stack: item.stack,
       // 90 根逐日柱子时，30px 上限几乎填满类目宽度，柱与柱粘成一整块；
@@ -110,6 +113,7 @@ const option = computed<ECOption>(() => ({
       name: item.name,
       type: 'line' as const,
       yAxisIndex: 1,
+      tooltip: { valueFormatter: (value: unknown) => `${Number(value).toLocaleString('zh-CN')}${props.rightUnit ? ` ${props.rightUnit}` : ''}` },
       data: item.data,
       smooth: item.smooth ?? true,
       showSymbol: item.symbol ?? props.categories.length <= 12,

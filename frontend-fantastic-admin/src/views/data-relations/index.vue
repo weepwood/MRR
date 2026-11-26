@@ -1244,8 +1244,8 @@ p {
   gap: var(--mrr-space-3);
   padding: var(--mrr-space-3) 0;
   margin: var(--mrr-space-3) 0;
-  border-top: 1px solid var(--mrr-shell-divider);
-  border-bottom: 1px solid var(--mrr-shell-divider);
+  border-top: 1px solid var(--mrr-border);
+  border-bottom: 1px solid var(--mrr-border);
 }
 
 .relation-card__provenance {
@@ -1326,6 +1326,10 @@ p {
   font-size: var(--mrr-font-size-xs);
   color: var(--el-text-color-secondary);
 }
+
+.archive-header > div { min-width: 0; overflow-wrap: anywhere; }
+
+.archive-header { flex-wrap: wrap; }
 
 .archive-header h3 {
   margin: var(--mrr-space-1) 0;

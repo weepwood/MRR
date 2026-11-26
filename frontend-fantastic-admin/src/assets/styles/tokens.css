@@ -187,6 +187,7 @@
    * 若这里写成 color-mix()，Chrome 86 上整条声明失效会退化成 currentColor（墨色描边）。
    */
   --mrr-border-strong: rgb(15 23 42 / 16%);
+  --mrr-table-stripe-bg: var(--mrr-muted);
   --mrr-ring: color-mix(in srgb, var(--color-primary) 72%, hsl(var(--ring)));
   --mrr-primary: var(--color-primary);
   --mrr-primary-foreground: #fff;
@@ -300,6 +301,7 @@
     --scrollbar-color: 240 3.7% 15.9%;
     --mrr-input: color-mix(in srgb, var(--mrr-foreground) 15%, transparent);
     --mrr-border-strong: rgb(255 255 255 / 16%);
+    --mrr-table-stripe-bg: var(--mrr-background);
     --mrr-control-bg-disabled: color-mix(in srgb, var(--mrr-muted) 80%, black);
     --mrr-control-border-hover: color-mix(in srgb, var(--mrr-foreground) 24%, var(--mrr-input));
     --mrr-destructive-muted: color-mix(in srgb, var(--mrr-destructive) 20%, var(--mrr-card));

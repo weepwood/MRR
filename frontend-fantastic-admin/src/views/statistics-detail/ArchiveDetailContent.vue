@@ -820,6 +820,7 @@ onBeforeUnmount(() => {
 .folder-top,
 .folder-footer {
   display: flex;
+  flex-wrap: wrap;
   gap: var(--mrr-space-2);
   align-items: center;
 }
@@ -840,7 +841,7 @@ onBeforeUnmount(() => {
   padding: 2px var(--mrr-space-2);
   font-size: var(--mrr-font-size-xs);
   font-weight: 600;
-  color: var(--folder-accent);
+  color: var(--mrr-tone-primary-ink);
   background: color-mix(in srgb, var(--folder-accent) 10%, transparent);
   border-radius: var(--mrr-radius-pill);
 }
@@ -876,7 +877,8 @@ onBeforeUnmount(() => {
   font: inherit;
   color: var(--text-primary);
   text-align: left;
-  white-space: nowrap;
+  overflow-wrap: anywhere;
+  white-space: normal;
   cursor: pointer;
   outline: none;
   background: none;
@@ -908,8 +910,10 @@ onBeforeUnmount(() => {
 }
 
 .folder-department {
+  min-width: 0;
   font-weight: 600;
   color: var(--text-primary);
+  overflow-wrap: anywhere;
 }
 
 .folder-meta-dot {
@@ -954,14 +958,12 @@ onBeforeUnmount(() => {
 
 .folder-code-value {
   min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
   font-family: var(--mrr-font-mono);
   font-size: var(--mrr-font-size-md);
   font-weight: 600;
   font-variant-numeric: tabular-nums;
   color: var(--text-primary);
-  white-space: nowrap;
+  overflow-wrap: anywhere;
 }
 
 .folder-copy {

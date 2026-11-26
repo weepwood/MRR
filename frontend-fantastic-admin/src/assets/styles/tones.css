@@ -85,3 +85,28 @@
   --el-color-info-light-9: var(--mrr-tone-neutral-soft);
   --el-color-info-dark-2: color-mix(in srgb, var(--mrr-tone-neutral) 80%, #000);
 }
+
+/* Semantic ink is not the brand/button fill. Dark defaults need higher contrast;
+ * palette-specific tones already supply their own accessible colors. */
+:root {
+  --mrr-tone-success-ink: var(--mrr-tone-success);
+  --mrr-tone-warning-ink: var(--mrr-tone-warning);
+  --mrr-tone-danger-ink: var(--mrr-destructive);
+  --mrr-tone-info-ink: var(--mrr-tone-info);
+  --mrr-tone-primary-ink: var(--mrr-tone-primary);
+  --mrr-tone-violet-ink: var(--mrr-tone-violet);
+  --mrr-tone-teal-ink: var(--mrr-tone-teal);
+  --mrr-tone-rose-ink: var(--mrr-tone-rose);
+  --mrr-tone-neutral-ink: var(--mrr-muted-foreground);
+}
+
+:root.dark:not([data-mrr-palette="gr8r"]) {
+  --mrr-tone-success-ink: #65d394;
+  --mrr-tone-warning-ink: #f2bd68;
+  --mrr-tone-danger-ink: #ff9797;
+  --mrr-tone-info-ink: #71cce8;
+  --mrr-tone-primary-ink: var(--mrr-navigation-active-foreground);
+  --mrr-tone-violet-ink: #c2a5ff;
+  --mrr-tone-teal-ink: #70d2c3;
+  --mrr-tone-rose-ink: #fda4bd;
+}

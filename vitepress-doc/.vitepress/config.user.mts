@@ -119,6 +119,8 @@ export default defineConfig({
   },
 
   vite: {
+    // Keep original SVG figures as addressable, hashed build assets.
+    build: { assetsInlineLimit: 0 },
     publicDir: '../public',
   },
 

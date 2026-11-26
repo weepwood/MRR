@@ -1,8 +1,16 @@
+<script setup>
+import figure1 from './assets/runtime-boundary.svg?url'
+</script>
+
 # 系统架构
 
 ## 设计目标
 
 MRR 采用单前端、单 Spring Boot 后端、单 PostgreSQL 数据库的部署模型，图片存储支持本地/NAS 和 OSS。当前架构优先考虑医院内网环境下的部署简单、数据可追溯、大表可维护和权限边界清晰，不以微服务或分布式部署为前提。
+
+<p class="doc-figure"><a :href="figure1" target="_blank" rel="noopener noreferrer" aria-label="Windows 单机运行边界（在新标签页查看原图）"><img :src="figure1" alt="Windows 单机运行边界" loading="lazy"></a></p>
+
+*图 1：单机运行拓扑与独立依赖 · 流程示意，点击查看原图。*
 
 ## 运行结构
 
@@ -134,10 +142,6 @@ flowchart LR
 状态页与主后端同部署。服务完全停止时状态页也无法访问；服务恢复后根据最后心跳和超时阈值补录停机区间。它适合展示历史可用率，但不能替代独立外部探针。
 
 ## 运行边界图解
-
-![Windows 单机运行边界](./assets/runtime-boundary.svg)
-
-*流程示意，非实际页面截图。*
 
 本图按职责分组，而非表示多个独立服务。Windows 部署可由 Nginx 提供统一入口与外置文档，Spring Boot JAR 可以内嵌前端。Actuator 和可选监控组件属于运维观察面，不是业务授权入口。源文件访问、权限校验、元数据读取及任务执行依赖真实运行配置；不新增 Redis、消息队列或跨主机协调服务作为默认依赖。
 

@@ -225,6 +225,8 @@ export default defineConfig({
     config: (md) => { MermaidMarkdown(md) },
   },
   vite: {
+    // Keep original SVG figures as addressable, hashed build assets.
+    build: { assetsInlineLimit: 0 },
     plugins: [MermaidPlugin()],
     optimizeDeps: { include: ['mermaid'] },
   },

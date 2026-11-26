@@ -104,7 +104,7 @@ MRR 不是 DICOM 诊断工作站，不提供窗宽窗位、医学测量、多帧
 | 影像档案袋 | `/archive` 或 `/archive/embed` | `record:read` |
 | 外部影像调阅 | `/archive/external?ticket=...` | 有效的一次性 Ticket |
 | Nginx 文件浏览 | `/nginx-browser` | `record:read` |
-| OSS 文件浏览 | `/oss-browser` | `record:read` |
+| OSS 文件浏览 | `/oss-browser` | `record:manage`（当前候选入口） |
 | 运维诊断中心 | `/operations-center` | `system:read` |
 | 运行错误中心 | `/runtime-errors` | `system:error:read` |
 | 服务状态 | `/status` | 公开脱敏信息 |

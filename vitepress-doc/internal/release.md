@@ -1,3 +1,7 @@
+<script setup>
+import figure1 from './assets/candidate-delivery.svg?url'
+</script>
+
 # 发布流程与版本基线
 
 MRR 的发布必须能够回答五个问题：运行的是什么产品版本、对应哪个 Git Commit、何时构建、兼容哪些数据库迁移、是否允许直接回滚应用。
@@ -259,9 +263,9 @@ npm run docs:build
 
 ## 候选制品与现场验收
 
-![候选版本交付门禁](./assets/candidate-delivery.svg)
+<p class="doc-figure"><a :href="figure1" target="_blank" rel="noopener noreferrer" aria-label="候选版本交付门禁（在新标签页查看原图）"><img :src="figure1" alt="候选版本交付门禁" loading="lazy"></a></p>
 
-*流程示意，非实际页面截图。*
+*图：固定提交、制品、现场演练及发布授权 · 流程示意，点击查看原图。*
 
 | 验收层 | 必须留存的证据 |
 | --- | --- |

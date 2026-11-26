@@ -2,6 +2,23 @@
 
 > 面向开发、测试、数据库、部署和运维人员。产品版本由根目录 `VERSION` 与站点构建配置统一读取；当前研发候选不等同正式 Release。事实来源依次为当前代码与 Flyway、`application.properties`、`VERSION`、`release-baseline.json`、自动化测试和运行中的 OpenAPI。
 
+## 如何阅读本手册
+
+如果你是第一次维护 MRR，不需要从头阅读全部接口和配置。建议按任务选择一条路径：
+
+| 角色 / 目标 | 阅读顺序 |
+| --- | --- |
+| 新加入的开发人员 | [系统架构](./architecture.md) → [开发流程](./development.md) → [前端工程](./frontend.md) 或 [后端工程](./backend.md) |
+| 数据库与迁移人员 | [数据库](./database.md) → [数据导入与迁移](./data-migration.md) → [生产运行手册](./runbook.md) |
+| 医院部署与运维人员 | [部署总览](./deployment.md) → [Windows 部署](./windows-deployment.md) → [运维监控](./operations.md) |
+| 接入与安全审查人员 | [API 与权限](./api.md) → [安全](./security.md) → [外部调阅接入](./external-archive-integration.md) |
+
+先理解三个概念：**业务主档**用于定位病案与关联记录，**影像来源**用于读取实际文件，**权限与审计**负责约束访问并记录行为。这三者相互关联，但不能用某一项的正常状态证明其余两项也正常。
+
+::: warning 候选与已部署版本
+本手册随源码维护，涉及新候选实现时以候选说明为准。生产环境应核对实际制品、配置与运行证据；未发布功能、现场兼容性与安全风险不得当作已经验收。
+:::
+
 ## 按任务查找文档
 
 ### 了解系统

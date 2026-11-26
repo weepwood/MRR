@@ -76,7 +76,7 @@
 
 | 权限 | 当前主分支能力 |
 | --- | --- |
-| `record:read` | 查看记录、患者、档案装箱、影像、OSS/Nginx 文件和迁移页面；图片类型修改接口当前也继承此权限 |
+| `record:read` | 查看记录、患者、档案装箱、影像、Nginx 文件和迁移概览；遗留图片类型修改接口仍继承此权限。OSS 浏览入口另需 record:manage |
 | `record:edit` | 已定义的记录编辑权限，并包含读取；当前主分支尚未覆盖全部写接口 |
 | `record:download` | 生成和下载 ZIP，并包含读取 |
 | `record:pdf:export` | 生成和下载 PDF，并包含读取 |

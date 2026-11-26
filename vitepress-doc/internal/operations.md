@@ -111,7 +111,7 @@ VITE_GRAFANA_DASHBOARD_UID=mrr-application-overview
 
 ## 数据质量检查
 
-数据质量检查只允许手动触发：
+当前候选默认关闭自动定时检查（`app.data-quality.enabled=false`，cron 为 `-`）。手动检查仍可使用，需对应管理权限：
 
 ```http
 POST /api/v1/system/data-quality/run
@@ -119,7 +119,7 @@ POST /api/v1/system/data-quality/run
 
 当前检查范围包括：
 
-- 病案号或上架号缺失、非八位数字。
+- 病案号或上架号缺失、编号或关联冲突；不以固定八位长度作为有效性标准。
 - 页数无效。
 - 文件名或目录缺失。
 - 已迁移但 OSS URL 为空。

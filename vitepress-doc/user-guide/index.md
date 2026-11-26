@@ -1,12 +1,16 @@
+<script setup>
+import figure1 from './assets/business-workflow.svg?url'
+</script>
+
 # MRR 用户手册
 
 MRR 用于管理医疗机构的患者、病案主档、扫描记录、病案图片、统计数据、实体装箱位置、访问审计、图片迁移任务和运行诊断。站点标题中的版本号由根目录 `VERSION` 在构建时自动读取，具体功能以当前部署版本、账号权限和后端接口为准。
 
 > 页面、菜单和可执行操作会随账号权限、系统设置及部署方式变化。菜单不可见通常表示权限不足或管理员在系统设置中隐藏了该菜单。
 
-![病案业务操作路径](./assets/business-workflow.svg)
+<p class="doc-figure"><a :href="figure1" target="_blank" rel="noopener noreferrer" aria-label="病案业务操作路径（在新标签页查看原图）"><img :src="figure1" alt="病案业务操作路径" loading="lazy"></a></p>
 
-*流程示意，非实际页面截图。*
+*图：病案业务流程示意，点击查看原图。*
 
 ## 从这里开始
 
@@ -23,7 +27,7 @@ MRR 用于管理医疗机构的患者、病案主档、扫描记录、病案图�
 | 查看日志、错误与运行状态 | [日志、审计与监控](./logs.md) |
 | 排查常见问题 | [常见问题](./faq.md) |
 
-## 功能导航
+## 按功能查找
 
 | 模块 | 主要用途 | 常见权限 |
 | --- | --- | --- |
@@ -34,7 +38,7 @@ MRR 用于管理医疗机构的患者、病案主档、扫描记录、病案图�
 | [病案类型](./medical-record-types.md) | 类型 0～15 的含义和使用规则 | 已登录账号 |
 | [统计分析](./statistics.md) | 扫描规模、年度趋势、明细和病案统计 | `statistics:read` |
 | [OSS 迁移管理](./oss-migration.md) | Nginx 原图迁移、等待补齐、重试和校验 | `record:read` |
-| [存储与文件浏览](./storage-browser.md) | 只读浏览 OSS 和 Nginx 静态资源 | `record:read` |
+| [存储与文件浏览](./storage-browser.md) | 只读浏览 OSS 和 Nginx 静态资源 | OSS：record:manage；Nginx：record:read |
 | [系统管理](./admin.md) | 用户、权限、系统设置和图片来源 | `user:manage` / `role:read` / `system:read` |
 | [数据交换中心](./data-exchange.md) | 模板、预校验、确认导入及条件导出 | 由数据集和操作权限决定 |
 | [数据关系工作台](./data-relation-workbench.md) | 检查病案、患者、统计、扫描和装箱关系 | `system:read` |
@@ -43,7 +47,7 @@ MRR 用于管理医疗机构的患者、病案主档、扫描记录、病案图�
 | [更新说明](./release-notes.md) | 当前版本重要变化和限制 | 已登录账号 |
 | [Git 更新记录](./changelog.md) | 按提交历史自动生成 | 已登录账号 |
 
-## 推荐业务流程
+## 一次完整的业务操作
 
 1. 在“患者管理”“记录管理”或“统计明细”中确认目标病案。
 2. 核对病案号与上架号的原始值，不要手工补零。
@@ -71,7 +75,7 @@ MRR 用于管理医疗机构的患者、病案主档、扫描记录、病案图�
 ### ZIP 与 PDF 是独立权限
 
 - 查看图片：`record:read`；
-- 修改图片类型：当前主分支接口仍继承 `record:read`；
+- 修改图片类型：当前候选的遗留接口仍继承 `record:read`，不能据此假定任何读者都可任意修改；
 - 下载 ZIP：`record:download`；
 - 导出 PDF：`record:pdf:export`；
 - `record:manage` 包含记录类上级权限。
@@ -91,7 +95,7 @@ ZIP/PDF 可能转为后台任务：
 
 ### 身份证查询
 
-首次可通过 `/archive?id=<身份证号>` 查询。成功后地址栏中的明文会替换为服务端不透明令牌，页面只显示脱敏信息。不要在截图、日志和工单中复制完整身份证号。
+优先使用影像档案袋的身份证查询表单。查询成功后使用不透明令牌定位相关病案；完整字段的显示与复制取决于授权和配置。旧明文链接可能残留在浏览器或代理历史中，不应作为新的分享方式。
 
 ### 只读降级
 

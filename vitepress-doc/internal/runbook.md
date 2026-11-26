@@ -1,3 +1,7 @@
+<script setup>
+import figure1 from './assets/audit-lifecycle.svg?url'
+</script>
+
 # 生产运行手册
 
 本文提供 Windows 内网部署下的日常检查、故障处置和变更操作清单。命令中的路径、服务名和数据库名应按实际环境调整。
@@ -201,9 +205,9 @@ tasklist /FI "PID eq <PID>"
 
 ## 默认访问审计故障处置
 
-![默认访问审计可靠性边界](./assets/audit-lifecycle.svg)
+<p class="doc-figure"><a :href="figure1" target="_blank" rel="noopener noreferrer" aria-label="默认访问审计可靠性边界（在新标签页查看原图）"><img :src="figure1" alt="默认访问审计可靠性边界" loading="lazy"></a></p>
 
-*流程示意，非实际页面截图。*
+*图：默认审计的异步写入和丢失边界 · 流程示意，点击查看原图。*
 
 | 指标 / 告警 | 含义 | 响应 |
 | --- | --- | --- |

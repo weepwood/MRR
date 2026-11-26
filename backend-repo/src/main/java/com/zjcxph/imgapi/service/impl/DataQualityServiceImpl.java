@@ -52,6 +52,9 @@ public class DataQualityServiceImpl implements DataQualityService {
     @Value("${app.data-quality.retention-days:90}")
     private int retentionDays;
 
+    @Value("${app.data-quality.run-budget-seconds:180}")
+    private int runBudgetSeconds = 180;
+
     public DataQualityServiceImpl(JdbcTemplate jdbcTemplate, MeterRegistry meterRegistry) {
         this.jdbcTemplate = jdbcTemplate;
         this.issuesGauge = MultiGauge.builder("mrr.data.quality.issues")
@@ -93,7 +96,9 @@ public class DataQualityServiceImpl implements DataQualityService {
     public Map<String, Object> getSummary() {
         List<Map<String, Object>> runs = jdbcTemplate.queryForList("""
                 SELECT id, status, triggered_by, check_count, total_issues, critical_count,
-                       warning_count, started_at, completed_at, error_message
+                       warning_count, started_at, completed_at, error_message,
+                       (SELECT id FROM app.mrr_data_quality_run WHERE status = 'SUCCESS'
+                         ORDER BY id DESC LIMIT 1) AS latest_successful_run_id
                 FROM app.mrr_data_quality_run
                 ORDER BY id DESC
                 LIMIT 1
@@ -124,13 +129,34 @@ public class DataQualityServiceImpl implements DataQualityService {
         int safeLimit = Math.max(1, Math.min(limit, 500));
         // Select the run and its samples in one database statement/snapshot.
         return jdbcTemplate.queryForList("""
-                SELECT id, check_code, check_name, severity, entity_type, entity_id,
+                SELECT id, run_id, check_code, check_name, severity, entity_type, entity_id,
                        bah, sjh, detail, detected_at
                 FROM app.mrr_data_quality_issue
                 WHERE run_id = (SELECT id FROM app.mrr_data_quality_run ORDER BY id DESC LIMIT 1)
                 ORDER BY CASE severity WHEN 'CRITICAL' THEN 1 ELSE 2 END, id DESC
                 LIMIT ?
                 """, safeLimit);
+    }
+
+    @Override
+    public List<Map<String, Object>> getIssues(int limit, long runId) {
+        if (runId <= 0) throw new BusinessException(400, "检查批次编号无效");
+        // One snapshot distinguishes an existing empty run from a missing/expired run.
+        var rows = jdbcTemplate.queryForList("""
+                SELECT i.id, r.id AS run_id, i.check_code, i.check_name, i.severity,
+                       i.entity_type, i.entity_id, i.bah, i.sjh, i.detail, i.detected_at
+                FROM app.mrr_data_quality_run r
+                LEFT JOIN LATERAL (
+                    SELECT * FROM app.mrr_data_quality_issue
+                    WHERE run_id = r.id
+                    ORDER BY CASE severity WHEN 'CRITICAL' THEN 1 ELSE 2 END, id DESC
+                    LIMIT ?
+                ) i ON true
+                WHERE r.id = ?
+                ORDER BY CASE i.severity WHEN 'CRITICAL' THEN 1 ELSE 2 END, i.id DESC
+                """, Math.max(1, Math.min(limit, 500)), runId);
+        if (rows.isEmpty()) throw new BusinessException(404, "检查批次不存在或已清理");
+        return rows.getFirst().get("id") == null ? List.of() : rows;
     }
 
     @Override
@@ -208,6 +234,8 @@ public class DataQualityServiceImpl implements DataQualityService {
         }
         runningGauge.set(1);
         Long runId = null;
+        boolean succeeded = false;
+        long deadline = System.nanoTime() + java.util.concurrent.TimeUnit.SECONDS.toNanos(Math.max(1, Math.min(runBudgetSeconds, 600)));
         try {
             String safeTriggeredBy = normalizeTrigger(triggeredBy);
             runId = jdbcTemplate.queryForObject("""
@@ -222,18 +250,18 @@ public class DataQualityServiceImpl implements DataQualityService {
             int safeSampleLimit = Math.max(1, Math.min(sampleLimit, 1000));
 
             for (DataQualityCheckDefinition check : checks) {
-                Long countValue = jdbcTemplate.query(check.countSql(), statement -> statement.setQueryTimeout(10),
+                Long countValue = jdbcTemplate.query(check.countSql(), statement -> statement.setQueryTimeout(remainingQuerySeconds(deadline)),
                         resultSet -> { if (!resultSet.next()) return null; long value = resultSet.getLong(1); return resultSet.wasNull() ? null : value; });
                 if (countValue == null) throw new IllegalStateException("统计信息不可用: " + check.code());
                 long issueCount = countValue;
                 List<Map<String, Object>> samples = issueCount == 0
                         ? List.of()
                         : jdbcTemplate.query(check.sampleSql() + " LIMIT ?", statement -> {
-                            statement.setQueryTimeout(10);
+                            statement.setQueryTimeout(remainingQuerySeconds(deadline));
                             statement.setInt(1, safeSampleLimit);
                         }, new ColumnMapRowMapper());
 
-                saveRuleResult(runId, check, issueCount, samples);
+                saveRuleResult(runId, check, issueCount, samples, deadline);
                 totalIssues += issueCount;
                 if ("CRITICAL".equals(check.severity())) {
                     criticalCount += issueCount;
@@ -242,25 +270,51 @@ public class DataQualityServiceImpl implements DataQualityService {
                 }
             }
 
-            jdbcTemplate.update("""
+            remainingQuerySeconds(deadline);
+            int finalized = jdbcTemplate.update("""
                     UPDATE app.mrr_data_quality_run
                     SET status = 'SUCCESS', check_count = ?, total_issues = ?, critical_count = ?,
                         warning_count = ?, completed_at = CURRENT_TIMESTAMP
-                    WHERE id = ?
+                    WHERE id = ? AND status = 'RUNNING'
                     """, checks.size(), totalIssues, criticalCount, warningCount, runId);
+            if (finalized != 1) throw new IllegalStateException("检查运行状态已变化");
 
-            cleanupExpiredRuns();
-            refreshMetrics(runId);
+            succeeded = true;
+            // Maintenance failures are not failures of the already-persisted check.
+            try {
+                cleanupExpiredRuns();
+            } catch (Exception exception) {
+                logger.warn("Data quality retention cleanup failed: {}", exception.getClass().getSimpleName());
+            }
+            try {
+                refreshMetrics(runId);
+            } catch (Exception exception) {
+                logger.warn("Data quality metric refresh failed: {}", exception.getClass().getSimpleName());
+            }
             logger.info("Data quality run {} completed: total={}, critical={}, warning={}",
                     runId, totalIssues, criticalCount, warningCount);
             return getSummary();
         } catch (Exception exception) {
-            recordFailedRun(runId, exception);
+            if (!succeeded) {
+                try {
+                    recordFailedRun(runId, exception);
+                } catch (Exception recordingFailure) {
+                    exception.addSuppressed(recordingFailure);
+                }
+            }
             throw new IllegalStateException("数据质量检查失败，请检查追踪编号或后台安全堆栈", exception);
         } finally {
-            running.set(false);
             runningGauge.set(0);
+            running.set(false);
         }
+    }
+
+    private int remainingQuerySeconds(long deadline) {
+        long nanos = deadline - System.nanoTime();
+        if (nanos <= 0 || Thread.currentThread().isInterrupted()) {
+            throw new org.springframework.dao.QueryTimeoutException("数据质量检查执行预算已耗尽或中断");
+        }
+        return (int) Math.min(10, (nanos + 999_999_999L) / 1_000_000_000L);
     }
 
     /**
@@ -268,9 +322,9 @@ public class DataQualityServiceImpl implements DataQualityService {
      * The SQL shape is generated only from the already bounded sample count; every value is bound.
      */
     private void saveRuleResult(long runId, DataQualityCheckDefinition check,
-                                long issueCount, List<Map<String, Object>> samples) {
+                                long issueCount, List<Map<String, Object>> samples, long deadline) {
         if (samples.isEmpty()) {
-            jdbcTemplate.update("""
+            budgetedUpdate(deadline, """
                     INSERT INTO app.mrr_data_quality_check_result
                         (run_id, check_code, check_name, severity, issue_count, sampled_count)
                     VALUES (?, ?, ?, ?, ?, 0)
@@ -288,7 +342,7 @@ public class DataQualityServiceImpl implements DataQualityService {
                     sample.get("sjh"), sample.get("detail"));
         }
         java.util.Collections.addAll(parameters, runId, check.code(), check.name(), check.severity(), issueCount);
-        jdbcTemplate.update("""
+        budgetedUpdate(deadline, """
                 WITH inserted AS (
                     INSERT INTO app.mrr_data_quality_issue
                         (run_id, check_code, check_name, severity, entity_type, entity_id, bah, sjh, detail)
@@ -299,6 +353,13 @@ public class DataQualityServiceImpl implements DataQualityService {
                     (run_id, check_code, check_name, severity, issue_count, sampled_count)
                 SELECT ?, ?, ?, ?, ?, count(*)::integer FROM inserted
                 """.formatted(placeholders), parameters.toArray());
+    }
+
+    private int budgetedUpdate(long deadline, String sql, Object... args) {
+        return jdbcTemplate.update(sql, (org.springframework.jdbc.core.PreparedStatementSetter) statement -> {
+            statement.setQueryTimeout(remainingQuerySeconds(deadline));
+            for (int i = 0; i < args.length; i++) statement.setObject(i + 1, args[i]);
+        });
     }
 
     private List<Map<String, Object>> findArchiveCandidates(String bah, String sjh) {
@@ -443,7 +504,7 @@ public class DataQualityServiceImpl implements DataQualityService {
         jdbcTemplate.update("""
                 UPDATE app.mrr_data_quality_run
                 SET status = 'FAILED', completed_at = CURRENT_TIMESTAMP, error_message = ?
-                WHERE id = ?
+                WHERE id = ? AND status = 'RUNNING'
                 """, exception.getClass().getSimpleName(), runId);
     }
 

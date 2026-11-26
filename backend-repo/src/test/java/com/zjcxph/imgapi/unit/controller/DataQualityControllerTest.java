@@ -56,6 +56,28 @@ class DataQualityControllerTest {
     }
 
     @Test
+    void rawQualitySamplesAndDetailRequireRecordRead() throws Exception {
+        var auth = new com.zjcxph.imgapi.interceptors.AuthorizationInterceptor();
+        var handlers = List.of(
+                new org.springframework.web.method.HandlerMethod(controller, DataQualityController.class.getMethod("issues", int.class, Long.class)),
+                new org.springframework.web.method.HandlerMethod(controller, DataQualityController.class.getMethod("issue", long.class)));
+        for (var handler : handlers) {
+            for (var permissions : List.of(List.of("system:read"), List.of("record:read"), List.of("system:manage"))) {
+                var request = new org.springframework.mock.web.MockHttpServletRequest("GET", "/api/v1/system/data-quality/issues");
+                var session = new com.zjcxph.imgapi.common.AuthSession();
+                session.setPermissions(permissions);
+                request.setAttribute(com.zjcxph.imgapi.interceptors.AuthorizationInterceptor.AUTH_SESSION_ATTRIBUTE, session);
+                var response = new org.springframework.mock.web.MockHttpServletResponse();
+                assertThat(auth.preHandle(request, response, handler)).isFalse();
+                assertThat(response.getStatus()).isEqualTo(403);
+                session.setPermissions(List.of("system:read", "record:read"));
+                assertThat(auth.preHandle(request, new org.springframework.mock.web.MockHttpServletResponse(), handler)).isTrue();
+            }
+        }
+        org.mockito.Mockito.verifyNoInteractions(dataQualityService);
+    }
+
+    @Test
     void summaryReturnsServicePayload() {
         Map<String, Object> summary = Map.of("running", false, "enabled", true);
         when(dataQualityService.getSummary()).thenReturn(summary);
@@ -73,7 +95,7 @@ class DataQualityControllerTest {
         List<Map<String, Object>> issues = List.of(Map.of("check_code", "SCAN_CODE_BLANK"));
         when(dataQualityService.getIssues(25)).thenReturn(issues);
 
-        Result<List<Map<String, Object>>> result = controller.issues(25);
+        Result<List<Map<String, Object>>> result = controller.issues(25, null);
 
         assertThat(result.getCode()).isEqualTo(200);
         assertThat(result.getMessage()).isEqualTo("获取数据质量异常成功");

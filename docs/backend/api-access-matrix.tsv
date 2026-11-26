@@ -159,8 +159,8 @@ GET	/api/v1/system/data-quality/case-reviews	QualityCaseReviewController#list	sy
 GET	/api/v1/system/data-quality/case-reviews/issue/{issueId}	QualityCaseReviewController#context	system:manage + record:manage
 GET	/api/v1/system/data-quality/case-reviews/{id}/events	QualityCaseReviewController#events	system:manage + record:manage
 GET	/api/v1/system/data-quality/case-reviews/{id}/recheck	QualityCaseReviewController#recheck	system:manage + record:manage
-GET	/api/v1/system/data-quality/issues	DataQualityController#issues	system:read
-GET	/api/v1/system/data-quality/issues/{issueId}	DataQualityController#issue	system:read
+GET	/api/v1/system/data-quality/issues	DataQualityController#issues	system:read + record:read
+GET	/api/v1/system/data-quality/issues/{issueId}	DataQualityController#issue	system:read + record:read
 GET	/api/v1/system/data-quality/issues/{issueId}/repair-preview	DataQualityController#repairPreview	system:read + record:read
 GET	/api/v1/system/data-quality/repair-orders	DataQualityRepairOrderController#list	system:manage + record:manage
 GET	/api/v1/system/data-quality/repair-orders/{id}	DataQualityRepairOrderController#get	system:manage + record:manage

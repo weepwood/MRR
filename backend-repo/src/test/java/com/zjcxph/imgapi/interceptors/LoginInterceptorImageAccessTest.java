@@ -71,7 +71,7 @@ class LoginInterceptorImageAccessTest {
         String cookie = issueCookie();
 
         when(tokenBlacklist.isRevokedHash(anyString())).thenReturn(false);
-        when(authUserMapper.findById(USER_ID)).thenReturn(user("active", 2));
+        when(authUserMapper.findSessionById(USER_ID)).thenReturn(user("active", 2));
         MockHttpServletRequest content = contentRequest(cookie);
         MockHttpServletResponse response = new MockHttpServletResponse();
 
@@ -103,12 +103,12 @@ class LoginInterceptorImageAccessTest {
         String cookie = issueCookie();
         when(tokenBlacklist.isRevokedHash(anyString())).thenReturn(false);
 
-        when(authUserMapper.findById(USER_ID)).thenReturn(user("active", 3));
+        when(authUserMapper.findSessionById(USER_ID)).thenReturn(user("active", 3));
         MockHttpServletResponse changed = new MockHttpServletResponse();
         assertThat(loginInterceptor.preHandle(contentRequest(cookie), changed, new Object())).isFalse();
         assertThat(changed.getContentAsString()).contains("AUTH_CREDENTIAL_CHANGED");
 
-        when(authUserMapper.findById(USER_ID)).thenReturn(user("disabled", 2));
+        when(authUserMapper.findSessionById(USER_ID)).thenReturn(user("disabled", 2));
         MockHttpServletResponse disabled = new MockHttpServletResponse();
         assertThat(loginInterceptor.preHandle(contentRequest(cookie), disabled, new Object())).isFalse();
         assertThat(disabled.getContentAsString()).contains("DISABLED_USER");
@@ -171,7 +171,7 @@ class LoginInterceptorImageAccessTest {
 
     private String issueCookie() throws Exception {
         when(tokenBlacklist.isRevoked(anyString())).thenReturn(false);
-        when(authUserMapper.findById(USER_ID)).thenReturn(user("active", 2));
+        when(authUserMapper.findSessionById(USER_ID)).thenReturn(user("active", 2));
         MockHttpServletRequest list = new MockHttpServletRequest("GET", "/api/v1/img/search");
         list.addHeader("Authorization", "Bearer " + bearerToken);
         MockHttpServletResponse response = new MockHttpServletResponse();

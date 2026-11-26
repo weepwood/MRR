@@ -22,6 +22,9 @@ import AppLoading from '@/components/AppLoading/index.vue'
 import MrrPageHeader from '@/components/MrrPageHeader/index.vue'
 import MrrPageShell from '@/components/MrrPageShell/index.vue'
 import MrrSectionCard from '@/components/MrrSectionCard/index.vue'
+import { useUserStore } from '@/store/modules/user'
+import { hasPermission } from '@/utils/session'
+import { isSessionAccessDenied } from '@/utils/session-access-denied'
 import { tableSequenceColumn } from '@/utils/table-sequence'
 
 defineOptions({ name: 'MonitoringPage' })
@@ -51,6 +54,13 @@ const systemInfo = ref<SystemInfo>({ application: {}, jvm: {}, operatingSystem: 
 const databaseOverview = ref<DatabaseOverview>(emptyDatabase())
 const qualitySummary = ref<DataQualitySummary>({ enabled: true, running: false, latestRun: null, checks: [] })
 const qualityIssues = ref<DataQualityIssue[]>([])
+const canReadQualitySamples = computed(() => hasPermission('record:read') && hasPermission('system:read'))
+let sampleAccessVersion = 0
+watch([() => useUserStore().token, canReadQualitySamples], () => {
+  ++sampleAccessVersion
+  qualityIssues.value = []
+  delete sectionRefreshedAt['数据质量明细']
+}, { flush: 'sync' })
 
 const databaseReady = computed(() => !!sectionRefreshedAt['数据库概览'])
 const qualityReady = computed(() => !!sectionRefreshedAt['数据质量摘要'])
@@ -182,14 +192,22 @@ function statusType(status?: string) {
 }
 
 async function fetchMonitoringSnapshot() {
+  const currentSampleAccess = sampleAccessVersion
+  const summaryRequest = getDataQualitySummary()
+  const sampleRequest = canReadQualitySamples.value
+    ? summaryRequest.then(
+        response => response.data?.latestRun === null ? { data: [] as DataQualityIssue[] } : getDataQualityIssues(100, response.data?.latestRun?.id),
+        () => getDataQualityIssues(100),
+      )
+    : Promise.resolve({ data: [] as DataQualityIssue[] })
   const results = await Promise.allSettled([
     getSystemHealth(),
     getSystemRuntime(),
     getSystemMemory(),
     getSystemInfo(),
     getDatabaseOverview(),
-    getDataQualitySummary(),
-    getDataQualityIssues(100),
+    summaryRequest,
+    sampleRequest,
   ])
   const [healthRes, runtimeRes, memoryRes, infoRes, databaseRes, qualityRes, issuesRes] = results
 
@@ -211,8 +229,12 @@ async function fetchMonitoringSnapshot() {
   if (qualityRes.status === 'fulfilled' && qualityRes.value.data != null) {
     qualitySummary.value = qualityRes.value.data
   }
-  if (issuesRes.status === 'fulfilled' && issuesRes.value.data != null) {
+  if (currentSampleAccess === sampleAccessVersion && canReadQualitySamples.value && qualityRes.status === 'fulfilled' && issuesRes.status === 'fulfilled' && issuesRes.value.data != null) {
     qualityIssues.value = issuesRes.value.data
+  }
+  else if (currentSampleAccess === sampleAccessVersion && (!canReadQualitySamples.value || (issuesRes.status === 'rejected' && isSessionAccessDenied(issuesRes.reason)))) {
+    qualityIssues.value = []
+    delete sectionRefreshedAt['数据质量明细']
   }
 
   const labels = ['健康状态', '运行时间', '内存', '系统信息', '数据库概览', '数据质量摘要', '数据质量明细']
@@ -220,13 +242,13 @@ async function fetchMonitoringSnapshot() {
   const now = new Date()
   labels.forEach((label, index) => {
     const result = results[index]
-    if (result?.status === 'fulfilled' && result.value.data != null) {
+    if ((index !== 6 || (currentSampleAccess === sampleAccessVersion && canReadQualitySamples.value && qualityRes.status === 'fulfilled')) && result?.status === 'fulfilled' && result.value.data != null) {
       sectionRefreshedAt[label] = now.toLocaleTimeString('zh-CN', { hour12: false })
     }
   })
   failedSections.value = labels.filter((_, index) => {
     const result = results[index]
-    return result?.status !== 'fulfilled' || result.value.data == null
+    return (index !== 6 || canReadQualitySamples.value) && (result?.status !== 'fulfilled' || result.value.data == null || (index === 6 && (currentSampleAccess !== sampleAccessVersion || qualityRes.status !== 'fulfilled')))
   })
   if (!failedSections.value.length) {
     lastRefresh.value = now.toLocaleTimeString('zh-CN', { hour12: false })
@@ -246,15 +268,26 @@ function loadAll(showLoading = true) {
 }
 
 async function runQualityCheck() {
+  const currentSampleAccess = sampleAccessVersion
   qualityRunning.value = true
   try {
     const response = await runDataQualityChecks()
     qualitySummary.value = response.data ?? qualitySummary.value
-    const issues = await getDataQualityIssues(100)
-    qualityIssues.value = issues.data ?? []
+    if (currentSampleAccess === sampleAccessVersion && canReadQualitySamples.value) {
+      const runId = response.data?.latestRun?.id
+      const issues = await getDataQualityIssues(100, runId)
+      if (currentSampleAccess === sampleAccessVersion && canReadQualitySamples.value) {
+        qualityIssues.value = issues.data ?? []
+        sectionRefreshedAt['数据质量明细'] = new Date().toLocaleTimeString('zh-CN', { hour12: false })
+      }
+    }
     ElMessage.success('数据质量检查已完成')
   }
   catch (error: unknown) {
+    if (currentSampleAccess === sampleAccessVersion && isSessionAccessDenied(error)) {
+      qualityIssues.value = []
+      delete sectionRefreshedAt['数据质量明细']
+    }
     const message = error instanceof Error ? error.message : '数据质量检查失败'
     ElMessage.error(message)
   }
@@ -515,7 +548,8 @@ onUnmounted(pause)
 
     <div class="monitor-grid monitor-grid--details">
       <MrrSectionCard id="monitor-issues" tabindex="-1" class="monitor-card" title="异常样本" description="最多显示最近 100 条">
-        <AppLoading v-if="loading && !issuesReady" type="table" :rows="4" />
+        <el-alert v-if="!canReadQualitySamples" title="查看异常样本需要病案读取权限" type="info" :closable="false" />
+        <AppLoading v-else-if="loading && !issuesReady" type="table" :rows="4" />
         <AppError v-else-if="!issuesReady" size="compact" message="尚未取得异常样本" @retry="loadAll()" />
         <el-table v-else :data="qualityIssues" stripe border max-height="460" empty-text="没有异常样本">
           <el-table-column v-bind="tableSequenceColumn()" />

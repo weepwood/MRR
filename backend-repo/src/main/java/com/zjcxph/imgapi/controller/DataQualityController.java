@@ -36,13 +36,15 @@ public class DataQualityController {
 
     @Operation(summary = "获取最近一次数据质量异常样本")
     @GetMapping("/issues")
-    public Result<List<Map<String, Object>>> issues(@RequestParam(defaultValue = "100") int limit) {
+    @RequirePermissions({"system:read", "record:read"})
+    public Result<List<Map<String, Object>>> issues(@RequestParam(defaultValue = "100") int limit, @RequestParam(required = false) Long runId) {
         return Result.<List<Map<String, Object>>>success("获取数据质量异常成功")
-                .data(dataQualityService.getIssues(limit));
+                .data(runId == null ? dataQualityService.getIssues(limit) : dataQualityService.getIssues(limit, runId));
     }
 
     @Operation(summary = "获取数据质量异常详情")
     @GetMapping("/issues/{issueId}")
+    @RequirePermissions({"system:read", "record:read"})
     public Result<Map<String, Object>> issue(@PathVariable long issueId) {
         return Result.<Map<String, Object>>success("获取数据质量异常详情成功")
                 .data(dataQualityService.getIssue(issueId));

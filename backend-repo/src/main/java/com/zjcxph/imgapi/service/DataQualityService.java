@@ -9,6 +9,8 @@ public interface DataQualityService {
 
     List<Map<String, Object>> getIssues(int limit);
 
+    List<Map<String, Object>> getIssues(int limit, long runId);
+
     Map<String, Object> getIssue(long issueId);
 
     Map<String, Object> previewRepair(long issueId);

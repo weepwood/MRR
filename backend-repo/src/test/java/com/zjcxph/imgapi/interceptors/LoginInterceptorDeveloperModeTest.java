@@ -113,7 +113,7 @@ class LoginInterceptorDeveloperModeTest {
         AuthUser databaseUser = activeUser(20L, "doctor.test", "DOCTOR", "record:read");
 
         when(tokenBlacklist.isRevoked(anyString())).thenReturn(false);
-        when(authUserMapper.findById(20L)).thenReturn(databaseUser);
+        when(authUserMapper.findSessionById(20L)).thenReturn(databaseUser);
 
         MockHttpServletRequest request = new MockHttpServletRequest("POST", "/api/v1/oss/migration/jobs");
         request.addHeader("Authorization", "Bearer " + token);
@@ -142,7 +142,7 @@ class LoginInterceptorDeveloperModeTest {
         AuthUser databaseUser = activeUser(21L, "nurse.test", "NURSE", "record:read");
 
         when(tokenBlacklist.isRevoked(anyString())).thenReturn(false);
-        when(authUserMapper.findById(21L)).thenReturn(databaseUser);
+        when(authUserMapper.findSessionById(21L)).thenReturn(databaseUser);
 
         MockHttpServletRequest request = new MockHttpServletRequest("GET", "/api/v1/scan/1");
         request.addHeader("Authorization", "Bearer " + token);
@@ -201,7 +201,7 @@ class LoginInterceptorDeveloperModeTest {
         String token = JwtUtil.getToken(tokenUser);
 
         when(tokenBlacklist.isRevoked(anyString())).thenReturn(false);
-        when(authUserMapper.findById(22L)).thenThrow(new IllegalStateException("database unavailable"));
+        when(authUserMapper.findSessionById(22L)).thenThrow(new IllegalStateException("database unavailable"));
 
         MockHttpServletRequest request = new MockHttpServletRequest("GET", "/api/v1/img/search");
         request.addHeader("Authorization", "Bearer " + token);

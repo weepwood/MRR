@@ -47,6 +47,7 @@ defineOptions({ name: 'DataRelationWorkbenchPage' })
 
 const props = withDefaults(defineProps<{ archiveOnly?: boolean }>(), { archiveOnly: false })
 
+const canReadQualitySamples = computed(() => hasPermission('record:read') && hasPermission('system:read'))
 const canRepair = computed(() => hasPermission('system:manage') && hasPermission('record:manage'))
 const overviewLoading = ref(false)
 const searchLoading = ref(false)
@@ -158,6 +159,18 @@ function resetPage() {
   issueSeverity.value = 'ALL'
 }
 watch(() => useUserStore().token, resetPage, { flush: 'sync' })
+watch(canReadQualitySamples, (allowed) => {
+  if (!allowed) {
+    ++qualityVersion
+    qualityLoading.value = false
+    qualityLoaded.value = false
+    issues.value = []
+    resetIssueFilters()
+    invalidatePreview()
+    previewVisible.value = false
+  }
+  if (!props.archiveOnly) void loadQualityData().catch(() => {})
+}, { flush: 'sync' })
 watch(() => props.archiveOnly, () => {
   resetPage()
   if (!props.archiveOnly) void loadDashboard()
@@ -321,11 +334,16 @@ async function loadQualityData() {
   qualityLoading.value = true
   qualityFailed.value = false
   try {
-    // A transport failure must not mask a later access denial from the other read.
-    const [summaryResult, issueResult] = await Promise.allSettled([
-      getDataQualitySummary(),
-      getDataQualityIssues(300),
-    ])
+    // Pin sample reads to the summary's run; on summary failure still check
+    // sample access so a transport failure cannot mask an authorization denial.
+    const summaryRequest = getDataQualitySummary()
+    const sampleRequest = canReadQualitySamples.value
+      ? summaryRequest.then(
+          response => response.data?.latestRun === null ? { data: [] as DataQualityIssue[] } : getDataQualityIssues(300, response.data?.latestRun?.id),
+          () => getDataQualityIssues(300),
+        )
+      : Promise.resolve({ data: [] as DataQualityIssue[] })
+    const [summaryResult, issueResult] = await Promise.allSettled([summaryRequest, sampleRequest])
     if (current !== qualityVersion) return
     const failures = [summaryResult, issueResult].filter(result => result.status === 'rejected')
     const failure = failures.find(result => isSessionAccessDenied(result.reason)) ?? failures[0]
@@ -335,8 +353,8 @@ async function loadQualityData() {
     const issueResponse = issueResult.value
     if (!summaryResponse.data || !Array.isArray(issueResponse.data)) throw new Error('Invalid quality response')
     qualitySummary.value = summaryResponse.data
-    issues.value = issueResponse.data
-    qualityLoaded.value = true
+    issues.value = canReadQualitySamples.value ? issueResponse.data : []
+    qualityLoaded.value = canReadQualitySamples.value
   }
   catch (error) {
     if (current === qualityVersion) {
@@ -908,7 +926,7 @@ onMounted(() => {
             <template #actions>
               <MrrStatusTag v-if="qualitySummary?.running" label="检查运行中" tone="warning" />
             </template>
-            <el-table :data="checks" stripe :empty-text="qualityLoaded ? '尚未执行数据质量检查' : '规则结果尚未取得'">
+            <el-table :data="checks" stripe :empty-text="qualitySummary ? '尚未执行数据质量检查' : '规则结果尚未取得'">
               <el-table-column v-bind="tableSequenceColumn()" />
               <el-table-column label="规则" min-width="280">
                 <template #default="{ row }">
@@ -949,7 +967,8 @@ onMounted(() => {
             </el-table>
           </MrrSectionCard>
 
-          <section ref="sampleRegion" class="quality-samples-region" tabindex="-1" aria-label="异常样本检查区">
+          <el-alert v-if="!canReadQualitySamples" title="查看异常样本需要病案读取权限" type="info" :closable="false" />
+          <section v-else ref="sampleRegion" class="quality-samples-region" tabindex="-1" aria-label="异常样本检查区">
             <MrrSectionCard v-loading="qualityLoading" class="section-card" title="异常样本" description="当前显示最近一次检查保存的有界样本，不直接返回全量异常">
               <template #actions>
                 <el-button :loading="qualityLoading" @click="retryQualityData">

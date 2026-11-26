@@ -258,6 +258,19 @@ class DataQualityServiceImplTest {
     }
 
     @Test
+    void retentionFailureMustNotRewriteSuccessfulRun() {
+        ReflectionTestUtils.setField(service, "checks", List.of());
+        when(jdbcTemplate.queryForObject(contains("INSERT INTO app.mrr_data_quality_run"), eq(Long.class), eq("manual")))
+                .thenReturn(77L);
+        when(jdbcTemplate.update(contains("SET status = 'SUCCESS'"), eq(0), eq(0L), eq(0L), eq(0L), eq(77L))).thenReturn(1);
+        when(jdbcTemplate.update(contains("DELETE FROM app.mrr_data_quality_run"), eq(90)))
+                .thenThrow(new DataAccessResourceFailureException("synthetic retention failure"));
+        assertThatCode(() -> service.runChecks("manual")).doesNotThrowAnyException();
+        verify(jdbcTemplate, never()).update(contains("SET status = 'FAILED'"), anyString(), eq(77L));
+        assertThat(meterRegistry.get("mrr.data.quality.running").gauge().value()).isZero();
+    }
+
+    @Test
     void metricInitializationDoesNotPreventApplicationStartupWhenDatabaseIsUnavailable() {
         when(jdbcTemplate.query(anyString(), org.mockito.ArgumentMatchers.<RowMapper<Long>>any()))
                 .thenThrow(new DataAccessResourceFailureException("database unavailable"));

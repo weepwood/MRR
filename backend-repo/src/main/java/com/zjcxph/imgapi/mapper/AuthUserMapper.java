@@ -28,6 +28,17 @@ public interface AuthUserMapper {
             "u.password_reset_by as passwordResetBy, u.last_login_at as lastLoginAt, " +
             "u.created_at as createdAt, u.updated_at as updatedAt ";
 
+    // Per-request authentication does not need credential hashes or registration/contact metadata.
+    String SESSION_COLUMNS = "u.id as id, u.username as username, u.display_name as displayName, " +
+            "u.role_code as roleCode, r.name as roleName, r.permissions as permissionsCsv, " +
+            "u.status as status, u.must_change_password as mustChangePassword, " +
+            "u.password_version as passwordVersion, " +
+            "u.temporary_password_expires_at as temporaryPasswordExpiresAt, u.last_login_at as lastLoginAt ";
+
+    @Select("select " + SESSION_COLUMNS +
+            "from mr_auth_user u left join mr_auth_role r on r.code = u.role_code where u.id = #{id}")
+    AuthUser findSessionById(@Param("id") Long id);
+
     @Select("select " + USER_COLUMNS +
             "from mr_auth_user u left join mr_auth_role r on r.code = u.role_code " +
             "where u.username = #{username}")

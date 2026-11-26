@@ -132,7 +132,7 @@ public class LoginInterceptor implements HandlerInterceptor {
 
         AuthUser currentUser;
         try {
-            currentUser = authUserMapper.findById(tokenSession.getId());
+            currentUser = authUserMapper.findSessionById(tokenSession.getId());
         } catch (Exception exception) {
             logger.error("Authentication user store unavailable: userId={}", tokenSession.getId(), exception);
             writeServiceUnavailable(response, "认证用户服务暂时不可用，请稍后重试");
@@ -187,7 +187,7 @@ public class LoginInterceptor implements HandlerInterceptor {
 
         AuthUser currentUser;
         try {
-            currentUser = authUserMapper.findById(grant.userId());
+            currentUser = authUserMapper.findSessionById(grant.userId());
         } catch (Exception exception) {
             logger.error("Authentication user store unavailable: userId={}", grant.userId(), exception);
             writeServiceUnavailable(response, "认证用户服务暂时不可用，请稍后重试");

@@ -128,6 +128,96 @@ class DataQualityQueryTimeoutPostgresqlIT extends PostgresqlIntegrationTestSuppo
         }
     }
 
+    @Test
+    void pinnedRunDoesNotReadNewerSamplesAndMissingRunIsNotEmpty() {
+        var metrics = new SimpleMeterRegistry();
+        var service = new DataQualityServiceImpl(jdbc, metrics);
+        String trigger = "synthetic-pinned-run";
+        try {
+            long old = jdbc.queryForObject("INSERT INTO app.mrr_data_quality_run(status,triggered_by) VALUES ('SUCCESS',?) RETURNING id", Long.class, trigger);
+            jdbc.update("INSERT INTO app.mrr_data_quality_issue(run_id,check_code,check_name,severity,entity_id) VALUES (?,'TEST','test','WARNING','old')", old);
+            long newer = jdbc.queryForObject("INSERT INTO app.mrr_data_quality_run(status,triggered_by) VALUES ('RUNNING',?) RETURNING id", Long.class, trigger);
+            assertThat(service.getSummary().get("latestRun")).isInstanceOfSatisfying(java.util.Map.class,
+                    row -> assertThat(row.get("latest_successful_run_id")).isEqualTo(old));
+            assertThat(service.getIssues(10, old)).extracting(row -> row.get("entity_id")).containsExactly("old");
+            assertThat(service.getIssues(10, old)).extracting(row -> row.get("run_id")).containsExactly(old);
+            assertThat(service.getIssues(10, newer)).isEmpty();
+            jdbc.update("DELETE FROM app.mrr_data_quality_run WHERE id=?", old);
+            assertThatThrownBy(() -> service.getIssues(10, old)).isInstanceOf(com.zjcxph.imgapi.exception.BusinessException.class);
+        } finally {
+            jdbc.update("DELETE FROM app.mrr_data_quality_run WHERE triggered_by=?", trigger);
+            metrics.close();
+        }
+    }
+
+    @Test
+    void smallRunBudgetCancelsSlowCountAndAllowsNextRun() throws Exception {
+        var metrics = new SimpleMeterRegistry();
+        var service = new DataQualityServiceImpl(jdbc, metrics);
+        ReflectionTestUtils.setField(service, "runBudgetSeconds", 1);
+        ReflectionTestUtils.setField(service, "retentionDays", 90);
+        String trigger = "synthetic-budget";
+        try {
+            ReflectionTestUtils.setField(service, "checks", List.of(check(
+                    "BUDGET", "synthetic", "WARNING", "SELECT 1::bigint FROM pg_sleep(5)", "SELECT 1")));
+            long start = System.nanoTime();
+            assertThatThrownBy(() -> service.runChecks(trigger)).isInstanceOf(IllegalStateException.class)
+                    .hasRootCauseInstanceOf(org.postgresql.util.PSQLException.class);
+            assertThat((System.nanoTime() - start) / 1_000_000_000.0).isLessThan(4);
+            assertThat(jdbc.queryForObject("SELECT status FROM app.mrr_data_quality_run WHERE triggered_by=? ORDER BY id DESC LIMIT 1", String.class, trigger)).isEqualTo("FAILED");
+            ReflectionTestUtils.setField(service, "runBudgetSeconds", 10);
+            ReflectionTestUtils.setField(service, "checks", List.of());
+            service.runChecks(trigger);
+            assertThat(jdbc.queryForObject("SELECT status FROM app.mrr_data_quality_run WHERE triggered_by=? ORDER BY id DESC LIMIT 1", String.class, trigger)).isEqualTo("SUCCESS");
+        } finally {
+            jdbc.update("DELETE FROM app.mrr_data_quality_run WHERE triggered_by=?", trigger);
+            metrics.close();
+        }
+    }
+
+    @Test
+    void ruleWriteLockIsCancelledWithinBudgetWithoutPublishingSamples() throws Exception {
+        var metrics = new SimpleMeterRegistry();
+        var service = new DataQualityServiceImpl(jdbc, metrics);
+        ReflectionTestUtils.setField(service, "runBudgetSeconds", 1);
+        ReflectionTestUtils.setField(service, "sampleLimit", 1);
+        ReflectionTestUtils.setField(service, "retentionDays", 90);
+        ReflectionTestUtils.setField(service, "checks", List.of(check("WRITE_BUDGET", "synthetic", "WARNING",
+                "SELECT 1::bigint", "SELECT 'mr_scan' AS entity_type, '1' AS entity_id, NULL::text AS bah, NULL::text AS sjh, 'synthetic' AS detail")));
+        String trigger = "synthetic-write-budget";
+        var executor = java.util.concurrent.Executors.newSingleThreadExecutor();
+        var locked = new java.util.concurrent.CountDownLatch(1);
+        try {
+            var holder = executor.submit(() -> {
+                try (var connection = jdbc.getDataSource().getConnection()) {
+                    connection.setAutoCommit(false);
+                    try (var statement = connection.createStatement()) {
+                        statement.execute("LOCK TABLE app.mrr_data_quality_issue IN ACCESS EXCLUSIVE MODE");
+                        locked.countDown();
+                        Thread.sleep(3000);
+                    } finally {
+                        connection.rollback();
+                    }
+                }
+                return null;
+            });
+            assertThat(locked.await(5, java.util.concurrent.TimeUnit.SECONDS)).isTrue();
+            assertThatThrownBy(() -> service.runChecks(trigger)).isInstanceOf(IllegalStateException.class)
+                    .hasRootCauseInstanceOf(org.postgresql.util.PSQLException.class);
+            holder.get(5, java.util.concurrent.TimeUnit.SECONDS);
+            var failed = jdbc.queryForMap("SELECT id,status FROM app.mrr_data_quality_run WHERE triggered_by=? ORDER BY id DESC LIMIT 1", trigger);
+            assertThat(failed.get("status")).isEqualTo("FAILED");
+            assertThat(jdbc.queryForObject("SELECT count(*) FROM app.mrr_data_quality_issue WHERE run_id=?", Long.class, failed.get("id"))).isZero();
+            assertThat(jdbc.queryForObject("SELECT count(*) FROM app.mrr_data_quality_check_result WHERE run_id=?", Long.class, failed.get("id"))).isZero();
+            assertThat(metrics.get("mrr.data.quality.running").gauge().value()).isZero();
+        } finally {
+            executor.shutdownNow();
+            executor.awaitTermination(5, java.util.concurrent.TimeUnit.SECONDS);
+            jdbc.update("DELETE FROM app.mrr_data_quality_run WHERE triggered_by=?", trigger);
+            metrics.close();
+        }
+    }
+
     private Object check(String code, String name, String severity, String countSql, String sampleSql)
             throws ReflectiveOperationException {
         // 测试限定的慢规则，不为夹具扩大生产检查目录的可见性。

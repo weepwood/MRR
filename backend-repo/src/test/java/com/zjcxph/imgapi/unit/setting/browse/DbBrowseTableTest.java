@@ -124,6 +124,14 @@ class DbBrowseTableTest {
     }
 
     @Test
+    void maskedSortColumnMustNotLeakThroughPlainCursor() {
+        assertThatThrownBy(() -> validBuilder()
+                .orderableColumns(Set.of("id", "bah")).build())
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("排序列不能脱敏");
+    }
+
+    @Test
     @DisplayName("排序列必须可见，否则游标会把该列原值带进响应")
     void rejectsHiddenSortColumn() {
         assertThatThrownBy(() -> validBuilder()

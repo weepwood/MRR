@@ -228,7 +228,7 @@ onBeforeUnmount(() => clearTimeout(hoverTimer))
   flex: none;
   min-height: 0;
   overflow: hidden;
-  transition: height 220ms var(--mrr-ease-out), visibility 0s linear 220ms;
+  transition: height var(--mrr-motion-overlay) var(--mrr-ease-out), visibility 0s linear var(--mrr-motion-overlay);
 }
 
 .menu-inline-branch.is-open {

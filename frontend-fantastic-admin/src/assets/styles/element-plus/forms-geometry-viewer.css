@@ -23,14 +23,23 @@
   box-shadow: var(--mrr-focus-ring);
 }
 
-.el-switch__core {
-  background: var(--mrr-input);
+body .el-switch .el-switch__core {
+  background: var(--mrr-switch-track);
   border-color: transparent;
   box-shadow: none;
+  transition: background-color var(--mrr-motion-feedback) var(--mrr-ease-out);
 }
 
-.el-switch.is-checked .el-switch__core {
+body .el-switch.is-checked .el-switch__core {
   background: var(--mrr-primary);
+}
+
+body .el-switch .el-switch__action {
+  transition: left var(--mrr-motion-move) var(--mrr-ease-out);
+}
+
+body .el-switch.is-checked .el-switch__action {
+  background-color: var(--mrr-primary-foreground);
 }
 
 /* ===== Forms and tabs (dialog geometry owned by overlay-shells.css) ===== */

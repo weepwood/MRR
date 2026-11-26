@@ -148,7 +148,31 @@ body .el-dropdown__popper .el-dropdown-menu__item:not(.is-disabled):hover {
 }
 
 body .el-select-dropdown .el-select-dropdown__item.is-selected {
-  font-weight: 500;
-  color: var(--mrr-primary);
+  font-weight: 600;
+  color: var(--mrr-tone-primary-ink);
+  background: var(--mrr-tone-primary-soft);
+}
+
+body .el-select-dropdown .el-select-dropdown__item.is-selected.is-hovering {
+  outline: 1px solid var(--mrr-border-strong);
+  outline-offset: -1px;
+}
+
+body .el-date-table td.available:not(.current):not(.disabled) .el-date-table-cell__text {
+  border-radius: var(--mrr-radius-sm);
+}
+
+body .el-date-table td.available:not(.current):not(.disabled):hover .el-date-table-cell__text {
   background: var(--mrr-accent);
+}
+
+body .el-date-table td.current:not(.disabled) .el-date-table-cell__text,
+body .el-date-table td.start-date .el-date-table-cell__text,
+body .el-date-table td.end-date .el-date-table-cell__text {
+  color: var(--mrr-primary-foreground);
+  background: var(--mrr-primary);
+}
+
+body .el-date-table td.in-range .el-date-table-cell {
+  background: var(--mrr-tone-primary-soft);
 }

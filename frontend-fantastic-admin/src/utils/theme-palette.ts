@@ -243,6 +243,10 @@ export function gr8rCssVariables(scheme: ThemePaletteScheme): Record<string, str
     '--mrr-shell-divider': c.line,
     '--mrr-input': c.controlLine,
     // 控件底色改为表面白：暖色主题用「描边控件」而不是「填充控件」。
+    '--mrr-section-heading-bg': c.mutedSurface,
+    '--mrr-switch-track': dark ? '#77736B' : '#928D84',
+    '--mrr-scroll-thumb': dark ? '#55524C' : '#C5C0B7',
+    '--mrr-scroll-thumb-hover': dark ? '#817D73' : '#928D84',
     '--mrr-segmented-track': dark ? '#2C2B28' : c.raisedSurface,
     '--mrr-segmented-selection': dark ? '#3C3A36' : c.surface,
     '--mrr-control-bg': c.surface,

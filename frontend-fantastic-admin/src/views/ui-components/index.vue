@@ -1,5 +1,6 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import type { ExampleId } from './catalog'
+import { computed, reactive, ref } from 'vue'
 import { categories, examples } from './catalog'
 import BasicExamples from './components/BasicExamples.vue'
 import BusinessExamples from './components/BusinessExamples.vue'
@@ -14,6 +15,14 @@ defineOptions({ name: 'UiComponentGallery' })
 const keyword = ref('')
 const category = ref<string>('all')
 const revision = ref(0)
+const exampleRevisions = reactive<Partial<Record<ExampleId, number>>>({})
+const compactExamples = reactive<Partial<Record<ExampleId, boolean>>>({})
+function resetExample(id: ExampleId) {
+  exampleRevisions[id] = (exampleRevisions[id] ?? 0) + 1
+}
+function togglePreview(id: ExampleId) {
+  compactExamples[id] = !compactExamples[id]
+}
 const visibleExamples = computed(() => {
   const query = keyword.value.trim().toLowerCase()
   return examples.filter(example => (category.value === 'all' || example.category === category.value)
@@ -24,6 +33,7 @@ function resetExamples() {
   keyword.value = ''
   category.value = 'all'
   revision.value += 1
+  for (const id of Object.keys(compactExamples) as ExampleId[]) { delete compactExamples[id] }
 }
 </script>
 
@@ -63,24 +73,39 @@ function resetExamples() {
         </p>
         <AppEmpty v-if="!visibleExamples.length" description="没有匹配的组件，试试其他名称或分类。" action-text="显示全部组件" @action="resetExamples" />
         <article v-for="example in visibleExamples" :key="`${example.id}-${revision}`" class="gallery-example" :aria-labelledby="`example-${example.id}`">
-          <header class="gallery-example-heading">
-            <h2 :id="`example-${example.id}`">
-              {{ example.title }}
-            </h2>
-            <p>{{ example.description }}</p>
-            <div class="gallery-component-names">
-              <code v-for="name in example.components" :key="name">{{ name }}</code>
+          <MrrSectionCard class="gallery-example-card">
+            <template #header>
+              <div class="gallery-card-header">
+                <div class="gallery-example-heading">
+                  <h2 :id="`example-${example.id}`">
+                    {{ example.title }}
+                  </h2>
+                  <p>{{ example.description }}</p>
+                  <div class="gallery-component-names">
+                    <code v-for="name in example.components" :key="name">{{ name }}</code>
+                  </div>
+                </div>
+                <div class="gallery-card-actions">
+                  <el-button v-if="['buttons', 'navigation', 'fields', 'selection'].includes(example.id)" :aria-pressed="!!compactExamples[example.id]" :aria-label="`窄宽预览：${example.title}`" @click="togglePreview(example.id)">
+                    <FaIcon :name="compactExamples[example.id] ? 'i-lucide:maximize-2' : 'i-lucide:smartphone'" aria-hidden="true" />
+                    {{ compactExamples[example.id] ? '恢复宽度' : '窄宽预览' }}
+                  </el-button>
+                  <el-button :aria-label="`重置示例：${example.title}`" @click="resetExample(example.id)">
+                    <FaIcon name="i-lucide:rotate-ccw" aria-hidden="true" />重置
+                  </el-button>
+                </div>
+              </div>
+            </template>
+            <div :key="exampleRevisions[example.id] ?? 0" class="gallery-preview" :class="{ 'gallery-preview--compact': compactExamples[example.id] }">
+              <SpecialExamples v-if="example.id === 'special-controls'" />
+              <BasicExamples v-else-if="['buttons', 'navigation', 'fields', 'selection'].includes(example.id)" :example="example.id" />
+              <DataExamples v-else-if="['metrics', 'table'].includes(example.id)" :example="example.id" />
+              <BusinessExamples v-else-if="['business-patterns', 'charts'].includes(example.id)" :example="example.id" />
+              <FeedbackExamples v-else-if="['feedback', 'overlays', 'glass'].includes(example.id)" :example="example.id" />
+              <PatternExamples v-else-if="['page-header', 'motion'].includes(example.id)" :example="example.id" />
+              <TokenExamples v-else />
             </div>
-          </header>
-          <div class="gallery-preview">
-            <SpecialExamples v-if="example.id === 'special-controls'" />
-            <BasicExamples v-else-if="['buttons', 'navigation', 'fields', 'selection'].includes(example.id)" :example="example.id" />
-            <DataExamples v-else-if="['metrics', 'table'].includes(example.id)" :example="example.id" />
-            <BusinessExamples v-else-if="['business-patterns', 'charts'].includes(example.id)" :example="example.id" />
-            <FeedbackExamples v-else-if="['feedback', 'overlays', 'glass'].includes(example.id)" :example="example.id" />
-            <PatternExamples v-else-if="['page-header', 'motion'].includes(example.id)" :example="example.id" />
-            <TokenExamples v-else />
-          </div>
+          </MrrSectionCard>
         </article>
       </main>
     </div>
@@ -91,7 +116,7 @@ function resetExamples() {
 .gallery-layout {
   display: grid;
   grid-template-columns: 210px minmax(0, 1fr);
-  gap: var(--mrr-space-8);
+  gap: var(--mrr-page-gap);
   align-items: start;
 }
 
@@ -145,21 +170,37 @@ function resetExamples() {
   min-width: 0;
 }
 
-.gallery-example {
-  padding-bottom: var(--mrr-space-8);
-  margin-bottom: var(--mrr-space-8);
-  border-bottom: 1px solid var(--mrr-border);
+.gallery-example + .gallery-example {
+  margin-top: var(--mrr-page-gap);
 }
 
-.gallery-example:last-child {
-  padding-bottom: 0;
-  margin-bottom: 0;
-  border-bottom: 0;
+.gallery-card-header {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--mrr-space-3);
+  align-items: flex-start;
+  justify-content: space-between;
+}
+
+.gallery-example-heading {
+  flex: 1 1 220px;
+  min-width: 0;
+}
+
+.gallery-card-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--mrr-space-2);
+  align-items: center;
+}
+
+.gallery-card-actions :deep(.el-button) {
+  margin: 0;
 }
 
 .gallery-example-heading h2 {
   margin: 0;
-  font-size: var(--mrr-font-size-lg);
+  font-size: var(--mrr-font-size-md);
   font-weight: var(--mrr-font-weight-heading);
 }
 
@@ -177,18 +218,28 @@ function resetExamples() {
 }
 
 .gallery-component-names code {
-  font-size: 11px;
+  font-family: var(--mrr-font-mono);
+  font-size: var(--mrr-font-size-xs);
   color: var(--mrr-muted-foreground);
   overflow-wrap: anywhere;
 }
 
 .gallery-preview {
   min-width: 0;
-  padding: var(--mrr-space-5);
-  margin-top: var(--mrr-space-4);
-  background: var(--mrr-card);
+  max-width: 100%;
+}
+
+.gallery-preview--compact {
+  max-width: 420px;
+  padding: var(--mrr-space-3);
+  margin-inline: auto;
+  background: var(--mrr-control-bg);
   border: 1px solid var(--mrr-border);
-  border-radius: var(--mrr-radius-card);
+  border-radius: var(--mrr-radius-md);
+}
+
+.gallery-preview--compact :deep(.example-field-grid) {
+  grid-template-columns: minmax(0, 1fr);
 }
 
 .gallery-preview :deep(.example-row) {
@@ -256,10 +307,6 @@ function resetExamples() {
 @media (max-width: 600px) {
   .gallery-categories {
     grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-
-  .gallery-preview {
-    padding: var(--mrr-space-3);
   }
 
   .gallery-preview :deep(.example-field-grid) {

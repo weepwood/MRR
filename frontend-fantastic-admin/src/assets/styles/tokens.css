@@ -175,8 +175,12 @@
   --mrr-secondary: hsl(var(--secondary));
   --mrr-secondary-foreground: hsl(var(--secondary-foreground));
   --mrr-muted: hsl(var(--muted));
+  --mrr-section-heading-bg: #f8fafc;
   --mrr-segmented-track: #e4eaf2;
   --mrr-segmented-selection: var(--mrr-card);
+  --mrr-switch-track: #8795a9;
+  --mrr-scroll-thumb: #b4bfcd;
+  --mrr-scroll-thumb-hover: #8795a9;
   --mrr-muted-foreground: hsl(var(--muted-foreground));
   --mrr-accent: hsl(var(--accent));
   --mrr-accent-foreground: hsl(var(--accent-foreground));
@@ -297,8 +301,12 @@
 
   &.dark {
     --mrr-chart-loading-mask: rgb(16 20 28 / 72%);
+    --mrr-section-heading-bg: #1c202a;
     --mrr-segmented-track: #252b37;
     --mrr-segmented-selection: #394352;
+    --mrr-switch-track: #687588;
+    --mrr-scroll-thumb: #4d596b;
+    --mrr-scroll-thumb-hover: #78869b;
 
     color-scheme: dark;
 

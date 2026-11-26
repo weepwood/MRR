@@ -140,6 +140,7 @@ body .el-table--border .el-table__fixed-right .el-table__fixed-footer-wrapper tr
 .el-table td.el-table__cell {
   height: var(--mrr-table-row-height);
   padding-block: 6px;
+  font-variant-numeric: tabular-nums;
 }
 
 .el-table--enable-row-hover .el-table__body tr:hover > td.el-table__cell {

@@ -465,7 +465,7 @@ onBeforeUnmount(() => {
       <MrrMetricCard v-for="item in summaryCards" :key="item.label" v-bind="item" />
     </section>
 
-    <MrrSectionCard title="档案筛选" description="可按患者姓名、病人 ID、住院科室、设备、负责人或日期定位档案袋">
+    <MrrSectionCard class="archive-filter-card" title="档案筛选" description="可按患者姓名、病人 ID、住院科室、设备、负责人或日期定位档案袋">
       <MrrFilterBar embedded :focus-ring="false">
         <el-input id="detail-filter-bah" v-model="filters.bah" class="filter-bah mrr-filter-field--code" clearable aria-label="病案号" @keyup.enter="handleSearch">
           <template #prefix>
@@ -678,6 +678,11 @@ onBeforeUnmount(() => {
 </template>
 
 <style scoped>
+.archive-filter-card {
+  --mrr-embedded-filter-bottom-space: 0px;
+  --mrr-embedded-filter-divider-width: 0px;
+}
+
 .content-layout,
 .archive-shelf {
   display: grid;
@@ -686,7 +691,7 @@ onBeforeUnmount(() => {
 
 .archive-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 340px), 1fr));
   gap: var(--mrr-space-4);
 }
 
@@ -731,6 +736,8 @@ onBeforeUnmount(() => {
   --folder-tint: var(--mrr-tone-primary-soft);
 
   position: relative;
+  display: grid;
+  min-width: 0;
   padding: var(--mrr-space-3) var(--mrr-space-2) var(--mrr-space-2);
   isolation: isolate;
 }

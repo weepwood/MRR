@@ -31,8 +31,19 @@
 }
 
 * {
-  scrollbar-color: hsl(var(--scrollbar-color)) transparent;
+  scrollbar-color: var(--mrr-scroll-thumb) transparent;
   scrollbar-width: thin;
+}
+
+@supports not (scrollbar-color: auto) {
+  ::-webkit-scrollbar-thumb {
+    background: var(--mrr-scroll-thumb);
+    border-radius: var(--mrr-radius-pill);
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    background: var(--mrr-scroll-thumb-hover);
+  }
 }
 
 .disable-color-scheme-transition-duration *,

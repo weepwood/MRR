@@ -75,8 +75,8 @@ function setChartRef(element: unknown) {
   gap: var(--mrr-space-2);
   place-content: center;
   justify-items: center;
-  color: var(--el-text-color-placeholder);
-  background: var(--el-bg-color);
+  color: var(--mrr-muted-foreground);
+  background: var(--mrr-card);
 }
 
 .mrr-chart__empty i {

@@ -84,3 +84,14 @@ body .el-divider.mrr-system-divider .el-divider__text {
   background: transparent;
   transform: none;
 }
+
+/* Native and Element Plus scroll areas use the same semantic thumb colors. */
+body .el-scrollbar__thumb {
+  background-color: var(--mrr-scroll-thumb);
+  opacity: 1;
+}
+
+body .el-scrollbar__thumb:hover {
+  background-color: var(--mrr-scroll-thumb-hover);
+  opacity: 1;
+}

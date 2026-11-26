@@ -66,7 +66,7 @@ const hasHeader = computed(() => Boolean(
 
 .mrr-section-card :deep(.el-card__header) {
   padding: var(--mrr-space-4) var(--mrr-card-inset);
-  background: color-mix(in srgb, var(--mrr-muted) 18%, var(--mrr-card));
+  background: var(--mrr-section-heading-bg);
   border-bottom-color: var(--mrr-border);
 }
 

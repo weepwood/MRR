@@ -246,7 +246,7 @@ textarea {
   .menu-item-container.active,
   .menu-item.active .menu-item-container,
   .tab.actived .tab-background,
-  .type-tab.active,
+  .type-tab-entry.active,
   .archive-wall-card.active,
   .archive-folder-card.is-selected .folder-card-body,
   .dashboard-widget.is-drag-over {

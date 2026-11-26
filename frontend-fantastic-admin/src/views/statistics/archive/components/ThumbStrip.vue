@@ -229,7 +229,7 @@ defineExpose({ resetVisible, scrollToIndex })
   align-items: center;
   width: 100% !important;
   min-height: 42px;
-  padding: 8px var(--mrr-space-3);
+  padding: var(--mrr-space-2) var(--mrr-space-3);
 }
 
 .thumb-item {
@@ -255,7 +255,7 @@ defineExpose({ resetVisible, scrollToIndex })
 }
 
 .thumb-check:focus-visible {
-  outline: 2px solid var(--color-primary);
+  outline: 2px solid var(--mrr-ring);
   outline-offset: 2px;
 }
 
@@ -415,8 +415,9 @@ defineExpose({ resetVisible, scrollToIndex })
 /* 悬浮条压在影像上，文字固定用浅色，不随主题反转（遮罩本身恒为深色）。 */
 .thumb-page {
   flex: none;
-  font-size: 12px;
-  font-weight: 800;
+  font-size: var(--mrr-font-size-xs);
+  font-weight: var(--mrr-font-weight-heading);
+  font-variant-numeric: tabular-nums;
   color: rgb(255 255 255 / 92%);
 }
 
@@ -438,14 +439,10 @@ defineExpose({ resetVisible, scrollToIndex })
  */
 .thumb-strip.list .thumb-meta {
   position: static;
+  max-width: 100%;
   padding: 0;
   background: none;
   border-radius: 0;
-}
-
-/* List metadata is on a themed surface rather than the dark image mask. */
-.thumb-strip.list .thumb-meta {
-  max-width: 100%;
 }
 
 .thumb-strip.list .thumb-check:not(.checked) {

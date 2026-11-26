@@ -25,6 +25,7 @@ const empty = ref(false)
 const chartLoading = ref(false)
 const dualAxis = ref(false)
 const points = ref(16)
+const ranking = computed(() => empty.value ? [] : [{ label: '接口 A', count: 240 }, { label: '接口 B', count: 135 }, { label: '接口 C', count: 78 }])
 const dates = Array.from({ length: 24 }, (_, i) => `2026-11-${String(i + 1).padStart(2, '0')}`)
 const series = computed(() => empty.value
   ? []
@@ -91,6 +92,6 @@ const series = computed(() => empty.value
     </div>
     <MrrDualAxisChart v-if="dualAxis" :loading="chartLoading" :categories="empty ? [] : dates" :bars="empty ? [] : [{ name: '扫描页数', data: dates.map((_, i) => 200 + i * 13), color: mrrChartColorToken('primary') }]" :lines="empty ? [] : [{ name: '扫描记录', data: dates.map((_, i) => 20 + i * 2), color: mrrChartColorToken('neutral'), smooth: false }]" left-axis-name="页数" right-axis-name="记录数" left-unit="页" right-unit="条" :initial-visible-count="points" :height="260" />
     <MrrLineChart v-else :loading="chartLoading" :categories="empty ? [] : dates" :series="series" :visible-points="points" unit="ms" :height="260" :min-interval="0" />
-    <MrrHorizontalBarChart :loading="chartLoading" :data="empty ? [] : [{ label: '接口 A', count: 240 }, { label: '接口 B', count: 135 }, { label: '接口 C', count: 78 }]" :height="180" unit="ms" />
+    <MrrHorizontalBarChart :loading="chartLoading" :data="ranking" :height="180" unit="ms" />
   </div>
 </template>

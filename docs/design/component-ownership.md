@@ -319,3 +319,5 @@ V1.2 第三轮：外壳阴影及分隔归公共tokens；权限角色排版和运
 影像阅读精修：查看器原生按钮与焦点归 PreviewViewerToolbar，共享浮层与窄屏位置归 forms-geometry-viewer.css，分类工具条归 PreviewActionBar，列表复选框/失败键/节点引用归 ThumbStrip；排行标签取图表语义色，加载组合示例归 BusinessExamples。
 
 生产候选：影像标准阅读断点归archive.vue，缩略图实际容器几何归useThumbLayout，滚动定位归ThumbStrip，患者字段排版归PatientCard；双轴组合演示复用MrrDualAxisChart，独立生产Mock环境隔离归Vite构建配置与专用Playwright配置。
+
+阅读密度收口：中宽屏信息区排版归 archive.vue；分类选中外表面与独立勾选/筛选归 TypeFilterBar，强制色通用回退归 base.css；缩略图元数据归 ThumbStrip；图表加载/空态优先级归 MrrChart，展厅数据引用稳定化归 BusinessExamples。性能采集归 e2e/ui-v12-lifecycle.spec.ts，仅在生产Mock专用配置显式启用堆快照。

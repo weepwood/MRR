@@ -604,6 +604,24 @@ test('中等宽度保持缩略图与原图并排，窄屏回到纵向阅读', as
     return !!a && !!b && Math.abs(a.y - b.y) < 2 && a.x + a.width <= b.x && b.width > 400
   }).toBe(true)
   await expect(page.locator('.archive-page .el-loading-mask:visible')).toHaveCount(0)
+  await expect.poll(async () => {
+    const a = await page.locator('.patient-card').boundingBox()
+    const b = await page.locator('.type-bar').boundingBox()
+    const c = await preview.boundingBox()
+    return !!a && !!b && !!c && Math.abs(a.y - b.y) < 2 && a.x + a.width <= b.x && c.y < 510
+  }).toBe(true)
+  const type = page.locator('.type-tab-entry').filter({ hasText: '03-手术记录' })
+  const filter = type.getByRole('button')
+  const check = type.getByRole('checkbox')
+  await expect(filter).toHaveAttribute('aria-pressed', 'false')
+  await check.focus()
+  await check.press('Space')
+  await expect(check).toBeChecked()
+  await expect(filter).toHaveAttribute('aria-pressed', 'false')
+  await filter.focus()
+  await filter.press('Enter')
+  await expect(filter).toHaveAttribute('aria-pressed', 'true')
+  await expect(check).toBeChecked()
   await page.screenshot({ path: testInfo.outputPath('reading-medium.png'), animations: 'disabled' })
   await page.setViewportSize({ width: 375, height: 900 })
   await expect.poll(async () => {

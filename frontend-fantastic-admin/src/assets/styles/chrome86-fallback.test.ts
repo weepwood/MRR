@@ -170,8 +170,8 @@ describe('chrome 86 color-mix 回退契约', () => {
     expect(settings).toMatch(/\.mode-container\s*\{[^}]*background: var\(--mrr-tone-primary-soft\);/)
     expect(settings).toMatch(/@supports \(color: color-mix\([^)]*\)\)\s*\{\s*\.mode-container\s*\{/)
     const types = read('views/statistics/archive/components/TypeFilterBar.vue')
-    expect(types).toMatch(/\.type-tab\.active\s*\{[^}]*box-shadow: var\(--mrr-shadow-xs\);/)
-    expect(types).toMatch(/@supports \(color: color-mix\([^)]*\)\)\s*\{\s*\.type-tab\.active\s*\{/)
+    expect(types).toMatch(/\.type-tab-entry\.active\s*\{[^}]*border-color: var\(--mrr-navigation-active-border\);/)
+    expect(types).not.toMatch(/\.type-tab-entry\.active\s*\{[^}]*color-mix\(/)
   })
 
   it('焦点环不自己算混色，走已带回退的 --mrr-ring', () => {

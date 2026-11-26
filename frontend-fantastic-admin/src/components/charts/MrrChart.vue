@@ -48,7 +48,7 @@ function setChartRef(element: unknown) {
       :aria-label="ariaLabel"
       role="img"
     />
-    <div v-if="empty" class="mrr-chart__empty">
+    <div v-if="empty && !loading" class="mrr-chart__empty">
       <i class="i-lucide:chart-no-axes-column-increasing" aria-hidden="true" />
       <span>{{ emptyDescription }}</span>
     </div>

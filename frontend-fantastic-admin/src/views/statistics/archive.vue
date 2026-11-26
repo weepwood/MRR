@@ -1523,7 +1523,29 @@ onUnmounted(() => {
   }
 
   .archive-workspace.has-viewer .archive-sidebar {
+    display: grid;
+    grid-template-columns: minmax(0, 2fr) minmax(0, 3fr);
     grid-column: 1 / -1;
+    align-items: start;
+  }
+
+  .archive-workspace.has-viewer .archive-sidebar > :deep(*) {
+    grid-column: 1 / -1;
+  }
+
+  .archive-workspace.has-viewer .archive-sidebar > :deep(.patient-card) {
+    grid-column: 1;
+    align-self: stretch;
+  }
+
+  .archive-workspace.has-viewer .archive-sidebar > :deep(.type-bar) {
+    grid-column: 2;
+  }
+
+  .archive-bottom-actions {
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: center;
+    margin-top: 0;
   }
 
   .archive-workspace.has-viewer .viewer-layout {

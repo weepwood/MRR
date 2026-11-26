@@ -2,7 +2,7 @@
 import type { PatientRecord } from '@/api/modules/patients'
 import type { MrrTableAction } from '@/components/MrrTableActions/types'
 import type { EffectiveSystemSettings } from '@/utils/system-settings'
-import { computed, onMounted, onUnmounted, ref } from 'vue'
+import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { getPatients } from '@/api/modules/patients'
 import AppEmpty from '@/components/AppEmpty/index.vue'
@@ -87,6 +87,16 @@ const {
     }
   },
 })
+watch(canEditPatients, (allowed) => {
+  if (!allowed) {
+    editDialogVisible.value = false
+    editingPatient.value = undefined
+  }
+}, { flush: 'sync' })
+watch([() => userStore.sessionEpoch, canReadPatients], ([, allowed]) => {
+  if (allowed) { void loadData() }
+})
+
 const patientActions: MrrTableAction[] = [
   {
     key: 'edit',
@@ -111,6 +121,7 @@ function openDataExchange() {
 }
 
 function handleEdit(row: PatientRecord) {
+  if (!canReadPatients.value || !canEditPatients.value) { return }
   editingPatient.value = { ...row }
   editDialogVisible.value = true
 }
@@ -122,7 +133,7 @@ function handlePatientAction(action: string, row: PatientRecord) {
 }
 
 function handlePatientSaved(updated: PatientRecord) {
-  if (!canReadPatients.value || editingPatient.value?.id !== updated.id) { return }
+  if (!canReadPatients.value || !canEditPatients.value || editingPatient.value?.id !== updated.id) { return }
   const index = tableData.value.findIndex(item => item.id === updated.id)
   if (index >= 0) {
     tableData.value[index] = updated
@@ -213,7 +224,7 @@ onUnmounted(() => {
       </template>
     </MrrPageHeader>
 
-    <PatientAnalyticsPanel :refresh-key="analyticsRefreshKey">
+    <PatientAnalyticsPanel v-if="canReadPatients" :key="userStore.sessionEpoch" :refresh-key="analyticsRefreshKey">
       <template #patients>
         <MrrDataTablePanel
           title="患者列表"
@@ -334,6 +345,8 @@ onUnmounted(() => {
     </PatientAnalyticsPanel>
 
     <PatientEditDialog
+      v-if="canReadPatients && canEditPatients"
+      :key="userStore.sessionEpoch"
       v-model="editDialogVisible"
       :patient="editingPatient"
       @saved="handlePatientSaved"

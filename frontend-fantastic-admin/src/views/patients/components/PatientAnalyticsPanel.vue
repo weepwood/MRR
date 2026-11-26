@@ -4,16 +4,20 @@ import type {
   PatientMultiRecordGroup,
   PatientRecord,
 } from '@/api/modules/patients'
-import { onMounted, ref, watch } from 'vue'
+import { onMounted, onScopeDispose, ref, toRef, watch } from 'vue'
 import {
   getMissingIdCardPatients,
   getPatientAnalyticsSummary,
   getPatientMultiRecordGroups,
 } from '@/api/modules/patients'
+import AppError from '@/components/AppError/index.vue'
 import AppLoading from '@/components/AppLoading/index.vue'
 
 import MrrDataTablePanel from '@/components/MrrDataTablePanel/index.vue'
-import { pageRowOffset, tableSequenceColumn } from '@/utils/table-sequence'
+import { useCrudList } from '@/composables/useCrudList'
+import { useUserStore } from '@/store/modules/user'
+import useAuth from '@/utils/composables/useAuth'
+import { tableSequenceColumn } from '@/utils/table-sequence'
 
 const props = withDefaults(defineProps<{
   refreshKey?: number
@@ -28,69 +32,98 @@ const summaryError = ref('')
 const summary = ref<PatientAnalyticsSummary>()
 
 const activeDetailTab = ref<'patients' | 'missing' | 'multi'>('patients')
-const missingLoading = ref(false)
-const missingRecords = ref<PatientRecord[]>([])
-const missingRowOffset = ref(0)
-const multiRowOffset = ref(0)
-const missingPage = ref(1)
-const missingSize = ref(10)
-const missingTotal = ref(0)
+const userStore = useUserStore()
+const { auth } = useAuth()
+const allowed = () => userStore.isSessionVerified && auth('record:read')
+const session = { key: () => String(userStore.sessionEpoch), allowed }
+const missingError = ref('')
+const multiError = ref('')
 
-const multiLoading = ref(false)
-const multiGroups = ref<PatientMultiRecordGroup[]>([])
-const multiPage = ref(1)
-const multiSize = ref(10)
-const multiTotal = ref(0)
-const includeSuspected = ref(true)
+const {
+  list: missingRecords,
+  loading: missingLoading,
+  total: missingTotal,
+  pageNum: missingPage,
+  pageSize: missingSize,
+  loadedRowOffset: missingRowOffset,
+  loadData: loadMissingRecords,
+  handlePageChange: handleMissingPageChange,
+  handleSizeChange: handleMissingSizeChange,
+} = useCrudList<PatientRecord, Record<string, never>>({
+  defaultQuery: {},
+  defaultPageSize: 10,
+  immediate: false,
+  session: { ...session, onReset: () => { missingError.value = '' } },
+  fetchApi: async (params, { isCurrent }) => {
+    if (isCurrent()) { missingError.value = '' }
+    try { return await getMissingIdCardPatients(params) }
+    catch (error: unknown) {
+      if (isCurrent()) { missingError.value = error instanceof Error ? error.message : '缺少身份证号病案加载失败' }
+      return { list: [], total: 0, page: params.page, size: params.size }
+    }
+  },
+})
+
+const {
+  list: multiGroups,
+  loading: multiLoading,
+  total: multiTotal,
+  pageNum: multiPage,
+  pageSize: multiSize,
+  loadedRowOffset: multiRowOffset,
+  query: multiQuery,
+  loadData: loadMultiGroups,
+  handleSearch: searchMultiGroups,
+  handlePageChange: handleMultiPageChange,
+  handleSizeChange: handleMultiSizeChange,
+} = useCrudList<PatientMultiRecordGroup, { includeSuspected: boolean }>({
+  defaultQuery: { includeSuspected: true },
+  defaultPageSize: 10,
+  immediate: false,
+  session: { ...session, onReset: () => { multiError.value = '' } },
+  fetchApi: async (params, { isCurrent }) => {
+    if (isCurrent()) { multiError.value = '' }
+    try { return await getPatientMultiRecordGroups(params) }
+    catch (error: unknown) {
+      if (isCurrent()) { multiError.value = error instanceof Error ? error.message : '多病案分组加载失败' }
+      return { list: [], total: 0, page: params.page, size: params.size }
+    }
+  },
+})
+const includeSuspected = toRef(multiQuery, 'includeSuspected')
+
+let summaryGeneration = 0
+let disposed = false
+watch([session.key, allowed], () => {
+  summaryGeneration++
+  summary.value = undefined
+  summaryError.value = ''
+  summaryLoading.value = false
+}, { flush: 'sync' })
+onScopeDispose(() => {
+  disposed = true
+  summaryGeneration++
+  summaryLoading.value = false
+})
 
 async function loadSummary() {
+  if (disposed || !allowed()) { return }
+  const token = ++summaryGeneration
+  const isCurrent = () => !disposed && token === summaryGeneration && allowed()
   summaryLoading.value = true
   summaryError.value = ''
   try {
     const response = await getPatientAnalyticsSummary(currentYear)
-    summary.value = response.data
+    if (isCurrent()) { summary.value = response.data }
   }
   catch (error: unknown) {
-    summary.value = undefined
-    summaryError.value = error instanceof Error ? error.message : '患者统计加载失败'
-  }
-  finally {
-    summaryLoading.value = false
-  }
-}
-
-async function loadMissingRecords() {
-  missingLoading.value = true
-  try {
-    const params = {
-      page: missingPage.value,
-      size: missingSize.value,
+    if (isCurrent()) {
+      summary.value = undefined
+      summaryError.value = error instanceof Error ? error.message : '患者统计加载失败'
     }
-    const response = await getMissingIdCardPatients(params)
-    missingRecords.value = response.data?.list ?? []
-    missingRowOffset.value = pageRowOffset(response.data?.page ?? params.page, response.data?.size ?? params.size)
-    missingTotal.value = Number(response.data?.total || 0)
   }
   finally {
-    missingLoading.value = false
-  }
-}
-
-async function loadMultiGroups() {
-  multiLoading.value = true
-  try {
-    const params = {
-      page: multiPage.value,
-      size: multiSize.value,
-      includeSuspected: includeSuspected.value,
-    }
-    const response = await getPatientMultiRecordGroups(params)
-    multiGroups.value = response.data?.list ?? []
-    multiRowOffset.value = pageRowOffset(response.data?.page ?? params.page, response.data?.size ?? params.size)
-    multiTotal.value = Number(response.data?.total || 0)
-  }
-  finally {
-    multiLoading.value = false
+    if (isCurrent()) { summaryLoading.value = false }
   }
 }
 
@@ -100,35 +133,8 @@ function reloadAll() {
   void loadMultiGroups()
 }
 
-function handleMissingPageChange(page: number) {
-  missingPage.value = page
-  void loadMissingRecords()
-}
-
-function handleMissingSizeChange(size: number) {
-  missingSize.value = size
-  missingPage.value = 1
-  void loadMissingRecords()
-}
-
-function handleMultiPageChange(page: number) {
-  multiPage.value = page
-  void loadMultiGroups()
-}
-
-function handleMultiSizeChange(size: number) {
-  multiSize.value = size
-  multiPage.value = 1
-  void loadMultiGroups()
-}
-
-watch(includeSuspected, () => {
-  multiPage.value = 1
-  void loadMultiGroups()
-})
-
+watch(includeSuspected, () => { void searchMultiGroups() })
 watch(() => props.refreshKey, reloadAll)
-
 onMounted(reloadAll)
 </script>
 
@@ -179,10 +185,11 @@ onMounted(reloadAll)
 
       <el-tab-pane name="missing">
         <template #label>
-          身份证为空病案（{{ summary?.missingIdCardRecords ?? missingTotal }}）
+          身份证为空病案（{{ summary?.missingIdCardRecords ?? (missingError ? '—' : missingTotal) }}）
         </template>
         <MrrDataTablePanel title="缺少身份证号的病案">
-          <el-table v-loading="missingLoading" :data="missingRecords" stripe>
+          <AppError v-if="missingError" :message="missingError" @retry="loadMissingRecords" />
+          <el-table v-else v-loading="missingLoading" :data="missingRecords" stripe>
             <el-table-column v-bind="tableSequenceColumn(missingRowOffset, missingRecords.length)" />
             <el-table-column prop="bah" label="病案号" min-width="140">
               <template #default="{ row }">
@@ -204,7 +211,7 @@ onMounted(reloadAll)
             <el-table-column prop="bingqu" label="病区" min-width="130" show-overflow-tooltip />
             <el-table-column prop="chuangwei" label="床位" min-width="100" />
           </el-table>
-          <template #pagination>
+          <template v-if="!missingError" #pagination>
             <el-pagination
               v-model:current-page="missingPage"
               v-model:page-size="missingSize"
@@ -220,7 +227,7 @@ onMounted(reloadAll)
 
       <el-tab-pane name="multi">
         <template #label>
-          同一患者多病案（{{ multiTotal }}）
+          同一患者多病案（{{ multiError ? '—' : multiTotal }}）
         </template>
         <MrrDataTablePanel title="多病案分组">
           <template #toolbar>
@@ -229,7 +236,8 @@ onMounted(reloadAll)
               <span>身份证号一致为高可信；仅姓名相同可能是同名患者，需要人工核对。</span>
             </div>
           </template>
-          <el-table v-loading="multiLoading" :data="multiGroups" stripe>
+          <AppError v-if="multiError" :message="multiError" @retry="loadMultiGroups" />
+          <el-table v-else v-loading="multiLoading" :data="multiGroups" stripe>
             <el-table-column v-bind="tableSequenceColumn(multiRowOffset, multiGroups.length)" />
             <el-table-column label="识别依据" width="130" class-name="mrr-table-status-column">
               <template #default="{ row }">
@@ -266,7 +274,7 @@ onMounted(reloadAll)
               </template>
             </el-table-column>
           </el-table>
-          <template #pagination>
+          <template v-if="!multiError" #pagination>
             <el-pagination
               v-model:current-page="multiPage"
               v-model:page-size="multiSize"

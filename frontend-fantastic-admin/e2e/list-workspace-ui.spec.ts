@@ -96,6 +96,47 @@ test('患者汇总失败时，列表可见且指标不显示假零', async ({ pa
   await expect(page.getByRole('cell', { name: '00004217', exact: true })).toBeVisible()
 })
 
+test('患者编辑保存期间锁定表单，成功后正常关闭', async ({ page }) => {
+  let release!: () => void
+  const gate = new Promise<void>((resolve) => { release = resolve })
+  const writes: unknown[] = []
+  await page.route('**/api/v1/patients/92001', async (route) => {
+    if (route.request().method() !== 'PUT') { await route.fallback(); return }
+    writes.push(route.request().postDataJSON())
+    await gate
+    await route.fulfill({ json: { code: 200, data: { ...patient, name: '合成更新患者' } } })
+  })
+  try {
+    await page.goto('/patients')
+    await page.getByRole('button', { name: '编辑患者', exact: true }).click()
+    const dialog = page.getByRole('dialog', { name: '编辑患者信息' })
+    await expect(dialog).toBeVisible()
+    await dialog.getByRole('textbox', { name: '姓名', exact: true }).fill('合成更新患者')
+    await dialog.getByRole('button', { name: '保存修改' }).click()
+    await expect.poll(() => writes.length).toBe(1)
+    await expect(dialog.getByRole('button', { name: '取消', exact: true })).toBeDisabled()
+    await expect(dialog.getByRole('textbox', { name: '姓名', exact: true })).toBeDisabled()
+    release()
+    await expect(dialog).toBeHidden()
+    expect(writes).toEqual([expect.objectContaining({ bah: patient.bah, name: '合成更新患者' })])
+  }
+  finally { release() }
+})
+
+test('患者缺失证号查询失败不显示假零，重试恢复', async ({ page }) => {
+  await page.route('**/api/v1/patients/analytics/missing-idcard?**', route => route.fulfill({
+    status: 500,
+    json: { code: 500, message: '合成测试：缺失证号查询失败' },
+  }), { times: 1 })
+  await page.goto('/patients')
+  await page.getByRole('tab', { name: /身份证为空病案/ }).click()
+  const panel = page.getByRole('tabpanel', { name: /身份证为空病案/ })
+  await expect(panel.getByRole('alert')).toBeVisible()
+  await panel.getByRole('button', { name: '重试' }).click()
+  await expect(panel.getByRole('cell', { name: patient.bah, exact: true })).toBeVisible()
+  await expect(panel.getByRole('alert')).toHaveCount(0)
+})
+
 test('窄屏装箱切换、筛选和表单完整可达', async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 })
   await page.addInitScript(() => localStorage.setItem('MRR-ADMIN:app-settings', JSON.stringify({

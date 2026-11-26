@@ -3,7 +3,7 @@ import { isolateLocalVisualSettings } from './helpers/local-visual-settings'
 
 for (const palette of ['mrr', 'gr8r']) {
   for (const theme of ['light', 'dark']) {
-    test(`侧栏悬停和右侧选中指示线 ${palette}/${theme}`, async ({ page }, testInfo) => {
+    test(`侧栏悬停和左侧选中指示线 ${palette}/${theme}`, async ({ page }, testInfo) => {
       await isolateLocalVisualSettings(page)
       await page.emulateMedia({ reducedMotion: 'no-preference' })
       await page.addInitScript(({ palette, theme }) => localStorage.setItem('MRR-ADMIN:app-settings', JSON.stringify({
@@ -20,13 +20,25 @@ for (const palette of ['mrr', 'gr8r']) {
       const rail = (el: Element) => {
         const s = getComputedStyle(el, '::after')
         const scale = s.transform === 'none' ? 1 : Math.abs(new DOMMatrixReadOnly(s.transform).d)
-        return { height: Number.parseFloat(s.height) * scale, width: s.width, opacity: s.opacity, right: s.right, background: s.backgroundColor, duration: s.transitionDuration }
+        return { height: Number.parseFloat(s.height) * scale, width: s.width, opacity: s.opacity, left: s.left, background: s.backgroundColor, duration: s.transitionDuration }
       }
-      await expect.poll(() => current.evaluate(rail)).toMatchObject({ height: 22, width: '3px', opacity: '1', right: '3px' })
-      await expect(current).toHaveCSS('border-right-color', 'rgba(0, 0, 0, 0)')
+      await expect.poll(() => current.evaluate(rail)).toMatchObject({ height: 22, width: '3px', opacity: '1', left: '3px' })
+      await expect(current).toHaveCSS('border-left-color', 'rgba(0, 0, 0, 0)')
       expect((await current.evaluate(rail)).duration).toContain('0.18s')
       const icon = target.locator('.menu-item-container-icon')
       const before = await icon.boundingBox()
+      // The rail remains inside the link, separate from the branch guide and icon.
+      const geometry = await current.evaluate((el) => {
+        const r = el.getBoundingClientRect()
+        const branch = el.closest('.sub-menu')!
+        const guide = branch.getBoundingClientRect().left + Number.parseFloat(getComputedStyle(branch).backgroundPositionX) + 1
+        const rail = getComputedStyle(el, '::after')
+        const railLeft = r.left + Number.parseFloat(getComputedStyle(el).borderLeftWidth) + Number.parseFloat(rail.left)
+        const iconLeft = el.querySelector('.menu-item-container-icon')!.getBoundingClientRect().left
+        return { guideGap: railLeft - guide, iconGap: iconLeft - railLeft - Number.parseFloat(rail.width) }
+      })
+      expect(geometry.guideGap).toBeGreaterThanOrEqual(11)
+      expect(geometry.iconGap).toBeGreaterThanOrEqual(3)
       const idle = await target.evaluate(el => getComputedStyle(el).backgroundColor)
       await target.hover()
       await expect.poll(() => target.evaluate(el => getComputedStyle(el).backgroundColor)).not.toBe(idle)
@@ -66,7 +78,7 @@ for (const palette of ['mrr', 'gr8r']) {
       await expect(page).toHaveURL(/\/records$/)
       await expect(target).toHaveAttribute('aria-current', 'page')
       await expect.poll(() => target.evaluate(rail)).toMatchObject({ height: 22, opacity: '1' })
-      await expect(target).toHaveCSS('border-right-color', 'rgba(0, 0, 0, 0)')
+      await expect(target).toHaveCSS('border-left-color', 'rgba(0, 0, 0, 0)')
       await expect.poll(() => current.evaluate(rail)).toMatchObject({ height: 0, opacity: '0' })
       await expect(nav).toHaveAttribute('data-rail-test-frames', /./)
       const frames = JSON.parse((await nav.getAttribute('data-rail-test-frames'))!) as { height: number, active: boolean, visible: number }[]

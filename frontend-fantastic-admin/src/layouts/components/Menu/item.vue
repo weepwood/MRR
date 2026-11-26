@@ -177,7 +177,7 @@ defineExpose({
  * Hide the previous route rail immediately so only one visible selection remains. */
 a.menu-item-container::after {
   position: absolute;
-  inset-inline-end: 3px;
+  inset-inline-start: 3px;
   top: 50%;
   z-index: 1;
   width: 3px;

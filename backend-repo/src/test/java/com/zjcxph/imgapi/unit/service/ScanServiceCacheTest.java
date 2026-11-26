@@ -48,6 +48,17 @@ class ScanServiceCacheTest {
     }
 
     @Test
+    void securitySensitiveLookupBypassesWarmCollectionCache() {
+        Scan old=new Scan(); old.setId(1);
+        Scan current=new Scan(); current.setId(2);
+        when(scanMapper.findByCode("123","123","","")).thenReturn(List.of(old),List.of(current));
+        assertThat(scanService.getImageListByCode("123","123","","")).containsExactly(old);
+        assertThat(scanService.getFreshImageListByCode("123","123","","")).containsExactly(current);
+        assertThat(scanService.getImageListByCode("123","123","","")).containsExactly(old);
+        verify(scanMapper,times(2)).findByCode("123","123","","");
+    }
+
+    @Test
     @DisplayName("相同病案号和上架号组合只查询数据库一次")
     void cachesArchiveSearchResult() {
         Scan scan = new Scan();

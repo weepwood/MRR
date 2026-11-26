@@ -9,6 +9,7 @@ import org.apache.ibatis.annotations.Select;
 public interface ImageContentMapper {
 
     @Select("SELECT * FROM mr_scan WHERE id = #{id} AND uploadflag != 0")
+    @Options(timeout = 3, useCache = false, flushCache = Options.FlushCachePolicy.TRUE)
     Scan findActiveById(@Param("id") Integer id);
 
     // Exact stored path fields; existing folder/filename index, no unbounded result or alias expansion.

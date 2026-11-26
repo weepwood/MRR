@@ -35,6 +35,38 @@ class AsyncLogServiceImplTest {
         return log;
     }
 
+    @Test
+    void outageRetainsUnwrittenAuditUntilDatabaseRecovers() {
+        var log = newLog(1);
+        log.setRequestId("synthetic-audit-retry");
+        when(logMapper.batchInsert(anyList())).thenThrow(new org.springframework.dao.DataAccessResourceFailureException("synthetic outage")).thenReturn(1);
+        org.mockito.Mockito.lenient().when(logMapper.insert(any(Log.class))).thenThrow(new org.springframework.dao.DataAccessResourceFailureException("synthetic outage"));
+        asyncLogService.saveLogAsync(log);
+        asyncLogService.flushPendingLogs();
+        asyncLogService.flushPendingLogs();
+        verify(logMapper,times(2)).batchInsert(argThat(rows->rows.size()==1 && rows.getFirst()==log));
+    }
+
+    @Test
+    void committedBatchWithLostAcknowledgementIsNotInsertedAgain() {
+        var log = newLog(1); log.setRequestId("synthetic-committed");
+        when(logMapper.batchInsert(anyList())).thenThrow(new org.springframework.dao.DuplicateKeyException("synthetic uncertain commit"));
+        when(logMapper.containsAudit(log)).thenReturn(true);
+        asyncLogService.saveLogAsync(log);
+        asyncLogService.flushPendingLogs();
+        verify(logMapper,never()).insert(any());
+        org.assertj.core.api.Assertions.assertThat(asyncLogService.pendingCount()).isZero();
+    }
+
+    @Test
+    void sustainedOutageIsBoundedAndCounted() {
+        when(logMapper.batchInsert(anyList())).thenThrow(new org.springframework.dao.DataAccessResourceFailureException("synthetic outage"));
+        for(int i=0;i<1100;i++) asyncLogService.saveLogAsync(newLog(i));
+        org.assertj.core.api.Assertions.assertThat(asyncLogService.pendingCount()).isEqualTo(1000);
+        org.assertj.core.api.Assertions.assertThat(asyncLogService.droppedCount()).isEqualTo(100);
+        verify(logMapper,times(1)).batchInsert(anyList());
+    }
+
     @Nested
     @DisplayName("saveLogAsync — 缓冲区累积与刷新")
     class SaveLogAsyncBuffer {

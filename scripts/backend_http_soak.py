@@ -79,6 +79,7 @@ def main():
     parser.add_argument("--seconds", type=int, default=90)
     parser.add_argument("--extended", action="store_true", help="explicitly authorize a longer isolated soak (up to 7200s)")
     parser.add_argument("--checkpoint-seconds", type=int, default=60)
+    parser.add_argument("--external-probes", action="store_true", help="exercise synthetic external session, current scope and privacy headers before load")
     args = parser.parse_args()
     if not 15 <= args.checkpoint_seconds <= 60:
         parser.error("checkpoint interval must be 15..60 seconds")
@@ -232,6 +233,50 @@ def main():
                 assert "no-store" in headers.get("Cache-Control","")
             (lab / "resource-probes.json").write_text(json.dumps(probe_results,indent=2))
             print("RESOURCE_PROBES " + json.dumps(probe_results), flush=True)
+            if args.external_probes:
+                # A direct synthetic session fixture isolates current authorization from ticket issuance.
+                # All real reads use the normal external controller and its actual storage service.
+                session_token = secrets.token_urlsafe(32)
+                session_hash = hashlib.sha256(session_token.encode()).hexdigest()
+                sql("INSERT INTO app.mr_external_archive_session(session_hash,client_id,external_user_id,allow_download,grant_json,expires_at,created_ip) "
+                    f"VALUES ('{session_hash}','synthetic-external','synthetic-external-user',false,"
+                    "'[{\"bah\":\"7654391\",\"sjh\":\"\"}]'::jsonb,CURRENT_TIMESTAMP+interval '5 minutes','127.0.0.1')")
+                other_file = lab / "images" / "private-fixture.png"
+                other_file.write_bytes(b"synthetic-private-image")
+                external_id = int(sql("INSERT INTO app.mr_scan(bah,brxh,filename,folder,uploadflag,source_type,source_ref) "
+                    "VALUES ('7654391','7654391','synthetic.png','synthetic-external',1,'LOCAL','synthetic.png') RETURNING id").splitlines()[0])
+                external_results = []
+                with closing(http.client.HTTPConnection("127.0.0.1", httpport, timeout=8)) as conn:
+                    def external(path, expected, method="GET", authenticated=True):
+                        headers = {"Cookie": "MRR_ARCHIVE_SESSION="+session_token} if authenticated else {}
+                        conn.request(method,path,headers=headers)
+                        response=conn.getresponse()
+                        payload=response.read()
+                        actual=dict(response.getheaders())
+                        assert response.status == expected,(method,path,response.status)
+                        assert "no-store" in actual.get("Cache-Control",""),(method,path,"missing no-store")
+                        assert actual.get("Referrer-Policy") == "no-referrer",(method,path,"missing referrer policy")
+                        external_results.append(dict(method=method,path=path,status=response.status))
+                        return payload
+                    prefix="/api/v1/external/archive"
+                    external(prefix+"/context",401,authenticated=False)
+                    external("/api/v1/integration/archive/tickets",400,"POST",False)
+                    external(prefix+"/context",200)
+                    payload=json.loads(external(prefix+"/images?bah=7654391",200))
+                    rows=payload["data"]
+                    assert len(rows)==1 and rows[0]["id"]==external_id
+                    assert all(rows[0].get(k) is None for k in ("folder","brxh","openerNo","ossUrl"))
+                    assert external(prefix+f"/image/{external_id}",200)==content
+                    external(prefix+"/download?bah=7654391",403)
+                    external(prefix+"/images?bah=7654300",403)
+                    sql(f"UPDATE app.mr_scan SET bah='7654392',filename='private-fixture.png',source_ref='private-fixture.png' WHERE id={external_id}")
+                    assert b"synthetic-private-image" not in external(prefix+f"/image/{external_id}",403)
+                    sql(f"UPDATE app.mr_external_archive_session SET revoked_at=CURRENT_TIMESTAMP WHERE session_hash='{session_hash}'")
+                    external(prefix+"/context",401)
+                sql(f"DELETE FROM app.mr_scan WHERE id={external_id}")
+                sql("ANALYZE app.mr_scan")
+                (lab/"external-probes.json").write_text(json.dumps(external_results,indent=2))
+                print("EXTERNAL_PROBES "+json.dumps(external_results),flush=True)
             paths = ["/api/v1/system/data-quality/summary",
                      f"/api/v1/system/data-quality/issues?limit=10&runId={run}",
                      "/api/v1/scan/page?page=30&size=20", "/api/v1/scan/cursor?afterId=0&size=20",

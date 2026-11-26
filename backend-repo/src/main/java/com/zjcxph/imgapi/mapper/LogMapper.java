@@ -16,6 +16,21 @@ public interface LogMapper {
     @Options(useGeneratedKeys = true, keyProperty = "id", keyColumn = "id")
     int insert(Log log);
 
+    // Match the immutable request identity and timestamp, not just an arbitrary unique-key failure.
+    // Works on both the ordinary and partitioned access_log relation.
+    @Select("""
+            SELECT EXISTS (SELECT 1 FROM access_log WHERE request_id=#{requestId}
+                AND access_time IS NOT DISTINCT FROM CAST(#{accessTime,jdbcType=TIMESTAMP} AS timestamp)
+                AND username IS NOT DISTINCT FROM #{username,jdbcType=VARCHAR}
+                AND method IS NOT DISTINCT FROM #{method,jdbcType=VARCHAR}
+                AND request_uri IS NOT DISTINCT FROM #{requestUri,jdbcType=VARCHAR}
+                AND response_status IS NOT DISTINCT FROM #{responseStatus,jdbcType=VARCHAR}
+                AND audit_action IS NOT DISTINCT FROM #{auditAction,jdbcType=VARCHAR}
+                AND audit_target IS NOT DISTINCT FROM #{auditTarget,jdbcType=VARCHAR})
+            """)
+    @Options(timeout = 3, useCache = false)
+    boolean containsAudit(Log log);
+
     @Select("SELECT " + BASE_COLUMNS + " FROM access_log ORDER BY access_time DESC LIMIT #{limit} OFFSET #{offset}")
     List<Log> findAll(@Param("limit") int limit, @Param("offset") int offset);
 

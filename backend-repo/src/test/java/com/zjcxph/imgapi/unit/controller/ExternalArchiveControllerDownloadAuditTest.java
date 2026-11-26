@@ -112,6 +112,6 @@ class ExternalArchiveControllerDownloadAuditTest {
         when(request.getHeader("User-Agent")).thenReturn("JUnit");
         when(request.getHeader("X-Request-Id")).thenReturn("request-42");
         when(externalAccess.requireSession("synthetic-session")).thenReturn(grant);
-        when(exports.prepareArchive("123456", "1234")).thenReturn(prepared);
+        when(exports.prepareExternalArchive("123456", "1234")).thenReturn(prepared);
     }
 }

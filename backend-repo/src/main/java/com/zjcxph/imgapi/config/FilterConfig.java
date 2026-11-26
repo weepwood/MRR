@@ -22,4 +22,14 @@ public class FilterConfig {
         registration.setName("requestCachingFilter");
         return registration;
     }
+    @Bean
+    public FilterRegistrationBean<com.zjcxph.imgapi.filter.ExternalArchivePrivacyFilter> externalArchivePrivacyFilter() {
+        var registration = new FilterRegistrationBean<com.zjcxph.imgapi.filter.ExternalArchivePrivacyFilter>();
+        registration.setFilter(new com.zjcxph.imgapi.filter.ExternalArchivePrivacyFilter());
+        registration.addUrlPatterns("/api/v1/external/archive/*", "/api/v1/integration/archive/tickets");
+        registration.setOrder(0);
+        registration.setAsyncSupported(true);
+        registration.setName("externalArchivePrivacyFilter");
+        return registration;
+    }
 }

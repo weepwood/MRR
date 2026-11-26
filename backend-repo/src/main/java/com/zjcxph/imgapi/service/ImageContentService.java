@@ -10,6 +10,11 @@ public interface ImageContentService {
 
     ImageContent open(Integer scanId);
 
+    /** Authorization and storage opening must use the same current scan metadata. */
+    ScopedImage openExternal(Integer scanId, com.zjcxph.imgapi.security.ExternalArchiveGrant grant);
+
+    record ScopedImage(ImageContent content, String bah, String sjh) {}
+
     ImageContent openLegacy(String bah, String brxh, String folder, String filename);
 
     /**

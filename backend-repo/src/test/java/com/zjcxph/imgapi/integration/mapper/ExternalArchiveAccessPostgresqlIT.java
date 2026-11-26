@@ -19,6 +19,53 @@ import static org.assertj.core.api.Assertions.assertThat;
 class ExternalArchiveAccessPostgresqlIT extends PostgresqlIntegrationTestSupport {
     @Autowired ExternalArchiveAccessMapper mapper;
 
+    @Autowired com.zjcxph.imgapi.mapper.ImageContentMapper contentMapper;
+    @Autowired com.zjcxph.imgapi.mapper.ScanMapper scans;
+
+    @Test
+    @org.springframework.transaction.annotation.Transactional(propagation = org.springframework.transaction.annotation.Propagation.NOT_SUPPORTED)
+    void actualReassignedScanCannotOpenAnotherArchivesLocalFile() throws Exception {
+        var root=java.nio.file.Files.createTempDirectory("mrr-external-scope-");
+        java.nio.file.Files.write(root.resolve("a.jpg"),new byte[]{1,2});
+        java.nio.file.Files.write(root.resolve("b.jpg"),new byte[]{8,9});
+        var settings=new com.zjcxph.imgapi.config.ImageProperties();
+        settings.setBasePath(root.toString());
+        var service=new com.zjcxph.imgapi.service.impl.ImageContentServiceImpl(contentMapper,
+                new com.zjcxph.imgapi.storage.LocalImageStorage(settings));
+        var scope=new com.zjcxph.imgapi.dto.resp.ExternalArchiveCaseDTO();
+        scope.setBah("8765431"); scope.setSjh("");
+        var grant=new com.zjcxph.imgapi.security.ExternalArchiveGrant("synthetic","synthetic",false,
+                System.currentTimeMillis()+60000,java.util.List.of(scope));
+        Integer id=null;
+        try {
+            id=jdbc.queryForObject("""
+                    INSERT INTO app.mr_scan(bah,brxh,filename,folder,uploadflag,source_type,source_ref)
+                    VALUES ('8765431','8765431','a.jpg','synthetic',1,'LOCAL','a.jpg') RETURNING id
+                    """,Integer.class);
+            final int scanId=id;
+            var stale=scans.findById(id);
+            assertThat(grant.allows(stale.getBah(),stale.getSjh())).isTrue();
+            try(var opened=service.openExternal(id,grant).content()) {
+                assertThat(opened.inputStream().readAllBytes()).containsExactly((byte)1,(byte)2);
+            }
+            var tx=new org.springframework.transaction.support.TransactionTemplate(transactions);
+            tx.executeWithoutResult(status->jdbc.update(
+                    "UPDATE app.mr_scan SET bah='8765432', filename='b.jpg',source_ref='b.jpg' WHERE id=?",scanId));
+            assertThat(grant.allows(stale.getBah(),stale.getSjh())).isTrue();
+            org.assertj.core.api.Assertions.assertThatThrownBy(()->service.openExternal(scanId,grant))
+                    .isInstanceOfSatisfying(com.zjcxph.imgapi.exception.BusinessException.class,e->assertThat(e.getCode()).isEqualTo(403));
+            jdbc.update("UPDATE app.mr_scan SET uploadflag=0 WHERE id=?",id);
+            org.assertj.core.api.Assertions.assertThatThrownBy(()->service.openExternal(scanId,grant))
+                    .isInstanceOfSatisfying(com.zjcxph.imgapi.exception.BusinessException.class,e->assertThat(e.getCode()).isEqualTo(404));
+            System.out.println("MRR_EXTERNAL_SCOPE allowed local bytes; committed reassignment denied; inactive denied");
+        } finally {
+            if(id!=null) jdbc.update("DELETE FROM app.mr_scan WHERE id=?",id);
+            java.nio.file.Files.deleteIfExists(root.resolve("a.jpg"));
+            java.nio.file.Files.deleteIfExists(root.resolve("b.jpg"));
+            java.nio.file.Files.deleteIfExists(root);
+        }
+    }
+
     @Test
     void ticketCannotBeConsumedTwiceEvenInSameMapperSession() {
         mapper.insertTicket("synthetic-ticket", "synthetic", "synthetic-user", false,

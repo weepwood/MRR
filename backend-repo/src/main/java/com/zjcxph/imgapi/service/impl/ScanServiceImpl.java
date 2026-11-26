@@ -115,6 +115,12 @@ public class ScanServiceImpl implements ScanService {
             String normalizedSjh,
             String sjhSearchCode
     ) {
+        return getFreshImageListByCode(normalizedBah, bahSearchCode, normalizedSjh, sjhSearchCode);
+    }
+
+    @Override
+    public List<Scan> getFreshImageListByCode(String normalizedBah, String bahSearchCode,
+                                             String normalizedSjh, String sjhSearchCode) {
         return performLookup(
                 normalizedBah,
                 bahSearchCode,

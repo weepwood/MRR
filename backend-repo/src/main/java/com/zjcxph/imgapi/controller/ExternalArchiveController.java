@@ -6,7 +6,6 @@ import com.zjcxph.imgapi.dto.req.ExternalArchiveTicketRequest;
 import com.zjcxph.imgapi.dto.resp.BAHDataResponseDTO;
 import com.zjcxph.imgapi.dto.resp.ExternalArchiveSessionResponse;
 import com.zjcxph.imgapi.dto.resp.ExternalArchiveTicketResponse;
-import com.zjcxph.imgapi.entity.Scan;
 import com.zjcxph.imgapi.exception.BusinessException;
 import com.zjcxph.imgapi.security.ExternalArchiveGrant;
 import com.zjcxph.imgapi.service.ArchiveExportService;
@@ -70,9 +69,12 @@ public class ExternalArchiveController {
             @RequestHeader(value = "X-MRR-Timestamp", required = false) String timestamp,
             @RequestHeader(value = "X-MRR-Nonce", required = false) String nonce,
             @RequestHeader(value = "X-MRR-Signature", required = false) String signature,
-            @RequestBody String rawBody,
+            @RequestBody(required = false) String rawBody,
             HttpServletRequest servletRequest
     ) {
+        if (!StringUtils.hasText(rawBody)) {
+            throw new BusinessException(400, "请求体不能为空");
+        }
         ExternalArchiveTicketRequest request;
         try {
             request = objectMapper.readValue(rawBody, ExternalArchiveTicketRequest.class);
@@ -98,9 +100,7 @@ public class ExternalArchiveController {
                 .build(true)
                 .toUriString();
         logger.info(
-                "External archive ticket issued: clientId={}, externalUserId={}, archives={}, ip={}",
-                issued.grant().clientId(), issued.grant().externalUserId(),
-                issued.grant().cases().size(), clientIp
+                "External archive ticket issued: archives={}", issued.grant().cases().size()
         );
         externalArchiveAccessService.recordAudit(
                 issued.grant(), null, null, "TICKET_CREATE", null,
@@ -168,8 +168,7 @@ public class ExternalArchiveController {
         List<BAHDataResponseDTO> images = externalArchiveAccessService.loadImages(grant, bah, sjh);
         String clientIp = IpUtil.getClientIp(request);
         logger.info(
-                "External archive viewed: clientId={}, externalUserId={}, bah={}, sjh={}, images={}, ip={}",
-                grant.clientId(), grant.externalUserId(), bah, sjh, images.size(), clientIp
+                "External archive viewed: images={}", images.size()
         );
         externalArchiveAccessService.recordAudit(
                 grant, bah, sjh, "ARCHIVE_VIEW", null,
@@ -196,7 +195,7 @@ public class ExternalArchiveController {
         }
 
         ArchiveExportService.BatchZipExport export =
-                archiveExportService.prepareArchive(normalizedBah, normalizedSjh);
+                archiveExportService.prepareExternalArchive(normalizedBah, normalizedSjh);
         if (export.itemCount() == 0) {
             throw new BusinessException(404, "未找到匹配档案的图片");
         }
@@ -238,18 +237,18 @@ public class ExternalArchiveController {
             HttpServletRequest request
     ) {
         ExternalArchiveGrant grant = requireGrant(request);
-        Scan scan = externalArchiveAccessService.requireImage(grant, id);
-        ImageContentService.ImageContent content = imageContentService.open(id);
+        var scoped = imageContentService.openExternal(id, grant);
+        ImageContentService.ImageContent content = scoped.content();
         String clientIp = IpUtil.getClientIp(request);
         String userAgent = request.getHeader("User-Agent");
         String currentRequestId = requestId(request);
 
         return ImageContentResponse.create(request, content,
                 () -> externalArchiveAccessService.recordAudit(
-                        grant, scan.getBah(), scan.getSjh(), "IMAGE_VIEW", id,
+                        grant, scoped.bah(), scoped.sjh(), "IMAGE_VIEW", id,
                         clientIp, userAgent, currentRequestId, "SUCCESS", null),
                 () -> externalArchiveAccessService.recordAudit(
-                        grant, scan.getBah(), scan.getSjh(), "IMAGE_VIEW", id,
+                        grant, scoped.bah(), scoped.sjh(), "IMAGE_VIEW", id,
                         clientIp, userAgent, currentRequestId, "FAILED", null));
     }
 

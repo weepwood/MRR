@@ -64,6 +64,7 @@ class AccessLogPartitionPostgresqlIT extends PostgresqlIntegrationTestSupport {
                 assertDefaultPartitionIsSplitOut(sql);
                 assertCutoverLockWaitIsBounded(url, sql);
                 long cutoverMaxId = assertCutover(sql);
+                assertPartitionedAuditAcknowledgementRecovery(url, sql);
                 assertPartitionedRowEstimate(url, sql);
                 assertSplitAfterCutoverKeepsLegacyCopy(sql);
                 assertExpiredMonthDroppedOnlyAfterRetirement(sql);
@@ -180,6 +181,43 @@ class AccessLogPartitionPostgresqlIT extends PostgresqlIntegrationTestSupport {
         sql.executeUpdate("DELETE FROM app.access_log WHERE request_id = 'live-1'");
         assertThat(count(sql, "SELECT count(*) FROM app.access_log_legacy WHERE request_id = 'live-1'")).isZero();
         return cutoverMaxId;
+    }
+
+    private static void assertPartitionedAuditAcknowledgementRecovery(String url, Statement sql) throws SQLException {
+        var dataSource=new DriverManagerDataSource(url+"?currentSchema=app",postgresqlUsername(),postgresqlPassword());
+        var config=new org.apache.ibatis.session.Configuration(new org.apache.ibatis.mapping.Environment(
+                "synthetic-partition-recovery",new org.apache.ibatis.transaction.jdbc.JdbcTransactionFactory(),dataSource));
+        config.addMapper(com.zjcxph.imgapi.mapper.LogMapper.class);
+        var factory=new org.apache.ibatis.session.SqlSessionFactoryBuilder().build(config);
+        var row=new com.zjcxph.imgapi.entity.Log();
+        row.setRequestId("partitioned-uncertain-commit");row.setUsername("synthetic");
+        row.setAccessTime(new java.util.Date());row.setRequestUri("/synthetic");row.setMethod("GET");
+        row.setResponseStatus("200");row.setAuditAction("VIEW_IMAGE");row.setAuditTarget("synthetic");
+        var fault=org.mockito.Mockito.mock(com.zjcxph.imgapi.mapper.LogMapper.class);
+        org.mockito.Mockito.when(fault.batchInsert(org.mockito.ArgumentMatchers.anyList())).thenAnswer(call->{
+            try(var session=factory.openSession(true)) {
+                session.getMapper(com.zjcxph.imgapi.mapper.LogMapper.class).batchInsert(call.getArgument(0));
+            }
+            throw new org.springframework.dao.DataAccessResourceFailureException("synthetic lost acknowledgement");
+        });
+        org.mockito.Mockito.when(fault.containsAudit(row)).thenAnswer(call->{
+            try(var session=factory.openSession(true)) {
+                return session.getMapper(com.zjcxph.imgapi.mapper.LogMapper.class).containsAudit(row);
+            }
+        });
+        var service=new com.zjcxph.imgapi.service.impl.AsyncLogServiceImpl(fault);
+        try {
+            service.saveLogAsync(row);service.flushPendingLogs();
+            assertThat(service.pendingCount()).isEqualTo(1);
+            service.flushPendingLogs();
+            assertThat(service.pendingCount()).isZero();
+            org.mockito.Mockito.verify(fault,org.mockito.Mockito.times(1)).batchInsert(org.mockito.ArgumentMatchers.anyList());
+            assertThat(count(sql,"SELECT count(*) FROM app.access_log WHERE request_id='partitioned-uncertain-commit'")).isEqualTo(1);
+            assertThat(count(sql,"SELECT count(*) FROM app.access_log_legacy WHERE request_id='partitioned-uncertain-commit'")).isEqualTo(1);
+            System.out.println("MRR_PARTITION_AUDIT_RECOVERY real cutover partition and legacy mirror both exactly once");
+        } finally {
+            sql.executeUpdate("DELETE FROM app.access_log WHERE request_id='partitioned-uncertain-commit'");
+        }
     }
 
     private static void assertPartitionedRowEstimate(String url, Statement sql) throws SQLException {

@@ -23,6 +23,9 @@ public interface ArchiveExportService {
 
     BatchZipExport prepareArchive(String bah, String sjh);
 
+    /** External grants are exact archive identities, not approximate search terms. */
+    BatchZipExport prepareExternalArchive(String bah, String sjh);
+
     default ArchiveExportSummary summarizeArchive(String bah, String sjh) {
         BatchZipExport export = prepareArchive(bah, sjh);
         return new ArchiveExportSummary(export.itemCount(), export.estimatedBytes());

@@ -16,7 +16,6 @@ import com.zjcxph.imgapi.utils.MedicalRecordCodeUtils;
 import com.zjcxph.imgapi.utils.SecretPolicy;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.BeanUtils;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
@@ -172,7 +171,7 @@ public class ExternalArchiveAccessService {
             throw new BusinessException(403, "当前外部会话无权访问该病案");
         }
 
-        List<Scan> scans = scanService.getImageListByCode(
+        List<Scan> scans = scanService.getFreshImageListByCode(
                 normalizedBah,
                 MedicalRecordCodeUtils.toSearchTerm(bah),
                 normalizedSjh,
@@ -180,11 +179,16 @@ public class ExternalArchiveAccessService {
         );
         List<BAHDataResponseDTO> result = new ArrayList<>(scans.size());
         for (Scan scan : scans) {
-            if (!grant.allows(scan.getBah(), scan.getSjh())) {
+            if (!ExternalArchiveGrant.keyOf(normalizedBah, normalizedSjh).equals(ExternalArchiveGrant.keyOf(scan.getBah(), scan.getSjh()))) {
                 continue;
             }
             BAHDataResponseDTO dto = new BAHDataResponseDTO();
-            BeanUtils.copyProperties(scan, dto);
+            dto.setId(scan.getId());
+            dto.setFilename(scan.getFilename());
+            dto.setBtype(scan.getBtype());
+            dto.setPages(scan.getPages());
+            dto.setUploadDate(scan.getUploadDate());
+            dto.setUploadFlag(scan.getUploadFlag());
             dto.setBah(MedicalRecordCodeUtils.normalize(scan.getBah()));
             dto.setSjh(MedicalRecordCodeUtils.normalize(scan.getSjh()));
             dto.setImg_url("/api/v1/external/archive/image/" + scan.getId());
@@ -192,20 +196,6 @@ public class ExternalArchiveAccessService {
             result.add(dto);
         }
         return result;
-    }
-
-    public Scan requireImage(ExternalArchiveGrant grant, Integer imageId) {
-        if (imageId == null) {
-            throw new BusinessException(400, "影像 ID 不能为空");
-        }
-        Scan scan = scanService.findById(imageId);
-        if (scan == null) {
-            throw new BusinessException(404, "影像不存在");
-        }
-        if (!grant.allows(scan.getBah(), scan.getSjh())) {
-            throw new BusinessException(403, "当前外部会话无权访问该影像");
-        }
-        return scan;
     }
 
     public void recordAudit(
@@ -238,7 +228,7 @@ public class ExternalArchiveAccessService {
                     truncate(detail, 500)
             );
         } catch (RuntimeException exception) {
-            logger.error("Failed to persist external archive audit log: {}", exception.getMessage(), exception);
+            logger.error("Failed to persist external archive audit log: errorType={}", exception.getClass().getSimpleName());
         }
     }
 
@@ -363,7 +353,7 @@ public class ExternalArchiveAccessService {
             throw new BusinessException(400, "病案号大于等于 10000000 时必须在 archives 中同时提供上架号");
         }
 
-        List<Scan> scans = scanService.getImageListByCode(
+        List<Scan> scans = scanService.getFreshImageListByCode(
                 normalizedBah,
                 MedicalRecordCodeUtils.toSearchTerm(rawBah),
                 normalizedSjh,

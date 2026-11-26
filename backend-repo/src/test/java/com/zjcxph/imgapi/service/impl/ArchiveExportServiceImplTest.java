@@ -39,6 +39,15 @@ class ArchiveExportServiceImplTest {
     private ImageStorage imageStorage;
 
     @Test
+    void externalArchiveExportUsesFreshExactScopeAndExcludesAliasRows() {
+        var allowed=scan(1,1L,"00789508","",1,"allowed.jpg");
+        var other=scan(2,2L,"789508","",1,"other.jpg");
+        when(scanService.getFreshImageListByCode("00789508","789508","","")).thenReturn(List.of(allowed,other));
+        var export=new ArchiveExportServiceImpl(scanService,imageStorage).prepareExternalArchive("00789508","");
+        assertThat(export.items()).extracting(PathDO::getScanId).containsExactly(1);
+    }
+
+    @Test
     void prepareArchiveConvertsScansToStorageLocations() {
         Scan scan = scan(1, 1L, "00789508", "", 1, "page.jpg");
         when(scanService.getImageListByCode("00789508", "789508", "", ""))

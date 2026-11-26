@@ -11,3 +11,42 @@ app.medical_audit_event独立账本；event_id为随机UUID关联ID加I/O后缀�
 新增nullable migration_claim_id，不设表全量默认；上线前检查DDL锁预算/旧实例兼容，停止旧迁移工作者，不能混用旧写者。领取比较来源快照和尝试次数并生成UUID；完成比较当前UUID和来源快照，失败/重试按当前UUID条件写入，旧工作者不能覆盖新代次。完成冲突释放仍属当前UUID的领取至重试等待，保存对象不签发；单实例启动恢复原有方式保留，多实例启动不能证明不会中断另一实例领取。当前同代次失败更新仅UUID/有效状态，若来源已变更仍需后续来源快照约束。实际本地对象写入后模拟ACK丢失，重试校验文件MD5而非重复上传。未证明实际S3/OSS条件创建、同名对象并发覆盖或真实DB迁移提交ACK丢失恢复；禁止自动孤儿删除。后续先只读盘点对象key哈希/大小/MD5、当前有效引用、活动claim和保留期；存在疑问、旧客户端、部分引用或失败确认时保留，必须经业务负责人独立复核后才允许运营清理。回滚停止迁移与审计准入，排空逐ID，保留前向表和列；不改历史Flyway、不执行逆向删除。
 ## Windows与物理I/O
 本机为macOS外接共享APFS存储，候选强制POSIX真实私有目录/0600文件/0700目录。Windows服务账户DACL、继承ACL/重解析点、NTFS目录同步及真实掉电均未验证，不绕过检查。已读取系统块设备累计写入计数但未能将驱动器统计唯一归因至本次共享设备实验；不报物理写入量或SSD磨损结论。后续使用专用隔离卷和已核对设备计数，区分读写/其他进程/文件系统缓存，记录起止计数和可比工作量。程序逻辑密文字节、force计数仅反映应用发布成本。
+
+## 冻结实验配置参考（从本地常规配置模板移出，非部署指引）
+
+仅既有隔离 POSIX 实验使用。全部默认关闭，不修改既有配置、历史密文或密钥。
+
+```properties
+# Experimental encrypted access-audit spool (POSIX lab only; disabled by default).
+# Provision an existing owner-only 0700 directory on a local filesystem.
+# Set independent 32-byte Base64 MRR_AUDIT_SPOOL_KEY via protected environment.
+# Do not reuse JWT/HMAC keys; do not rotate until spool is drained and verified.
+# mrr.audit.spool.enabled=false
+# mrr.audit.spool.directory=/absolute/private/lab/audit-spool
+# mrr.audit.spool.max-records=10000
+# mrr.audit.spool.max-bytes=67108864
+# Second-generation sealed encrypted group candidate; requires spool.enabled=true.
+# Default remains false; drain all v2 segments before downgrading to batch8 binary.
+# mrr.audit.spool.grouped=false
+# Optional v3 key-ring restart rotation (environment only): MRR_AUDIT_SPOOL_ACTIVE_KEY_ID,
+# MRR_AUDIT_SPOOL_KEY_RING (JSON object of id to independent 32-byte Base64 key).
+# Retain MRR_AUDIT_SPOOL_KEY for v1/v2. Never remove keys for pending or held segments.
+# Explicit replay hold policy; 0 means disabled, not an inferred retention period.
+# mrr.audit.spool.max-replay-age-days=0
+# Experimental separate internal medical INTENT/OUTCOME ledger, POSIX only.
+# mrr.audit.admission.enabled=false
+# mrr.audit.admission.directory=/absolute/private/lab/medical-audit
+# mrr.audit.admission.max-records=10000
+# mrr.audit.admission.max-bytes=67108864
+# MRR_MEDICAL_AUDIT_KEY / MRR_MEDICAL_AUDIT_ACTIVE_KEY_ID / MRR_MEDICAL_AUDIT_KEY_RING
+# must be independent from ordinary audit keys. Retain all generations until verified.
+# Batch11 opt-in: medical gate group commit and exact batch reconciliation.
+# Requires mrr.audit.admission.enabled=true. Default stays disabled.
+# mrr.audit.admission.grouped=false
+# Independent strict external INTENT candidate: preserves dedicated audit table/transactions.
+# mrr.audit.external.strict-intent=false
+# Optional S3 If-None-Match conditional creation. Verify actual OSS compatibility before enabling.
+# oss.conditional-create=false
+# Batch12 experimental optimization; does not enable medical admission.
+# mrr.audit.admission.fast-capacity=false
+```

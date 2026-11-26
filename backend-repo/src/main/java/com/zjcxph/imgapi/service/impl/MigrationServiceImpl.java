@@ -659,11 +659,12 @@ public class MigrationServiceImpl implements MigrationService {
             boolean exhausted = false;
 
             while (processed < plannedTotal) {
-                MigrationJob observed=migrationJobMapper.findById(jobId);
-                if(observed==null||!("running".equals(observed.getStatus())||"cancelling".equals(observed.getStatus()))){
-                    invalidateSummaryCaches();return;
+                MigrationJob observed = migrationJobMapper.findById(jobId);
+                if (!isExecutingJob(observed)) {
+                    invalidateSummaryCaches();
+                    return;
                 }
-                if (Boolean.TRUE.equals(migrationJobMapper.isCancelRequested(jobId))) {
+                if (Boolean.TRUE.equals(observed.getCancelRequested())) {
                     cancelled = true;
                     break;
                 }
@@ -682,11 +683,12 @@ public class MigrationServiceImpl implements MigrationService {
 
                 for (Scan scan : batch) {
                     afterId = Math.max(afterId, scan.getId());
-                    MigrationJob current=migrationJobMapper.findById(jobId);
-                    if(current==null||!("running".equals(current.getStatus())||"cancelling".equals(current.getStatus()))){
-                        invalidateSummaryCaches();return;
+                    MigrationJob current = migrationJobMapper.findById(jobId);
+                    if (!isExecutingJob(current)) {
+                        invalidateSummaryCaches();
+                        return;
                     }
-                    if (Boolean.TRUE.equals(migrationJobMapper.isCancelRequested(jobId))) {
+                    if (Boolean.TRUE.equals(current.getCancelRequested())) {
                         cancelled = true;
                         break;
                     }
@@ -778,6 +780,10 @@ public class MigrationServiceImpl implements MigrationService {
             );
             invalidateSummaryCaches();
         }
+    }
+
+    private boolean isExecutingJob(MigrationJob job) {
+        return job != null && ("running".equals(job.getStatus()) || "cancelling".equals(job.getStatus()));
     }
 
     private void completeCancelledJob(MigrationJob job, long processed, long failed) {

@@ -220,6 +220,8 @@ class MigrationServiceImplTest {
                 any(Date.class)
         );
         verify(ossService, times(1)).generatePresignedUrl(anyString());
+        // Initial and final cancellation checks remain fresh; batch/scan share the current job snapshot.
+        verify(migrationJobMapper,times(2)).isCancelRequested(7L);
     }
 
     @Test
@@ -248,7 +250,7 @@ class MigrationServiceImplTest {
         when(migrationJobMapper.findById(9L)).thenReturn(persisted);
         when(migrationJobMapper.markRunning(eq(9L), any(Date.class))).thenAnswer(call->{persisted.setStatus("running");return 1;});
         when(migrationJobMapper.updateProgress(eq(9L),anyLong(),anyLong(),any(BigDecimal.class))).thenReturn(1);
-        when(migrationJobMapper.isCancelRequested(9L)).thenReturn(false, false, false, true);
+        when(migrationJobMapper.isCancelRequested(9L)).thenReturn(false, true);
         when(scanMapper.findPendingMigrationAfterId(0, 20, null, 1)).thenReturn(List.of(pending));
         when(sourceResolver.resolve(pending)).thenReturn(resolved(file));
         when(ossService.calculateMd5(file.toString())).thenReturn("0123456789abcdef0123456789abcdef");

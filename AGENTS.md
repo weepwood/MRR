@@ -27,7 +27,7 @@ PostgreSQL 16 + 本地/NAS/Nginx/OSS 影像来源
 1. 当前产品任务、Issue/PR（如适用）和验收标准；
 2. `ARCHITECTURE.md`；
 3. `docs/engineering/ai-assisted-development-governance.md`；
-4. 本文件及 [AI 开发交接索引](docs/engineering/ai-handoff.md)；
+4. [统一任务池](ROADMAP.md) 及 [当前交接索引](docs/engineering/ai-handoff.md)；
 5. 与修改模块相关的工程文档：
    - `backend-repo/ENGINEERING_GUIDE.md`；
    - `frontend-fantastic-admin/ENGINEERING.md`；
@@ -55,26 +55,11 @@ MRR/
 
 ## 当前研发阶段（2026-11-26）
 
-- 维护者于5926edc8后明确切换至后端治理研发：优先API/数据流审计、医疗权限、SQL与索引、事务一致性及真实性能/故障实验；入口 [后端治理任务池](docs/backend/ROADMAP.md) 与 [第一批报告](docs/backend/governance-batch1.md)。前端主动研发暂缓，必要安全兼容联动除外；正式CI、安装包、医院部署及候选发布继续暂停，不删除历史证据和门禁。
-- 入口：[产品任务池](docs/product/ROADMAP.md)、[开源复用索引](docs/references/opensource-reuse.md)、[研发阶段规则](docs/product/AI-DEVELOPMENT.md)。先读当前任务及受影响模块，不默认加载全部历史日志。
-- 使用现有成熟 Skills 与开源能力；项目级技能位于 .agents/skills，已安装全局技能只按任务读取，不重复安装、不执行未经审计的脚本。优先 Element Plus、VueUse、ECharts 及已有 Mrr 公共组件；Reka 仅用于专用交互，保留既有组件归属规则。
-- 保留所有稳定 UI 契约（公共分页、筛选、序号、导航、设置、主题、视觉规范）；用户允许以真实功能和专业设计为核心继续深化，不机械重做。Chrome86 核心降级、数据权限与隐私边界保持。
-- 继续当前独立工作区及 9037 Mock，仅本地开发，风险分级验收，中文提交；正式 main 与远端 #850 保持不变，任何推送/合并/发布需明确授权。
-- 第二批产品研发：数据治理规则直达样本与只读审计证据、运维排查入口及存储事件筛选，跨页面主要操作调查见 [产品功能调查](docs/product/product-batch2-audit.md)。历史前端研发记录，不新建重复监控或关系编辑引擎。
-- 第三批产品研发：异常样本首次失败、组合筛选、并发拒绝清理及恢复，定向双浏览器8/8、类型及修改文件ESLint通过；详见 [第三批审查](docs/product/product-batch3-audit.md)。前端待办 GOV-03/OPS-02 暂缓，保持仅本地研发。
-- 后端治理第二批：273条API声明矩阵，病案关系双读权限，外部撤销及票据缓存修复，旧查询SQL预算、质量样本与汇总原子持久化，详见 [第二批报告](docs/backend/governance-batch2.md)。仅本地研发，保留前端兼容与正式发布待办。
-- 后端治理第三批：医疗质量样本双读权限、固定运行批次、规则读写预算/终态保护、认证字段最小化、票据并发及真实HTTP实验；详见 [第三批报告](docs/backend/governance-batch3.md)。持久化异步取消、完整权限与长时负载未完成；仅本地。
-- 后端治理第四批：持久化质量任务活动槽、异步提交/状态/协作式取消与过期恢复，单SQL认证，历史错误/CSV安全及真实完整应用混合HTTP；276条声明矩阵，详见 [第四批报告](docs/backend/governance-batch4.md)。新增前向迁移仅隔离PG16验证，旧同步接口保留；未证明吞吐提升，正式门禁仍待执行。
-- 后端治理第五批：异步Servlet身份及MDC清理、审计请求ID保留、就绪错误脱敏、质量预算与只读准入，真实子JVM强杀/竞争恢复、局部认证AB、276路由1100授权探测、完整应用逐请求审计对账；详见 [第五批报告](docs/backend/governance-batch5.md)。严格硬截止、实际小时级、逐业务字段与全死锁矩阵未完成；仅本地。
-- 后端治理第六批：按截止获取质量任务连接及毫秒SQL超时、历史导出稳定ID与日志值治理、真实Manifest死锁回滚及幂等、11次真实响应探测，详见 [第六批报告](docs/backend/governance-batch6.md)。95/95定向、65/65隔离PG16；小时级实际最终结果尚未取得，继续保留全业务响应和跨模块死锁、网络/收尾预算门禁，仅本地。
-- 后端治理第七批：69ccb6b7实际小时级3600.483秒429194读请求零错/逐ID零漏重，旧基线验收完成；外部影像当前元数据授权、fresh范围、隐私头与字段，审计有界内存重试/普通分区确认对账，详见 [第七批报告](docs/backend/governance-batch7.md)。新代码124定向/35PG/30秒HTTP通过，未完成持久化审计、全资源审计、跨模块故障和新代码小时级验收；仅本地。
-- 后端治理第八批：加密POSIX持久化审计候选（显式启用、性能未达标、默认不替换），实际JVM强杀/PG停止/网络COMMIT确认丢失/分区退役协作幂等；真实签发/兑换/ZIP/撤销、数据库浏览历史自由文本与三角色、OCR取消竞态，详见 [第八批报告](docs/backend/governance-batch8.md)。124定向/53PG，完整应用短测通过；容量准入、Windows与密钥、专用审计、跨模块故障及长时验收未收口。仅本地。
-- 后端治理第九批：v2不可变加密分组/集合SQL候选（两开关显式开启、默认不替换），两轮A/B中位95.395RPS/P95 33.496ms、120秒11399请求零漏重/8检查点零逾期；真实停库/双条COMMIT应答丢失/分区退役及本地对象副作用PG交错，迁移提交条件与历史签发治理；87定向/56PG/1H2，16新增HTTP探测、累计25条路由，详见 [第九批报告](docs/backend/governance-batch9.md)。响应前准入、Windows/密钥/过期/专用审计、跨业务锁及剩余权限、小时级和正式门禁仍待，仅本地。
-- 后端治理第十批：显式关闭的独立INTENT/OUTCOME医疗准入候选、新前向事件账本及UUID迁移领取、v3多代重启轮换/冲突过期保留、OSS浏览管理权限与网关签发拒绝、历史诊断保护；真实HTTP容量200/503/200、子JVM强杀、81PG/77定向、20医疗探测、最终1049请求629双阶段配对零漏重，P95 386.573ms性能未通过。累计30/276路由；Windows/物理I/O/专用审计/活动WAL/长期与全资源、正式门禁仍待；详见 [第十批报告](docs/backend/governance-batch10.md)，仅本地。
-- 后端治理第十一批：双阶段分组准入/集合投递候选、未配对告警、外部专用严格INTENT、迁移来源失败保护/提交确认核对/可选条件PUT、历史迁移任务隐私；100定向，PG84首轮/新增故障19复验（分批覆盖86），三轮5063请求3041配对零漏重，最终63.14RPS/P95 117.654ms，仍不切换默认。外部真实故障503及票据/nonce/兑换回滚；累计32/276路由。详见 [第十一批报告](docs/backend/governance-batch11.md)，多实例、真实断开/OSS/孤儿、剩余权限、Windows与长时门禁仍待，仅本地。
-- 后端治理第十二批：原子容量快照/锁外解密候选（默认关闭、两组AB无性能收益）、同进程OUTCOME原值恢复、外部凭据SUCCESS同事务、条件PUT字节校验、禁止默认全局迁移启动恢复；最终103定向/89PG、四轮7517请求4510配对零漏重、真实目录故障/凭据终态回滚/本地条件PUT/双实例目录隔离。累计32/276；真实断流、外部流终态持久化、跨主机租约/现场OSS及孤儿、Windows/长时和正式门禁未完成。详见 [第十二批报告](docs/backend/governance-batch12.md) 与 [累计风险审查](docs/backend/governance-cumulative-review-batch12.md)，仅本地。
-- 后端治理第十三批：迁移响应字段与已知错误码、OCR事实病案错配真实RED/修复及缓存保护、迁移任务终态与独占维护事务、现有网关Blob预览。74Java/33PG/44前端及54次HTTP通过，累计54/276条（余222）；审计实验功能范围冻结，默认不开启候选。自动跨主机租约/存储围栏、现场OSS、外部终态/断流、浏览器与正式平台/长时/独立审查仍待。详见 [报告](docs/backend/governance-batch13.md)、[阶段冻结](docs/backend/governance-stage-freeze-batch13.md)；仅本地。
-- [历史优先级及设计决策](docs/engineering/v1.2-agents-history.md)、[已有候选验收](docs/engineering/v1.2-candidate-closure.md)、[候选准备](docs/engineering/v1.2-release-preparation.md) 仅用于查阅，不再作为当前任务队列。旧版独立审查及发布阻塞保留，不能当作已通过。
+- 架构简化与产品收口。当前任务以 [统一任务池](ROADMAP.md) 为准；[已知风险与实验冻结](docs/backend/governance-stage-freeze-batch13.md)、[版本门禁](docs/engineering/v1.2-release-preparation.md) 继续有效。
+- 继续独立 worktree、本地开发与用户 Mock 预览（9037）。测试使用其他隔离端口和合成数据；不推送、不合并、不发布，保护 main、远端草稿 #850 及其他工作区。
+- 优先实际医疗业务、安全和维护成本；不扩张自定义审计引擎、通用任务平台或跨主机架构。保留原权限、审计、数据与 UI 契约。
+- 技能按任务读取 .agents/skills；优先 Element Plus、VueUse、ECharts 和既有 Mrr 组件；Reka 仅用于专用交互。参照 [复用索引](docs/references/opensource-reuse.md)、[研发阶段规则](docs/product/AI-DEVELOPMENT.md)。
+- 历史批次、专题及候选记录由 [交接索引](docs/engineering/ai-handoff.md) 导航；原 AGENTS 阶段叙述可在 Git 0c520e7d 查阅，不逐轮复制到本文件。
 
 ## 4. 风险等级
 
@@ -170,11 +155,9 @@ MRR/
 - 2026-11-26 维护者调整 MRR V1.2 工作方式：本地开发与用户实际页面检查优先。保留当前独立 worktree，默认仅本地修改、测试及中文提交；只有维护者明确要求整理/合并 PR 时才推送后续变更、整理候选并按最新门禁合并。现有 #850 保持草稿，不自动合并或部署。用户预览使用独立 Mock（127.0.0.1:9037），禁止连接真实医院数据；自动测试使用其他独立端口，不抢占用户预览。具体状态见交接记录。
 
 - 每轮开始先读当前产品任务、相关交接和实际分支 SHA。仅当任务涉及远端集成或发布时核对最新 GitHub PR/CI；不得仅依赖聊天记忆。
-- 每个独立任务在仓库内维护可接续的进度记录：目标与非目标、已完成/待办、Issue/PR/分支/提交、实际验证及未执行项、阻塞、关键决策、下一步及回滚入口。
+- 每个独立任务在统一任务池更新状态，并按需维护一份证据记录：目标与非目标、已完成/待办、Issue/PR/分支/提交、实际验证及未执行项、阻塞、关键决策、下一步及回滚入口。
 - 在阶段交付、暂停、切换工具或上下文前更新记录；代码变更随任务 PR 更新对应实施文档，合并状态以实时 GitHub 为准，避免把待合并写成已完成。仅交接变更可独立 P3 PR。
-- V1.1 集成已收口：#818合并92896f7c，最终199/199、原完整候选0360e80c及制品独立核验通过；正式main仍为 `24152bee`，不发布。
-- V1.2 独立专业工作台：#832已合并f54770c2，独立[预览站](https://weepwood.github.io/MRR-preview/v1.2/#/archive-workbench)已发布该提交；#833多面板及工具栏见[专业工作台](docs/engineering/v1.2-professional-workbench.md)。不修改已收口V1.1或main。
-- V1.1 当前专题入口：[候选与跨浏览器验收](docs/engineering/v1.1-candidate-qualification.md)、[运行错误中心](docs/engineering/v1.1-runtime-error-experience.md)、[依赖安全阶段收口](docs/engineering/v1.1-dependency-security.md)、[会话生命周期与审计隔离](docs/engineering/v1.1-session-lifecycle.md)、[双主题与入口体验](docs/engineering/v1.1-visual-quality.md)、[工程收口与Issue审计](docs/engineering/v1.1-engineering-closure.md)、[演示系统完整性专项](docs/engineering/v1.1-demo-completeness.md)、[影像查看器与OCR安全交互](docs/engineering/v1.1-archive-viewer-ocr.md)、[病案工作台布局及影像导航](docs/engineering/v1.1-archive-workbench-layout.md)、[Windows网关状态与TCP监听观察](docs/engineering/v1.1-windows-gateway-observation.md)、[Nginx运行观察与脱敏日志](docs/engineering/v1.1-nginx-runtime-observation.md)、[逐记录只读复验与集中集成](docs/engineering/v1.1-quality-case-recheck.md)、[异常人工决策与历史](docs/engineering/v1.1-quality-case-review.md)、[正常装箱关联修复](docs/engineering/v1.1-box-repair.md)、[导出版本与断点校验](docs/engineering/v1.1-export-representation.md)、[持久存储熔断事件](docs/engineering/v1.1-storage-circuit-history.md)、[病案工作台影像分页与内嵌OCR](docs/engineering/v1.1-workbench-scan-pagination.md)、[Manifest任务恢复及公开演示配置](docs/engineering/v1.1-manifest-recovery.md)、[工单异常重开与完整性报告](docs/engineering/v1.1-repair-manifest-report.md)、[运维历史及Nginx受控检查](docs/engineering/v1.1-operations-history.md)、[独立病案工作台与集中可靠性增量](docs/engineering/v1.1-workbench-entry.md)、[工作台、成员快照及工程欠账](docs/engineering/v1.1-workbench-snapshot.md)，最终 PR、SHA 和验收以实际 GitHub 状态为准。
+- V1.1/V1.2 历史集成、预览、专题和已验候选见交接索引及历史记录；不将旧 SHA 的证据作为当前验收。
 - AGENTS.md 保持稳定的规则和入口，不堆积逐轮日志。长篇历史归档到关联 Issue 或专题文档；交接索引保留当前任务及指向。
 - 不记录真实患者数据、令牌、密钥、生产配置或其他敏感信息；不擅自提交用户未保存的改动。若不能写入仓库，如实报告并保留可复制交接内容。
 

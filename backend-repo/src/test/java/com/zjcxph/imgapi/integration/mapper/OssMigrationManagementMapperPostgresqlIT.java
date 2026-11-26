@@ -81,6 +81,18 @@ class OssMigrationManagementMapperPostgresqlIT extends PostgresqlIntegrationTest
     }
 
     @Test
+    void currentJobSnapshotContainsCancellationAndActiveStatus() {
+        long id=jdbcTemplate.queryForObject("INSERT INTO app.migration_job(status,mode) VALUES ('running','folder') RETURNING id",Long.class);
+        var running=migrationJobs.findById(id);
+        assertThat(running.getStatus()).isEqualTo("running");
+        assertThat(running.getCancelRequested()).isFalse();
+        assertThat(migrationJobs.requestCancel(id)).isEqualTo(1);
+        var cancelling=migrationJobs.findById(id);
+        assertThat(cancelling.getStatus()).isEqualTo("cancelling");
+        assertThat(cancelling.getCancelRequested()).isTrue();
+    }
+
+    @Test
     void lateWorkerCannotRewriteTerminalJob(){
         long id=jdbcTemplate.queryForObject("INSERT INTO app.migration_job(status,mode) VALUES ('running','folder') RETURNING id",Long.class);
         jdbcTemplate.update("UPDATE app.migration_job SET status='interrupted',processed_count=7 WHERE id=?",id);

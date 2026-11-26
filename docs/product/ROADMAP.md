@@ -1,27 +1,5 @@
-# MRR 产品任务池
+# 历史入口（已冻结）
 
-阶段：后端治理研发（5926edc8 后，维护者明确授权）。优先安全、事务、SQL及真实资源/故障实验；[当前后端任务池](../backend/ROADMAP.md) 与 [第一批报告](../backend/governance-batch1.md)、[第二批报告](../backend/governance-batch2.md)、[第三批报告](../backend/governance-batch3.md)、[第四批报告](../backend/governance-batch4.md)、[第五批报告](../backend/governance-batch5.md)、[第六批报告](../backend/governance-batch6.md)、[第七批报告](../backend/governance-batch7.md)、[第八批报告](../backend/governance-batch8.md)、[第九批报告](../backend/governance-batch9.md)。以下为保留的前端产品任务池，暂停主动扩展，必要安全/兼容联动按后端任务执行。非正式发布准备。
+当前任务只维护在 [统一任务池](../../ROADMAP.md)。
 
-| ID | 用户任务 | 状态 / 完成条件 |
-| --- | --- | --- |
-| DEV-01 | 研发上下文与 Skills 复用 | 已建立任务入口、原版 UI-Vault Skills 与开源决策索引；后续按真实任务补充 |
-| IMG-01 | 长病案快速定位和列表浏览 | 第一批完成：序号直达、固定高度虚拟列表、跨窗口勾选保持；600张合成影像双浏览器通过，末页渲染节点少于60；不定高网格仍待研究 |
-| IMG-02 | 高分辨率平移缩放 | 待原型：对照现有 ImageViewer 与 OpenSeadragon，普通图片/权限/水印/失效释放，不重写引擎 |
-| IMG-03 | 大图网格、连续阅读及多面板 | 待研究：不定高虚拟化、阅读定位、滚动联动；不改变分类/导出/外部调阅 |
-| GOV-01 | 检查异常样本 | 第一批完成：规则/级别/关键词筛选控件、匹配计数与无匹配区分；规则/关键词、重置双浏览器通过，本轮补规则直达、刷新失败及旧数据保留；第三批补齐规则/级别/关键词组合、首次失败与成功空结果、普通失败后访问拒绝清理，双浏览器通过；不将有界样本当全量 |
-| GOV-02 | 病案关系与修复工单上下文 | 第二批：规则直达样本、审计事件前后关联证据，现有工单审批/执行/复验链路通过；Manifest 与工单跨页上下文、独立实时复验入口待深化 |
-| OPS-01 | 运维异常排查 | 第二批：权限感知排查入口、运行历史/网关/存储区定位、存储来源与事件筛选；运行错误/日志/接口性能进入既有页面，时间证据关联及统一时段待深化 |
-| UI-01 | 工作台专业视觉 | 随真实功能迭代，使用 UI-Vault 视觉精修与 DESIGN.md，减少重复工具栏与无效装饰 |
-| UI-02 | 公共能力复用 | 按真实调用点审查 Element Plus / VueUse / ECharts，不机械更换原生和专用组件 |
-| KIT-01 | 跨项目沉淀 | 仅回收已验证的通用模式及合成示例，记录来源与边界，不发布 |
-| HOLD-01 | 正式版本、CI、Windows、医院落地 | 暂缓；已有门禁见候选文档，恢复发布阶段再核查 |
-
-初查范围：影像阅读（ThumbStrip/PreviewPanel）、病案与数据治理（DataRelationWorkbenchPage、Manifest、QualityCaseReview、RepairOrderPanel）、运维（OperationsHistoryCard、StorageCircuitHistoryCard）、普通记录/患者、装箱、统计、用户/权限、设置、OCR、数据导入导出及存储浏览目录。第一批仅前两组深入实施。第二批针对运维与治理实现并执行22项跨页主要操作调查，详见 [功能调查](product-batch2-audit.md)。不是全部角色、路由、边界或写入链路验收。
-
-后端治理第十批：[报告](../backend/governance-batch10.md)，医疗前置准入候选默认关闭，OSS浏览权限收紧及迁移状态保护，保留正式验收门禁。
-
-后端治理第十一批：[报告](../backend/governance-batch11.md)，前置分组与外部专用候选默认关闭，迁移来源及历史任务字段保护，保留正式验收门禁。
-
-后端治理第十二批：[报告](../backend/governance-batch12.md)，外部凭据严格终态与迁移启动保护，审计候选保持关闭，保留正式采用门禁。
-
-后端治理第十三批：[报告](../backend/governance-batch13.md)、[阶段冻结](../backend/governance-stage-freeze-batch13.md)，迁移受控预览及OCR当前事实关联保护；实验引擎冻结，保留正式采用门禁。
+原始内容完整归档：[历史记录](ROADMAP-history-20261126.md)。历史状态不是当前验收结论，不再追加研发日志。

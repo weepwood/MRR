@@ -9,7 +9,7 @@
 | P1 | 迁移及外部调阅 | 保留UUID/来源/条件更新和[独占维护](docs/backend/migration-maintenance-batch13.md)，实际OSS/NAS、外部流终态和断流待验；无多实例生产需求不做自动跨主机接管。 |
 | P2 | 核心业务交付 | 病案查询/影像阅读/患者/装箱/OCR/导出/系统管理，优先已证实的操作缺陷；不新增业务平台。 |
 | P2 | 代码与UI维护 | 仅有证据的重复、失效机制及过度封装；遵循设计规范和Chrome86，不因行数拆类、不改变视觉契约。 |
-| P1 | 版本收口 | 固定候选SHA，按依赖顺序分段审查累计diff；发布迁移上限已同步并通过静态校验；完整CI、真实Windows/Chrome86/存储、升级/回滚及独立安全复核未完成。授权后执行，现不发布。 |
+| P1 | 版本收口 | 固定候选SHA，按依赖顺序分段审查累计diff；发布迁移上限已同步；旧正式基线合成数据直接/分段升级及空库安装3/3通过。实际副本升级/备份恢复、完整CI、真实Windows/Chrome86/存储及独立安全复核未完成。授权后执行，现不发布。 |
 
 ## 冻结及非目标
 
@@ -24,3 +24,5 @@
 本轮完成记录：[架构简化与产品收口](docs/engineering/v1.2-simplification-closure.md)。
 
 稳定期第一轮：[发布元数据及病案主档查询收口](docs/engineering/v1.2-stability-release-baseline.md)。
+
+稳定期第二轮：[旧数据库前向升级验收](docs/engineering/v1.2-stability-upgrade.md)。

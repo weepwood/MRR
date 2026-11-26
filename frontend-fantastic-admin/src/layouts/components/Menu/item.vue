@@ -43,6 +43,10 @@ const isItemActive = computed(() => {
   return isActived.value && (!props.subMenu || rootMenu.isMenuPopup)
 })
 
+// inert is not available in every supported browser; remove closed descendants
+// from sequential focus independently of native inert support.
+const branchTabIndex = computed(() => rootMenu.isMenuPopup || props.uniqueKey.slice(0, -1).every(key => rootMenu.openedMenus.includes(key)) ? 0 : -1)
+
 const useLeadingExpandIndicator = computed(() => {
   return props.subMenu
     && rootMenu.props.leadingExpandIndicator
@@ -81,14 +85,13 @@ defineExpose({
             ...(subMenu && { 'type': 'button', 'aria-expanded': expand, 'aria-controls': popupId }),
             ...(!subMenu && {
               href: item.meta?.link ? item.meta.link : href,
-              tabindex: 0,
               target: item.meta?.link ? '_blank' : '_self',
               class: 'no-underline',
             }),
           }" :class="cn('group mrr-navigation-control menu-item-container relative h-full w-full flex cursor-pointer items-center justify-between gap-1 rounded-md px-3 py-2 transition-colors', {
             'active': isItemActive,
             'px-2.5': rootMenu.isMenuPopup && level === 0,
-          })" :aria-current="!subMenu && isItemActive ? 'page' : undefined" :aria-label="subMenu || (rootMenu.isMenuPopup && level === 0 && !rootMenu.props.showCollapseName) ? title : undefined" :title="title" @click="handleClick($event, navigate)"
+          })" :tabindex="branchTabIndex" :aria-current="!subMenu && isItemActive ? 'page' : undefined" :aria-label="subMenu || (rootMenu.isMenuPopup && level === 0 && !rootMenu.props.showCollapseName) ? title : undefined" :title="title" @click="handleClick($event, navigate)"
         >
           <span
             :class="cn('relative z-10 text-start inline-flex flex-1 items-center justify-center gap-[10px] pl-[calc(var(--indent-level)*16px)]', {

@@ -21,17 +21,17 @@ for (const palette of ['mrr', 'gr8r']) {
         }
         await expect.poll(() => nav.evaluate((el) => {
           const sidebar = el.getBoundingClientRect()
-          const items = [...el.querySelectorAll('.sub-menu .menu-item-container')].filter(node => node.getBoundingClientRect().width > 0)
+          const items = [...el.querySelectorAll('.sub-menu .menu-item-container')].filter(node => node.getBoundingClientRect().width > 0 && !node.closest('[aria-hidden=true]'))
           return items.length > 0 && items.every((node) => {
             const branch = node.closest('.sub-menu')!
             const r = node.getBoundingClientRect()
             const b = branch.getBoundingClientRect()
-            const guide = b.left + Number.parseFloat(getComputedStyle(branch).backgroundPositionX) + 1
+            const guide = b.left + Number.parseFloat(getComputedStyle(branch, '::before').left) + 1
             const icon = node.querySelector('.menu-item-container-icon')?.getBoundingClientRect()
             const label = node.querySelector('.truncate')
             return Math.abs(r.left - guide - 8) <= 1
               && Math.abs(sidebar.right - r.right - 12) <= 1
-              && (!icon || Math.abs(icon.left - r.left - 11) <= 1)
+              && (!icon || Math.abs(icon.left - r.left - 15) <= 1)
               && (!label || label.scrollWidth <= label.clientWidth + 1)
           })
         })).toBe(true)

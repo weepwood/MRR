@@ -31,14 +31,14 @@ for (const palette of ['mrr', 'gr8r']) {
       const geometry = await current.evaluate((el) => {
         const r = el.getBoundingClientRect()
         const branch = el.closest('.sub-menu')!
-        const guide = branch.getBoundingClientRect().left + Number.parseFloat(getComputedStyle(branch).backgroundPositionX) + 1
+        const guide = branch.getBoundingClientRect().left + Number.parseFloat(getComputedStyle(branch, '::before').left) + 1
         const rail = getComputedStyle(el, '::after')
         const railLeft = r.left + Number.parseFloat(getComputedStyle(el).borderLeftWidth) + Number.parseFloat(rail.left)
         const iconLeft = el.querySelector('.menu-item-container-icon')!.getBoundingClientRect().left
         return { guideGap: railLeft - guide, iconGap: iconLeft - railLeft - Number.parseFloat(rail.width) }
       })
       expect(geometry.guideGap).toBeGreaterThanOrEqual(11)
-      expect(geometry.iconGap).toBeGreaterThanOrEqual(3)
+      expect(geometry.iconGap).toBeGreaterThanOrEqual(8)
       const idle = await target.evaluate(el => getComputedStyle(el).backgroundColor)
       await target.hover()
       await expect.poll(() => target.evaluate(el => getComputedStyle(el).backgroundColor)).not.toBe(idle)
@@ -67,7 +67,7 @@ for (const palette of ['mrr', 'gr8r']) {
           frames.push({
             height: Number.parseFloat(style.height) * scale,
             active: target.getAttribute('aria-current') === 'page',
-            visible: links.filter(a => Number.parseFloat(getComputedStyle(a, '::after').opacity) > 0.01).length,
+            visible: links.filter(a => !a.closest('[aria-hidden=true]') && Number.parseFloat(getComputedStyle(a, '::after').opacity) > 0.01).length,
           })
           if (performance.now() - start < 1200) { requestAnimationFrame(sample) }
           else { el.setAttribute('data-rail-test-frames', JSON.stringify(frames)) }

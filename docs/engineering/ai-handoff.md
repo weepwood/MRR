@@ -847,3 +847,6 @@ MrrCursorPagination 改用 ElPagination 原生页码、箭头、跳页、条数�
 
 ## 侧栏选中色条左移（2026-11-26）
 基线0fed73bb。公共Menu/item.vue的伪元素由inline-end改为inline-start 3px，保留路由驱动scaleY与原菜单间距。双浏览器16/16，包含8组逐帧连续性和新增色条与树线、图标间距断言，以及8组侧栏几何回归。ESLint、Stylelint及git diff检查通过。未重新执行全量CI、生产构建、类型全检和真实医院终端验收，不推送合并发布。
+
+## 侧栏引导线及展开动效精修（2026-11-26）
+基线7de6632c。子菜单起始内距14px，实测色条/图标间距8px；灰色树线只在父项hover淡入，主色选中线持续显示。内联菜单分离原浮层路径，保持实例并测量自然内容高度，220ms缓出可中断height过渡，overflow裁剪、inert/aria-hidden/tabindex及焦点恢复。首轮双引擎28/30，新增2项因全局reduced-motion返回单个0s而非0s,0s的字符串断言失败，改为数值零判定后双引擎2/2复验；含hover、快速反向高度、选中色条连续性、键盘、浮层和移动导航。全五组26项名称无截断，静止时灰色线0根，TypeScript及定向lint通过。截图/Volumes/data/AI-Development/artifacts/mrr-sidebar-branch-20261126，日志/tmp/mrr-sidebar-branch-*.log。未执行全量CI、生产构建、真实旧浏览器/医院终端及深层嵌套菜单专项，不推送合并发布。

@@ -134,6 +134,7 @@ watch(() => menuStore.actived, (val, oldVal) => {
     --mrr-menu-guide-gap: 8px;
     --mrr-menu-item-inset-end: 12px;
     --mrr-menu-item-padding-x: 10px;
+    --mrr-menu-item-padding-start: 14px;
     --mrr-menu-icon-gap: 10px;
     --mrr-menu-item-gutter: 4px;
     --mrr-menu-branch-inset: calc(var(--mrr-menu-guide-offset) + 1px + var(--mrr-menu-guide-gap) - var(--mrr-menu-item-gutter));
@@ -141,11 +142,25 @@ watch(() => menuStore.actived, (val, oldVal) => {
     width: 100%;
     padding: 4px calc(var(--mrr-menu-item-inset-end) - var(--mrr-menu-item-gutter)) 16px;
 
-    :deep(.sub-menu) {
-      background-image: linear-gradient(var(--mrr-navigation-border), var(--mrr-navigation-border));
-      background-repeat: no-repeat;
-      background-position: var(--mrr-menu-guide-offset) 4px;
-      background-size: 1px calc(100% - 8px);
+    /* The branch guide is separate from the active leaf rail. Only the
+     * adjacent parent item hover reveals it, never child hover. */
+    :deep(.menu-inline-branch::before) {
+      position: absolute;
+      inset-block: 4px;
+      inset-inline-start: var(--mrr-menu-guide-offset);
+      z-index: 1;
+      width: 1px;
+      pointer-events: none;
+      content: "";
+      background: var(--mrr-navigation-border);
+      opacity: 0;
+      transition: opacity var(--mrr-motion-feedback) var(--mrr-ease-out);
+    }
+
+    @media (hover: hover) {
+      :deep(.menu-item:hover + .menu-inline-branch.is-open::before) {
+        opacity: 1;
+      }
     }
 
     :deep(.menu-item) {
@@ -183,7 +198,7 @@ watch(() => menuStore.actived, (val, oldVal) => {
 
     :deep(.sub-menu .menu-item-container) {
       width: calc(100% - var(--mrr-menu-branch-inset));
-      padding-inline: var(--mrr-menu-item-padding-x) !important;
+      padding-inline: var(--mrr-menu-item-padding-start) var(--mrr-menu-item-padding-x) !important;
       margin-inline-start: var(--mrr-menu-branch-inset);
     }
 
@@ -219,8 +234,8 @@ watch(() => menuStore.actived, (val, oldVal) => {
       margin-top: var(--mrr-space-2);
     }
 
-    & > :deep(.sub-menu) {
-      margin: 1px 0 var(--mrr-space-2);
+    & > :deep(.menu-inline-branch) {
+      margin: 0 0 var(--mrr-space-2);
     }
 
     /* 子项比分组标题弱一档：常规态用次级文本色，靠左缩进读出层级。 */

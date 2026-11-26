@@ -317,6 +317,7 @@ function today() {
           <template #business>
             <el-button
               type="primary"
+              plain
               :icon="Download"
               :loading="exporting.patients"
               :disabled="!canReadRecords"
@@ -378,6 +379,7 @@ function today() {
           <template #business>
             <el-button
               type="primary"
+              plain
               :icon="Download"
               :loading="exporting.statistics"
               :disabled="!canReadStatistics"
@@ -442,6 +444,7 @@ function today() {
           <template #business>
             <el-button
               type="primary"
+              plain
               :icon="Download"
               :loading="exporting.archives"
               :disabled="!canReadRecords"
@@ -496,6 +499,7 @@ function today() {
           <template #business>
             <el-button
               type="primary"
+              plain
               :icon="Download"
               :loading="exporting['archive-boxes']"
               :disabled="!canReadRecords"
@@ -552,6 +556,7 @@ function today() {
           <template #business>
             <el-button
               type="primary"
+              plain
               :icon="Download"
               :loading="exporting.scan"
               :disabled="!canReadRecords"

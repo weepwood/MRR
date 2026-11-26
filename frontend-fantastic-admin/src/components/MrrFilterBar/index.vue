@@ -36,7 +36,7 @@ const narrow = computed(() => rootWidth.value > 0 && rootWidth.value < 560)
 const tiny = computed(() => rootWidth.value > 0 && rootWidth.value < 280)
 const fields = ref<HTMLElement>()
 const { width: fieldsWidth } = useElementSize(computed(() => props.layout === 'grid' ? fields.value : undefined))
-const advancedExpanded = ref(true)
+const advancedExpanded = ref(false)
 const advancedId = useId()
 // Chrome 86 supports ResizeObserver, but not CSS container queries. Use actual
 // available width (sidebar/inspector included), not the browser viewport.
@@ -51,15 +51,17 @@ const columns = computed(() => {
     <div ref="fields" class="mrr-filter-bar__fields" :data-grid-columns="columns">
       <slot />
     </div>
-    <div v-if="slots.actions || slots.advanced" class="mrr-filter-bar__actions">
-      <slot name="actions" />
-      <el-button v-if="slots.advanced" class="mrr-filter-bar__disclosure" native-type="button" :aria-controls="advancedId" :aria-expanded="advancedExpanded" @click="advancedExpanded = !advancedExpanded">
-        <FaIcon :name="advancedExpanded ? 'i-lucide:chevron-up' : 'i-lucide:chevron-down'" aria-hidden="true" />
-        {{ advancedExpanded ? '收起高级筛选' : '展开高级筛选' }}（已填写 {{ props.advancedCount }} 项）
-      </el-button>
-    </div>
-    <div v-if="slots.business" class="mrr-filter-bar__business">
-      <slot name="business" />
+    <div v-if="slots.actions || slots.advanced || slots.business" class="mrr-filter-bar__commands">
+      <div v-if="slots.actions || slots.advanced" class="mrr-filter-bar__actions">
+        <slot name="actions" />
+        <el-button v-if="slots.advanced" class="mrr-filter-bar__disclosure" native-type="button" :aria-controls="advancedId" :aria-expanded="advancedExpanded" @click="advancedExpanded = !advancedExpanded">
+          高级筛选<span v-if="props.advancedCount > 0">（已填写 {{ props.advancedCount }} 项）</span>
+          <FaIcon :name="advancedExpanded ? 'i-lucide:chevron-up' : 'i-lucide:chevron-down'" aria-hidden="true" />
+        </el-button>
+      </div>
+      <div v-if="slots.business" class="mrr-filter-bar__business">
+        <slot name="business" />
+      </div>
     </div>
     <div v-if="slots.advanced" v-show="advancedExpanded" :id="advancedId" class="mrr-filter-bar__advanced">
       <slot name="advanced" />
@@ -218,10 +220,16 @@ const columns = computed(() => {
   color: var(--mrr-muted-foreground);
 }
 
+/* Preserve independent wrapping on desktop; keep both action groups together
+ * on narrow containers whenever their intrinsic widths fit. */
+.mrr-filter-bar__commands {
+  display: contents;
+}
+
 .mrr-filter-bar__actions,
 .mrr-filter-bar__business {
   display: flex;
-  flex: 0 0 auto;
+  flex: 0 1 auto;
   flex-wrap: wrap;
   gap: var(--mrr-space-2);
   align-items: center;
@@ -231,13 +239,36 @@ const columns = computed(() => {
 
 .mrr-filter-bar__actions :deep(.el-button),
 .mrr-filter-bar__business :deep(.el-button) {
+  box-sizing: border-box;
   flex: none;
   min-width: 72px;
+  height: var(--mrr-control-height);
+  min-height: var(--mrr-control-height);
+  padding: 0 var(--mrr-button-padding-x);
   margin: 0;
+  font-size: var(--mrr-button-font-size);
+  font-weight: 500;
+  line-height: 1;
+  border-radius: var(--mrr-control-radius);
 }
 
 .mrr-filter-bar__business {
   margin-inline-start: auto;
+}
+
+/* Toolbar primary actions use readable semantic ink, not the saturated fill.
+ * Keep native focus and disabled states; do not recolor dialog confirmations. */
+.mrr-filter-bar__business :deep(.el-button--primary.is-plain:not(.is-disabled)) {
+  color: var(--mrr-tone-primary-ink);
+  background: var(--mrr-card);
+  border-color: var(--mrr-border);
+  box-shadow: var(--mrr-shadow-xs);
+}
+
+.mrr-filter-bar__business :deep(.el-button--primary.is-plain:not(.is-disabled):hover) {
+  color: var(--mrr-tone-primary-ink);
+  background: var(--mrr-tone-primary-soft);
+  border-color: var(--mrr-tone-primary-border);
 }
 
 .mrr-filter-bar__advanced {
@@ -327,10 +358,20 @@ const columns = computed(() => {
   grid-column: 1 / -1;
 }
 
+.mrr-filter-bar--narrow .mrr-filter-bar__commands,
+.mrr-filter-bar--grid .mrr-filter-bar__commands {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--mrr-space-2);
+  align-items: center;
+  justify-content: flex-end;
+  width: 100%;
+  min-width: 0;
+}
+
 .mrr-filter-bar--narrow .mrr-filter-bar__actions,
 .mrr-filter-bar--narrow .mrr-filter-bar__business {
   justify-content: flex-end;
-  width: 100%;
 }
 
 /*

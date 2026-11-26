@@ -75,8 +75,13 @@ for (const palette of ['mrr', 'gr8r'] as const) {
           }
           if (route === 'logs' || route === 'audit-images') {
             const advanced = page.locator('.mrr-filter-bar__advanced')
+            const disclosure = page.locator('.mrr-filter-bar__disclosure')
+            await expect(disclosure).toHaveAttribute('aria-expanded', 'false')
+            await expect(advanced).toBeHidden()
+            await disclosure.click()
             await expect(advanced).toBeVisible()
             await expect.poll(() => advanced.evaluate(el => el.scrollWidth <= el.clientWidth + 1)).toBe(true)
+            await disclosure.click()
           }
           if (route === 'audit-images') {
             const summary = page.locator('.mrr-metric-grid--five')

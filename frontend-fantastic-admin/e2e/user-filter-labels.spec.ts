@@ -201,3 +201,30 @@ test('克制型用户操作菜单统一尺寸与危险语义，自身账号操�
   await expect(menu.getByRole('menuitem', { name: '重置密码' })).toHaveClass(/is-disabled/)
   await expect(menu.getByRole('menuitem', { name: '禁用用户' })).toHaveClass(/is-disabled/)
 })
+
+for (const palette of ['mrr', 'gr8r']) {
+  for (const theme of ['light', 'dark']) {
+    test(`${palette}/${theme} 业务按钮与查询控件统一高度和对齐`, async ({ page }) => {
+      await isolateLocalVisualSettings(page)
+      await page.addInitScript(({ palette, theme }) => localStorage.setItem('MRR-ADMIN:app-settings', JSON.stringify({ app: { themePalette: palette, colorScheme: theme, enableMotion: false }, layout: { enableMobileAdaptation: true } })), { palette, theme })
+      await page.goto('/users')
+      const bar = page.locator('.users-filter-bar')
+      const create = bar.getByRole('button', { name: '创建用户', exact: true })
+      await expect(create).toHaveClass(/is-plain/)
+      for (const width of [1920, 1440, 375, 320]) {
+        await page.setViewportSize({ width, height: 900 })
+        await expect.poll(() => bar.evaluate((el) => {
+          const buttons = [...el.querySelectorAll('.el-button')]
+          const fields = [...el.querySelectorAll('.el-input__wrapper, .el-select__wrapper')]
+          const height = Number.parseFloat(getComputedStyle(el).getPropertyValue('--mrr-control-height'))
+          const query = buttons[0].getBoundingClientRect()
+          const business = buttons[buttons.length - 1].getBoundingClientRect()
+          const sameHeight = [...buttons, ...fields].every(node => Math.abs(node.getBoundingClientRect().height - height) <= 1)
+          const rightAligned = Math.abs(business.right - el.getBoundingClientRect().right) <= 1
+          const sameRow = innerWidth === 320 || Math.abs(query.y - business.y) <= 1
+          return sameHeight && rightAligned && sameRow && el.scrollWidth <= el.clientWidth + 1
+        })).toBe(true)
+      }
+    })
+  }
+}

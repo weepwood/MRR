@@ -665,7 +665,7 @@ onMounted(loadData)
               <MrrFilterActionButton action="reset" feedback="request" :pending="dataLoadingAction === 'reset'" :busy="loading || dataLoadingAction !== null" @click="resetFilters">重置</MrrFilterActionButton>
             </template>
             <template v-if="canManage" #business>
-              <el-button type="primary" class="users-toolbar__create" @click="openCreate">
+              <el-button type="primary" plain class="users-toolbar__create" @click="openCreate">
                 <FaIcon name="i-lucide:user-round-plus" aria-hidden="true" />创建用户
               </el-button>
             </template>

@@ -36,6 +36,59 @@ class OcrExecutionPostgresqlIT extends PostgresqlIntegrationTestSupport {
         assertThat(mapper.factForCurrentArchive(scan,current.getArchiveId())).isNull();
     }
 
+    @Autowired com.zjcxph.imgapi.mapper.ScanMapper scans;
+    @Autowired org.springframework.transaction.PlatformTransactionManager transactionManager;
+
+    @org.junit.jupiter.params.ParameterizedTest
+    @org.junit.jupiter.params.provider.ValueSource(booleans={true,false})
+    void workerReusesFactOnlyForCurrentArchive(boolean sameArchive,
+            @org.junit.jupiter.api.io.TempDir java.nio.file.Path temp)throws Exception{
+        Job current=job(), historical=job();
+        int scan=scan(current.getArchiveId());
+        String hash="a".repeat(64),fingerprint="b".repeat(64);
+        Fact old=fact(scan,sameArchive?current.getArchiveId():historical.getArchiveId());
+        old.setModelChecksum(fingerprint);old.setPreprocessingVersion("rgb-exif-v1");
+        mapper.saveFact(old);
+        current.setConfigSnapshot(com.zjcxph.imgapi.ocr.OcrProtocol.JSON.writeValueAsString(
+                new Config("synthetic",fingerprint,30,65536,0.7)));
+        mapper.insert(current);mapper.insertItem(current.getId(),scan);mapper.planned(current.getId(),1);
+        var access=org.mockito.Mockito.mock(com.zjcxph.imgapi.ocr.OcrAccess.class);
+        var engine=org.mockito.Mockito.mock(com.zjcxph.imgapi.ocr.OcrEngine.class);
+        var input=org.mockito.Mockito.mock(com.zjcxph.imgapi.ocr.OcrInput.class);
+        var settings=org.mockito.Mockito.mock(com.zjcxph.imgapi.service.SystemSettingService.class);
+        var classification=org.mockito.Mockito.mock(com.zjcxph.imgapi.service.ClassificationService.class);
+        var guard=org.mockito.Mockito.mock(com.zjcxph.imgapi.ocr.OcrLoadGuard.class);
+        var path=java.nio.file.Files.createFile(temp.resolve("synthetic.ocr"));
+        org.mockito.Mockito.when(settings.getSetting("ocrEnabled")).thenReturn("true");
+        org.mockito.Mockito.when(engine.fingerprint("synthetic")).thenReturn(fingerprint);
+        org.mockito.Mockito.when(input.prepare(org.mockito.ArgumentMatchers.eq(scan),org.mockito.ArgumentMatchers.any()))
+                .thenReturn(new com.zjcxph.imgapi.ocr.OcrInput.Prepared(path,hash));
+        org.mockito.Mockito.when(engine.recognize(org.mockito.ArgumentMatchers.eq("synthetic"),org.mockito.ArgumentMatchers.eq(path),
+                org.mockito.ArgumentMatchers.eq(30),org.mockito.ArgumentMatchers.eq(65536),org.mockito.ArgumentMatchers.any()))
+                .thenReturn(new com.zjcxph.imgapi.ocr.OcrProtocol.Result("synthetic",1,1,java.util.List.of(),"synthetic"));
+        var service=new com.zjcxph.imgapi.service.OcrJobService(mapper,scans,access,engine,input,settings,
+                new org.springframework.transaction.support.TransactionTemplate(transactionManager),classification,guard);
+        service.runOne();
+        Fact actual=mapper.fact(scan);
+        assertThat(actual.getArchiveId()).isEqualTo(current.getArchiveId());
+        if(sameArchive){
+            assertThat(actual.getResultVersion()).isEqualTo(old.getResultVersion());
+            org.mockito.Mockito.verify(engine,org.mockito.Mockito.never()).recognize(org.mockito.ArgumentMatchers.anyString(),
+                    org.mockito.ArgumentMatchers.any(),org.mockito.ArgumentMatchers.anyInt(),org.mockito.ArgumentMatchers.anyInt(),org.mockito.ArgumentMatchers.any());
+        }else{
+            assertThat(actual.getResultVersion()).isNotEqualTo(old.getResultVersion());
+            assertThat(jdbc.queryForObject("SELECT archive_id FROM app.mr_scan_ocr_history WHERE result_version=?",Long.class,old.getResultVersion()))
+                    .isEqualTo(historical.getArchiveId());
+            org.mockito.Mockito.verify(engine).recognize(org.mockito.ArgumentMatchers.eq("synthetic"),
+                    org.mockito.ArgumentMatchers.eq(path),org.mockito.ArgumentMatchers.eq(30),org.mockito.ArgumentMatchers.eq(65536),org.mockito.ArgumentMatchers.any());
+        }
+        var item=mapper.items(current.getId(),0,50).getFirst();
+        assertThat(item.getOcrResultVersion()).isEqualTo(actual.getResultVersion());
+        org.mockito.Mockito.verify(classification).classify(org.mockito.ArgumentMatchers.any(),org.mockito.ArgumentMatchers.any(),
+                org.mockito.ArgumentMatchers.argThat(f->current.getArchiveId().equals(f.getArchiveId())));
+        assertThat(mapper.job(current.getId()).getStatus()).isEqualTo("SUCCESS");
+    }
+
     @Test void claimsWithFencingAndRecoversExpiredPageWithoutLosingProgress() {
         Job job=job(); int scan=scan(job.getArchiveId()); mapper.insert(job); mapper.insertItem(job.getId(),scan); mapper.planned(job.getId(),1);
         Job claimed=mapper.claim("token-one"); assertThat(claimed.getId()).isEqualTo(job.getId());

@@ -104,7 +104,7 @@ public class OcrJobService {
             if (!config.fingerprint().equals(engine.fingerprint(config.profile()))) throw new OcrFailure("MODEL_INVALID");
             final String jobId=job.getId();
             try (var prepared=input.prepare(item.getScanId(),()->!enabled()||!mapper.alive(jobId,token))) {
-                Fact fact=mapper.fact(item.getScanId());
+                Fact fact=mapper.factForCurrentArchive(item.getScanId(),job.getArchiveId());
                 if (fact==null || !prepared.hash().equals(fact.getContentHash()) || !config.fingerprint().equals(fact.getModelChecksum())
                         || !"rgb-exif-v1".equals(fact.getPreprocessingVersion())
                         || !java.util.Set.of("SUCCEEDED","LOW_CONFIDENCE").contains(fact.getStatus())) {

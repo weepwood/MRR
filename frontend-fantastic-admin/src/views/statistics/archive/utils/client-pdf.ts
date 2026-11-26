@@ -21,7 +21,12 @@ function formatNumber(value: number): string {
   return Number(value.toFixed(2)).toString()
 }
 
-async function fetchImageBlob(imageUrl: string): Promise<Blob> {
+function requireNotAborted(signal?: AbortSignal) {
+  if (signal?.aborted) { throw new DOMException('PDF 导出已取消', 'AbortError') }
+}
+
+async function fetchImageBlob(imageUrl: string, signal?: AbortSignal): Promise<Blob> {
+  requireNotAborted(signal)
   // Pages CSP forbids network access, including fetch(data:). The synthetic SVG
   // is already inline; decode its bounded payload without a network request.
   const demoPrefix = 'data:image/svg+xml;charset=utf-8,'
@@ -30,13 +35,14 @@ async function fetchImageBlob(imageUrl: string): Promise<Blob> {
     return new Blob([decodeURIComponent(imageUrl.slice(demoPrefix.length))], { type: 'image/svg+xml' })
   }
   const resolvedUrl = new URL(imageUrl, window.location.href)
-  const response = await fetch(resolvedUrl.toString(), imageFetchInit(resolvedUrl))
+  const response = await fetch(resolvedUrl.toString(), { ...imageFetchInit(resolvedUrl), signal })
 
   if (!response.ok) {
     throw new Error(`影像获取失败（HTTP ${response.status}）`)
   }
 
   const blob = await response.blob()
+  requireNotAborted(signal)
   if (!blob.size) {
     throw new Error('影像文件为空')
   }
@@ -222,16 +228,21 @@ export function buildPdfBlob(images: ClientPdfImage[]): Blob {
 export async function createPdfFromImageUrls(
   imageUrls: string[],
   onProgress?: (completed: number, total: number) => void,
+  signal?: AbortSignal,
 ): Promise<Blob> {
   const preparedImages: ClientPdfImage[] = []
   let preparedBytes = 0
   for (let index = 0; index < imageUrls.length; index += 1) {
-    const imageBlob = await fetchImageBlob(imageUrls[index])
+    requireNotAborted(signal)
+    const imageBlob = await fetchImageBlob(imageUrls[index], signal)
+    requireNotAborted(signal)
     const image = await convertToJpeg(imageBlob)
+    requireNotAborted(signal)
     preparedBytes += image.blob.size
     requireArchiveExportSize(preparedBytes)
     preparedImages.push(image)
     onProgress?.(index + 1, imageUrls.length)
   }
+  requireNotAborted(signal)
   return buildPdfBlob(preparedImages)
 }

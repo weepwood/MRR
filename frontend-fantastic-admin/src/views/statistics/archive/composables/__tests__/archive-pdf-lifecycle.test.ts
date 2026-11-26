@@ -167,6 +167,23 @@ describe('选页 PDF 异步生命周期', () => {
     expect(message.success).not.toHaveBeenCalled()
   })
 
+  it.each(['selection', 'dispose'])('客户端合成在 %s 后主动取消取图', async (action) => {
+    api.getSelectedImagesPdfExportPlan.mockResolvedValue({ data: { executionMode: 'CLIENT_PDF' } })
+    const blob = deferred<Blob>()
+    clientPdf.createPdfFromImageUrls.mockReturnValue(blob.promise)
+    const { scope, pdf } = setup()
+    const running = pdf.exportSelectedPdf(images)
+    await Promise.resolve()
+    const signal = clientPdf.createPdfFromImageUrls.mock.calls[0][2] as AbortSignal | undefined
+    expect(signal?.aborted).toBe(false)
+    if (action === 'dispose') { scope.stop() }
+    else { changeSelection() }
+    expect(signal?.aborted).toBe(true)
+    blob.resolve(new Blob(['old-pdf']))
+    await running
+    expect(URL.createObjectURL).not.toHaveBeenCalled()
+  })
+
   it('旧请求报错和 finally 不影响切页后启动的新请求', async () => {
     const oldPlan = deferred<never>()
     const newPlan = deferred<{ data: { executionMode: string } }>()
@@ -210,7 +227,7 @@ describe('选页 PDF 异步生命周期', () => {
     mutable[0].imageUrl = '/changed-after-start.jpg'
     plan.resolve({ data: { executionMode: 'CLIENT_PDF' } })
     await running
-    expect(clientPdf.createPdfFromImageUrls).toHaveBeenCalledWith(['/test-1.jpg'])
+    expect(clientPdf.createPdfFromImageUrls).toHaveBeenCalledWith(['/test-1.jpg'], undefined, expect.any(AbortSignal))
     expect(message.success).toHaveBeenCalledTimes(1)
   })
 })

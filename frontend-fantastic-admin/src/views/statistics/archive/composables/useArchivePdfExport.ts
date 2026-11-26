@@ -32,9 +32,12 @@ export function useArchivePdfExport(selectedImages?: Readonly<Ref<readonly Galle
   let boundSelection: string | null = null
   let generation = 0
   let disposed = false
+  let clientPdfController: AbortController | undefined
 
   function invalidate() {
     generation++
+    clientPdfController?.abort()
+    clientPdfController = undefined
     boundSelection = null
     exportingPdf.value = false
     // 即使创建响应尚未返回，也须让已有任务机制失效并取消迟到任务。
@@ -93,7 +96,8 @@ export function useArchivePdfExport(selectedImages?: Readonly<Ref<readonly Galle
           ElMessage.warning('部分影像缺少访问地址，无法导出 PDF')
           return
         }
-        const pdfBlob = await createPdfFromImageUrls(imageUrls)
+        clientPdfController = new AbortController()
+        const pdfBlob = await createPdfFromImageUrls(imageUrls, undefined, clientPdfController.signal)
         if (!isCurrent()) { return }
         saveBlob(pdfBlob, fileName)
         ElMessage.success(`已在浏览器中合成并导出 ${images.length} 张影像`)
@@ -117,7 +121,10 @@ export function useArchivePdfExport(selectedImages?: Readonly<Ref<readonly Galle
       ElMessage.error(message.includes('Failed to fetch') ? '影像获取失败，请检查图片服务配置' : message)
     }
     finally {
-      if (isCurrent()) { exportingPdf.value = false }
+      if (isCurrent()) {
+        clientPdfController = undefined
+        exportingPdf.value = false
+      }
     }
   }
 

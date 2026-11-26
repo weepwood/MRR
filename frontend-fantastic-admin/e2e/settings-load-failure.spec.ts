@@ -63,8 +63,8 @@ for (const [label, status, json] of [
     await expect(failure).toBeVisible({ timeout: 20_000 })
     await expect(failure).toContainText('系统设置读取失败')
     await expect(page.getByText('系统标识', { exact: true })).toHaveCount(0)
-    await expect(page.locator('.mrr-page-header .mrr-page-header__aside').getByRole('button', { name: '保存设置' })).toBeDisabled()
-    await expect(page.locator('.mrr-page-header .mrr-page-header__aside').getByRole('button', { name: '恢复默认' })).toBeDisabled()
+    await expect(page.locator('.settings-command-buttons').getByRole('button', { name: '保存设置' })).toBeDisabled()
+    await expect(page.locator('.settings-command-buttons').getByRole('button', { name: '恢复默认' })).toBeDisabled()
 
     // 其他服务器配置分区共用同一份基线，同样只显示错误，不会因为回退值被当作「未保存修改」而弹出离开确认。
     await page.locator('.settings-nav-item').filter({ hasText: '访问安全' }).click()
@@ -77,7 +77,7 @@ for (const [label, status, json] of [
     await page.locator('.settings-content .app-error').getByRole('button', { name: '重新加载' }).click()
     await expect(page.locator('.settings-content .app-error')).toHaveCount(0)
     await expect(page.locator('.settings-content[aria-busy="false"]')).toBeVisible()
-    await expect(page.locator('.mrr-page-header .mrr-page-header__aside').getByRole('button', { name: '恢复默认' })).toBeEnabled()
+    await expect(page.locator('.settings-command-buttons').getByRole('button', { name: '恢复默认' })).toBeEnabled()
     expect(writes).toEqual([])
   })
 }

@@ -810,3 +810,7 @@ MrrCursorPagination 改用 ElPagination 原生页码、箭头、跳页、条数�
 ## 筛选默认收起与按钮精修（2026-11-26）
 
 基线6d6bd521；MrrFilterBar首次默认收起，有值显示已填写数量。统一按钮几何，新增/导出使用克制的主题描边和语义前景，窄屏动作尽量合行。原截图复测默认主题按钮外框均33px，差异为视觉重量而非实际高度；gr8r为30px。首轮9037 Mock五种页面/模式×两配色×明暗×四宽度共80组几何无失败，双引擎业务44/44；最终颜色调整后新增双引擎按钮尺寸/对齐8项复验，截图保存在/Volumes/data/AI-Development/artifacts/mrr-filter-compact-20261126。未执行全量CI/生产发布/真实医院终端，不变更查询权限及数据契约。
+
+## 系统设置工作区精修（2026-11-26）
+
+基线d4d876cd。目录独立卡与桌面sticky，原服务器及自管面板命令迁到分区头部，内容宽度决定并排/换行；窄屏取消固定、分类分组下拉。表单双列、统一间距、常驻草稿提醒、键盘目录导航、搜索避让及外观同步说明。未改保存请求、权限、医疗数据或表格分页。设置及相关双引擎回归62/62；设置单测50/50；最终布局与搜索复验6/6。11分区×明暗×1440/1024/375共66组视觉矩阵0受检溢出，最终服务器命令宽度调整复验12组。截图 /Volumes/data/AI-Development/artifacts/mrr-settings-polish-20261126/{before,after,final}，日志/tmp/mrr-settings-polish-*.log及/tmp/mrr-settings-header-recheck.log。TypeScript、定向lint通过；未运行全量CI、生产构建、真实医院终端或所有配色/交互状态。保留9037 Mock与main 24152bee，不自动推送、合并、发布。

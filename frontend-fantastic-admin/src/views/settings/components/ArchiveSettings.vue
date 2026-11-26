@@ -11,7 +11,7 @@ const settings = defineModel<EffectiveSystemSettings>({ required: true })
       <div class="group-heading">
         <strong data-settings-search-target="image-source" tabindex="-1">默认图片来源</strong><p>设置影像档案袋优先从本地图片服务器或 OSS 读取。</p>
       </div>
-      <el-segmented v-model="settings.imageSource" :options="[{ label: '本地图片', value: 'local' }, { label: 'OSS 图片', value: 'oss' }]" class="full-width" />
+      <el-segmented v-model="settings.imageSource" :options="[{ label: '本地图片', value: 'local' }, { label: 'OSS 图片', value: 'oss' }]" class="full-width image-source-select" />
       <el-alert class="image-source-hint" type="info" :closable="false" show-icon :title="settings.imageSource === 'local' ? '默认从本地图片服务器读取。' : '优先从 OSS 读取；签名失败时自动回退本地图片。'" />
     </div>
     <div class="setting-group">
@@ -60,6 +60,7 @@ const settings = defineModel<EffectiveSystemSettings>({ required: true })
 .setting-group,
 .switch-list { padding: var(--mrr-space-5); background: var(--mrr-card); border: 1px solid var(--mrr-border); border-radius: var(--mrr-radius-card); }
 .group-heading { margin-bottom: var(--mrr-space-4); }
+.image-source-select { max-width: 360px; }
 .image-source-hint { margin-top: var(--mrr-space-3); }
 .control-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--mrr-space-4); }
 .full-width { width: 100%; }

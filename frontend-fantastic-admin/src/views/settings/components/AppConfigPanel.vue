@@ -125,8 +125,10 @@ const syncScopeDescription = computed(() => {
       return '这些选项保存在本机浏览器。当前账号缺少系统管理权限，修改不会同步到全站。'
     case 'failed':
       return '这些选项已保存在本机浏览器，但写入系统数据库失败，尚未同步到全站。'
+    case 'synced':
+      return '这些选项已同步到系统数据库，作为全站默认外观。'
     default:
-      return '这些选项同时保存在本机并同步到系统数据库，作为全站默认外观。'
+      return '外观修改先保存在本机；全站同步取决于账号权限及服务器返回结果。'
   }
 })
 

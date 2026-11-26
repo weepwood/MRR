@@ -193,7 +193,10 @@ public class ArchiveExportJobService {
     }
 
     public Path requireDownloadFile(AuthSession session, String id) throws IOException {
-        ArchiveExportJob job = requireOwned(session, id);
+        return requireDownloadFile(session, requireOwned(session, id));
+    }
+
+    private Path requireDownloadFile(AuthSession session, ArchiveExportJob job) throws IOException {
         requirePermission(session, job.getFormat());
         if (Set.of("PENDING", "PROCESSING").contains(job.getStatus())) {
             throw new BusinessException(409, "导出任务尚未完成");
@@ -213,8 +216,22 @@ public class ArchiveExportJobService {
     }
 
     public ArchiveExportTempFileManager.DownloadLease openDownload(AuthSession session, String id) throws IOException {
-        Path file = requireDownloadFile(session, id);
-        return tempFileManager.openDownload(file.toString(), session.getId());
+        ArchiveExportJob job = requireOwned(session, id);
+        Path file = requireDownloadFile(session, job);
+        var lease = tempFileManager.openDownload(file.toString(), session.getId());
+        Long expected = job.getOutputBytes();
+        // Validate the opened handle, not a separate path stat. Never publish stale
+        // completion metadata for a file whose length no longer matches.
+        if (expected == null || expected <= 0 || lease.length() != expected) {
+            var failure = new BusinessException(409, "导出文件与完成记录不一致，请重新导出");
+            try {
+                lease.close();
+            } catch (IOException closeFailure) {
+                failure.addSuppressed(closeFailure);
+            }
+            throw failure;
+        }
+        return lease;
     }
 
     public ArchiveExportJob requireOwned(AuthSession session, String id) {

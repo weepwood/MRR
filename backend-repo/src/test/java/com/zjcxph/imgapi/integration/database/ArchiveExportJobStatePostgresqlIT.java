@@ -182,6 +182,47 @@ class ArchiveExportJobStatePostgresqlIT extends PostgresqlIntegrationTestSupport
         assertThat(directory.resolve(id + ".zip")).exists();
     }
 
+    @Test
+    void changedOutputLengthIsRejectedWithoutLeakingDownloadQuotaOrRewritingSuccess() throws Exception {
+        var repository = new ArchiveExportJobRepository(jdbc);
+        String id = insert(repository);
+        var exporter = exporter();
+        byte[] original = {1, 2, 3, 4};
+        doAnswer(invocation -> {
+            invocation.<OutputStream>getArgument(1).write(original);
+            return null;
+        }).when(exporter).writeBatchZip(any(), any(), any());
+        var service = service(repository, exporter);
+        ReflectionTestUtils.invokeMethod(service, "runJob", id);
+        var completed = repository.findById(id).orElseThrow();
+        assertThat(completed.getStatus()).isEqualTo("SUCCESS");
+        assertThat(completed.getOutputBytes()).isEqualTo(4L);
+        var session = new com.zjcxph.imgapi.common.AuthSession();
+        session.setId(1L);
+        session.setUsername("synthetic-export-user");
+        session.setPermissions(List.of("record:read", "record:download"));
+        Path output = Path.of(completed.getFilePath());
+        try (var lease = service.openDownload(session, id)) {
+            assertThat(lease.length()).isEqualTo(4L);
+        }
+        Files.write(output, new byte[]{1, 2});
+        for (int attempt = 0; attempt < 3; attempt++) {
+            assertThatThrownBy(() -> {
+                try (var ignored = service.openDownload(session, id)) { }
+            }).isInstanceOf(com.zjcxph.imgapi.exception.BusinessException.class)
+              .satisfies(error -> assertThat(((com.zjcxph.imgapi.exception.BusinessException) error).getCode()).isEqualTo(409));
+        }
+        assertThat(Files.readAllBytes(output)).containsExactly((byte)1, (byte)2);
+        var unchanged = repository.findById(id).orElseThrow();
+        assertThat(unchanged.getStatus()).isEqualTo("SUCCESS");
+        assertThat(unchanged.getSha256()).isEqualTo(completed.getSha256());
+        assertThat(unchanged.getOutputBytes()).isEqualTo(4L);
+        Files.write(output, original);
+        try (var lease = service.openDownload(session, id)) {
+            assertThat(lease.length()).isEqualTo(4L);
+        }
+    }
+
     private ArchiveExportService exporter() {
         ArchiveExportService exporter = mock(ArchiveExportService.class);
         PathDO item = new PathDO();

@@ -29,6 +29,7 @@ export function useArchiveExportJob(_formatHint?: 'ZIP' | 'PDF') {
   let pollTimer: ReturnType<typeof setTimeout> | undefined
   let disposed = false
   let generation = 0
+  let pollRevision = 0
   let autoDownloadGeneration = -1
 
   function applyJob(next: ArchiveExportJob) {
@@ -63,10 +64,11 @@ export function useArchiveExportJob(_formatHint?: 'ZIP' | 'PDF') {
 
   async function poll(id: string, token: number) {
     if (!isCurrent(id, token)) { return }
+    const revision = pollRevision
     try {
       const response = await getArchiveExportJob(id)
       // discard/dismiss 或新任务启动后，即使旧请求稍后返回也不得恢复旧按钮状态。
-      if (!isCurrent(id, token)) { return }
+      if (!isCurrent(id, token) || revision !== pollRevision) { return }
       if (response.data) { applyJob(response.data) }
       if (!job.value || isTerminal(job.value.status)) {
         stopPolling()
@@ -101,7 +103,7 @@ export function useArchiveExportJob(_formatHint?: 'ZIP' | 'PDF') {
       schedulePoll(id, token, 1500)
     }
     catch (error: unknown) {
-      if (!isCurrent(id, token)) { return }
+      if (!isCurrent(id, token) || revision !== pollRevision) { return }
       stopPolling()
       cancelling.value = false
       ElMessage.error((error as { message?: string })?.message || '导出任务状态查询失败')
@@ -141,8 +143,11 @@ export function useArchiveExportJob(_formatHint?: 'ZIP' | 'PDF') {
 
   async function cancel() {
     const current = job.value
-    if (!current || isTerminal(current.status)) { return }
+    if (!current || isTerminal(current.status) || cancelling.value) { return }
     const token = generation
+    // Cancellation takes precedence over status reads issued before it.
+    pollRevision++
+    stopPolling()
     cancelling.value = true
     try {
       const response = await cancelArchiveExportJob(current.id)
@@ -159,7 +164,10 @@ export function useArchiveExportJob(_formatHint?: 'ZIP' | 'PDF') {
       }
     }
     catch (error) {
-      if (token === generation) { cancelling.value = false }
+      if (isCurrent(current.id, token)) {
+        cancelling.value = false
+        if (job.value && !isTerminal(job.value.status)) { schedulePoll(current.id, token, 500) }
+      }
       throw error
     }
   }

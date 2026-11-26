@@ -125,6 +125,51 @@ describe('useArchiveExportJob', () => {
     scope.stop()
   })
 
+  it('取消成功后迟到的旧轮询不能恢复处理中状态', async () => {
+    api.createArchiveExportJob.mockResolvedValue({ data: job('job-race', 'PROCESSING') })
+    api.cancelArchiveExportJob.mockResolvedValue({ data: job('job-race', 'CANCELLED') })
+    const pending = deferred<{ data: ReturnType<typeof job> }>()
+    api.getArchiveExportJob.mockReturnValue(pending.promise)
+    const scope = effectScope()
+    const task = scope.run(() => useArchiveExportJob('PDF'))!
+    try {
+      await task.start({ format: 'PDF', ids: [1, 2] })
+      await vi.advanceTimersByTimeAsync(500)
+      await task.cancel()
+      expect(task.job.value?.status).toBe('CANCELLED')
+      pending.resolve({ data: job('job-race', 'PROCESSING') })
+      await vi.advanceTimersByTimeAsync(0)
+      expect(task.job.value?.status).toBe('CANCELLED')
+      await vi.advanceTimersByTimeAsync(1500)
+      expect(api.getArchiveExportJob).toHaveBeenCalledTimes(1)
+    }
+    finally { scope.stop() }
+  })
+
+  it('取消失败后恢复轮询，连续取消不重复发请求', async () => {
+    api.createArchiveExportJob.mockResolvedValue({ data: job('job-retry', 'PROCESSING') })
+    let reject!: (reason: unknown) => void
+    api.cancelArchiveExportJob.mockReturnValueOnce(new Promise((_resolve, fail) => { reject = fail }))
+    api.getArchiveExportJob.mockResolvedValue({ data: job('job-retry', 'SUCCESS') })
+    exportDownload.downloadExportJobToBrowser.mockResolvedValue('blob')
+    const scope = effectScope()
+    const task = scope.run(() => useArchiveExportJob('PDF'))!
+    try {
+      await task.start({ format: 'PDF', ids: [1, 2] })
+      const cancellation = task.cancel()
+      const failure = expect(cancellation).rejects.toThrow('synthetic cancel failure')
+      await task.cancel()
+      expect(api.cancelArchiveExportJob).toHaveBeenCalledTimes(1)
+      reject(new Error('synthetic cancel failure'))
+      await failure
+      expect(task.cancelling.value).toBe(false)
+      await vi.advanceTimersByTimeAsync(500)
+      expect(task.job.value?.status).toBe('SUCCESS')
+      expect(exportDownload.downloadExportJobToBrowser).toHaveBeenCalledTimes(1)
+    }
+    finally { scope.stop() }
+  })
+
   it('任务完成后自动下载完整的导出文件', async () => {
     const completedJob = job('job-complete', 'SUCCESS')
     api.createArchiveExportJob.mockResolvedValue({ data: job('job-complete', 'PROCESSING') })

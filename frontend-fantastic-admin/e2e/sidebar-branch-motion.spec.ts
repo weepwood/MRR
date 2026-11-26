@@ -1,7 +1,7 @@
 import { expect, test } from '@playwright/test'
 import { isolateLocalVisualSettings } from './helpers/local-visual-settings'
 
-test('父菜单悬停才显示引导线，快速反向展开收起保持连续', async ({ page }, testInfo) => {
+test('引导线常驻且父菜单悬停增强，快速反向展开收起保持连续', async ({ page }, testInfo) => {
   await isolateLocalVisualSettings(page)
   await page.emulateMedia({ reducedMotion: 'no-preference' })
   await page.addInitScript(() => localStorage.setItem('MRR-ADMIN:app-settings', JSON.stringify({
@@ -20,12 +20,12 @@ test('父菜单悬停才显示引导线，快速反向展开收起保持连续',
   const leaf = branch.locator('a.menu-item-container').first()
   const guideOpacity = () => branch.evaluate(el => getComputedStyle(el, '::before').opacity)
   await page.mouse.move(900, 500)
-  await expect.poll(guideOpacity).toBe('0')
+  await expect.poll(guideOpacity).toBe('0.8')
   await group.hover()
   await expect.poll(guideOpacity).toBe('1')
   await nav.screenshot({ path: testInfo.outputPath('parent-hover.png'), animations: 'disabled' })
   await leaf.hover()
-  await expect.poll(guideOpacity).toBe('0')
+  await expect.poll(guideOpacity).toBe('0.8')
   await nav.screenshot({ path: testInfo.outputPath('leaf-hover.png'), animations: 'disabled' })
   await page.mouse.move(900, 500)
   const samples = await group.evaluate(async (button) => {

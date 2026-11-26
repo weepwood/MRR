@@ -29,7 +29,7 @@ for (const palette of ['mrr', 'gr8r']) {
             const guide = b.left + Number.parseFloat(getComputedStyle(branch, '::before').left) + 1
             const icon = node.querySelector('.menu-item-container-icon')?.getBoundingClientRect()
             const label = node.querySelector('.truncate')
-            return Math.abs(r.left - guide - 8) <= 1
+            return Math.abs(r.left - guide - 12) <= 1
               && Math.abs(sidebar.right - r.right - 12) <= 1
               && (!icon || Math.abs(icon.left - r.left - 15) <= 1)
               && (!label || label.scrollWidth <= label.clientWidth + 1)

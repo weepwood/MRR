@@ -131,7 +131,7 @@ watch(() => menuStore.actived, (val, oldVal) => {
 
   .menu {
     --mrr-menu-guide-offset: 19px;
-    --mrr-menu-guide-gap: 8px;
+    --mrr-menu-guide-gap: 12px;
     --mrr-menu-item-inset-end: 12px;
     --mrr-menu-item-padding-x: 10px;
     --mrr-menu-item-padding-start: 14px;
@@ -142,8 +142,8 @@ watch(() => menuStore.actived, (val, oldVal) => {
     width: 100%;
     padding: 4px calc(var(--mrr-menu-item-inset-end) - var(--mrr-menu-item-gutter)) 16px;
 
-    /* The branch guide is separate from the active leaf rail. Only the
-     * adjacent parent item hover reveals it, never child hover. */
+    /* A quiet persistent hierarchy guide, separate from the active leaf rail.
+     * Parent hover only strengthens it; geometry never changes. */
     :deep(.menu-inline-branch::before) {
       position: absolute;
       inset-block: 4px;
@@ -153,7 +153,7 @@ watch(() => menuStore.actived, (val, oldVal) => {
       pointer-events: none;
       content: "";
       background: var(--mrr-navigation-border);
-      opacity: 0;
+      opacity: 0.8;
       transition: opacity var(--mrr-motion-feedback) var(--mrr-ease-out);
     }
 

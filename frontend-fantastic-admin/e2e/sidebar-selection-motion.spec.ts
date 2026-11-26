@@ -37,7 +37,7 @@ for (const palette of ['mrr', 'gr8r']) {
         const iconLeft = el.querySelector('.menu-item-container-icon')!.getBoundingClientRect().left
         return { guideGap: railLeft - guide, iconGap: iconLeft - railLeft - Number.parseFloat(rail.width) }
       })
-      expect(geometry.guideGap).toBeGreaterThanOrEqual(11)
+      expect(geometry.guideGap).toBeGreaterThanOrEqual(16)
       expect(geometry.iconGap).toBeGreaterThanOrEqual(8)
       const idle = await target.evaluate(el => getComputedStyle(el).backgroundColor)
       await target.hover()

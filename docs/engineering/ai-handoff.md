@@ -838,3 +838,6 @@ MrrCursorPagination 改用 ElPagination 原生页码、箭头、跳页、条数�
 
 ## 侧栏分组横向间距（2026-11-26）
 基线e412d382。SubSidebar统一竖线、子项背景边界、内距与图标间距变量，移除额外2px缩进。实际经典明亮232px侧栏，竖线间隙2→8px，子项宽190→184px，右侧12px保持；五分组26项展开检查无文字截断。Chromium/WebKit 20/20（含32组配色/明暗/视口几何），键盘、折叠浮层、减少动效及移动导航回归通过。TypeScript、ESLint、Stylelint通过。截图/Volumes/data/AI-Development/artifacts/mrr-sidebar-spacing-20261126，日志/tmp/mrr-sidebar-spacing-e2e.log。未执行全量CI、生产构建及医院终端验收，不修改菜单权限和路由，不推送合并发布。
+
+## 侧栏悬停及选中指示线（2026-11-26）
+基线824bffcb。参考 https://github.com/weepwood/UI-Vault/blob/main/demos/components/endfield-nav-tab/index.html 的竖条机制，不引入字体/插画。公共Menu/item.vue叶子链接右侧伪元素，按下10px、实际路由选中22px、宽3px、内距3px，180ms高度/120ms透明度；移除图标缩放与横移，保留一级展开箭头、键盘焦点、减少动效。SubSidebar选中叶子去有色描边，保持布局。首轮双引擎28/28，最终选中描边与动效端点8/8，定向lint/TypeScript通过；实际截图位于/Volumes/data/AI-Development/artifacts/mrr-sidebar-selection-20261126。日志/tmp/mrr-sidebar-selection-*.log。未执行全量CI、生产构建、医院终端验收；不修改菜单路由权限，不推送合并发布。

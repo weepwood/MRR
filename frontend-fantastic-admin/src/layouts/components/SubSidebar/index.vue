@@ -237,13 +237,12 @@ watch(() => menuStore.actived, (val, oldVal) => {
       font-size: 15px !important;
       opacity: 0.75;
       transition:
-        color var(--mrr-motion-move) var(--mrr-ease-out),
-        opacity var(--mrr-motion-move) var(--mrr-ease-out),
-        transform var(--mrr-motion-move) var(--mrr-ease-out);
+        color var(--mrr-motion-feedback) var(--mrr-ease-out),
+        opacity var(--mrr-motion-feedback) var(--mrr-ease-out);
     }
 
     :deep(.sub-menu .menu-item-container:hover .menu-item-container-icon) {
-      transform: var(--mrr-motion-decor, translateX(1px) scale(1.08));
+      opacity: 1;
     }
 
     :deep(.menu-item-container:hover) {
@@ -262,6 +261,16 @@ watch(() => menuStore.actived, (val, oldVal) => {
     :deep(.sub-menu .menu-item.active .menu-item-container-icon) {
       opacity: 1;
     }
+  }
+
+  /* The theme surface handles hover; the accent rail alone marks the active leaf.
+   * Keep the transparent border for stable geometry and reserve keyboard focus. */
+  .menu :deep(.menu-item.active a.menu-item-container[aria-current="page"]) {
+    border-color: transparent;
+  }
+
+  .menu :deep(a.menu-item-container:not(.active):active) {
+    background: var(--mrr-navigation-active);
   }
 
   .collapse-area {

@@ -156,8 +156,7 @@ defineExpose({
 .menu-item-container-icon {
   flex: 0 0 auto;
   color: currentcolor;
-  transform-origin: center;
-  transition: color var(--mrr-motion-feedback) var(--mrr-ease-out), transform var(--mrr-motion-feedback) var(--mrr-ease-out);
+  transition: color var(--mrr-motion-feedback) var(--mrr-ease-out);
 }
 
 .menu-error-badge {
@@ -173,17 +172,43 @@ defineExpose({
   border-radius: 9px;
 }
 
-.menu-item-container:hover .menu-item-container-icon {
-  transform: var(--mrr-motion-decor, scale(1.04));
+/* The selection rail belongs to the route, never to the hover target.
+ * It expands inside the existing padding without changing hit area or layout. */
+a.menu-item-container::after {
+  position: absolute;
+  inset-inline-end: 3px;
+  top: 50%;
+  z-index: 1;
+  width: 3px;
+  height: 0;
+  pointer-events: none;
+  content: "";
+  background: var(--mrr-primary);
+  border-radius: 2px;
+  opacity: 0;
+  transform: translateY(-50%);
+  transition: height var(--mrr-motion-move) var(--mrr-ease-out), opacity var(--mrr-motion-feedback) var(--mrr-ease-out), background-color var(--mrr-motion-feedback) var(--mrr-ease-out);
 }
 
-.menu-item-container.active .menu-item-container-icon,
-.menu-item.active .menu-item-container-icon {
-  transform: var(--mrr-motion-decor, scale(1.06));
+a.menu-item-container:not(.active):active {
+  background: var(--mrr-navigation-active);
 }
 
-.menu-item-container:active .menu-item-container-icon {
-  transform: var(--mrr-motion-decor, scale(0.92));
+a.menu-item-container:not(.active):active::after {
+  height: 10px;
+  opacity: 0.65;
+}
+
+a.menu-item-container[aria-current="page"]::after {
+  height: 22px;
+  opacity: 1;
+}
+
+@media (forced-colors: active) {
+  a.menu-item-container[aria-current="page"]::after {
+    forced-color-adjust: none;
+    background: Highlight;
+  }
 }
 
 .menu-leading-control {
@@ -218,8 +243,7 @@ defineExpose({
 .menu-item-container:hover .menu-leading-control-icon {
   opacity: 0;
 
-  /* 只有缩放是装饰；-3px 位移是箭头与图标的重合对位，必须保留。 */
-  transform: scale(0.82) translateX(-3px) !important;
+  /* 一级目录保持图标与展开箭头原位淡入淡出，不再缩放。 */
 }
 
 /*
@@ -239,10 +263,6 @@ defineExpose({
   .menu-leading-control-icon,
   .menu-leading-control-arrow {
     transition: none;
-  }
-
-  .menu-item-container:hover .menu-leading-control-icon {
-    transform: scale(0.82) !important;
   }
 
   .menu-leading-control-arrow {

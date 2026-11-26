@@ -1,5 +1,8 @@
 import type { Page } from '@playwright/test'
 import { expect, test } from '@playwright/test'
+import { isolateLocalVisualSettings } from './helpers/local-visual-settings'
+
+test.beforeEach(async ({ page }) => { await isolateLocalVisualSettings(page) })
 
 /** 打开设置页并等首次读取完成，否则后续改写会被 loadSettings 的返回值覆盖。 */
 async function openSettings(page: Page, section: string) {

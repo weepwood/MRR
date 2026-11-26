@@ -1,5 +1,8 @@
 import { Buffer } from 'node:buffer'
 import { expect, test } from '@playwright/test'
+import { isolateLocalVisualSettings } from './helpers/local-visual-settings'
+
+test.beforeEach(async ({ page }) => { await isolateLocalVisualSettings(page) })
 
 const reply = (data: unknown) => ({ code: 200, message: 'success', data })
 

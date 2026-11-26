@@ -1,4 +1,7 @@
 import { expect, test } from '@playwright/test'
+import { isolateLocalVisualSettings } from './helpers/local-visual-settings'
+
+test.beforeEach(async ({ page }) => { await isolateLocalVisualSettings(page) })
 
 for (const palette of ['mrr', 'gr8r'] as const) {
   for (const theme of ['light', 'dark'] as const) {

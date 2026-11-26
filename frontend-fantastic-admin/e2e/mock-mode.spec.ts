@@ -1,4 +1,5 @@
 import { expect, test } from '@playwright/test'
+import { isolateLocalVisualSettings } from './helpers/local-visual-settings'
 
 async function readRadius(locator: import('@playwright/test').Locator) {
   return locator.evaluate(element => Number.parseFloat(window.getComputedStyle(element).borderRadius))
@@ -88,6 +89,7 @@ test.describe('无后端 Mock 模式', () => {
   })
 
   test('影像档案袋保持可见并应用全局圆角', async ({ page }) => {
+    await isolateLocalVisualSettings(page)
     await page.setViewportSize({ width: 1440, height: 900 })
     await page.addInitScript(() => {
       localStorage.setItem('MRR-ADMIN:app-settings', JSON.stringify({
@@ -113,6 +115,7 @@ test.describe('无后端 Mock 模式', () => {
   })
 
   test('页面标题可在页面同级与卡片风格之间切换', async ({ page }) => {
+    await isolateLocalVisualSettings(page)
     await page.setViewportSize({ width: 1440, height: 900 })
     await page.addInitScript(() => {
       const storageKey = 'MRR-ADMIN:app-settings'
@@ -164,6 +167,7 @@ test.describe('无后端 Mock 模式', () => {
   })
 
   test('主要页面卡片跟随统一圆角设置', async ({ page }) => {
+    await isolateLocalVisualSettings(page)
     await page.setViewportSize({ width: 1440, height: 900 })
     await page.addInitScript(() => {
       localStorage.setItem('MRR-ADMIN:app-settings', JSON.stringify({

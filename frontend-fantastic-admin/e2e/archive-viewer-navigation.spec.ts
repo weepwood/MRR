@@ -1,4 +1,7 @@
 import { expect, test } from '@playwright/test'
+import { isolateLocalVisualSettings } from './helpers/local-visual-settings'
+
+test.beforeEach(async ({ page }) => { await isolateLocalVisualSettings(page) })
 
 test('原图局部缩放锚点、鼠标拖动和键盘复位保持显示边界', async ({ page }) => {
   await page.goto('/archive-workbench')

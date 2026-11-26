@@ -77,17 +77,24 @@ public interface AuthUserMapper {
 
     @Update("update mr_auth_user set password_hash = #{passwordHash}, password_changed_at = CURRENT_TIMESTAMP, " +
             "must_change_password = false, temporary_password_expires_at = null, " +
-            "password_version = password_version + 1, updated_at = CURRENT_TIMESTAMP where id = #{id}")
-    int changePassword(@Param("id") Long id, @Param("passwordHash") String passwordHash);
+            "password_version = password_version + 1, updated_at = CURRENT_TIMESTAMP where id = #{id} "
+            + "and status = 'active' and password_version = #{expectedVersion} "
+            + "and must_change_password = #{required} "
+            + "and (not #{required} or temporary_password_expires_at is null "
+            + "or temporary_password_expires_at > clock_timestamp())")
+    int changePassword(@Param("id") Long id, @Param("passwordHash") String passwordHash,
+                       @Param("expectedVersion") int expectedVersion, @Param("required") boolean required);
 
     @Update("update mr_auth_user set password_hash = #{passwordHash}, must_change_password = true, " +
             "temporary_password_expires_at = #{expiresAt}, password_reset_at = CURRENT_TIMESTAMP, " +
             "password_reset_by = #{resetBy}, password_version = password_version + 1, " +
-            "updated_at = CURRENT_TIMESTAMP where id = #{id}")
+            "updated_at = CURRENT_TIMESTAMP where id = #{id} and status = 'active' "
+            + "and password_version = #{expectedVersion}")
     int resetPassword(@Param("id") Long id,
                       @Param("passwordHash") String passwordHash,
                       @Param("expiresAt") LocalDateTime expiresAt,
-                      @Param("resetBy") Long resetBy);
+                      @Param("resetBy") Long resetBy,
+                      @Param("expectedVersion") int expectedVersion);
 
     @Update("update mr_auth_user set status = #{status}, updated_at = CURRENT_TIMESTAMP where id = #{id}")
     int updateStatus(@Param("id") Long id, @Param("status") String status);

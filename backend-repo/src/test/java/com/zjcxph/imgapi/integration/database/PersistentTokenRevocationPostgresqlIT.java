@@ -22,4 +22,36 @@ class PersistentTokenRevocationPostgresqlIT extends PostgresqlIntegrationTestSup
         assertThat(new TokenBlacklist(jdbc).isRevoked("synthetic-token-id")).isTrue();
         assertThat(new TokenBlacklist(jdbc).isRevoked("other-synthetic-id")).isFalse();
     }
+
+    @Autowired com.zjcxph.imgapi.mapper.AuthUserMapper users;
+
+    @Test void credentialWritesRequireCurrentVersionAndActiveState() {
+        String username = "synthetic-credential-" + java.util.UUID.randomUUID();
+        Long id = jdbc.queryForObject("""
+                INSERT INTO app.mr_auth_user(username,password_hash,role_code,status,password_version)
+                VALUES (?, 'synthetic-placeholder', 'READER', 'active', 4) RETURNING id
+                """, Long.class, username);
+        var expires = java.time.LocalDateTime.now().plusHours(1);
+        assertThat(users.resetPassword(id, "synthetic-reset-placeholder", expires, id, 4)).isEqualTo(1);
+        assertThat(users.changePassword(id, "synthetic-stale-placeholder", 4, false)).isZero();
+        assertThat(users.resetPassword(id, "synthetic-stale-placeholder", expires, id, 4)).isZero();
+        assertThat(users.findById(id).effectivePasswordVersion()).isEqualTo(5);
+        assertThat(users.findById(id).isPasswordChangeRequired()).isTrue();
+        assertThat(users.changePassword(id, "synthetic-wrong-mode", 5, false)).isZero();
+        assertThat(users.changePassword(id, "synthetic-first-placeholder", 5, true)).isEqualTo(1);
+        assertThat(users.findById(id).effectivePasswordVersion()).isEqualTo(6);
+        assertThat(users.findById(id).isPasswordChangeRequired()).isFalse();
+        assertThat(users.changePassword(id, "synthetic-normal-placeholder", 6, false)).isEqualTo(1);
+        assertThat(users.findById(id).effectivePasswordVersion()).isEqualTo(7);
+        assertThat(users.resetPassword(id, "synthetic-expired-placeholder",
+                java.time.LocalDateTime.now().minusMinutes(1), id, 7)).isEqualTo(1);
+        assertThat(users.changePassword(id, "synthetic-late-placeholder", 8, true)).isZero();
+        assertThat(users.updateStatus(id, "disabled")).isEqualTo(1);
+        assertThat(users.resetPassword(id, "synthetic-disabled-placeholder", expires, id, 8)).isZero();
+        assertThat(users.changePassword(id, "synthetic-disabled-placeholder", 8, true)).isZero();
+        var unchanged = users.findById(id);
+        assertThat(unchanged.effectivePasswordVersion()).isEqualTo(8);
+        assertThat(unchanged.getStatus()).isEqualTo("disabled");
+        assertThat(unchanged.getPasswordHash()).isEqualTo("synthetic-expired-placeholder");
+    }
 }

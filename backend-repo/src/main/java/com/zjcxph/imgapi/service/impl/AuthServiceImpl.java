@@ -359,7 +359,10 @@ public class AuthServiceImpl implements AuthService {
         int validHours = normalizeValidHours(request.getTemporaryPasswordValidHours());
         String temporaryPassword = generateTemporaryPassword();
         LocalDateTime expiresAt = LocalDateTime.now().plusHours(validHours);
-        authUserMapper.resetPassword(userId, PasswordUtil.encode(temporaryPassword), expiresAt, administratorId);
+        if (authUserMapper.resetPassword(userId, PasswordUtil.encode(temporaryPassword), expiresAt,
+                administratorId, target.effectivePasswordVersion()) != 1) {
+            throw credentialChanged();
+        }
 
         AuthUser updated = authUserMapper.findById(userId);
         securityAudit.warn("event=USER_PASSWORD_RESET actorUserId={} targetUserId={} username={} sourceIp={} passwordVersion={} tempExpiresAt={} result=SUCCESS",
@@ -395,7 +398,10 @@ public class AuthServiceImpl implements AuthService {
             throw new BusinessException("新密码不能与当前密码相同");
         }
 
-        authUserMapper.changePassword(userId, PasswordUtil.encode(request.getNewPassword()));
+        if (authUserMapper.changePassword(userId, PasswordUtil.encode(request.getNewPassword()),
+                user.effectivePasswordVersion(), true) != 1) {
+            throw credentialChanged();
+        }
         securityAudit.info("event=USER_FIRST_PASSWORD_CHANGED actorUserId={} targetUserId={} sourceIp={} result=SUCCESS",
                 userId, userId, clientIp);
     }
@@ -471,7 +477,10 @@ public class AuthServiceImpl implements AuthService {
         if (oldPassword.equals(newPassword)) {
             throw new BusinessException("新密码不能与原密码相同");
         }
-        authUserMapper.changePassword(userId, PasswordUtil.encode(newPassword));
+        if (authUserMapper.changePassword(userId, PasswordUtil.encode(newPassword),
+                user.effectivePasswordVersion(), false) != 1) {
+            throw credentialChanged();
+        }
         securityAudit.info("event=USER_PASSWORD_CHANGED actorUserId={} targetUserId={} result=SUCCESS", userId, userId);
     }
 
@@ -597,6 +606,10 @@ public class AuthServiceImpl implements AuthService {
                 && "ADMIN".equalsIgnoreCase(user.getRoleCode())
                 && "active".equalsIgnoreCase(user.getStatus())
                 && authUserMapper.countActiveAdmins() <= 1;
+    }
+
+    private BusinessException credentialChanged() {
+        return new BusinessException(409, "账号状态或凭据已变化，请刷新后重试");
     }
 
     private BusinessException lastActiveAdminRequired() {

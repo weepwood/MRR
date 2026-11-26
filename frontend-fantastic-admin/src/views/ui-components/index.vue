@@ -134,6 +134,7 @@ function resetExamples() {
   position: absolute;
   top: 50%;
   left: 10px;
+  z-index: 1;
   width: 14px;
   height: 14px;
   color: var(--mrr-muted-foreground);
@@ -147,10 +148,6 @@ function resetExamples() {
 
 .gallery-search-input :deep(.el-input__wrapper) {
   padding-left: var(--mrr-space-8);
-}
-
-.gallery-search-icon {
-  z-index: 1;
 }
 
 .gallery-categories {

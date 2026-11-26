@@ -54,7 +54,7 @@ const option = computed<ECOption>(() => ({
       }
     : undefined,
   grid: {
-    top: props.showLegend && props.series.length > 1 ? 42 : 24,
+    top: props.showLegend && props.series.length > 1 ? (props.yAxisName ? 52 : 36) : props.yAxisName ? 32 : 20,
     right: 20,
     bottom: 28,
     left: 18,

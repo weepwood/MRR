@@ -409,9 +409,7 @@ onUnmounted(() => {
   min-height: 0;
   padding: var(--mrr-space-3) var(--mrr-space-3) 92px;
   overflow: auto;
-  background:
-    radial-gradient(circle at top right, hsl(var(--primary) / 5%), transparent 32%),
-    var(--surface-muted);
+  background: var(--surface-muted);
   border: 1px solid var(--divider);
   border-radius: var(--mrr-radius-card);
 }
@@ -437,7 +435,7 @@ onUnmounted(() => {
 
 .archive-wall-card:hover {
   border-color: var(--mrr-navigation-active-border);
-  box-shadow: 0 8px 20px rgb(0 0 0 / 8%);
+  box-shadow: var(--mrr-shadow-sm);
   transform: var(--mrr-motion-decor, translateY(-1px));
 }
 
@@ -505,13 +503,11 @@ onUnmounted(() => {
   position: relative;
   display: grid;
   place-items: center;
-  min-height: 320px;
+  min-height: 0;
   aspect-ratio: 3 / 4;
   overflow: hidden;
   cursor: zoom-in;
-  background:
-    linear-gradient(135deg, hsl(var(--primary) / 4%), transparent 62%),
-    var(--surface-alt);
+  background: var(--surface-alt);
 }
 
 .archive-wall-image-stage img {

@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import type { ExampleId } from '../catalog'
-import { nextTick, ref, watch } from 'vue'
+import { nextTick, ref } from 'vue'
 
 defineProps<{ example: ExampleId }>()
 
@@ -19,14 +19,14 @@ const popoverPosition = {
 const modalTrigger = ref<{ $el: HTMLButtonElement }>()
 const drawerTrigger = ref<{ $el: HTMLButtonElement }>()
 
-// 浮层由 v-model 打开，页面负责把关闭后的焦点交还对应触发按钮。
-watch([modalOpen, drawerOpen], async ([modal, drawer], [previousModal, previousDrawer]) => {
+// Only restore focus after the actual close lifecycle. A newly opened overlay
+// owns focus; an earlier close must not pull focus out of it.
+async function restoreFocus(kind: 'modal' | 'drawer') {
   await nextTick()
-  const trigger = previousModal && !modal ? modalTrigger.value : previousDrawer && !drawer ? drawerTrigger.value : undefined
-  if (trigger?.$el.isConnected) {
-    trigger.$el.focus()
-  }
-}, { flush: 'post' })
+  if (modalOpen.value || drawerOpen.value) { return }
+  const trigger = kind === 'modal' ? modalTrigger.value : drawerTrigger.value
+  if (trigger?.$el.isConnected) { trigger.$el.focus() }
+}
 
 function confirm(kind: string) {
   modalOpen.value = false
@@ -82,10 +82,10 @@ function confirm(kind: string) {
     <p class="example-note" role="status">
       {{ message }}
     </p>
-    <MrrDialog v-model="modalOpen" title="对话框示例" description="预览标题、内容、操作与焦点。" show-cancel-button class="gallery-demo-dialog" @confirm="confirm('对话框')">
+    <MrrDialog v-model="modalOpen" title="对话框示例" description="预览标题、内容、操作与焦点。" show-cancel-button class="gallery-demo-dialog" @closed="restoreFocus('modal')" @confirm="confirm('对话框')">
       <p>这是一个真实的对话框组件。可以确认、取消，或按 Escape 关闭。</p>
     </MrrDialog>
-    <MrrDrawer v-model="drawerOpen" title="抽屉示例" description="查看侧边详情与底部操作。" show-cancel-button content-class="gallery-demo-drawer" @confirm="confirm('抽屉')">
+    <MrrDrawer v-model="drawerOpen" title="抽屉示例" description="查看侧边详情与底部操作。" show-cancel-button content-class="gallery-demo-drawer" @closed="restoreFocus('drawer')" @confirm="confirm('抽屉')">
       <p>这是合成的详情内容，用于验收抽屉的阅读和关闭体验。</p>
     </MrrDrawer>
   </div>

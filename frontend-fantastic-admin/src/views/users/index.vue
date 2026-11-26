@@ -791,8 +791,10 @@ onMounted(loadData)
     <MrrDialog v-model="createVisible" title="创建用户" width="520px" :close-on-click-overlay="false">
       <el-alert type="info" :closable="false" show-icon title="管理员创建的用户默认启用。系统将生成一次性临时密码，首次登录后必须修改。" />
       <el-form ref="createFormRef" :model="createForm" :rules="createRules" label-position="top" class="dialog-form mrr-edit-form mrr-edit-form--paired">
+        <h3 class="mrr-edit-form__section">账号信息</h3>
         <el-form-item label="用户名" prop="username"><el-input v-model="createForm.username" autocomplete="off" placeholder="例如 zhangsan" /></el-form-item>
         <el-form-item label="显示名称"><el-input v-model="createForm.displayName" placeholder="例如 张三" /></el-form-item>
+        <h3 class="mrr-edit-form__section">权限与首次登录</h3>
         <el-form-item label="角色" prop="roleCode"><el-select v-model="createForm.roleCode" class="full-width"><el-option v-for="role in roles" :key="role.code" :label="role.name || role.code" :value="role.code!" /></el-select></el-form-item>
         <el-form-item label="临时密码有效期"><el-input-number v-model="createForm.temporaryPasswordValidHours" :min="1" :max="168" /><span class="mrr-edit-form__unit">小时</span></el-form-item>
       </el-form>
@@ -801,8 +803,10 @@ onMounted(loadData)
 
     <MrrDialog v-model="editVisible" title="编辑用户" width="480px" :close-on-click-overlay="false">
       <el-form ref="editFormRef" :model="editForm" :rules="editRules" label-position="top" class="dialog-form mrr-edit-form mrr-edit-form--paired">
+        <h3 class="mrr-edit-form__section">账号信息</h3>
         <el-form-item label="用户名"><div class="readonly-field"><span>{{ editTarget?.username }}</span></div></el-form-item>
         <el-form-item label="显示名称"><el-input v-model="editForm.displayName" /></el-form-item>
+        <h3 class="mrr-edit-form__section">权限与状态</h3>
         <el-form-item label="角色" prop="roleCode"><el-select v-model="editForm.roleCode" class="full-width"><el-option v-for="role in roles" :key="role.code" :label="role.name || role.code" :value="role.code!" /></el-select></el-form-item>
         <el-form-item label="状态" prop="status"><el-select v-model="editForm.status" class="full-width"><el-option v-for="option in editableStatusOptions" :key="option.value" v-bind="option" /></el-select></el-form-item>
       </el-form>

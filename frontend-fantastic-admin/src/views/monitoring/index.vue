@@ -361,7 +361,7 @@ onUnmounted(pause)
       :closable="false"
       show-icon
     />
-    <section class="mrr-metric-grid mrr-metric-grid--compact">
+    <section class="mrr-metric-grid mrr-metric-grid--compact mrr-metric-grid--mobile-compact">
       <MrrMetricCard
         v-for="item in summaryCards"
         :key="item.label"

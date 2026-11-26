@@ -20,7 +20,8 @@
  * 这里不写死成固定值，否则「全局圆角」滑块在暖色主题下会失灵；
  * 改为按滑块值等比压缩并封顶，滑块拉到最大也不会回到圆润的大圆角。
  */
-html[data-mrr-palette="gr8r"] {
+html[data-mrr-palette="gr8r"],
+.mrr-local-warm-preview {
   --mrr-radius-sm: min(calc(var(--radius, 0.5rem) * 0.6), 7px);
   --mrr-radius-md: min(calc(var(--radius, 0.5rem) * 0.8), 8px);
   --mrr-radius-lg: min(calc(var(--radius, 0.5rem) * 1), 10px);
@@ -105,7 +106,8 @@ html[data-mrr-palette="gr8r"] .topbar-container.mask {
  * el-button 读取这组变量，所以这里不再重写 padding / font-size ——
  * 之前两族各写一套（el 12.5px / Fa 14px），同一条工具栏里立刻能看出两种字号。
  */
-html[data-mrr-palette="gr8r"] {
+html[data-mrr-palette="gr8r"],
+.mrr-local-warm-preview {
   /*
    * 字号回到 13px 整数档：12.5px 在 Windows 100% 缩放（医院终端的常见配置）下
    * 中文字形会落在半像素上，ClearType 渲染发虚、笔画粗细不一。
@@ -131,34 +133,40 @@ html[data-mrr-palette="gr8r"] {
  * 圆角不在这里写：按钮模板已经读 --mrr-control-radius，而上面把 radius-* 令牌整体换成了
  * Gr8r 口径；在这里再声明一次会把 `.el-button.is-circle` 的 50% 一起压平成圆角方块。
  */
-html[data-mrr-palette="gr8r"] .el-button {
+html[data-mrr-palette="gr8r"] .el-button,
+.mrr-local-warm-preview .el-button {
   box-shadow: none;
 }
 
 /* 禁用的默认按钮必须退出这条规则，否则发丝描边和白底会盖掉下面的禁用灰。 */
-html[data-mrr-palette="gr8r"] .el-button:not(.el-button--primary):not(.el-button--success):not(.el-button--warning):not(.el-button--danger):not(.el-button--info):not(.is-link):not(.is-text):not(.is-disabled) {
+html[data-mrr-palette="gr8r"] .el-button:not(.el-button--primary):not(.el-button--success):not(.el-button--warning):not(.el-button--danger):not(.el-button--info):not(.is-link):not(.is-text):not(.is-disabled),
+.mrr-local-warm-preview .el-button:not(.el-button--primary):not(.el-button--success):not(.el-button--warning):not(.el-button--danger):not(.el-button--info):not(.is-link):not(.is-text):not(.is-disabled) {
   background: var(--mrr-card);
   border-color: var(--mrr-border-strong);
   box-shadow: none;
 }
 
 /* 悬停只加深底色，描边维持不动：描边再深一档会被读成「选中态」。 */
-html[data-mrr-palette="gr8r"] .el-button:not(.el-button--primary):not(.el-button--success):not(.el-button--warning):not(.el-button--danger):not(.el-button--info):not(.is-link):not(.is-text):not(.is-disabled):hover {
+html[data-mrr-palette="gr8r"] .el-button:not(.el-button--primary):not(.el-button--success):not(.el-button--warning):not(.el-button--danger):not(.el-button--info):not(.is-link):not(.is-text):not(.is-disabled):hover,
+.mrr-local-warm-preview .el-button:not(.el-button--primary):not(.el-button--success):not(.el-button--warning):not(.el-button--danger):not(.el-button--info):not(.is-link):not(.is-text):not(.is-disabled):hover {
   color: var(--mrr-foreground);
   background: var(--mrr-muted);
   border-color: var(--mrr-border-strong);
 }
 
-html[data-mrr-palette="gr8r"] .el-button--primary:not(.is-link):not(.is-text):not(.is-plain) {
+html[data-mrr-palette="gr8r"] .el-button--primary:not(.is-link):not(.is-text):not(.is-plain),
+.mrr-local-warm-preview .el-button--primary:not(.is-link):not(.is-text):not(.is-plain) {
   box-shadow: inset 0 -1px 0 rgb(0 0 0 / 12%);
 }
 
-html[data-mrr-palette="gr8r"] .el-button--primary:not(.is-link):not(.is-text):not(.is-plain):not(.is-disabled):hover {
+html[data-mrr-palette="gr8r"] .el-button--primary:not(.is-link):not(.is-text):not(.is-plain):not(.is-disabled):hover,
+.mrr-local-warm-preview .el-button--primary:not(.is-link):not(.is-text):not(.is-plain):not(.is-disabled):hover {
   box-shadow: inset 0 -1px 0 rgb(0 0 0 / 16%);
 }
 
 /* 按压回弹比 MRR 的「下沉 1px」更短促，与 140ms 动效节奏一致。 */
-html[data-mrr-palette="gr8r"] .el-button:not(.is-disabled):not(.is-loading):active {
+html[data-mrr-palette="gr8r"] .el-button:not(.is-disabled):not(.is-loading):active,
+.mrr-local-warm-preview .el-button:not(.is-disabled):not(.is-loading):active {
   transform: var(--mrr-motion-decor, scale(0.97));
 }
 

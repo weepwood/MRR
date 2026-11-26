@@ -2,6 +2,7 @@
 import type { ExampleId } from '../catalog'
 import { computed, ref, useId } from 'vue'
 import MrrSegmentedTabs from '@/components/MrrSegmentedTabs/index.vue'
+import LocalThemePreview from './LocalThemePreview.vue'
 
 defineProps<{ example: ExampleId }>()
 
@@ -121,6 +122,7 @@ const options = [{ label: '本地示例', value: 'local' }, { label: '归档示�
     <p class="example-note" role="status">
       已触发 {{ clicks }} 次示例操作
     </p>
+    <LocalThemePreview />
   </div>
 
   <div v-else-if="example === 'navigation'" class="example-stack">

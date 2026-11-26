@@ -214,15 +214,18 @@ async function skipRollbackPage() {
         </el-button>
       </template>
 
-      <el-form class="ocr-batches__form mrr-edit-form mrr-edit-form--multi" label-position="top">
-        <el-form-item label="起点影像 ID（不包含）">
-          <el-input-number v-model="form.afterId" :min="0" :max="2147483647" />
+      <el-form class="ocr-batches__form mrr-edit-form mrr-edit-form--multi mrr-edit-form--bounded" label-position="top">
+        <el-form-item label="起点影像 ID">
+          <el-input-number v-model="form.afterId" :min="0" :max="2147483647" aria-describedby="ocr-start-hint" />
+          <span id="ocr-start-hint" class="mrr-edit-form__hint">不包含起点 ID</span>
         </el-form-item>
-        <el-form-item label="终点影像 ID（0 为当前最大值）">
-          <el-input-number v-model="form.upperId" :min="0" :max="2147483647" />
+        <el-form-item label="终点影像 ID">
+          <el-input-number v-model="form.upperId" :min="0" :max="2147483647" aria-describedby="ocr-end-hint" />
+          <span id="ocr-end-hint" class="mrr-edit-form__hint">0 为当前最大值</span>
         </el-form-item>
         <el-form-item label="本批次页数上限">
-          <el-input-number v-model="form.maxPages" :min="1" :max="10000" />
+          <el-input-number v-model="form.maxPages" :min="1" :max="10000" aria-describedby="ocr-pages-hint" />
+          <span id="ocr-pages-hint" class="mrr-edit-form__hint">每批最多 10,000 页</span>
         </el-form-item>
       </el-form>
 
@@ -357,21 +360,6 @@ async function skipRollbackPage() {
 <style scoped>
 .ocr-batches {
   min-width: 0;
-}
-
-.ocr-batches__form {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(min(100%, 220px), 1fr));
-  gap: var(--mrr-space-3) var(--mrr-space-4);
-}
-
-.ocr-batches__form :deep(.el-form-item) {
-  min-width: 0;
-  margin: 0;
-}
-
-.ocr-batches__form :deep(.el-input-number) {
-  width: 100%;
 }
 
 .ocr-batches__auto-apply {

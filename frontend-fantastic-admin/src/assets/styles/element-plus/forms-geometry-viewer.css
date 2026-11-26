@@ -507,3 +507,20 @@ body .el-form.mrr-edit-form .el-input-number .el-input {
 body .el-form.mrr-edit-form--multi {
   grid-template-columns: repeat(auto-fit, minmax(min(100%, 220px), 1fr));
 }
+
+/* Short numeric fields must not expand with the full page width. */
+body .el-form.mrr-edit-form--bounded {
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 220px), 260px));
+}
+
+body .el-form.mrr-edit-form--bounded .el-input-number {
+  width: 100%;
+}
+
+.mrr-edit-form__hint {
+  flex: 0 0 100%;
+  font-size: var(--mrr-font-size-xs);
+  line-height: 1.5;
+  color: var(--mrr-muted-foreground);
+  overflow-wrap: anywhere;
+}

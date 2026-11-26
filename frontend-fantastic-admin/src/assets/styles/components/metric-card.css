@@ -315,3 +315,36 @@
     border: 1px solid var(--mrr-border);
   }
 }
+
+@media (max-width: 600px) {
+  .mrr-metric-grid--mobile-compact {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .mrr-metric-grid--mobile-compact > :last-child:nth-child(odd) {
+    grid-column: 1 / -1;
+  }
+
+  .mrr-metric-grid--mobile-compact .mrr-metric-card .el-card__body {
+    grid-template-columns: minmax(0, 1fr);
+    gap: var(--mrr-space-2);
+    align-content: start;
+  }
+
+  .mrr-metric-grid--mobile-compact .mrr-metric-card__icon {
+    width: 32px;
+    height: 32px;
+    font-size: 20px;
+  }
+
+  .mrr-metric-grid--mobile-compact .mrr-metric-card__value {
+    font-size: var(--mrr-font-size-title-compact);
+    letter-spacing: normal;
+  }
+}
+
+@media (max-width: 320px) {
+  .mrr-metric-grid--mobile-compact {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}

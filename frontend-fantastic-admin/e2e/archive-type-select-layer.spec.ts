@@ -523,3 +523,30 @@ test('全屏分类确认期间切换影像时取消本次修改', async ({ page 
   await expect(page.locator('.el-message')).toContainText('当前影像已切换，请重新确认分类')
   await expect(page.locator('.preview-type-select')).toContainText('03-手术记录')
 })
+
+test('平铺模式紧凑卡片保持比例、选中与全屏操作', async ({ page }, testInfo) => {
+  await page.setViewportSize({ width: 1440, height: 900 })
+  await mockArchivePage(page, 4)
+  await page.addInitScript(() => {
+    localStorage.setItem('MRR-ADMIN:archive-local-preferences', JSON.stringify({
+      archiveLayoutMode: 'wall',
+      archiveWallCardWidth: 160,
+      archiveWallDensity: 'compact',
+    }))
+  })
+  await page.goto('/archive?bah=00009301')
+  const card = page.locator('.archive-wall-card').first()
+  const stage = card.locator('.archive-wall-image-stage')
+  await expect(stage).toBeVisible()
+  const geometry = await stage.boundingBox()
+  expect(geometry!.height / geometry!.width).toBeCloseTo(4 / 3, 1)
+  expect(geometry!.height).toBeLessThan(320)
+  await page.locator('.archive-wall').screenshot({ path: testInfo.outputPath('compact-wall.png'), animations: 'disabled' })
+  await stage.click()
+  await expect(page.locator('.el-image-viewer__wrapper')).toBeVisible()
+  await page.keyboard.press('ArrowRight')
+  await expect(page.locator('.viewer-progress')).toHaveText('2 / 4')
+  await page.keyboard.press('Escape')
+  await expect(page.locator('.el-image-viewer__wrapper')).toBeHidden()
+  await expect(page.locator('.archive-wall-card').nth(1)).toHaveClass(/active/)
+})

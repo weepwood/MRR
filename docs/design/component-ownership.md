@@ -309,3 +309,5 @@ base.css 的 mrr-nav-leaf 负责所有叶子选中色条及动效，按语义ARI
 目录外层容器由 base.css 的 mrr-directory-panel 统一管理背景、描边、圆角与内边距；页面仅管理目录位置、响应式排列和滚动。
 
 集中UI精修：分区标题表面由tokens.css/theme-palette.ts与MrrSectionCard消费，数字、选择、日期、开关、滚动条分别由现有Element Plus桥接与base.css负责；展厅仅负责局部预览与示例状态，不另建主题机制；统计明细仅消费嵌入筛选器的既有令牌和自身档案网格。
+
+专业构图深化：表单定宽与帮助文字归公共forms-geometry-viewer.css，监控窄屏摘要显式变体归metric-card.css，图表通用轴/图例归chart-theme.ts；局部暖色预览复用正式palette与warm-flat.css的明确作用域，不持久化、不影响浮层。影像墙比例由ArchiveWall负责，抽屉过渡由overlay-shells.css负责。

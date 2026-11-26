@@ -370,3 +370,13 @@ body .el-descriptions.mrr-detail-descriptions--compact .el-descriptions__label.e
 body .el-descriptions.mrr-detail-descriptions--compact .el-descriptions__content.el-descriptions__cell {
   padding: 0 var(--mrr-space-2) var(--mrr-space-2);
 }
+
+/* Drawer positioning remains native; do not animate width/layout on rapid state changes. */
+body .el-drawer.mrr-drawer-shell:not(.is-dragging) {
+  transition: transform var(--mrr-motion-overlay) var(--mrr-ease-out);
+}
+
+body .mrr-dialog-mask.el-drawer-fade-enter-active,
+body .mrr-dialog-mask.el-drawer-fade-leave-active {
+  transition: background-color var(--mrr-motion-overlay) var(--mrr-ease-out);
+}

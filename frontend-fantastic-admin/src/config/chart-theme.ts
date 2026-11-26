@@ -149,6 +149,8 @@ function themeAxis(axis: unknown, tokens: MrrChartThemeTokens) {
     axisLabel: {
       color: tokens.textSecondary,
       fontSize: chartFontSize('--mrr-chart-axis-font-size'),
+      margin: 10,
+      hideOverlap: true,
       ...(source.axisLabel as Record<string, unknown> | undefined),
     },
     nameTextStyle: {
@@ -206,9 +208,12 @@ export function applyMrrChartTheme(option: ECOption, tokens = getMrrChartThemeTo
       : undefined,
     legend: option.legend
       ? {
-          itemWidth: 12,
+          itemWidth: 14,
           itemHeight: 8,
-          itemGap: 12,
+          itemGap: 14,
+          pageTextStyle: { color: tokens.textSecondary },
+          pageIconColor: tokens.textPrimary,
+          pageIconInactiveColor: tokens.border,
           textStyle: {
             color: tokens.textSecondary,
             fontSize: chartFontSize('--mrr-chart-legend-font-size'),

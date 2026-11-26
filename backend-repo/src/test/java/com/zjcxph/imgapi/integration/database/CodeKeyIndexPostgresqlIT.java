@@ -32,11 +32,37 @@ class CodeKeyIndexPostgresqlIT extends PostgresqlIntegrationTestSupport {
         String query="SELECT "+match.group(1);
         String first=jdbc.queryForObject(query,String.class);
         String name=jdbc.queryForObject("SELECT current_database()",String.class);
-        try(var second=new org.testcontainers.containers.PostgreSQLContainer<>("postgres:16-alpine").withDatabaseName(name)) {
-            second.start();
-            try(var connection=java.sql.DriverManager.getConnection(second.getJdbcUrl(),second.getUsername(),second.getPassword());var statement=connection.createStatement()) {
-                try(var result=statement.executeQuery("SELECT current_database()")){assertThat(result.next()).isTrue();assertThat(result.getString(1)).isEqualTo(name);}
-                try(var result=statement.executeQuery(query)){assertThat(result.next()).isTrue();assertThat(result.getString(1)).isNotEqualTo(first);}
+        // Local qualification may provide a second isolated PostgreSQL instance.
+        // CI keeps the existing independent Testcontainers path by default.
+        String secondUrl = System.getenv("MRR_TEST_POSTGRES_SECOND_URL");
+        if (secondUrl != null && !secondUrl.isBlank()) {
+            assertThat(System.getenv("MRR_TEST_POSTGRES_URL")).isNotBlank();
+            assertThat(secondUrl).isNotEqualTo(System.getenv("MRR_TEST_POSTGRES_URL"));
+            try (var connection = java.sql.DriverManager.getConnection(
+                    secondUrl, postgresqlUsername(), postgresqlPassword())) {
+                assertDifferentDatabaseIdentity(connection, name, query, first);
+            }
+        } else {
+            try (var second = new org.testcontainers.containers.PostgreSQLContainer<>("postgres:16-alpine").withDatabaseName(name)) {
+                second.start();
+                try (var connection = java.sql.DriverManager.getConnection(
+                        second.getJdbcUrl(), second.getUsername(), second.getPassword())) {
+                    assertDifferentDatabaseIdentity(connection, name, query, first);
+                }
+            }
+        }
+    }
+
+    private void assertDifferentDatabaseIdentity(java.sql.Connection connection, String name,
+                                                 String query, String first) throws Exception {
+        try (var statement = connection.createStatement()) {
+            try (var result = statement.executeQuery("SELECT current_database()")) {
+                assertThat(result.next()).isTrue();
+                assertThat(result.getString(1)).isEqualTo(name);
+            }
+            try (var result = statement.executeQuery(query)) {
+                assertThat(result.next()).isTrue();
+                assertThat(result.getString(1)).isNotEqualTo(first);
             }
         }
     }

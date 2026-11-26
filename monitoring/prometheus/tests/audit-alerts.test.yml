@@ -1,0 +1,81 @@
+rule_files:
+  - ../rules/mrr-alerts.yml
+evaluation_interval: 15s
+tests:
+  - interval: 15s
+    input_series:
+      - series: 'mrr_audit_dropped{application="mrr",job="mrr-backend",instance="synthetic"}'
+        values: '0 0 1 1 0 0 0'
+      - series: 'mrr_audit_pending{application="mrr",job="mrr-backend",instance="synthetic"}'
+        values: '0 999 1000 999 0 0 0'
+    alert_rule_test:
+      - eval_time: 15s
+        alertname: MrrAuditDropped
+        exp_alerts: []
+      - eval_time: 15s
+        alertname: MrrAuditBufferFull
+        exp_alerts: []
+      - eval_time: 30s
+        alertname: MrrAuditDropped
+        exp_alerts:
+          - exp_labels:
+              application: mrr
+              job: mrr-backend
+              instance: synthetic
+              severity: critical
+            exp_annotations:
+              summary: MRR 审计记录出现丢弃
+              description: 当前进程报告审计丢弃或拒绝累计值大于零；记录现场证据并核实缺口，重启归零不代表记录恢复。
+              runbook_url: docs/engineering/mrr-data-operations-runbook.md
+      - eval_time: 30s
+        alertname: MrrAuditBufferFull
+        exp_alerts:
+          - exp_labels:
+              application: mrr
+              job: mrr-backend
+              instance: synthetic
+              severity: warning
+            exp_annotations:
+              summary: MRR 默认审计缓冲达到容量边界
+              description: 默认内存缓冲等待及在途达到1000条，核对数据库和积压；该边界不适用于冻结的持久化实验模式。
+              runbook_url: docs/engineering/mrr-data-operations-runbook.md
+      - eval_time: 45s
+        alertname: MrrAuditBufferFull
+        exp_alerts: []
+      - eval_time: 1m
+        alertname: MrrAuditDropped
+        exp_alerts: []
+  - interval: 15s
+    input_series:
+      - series: 'up{job="mrr-backend",instance="healthy"}'
+        values: '1+0x8'
+      - series: 'mrr_audit_pending{application="mrr",job="mrr-backend",instance="healthy"}'
+        values: '0+0x8'
+      - series: 'mrr_audit_dropped{application="mrr",job="mrr-backend",instance="healthy"}'
+        values: '0+0x8'
+      - series: 'up{job="mrr-backend",instance="missing"}'
+        values: '1+0x8'
+      - series: 'mrr_audit_pending{application="mrr",job="mrr-backend",instance="missing"}'
+        values: '0+0x8'
+      - series: 'mrr_audit_dropped{application="mrr",job="mrr-backend",instance="missing"}'
+        values: '_ _ _ _ _ 0 0 0 0'
+      - series: 'up{job="mrr-backend",instance="down"}'
+        values: '0+0x8'
+    alert_rule_test:
+      - eval_time: 45s
+        alertname: MrrAuditMetricsMissing
+        exp_alerts: []
+      - eval_time: 1m
+        alertname: MrrAuditMetricsMissing
+        exp_alerts:
+          - exp_labels:
+              job: mrr-backend
+              instance: missing
+              severity: warning
+            exp_annotations:
+              summary: MRR 审计关键指标未采集
+              description: 后端可抓取但缺少审计积压或丢弃指标；检查采集配置和运行模式，不能据此认定审计无损。
+              runbook_url: docs/engineering/mrr-data-operations-runbook.md
+      - eval_time: 1m15s
+        alertname: MrrAuditMetricsMissing
+        exp_alerts: []

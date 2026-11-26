@@ -23,6 +23,40 @@ groups:
           description: postgres_exporter 连续 1 分钟无法连接数据库。
           runbook_url: docs/engineering/database-monitoring-and-tuning.md
 
+  # 默认内存审计的明确容量边界；不把累计 gauge 当作 counter。
+  - name: mrr-audit
+    rules:
+      - alert: MrrAuditDropped
+        expr: mrr_audit_dropped{job="mrr-backend", application="mrr"} > 0
+        labels:
+          severity: critical
+        annotations:
+          summary: MRR 审计记录出现丢弃
+          description: 当前进程报告审计丢弃或拒绝累计值大于零；记录现场证据并核实缺口，重启归零不代表记录恢复。
+          runbook_url: docs/engineering/mrr-data-operations-runbook.md
+
+      - alert: MrrAuditBufferFull
+        expr: mrr_audit_pending{job="mrr-backend", application="mrr"} >= 1000
+        labels:
+          severity: warning
+        annotations:
+          summary: MRR 默认审计缓冲达到容量边界
+          description: 默认内存缓冲等待及在途达到1000条，核对数据库和积压；该边界不适用于冻结的持久化实验模式。
+          runbook_url: docs/engineering/mrr-data-operations-runbook.md
+
+      - alert: MrrAuditMetricsMissing
+        expr: |
+          (up{job="mrr-backend"} == 1 unless on(job, instance) mrr_audit_pending{job="mrr-backend", application="mrr"})
+          or
+          (up{job="mrr-backend"} == 1 unless on(job, instance) mrr_audit_dropped{job="mrr-backend", application="mrr"})
+        for: 1m
+        labels:
+          severity: warning
+        annotations:
+          summary: MRR 审计关键指标未采集
+          description: 后端可抓取但缺少审计积压或丢弃指标；检查采集配置和运行模式，不能据此认定审计无损。
+          runbook_url: docs/engineering/mrr-data-operations-runbook.md
+
   - name: mrr-database
     rules:
       - alert: MrrDatabaseConnectionsHigh

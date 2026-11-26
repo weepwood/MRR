@@ -90,6 +90,7 @@ defineExpose({
             }),
           }" :class="cn('group mrr-navigation-control menu-item-container relative h-full w-full flex cursor-pointer items-center justify-between gap-1 rounded-md px-3 py-2 transition-colors', {
             'active': isItemActive,
+            'mrr-nav-leaf': !subMenu,
             'px-2.5': rootMenu.isMenuPopup && level === 0,
           })" :tabindex="branchTabIndex" :aria-current="!subMenu && isItemActive ? 'page' : undefined" :aria-label="subMenu || (rootMenu.isMenuPopup && level === 0 && !rootMenu.props.showCollapseName) ? title : undefined" :title="title" @click="handleClick($event, navigate)"
         >
@@ -175,40 +176,8 @@ defineExpose({
   border-radius: 9px;
 }
 
-/* The selection rail belongs to the route, never to the hover target.
- * A fixed-size rail scales around its center; pointer release never resets it.
- * Hide the previous route rail immediately so only one visible selection remains. */
-a.menu-item-container::after {
-  position: absolute;
-  inset-inline-start: 3px;
-  top: 50%;
-  z-index: 1;
-  width: 3px;
-  height: 22px;
-  pointer-events: none;
-  content: "";
-  background: var(--mrr-primary);
-  border-radius: 2px;
-  opacity: 0;
-  transform: translateY(-50%) scaleY(0);
-  transform-origin: center;
-  transition: transform var(--mrr-motion-move) var(--mrr-ease-out);
-}
-
 a.menu-item-container:not(.active):active {
   background: var(--mrr-navigation-active);
-}
-
-a.menu-item-container[aria-current="page"]::after {
-  opacity: 1;
-  transform: translateY(-50%) scaleY(1);
-}
-
-@media (forced-colors: active) {
-  a.menu-item-container[aria-current="page"]::after {
-    forced-color-adjust: none;
-    background: Highlight;
-  }
 }
 
 .menu-leading-control {

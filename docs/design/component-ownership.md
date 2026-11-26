@@ -302,3 +302,6 @@ MrrFilterBar 统一拥有字段流式/网格布局、容器响应式、语义宽
 
 ## 分段页签（2026-11-26）
 MrrSegmentedTabs拥有原生Element Plus封装、可访问tablist名称和首尾键导航；form-controls.css拥有共用轨道、活动底板、尺寸和动效。业务页面仅提供选项与内容，AppConfigPanel负责窄容器图标化，不复制活动底板。theme-palette.ts拥有暖色输入边界、悬停和聚焦相关令牌。
+
+## 目录导航（2026-11-26）
+base.css 的 mrr-nav-leaf 负责所有叶子选中色条及动效，按语义ARIA选中状态驱动；mrr-directory-nav-item/icon/label/count 负责本地平级目录的公共视觉样式。Menu/item.vue保留路由行为，SubSidebar保留树层级及展开几何；设置与展厅仅负责各自数据、筛选及交互，不复制色条或选中描边。

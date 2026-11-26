@@ -23,7 +23,7 @@
 }
 
 .settings-nav { display: grid; gap: var(--mrr-space-3); }
-.settings-nav-group { display: grid; gap: 2px; }
+.settings-nav-group { display: grid; gap: 4px; }
 
 .settings-nav-heading {
   padding: var(--mrr-space-1) var(--mrr-space-2);
@@ -32,40 +32,7 @@
   color: var(--mrr-muted-foreground);
 }
 
-.settings-nav-item {
-  display: grid;
-  grid-template-columns: 16px minmax(0, 1fr);
-  gap: var(--mrr-space-2);
-  align-items: center;
-  width: 100%;
-  min-height: 34px;
-  padding: var(--mrr-space-1) var(--mrr-space-2);
-  color: var(--mrr-card-foreground);
-  text-align: left;
-  cursor: pointer;
-  background: transparent;
-  border: 1px solid transparent;
-  border-radius: var(--mrr-control-radius);
-}
-
-.settings-nav-item:hover { background: var(--mrr-navigation-hover); }
-.settings-nav-item.active { background: var(--mrr-navigation-active); border-color: var(--mrr-navigation-active-border); }
-.settings-nav-item:focus-visible { outline: 2px solid var(--mrr-navigation-active-foreground, var(--mrr-primary)); outline-offset: -2px; }
-.settings-nav-item:disabled { cursor: wait; }
-.nav-icon { font-size: 16px; color: var(--mrr-muted-foreground); }
-
-.settings-nav-item.active .nav-icon,
-.settings-nav-item.active .nav-title { color: var(--mrr-navigation-active-foreground, var(--mrr-primary)); }
 .settings-nav-item.danger .nav-icon { color: var(--mrr-tone-danger-ink); }
-
-.nav-title {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  font-size: var(--mrr-font-size-sm);
-  font-weight: 500;
-  white-space: nowrap;
-}
-.settings-nav-item.active .nav-title { font-weight: 650; }
 
 .settings-category-select { display: none; }
 .settings-panel { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--mrr-space-4); justify-items: stretch; }
@@ -211,7 +178,3 @@
 .settings-layout--narrow .settings-actions { padding: var(--mrr-space-3); }
 .settings-layout--narrow .settings-command-buttons { width: 100%; }
 .settings-layout--narrow .settings-command-buttons > .el-button { flex: 1 1 auto; }
-
-@supports not (color: color-mix(in srgb, #000 50%, #fff)) {
-  .settings-nav-item.active { background: var(--mrr-tone-primary-soft); border-color: var(--mrr-tone-primary-border); }
-}

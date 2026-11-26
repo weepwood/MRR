@@ -853,3 +853,6 @@ MrrCursorPagination 改用 ElPagination 原生页码、箭头、跳页、条数�
 
 ## 侧栏常驻浅灰引导线（2026-11-26）
 基线cf2102d3。SubSidebar灰色分组引导线恢复常驻（opacity 0.8，父项hover 1），子菜单引导间距8→12px、外框宽184→180px、蓝线与灰线16px，保持232px侧栏和内部控件间距。Chromium/WebKit专项18/18（含快速反向展开、选中线及32组视口主题几何），实际四种配色主题五组26项名称无截断，截图/Volumes/data/AI-Development/artifacts/mrr-sidebar-guide-restore-20261126。定向lint与diff检查通过。未重新执行全量CI、生产构建、类型全检和医院终端验收，不推送合并发布。
+
+## 设置与组件展厅目录导航归一（2026-11-26）
+基线5bb5fd3c，连接本地工作区成功。复用当前实际业务子菜单视觉参数及统一mrr-nav-leaf色条，两个目录共享视觉类、移除旧重复CSS；平级目录不添加树线，保留业务侧栏原缩进/展开。原有20项双引擎回归全部通过；新增8项首轮3/8通过，5项因亚像素及滚动绝对坐标测量差异失败，改为实际行高精度及相对图标几何后最终8/8，覆盖两主题明暗、两目录、点击/hover、减少动效、移动适配。TypeScript、定向ESLint/Stylelint及diff通过。截图/Volumes/data/AI-Development/artifacts/mrr-directory-nav-20261126，日志/tmp/mrr-directory-nav-{e2e,final,tsc}.log。未执行全量CI、生产构建及真实医院终端验收，不推送合并发布。

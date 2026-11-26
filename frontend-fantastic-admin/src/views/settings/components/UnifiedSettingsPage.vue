@@ -457,13 +457,13 @@ onUnmounted(() => {
               v-for="item in group.items"
               :key="item.key"
               type="button"
-              class="settings-nav-item"
+              class="settings-nav-item mrr-navigation-control mrr-nav-leaf mrr-directory-nav-item"
               :class="{ active: activeSection === item.key, danger: item.key === 'developer' && settings.developerModeEnabled }"
               :aria-current="activeSection === item.key ? 'true' : undefined"
-              :disabled="sectionSwitching" @click="navigateSection(item.key)"
+              :title="item.title" :disabled="sectionSwitching" @click="navigateSection(item.key)"
             >
-              <FaIcon :name="item.icon" class="nav-icon" aria-hidden="true" />
-              <strong class="nav-title">{{ item.title }}</strong>
+              <FaIcon :name="item.icon" class="nav-icon mrr-directory-nav-icon" aria-hidden="true" />
+              <strong class="nav-title mrr-directory-nav-label">{{ item.title }}</strong>
             </button>
           </div>
         </nav>

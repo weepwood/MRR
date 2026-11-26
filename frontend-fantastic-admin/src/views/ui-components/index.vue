@@ -49,12 +49,12 @@ function resetExamples() {
         <nav class="gallery-categories" aria-label="组件分类">
           <button
             v-for="item in categories" :key="item.id" type="button"
-            :aria-pressed="category === item.id" class="gallery-category"
+            :aria-pressed="category === item.id" class="gallery-category mrr-navigation-control mrr-nav-leaf mrr-directory-nav-item" :title="item.label"
             @click="category = item.id"
           >
-            <FaIcon :name="item.icon" class="gallery-category-icon" aria-hidden="true" />
-            <span>{{ item.label }}</span>
-            <span class="gallery-category-count">{{ item.id === 'all' ? examples.length : examples.filter(example => example.category === item.id).length }}</span>
+            <FaIcon :name="item.icon" class="gallery-category-icon mrr-directory-nav-icon" aria-hidden="true" />
+            <span class="mrr-directory-nav-label">{{ item.label }}</span>
+            <span class="gallery-category-count mrr-directory-nav-count">{{ item.id === 'all' ? examples.length : examples.filter(example => example.category === item.id).length }}</span>
           </button>
         </nav>
         <p class="gallery-directory-note">
@@ -138,52 +138,6 @@ function resetExamples() {
   display: grid;
   gap: var(--mrr-space-1);
   margin-top: var(--mrr-space-5);
-}
-
-.gallery-category {
-  display: flex;
-  gap: var(--mrr-space-2);
-  align-items: center;
-  min-height: var(--mrr-control-height-compact);
-  padding: var(--mrr-space-2) var(--mrr-space-3);
-  text-align: left;
-  cursor: pointer;
-  background: transparent;
-  border: 1px solid transparent;
-  border-radius: var(--mrr-radius-md);
-}
-
-.gallery-category:hover {
-  background: var(--mrr-navigation-hover);
-}
-
-/* 选中态与系统设置页目录（settings-nav-item.active）保持同一形态。 */
-.gallery-category[aria-pressed="true"] {
-  font-weight: 600;
-  color: var(--mrr-navigation-active-foreground, var(--mrr-primary));
-  background: var(--mrr-card);
-  border-color: var(--mrr-border);
-}
-
-.gallery-category:focus-visible {
-  outline: 2px solid var(--mrr-navigation-active-foreground, var(--mrr-primary));
-  outline-offset: 0;
-}
-
-.gallery-category-icon {
-  font-size: 16px;
-  color: var(--mrr-muted-foreground);
-}
-
-.gallery-category[aria-pressed="true"] .gallery-category-icon {
-  color: var(--mrr-navigation-active-foreground, var(--mrr-primary));
-}
-
-.gallery-category-count {
-  margin-left: auto;
-  font-size: 12px;
-  font-variant-numeric: tabular-nums;
-  color: var(--mrr-muted-foreground);
 }
 
 .gallery-directory-note,

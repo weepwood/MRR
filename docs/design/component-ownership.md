@@ -299,3 +299,6 @@ FaIcon、FaKbd、FaPinInput、FaScrollArea、FaSmartFixedBlock、FaPasswordStren
 ## 普通业务筛选归属补充（2026-11-26）
 
 MrrFilterBar 统一拥有字段流式/网格布局、容器响应式、语义宽度、动作分组与高级区域结构；MrrFilterActionButton 统一查询/重置反馈，MrrDataTablePanel 继续拥有表格及分页。页面拥有字段值、权限、请求、已应用快照和业务操作；不复制普通筛选尺寸/间距。动态数据库筛选保留带标签网格，专用影像身份查询/侧栏及即时筛选保留专业布局。
+
+## 分段页签（2026-11-26）
+MrrSegmentedTabs拥有原生Element Plus封装、可访问tablist名称和首尾键导航；form-controls.css拥有共用轨道、活动底板、尺寸和动效。业务页面仅提供选项与内容，AppConfigPanel负责窄容器图标化，不复制活动底板。theme-palette.ts拥有暖色输入边界、悬停和聚焦相关令牌。

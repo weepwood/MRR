@@ -186,8 +186,8 @@ describe('chrome 86 color-mix 回退契约', () => {
 describe('分段标签的 Chrome 86 选择器契约', () => {
   it('首尾标签使用等价显式选择器而非 :is()', () => {
     const css = read('assets/styles/components/form-controls.css')
-    expect(css).toContain('.mrr-segmented-tabs:not(.appearance-tabs) > .el-tabs__header .el-tabs__item:nth-child(2),')
-    expect(css).toContain('.mrr-segmented-tabs:not(.appearance-tabs) > .el-tabs__header .el-tabs__item:last-child {')
+    expect(css).toContain('.mrr-segmented-tabs > .el-tabs__header .el-tabs__item:nth-child(2),')
+    expect(css).toContain('.mrr-segmented-tabs > .el-tabs__header .el-tabs__item:last-child {')
     expect(css.replace(/\/\*[\s\S]*?\*\//g, '')).not.toMatch(/:is\(/)
   })
 })

@@ -826,3 +826,6 @@ MrrCursorPagination 改用 ElPagination 原生页码、箭头、跳页、条数�
 
 ## 运行参数工作区精修（2026-11-26）
 基线8c40c0e9。按服务端schema组织配置管理及参数分组，来源/敏感/待保存状态，左说明右控件，部署默认值/范围/已核对生效值，筛选不改变草稿或保存范围。批量填默认跳过需重启项，恢复按钮同样禁止需重启项；不改接口、保存确认及回读逻辑。Mock实际11项，独立目录路由不重复展示。安全单测19/19、双引擎安全8/8、最终布局6/6（16组主题和宽度几何检查，实际截图等待加载遮罩结束）通过。TypeScript与定向lint通过；未执行全量CI/生产构建/正式环境验收。截图 /Volumes/data/AI-Development/artifacts/mrr-runtime-polish-20261126/final，日志/tmp/mrr-runtime-*.log。未修改真实运行配置、不推送合并发布。
+
+## 外观导航、暖色描边与页签动画（2026-11-26）
+基线36a7b31f。窄内容/抽屉四等宽图标保留无障碍名称，MrrSegmentedTabs复用Element Plus原生活动条、180ms连续位移及120ms文字过渡；颜色主题/标题风格/分类/展厅迁移。暖色明亮输入描边#918B83→#99938A、暗黑#929087→#716E66，主要卡面静态边界对比至少3:1，悬停和焦点独立。30项定向单测与36项Chromium/WebKit回归通过，新增测试实际采集动画中间位移、reduced-motion、三种抽屉视口及输入焦点颜色；TypeScript和定向lint通过。截图 /Volumes/data/AI-Development/artifacts/mrr-appearance-tabs-20261126/final，日志/tmp/mrr-appearance-*.log。未执行全量CI、生产构建、实际旧浏览器及全站视觉矩阵；保留main 24152bee、9037 Mock，不推送合并发布。

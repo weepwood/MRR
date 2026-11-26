@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import type { ExampleId } from '../catalog'
 import { computed, ref, useId } from 'vue'
-import { handleSegmentedTabKey } from '@/utils/segmented-tabs'
+import MrrSegmentedTabs from '@/components/MrrSegmentedTabs/index.vue'
 
 defineProps<{ example: ExampleId }>()
 
@@ -119,7 +119,7 @@ const options = [{ label: '本地示例', value: 'local' }, { label: '归档示�
   </div>
 
   <div v-else-if="example === 'navigation'" class="example-stack">
-    <el-tabs v-model="activeTab" class="mrr-segmented-tabs" @keydown="handleSegmentedTabKey">
+    <MrrSegmentedTabs v-model="activeTab" label="页签示例">
       <el-tab-pane :name="`${id}-preview`" label="组件预览" lazy>
         <p class="example-note">
           正在展示页签的预览内容，可以使用方向键切换页签。
@@ -130,7 +130,7 @@ const options = [{ label: '本地示例', value: 'local' }, { label: '归档示�
           页签内容随选择切换；提示可以通过悬停或键盘聚焦查看。
         </p>
       </el-tab-pane>
-    </el-tabs>
+    </MrrSegmentedTabs>
     <div class="example-row">
       <MrrTooltip content="这是组件说明提示，支持键盘聚焦。">
         <el-button class="mrr-button-flow" :auto-insert-space="false">

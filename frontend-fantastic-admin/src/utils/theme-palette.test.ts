@@ -46,7 +46,7 @@ describe('暖色扁平风格配色方案', () => {
     expect(light['--mrr-navigation-bg-solid']).toBe('#F3F2EF')
     expect(light['--mrr-tone-success']).toBe('#226C4F')
     expect(light['--mrr-tone-danger']).toBe('#B63E38')
-    expect(light['--mrr-control-border']).toBe('#918B83')
+    expect(light['--mrr-control-border']).toBe('#99938A')
     expect(dark['--mrr-navigation-bg-solid']).toBe('#171716')
     expect(dark['--mrr-tone-success']).toBe('#76C3A0')
     expect(dark['--mrr-primary-foreground']).toBe('#1D2449')
@@ -88,7 +88,11 @@ describe('暖色扁平风格配色方案', () => {
     expect(light['--mrr-control-bg-hover']).toBe(GR8R_COLORS.light.mutedSurface)
     expect(light['--mrr-control-border']).toBe(GR8R_COLORS.light.controlLine)
     expect(dark['--mrr-control-border']).toBe(GR8R_COLORS.dark.controlLine)
-    expect(light['--mrr-control-border-hover']).toBe(GR8R_COLORS.light.controlLine)
+    expect(light['--mrr-control-border-hover']).toBe('#918B83')
+    expect(dark['--mrr-control-border-hover']).toBe('#858178')
+    for (const c of [GR8R_COLORS.light, GR8R_COLORS.dark]) {
+      expect(contrastRatio(c.controlLine, c.surface)).toBeGreaterThanOrEqual(3)
+    }
     // 按钮保留暖灰描边，输入控件使用对比度更高的边线。
     expect(light['--mrr-border-strong']).toBe(GR8R_COLORS.light.strongLine)
     expect(dark['--mrr-border-strong']).toBe(GR8R_COLORS.dark.strongLine)

@@ -1,10 +1,10 @@
 <script setup lang="ts">
-import type { TabsInstance } from 'element-plus'
 import type { Settings } from '#/global'
+import { useElementSize } from '@vueuse/core'
+import MrrSegmentedTabs from '@/components/MrrSegmentedTabs/index.vue'
 import settingsDefault from '@/settings.default'
 import { notify } from '@/utils/notification'
 import { diffTwoObj } from '@/utils/object'
-import { handleSegmentedTabKey } from '@/utils/segmented-tabs'
 import { normalizeThemeColor, readableInkOn, themeColorPresets } from '@/utils/theme-color'
 import { gr8rPrimary, normalizeThemePalette, themePalettePresets } from '@/utils/theme-palette'
 
@@ -19,10 +19,9 @@ const props = withDefaults(defineProps<{
 const settingsStore = useSettingsStore()
 const autoSaveState = ref<'idle' | 'saving' | 'saved'>('idle')
 const tabsId = useId()
-const groupTabsRef = ref<TabsInstance>()
-onMounted(() => {
-  groupTabsRef.value?.tabNavRef?.tabListRef?.setAttribute('aria-label', '外观设置分类')
-})
+const panelRef = ref<HTMLElement>()
+const { width: panelWidth } = useElementSize(panelRef)
+const iconOnlyGroups = computed(() => props.drawer || (panelWidth.value > 0 && panelWidth.value < 680))
 
 const activeGroup = ref<string | number>('theme')
 const groupTab = computed({
@@ -189,7 +188,7 @@ function handleReset() {
 </script>
 
 <template>
-  <div class="app-config-panel" :class="{ 'app-config-panel--drawer': props.drawer }">
+  <div ref="panelRef" class="app-config-panel" :class="{ 'app-config-panel--drawer': props.drawer }">
     <div class="config-summary" :class="{ 'config-summary--warning': settingsStore.uiSettingsSyncState === 'failed' }">
       <div class="config-save-feedback" role="status">
         <strong class="autosave-state">
@@ -215,12 +214,12 @@ function handleReset() {
     </div>
     <input ref="importInput" class="import-input" type="file" accept="application/json,.json" @change="handleImport">
 
-    <el-tabs ref="groupTabsRef" v-model="groupTab" class="mrr-segmented-tabs appearance-tabs" @keydown="handleSegmentedTabKey">
+    <MrrSegmentedTabs v-model="groupTab" label="外观设置分类" class="appearance-tabs" :class="{ 'appearance-tabs--icons': iconOnlyGroups }">
       <el-tab-pane :name="`${tabsId}-group-theme`" lazy>
         <template #label>
-          <span data-settings-search-target="theme" class="appearance-tab-label">
-            <FaIcon :name="appearanceGroups[0].icon" aria-hidden="true" />
-            {{ appearanceGroups[0].label }}
+          <span data-settings-search-target="theme" class="appearance-tab-label" :title="appearanceGroups[0].label">
+            <FaIcon :name="appearanceGroups[0].icon" class="appearance-tab-icon" aria-hidden="true" />
+            <span class="appearance-tab-text">{{ appearanceGroups[0].label }}</span>
           </span>
         </template>
         <div v-if="activeGroup === 'theme'" class="appearance-tab-content">
@@ -273,7 +272,7 @@ function handleReset() {
                 <strong>颜色主题</strong>
                 <small>可固定明亮、暗黑模式，或跟随操作系统。</small>
               </div>
-              <el-tabs v-model="themeTab" class="theme-tabs mrr-segmented-tabs" @keydown="handleSegmentedTabKey">
+              <MrrSegmentedTabs v-model="themeTab" label="颜色主题" class="theme-tabs">
                 <el-tab-pane v-for="option in themeOptions" :key="option.value" :name="`${tabsId}-theme-${option.value}`">
                   <template #label>
                     <span class="mrr-segmented-label">
@@ -282,7 +281,7 @@ function handleReset() {
                     </span>
                   </template>
                 </el-tab-pane>
-              </el-tabs>
+              </MrrSegmentedTabs>
             </div>
 
             <div class="setting-item">
@@ -365,9 +364,9 @@ function handleReset() {
                 <strong>页面标题风格</strong>
                 <small>页面同级更简洁，卡片风格层次更突出。</small>
               </div>
-              <el-tabs v-model="titleTab" class="title-style-tabs mrr-segmented-tabs" @keydown="handleSegmentedTabKey">
+              <MrrSegmentedTabs v-model="titleTab" label="页面标题风格" class="title-style-tabs">
                 <el-tab-pane v-for="option in titleOptions" :key="option.value" :name="`${tabsId}-title-${option.value}`" :label="option.label" />
-              </el-tabs>
+              </MrrSegmentedTabs>
             </div>
 
             <div class="setting-item">
@@ -383,9 +382,9 @@ function handleReset() {
 
       <el-tab-pane :name="`${tabsId}-group-navigation`" lazy>
         <template #label>
-          <span data-settings-search-target="navigation" class="appearance-tab-label">
-            <FaIcon :name="appearanceGroups[1].icon" aria-hidden="true" />
-            {{ appearanceGroups[1].label }}
+          <span data-settings-search-target="navigation" class="appearance-tab-label" :title="appearanceGroups[1].label">
+            <FaIcon :name="appearanceGroups[1].icon" class="appearance-tab-icon" aria-hidden="true" />
+            <span class="appearance-tab-text">{{ appearanceGroups[1].label }}</span>
           </span>
         </template>
         <div v-if="activeGroup === 'navigation'" class="appearance-tab-content">
@@ -497,9 +496,9 @@ function handleReset() {
 
       <el-tab-pane :name="`${tabsId}-group-workspace`" lazy>
         <template #label>
-          <span data-settings-search-target="workspace" class="appearance-tab-label">
-            <FaIcon :name="appearanceGroups[2].icon" aria-hidden="true" />
-            {{ appearanceGroups[2].label }}
+          <span data-settings-search-target="workspace" class="appearance-tab-label" :title="appearanceGroups[2].label">
+            <FaIcon :name="appearanceGroups[2].icon" class="appearance-tab-icon" aria-hidden="true" />
+            <span class="appearance-tab-text">{{ appearanceGroups[2].label }}</span>
           </span>
         </template>
         <div v-if="activeGroup === 'workspace'" class="appearance-tab-content">
@@ -600,9 +599,9 @@ function handleReset() {
 
       <el-tab-pane :name="`${tabsId}-group-other`" lazy>
         <template #label>
-          <span data-settings-search-target="other" class="appearance-tab-label">
-            <FaIcon :name="appearanceGroups[3].icon" aria-hidden="true" />
-            {{ appearanceGroups[3].label }}
+          <span data-settings-search-target="other" class="appearance-tab-label" :title="appearanceGroups[3].label">
+            <FaIcon :name="appearanceGroups[3].icon" class="appearance-tab-icon" aria-hidden="true" />
+            <span class="appearance-tab-text">{{ appearanceGroups[3].label }}</span>
           </span>
         </template>
         <div v-if="activeGroup === 'other'" class="appearance-tab-content">
@@ -700,7 +699,7 @@ function handleReset() {
           </div>
         </div>
       </el-tab-pane>
-    </el-tabs>
+    </MrrSegmentedTabs>
   </div>
 </template>
 
@@ -776,33 +775,21 @@ function handleReset() {
 .import-input { display: none; }
 
 .appearance-tabs > :deep(.el-tabs__header .el-tabs__nav) {
-  display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: var(--mrr-space-1);
   border: 1px solid var(--mrr-border);
-  border-radius: var(--mrr-radius-card);
 }
 
-.app-config-panel--drawer .appearance-tabs > :deep(.el-tabs__header .el-tabs__nav) {
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+.appearance-tabs--icons .appearance-tab-text {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  clip-path: inset(50%);
 }
 
-.appearance-tabs > :deep(.el-tabs__header .el-tabs__item) {
-  min-width: 0;
-  height: auto;
-  min-height: 38px;
-  padding-inline: var(--mrr-space-2);
-  white-space: normal;
-  border: 1px solid transparent;
-  border-radius: var(--mrr-radius-md);
-}
-
-.appearance-tabs > :deep(.el-tabs__header .el-tabs__item.is-active) {
-  font-weight: 600;
-  color: var(--mrr-navigation-active-foreground, var(--mrr-primary));
-  background: var(--mrr-card);
-  border-color: var(--mrr-border);
-}
+.appearance-tabs--icons .appearance-tab-label { width: 100%; }
+.appearance-tabs--icons .appearance-tab-label :deep(.appearance-tab-icon) { width: 18px; height: 18px; font-size: 18px; }
 
 .appearance-tab-label {
   display: flex;
@@ -813,7 +800,7 @@ function handleReset() {
   line-height: 1.35;
 }
 
-.appearance-tab-label :deep(svg) { flex-shrink: 0; }
+.appearance-tab-label :deep(.appearance-tab-icon) { flex-shrink: 0; }
 .appearance-tabs > :deep(.el-tabs__content) { padding-top: var(--mrr-space-4); }
 
 .config-section {
@@ -869,13 +856,7 @@ function handleReset() {
 }
 
 .theme-tabs {
-  width: 240px;
-}
-
-/* The old 240px option bar contained 238px of intrinsic-width segments.
- * Its centered flex row therefore started 1px from the outer edge. */
-.theme-tabs > :deep(.el-tabs__header .el-tabs__nav) {
-  padding-inline: 1px;
+  width: min(280px, 100%);
 }
 
 /* 配色预览始终显示方案自身的真实色值，而非当前主题的颜色。 */
@@ -1305,10 +1286,6 @@ function handleReset() {
 .mode-single .mode-container {
   inset: 8px 8px 8px 22px;
   border-radius: 0 4px 4px 0;
-}
-
-@media (max-width: 1200px) {
-  .appearance-tabs > :deep(.el-tabs__header .el-tabs__nav) { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
 
 @media (max-width: 720px) {

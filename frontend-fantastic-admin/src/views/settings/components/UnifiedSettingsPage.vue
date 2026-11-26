@@ -686,10 +686,6 @@ onUnmounted(() => {
   grid-template-columns: minmax(0, 1fr);
 }
 
-.settings-layout--narrow .settings-content :deep(.appearance-tabs > .el-tabs__header .el-tabs__nav) {
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-}
-
 .settings-layout--narrow .settings-content :deep(.theme-palette-options) { grid-template-columns: minmax(0, 1fr); }
 
 .settings-content :deep(.control-grid .el-form-item),

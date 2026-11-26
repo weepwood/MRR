@@ -585,7 +585,7 @@ onMounted(() => {
       <el-tab-pane label="病案工作台" name="archive">
         <div class="archive-stack" :class="{ 'archive-stack--workspace': archiveOnly }" :style="archiveOnly ? { '--archive-rail-width': `${railWidth}px` } : undefined">
           <div :id="archiveOnly ? 'archive-search-pane' : undefined" class="archive-search-rail" :class="{ 'archive-search-rail--legacy': !archiveOnly }" role="region" aria-label="病案检索及候选">
-            <MrrSectionCard :body-padding="archiveOnly ? 'compact' : 'normal'" title="查找病案" :description="archiveOnly ? undefined : '选择编号类型，查询病案主档及其跨表关系。'">
+            <MrrSectionCard :body-padding="archiveOnly ? 'compact' : 'normal'" title="查找病案" description="选择编号类型，查询病案主档及其跨表关系。">
               <div class="search-row">
                 <div class="search-field search-field--type">
                   <label for="relation-search-type">查询类型</label>
@@ -1041,7 +1041,7 @@ p {
   gap: var(--mrr-space-3);
   justify-items: center;
   min-width: 0;
-  padding: var(--mrr-space-6) var(--mrr-space-3);
+  padding: var(--mrr-space-5) var(--mrr-space-3);
   text-align: center;
 }
 
@@ -1051,7 +1051,7 @@ p {
   width: 48px;
   height: 48px;
   font-size: 24px;
-  color: var(--mrr-primary);
+  color: var(--mrr-tone-primary-ink);
   background: var(--mrr-tone-primary-soft);
   border: 1px solid var(--mrr-tone-primary-border);
   border-radius: var(--mrr-radius-lg);

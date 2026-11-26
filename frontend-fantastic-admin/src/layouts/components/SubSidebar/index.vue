@@ -121,7 +121,7 @@ watch(() => menuStore.actived, (val, oldVal) => {
   .sidebar-logo {
     min-height: var(--g-sidebar-logo-height);
     background: transparent;
-    border-bottom: 1px solid var(--mrr-navigation-border);
+    border-bottom: 1px solid var(--mrr-shell-divider);
 
     &.side-mode-logo,
     &.single {

@@ -1309,9 +1309,21 @@ onMounted(async () => {
 }
 
 .issue-row {
-  gap: var(--mrr-space-4);
+  gap: var(--mrr-space-3);
+  align-items: start;
   padding: var(--mrr-space-3) 0;
-  border-bottom: 1px solid var(--el-border-color-lighter);
+  border-bottom: 1px solid var(--mrr-border);
+}
+
+.issue-row > div {
+  flex: 1;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.issue-row > .el-tag,
+.issue-row > .el-button {
+  flex: none;
 }
 
 .issue-row:first-child {

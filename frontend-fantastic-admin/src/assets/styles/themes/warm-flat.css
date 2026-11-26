@@ -91,14 +91,6 @@ html[data-mrr-palette="gr8r"]:root {
   --el-box-shadow-dark: var(--mrr-shadow-lg);
 }
 
-/*
- * 顶栏吸顶后的投影原为写死的冷色 rgb(15 23 42 / 6%)（组件内 scoped 样式），
- * 暖色主题下换成调色板写入的暖色投影；暗色沿用组件自身的中性黑投影，不在此覆盖。
- */
-html[data-mrr-palette="gr8r"] .topbar-container.mask {
-  box-shadow: var(--mrr-shadow-sm);
-}
-
 /* ===== 4. 按钮 ===== */
 
 /*

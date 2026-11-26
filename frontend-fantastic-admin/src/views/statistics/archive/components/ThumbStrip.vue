@@ -360,11 +360,9 @@ defineExpose({ resetVisible, scrollToIndex })
   aspect-ratio: 3 / 4;
   padding: var(--mrr-space-3);
   font-size: 11px;
-  color: var(--text-tertiary);
+  color: var(--mrr-muted-foreground);
   text-align: center;
-  background:
-    linear-gradient(135deg, hsl(var(--primary) / 4%), transparent 60%),
-    var(--surface-alt);
+  background: var(--surface-alt);
   border: 1px dashed var(--divider);
 }
 

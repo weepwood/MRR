@@ -26,6 +26,8 @@ const labels = computed(() => props.data.map((item, index) => (
   props.showRank ? `${index + 1}. ${item.label}` : item.label
 )))
 
+const labelGutter = computed(() => Math.max(28, ...props.data.map(item => Number(item.count).toLocaleString('zh-CN').length * 7 + 12)))
+
 const option = computed<ECOption>(() => ({
   tooltip: {
     trigger: 'axis',
@@ -34,7 +36,7 @@ const option = computed<ECOption>(() => ({
   },
   grid: {
     top: 8,
-    right: 28,
+    right: labelGutter.value,
     bottom: 8,
     left: 8,
     containLabel: true,
@@ -77,7 +79,7 @@ const option = computed<ECOption>(() => ({
         show: true,
         position: 'right',
         formatter: params => Number(params.value).toLocaleString('zh-CN'),
-        fontSize: 11,
+        fontSize: 12,
       },
     },
   ],

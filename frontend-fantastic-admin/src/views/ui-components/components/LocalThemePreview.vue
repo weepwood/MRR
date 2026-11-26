@@ -1,16 +1,58 @@
 <script setup lang="ts">
 import type { ThemePaletteScheme } from '@/utils/theme-palette'
 import { computed, ref } from 'vue'
-import { buildThemeColorScale, toCssVariables } from '@/utils/theme-color'
+import { buildThemeColorScale, DEFAULT_THEME_COLOR, toCssVariables } from '@/utils/theme-color'
 import { GR8R_COLORS, gr8rCssVariables } from '@/utils/theme-palette'
+import { darkTheme, lightTheme } from '../../../../themes'
 
-const scheme = ref<'follow' | ThemePaletteScheme>('follow')
+const scheme = ref<'follow' | ThemePaletteScheme | 'classic-light' | 'classic-dark'>('follow')
 const enabled = ref(true)
 const checked = ref(false)
 const text = ref('示例内容')
 const clicks = ref(0)
+const validation = ref('')
+const matrixState = ref<'normal' | 'disabled' | 'loading'>('normal')
+const half = ref(true)
+const mixed = ref(false)
 const previewStyle = computed(() => {
   if (scheme.value === 'follow') { return undefined }
+  if (scheme.value === 'classic-light' || scheme.value === 'classic-dark') {
+    const dark = scheme.value === 'classic-dark'
+    const theme = dark ? darkTheme : lightTheme
+    const color = toCssVariables(buildThemeColorScale(DEFAULT_THEME_COLOR, dark ? 'dark' : 'light'))
+    return {
+      ...theme,
+      ...color,
+      '--mrr-background': 'hsl(var(--background))',
+      '--mrr-card': 'hsl(var(--card))',
+      '--mrr-card-foreground': 'hsl(var(--card-foreground))',
+      '--mrr-foreground': 'hsl(var(--foreground))',
+      '--mrr-muted-foreground': 'hsl(var(--muted-foreground))',
+      '--mrr-muted': 'hsl(var(--muted))',
+      '--mrr-accent': 'hsl(var(--accent))',
+      '--mrr-accent-foreground': 'hsl(var(--accent-foreground))',
+      '--mrr-border': 'hsl(var(--border))',
+      '--mrr-border-strong': 'hsl(var(--border))',
+      '--mrr-primary': color['--color-primary'],
+      '--mrr-primary-foreground': 'hsl(var(--primary-foreground))',
+      '--mrr-control-bg': 'hsl(var(--background))',
+      '--mrr-control-bg-hover': 'hsl(var(--muted))',
+      '--mrr-control-bg-disabled': 'hsl(var(--muted))',
+      '--mrr-control-border': 'hsl(var(--input))',
+      '--mrr-control-border-hover': 'hsl(var(--muted-foreground))',
+      '--mrr-field-focus-bg': 'hsl(var(--card))',
+      '--mrr-ring': color['--color-primary'],
+      '--mrr-destructive': 'hsl(var(--destructive))',
+      '--el-bg-color': 'hsl(var(--card))',
+      '--el-fill-color-blank': 'hsl(var(--card))',
+      '--el-text-color-primary': 'hsl(var(--foreground))',
+      '--el-text-color-regular': 'hsl(var(--foreground))',
+      '--el-text-color-secondary': 'hsl(var(--muted-foreground))',
+      '--el-border-color': 'hsl(var(--border))',
+      '--el-disabled-bg-color': 'hsl(var(--muted))',
+      '--el-disabled-text-color': 'hsl(var(--muted-foreground))',
+    }
+  }
   const c = GR8R_COLORS[scheme.value]
   const variables = gr8rCssVariables(scheme.value)
   return {
@@ -48,6 +90,12 @@ const previewStyle = computed(() => {
         <el-radio-button value="follow">
           跟随全站
         </el-radio-button>
+        <el-radio-button value="classic-light">
+          经典亮
+        </el-radio-button>
+        <el-radio-button value="classic-dark">
+          经典暗
+        </el-radio-button>
         <el-radio-button value="light">
           暖色亮
         </el-radio-button>
@@ -56,7 +104,7 @@ const previewStyle = computed(() => {
         </el-radio-button>
       </el-radio-group>
     </div>
-    <div class="local-theme-preview__surface" :class="{ 'mrr-local-warm-preview': scheme !== 'follow' }" :style="previewStyle" :data-preview-scheme="scheme">
+    <div class="local-theme-preview__surface" :class="{ 'mrr-local-warm-preview': scheme === 'light' || scheme === 'dark' }" :style="previewStyle" :data-preview-scheme="scheme">
       <div class="example-row local-theme-preview__sizes">
         <el-button v-for="size in (['small', 'default', 'large'] as const)" :key="size" :size="size" type="primary" @click="clicks++">
           {{ { small: '紧凑', default: '标准', large: '宽松' }[size] }}
@@ -72,8 +120,40 @@ const previewStyle = computed(() => {
           局部选择
         </el-checkbox>
       </div>
+      <div class="local-theme-preview__matrix" aria-label="基础控件状态矩阵">
+        <div class="example-row">
+          <el-radio-group v-model="matrixState" aria-label="局部操作状态">
+            <el-radio-button value="normal">
+              默认
+            </el-radio-button>
+            <el-radio-button value="disabled">
+              禁用
+            </el-radio-button>
+            <el-radio-button value="loading">
+              加载
+            </el-radio-button>
+          </el-radio-group>
+          <el-button type="primary" :loading="matrixState === 'loading'" :disabled="matrixState === 'disabled'" @click="clicks++">
+            执行示例
+          </el-button>
+        </div>
+        <el-form label-position="top" class="mrr-edit-form mrr-edit-form--paired">
+          <el-form-item label="只读示例">
+            <el-input model-value="不可修改" readonly />
+          </el-form-item>
+          <el-form-item label="校验示例" :error="validation.trim() ? '' : '请输入示例值'">
+            <el-input v-model="validation" aria-label="局部校验输入" />
+          </el-form-item>
+        </el-form>
+        <div class="example-row">
+          <el-checkbox v-model="mixed" :indeterminate="half" @change="half = false">
+            半选示例
+          </el-checkbox>
+          <el-switch :model-value="true" disabled aria-label="局部禁用开关" />
+        </div>
+      </div>
       <p class="local-theme-preview__hint" role="status">
-        本地示例操作 {{ clicks }} 次；不修改全站外观。浮层继续跟随全站。
+        本地示例操作 {{ clicks }} 次；不修改全站外观。经典预览使用默认主色与正式配色，尺寸跟随宿主；浮层继续跟随全站。
       </p>
     </div>
   </section>
@@ -118,6 +198,21 @@ const previewStyle = computed(() => {
 
 .local-theme-preview__input {
   width: min(100%, 240px);
+}
+
+.local-theme-preview__surface :deep(.el-radio-button) {
+  --el-radio-button-checked-text-color: var(--mrr-primary-foreground);
+}
+
+.local-theme-preview__matrix {
+  display: grid;
+  gap: var(--mrr-space-3);
+  padding-top: var(--mrr-space-3);
+  border-top: 1px solid var(--mrr-border);
+}
+
+.local-theme-preview__heading :deep(.el-radio-group) {
+  flex-wrap: wrap;
 }
 
 .local-theme-preview__hint {

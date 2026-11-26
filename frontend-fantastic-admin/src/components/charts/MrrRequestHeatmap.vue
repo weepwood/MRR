@@ -422,7 +422,7 @@ onBeforeUnmount(hideTooltip)
 .heatmap-legend span {
   padding: 0 var(--mrr-space-1);
   font-size: var(--mrr-font-size-xs);
-  color: var(--el-text-color-placeholder);
+  color: var(--mrr-muted-foreground);
 }
 
 .heatmap-legend i {
@@ -453,7 +453,7 @@ onBeforeUnmount(hideTooltip)
   column-gap: var(--heatmap-cell-gap);
   width: var(--heatmap-grid-width);
   height: 20px;
-  margin-left: 34px;
+  margin-left: calc(28px + var(--mrr-space-2));
   font-size: var(--mrr-font-size-xs);
   color: var(--el-text-color-secondary);
 }
@@ -479,7 +479,7 @@ onBeforeUnmount(hideTooltip)
   /* 只在一、三、五行出现，相邻标签之间隔一行，12px 字形不会互相挤压。 */
   font-size: var(--mrr-font-size-xs);
   line-height: var(--heatmap-cell-size);
-  color: var(--el-text-color-placeholder);
+  color: var(--mrr-muted-foreground);
   text-align: right;
 }
 
@@ -512,6 +512,11 @@ onBeforeUnmount(hideTooltip)
   border-color: var(--el-text-color-primary);
   filter: saturate(1.08);
   transform: var(--mrr-motion-decor, scale(1.18));
+}
+
+.heatmap-cell:focus-visible {
+  outline: 2px solid var(--mrr-ring);
+  outline-offset: 1px;
 }
 
 .heatmap-cell.is-outside {

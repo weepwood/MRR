@@ -68,7 +68,7 @@ header {
   margin: 0 auto;
   color: var(--text-primary);
   background: var(--mrr-navigation-bg);
-  border-bottom: 1px solid var(--mrr-navigation-border);
+  border-bottom: 1px solid var(--mrr-shell-divider);
   transition: background-color var(--mrr-motion-feedback) var(--mrr-ease-out), border-color var(--mrr-motion-feedback) var(--mrr-ease-out);
 
   .header-container {

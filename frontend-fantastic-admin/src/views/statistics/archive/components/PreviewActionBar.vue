@@ -103,10 +103,10 @@ watch(() => props.image, () => {
   width: min(180px, calc(100vw - 32px));
   min-width: 0;
   padding: 8px;
-  background: hsl(var(--card) / 92%);
+  background: var(--mrr-popover);
   border: 1px solid var(--divider);
   border-radius: var(--mrr-radius-md);
-  box-shadow: 0 4px 12px rgb(0 0 0 / 6%);
+  box-shadow: var(--mrr-shadow-md);
 }
 
 .preview-controls,

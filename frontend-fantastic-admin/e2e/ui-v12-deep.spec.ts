@@ -37,6 +37,24 @@ test('经典局部明暗配色与状态矩阵不污染全站', async ({ page }, 
   await matrix.getByLabel('局部校验输入').fill('通过')
   await expect(matrix.getByText('请输入示例值')).toHaveCount(0)
   await expect(matrix.getByRole('switch', { name: '局部禁用开关' })).toBeDisabled()
+  const number = matrix.getByRole('spinbutton', { name: '局部数字输入' })
+  await number.focus()
+  await number.press('ArrowUp')
+  await expect(number).toHaveValue('4')
+  await matrix.locator('.el-select__wrapper').click()
+  const popper = surface.locator('.el-select__popper:visible')
+  await expect(popper).toBeVisible()
+  await expect(popper).toHaveCSS('background-color', await surface.evaluate((el) => {
+    const probe = document.createElement('span')
+    probe.style.backgroundColor = 'var(--mrr-popover)'
+    el.appendChild(probe)
+    const color = getComputedStyle(probe).backgroundColor
+    probe.remove()
+    return color
+  }))
+  await popper.getByRole('option', { name: '归档', exact: true }).click()
+  await expect(matrix.locator('.el-select')).toContainText('归档')
+
   expect(await page.evaluate(() => ({
     settings: localStorage.getItem('MRR-ADMIN:app-settings'),
     card: getComputedStyle(document.documentElement).getPropertyValue('--mrr-card'),

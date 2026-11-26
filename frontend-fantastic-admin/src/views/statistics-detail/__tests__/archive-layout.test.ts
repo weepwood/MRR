@@ -36,7 +36,7 @@ describe('statistics detail archive layout', () => {
     const sfc = fs.readFileSync(path.resolve(__dirname, '../ArchiveDetailContent.vue'), 'utf8')
     const grid = sfc.match(/\.archive-grid\s*\{[^}]*\}/)?.[0] ?? ''
 
-    expect(grid).toContain('minmax(340px, 1fr)')
+    expect(grid).toContain('minmax(min(100%, 340px), 1fr)')
     expect(grid).toContain('gap: var(--mrr-space-4)')
     expect(ARCHIVE_GRID_GAP).toBe(16)
   })

@@ -14,6 +14,8 @@ const validation = ref('')
 const matrixState = ref<'normal' | 'disabled' | 'loading'>('normal')
 const half = ref(true)
 const mixed = ref(false)
+const previewCount = ref(3)
+const previewSource = ref('local')
 const previewStyle = computed(() => {
   if (scheme.value === 'follow') { return undefined }
   if (scheme.value === 'classic-light' || scheme.value === 'classic-dark') {
@@ -44,6 +46,11 @@ const previewStyle = computed(() => {
       '--mrr-ring': color['--color-primary'],
       '--mrr-destructive': 'hsl(var(--destructive))',
       '--el-bg-color': 'hsl(var(--card))',
+      '--el-bg-color-overlay': 'hsl(var(--popover))',
+      '--mrr-popover': 'hsl(var(--popover))',
+      '--mrr-popover-foreground': 'hsl(var(--popover-foreground))',
+      '--mrr-tone-primary-soft': color['--el-color-primary-light-9'],
+      '--mrr-tone-primary-ink': dark ? 'hsl(var(--foreground))' : color['--color-primary'],
       '--el-fill-color-blank': 'hsl(var(--card))',
       '--el-text-color-primary': 'hsl(var(--foreground))',
       '--el-text-color-regular': 'hsl(var(--foreground))',
@@ -71,6 +78,9 @@ const previewStyle = computed(() => {
     '--mrr-tone-primary': c.accent,
     '--mrr-tone-primary-ink': c.accent,
     '--el-bg-color': c.surface,
+    '--el-bg-color-overlay': c.surface,
+    '--mrr-popover': c.surface,
+    '--mrr-popover-foreground': c.ink,
     '--el-fill-color-blank': c.surface,
     '--el-text-color-primary': c.ink,
     '--el-text-color-regular': c.ink,
@@ -145,6 +155,19 @@ const previewStyle = computed(() => {
             <el-input v-model="validation" aria-label="局部校验输入" />
           </el-form-item>
         </el-form>
+        <el-form label-position="top" class="mrr-edit-form mrr-edit-form--paired">
+          <el-form-item label="数字输入">
+            <el-input-number v-model="previewCount" :min="0" :max="10" aria-label="局部数字输入" />
+          </el-form-item>
+          <el-form-item label="选择器">
+            <el-select v-model="previewSource" aria-label="局部来源" :teleported="false">
+              <el-option label="本地" value="local" /><el-option label="归档" value="archive" />
+            </el-select>
+          </el-form-item>
+          <el-form-item label="禁用输入">
+            <el-input model-value="禁用状态" disabled />
+          </el-form-item>
+        </el-form>
         <div class="example-row">
           <el-checkbox v-model="mixed" :indeterminate="half" @change="half = false">
             半选示例
@@ -153,7 +176,7 @@ const previewStyle = computed(() => {
         </div>
       </div>
       <p class="local-theme-preview__hint" role="status">
-        本地示例操作 {{ clicks }} 次；不修改全站外观。经典预览使用默认主色与正式配色，尺寸跟随宿主；浮层继续跟随全站。
+        本地示例操作 {{ clicks }} 次；不修改全站外观。经典预览使用默认主色与正式配色，尺寸跟随宿主；示例内联下拉随局部配色，全局浮层继续跟随全站。
       </p>
     </div>
   </section>

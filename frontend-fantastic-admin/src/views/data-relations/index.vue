@@ -1132,19 +1132,25 @@ p {
   text-align: left;
   overflow-wrap: anywhere;
   cursor: pointer;
-  background: var(--el-fill-color-blank);
-  border: 1px solid var(--el-border-color-light);
-  border-radius: var(--el-border-radius-base);
+  background: var(--mrr-card);
+  border: 1px solid var(--mrr-border);
+  border-radius: var(--mrr-radius-md);
+  transition: background-color var(--mrr-motion-feedback) var(--mrr-ease-out), border-color var(--mrr-motion-feedback) var(--mrr-ease-out);
+}
+
+.archive-candidate[aria-pressed="false"]:hover {
+  background: var(--mrr-control-bg-hover);
+  border-color: var(--mrr-border-strong);
 }
 
 .archive-candidate[aria-pressed="true"] {
-  background: var(--el-color-primary-light-9);
-  border-color: var(--el-color-primary);
+  background: var(--mrr-tone-primary-soft);
+  border-color: var(--mrr-primary);
 }
 
 .archive-candidate:focus-visible,
 [data-archive-section]:focus-visible {
-  outline: 2px solid var(--el-color-primary);
+  outline: 2px solid var(--mrr-ring);
   outline-offset: -2px;
 }
 

@@ -72,6 +72,7 @@ public interface AuthUserMapper {
     int updateLastLoginAt(@Param("id") Long id, @Param("lastLoginAt") LocalDateTime lastLoginAt);
 
     @Update("update mr_auth_user set display_name = #{displayName}, role_code = #{roleCode}, " +
+            "password_version = password_version + CASE WHEN status IS DISTINCT FROM #{status} THEN 1 ELSE 0 END, " +
             "status = #{status}, updated_at = CURRENT_TIMESTAMP where id = #{id}")
     int updateUser(AuthUser user);
 
@@ -96,7 +97,10 @@ public interface AuthUserMapper {
                       @Param("resetBy") Long resetBy,
                       @Param("expectedVersion") int expectedVersion);
 
-    @Update("update mr_auth_user set status = #{status}, updated_at = CURRENT_TIMESTAMP where id = #{id}")
+    // Account-state transitions invalidate both old Bearer and image-cookie credential versions.
+    @Update("update mr_auth_user set status = #{status}, " +
+            "password_version = password_version + CASE WHEN status IS DISTINCT FROM #{status} THEN 1 ELSE 0 END, " +
+            "updated_at = CURRENT_TIMESTAMP where id = #{id}")
     int updateStatus(@Param("id") Long id, @Param("status") String status);
 
     @Insert("insert into mr_auth_user (username, display_name, password_hash, role_code, status, " +

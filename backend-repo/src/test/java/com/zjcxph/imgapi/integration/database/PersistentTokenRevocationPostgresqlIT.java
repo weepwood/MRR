@@ -47,11 +47,43 @@ class PersistentTokenRevocationPostgresqlIT extends PostgresqlIntegrationTestSup
                 java.time.LocalDateTime.now().minusMinutes(1), id, 7)).isEqualTo(1);
         assertThat(users.changePassword(id, "synthetic-late-placeholder", 8, true)).isZero();
         assertThat(users.updateStatus(id, "disabled")).isEqualTo(1);
-        assertThat(users.resetPassword(id, "synthetic-disabled-placeholder", expires, id, 8)).isZero();
-        assertThat(users.changePassword(id, "synthetic-disabled-placeholder", 8, true)).isZero();
+        assertThat(users.resetPassword(id, "synthetic-disabled-placeholder", expires, id, 9)).isZero();
+        assertThat(users.changePassword(id, "synthetic-disabled-placeholder", 9, true)).isZero();
         var unchanged = users.findById(id);
-        assertThat(unchanged.effectivePasswordVersion()).isEqualTo(8);
+        assertThat(unchanged.effectivePasswordVersion()).isEqualTo(9);
         assertThat(unchanged.getStatus()).isEqualTo("disabled");
         assertThat(unchanged.getPasswordHash()).isEqualTo("synthetic-expired-placeholder");
+    }
+
+    @org.junit.jupiter.params.ParameterizedTest
+    @org.junit.jupiter.params.provider.ValueSource(booleans = {true, false})
+    void actualStatusTransitionsInvalidatePreviousCredentialVersions(boolean editProfile) {
+        String username = "synthetic-state-" + java.util.UUID.randomUUID();
+        Long id = jdbc.queryForObject("""
+                INSERT INTO app.mr_auth_user(username,password_hash,role_code,status,password_version)
+                VALUES (?, 'synthetic-placeholder', 'READER', 'active', 4) RETURNING id
+                """, Long.class, username);
+        var user = users.findById(id);
+        user.setDisplayName("synthetic-display");
+        assertThat(users.updateUser(user)).isEqualTo(1);
+        assertThat(users.findById(id).effectivePasswordVersion()).isEqualTo(4);
+        if (editProfile) {
+            user.setStatus("disabled");
+            assertThat(users.updateUser(user)).isEqualTo(1);
+        } else {
+            assertThat(users.updateStatus(id, "disabled")).isEqualTo(1);
+        }
+        var disabled = users.findById(id);
+        assertThat(disabled.getStatus()).isEqualTo("disabled");
+        assertThat(disabled.effectivePasswordVersion()).isEqualTo(5);
+        assertThat(users.updateStatus(id, "disabled")).isEqualTo(1);
+        assertThat(users.findById(id).effectivePasswordVersion()).isEqualTo(5);
+        disabled.setStatus("active");
+        assertThat(users.updateUser(disabled)).isEqualTo(1);
+        var active = users.findById(id);
+        assertThat(active.getStatus()).isEqualTo("active");
+        assertThat(active.effectivePasswordVersion()).isEqualTo(6);
+        assertThat(active.getPasswordHash()).isEqualTo("synthetic-placeholder");
+        assertThat(active.isPasswordChangeRequired()).isFalse();
     }
 }

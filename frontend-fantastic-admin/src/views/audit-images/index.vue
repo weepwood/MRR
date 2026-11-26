@@ -23,6 +23,7 @@ import { useUserStore } from '@/store/modules/user'
 import { rangePickerPopperOptions } from '@/ui/provider/picker-options'
 import { checkSessionPermission } from '@/utils/permission'
 import { isSessionAccessDenied } from '@/utils/session-access-denied'
+import { tableSequenceColumn } from '@/utils/table-sequence'
 import AuditAnalytics from './components/AuditAnalytics.vue'
 
 defineOptions({ name: 'ImageAuditPage' })
@@ -190,6 +191,7 @@ const {
   clearResults,
   list,
   total,
+  loadedRowOffset,
   loading,
   resultVersion,
   pageNum,
@@ -411,7 +413,7 @@ onMounted(loadData)
     <el-alert v-if="analyticsError" type="error" show-icon :closable="false" :title="`分析数据加载失败：${analyticsError}`" />
     <AuditAnalytics :analytics="analytics" :loading="analyticsLoading" @export-user="value => exportAudit('user', value)" @export-target="value => exportAudit('target', value)" />
 
-    <MrrDataTablePanel title="最近访问明细" description="病案号、上架号和身份证号独立展示" :count="total" :loading="loading" :result-key="resultVersion">
+    <MrrDataTablePanel title="最近访问明细" description="病案号、上架号和身份证号独立展示" :loading="loading" :result-key="resultVersion">
       <!--
         页头原有一个「导出当前明细」，与这里的「导出明细」调用同一个导出（scope=all），两处同名不同字。
         只保留明细卡头这一处：导出的就是这张表的当前筛选结果，按钮应紧挨它的对象。
@@ -423,14 +425,15 @@ onMounted(loadData)
       <AppError v-else-if="error" :message="error" @retry="loadListData" />
       <AppEmpty v-else-if="!list.length" description="暂无审计记录" />
       <el-table v-else :data="list" stripe>
+        <el-table-column v-bind="tableSequenceColumn(loadedRowOffset, list.length)" />
         <el-table-column prop="accessTime" label="访问时间" width="176"><template #default="{ row }">{{ formatDateTime(row.accessTime) }}</template></el-table-column>
         <el-table-column prop="username" label="用户" width="132" show-overflow-tooltip><template #default="{ row }">{{ row.username || '-' }}</template></el-table-column>
         <el-table-column label="病案号" width="128" show-overflow-tooltip><template #default="{ row }">{{ auditIdentifiers(row).bah }}</template></el-table-column>
         <el-table-column label="上架号" width="128" show-overflow-tooltip><template #default="{ row }">{{ auditIdentifiers(row).sjh }}</template></el-table-column>
         <el-table-column label="身份证号" width="190" show-overflow-tooltip><template #default="{ row }"><span class="audit-mono">{{ auditIdentifiers(row).idCard }}</span></template></el-table-column>
-        <el-table-column prop="auditDescription" label="访问类型" min-width="160" show-overflow-tooltip><template #default="{ row }"><el-tag effect="plain">{{ row.auditDescription || actionLabel(row.auditAction) }}</el-tag></template></el-table-column>
+        <el-table-column prop="auditDescription" label="访问类型" min-width="160" class-name="mrr-table-status-column"><template #default="{ row }"><el-tag effect="plain">{{ row.auditDescription || actionLabel(row.auditAction) }}</el-tag></template></el-table-column>
         <el-table-column prop="clientIp" label="客户端 IP" width="148" show-overflow-tooltip><template #default="{ row }"><span class="audit-mono">{{ row.clientIp || '-' }}</span></template></el-table-column>
-        <el-table-column prop="responseStatus" label="状态码" width="92"><template #default="{ row }"><el-tag :type="statusTagType(row.responseStatus)">{{ row.responseStatus || '-' }}</el-tag></template></el-table-column>
+        <el-table-column prop="responseStatus" label="状态码" width="92" class-name="mrr-table-status-column"><template #default="{ row }"><el-tag :type="statusTagType(row.responseStatus)">{{ row.responseStatus || '-' }}</el-tag></template></el-table-column>
         <el-table-column prop="executeTime" label="耗时(ms)" width="105" align="right" />
         <el-table-column label="操作" :width="detailActionColumnWidth" fixed="right" align="center">
           <template #default="{ row }">
@@ -442,7 +445,7 @@ onMounted(loadData)
           </template>
         </el-table-column>
       </el-table>
-      <template #pagination><el-pagination v-model:current-page="pageNum" v-model:page-size="pageSize" :page-sizes="[10, 20, 50, 100]" :total="total" layout="total, sizes, prev, pager, next, jumper" @size-change="handleSizeChange" @current-change="handlePageChange" /></template>
+      <template #pagination><el-pagination v-model:current-page="pageNum" v-model:page-size="pageSize" :page-sizes="[10, 20, 50, 100]" :total="total" layout="total, prev, pager, next, jumper, sizes" @size-change="handleSizeChange" @current-change="handlePageChange" /></template>
     </MrrDataTablePanel>
 
     <el-dialog v-model="detailVisible" align-center title="审计详情" width="min(820px, 92vw)" class="audit-detail">

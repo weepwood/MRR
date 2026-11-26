@@ -4,6 +4,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import RecordsPage from '../index.vue'
 
 const { getScanCursor } = vi.hoisted(() => ({ getScanCursor: vi.fn() }))
+vi.mock('element-plus/es/components/pagination/style/css', () => ({}))
 vi.mock('@/api/modules/records', () => ({
   getScanCursor,
   batchDownloadRecords: vi.fn(),
@@ -19,10 +20,15 @@ function mountPage() {
       stubs: {
         'FaIcon': true,
         'el-card': { template: '<div><slot name="header" /><slot /></div>' },
+        'ElPagination': {
+          props: ['currentPage', 'pageCount', 'pageSize', 'pageSizes', 'disabled'],
+          emits: ['update:currentPage', 'update:pageSize'],
+          template: '<div class="el-pagination"><slot/><button :disabled="disabled || currentPage >= pageCount" @click="$emit(\'update:currentPage\', currentPage + 1)">下一页</button><div class="el-pagination__jump"><input :value="currentPage" @change="$emit(\'update:currentPage\', Number($event.target.value))"></div><div class="el-pagination__sizes"><select :value="pageSize" @change="$emit(\'update:pageSize\', Number($event.target.value))"><option v-for="size in pageSizes" :value="size">{{ size }}</option></select></div></div>',
+        },
         'el-table': { template: '<div class="test-table"><slot /></div>' },
         'el-button': { emits: ['click'], template: '<button @click="$emit(\'click\', $event)"><slot /></button>' },
         'el-input': { props: ['modelValue'], template: '<input :value="modelValue" @input="$emit(\'update:modelValue\', $event.target.value)" @keyup.enter="$emit(\'keyup.enter\')">' },
-        'el-select': { props: ['modelValue'], template: '<select :value="modelValue" @change="$emit(\'update:modelValue\', Number($event.target.value)); $emit(\'change\')"><slot /></select>' },
+        'el-select': { props: ['modelValue'], template: '<select :value="modelValue" @change="$emit(\'update:modelValue\', Number($event.target.value)); $emit(\'change\', Number($event.target.value))"><slot /></select>' },
         'el-checkbox': { props: ['modelValue'], template: '<input type="checkbox" :checked="modelValue" @change="$emit(\'update:modelValue\', $event.target.checked)">' },
         'el-option': { props: ['value', 'label'], template: '<option :value="value">{{ label }}</option>' },
         'el-table-column': true,
@@ -75,14 +81,30 @@ describe('扫描记录查询', () => {
     const wrapper = mountPage()
     await flushPromises()
     await wrapper.get('#records-bah').setValue('00123')
-    await button(wrapper, '下一批').trigger('click')
+    await button(wrapper, '下一页').trigger('click')
     await flushPromises()
     expect(getScanCursor).toHaveBeenLastCalledWith(expect.objectContaining({ bah: undefined }), 42, 20)
     expect(wrapper.text()).toContain('筛选条件已修改')
-    await wrapper.get('.records-page-size-select').setValue('50')
+    await wrapper.get('.el-pagination__sizes select').setValue('50')
     await flushPromises()
     expect(getScanCursor).toHaveBeenLastCalledWith(expect.objectContaining({ bah: undefined }), 0, 50)
     expect(wrapper.text()).toContain('已提交条件：全部记录')
+  })
+
+  it('前往仅使用已知游标，越界不触发请求，切换条数重置历史', async () => {
+    const wrapper = mountPage()
+    await flushPromises()
+    const jump = wrapper.get('.el-pagination__jump input')
+    const count = getScanCursor.mock.calls.length
+    await jump.setValue('9999')
+    expect(getScanCursor).toHaveBeenCalledTimes(count)
+    expect(wrapper.get('.mrr-pagination-range-error').text()).toContain('1–2')
+    await jump.setValue('2')
+    await flushPromises()
+    expect(getScanCursor).toHaveBeenLastCalledWith(expect.anything(), 42, 20)
+    await jump.setValue('1')
+    await flushPromises()
+    expect(getScanCursor).toHaveBeenLastCalledWith(expect.anything(), 0, 20)
   })
 
   it('新查询加载期间不把旧表格显示为新结果，空态可重置', async () => {
@@ -124,7 +146,7 @@ describe('扫描记录查询', () => {
     const wrapper = mountPage()
     await flushPromises()
     await wrapper.get('#records-legacy-contains').setValue(true)
-    await button(wrapper, '下一批').trigger('click')
+    await button(wrapper, '下一页').trigger('click')
     await flushPromises()
     expect(getScanCursor).toHaveBeenLastCalledWith(expect.anything(), 42, 20)
     await wrapper.get('#records-bah').setValue('00123')
@@ -133,7 +155,7 @@ describe('扫描记录查询', () => {
     expect(getScanCursor).toHaveBeenLastCalledWith(expect.objectContaining({ bah: '00123' }), 0, 20, true)
     expect(wrapper.text()).toContain('兼容包含')
     getScanCursor.mockRejectedValueOnce(new Error('查询超时'))
-    await button(wrapper, '下一批').trigger('click')
+    await button(wrapper, '下一页').trigger('click')
     await flushPromises()
     expect(wrapper.get('.app-error').text()).toContain('查询超时')
     await button(wrapper, '重试').trigger('click')

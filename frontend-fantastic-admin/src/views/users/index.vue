@@ -21,6 +21,7 @@ import MrrStatusTag from '@/components/MrrStatusTag/index.vue'
 import MrrTableActions from '@/components/MrrTableActions/index.vue'
 import { actionDialog, ActionDialogCancelled } from '@/ui/components/ActionDialog'
 import { copyText as copyToClipboard } from '@/utils/copy-text'
+import { tableSequenceColumn } from '@/utils/table-sequence'
 
 defineOptions({ name: 'UsersPage' })
 
@@ -44,14 +45,11 @@ const total = ref(0)
 const page = ref(1)
 const size = ref(20)
 const loadedRowOffset = ref(0)
-const userRowIndex = (index: number) => loadedRowOffset.value + index + 1
-const userIndexWidth = computed(() => Math.max(64, String(Math.max(total.value, loadedRowOffset.value + users.value.length)).length * 8 + 24))
-const pageSizes = [10, 20, 50, 100] as const
+const pageSizes = [10, 20, 50, 100]
 const compactPagination = useMediaQuery('(max-width: 760px)')
-const nextPageSize = computed(() => pageSizes[(pageSizes.findIndex(value => value === size.value) + 1) % pageSizes.length]!)
 const paginationLayout = computed(() => total.value > size.value
-  ? 'total, slot, prev, pager, next, jumper'
-  : 'total, slot, prev, pager, next')
+  ? 'total, prev, pager, next, jumper, sizes'
+  : 'total, prev, pager, next, sizes')
 const filters = reactive({ keyword: '', roleCode: '', status: '' })
 
 const statusOptions = [
@@ -270,10 +268,10 @@ function handleSearch() {
   void loadData('search')
 }
 
-function cyclePageSize() {
+function handleSizeChange(nextSize: number) {
   if (loading.value || dataLoadingAction.value !== null) return
   page.value = 1
-  size.value = nextPageSize.value
+  size.value = nextSize
   void loadData()
 }
 
@@ -678,7 +676,7 @@ onMounted(loadData)
       <div v-else-if="!users.length" class="users-state"><AppEmpty description="暂无符合条件的用户记录" /></div>
 
       <el-table v-else :data="users" row-key="id" stripe>
-        <el-table-column type="index" label="序号" :width="userIndexWidth" :index="userRowIndex" align="center" class-name="user-index-column" />
+        <el-table-column v-bind="tableSequenceColumn(loadedRowOffset, users.length)" />
         <el-table-column prop="username" label="用户名" width="168" show-overflow-tooltip>
           <template #default="{ row }">
             <div class="user-identity">
@@ -705,8 +703,8 @@ onMounted(loadData)
           </template>
         </el-table-column>
         <el-table-column label="角色" width="96" show-overflow-tooltip><template #default="{ row }">{{ row.roleName || row.roleCode }}</template></el-table-column>
-        <el-table-column label="凭据状态" width="152" show-overflow-tooltip><template #default="{ row }"><MrrStatusTag :label="credentialStatus(row).label" :tone="credentialStatus(row).tone" /></template></el-table-column>
-        <el-table-column label="账号状态" width="96" class-name="user-status-column"><template #default="{ row }"><MrrStatusTag :status="row.status" :label="statusDisplay(row.status).label" :tone="statusDisplay(row.status).tone" /></template></el-table-column>
+        <el-table-column label="凭据状态" width="152" class-name="mrr-table-status-column"><template #default="{ row }"><MrrStatusTag :label="credentialStatus(row).label" :tone="credentialStatus(row).tone" /></template></el-table-column>
+        <el-table-column label="账号状态" width="96" class-name="user-status-column mrr-table-status-column"><template #default="{ row }"><MrrStatusTag :status="row.status" :label="statusDisplay(row.status).label" :tone="statusDisplay(row.status).tone" /></template></el-table-column>
         <el-table-column prop="lastLoginAt" label="最后登录" width="176" show-overflow-tooltip><template #default="{ row }">{{ formatDateTime(row.lastLoginAt) }}</template></el-table-column>
         <el-table-column
           v-if="canManage"
@@ -727,18 +725,7 @@ onMounted(loadData)
       </el-table>
 
       <template #pagination>
-        <el-pagination v-model:current-page="page" v-model:page-size="size" class="users-pagination" :total="total" :pager-count="compactPagination ? 5 : 7" :layout="paginationLayout" :disabled="loading" @current-change="handlePageChange">
-          <el-button
-            text
-            class="users-pagination__size"
-            :disabled="loading"
-            :aria-label="`当前每页 ${size} 条，点击切换为每页 ${nextPageSize} 条`"
-            :title="`切换为 ${nextPageSize} 条/页（10、20、50、100 循环）`"
-            @click="cyclePageSize"
-          >
-            {{ size }}条/页
-          </el-button>
-        </el-pagination>
+        <el-pagination v-model:current-page="page" v-model:page-size="size" class="users-pagination" :total="total" :page-sizes="pageSizes" :pager-count="compactPagination ? 5 : 7" :layout="paginationLayout" :disabled="loading" @size-change="handleSizeChange" @current-change="handlePageChange" />
       </template>
     </MrrDataTablePanel>
 
@@ -874,51 +861,16 @@ onMounted(loadData)
 .users-filter-bar :deep(.mrr-filter-bar__fields > .users-filter__keyword) { width: 100%; max-width: none; min-width: 0; }
 .users-filter-bar :deep(.mrr-filter-bar__fields > .users-filter__select) { width: 100%; max-width: none; min-width: 0; }
 .users-toolbar { display: flex; flex-wrap: wrap; align-items: flex-start; gap: var(--mrr-space-3); }
-.users-toolbar > .users-filter-bar.mrr-filter-bar--embedded { flex: 1 1 640px; min-width: 0; padding-bottom: 0; justify-content: flex-start; border-bottom: 0; }
+.users-toolbar > .users-filter-bar.mrr-filter-bar--embedded { flex: 1 1 640px; min-width: 0; justify-content: flex-start; }
 .users-toolbar__create { flex: none; margin-inline-start: auto; }
 .users-filter-bar :deep(.mrr-filter-bar__fields) { display: grid; flex: 0 1 784px; grid-template-columns: minmax(0, 1fr) 144px 144px; }
 .users-filter-bar :deep(.mrr-filter-bar__actions) { flex-shrink: 0; align-self: flex-end; padding-left: 0; border-left: 0; }
 
 .users-state { display: grid; min-height: 280px; padding: var(--mrr-space-5); place-items: center; }
-.users-table-panel :deep(.el-table tr > .user-index-column:first-child > .cell) { padding-inline: 8px; }
-.users-table-panel :deep(td.user-index-column) { font-variant-numeric: tabular-nums; color: var(--mrr-muted-foreground); }
 .user-identity { display: flex; gap: var(--mrr-space-2); align-items: center; min-width: 0; }
 .user-avatar { display: grid; flex: 0 0 28px; width: 28px; height: 28px; font-size: var(--mrr-font-size-xs); font-weight: 600; color: var(--mrr-primary); background: var(--mrr-tone-primary-soft); border: 1px solid var(--mrr-border); border-radius: 50%; place-items: center; }
 .user-identity__username { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .user-source { color: var(--mrr-muted-foreground); }
-
-/* Quiet pagination: keep Element Plus navigation and replace only the size selector.
- * Smaller visual targets still have a 28px minimum pointer/keyboard footprint. */
-.users-table-panel :deep(.users-pagination.el-pagination) {
-  --el-pagination-button-width: 28px;
-  --el-pagination-button-height: 28px;
-
-  width: 100%;
-  gap: var(--mrr-space-1);
-}
-
-.users-pagination :deep(.btn-prev), .users-pagination :deep(.btn-next), .users-pagination :deep(.el-pager li) {
-  min-width: 28px;
-  height: 28px;
-  font-size: 12px;
-  line-height: 28px;
-}
-.users-pagination :deep(.btn-prev .el-icon), .users-pagination :deep(.btn-next .el-icon) { font-size: 12px; }
-
-.users-pagination .users-pagination__size.el-button {
-  min-height: 28px;
-  height: 28px;
-  padding: 0 var(--mrr-space-2);
-  margin-right: var(--mrr-space-2);
-  font-size: var(--mrr-font-size-xs);
-  font-variant-numeric: tabular-nums;
-  font-weight: 400;
-  color: var(--mrr-muted-foreground);
-  border: 0;
-  box-shadow: none;
-}
-.users-pagination .users-pagination__size.el-button:not(.is-disabled):hover { color: var(--mrr-foreground); }
-.users-table-panel :deep(.el-pagination__total) { margin-inline-end: auto; color: var(--mrr-muted-foreground); }
 
 /* One line for scanning; the read-only dialog preserves the original text. */
 .application-preview.el-button { justify-content: flex-start; width: 100%; max-width: 100%; min-width: 0; height: var(--mrr-control-height); padding: 0; color: var(--mrr-muted-foreground); text-align: left; border: 0; box-shadow: none; }
@@ -955,17 +907,7 @@ onMounted(loadData)
   .users-filter-bar :deep(.mrr-filter-bar__fields > .users-filter__keyword),
   .users-filter-bar :deep(.mrr-filter-bar__fields > .users-filter__select) { flex: 1 1 100%; width: 100%; max-width: 100%; min-width: 0; }
   .users-filter-bar :deep(.mrr-filter-bar__fields) { flex: 1 1 auto; grid-template-columns: minmax(0, 1fr); }
-  .users-table-panel :deep(.el-pagination__total) { margin-inline-end: 0; }
-  .users-pagination .users-pagination__size.el-button { grid-row: 1; grid-column: 3 / -1; justify-self: end; margin-right: 0; }
 
-  .users-table-panel :deep(.users-pagination.el-pagination) {
-    --el-pagination-button-width: 28px;
-    --el-pagination-button-height: 32px;
-  }
-  .users-pagination :deep(.btn-prev), .users-pagination :deep(.btn-next), .users-pagination :deep(.el-pager li) { min-width: 28px; height: 32px; line-height: 32px; }
   .credential-actions { flex-direction: column; }
-}
-@media (max-width: 360px) {
-  .users-pagination .users-pagination__size.el-button { grid-column: 2 / -1; }
 }
 </style>

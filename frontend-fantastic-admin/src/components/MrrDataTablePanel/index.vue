@@ -113,6 +113,10 @@ watch(() => props.resultKey, (next, previous) => {
 
 /* 所有分区共用 --mrr-card-inset，卡头标题、筛选字段、表格外沿、分页落在同一条竖线上。 */
 .mrr-data-table-panel__filters {
+  /* Inherited contract avoids cross-component scoped selector/cascade differences. */
+  --mrr-embedded-filter-bottom-space: 0px;
+  --mrr-embedded-filter-divider-width: 0px;
+
   padding: var(--mrr-space-4) var(--mrr-card-inset) 0;
 }
 
@@ -201,10 +205,6 @@ watch(() => props.resultKey, (next, previous) => {
   border-top: 1px solid var(--mrr-shell-divider);
 }
 
-.mrr-data-table-panel__pagination :deep(.el-pagination) {
-  justify-content: flex-end;
-}
-
 .mrr-data-table-panel__content :deep(.el-table) {
   --el-table-border-color: var(--mrr-border);
 
@@ -242,6 +242,8 @@ watch(() => props.resultKey, (next, previous) => {
 }
 
 .mrr-data-table-panel--quiet .mrr-data-table-panel__filters {
+  --mrr-embedded-filter-bottom-space: var(--mrr-space-3);
+
   padding-top: 0;
 }
 
@@ -255,11 +257,6 @@ watch(() => props.resultKey, (next, previous) => {
   .mrr-data-table-panel--quiet.mrr-data-table-panel--headerless .mrr-data-table-panel__filters {
     padding-top: var(--mrr-space-3);
   }
-}
-
-.mrr-data-table-panel--quiet .mrr-data-table-panel__filters :deep(.mrr-filter-bar--embedded) {
-  padding-bottom: var(--mrr-space-3);
-  border-bottom: 0;
 }
 
 .mrr-data-table-panel--quiet .mrr-data-table-panel__content {

@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import type { LogRecord, PaginatedResult } from '@/api/types'
-/* eslint-disable antfu/if-newline, curly, vue/singleline-html-element-content-newline */
 import type { MrrTableAction } from '@/components/MrrTableActions/types'
+/* eslint-disable antfu/if-newline, curly, vue/singleline-html-element-content-newline */
 import { useMediaQuery } from '@vueuse/core'
 import { computed, onBeforeUnmount, onDeactivated, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
@@ -25,6 +25,7 @@ import { copyText as copyToClipboard } from '@/utils/copy-text'
 import { formatDateTime, isRedactedLogText } from '@/utils/display-format'
 import { checkSessionPermission } from '@/utils/permission'
 import { isSessionAccessDenied } from '@/utils/session-access-denied'
+import { tableSequenceColumn } from '@/utils/table-sequence'
 
 defineOptions({ name: 'LogsPage' })
 
@@ -102,7 +103,7 @@ const defaultQuery: LogsQuery = {
 const routeRequestId = computed(() => typeof route.query.requestId === 'string' ? route.query.requestId.trim() : '')
 const linkedRequestId = ref(routeRequestId.value)
 
-const { clearResults, list, total, loading, resultVersion, pageNum, pageSize, query, handleSearch, handlePageChange, loadData } = useCrudList<
+const { clearResults, list, total, loadedRowOffset, loading, resultVersion, pageNum, pageSize, query, handleSearch, handlePageChange, loadData } = useCrudList<
   LogRecord,
   LogsQuery
 >({
@@ -278,7 +279,7 @@ function statusTagType(status: string | number) {
       </template>
     </MrrPageHeader>
 
-    <MrrDataTablePanel title="日志记录" :count="total" :loading="loading" :result-key="resultVersion">
+    <MrrDataTablePanel title="日志记录" :loading="loading" :result-key="resultVersion">
       <template #filters>
         <el-form label-position="top" @submit.prevent>
           <MrrFilterBar embedded layout="grid" :advanced-count="advancedCount">
@@ -347,20 +348,21 @@ function statusTagType(status: string | number) {
         :description="linkedRequestId && query.keyword === linkedRequestId ? '未找到该 Request ID 对应的访问日志' : '暂无日志记录'"
       />
       <el-table v-else :data="list" stripe>
+        <el-table-column v-bind="tableSequenceColumn(loadedRowOffset, list.length)" />
         <el-table-column prop="accessTime" label="访问时间" width="176">
           <template #default="{ row }">{{ formatDateTime(row.accessTime) }}</template>
         </el-table-column>
-        <el-table-column prop="requestId" label="Request ID" width="200" show-overflow-tooltip>
+        <el-table-column prop="requestId" label="Request ID" min-width="200">
           <template #default="{ row }">
-            <template v-if="row.requestId">
-              <span class="log-mono">{{ row.requestId }}</span>
+            <div v-if="row.requestId" class="mrr-table-inline-content">
+              <span class="log-mono mrr-table-inline-content__text" :title="row.requestId">{{ row.requestId }}</span>
               <el-button
                 link type="primary" class="copy-link" aria-label="复制 Request ID"
                 @click="copyText(row.requestId, 'Request ID 已复制')"
               >
                 <FaIcon name="i-lucide:copy" aria-hidden="true" />
               </el-button>
-            </template>
+            </div>
             <template v-else>-</template>
           </template>
         </el-table-column>
@@ -370,7 +372,7 @@ function statusTagType(status: string | number) {
         <el-table-column prop="clientIp" label="客户端 IP" width="148" show-overflow-tooltip>
           <template #default="{ row }"><span class="log-mono">{{ row.clientIp || '-' }}</span></template>
         </el-table-column>
-        <el-table-column prop="method" label="方法" width="92">
+        <el-table-column prop="method" label="方法" width="92" class-name="mrr-table-status-column">
           <template #default="{ row }">
             <el-tag :type="methodTagType(row.method)">{{ row.method || '-' }}</el-tag>
           </template>
@@ -378,7 +380,7 @@ function statusTagType(status: string | number) {
         <el-table-column prop="requestUri" label="真实请求 URI" min-width="280" show-overflow-tooltip>
           <template #default="{ row }"><span class="log-mono">{{ row.requestUri || '-' }}</span></template>
         </el-table-column>
-        <el-table-column prop="responseStatus" label="状态码" width="92">
+        <el-table-column prop="responseStatus" label="状态码" width="92" class-name="mrr-table-status-column">
           <template #default="{ row }">
             <el-tag :type="statusTagType(row.responseStatus)">{{ row.responseStatus || '-' }}</el-tag>
           </template>
@@ -408,7 +410,7 @@ function statusTagType(status: string | number) {
           v-model:page-size="pageSize"
           :page-sizes="[10, 20, 50, 100]"
           :total="total"
-          layout="total, sizes, prev, pager, next, jumper"
+          layout="total, prev, pager, next, jumper, sizes"
           @size-change="handleSearch"
           @current-change="handlePageChange"
         />
@@ -489,7 +491,6 @@ function statusTagType(status: string | number) {
 }
 
 .copy-link {
-  margin-left: var(--mrr-space-1);
   vertical-align: middle;
 }
 

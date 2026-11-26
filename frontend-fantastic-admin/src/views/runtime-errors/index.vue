@@ -3,8 +3,8 @@ import type {
   SystemErrorEvent,
   SystemErrorOverview,
 } from '@/api/modules/system-errors'
-/* eslint-disable vue/singleline-html-element-content-newline */
 import type { MrrTableAction } from '@/components/MrrTableActions/types'
+/* eslint-disable vue/singleline-html-element-content-newline */
 import { RefreshCw as Refresh } from 'lucide-vue-next'
 import { computed, onBeforeUnmount, onDeactivated, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
@@ -32,6 +32,7 @@ import { copyText as copyToClipboard } from '@/utils/copy-text'
 import { formatDateTime, isRedactedLogText } from '@/utils/display-format'
 import { checkSessionPermission } from '@/utils/permission'
 import { isSessionAccessDenied } from '@/utils/session-access-denied'
+import { tableSequenceColumn } from '@/utils/table-sequence'
 
 defineOptions({ name: 'RuntimeErrorsPage' })
 
@@ -134,7 +135,7 @@ function rangeStart(range: string) {
   return undefined
 }
 
-const { clearResults, query, list, total, loading, resultVersion, pageNum: page, pageSize: size, loadData, handleSearch } = useCrudList<SystemErrorEvent, typeof defaultQuery>({
+const { clearResults, query, list, total, loadedRowOffset, loading, resultVersion, pageNum: page, pageSize: size, loadData, handleSearch } = useCrudList<SystemErrorEvent, typeof defaultQuery>({
   session: { resetQuery: defaultQuery, key: () => userStore.token, allowed: () => canReadErrors.value, onReset: () => { resetOverview(); lastRefreshedAt.value = null; error.value = ''; linkedRequestId.value = ''; moduleGeneration++; moduleOptions.value = []; closeDetail() } },
   defaultQuery: { ...defaultQuery, keyword: linkedRequestId.value },
   fetchApi: async ({ page, size, keyword, level, module, range }, { isCurrent, silent }) => {
@@ -361,7 +362,7 @@ function levelTagType(level: string) {
       <el-button size="small" :loading="overviewLoading" @click="loadOverview">重试概览</el-button>
     </div>
 
-    <MrrDataTablePanel title="运行错误组" :count="total" :loading="loading" :result-key="resultVersion" class="runtime-errors-panel">
+    <MrrDataTablePanel title="运行错误组" :loading="loading" :result-key="resultVersion" class="runtime-errors-panel">
       <template #filters>
         <!-- 筛选栏对齐用户管理页模式：无可见标签，控件 aria-label + 自描述占位符 -->
         <MrrFilterBar embedded>
@@ -420,20 +421,21 @@ function levelTagType(level: string) {
         :description="linkedRequestId && query.keyword === linkedRequestId ? '未找到相关运行错误。错误组仅保留最近一次关联的 Request ID。' : '暂无运行错误事件'"
       />
       <el-table v-else :data="list" stripe class="runtime-errors-table">
+        <el-table-column v-bind="tableSequenceColumn(loadedRowOffset, list.length)" />
         <el-table-column prop="lastSeenAt" label="最后发生" width="176">
           <template #default="{ row }">{{ formatDateTime(row.lastSeenAt) }}</template>
         </el-table-column>
         <el-table-column prop="errorId" label="错误编号" width="184" show-overflow-tooltip>
           <template #default="{ row }"><span class="detail-code runtime-errors__id">{{ row.errorId || '-' }}</span></template>
         </el-table-column>
-        <el-table-column prop="level" label="级别" width="90">
+        <el-table-column prop="level" label="级别" width="90" class-name="mrr-table-status-column">
           <template #default="{ row }">
             <el-tag :type="levelTagType(row.level)">{{ row.level }}</el-tag>
           </template>
         </el-table-column>
-        <el-table-column prop="module" label="模块" width="132" show-overflow-tooltip>
+        <el-table-column prop="module" label="模块" min-width="132">
           <template #default="{ row }">
-            <el-button link :auto-insert-space="false" class="module-filter mrr-inline-action" :title="`点击按模块 ${row.module} 筛选`" @click="filterByModule(row.module)">
+            <el-button link :auto-insert-space="false" class="module-filter mrr-inline-action mrr-table-text-link" :title="`点击按模块 ${row.module} 筛选`" @click="filterByModule(row.module)">
               {{ row.module || '-' }}
             </el-button>
           </template>
@@ -467,7 +469,7 @@ function levelTagType(level: string) {
           v-model:page-size="size"
           :page-sizes="[10, 20, 50, 100]"
           :total="total"
-          layout="total, sizes, prev, pager, next, jumper"
+          layout="total, prev, pager, next, jumper, sizes"
           @size-change="handleSearch"
           @current-change="loadData()"
         />

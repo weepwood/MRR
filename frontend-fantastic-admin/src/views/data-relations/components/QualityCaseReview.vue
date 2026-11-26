@@ -8,6 +8,7 @@ import AppError from '@/components/AppError/index.vue'
 import MrrSectionCard from '@/components/MrrSectionCard/index.vue'
 import { formatDateTime } from '@/utils/display-format'
 import { hasPermission } from '@/utils/session'
+import { tableSequenceColumn } from '@/utils/table-sequence'
 
 const props = defineProps<{ issueId?: number }>()
 const allowed = computed(() => hasPermission('system:manage') && hasPermission('record:manage'))
@@ -176,6 +177,7 @@ onBeforeUnmount(reset)
     </template>
     <template v-if="issueId == null">
       <el-table v-if="rows.length" :data="rows" row-key="id" @row-click="row => history(row)">
+        <el-table-column v-bind="tableSequenceColumn()" />
         <el-table-column prop="id" label="案件" width="90" />
         <el-table-column prop="entityType" label="记录类型" min-width="170" />
         <el-table-column prop="entityId" label="记录 ID" min-width="120" />

@@ -21,6 +21,7 @@ import {
   findExternalArchiveClient,
   getExternalArchiveReadiness,
 } from '@/utils/external-archive-test-guide'
+import { tableSequenceColumn } from '@/utils/table-sequence'
 
 const emit = defineEmits<{
   record: [event: AuthTestHistoryEvent]
@@ -545,22 +546,23 @@ onMounted(() => {
       </div>
 
       <el-table v-if="integrationStatus?.clients?.length" :data="integrationStatus.clients" size="small" class="client-table">
+        <el-table-column v-bind="tableSequenceColumn()" />
         <el-table-column prop="clientId" label="Client ID" min-width="180" />
-        <el-table-column label="启用" width="90">
+        <el-table-column label="启用" width="90" class-name="mrr-table-status-column">
           <template #default="{ row }">
             <el-tag :type="row.enabled ? 'success' : 'danger'" effect="plain">
               {{ row.enabled ? '是' : '否' }}
             </el-tag>
           </template>
         </el-table-column>
-        <el-table-column label="Secret" width="110">
+        <el-table-column label="Secret" width="110" class-name="mrr-table-status-column">
           <template #default="{ row }">
             <el-tag :type="row.secretConfigured ? 'success' : 'danger'" effect="plain">
               {{ row.secretConfigured ? '已配置' : '未配置' }}
             </el-tag>
           </template>
         </el-table-column>
-        <el-table-column label="当前 IP" width="110">
+        <el-table-column label="当前 IP" width="110" class-name="mrr-table-status-column">
           <template #default="{ row }">
             <el-tag :type="row.requestIpAllowed ? 'success' : 'danger'" effect="plain">
               {{ row.requestIpAllowed ? '允许' : '拒绝' }}

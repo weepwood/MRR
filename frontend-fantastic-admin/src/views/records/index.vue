@@ -7,6 +7,7 @@ import { batchDownloadRecords, getScanCursor } from '@/api/modules/records'
 import AppEmpty from '@/components/AppEmpty/index.vue'
 import AppError from '@/components/AppError/index.vue'
 import AppLoading from '@/components/AppLoading/index.vue'
+import MrrCursorPagination from '@/components/MrrCursorPagination/index.vue'
 import MrrDataTablePanel from '@/components/MrrDataTablePanel/index.vue'
 import MrrFilterActionButton from '@/components/MrrFilterActionButton/index.vue'
 import MrrFilterBar from '@/components/MrrFilterBar/index.vue'
@@ -16,15 +17,11 @@ import MrrStatusTag from '@/components/MrrStatusTag/index.vue'
 import MrrTableActions from '@/components/MrrTableActions/index.vue'
 import { useTableActionLayout } from '@/composables/useTableActionLayout'
 import { getMedicalRecordTypeLabel, MEDICAL_RECORD_TYPES } from '@/constants/medical-record-types'
+import { migrationStatusTag } from '@/constants/migration-status'
 import { notify } from '@/utils/notification'
+import { tableSequenceColumn } from '@/utils/table-sequence'
 
 defineOptions({ name: 'RecordsPage' })
-
-const migrationStatusMap: Record<string, { label: string, tone: 'neutral' | 'success' }> = {
-  not_migrated: { label: '未迁移', tone: 'neutral' },
-  migrated: { label: '已迁移', tone: 'success' },
-  verified: { label: '已验证', tone: 'success' },
-}
 
 // 业务状态（非 CRUD 通用部分）
 const downloading = ref(false)
@@ -75,6 +72,8 @@ const appliedSummary = computed(() => {
   return fields.filter(([, value]) => value).map(([label, value]) => `${label}：${value}`).join('；') || '全部记录'
 })
 const cursors = ref<number[]>([0])
+const cursorRowOffsets = ref<number[]>([0])
+const loadedRowOffset = computed(() => cursorRowOffsets.value[pageNum.value - 1] ?? 0)
 const nextCursor = ref<number | undefined>()
 const hasMore = ref(false)
 let version = 0
@@ -99,6 +98,8 @@ async function loadData() {
     selectedRows.value = []
     hasMore.value = res.data.hasMore
     nextCursor.value = res.data.nextCursorId
+    cursors.value = cursors.value.slice(0, pageNum.value)
+    cursorRowOffsets.value = cursorRowOffsets.value.slice(0, pageNum.value)
   }
   catch (exception) {
     if (current === version) { error.value = exception instanceof Error ? exception.message : '记录读取失败'; list.value = []; hasMore.value = false }
@@ -110,16 +111,23 @@ async function loadData() {
 function reloadFirstBatch() {
   pageNum.value = 1
   cursors.value = [0]
+  cursorRowOffsets.value = [0]
   hasMore.value = false
   void loadData()
 }
 function handleSearch() { appliedQuery.value = { ...query }; reloadFirstBatch() }
 function resetFilters() { Object.assign(query, { bah: '', brxh: '', sjh: '', openerNo: '', btype: '', legacyContains: false }); handleSearch() }
-function nextPage() {
-  if (loading.value || !hasMore.value || nextCursor.value == null) { return } cursors.value[pageNum.value] = nextCursor.value; pageNum.value++; void loadData()
-}
-function previousPage() {
-  if (loading.value || pageNum.value <= 1) { return } pageNum.value--; void loadData()
+const maxReachablePage = computed(() => pageNum.value + (hasMore.value && nextCursor.value != null ? 1 : 0))
+function jumpToPage(target: number) {
+  if (loading.value || !Number.isSafeInteger(target) || target < 1 || target > maxReachablePage.value || target === pageNum.value) { return }
+  if (target === pageNum.value + 1) {
+    if (!hasMore.value || nextCursor.value == null) { return }
+    cursors.value[pageNum.value] = nextCursor.value
+    cursorRowOffsets.value[pageNum.value] = loadedRowOffset.value + list.value.length
+  }
+  if (cursors.value[target - 1] === undefined) { return }
+  pageNum.value = target
+  void loadData()
 }
 onMounted(loadData)
 onBeforeUnmount(() => { version++ })
@@ -280,8 +288,9 @@ function typeLabel(value: unknown) {
         class="records-table"
         @selection-change="handleSelectionChange"
       >
-        <!-- 短字段使用稳定宽度，文件名及目录弹性分配余量，窄屏保留原生横向滚动。 -->
         <el-table-column type="selection" width="48" />
+        <el-table-column v-bind="tableSequenceColumn(loadedRowOffset, list.length)" />
+        <!-- 短字段使用稳定宽度，文件名及目录弹性分配余量，窄屏保留原生横向滚动。 -->
         <el-table-column prop="bah" label="病案号" width="128" show-overflow-tooltip />
         <el-table-column prop="brxh" label="病人序号" width="112" show-overflow-tooltip />
         <el-table-column prop="sjh" label="上架号" width="120" show-overflow-tooltip />
@@ -294,12 +303,12 @@ function typeLabel(value: unknown) {
         <el-table-column prop="pages" label="页数" width="80" show-overflow-tooltip />
         <el-table-column prop="openerNo" label="扫描人员" width="112" show-overflow-tooltip />
         <el-table-column prop="folder" label="目录" min-width="140" show-overflow-tooltip />
-        <el-table-column prop="migrationStatus" label="迁移状态" width="112" show-overflow-tooltip>
+        <el-table-column prop="migrationStatus" label="迁移状态" min-width="132" class-name="mrr-table-status-column">
           <template #default="{ row }">
             <MrrStatusTag
               v-if="row.migrationStatus"
-              :label="migrationStatusMap[row.migrationStatus]?.label || row.migrationStatus"
-              :tone="migrationStatusMap[row.migrationStatus]?.tone || 'neutral'"
+              :title="row.migrationStatus"
+              v-bind="migrationStatusTag(row.migrationStatus)"
             />
             <span v-else class="text-muted">-</span>
           </template>
@@ -321,20 +330,21 @@ function typeLabel(value: unknown) {
       </el-table>
 
       <template #pagination>
-        <div class="pager">
-          <el-select v-model="pageSize" aria-label="每批条数" class="records-page-size-select" @change="reloadFirstBatch">
-            <el-option v-for="size in [10, 20, 50, 100]" :key="size" :value="size" :label="`${size}条/批`" />
-          </el-select>
-          <div class="pager__navigation">
-            <el-button :disabled="pageNum <= 1 || loading" @click="previousPage">
-              上一批
-            </el-button>
-            <span class="pager__current">第 {{ pageNum }} 批</span>
-            <el-button :disabled="!hasMore || loading" @click="nextPage">
-              下一批
-            </el-button>
-          </div>
-        </div>
+        <MrrCursorPagination
+          :page="pageNum"
+          :max-reachable-page="maxReachablePage"
+          :page-size="pageSize"
+          :page-sizes="[10, 20, 50, 100]"
+          :loading="loading"
+          :can-previous="pageNum > 1"
+          :can-next="hasMore"
+          @jump="jumpToPage"
+          @size-change="size => { pageSize = size; reloadFirstBatch() }"
+        >
+          <template #summary>
+            <span v-if="!loading && !error">本页 {{ list.length }} 条</span>
+          </template>
+        </MrrCursorPagination>
       </template>
     </MrrDataTablePanel>
 
@@ -370,8 +380,8 @@ function typeLabel(value: unknown) {
         <el-descriptions-item label="迁移状态">
           <MrrStatusTag
             v-if="currentRecord.migrationStatus"
-            :label="migrationStatusMap[currentRecord.migrationStatus]?.label || currentRecord.migrationStatus"
-            :tone="migrationStatusMap[currentRecord.migrationStatus]?.tone || 'neutral'"
+            :title="currentRecord.migrationStatus"
+            v-bind="migrationStatusTag(currentRecord.migrationStatus)"
           />
           <span v-else>-</span>
         </el-descriptions-item>
@@ -387,15 +397,6 @@ function typeLabel(value: unknown) {
 </template>
 
 <style scoped>
-.pager {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--mrr-space-2);
-  align-items: center;
-  justify-content: flex-end;
-  width: 100%;
-}
-
 /* 标签排版与操作区底边对齐由 MrrFilterBar 的 labelled 模式统一提供，这里只保留列宽。 */
 .records-filter__field {
   flex: 1 1 150px;
@@ -436,13 +437,6 @@ function typeLabel(value: unknown) {
   color: var(--mrr-muted-foreground);
 }
 
-.pager__current {
-  min-width: 4.5em;
-  font-variant-numeric: tabular-nums;
-  color: var(--mrr-muted-foreground);
-  text-align: center;
-}
-
 .records-query-context strong {
   color: var(--mrr-foreground);
 }
@@ -463,18 +457,6 @@ function typeLabel(value: unknown) {
     justify-content: space-between;
     width: 100%;
   }
-}
-
-.records-page-size-select {
-  width: 120px;
-}
-
-.pager__navigation {
-  display: flex;
-  flex: 0 0 auto;
-  gap: var(--mrr-space-2);
-  align-items: center;
-  white-space: nowrap;
 }
 
 .text-muted {

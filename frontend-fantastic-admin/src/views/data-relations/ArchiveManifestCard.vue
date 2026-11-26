@@ -9,6 +9,7 @@ import MrrSectionCard from '@/components/MrrSectionCard/index.vue'
 import { formatDateTime } from '@/utils/display-format'
 import { downloadBlob } from '@/utils/file-download'
 import { hasPermission } from '@/utils/session'
+import { tableSequenceColumn } from '@/utils/table-sequence'
 
 const props = defineProps<{ archiveId: number }>()
 const scanPreview = ref<number | null>(null)
@@ -404,6 +405,7 @@ onBeforeUnmount(clear)
           仅筛选已加载的 {{ issues.length }} 条异常，当前 {{ visibleIssues.length }} 条；不是全量筛选。
         </p>
         <el-table :data="visibleIssues" max-height="320" empty-text="已加载异常中无匹配记录">
+          <el-table-column v-bind="tableSequenceColumn()" />
           <el-table-column prop="scanId" label="影像 ID" width="120" />
           <el-table-column prop="status" label="异常类型" min-width="180" />
           <el-table-column prop="bytesRead" label="读取字节" width="120" />

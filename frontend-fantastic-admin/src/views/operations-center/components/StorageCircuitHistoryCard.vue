@@ -7,6 +7,7 @@ import AppError from '@/components/AppError/index.vue'
 import MrrSectionCard from '@/components/MrrSectionCard/index.vue'
 import { formatDateTime } from '@/utils/display-format'
 import { hasPermission } from '@/utils/session'
+import { tableSequenceColumn } from '@/utils/table-sequence'
 
 const hours = ref<24 | 168>(24)
 const data = ref<StorageCircuitHistory>()
@@ -76,6 +77,7 @@ onBeforeUnmount(clear)
         节点序号为采集时的显示位置，运行实例标识不用于跨重启匹配节点。
       </p>
       <el-table :data="data.events" :row-key="row => `${row.circuitId}-${row.sequence}`" max-height="420">
+        <el-table-column v-bind="tableSequenceColumn()" />
         <el-table-column label="发生时间" min-width="170">
           <template #default="{ row }">
             {{ formatDateTime(row.occurredAt) }}
@@ -86,7 +88,7 @@ onBeforeUnmount(clear)
             {{ row.sourceKind }} · #{{ row.nodeOrdinal }}
           </template>
         </el-table-column>
-        <el-table-column label="事件" min-width="145">
+        <el-table-column label="事件" min-width="145" class-name="mrr-table-status-column">
           <template #default="{ row }">
             <el-tag :type="row.eventType === 'OPENED' ? 'danger' : row.eventType === 'RECOVERED' ? 'success' : 'warning'">
               {{ labels[row.eventType as keyof typeof labels] }}

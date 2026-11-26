@@ -48,7 +48,7 @@ const isLive = computed(() => props.live ?? (!props.tone && RUNNING_STATUSES.inc
 <template>
   <span class="mrr-status-tag" :class="[`mrr-status-tag--${statusMeta.tone}`, { 'mrr-status-tag--live': isLive }]">
     <span class="mrr-status-tag__dot" aria-hidden="true" />
-    <span>{{ statusMeta.label }}</span>
+    <span class="mrr-status-tag__label">{{ statusMeta.label }}</span>
   </span>
 </template>
 
@@ -81,6 +81,7 @@ const isLive = computed(() => props.live ?? (!props.tone && RUNNING_STATUSES.inc
 
 .mrr-status-tag__dot {
   position: relative;
+  flex: 0 0 6px;
   width: 6px;
   height: 6px;
   background: currentcolor;

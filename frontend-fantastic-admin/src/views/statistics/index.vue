@@ -23,6 +23,7 @@ import MrrFilterBar from '@/components/MrrFilterBar/index.vue'
 import MrrPageHeader from '@/components/MrrPageHeader/index.vue'
 import MrrPageShell from '@/components/MrrPageShell/index.vue'
 import { rangePickerPopperOptions } from '@/ui/provider/picker-options'
+import { pageRowOffset, tableSequenceColumn } from '@/utils/table-sequence'
 
 defineOptions({ name: 'StatisticsPage' })
 
@@ -414,7 +415,6 @@ onMounted(refreshAll)
       class="list-card"
       title="病案明细列表"
       icon="i-lucide:file-text"
-      :count="statisticsListData.total ?? 0"
       :loading="listLoading && statisticsListData.list.length > 0"
       :result-key="statisticsListData.list"
     >
@@ -492,6 +492,7 @@ onMounted(refreshAll)
         empty-text="暂无病案明细数据"
         @sort-change="handleSortChange"
       >
+        <el-table-column v-bind="tableSequenceColumn(pageRowOffset(statisticsListData.page, statisticsListData.size), statisticsListData.list.length)" />
         <el-table-column prop="bah" label="病案号" min-width="136" sortable="custom" show-overflow-tooltip />
         <el-table-column prop="sjh" label="上架号" min-width="136" show-overflow-tooltip />
         <el-table-column prop="date" label="日期" min-width="132" sortable="custom" show-overflow-tooltip />
@@ -507,7 +508,7 @@ onMounted(refreshAll)
           v-model:page-size="pageSize"
           :total="statisticsListData.total ?? 0"
           :page-sizes="[20, 50, 100, 200]"
-          layout="total, sizes, prev, pager, next, jumper"
+          layout="total, prev, pager, next, jumper, sizes"
           @current-change="loadStatisticsList"
           @size-change="handleListSizeChange"
         />

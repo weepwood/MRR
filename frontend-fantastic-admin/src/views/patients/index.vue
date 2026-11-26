@@ -18,6 +18,7 @@ import { useTableActionLayout } from '@/composables/useTableActionLayout'
 import useAuth from '@/utils/composables/useAuth'
 import { copyText as copyToClipboard } from '@/utils/copy-text'
 import { loadEffectiveSystemSettings, SYSTEM_SETTINGS_UPDATED_EVENT } from '@/utils/system-settings'
+import { pageRowOffset, tableSequenceColumn } from '@/utils/table-sequence'
 import PatientAnalyticsPanel from './components/PatientAnalyticsPanel.vue'
 import PatientEditDialog from './components/PatientEditDialog.vue'
 
@@ -30,6 +31,7 @@ const error = ref('')
 const page = ref(1)
 const size = ref(20)
 const total = ref(0)
+const loadedRowOffset = ref(0)
 const revealedIdCards = ref(new Set<string>())
 const patientIdCardRevealEnabled = ref(false)
 const patientIdCardCopyEnabled = ref(false)
@@ -62,6 +64,7 @@ async function loadData() {
     const res = await getPatients(params)
     const payload = res.data ?? { list: [], total: 0 }
     tableData.value = Array.isArray(payload.list) ? payload.list : []
+    loadedRowOffset.value = pageRowOffset(res.data?.page ?? params.page, res.data?.size ?? params.size)
     total.value = Number(payload.total || 0)
     revealedIdCards.value.clear()
   }
@@ -212,7 +215,7 @@ onUnmounted(() => {
         <MrrDataTablePanel
           title="患者列表"
           description="支持按病案号、姓名、身份证号、科室、病区或床位查询。"
-          :count="loading || error ? undefined : total"
+          :count="!loading && !error && !total ? 0 : undefined"
           :loading="loading"
           :result-key="tableData"
         >
@@ -249,6 +252,7 @@ onUnmounted(() => {
           <AppEmpty v-else-if="!tableData.length" description="暂无患者记录" />
           <!-- 短字段使用稳定宽度，科室、病区弹性分配余量，窄屏保留原生横向滚动。 -->
           <el-table v-else :data="tableData" stripe class="patients-table">
+            <el-table-column v-bind="tableSequenceColumn(loadedRowOffset, tableData.length)" />
             <el-table-column prop="bah" label="病案号" width="132" show-overflow-tooltip>
               <template #default="{ row }">
                 <router-link
@@ -318,7 +322,7 @@ onUnmounted(() => {
               v-model:page-size="size"
               :total="total"
               :page-sizes="[10, 20, 50, 100]"
-              layout="sizes, prev, pager, next, jumper"
+              layout="total, prev, pager, next, jumper, sizes"
               @current-change="handlePageChange"
               @size-change="handleSizeChange"
             />

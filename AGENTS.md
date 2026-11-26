@@ -55,6 +55,8 @@ MRR/
 
 ## V1.2 当前 UI 开发优先级
 
+- 普通业务表格与分页统一优先：使用默认 MrrDataTablePanel、默认紧凑 MrrTableActions；游标页使用 MrrCursorPagination 作为 ElPagination 数据适配器，所有分页实际 UI 与 CSS 统一；真实条数下拉及已知游标范围内跳转，不虚构总数或任意跳页；病案明细档案袋与列表共用面板，袋模式整行自适应，列表允许显式选择条数。状态列使用 mrr-table-status-column，控件不可被文本省略规则裁切；迁移状态共用映射，复制操作与长文本分离。适用记录列表通过 tableSequenceColumn 共享原生序号列，真实分页连续、游标累计实际行数，保留原始业务编号与复选框。当前本地候选及未验收事项见交接索引，保持 #850 草稿和 9037 Mock。
+
 - 业务视觉集中工作区 `feat/v1.2-table-gallery-contract` 基于dcb01928，含70c1290e及0614ffe5；P1/P2 表格、筛选、反馈、统计/数据关系/OCR/运维/设置集中治理。修复Select浮层后最终Chromium 62/62、WebKit 10/10、84/84样式、生产构建与Chrome86静态校验通过；Firefox本机启动失败，转Linux专项CI，不合并未验收候选。260组视觉证据及最终门禁状态见[审查](docs/design/business-page-visual-audit.md)及交接索引。保留冻结分支、权限和原业务契约；不得把未通过的回归或预览写成完成。
 
 - #836已合并dbd81c50；字段令牌、双族文本域和只读/错误归属已集中实施，68项样式守护、49项业务浏览器回归通过，待远端门禁。

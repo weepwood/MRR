@@ -7,6 +7,7 @@ import MrrPageShell from '@/components/MrrPageShell/index.vue'
 import MrrSectionCard from '@/components/MrrSectionCard/index.vue'
 import { useUserStore } from '@/store/modules/user'
 import { hasPermission } from '@/utils/session'
+import { tableSequenceColumn } from '@/utils/table-sequence'
 
 defineOptions({ name: 'DatabaseBrowsePage' })
 
@@ -24,7 +25,9 @@ const schema = ref<DbBrowseTableSchema>()
 const page = ref<DbBrowsePage>()
 const filterValues = reactive<Record<string, string>>({})
 const cursorStack = ref<string[]>([])
+const rowOffsets = ref<number[]>([0])
 const pageIndex = ref(1)
+const loadedRowOffset = computed(() => rowOffsets.value[pageIndex.value - 1] ?? 0)
 const activeFilter = ref<string>()
 
 const filterableColumns = computed<DbBrowseColumnView[]>(
@@ -38,7 +41,10 @@ const estimateText = computed(() => formatRowCount(page.value?.estimatedRows, pa
 const currentTable = computed(() => tables.value.find(item => item.tableKey === tableKey.value))
 
 /** 单页行数跟随注册表上限（后端还会再校验一次，这里只是少发一次必然失败的请求）。 */
-const pageSize = computed(() => Math.min(schema.value?.maxPageSize ?? 50, 100))
+const pageSizeOverride = ref<number>()
+const maxPageSize = computed(() => Math.min(schema.value?.maxPageSize ?? 50, 100))
+const pageSize = computed(() => pageSizeOverride.value ?? maxPageSize.value)
+const pageSizes = computed(() => [...new Set([10, 20, 50, 100, maxPageSize.value].filter(size => size <= maxPageSize.value))].sort((a, b) => a - b))
 
 const emptyText = computed(() => {
   if (schema.value?.requireFilter && !activeFilter.value) { return '该表必须提供过滤条件后才会返回数据' }
@@ -106,8 +112,10 @@ function cancelRequest() {
 function clearSelection() {
   tableKey.value = ''
   schema.value = undefined
+  pageSizeOverride.value = undefined
   page.value = undefined
   cursorStack.value = []
+  rowOffsets.value = [0]
   pageIndex.value = 1
   activeFilter.value = undefined
   Object.keys(filterValues).forEach(name => delete filterValues[name])
@@ -166,6 +174,8 @@ interface FetchTarget {
   cursor?: string
   filter?: string
   stack: string[]
+  size?: number
+  offsets?: number[]
 }
 
 /**
@@ -182,23 +192,27 @@ async function fetchRows(target: FetchTarget) {
     page.value = undefined
     pageIndex.value = 1
     cursorStack.value = []
+    rowOffsets.value = [0]
     activeFilter.value = undefined
     errorMessage.value = ''
     return
   }
+  const requestedSize = target.size ?? pageSize.value
   const request = startRequest(() => fetchRows(target))
   try {
     const result = await getBrowseRows(key, {
       page: target.page,
-      size: pageSize.value,
+      size: requestedSize,
       filter: target.filter,
       cursor: target.cursor,
     }, request.signal)
     if (!request.isCurrent()) { return }
     if (!result || result.tableKey !== key || result.page !== target.page) { throw new Error('查询结果与当前数据表或页码不匹配') }
     page.value = result
+    pageSizeOverride.value = requestedSize
     pageIndex.value = target.page
     cursorStack.value = target.stack
+    rowOffsets.value = target.offsets ?? [0]
     activeFilter.value = target.filter
   }
   catch (error) {
@@ -238,26 +252,20 @@ async function resetFilters() {
   await search()
 }
 
-async function nextPage() {
-  const cursor = page.value?.nextCursor
-  if (!cursor) { return }
-  await fetchRows({
-    page: pageIndex.value + 1,
-    cursor,
-    filter: activeFilter.value,
-    stack: [...cursorStack.value, cursor],
-  })
+async function changePageSize(size: number) {
+  if (loading.value || !page.value || !pageSizes.value.includes(size) || size === pageSize.value) { return }
+  await fetchRows({ page: 1, stack: [], filter: activeFilter.value, size })
 }
-
-async function prevPage() {
-  if (pageIndex.value <= 1) { return }
-  const stack = cursorStack.value.slice(0, -1)
-  await fetchRows({
-    page: pageIndex.value - 1,
-    cursor: stack[stack.length - 1],
-    filter: activeFilter.value,
-    stack,
-  })
+const maxReachablePage = computed(() => pageIndex.value + (page.value?.hasMore && page.value.nextCursor ? 1 : 0))
+async function jumpToPage(target: number) {
+  if (loading.value || !page.value || !Number.isSafeInteger(target) || target < 1 || target > maxReachablePage.value || target === pageIndex.value) { return }
+  const stack = target > pageIndex.value
+    ? [...cursorStack.value, page.value.nextCursor!]
+    : cursorStack.value.slice(0, target - 1)
+  const offsets = target > pageIndex.value
+    ? [...rowOffsets.value, loadedRowOffset.value + rows.value.length]
+    : rowOffsets.value.slice(0, target)
+  await fetchRows({ page: target, cursor: stack[stack.length - 1], filter: activeFilter.value, stack, offsets })
 }
 
 watch([() => userStore.token, canBrowse], () => {
@@ -390,6 +398,7 @@ onMounted(loadTables)
     <MrrDataTablePanel v-if="schema" title="查询结果" :description="currentTable?.label" :loading="loading && Boolean(page)" :result-key="page">
       <AppLoading v-if="loading && !page" type="table" :rows="3" />
       <el-table v-else :data="rows" stripe border class="result-table">
+        <el-table-column v-bind="tableSequenceColumn(loadedRowOffset, rows.length)" />
         <el-table-column
           v-for="column in columns"
           :key="column.name"
@@ -420,23 +429,29 @@ onMounted(loadTables)
         :title="`以下列内容过长已截断：${page.truncatedColumns.join('、')}`"
       />
       <template #pagination>
-        <div class="pager">
-          <span class="pager-note" role="status">
-            第 {{ pageIndex }} 页 · 本页 {{ rows.length }} 行 · 总行数 {{ estimateText }}<template v-if="page"> · 耗时 {{ page.tookMs }} ms</template>
-            <template v-if="errorMessage && page"> · 保留上次成功结果</template>
+        <MrrCursorPagination
+          :page="pageIndex"
+          :max-reachable-page="page ? maxReachablePage : undefined"
+          :page-size="pageSize"
+          :page-sizes="page ? pageSizes : []"
+          :loading="loading"
+          :can-previous="pageIndex > 1"
+          :can-next="Boolean(page?.hasMore)"
+          @jump="jumpToPage"
+          @size-change="changePageSize"
+        >
+          <template #summary>
+            本页 {{ rows.length }} 行 · 总行数 {{ estimateText }}<template v-if="page">
+              · 耗时 {{ page.tookMs }} ms
+            </template>
+            <template v-if="errorMessage && page">
+              · 保留上次成功结果
+            </template>
             <template v-if="page?.omittedColumnCount">
               · {{ page.omittedColumnCount }} 列未展示
             </template>
-          </span>
-          <div class="pager-actions">
-            <el-button :disabled="pageIndex <= 1 || loading" @click="prevPage">
-              上一页
-            </el-button>
-            <el-button :disabled="!page?.hasMore || loading" @click="nextPage">
-              下一页
-            </el-button>
-          </div>
-        </div>
+          </template>
+        </MrrCursorPagination>
       </template>
     </MrrDataTablePanel>
   </MrrPageShell>
@@ -590,31 +605,6 @@ onMounted(loadTables)
 }
 
 /* Cursor pagination must keep the actual server result rather than invent a total page count. */
-.pager {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--mrr-space-2);
-  align-items: center;
-  justify-content: space-between;
-  width: 100%;
-  min-width: 0;
-}
-
-.pager-note {
-  font-size: var(--mrr-font-size-xs);
-  font-variant-numeric: tabular-nums;
-  color: var(--mrr-muted-foreground);
-}
-
-.pager-actions {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--mrr-space-2);
-}
-
-.pager-actions :deep(.el-button + .el-button) {
-  margin-left: 0;
-}
 
 .empty-hint {
   font-size: var(--mrr-font-size-sm);

@@ -179,3 +179,23 @@ it('会话切换及权限撤销同步清理列表并拒绝迟到结果', async (
   }
   finally { scope.stop() }
 })
+
+describe('已成功加载的序号偏移', () => {
+  it('新请求等待期间不重编号，成功后更新，清空后归零', async () => {
+    const second = deferred<ReturnType<typeof result>>()
+    const fetchApi = vi.fn().mockResolvedValueOnce(result('first')).mockReturnValueOnce(second.promise)
+    const scope = effectScope()
+    const state = scope.run(() => useCrudList({ fetchApi, defaultQuery: {}, immediate: false }))!
+    try {
+      await state.loadData()
+      const pending = state.handlePageChange(2)
+      expect(state.loadedRowOffset.value).toBe(0)
+      second.resolve({ ...result('second'), page: 2, size: 20 })
+      await pending
+      expect(state.loadedRowOffset.value).toBe(20)
+      state.clearResults()
+      expect(state.loadedRowOffset.value).toBe(0)
+    }
+    finally { scope.stop() }
+  })
+})

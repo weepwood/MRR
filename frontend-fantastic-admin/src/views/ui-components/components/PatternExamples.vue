@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import type { ExampleId } from '../catalog'
 import { computed, onBeforeUnmount, onMounted, ref, useId } from 'vue'
+import { tableSequenceColumn } from '@/utils/table-sequence'
 
 defineProps<{ example: ExampleId }>()
 
@@ -187,6 +188,7 @@ onBeforeUnmount(() => {
         </template>
         <AppLoading v-if="tableLoading && !tableRows.length" type="table" :rows="4" :cols="3" />
         <el-table v-else :data="tableRows" row-key="id">
+          <el-table-column v-bind="tableSequenceColumn()" />
           <el-table-column label="批次编号" min-width="140">
             <template #default="{ row }">
               <span class="pattern-mono">{{ row.id }}</span>
@@ -197,7 +199,7 @@ onBeforeUnmount(() => {
               {{ row.pages.toLocaleString('zh-CN') }}
             </template>
           </el-table-column>
-          <el-table-column label="批次状态" min-width="120">
+          <el-table-column label="批次状态" min-width="120" class-name="mrr-table-status-column">
             <template #default="{ row }">
               <MrrStatusTag :status="row.status" :label="row.label" />
             </template>

@@ -3,6 +3,7 @@ import type { ExampleId } from '../catalog'
 import type { MrrTableAction } from '@/components/MrrTableActions/types'
 import { computed, ref, useId } from 'vue'
 import { useTableActionLayout } from '@/composables/useTableActionLayout'
+import { pageRowOffset, tableSequenceColumn } from '@/utils/table-sequence'
 
 defineProps<{ example: ExampleId }>()
 
@@ -68,10 +69,11 @@ function search(reset = false) {
           </MrrFilterBar>
         </form>
       </template>
-      <el-table :data="visibleRows" empty-text="没有匹配的演示项目">
+      <el-table :data="visibleRows" stripe empty-text="没有匹配的演示项目">
+        <el-table-column v-bind="tableSequenceColumn(pageRowOffset(page, 3), visibleRows.length)" />
         <el-table-column prop="id" label="示例编号" min-width="125" />
         <el-table-column prop="name" label="示例名称" min-width="160" />
-        <el-table-column label="状态" min-width="110">
+        <el-table-column label="状态" min-width="110" class-name="mrr-table-status-column">
           <template #default="{ row }">
             <MrrStatusTag :status="row.status" :label="row.label" />
           </template>
@@ -83,15 +85,11 @@ function search(reset = false) {
         </el-table-column>
       </el-table>
       <template #pagination>
-        <div v-if="cursorMode" class="example-row">
-          <span role="status">第 {{ page }} 批 · 本批 {{ visibleRows.length }} 项 · 总数未知</span>
-          <el-button :disabled="page <= 1" @click="page--">
-            上一批示例
-          </el-button>
-          <el-button :disabled="page * 3 >= matches.length" @click="page++">
-            下一批示例
-          </el-button>
-        </div>
+        <MrrCursorPagination v-if="cursorMode" :page="page" :max-reachable-page="page + (page * 3 < matches.length ? 1 : 0)" :can-previous="page > 1" :can-next="page * 3 < matches.length" @jump="page = $event">
+          <template #summary>
+            本批 {{ visibleRows.length }} 项 · 总数未知
+          </template>
+        </MrrCursorPagination>
         <el-pagination v-else v-model:current-page="page" :page-size="3" :total="matches.length" layout="total, prev, pager, next" small />
       </template>
     </MrrDataTablePanel>

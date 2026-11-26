@@ -83,10 +83,10 @@ const columns = computed(() => {
 }
 
 .mrr-filter-bar.mrr-filter-bar--embedded {
-  padding: 0 0 var(--mrr-space-3);
+  padding: 0 0 var(--mrr-embedded-filter-bottom-space, var(--mrr-space-3));
   background: transparent;
   border: 0;
-  border-bottom: 1px solid var(--mrr-shell-divider);
+  border-bottom: var(--mrr-embedded-filter-divider-width, 1px) solid var(--mrr-shell-divider);
   border-radius: 0;
   box-shadow: none;
 }

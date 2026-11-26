@@ -35,20 +35,22 @@ import {
   uploadToOss,
 } from '@/api/modules/oss'
 import AppLoading from '@/components/AppLoading/index.vue'
+import MrrDataTablePanel from '@/components/MrrDataTablePanel/index.vue'
 import MrrFilterActionButton from '@/components/MrrFilterActionButton/index.vue'
 import MrrPageHeader from '@/components/MrrPageHeader/index.vue'
 import MrrPageShell from '@/components/MrrPageShell/index.vue'
 import MrrSectionCard from '@/components/MrrSectionCard/index.vue'
 import MrrTableActions from '@/components/MrrTableActions/index.vue'
 import { useTableActionLayout } from '@/composables/useTableActionLayout'
+import { migrationStatusMeta as statusMeta } from '@/constants/migration-status'
 import { actionDialog } from '@/ui/components/ActionDialog'
+import { pageRowOffset, tableSequenceColumn } from '@/utils/table-sequence'
 import { useMigrationPolling } from './composables/useMigrationPolling'
 
 defineOptions({ name: 'OssMigrationPage' })
 
 type MigrationMode = 'pilot' | 'batch' | 'full'
 type RecordTab = 'pending' | 'waiting'
-type TagType = 'success' | 'warning' | 'danger' | 'info' | 'primary'
 
 interface JobFormState {
   mode: MigrationMode
@@ -100,25 +102,6 @@ const MODE_LABELS: Record<string, string> = {
   retry: '失败重试',
 }
 
-const STATUS_LABELS: Record<string, { label: string, type: TagType }> = {
-  pending: { label: '等待启动', type: 'warning' },
-  running: { label: '迁移中', type: 'primary' },
-  cancelling: { label: '正在取消', type: 'warning' },
-  cancelled: { label: '已取消', type: 'info' },
-  interrupted: { label: '已中断', type: 'warning' },
-  completed: { label: '已完成', type: 'success' },
-  completed_with_errors: { label: '完成但有失败', type: 'warning' },
-  failed: { label: '失败', type: 'danger' },
-  success: { label: '成功', type: 'success' },
-  retry_wait: { label: '等待重试', type: 'warning' },
-  waiting_sjh: { label: '等待上架号', type: 'info' },
-  migrating: { label: '迁移中', type: 'primary' },
-  migrated: { label: '已迁移', type: 'success' },
-  verified: { label: '已验证', type: 'success' },
-  not_migrated: { label: '未迁移', type: 'info' },
-  skipped: { label: '已跳过', type: 'info' },
-}
-
 const stats = ref<MigrationStatistics>({})
 const readiness = ref<MigrationReadiness>()
 const folders = ref<FolderSummary[]>([])
@@ -129,6 +112,8 @@ const recordHasMore = ref(false)
 const selectedRecords = ref<MigrationScanRecord[]>([])
 const jobs = ref<MigrationJob[]>([])
 const jobTotal = ref(0)
+const jobRowOffset = ref(0)
+const logRowOffset = ref(0)
 const jobPage = ref(1)
 const jobSize = ref(10)
 const currentJob = ref<MigrationJob>()
@@ -297,10 +282,6 @@ watch(autoRefresh, (enabled) => {
   }
 })
 
-function statusMeta(status?: string) {
-  return STATUS_LABELS[status ?? ''] ?? { label: status || '-', type: 'info' as TagType }
-}
-
 function modeLabel(mode?: string) {
   return MODE_LABELS[mode ?? ''] ?? mode ?? '-'
 }
@@ -437,6 +418,7 @@ async function loadJobs() {
       throw new Error('任务列表响应为空')
     }
     jobs.value = response.data.list
+    jobRowOffset.value = pageRowOffset(response.data.page ?? requestedPage, response.data.size ?? requestedSize)
     jobTotal.value = response.data.total ?? 0
     jobHistoryPage.value = requestedPage
     // A history page cannot establish whether a global active job exists.
@@ -455,13 +437,15 @@ async function loadJobs() {
 async function loadLogs() {
   loading.logs = true
   try {
-    const response = await getMigrationLogs({
+    const params = {
       status: logStatus.value || undefined,
       scanId: logScanId.value,
       page: logPage.value,
       size: logSize.value,
-    })
+    }
+    const response = await getMigrationLogs(params)
     logs.value = response.data?.list ?? []
+    logRowOffset.value = pageRowOffset(response.data?.page ?? params.page, response.data?.size ?? params.size)
     logTotal.value = response.data?.total ?? 0
     selectedLogs.value = []
   }
@@ -1176,6 +1160,7 @@ onMounted(() => {
           @selection-change="handleRecordSelection"
         >
           <el-table-column v-if="recordTab === 'pending'" type="selection" width="48" />
+          <el-table-column v-bind="tableSequenceColumn(0, records.length)" />
           <el-table-column prop="id" label="Scan ID" width="100" />
           <el-table-column prop="bah" label="病案号" width="128" show-overflow-tooltip />
           <el-table-column prop="sjh" label="上架号" width="128" show-overflow-tooltip>
@@ -1190,7 +1175,7 @@ onMounted(() => {
               {{ row.migrationAttempts ?? 0 }}
             </template>
           </el-table-column>
-          <el-table-column prop="migrationStatus" label="状态" width="120">
+          <el-table-column prop="migrationStatus" label="状态" min-width="132" class-name="mrr-table-status-column">
             <template #default="{ row }">
               <el-tag :type="statusMeta(row.migrationStatus).type" size="small">
                 {{ statusMeta(row.migrationStatus).label }}
@@ -1238,7 +1223,7 @@ onMounted(() => {
         </div>
       </el-card>
 
-      <MrrSectionCard title="迁移任务历史" description="分页查看试迁移、批次迁移和全量迁移的执行结果。">
+      <MrrDataTablePanel title="迁移任务历史" description="分页查看试迁移、批次迁移和全量迁移的执行结果。">
         <template #actions>
           <el-button :icon="Refresh" :loading="loading.jobs" @click="loadJobs">
             刷新任务
@@ -1253,6 +1238,7 @@ onMounted(() => {
           :title="jobHistoryPage == null ? '尚未取得任务历史，请点击刷新任务重试。' : `任务历史读取失败，当前仍显示上次成功读取的第 ${jobHistoryPage} 页。可点击刷新任务重试。`"
         />
         <el-table v-loading="loading.jobs" :data="jobs" stripe empty-text="暂无迁移任务">
+          <el-table-column v-bind="tableSequenceColumn(jobRowOffset, jobs.length)" />
           <el-table-column prop="id" label="任务" width="80" />
           <el-table-column label="阶段" width="110">
             <template #default="{ row }">
@@ -1272,7 +1258,7 @@ onMounted(() => {
               <el-progress :percentage="Math.min(100, Number(row.rate || 0))" :stroke-width="8" />
             </template>
           </el-table-column>
-          <el-table-column label="状态" width="130">
+          <el-table-column label="状态" min-width="144" class-name="mrr-table-status-column">
             <template #default="{ row }">
               <el-tag :type="statusMeta(row.status).type" size="small">
                 {{ statusMeta(row.status).label }}
@@ -1300,21 +1286,21 @@ onMounted(() => {
           </el-table-column>
         </el-table>
 
-        <div class="pager">
+        <template #pagination>
           <el-pagination
             v-model:current-page="jobPage"
             v-model:page-size="jobSize"
             :disabled="loading.jobs"
             :page-sizes="[10, 20, 50]"
             :total="jobTotal"
-            layout="total, sizes, prev, pager, next"
+            layout="total, prev, pager, next, jumper, sizes"
             @size-change="loadJobs"
             @current-change="loadJobs"
           />
-        </div>
-      </MrrSectionCard>
+        </template>
+      </MrrDataTablePanel>
 
-      <MrrSectionCard title="迁移日志与失败处理" description="按结果或 Scan ID 定位记录；核对问题后才能重置永久失败。">
+      <MrrDataTablePanel title="迁移日志与失败处理" description="按结果或 Scan ID 定位记录；核对问题后才能重置永久失败。">
         <template #actions>
           <el-button
             :icon="RotateCcw"
@@ -1326,41 +1312,43 @@ onMounted(() => {
           </el-button>
         </template>
 
-        <el-alert
-          v-if="retryFeedback"
-          :title="retryFeedback.message"
-          :type="retryFeedback.type"
-          :closable="false"
-          show-icon
-        />
+        <template #filters>
+          <el-alert
+            v-if="retryFeedback"
+            :title="retryFeedback.message"
+            :type="retryFeedback.type"
+            :closable="false"
+            show-icon
+          />
 
-        <el-form class="log-filter" inline>
-          <el-form-item label="结果">
-            <el-select v-model="logStatus" clearable placeholder="全部状态">
-              <el-option label="成功" value="success" />
-              <el-option label="永久失败" value="failed" />
-              <el-option label="等待重试" value="retry_wait" />
-              <el-option label="等待上架号" value="waiting_sjh" />
-              <el-option label="已跳过" value="skipped" />
-            </el-select>
-          </el-form-item>
-          <el-form-item label="Scan ID">
-            <el-input-number
-              v-model="logScanId"
-              :min="1"
-              controls-position="right"
-              placeholder="精确 ID"
-            />
-          </el-form-item>
-          <el-form-item>
-            <MrrFilterActionButton action="search" :pending="loading.logs" :busy="loading.logs" @click="loadLogs">
-              查询
-            </MrrFilterActionButton>
-            <MrrFilterActionButton action="reset" :pending="loading.logs" :busy="loading.logs" @click="resetLogFilters">
-              重置
-            </MrrFilterActionButton>
-          </el-form-item>
-        </el-form>
+          <el-form class="log-filter" inline>
+            <el-form-item label="结果">
+              <el-select v-model="logStatus" clearable placeholder="全部状态">
+                <el-option label="成功" value="success" />
+                <el-option label="永久失败" value="failed" />
+                <el-option label="等待重试" value="retry_wait" />
+                <el-option label="等待上架号" value="waiting_sjh" />
+                <el-option label="已跳过" value="skipped" />
+              </el-select>
+            </el-form-item>
+            <el-form-item label="Scan ID">
+              <el-input-number
+                v-model="logScanId"
+                :min="1"
+                controls-position="right"
+                placeholder="精确 ID"
+              />
+            </el-form-item>
+            <el-form-item>
+              <MrrFilterActionButton action="search" :pending="loading.logs" :busy="loading.logs" @click="loadLogs">
+                查询
+              </MrrFilterActionButton>
+              <MrrFilterActionButton action="reset" :pending="loading.logs" :busy="loading.logs" @click="resetLogFilters">
+                重置
+              </MrrFilterActionButton>
+            </el-form-item>
+          </el-form>
+        </template>
 
         <el-table
           v-loading="loading.logs"
@@ -1370,9 +1358,10 @@ onMounted(() => {
           @selection-change="handleLogSelection"
         >
           <el-table-column type="selection" width="48" :selectable="logSelectable" />
+          <el-table-column v-bind="tableSequenceColumn(logRowOffset, logs.length)" />
           <el-table-column prop="scanId" label="Scan ID" width="100" />
           <el-table-column prop="localPath" label="迁移来源" min-width="200" show-overflow-tooltip />
-          <el-table-column prop="migrationStatus" label="结果" width="120">
+          <el-table-column prop="migrationStatus" label="结果" min-width="132" class-name="mrr-table-status-column">
             <template #default="{ row }">
               <el-tag :type="statusMeta(row.migrationStatus).type" size="small">
                 {{ statusMeta(row.migrationStatus).label }}
@@ -1411,18 +1400,18 @@ onMounted(() => {
           </el-table-column>
         </el-table>
 
-        <div class="pager">
+        <template #pagination>
           <el-pagination
             v-model:current-page="logPage"
             v-model:page-size="logSize"
             :page-sizes="[10, 20, 50, 100]"
             :total="logTotal"
-            layout="total, sizes, prev, pager, next"
+            layout="total, prev, pager, next, jumper, sizes"
             @size-change="loadLogs"
             @current-change="loadLogs"
           />
-        </div>
-      </MrrSectionCard>
+        </template>
+      </MrrDataTablePanel>
     </template>
 
     <el-dialog v-model="uploadResultVisible" align-center title="手工上传结果" width="min(900px, 92vw)">
@@ -1441,8 +1430,9 @@ onMounted(() => {
         </el-tag>
       </div>
       <el-table :data="uploadResult?.results ?? []" stripe max-height="520">
+        <el-table-column v-bind="tableSequenceColumn(0, uploadResult?.results.length ?? 0)" />
         <el-table-column prop="scanId" label="Scan ID" width="100" />
-        <el-table-column prop="status" label="结果" width="130">
+        <el-table-column prop="status" label="结果" min-width="144" class-name="mrr-table-status-column">
           <template #default="{ row }: { row: OssUploadResult }">
             <el-tag :type="statusMeta(row.status).type">
               {{ statusMeta(row.status).label }}
@@ -1664,12 +1654,6 @@ onMounted(() => {
 
 .log-filter :deep(.el-select) {
   width: 160px;
-}
-
-.pager {
-  display: flex;
-  justify-content: flex-end;
-  margin-top: var(--mrr-space-3);
 }
 
 .upload-summary {

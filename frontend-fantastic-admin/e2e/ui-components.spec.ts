@@ -170,7 +170,7 @@ test('页头尺寸示例：相同内容的业务页头等高，长说明折行�
   await expect.poll(() => page.locator('.pattern-sample .mrr-page-header__description').evaluateAll(nodes => nodes.every(node => node.scrollWidth <= node.clientWidth + 1))).toBe(true)
 })
 
-test('动效示例：刷新期间保留结果并标记忙碌，结束后换成下一批', async ({ page }) => {
+test('动效示例：刷新期间保留结果并标记忙碌，结束后换成下一页', async ({ page }) => {
   await openGallery(page)
   await page.getByRole('button', { name: /反馈与浮层/ }).click()
   const content = page.locator('.mrr-data-table-panel__content').filter({ has: page.locator('.el-table') }).first()
@@ -286,15 +286,19 @@ test('展厅游标示例仅展示实际批次，查询与重置回到首批', as
   await cursor.focus()
   await cursor.press('Space')
   await expect(cursor).toHaveAttribute('aria-checked', 'true')
-  await expect(page.getByText('第 1 批 · 本批 3 项 · 总数未知')).toBeVisible()
-  await page.getByRole('button', { name: '下一批示例' }).click()
-  await expect(page.getByText('第 2 批 · 本批 2 项 · 总数未知')).toBeVisible()
-  await expect(page.getByRole('button', { name: '下一批示例' })).toBeDisabled()
+  await expect(page.locator('.mrr-cursor-pagination .el-pager .is-active')).toHaveText('1')
+  await expect(page.locator('.mrr-cursor-pagination__summary')).toHaveText('本批 3 项 · 总数未知')
+  await page.getByRole('button', { name: '下一页', exact: true }).click()
+  await expect(page.locator('.mrr-cursor-pagination .el-pager .is-active')).toHaveText('2')
+  await expect(page.locator('.mrr-cursor-pagination__summary')).toHaveText('本批 2 项 · 总数未知')
+  await expect(page.getByRole('button', { name: '下一页', exact: true })).toBeDisabled()
   await page.getByLabel('筛选示例', { exact: true }).fill('暗色')
   await page.getByLabel('筛选示例', { exact: true }).press('Enter')
-  await expect(page.getByText('第 1 批 · 本批 1 项 · 总数未知')).toBeVisible()
+  await expect(page.locator('.mrr-cursor-pagination .el-pager .is-active')).toHaveText('1')
+  await expect(page.locator('.mrr-cursor-pagination__summary')).toHaveText('本批 1 项 · 总数未知')
   await page.getByRole('button', { name: '重置筛选', exact: true }).click()
-  await expect(page.getByText('第 1 批 · 本批 3 项 · 总数未知')).toBeVisible()
+  await expect(page.locator('.mrr-cursor-pagination .el-pager .is-active')).toHaveText('1')
+  await expect(page.locator('.mrr-cursor-pagination__summary')).toHaveText('本批 3 项 · 总数未知')
 })
 
 test('返回顶部在隐藏计时后仍可通过键盘聚焦与触发', async ({ page }) => {

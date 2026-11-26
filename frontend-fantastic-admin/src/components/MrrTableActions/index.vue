@@ -12,6 +12,7 @@ const props = withDefaults(defineProps<{
 }>(), {
   maxInline: 2,
   moreLabel: '更多操作',
+  appearance: 'quiet',
 })
 
 const emit = defineEmits<{

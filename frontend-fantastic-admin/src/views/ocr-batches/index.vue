@@ -18,6 +18,7 @@ import { useTableActionLayout } from '@/composables/useTableActionLayout'
 import { actionDialog } from '@/ui/components/ActionDialog'
 import useAuth from '@/utils/composables/useAuth'
 import { getRequestErrorMessage } from '@/utils/request-error-message'
+import { tableSequenceColumn } from '@/utils/table-sequence'
 import ClassificationReview from '../statistics/archive/components/ClassificationReview.vue'
 
 defineOptions({ name: 'OcrBatchesPage' })
@@ -255,7 +256,8 @@ async function skipRollbackPage() {
 
       <AppLoading v-if="loading && !batches.length" type="table" :rows="5" />
       <AppError v-else-if="loadError && !batches.length" :message="loadError" @retry="reload" />
-      <el-table v-else :data="batches">
+      <el-table v-else :data="batches" stripe>
+        <el-table-column v-bind="tableSequenceColumn(0, batches.length)" />
         <!-- 成功但为空走共享空态（DESIGN.md §5.1），不用 el-table 默认「暂无数据」 -->
         <template #empty>
           <AppEmpty size="compact" description="暂无批次记录，可在上方创建" />
@@ -265,7 +267,7 @@ async function skipRollbackPage() {
             <span class="ocr-batches__mono">{{ row.id }}</span>
           </template>
         </el-table-column>
-        <el-table-column prop="status" label="状态" width="124">
+        <el-table-column prop="status" label="状态" width="124" class-name="mrr-table-status-column">
           <template #default="{ row }">
             <MrrStatusTag :label="statusMeta(row.status).label" :tone="statusMeta(row.status).tone" :title="row.status" />
           </template>
@@ -332,6 +334,7 @@ async function skipRollbackPage() {
         {{ rollbackMessage }}
       </p>
       <el-table :data="rollbackRows">
+        <el-table-column v-bind="tableSequenceColumn(0, rollbackRows.length)" />
         <el-table-column prop="scanId" label="影像 ID" /><el-table-column prop="newType" label="自动类型" /><el-table-column label="可回退">
           <template #default="{ row }">
             {{ row.eligible ? '可以恢复为未分类' : '已有后续变化，跳过' }}

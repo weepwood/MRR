@@ -10,9 +10,10 @@ import {
   getPatientAnalyticsSummary,
   getPatientMultiRecordGroups,
 } from '@/api/modules/patients'
-
 import AppLoading from '@/components/AppLoading/index.vue'
+
 import MrrDataTablePanel from '@/components/MrrDataTablePanel/index.vue'
+import { pageRowOffset, tableSequenceColumn } from '@/utils/table-sequence'
 
 const props = withDefaults(defineProps<{
   refreshKey?: number
@@ -29,6 +30,8 @@ const summary = ref<PatientAnalyticsSummary>()
 const activeDetailTab = ref<'patients' | 'missing' | 'multi'>('patients')
 const missingLoading = ref(false)
 const missingRecords = ref<PatientRecord[]>([])
+const missingRowOffset = ref(0)
+const multiRowOffset = ref(0)
 const missingPage = ref(1)
 const missingSize = ref(10)
 const missingTotal = ref(0)
@@ -59,11 +62,13 @@ async function loadSummary() {
 async function loadMissingRecords() {
   missingLoading.value = true
   try {
-    const response = await getMissingIdCardPatients({
+    const params = {
       page: missingPage.value,
       size: missingSize.value,
-    })
+    }
+    const response = await getMissingIdCardPatients(params)
     missingRecords.value = response.data?.list ?? []
+    missingRowOffset.value = pageRowOffset(response.data?.page ?? params.page, response.data?.size ?? params.size)
     missingTotal.value = Number(response.data?.total || 0)
   }
   finally {
@@ -74,12 +79,14 @@ async function loadMissingRecords() {
 async function loadMultiGroups() {
   multiLoading.value = true
   try {
-    const response = await getPatientMultiRecordGroups({
+    const params = {
       page: multiPage.value,
       size: multiSize.value,
       includeSuspected: includeSuspected.value,
-    })
+    }
+    const response = await getPatientMultiRecordGroups(params)
     multiGroups.value = response.data?.list ?? []
+    multiRowOffset.value = pageRowOffset(response.data?.page ?? params.page, response.data?.size ?? params.size)
     multiTotal.value = Number(response.data?.total || 0)
   }
   finally {
@@ -176,6 +183,7 @@ onMounted(reloadAll)
         </template>
         <MrrDataTablePanel title="缺少身份证号的病案">
           <el-table v-loading="missingLoading" :data="missingRecords" stripe>
+            <el-table-column v-bind="tableSequenceColumn(missingRowOffset, missingRecords.length)" />
             <el-table-column prop="bah" label="病案号" min-width="140">
               <template #default="{ row }">
                 <router-link
@@ -202,7 +210,7 @@ onMounted(reloadAll)
               v-model:page-size="missingSize"
               :total="missingTotal"
               :page-sizes="[10, 20, 50, 100]"
-              layout="total, sizes, prev, pager, next, jumper"
+              layout="total, prev, pager, next, jumper, sizes"
               @current-change="handleMissingPageChange"
               @size-change="handleMissingSizeChange"
             />
@@ -222,7 +230,8 @@ onMounted(reloadAll)
             </div>
           </template>
           <el-table v-loading="multiLoading" :data="multiGroups" stripe>
-            <el-table-column label="识别依据" width="130">
+            <el-table-column v-bind="tableSequenceColumn(multiRowOffset, multiGroups.length)" />
+            <el-table-column label="识别依据" width="130" class-name="mrr-table-status-column">
               <template #default="{ row }">
                 <el-tag :type="row.matchType === 'IDCARD' ? 'success' : 'warning'">
                   {{ row.matchType === 'IDCARD' ? '身份证一致' : '仅姓名相同' }}
@@ -263,7 +272,7 @@ onMounted(reloadAll)
               v-model:page-size="multiSize"
               :total="multiTotal"
               :page-sizes="[10, 20, 50, 100]"
-              layout="total, sizes, prev, pager, next, jumper"
+              layout="total, prev, pager, next, jumper, sizes"
               @current-change="handleMultiPageChange"
               @size-change="handleMultiSizeChange"
             />

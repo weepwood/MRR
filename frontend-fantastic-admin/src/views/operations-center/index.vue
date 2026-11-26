@@ -40,6 +40,7 @@ import MrrSectionCard from '@/components/MrrSectionCard/index.vue'
 import { actionDialog } from '@/ui/components/ActionDialog'
 import { formatDateTime as formatTime } from '@/utils/display-format'
 import { hasAnyPermission, hasPermission } from '@/utils/session'
+import { tableSequenceColumn } from '@/utils/table-sequence'
 import NginxConfigurationCard from './components/NginxConfigurationCard.vue'
 import NginxRuntimeCard from './components/NginxRuntimeCard.vue'
 import OperationsHistoryCard from './components/OperationsHistoryCard.vue'
@@ -787,8 +788,9 @@ onMounted(async () => {
 
               <MrrSectionCard title="依赖检查" description="最近一次部署就绪检查">
                 <el-table :data="overviewChecks" empty-text="等待首次依赖检查">
+                  <el-table-column v-bind="tableSequenceColumn()" />
                   <el-table-column prop="name" label="检查项" />
-                  <el-table-column label="状态" width="100">
+                  <el-table-column label="状态" width="100" class-name="mrr-table-status-column">
                     <template #default="{ row }">
                       <el-tag :type="row.passed ? 'success' : row.severity === 'CRITICAL' ? 'danger' : 'warning'">
                         {{ row.passed ? '通过' : '未通过' }}
@@ -974,6 +976,7 @@ onMounted(async () => {
           </section>
           <MrrSectionCard class="section-card" title="各业务表关联情况">
             <el-table :data="integrity.tables" border>
+              <el-table-column v-bind="tableSequenceColumn()" />
               <el-table-column prop="table" label="数据表" min-width="180" />
               <el-table-column prop="total" label="统计范围内总数" min-width="130" />
               <el-table-column prop="linked" label="已关联" min-width="130" />
@@ -1008,6 +1011,7 @@ onMounted(async () => {
           <MrrMetricCard icon="i-lucide:circle-check" label="已完成" value-tone="success" :value="tasksAvailable ? formatNumber(taskCounts.SUCCESS) : '不可用'" />
         </section>
         <el-table :data="filteredExportJobs" border height="600" class="section-card">
+          <el-table-column v-bind="tableSequenceColumn()" />
           <el-table-column prop="created_at" label="创建时间" width="180">
             <template #default="scope">
               {{ formatTime(scope.row.created_at) }}
@@ -1038,7 +1042,7 @@ onMounted(async () => {
           </el-table-column>
           <el-table-column prop="download_count" label="下载次数" width="100" />
           <el-table-column prop="error_message" label="失败原因" min-width="180" show-overflow-tooltip />
-          <el-table-column label="状态" width="110" fixed="right">
+          <el-table-column label="状态" width="110" fixed="right" class-name="mrr-table-status-column">
             <template #default="scope">
               <el-tag :type="statusType(scope.row.status)">
                 {{ scope.row.status }}
@@ -1067,6 +1071,7 @@ onMounted(async () => {
           </div>
         </div>
         <el-table :data="filteredEndpoints" border height="600">
+          <el-table-column v-bind="tableSequenceColumn()" fixed />
           <el-table-column prop="method" label="方法" width="90" fixed />
           <el-table-column prop="path" label="接口" min-width="260" show-overflow-tooltip fixed />
           <el-table-column prop="operation" label="操作" min-width="230" show-overflow-tooltip />
@@ -1076,7 +1081,7 @@ onMounted(async () => {
               {{ scope.row.requiredPermissions.join(', ') || '-' }}
             </template>
           </el-table-column>
-          <el-table-column v-for="role in permissionMatrix?.roles || []" :key="role.code" :label="role.name || role.code" width="110" align="center">
+          <el-table-column v-for="role in permissionMatrix?.roles || []" :key="role.code" :label="role.name || role.code" width="110" align="center" class-name="mrr-table-status-column">
             <template #default="scope">
               <el-tag :type="scope.row.roleAccess[role.code] ? 'success' : 'info'" effect="plain">
                 {{ scope.row.roleAccess[role.code] ? '允许' : '拒绝' }}
@@ -1086,6 +1091,7 @@ onMounted(async () => {
         </el-table>
         <MrrSectionCard v-if="permissionMatrix?.diff.available && permissionMatrix.diff.changes.length" class="section-card" title="与上一版本的差异">
           <el-table :data="permissionMatrix.diff.changes" border>
+            <el-table-column v-bind="tableSequenceColumn()" />
             <el-table-column prop="type" label="变化" width="110" />
             <el-table-column prop="key" label="接口" min-width="300" />
           </el-table>
@@ -1167,6 +1173,7 @@ onMounted(async () => {
           </div>
         </div>
         <el-table :data="auditEntries" border height="640">
+          <el-table-column v-bind="tableSequenceColumn()" />
           <el-table-column prop="access_time" label="时间" width="180">
             <template #default="scope">
               {{ formatTime(scope.row.access_time) }}
@@ -1179,7 +1186,7 @@ onMounted(async () => {
           <el-table-column prop="request_id" label="requestId" min-width="210" show-overflow-tooltip />
           <el-table-column prop="execute_time" label="耗时(ms)" width="110" />
           <el-table-column prop="error_message" label="错误" min-width="180" show-overflow-tooltip />
-          <el-table-column label="结果" width="100" fixed="right">
+          <el-table-column label="结果" width="100" fixed="right" class-name="mrr-table-status-column">
             <template #default="scope">
               <el-tag :type="responseType(scope.row.response_status)">
                 {{ scope.row.response_status || '-' }}

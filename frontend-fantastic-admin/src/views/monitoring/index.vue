@@ -20,6 +20,7 @@ import {
 import MrrPageHeader from '@/components/MrrPageHeader/index.vue'
 import MrrPageShell from '@/components/MrrPageShell/index.vue'
 import MrrSectionCard from '@/components/MrrSectionCard/index.vue'
+import { tableSequenceColumn } from '@/utils/table-sequence'
 
 defineOptions({ name: 'MonitoringPage' })
 
@@ -479,9 +480,10 @@ onUnmounted(pause)
       </div>
 
       <el-table :data="qualitySummary.checks" stripe border empty-text="尚未执行数据质量检查">
+        <el-table-column v-bind="tableSequenceColumn()" />
         <el-table-column prop="check_name" label="检查项" min-width="220" />
         <el-table-column prop="check_code" label="代码" min-width="210" />
-        <el-table-column label="级别" width="110">
+        <el-table-column label="级别" width="110" class-name="mrr-table-status-column">
           <template #default="scope">
             <el-tag :type="scope.row.severity === 'CRITICAL' ? 'danger' : 'warning'">
               {{ scope.row.severity }}
@@ -496,7 +498,8 @@ onUnmounted(pause)
     <div class="monitor-grid monitor-grid--details">
       <MrrSectionCard id="monitor-issues" tabindex="-1" class="monitor-card" title="异常样本" description="最多显示最近 100 条">
         <el-table :data="qualityIssues" stripe border max-height="460" empty-text="没有异常样本">
-          <el-table-column prop="severity" label="级别" width="100">
+          <el-table-column v-bind="tableSequenceColumn()" />
+          <el-table-column prop="severity" label="级别" width="100" class-name="mrr-table-status-column">
             <template #default="scope">
               <el-tag :type="scope.row.severity === 'CRITICAL' ? 'danger' : 'warning'" size="small">
                 {{ scope.row.severity }}
@@ -511,6 +514,7 @@ onUnmounted(pause)
       </MrrSectionCard>
       <MrrSectionCard class="monitor-card" title="数据库占用最大的表" description="包含表与索引">
         <el-table :data="databaseOverview.tables" stripe border max-height="460" empty-text="暂无表统计">
+          <el-table-column v-bind="tableSequenceColumn()" />
           <el-table-column prop="table_name" label="表" min-width="180" />
           <el-table-column label="总大小" width="120">
             <template #default="scope">

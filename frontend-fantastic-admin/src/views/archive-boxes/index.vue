@@ -32,6 +32,7 @@ import MrrStatusTag from '@/components/MrrStatusTag/index.vue'
 import MrrTableActions from '@/components/MrrTableActions/index.vue'
 import { useTableActionLayout } from '@/composables/useTableActionLayout'
 import { actionDialog } from '@/ui/components/ActionDialog'
+import { pageRowOffset, tableSequenceColumn } from '@/utils/table-sequence'
 
 defineOptions({ name: 'ArchiveBoxesPage' })
 
@@ -63,6 +64,8 @@ const summary = ref<ArchiveBoxSummary>({
   abnormalCount: 0,
 })
 
+const recordRowOffset = ref(0)
+const boxRowOffset = ref(0)
 const page = ref(1)
 const size = ref(100)
 const total = ref(0)
@@ -217,9 +220,11 @@ async function loadRecords() {
   loading.value = true
   error.value = ''
   try {
-    const response = await getArchiveBoxRecords(buildQuery())
+    const params = buildQuery()
+    const response = await getArchiveBoxRecords(params)
     const payload = response.data
     records.value = Array.isArray(payload?.list) ? payload.list : []
+    recordRowOffset.value = pageRowOffset(payload?.page ?? params.page ?? 1, payload?.size ?? params.size ?? 100)
     total.value = Number(payload?.total || 0)
   }
   catch (cause: unknown) {
@@ -236,13 +241,15 @@ async function loadBoxes() {
   loading.value = true
   error.value = ''
   try {
-    const response = await getArchiveBoxGroups({
+    const params = {
       page: boxPage.value,
       size: boxSize.value,
       ...(boxKeyword.value.trim() && { keyword: boxKeyword.value.trim() }),
-    })
+    }
+    const response = await getArchiveBoxGroups(params)
     const payload = response.data
     boxes.value = Array.isArray(payload?.list) ? payload.list : []
+    boxRowOffset.value = pageRowOffset(payload?.page ?? params.page, payload?.size ?? params.size)
     boxTotal.value = Number(payload?.total || 0)
   }
   catch (cause: unknown) {
@@ -463,7 +470,7 @@ onMounted(refreshAll)
 
     <MrrDataTablePanel
       :title="activeView === 'records' ? '装箱明细' : '箱号列表'"
-      :count="loading || error ? undefined : resultCount"
+      :count="!loading && !error && !resultCount ? 0 : undefined"
       :loading="loading"
       :result-key="activeView === 'records' ? records : boxes"
     >
@@ -539,6 +546,7 @@ onMounted(refreshAll)
       <template v-else-if="activeView === 'records'">
         <AppEmpty v-if="!records.length" description="暂无符合条件的装箱记录" />
         <el-table v-else :data="records" stripe>
+          <el-table-column v-bind="tableSequenceColumn(recordRowOffset, records.length)" />
           <el-table-column label="病案号" width="124" show-overflow-tooltip>
             <template #default="{ row }">
               <span class="record-code">{{ normalizeText(row.bah) }}</span>
@@ -549,13 +557,14 @@ onMounted(refreshAll)
               <span class="record-code">{{ normalizeText(row.sjh) }}</span>
             </template>
           </el-table-column>
-          <el-table-column label="实际箱号" width="144" show-overflow-tooltip>
+          <el-table-column label="实际箱号" min-width="144">
             <template #default="{ row }">
               <el-button
                 v-if="row.boxNo"
                 link
                 type="primary"
-                class="box-link"
+                class="box-link mrr-table-text-link"
+                :title="row.boxNo"
                 @click="openBox(row.boxNo)"
               >
                 {{ row.boxNo }}
@@ -563,7 +572,7 @@ onMounted(refreshAll)
               <span v-else class="empty-value">未确认</span>
             </template>
           </el-table-column>
-          <el-table-column label="状态" width="140">
+          <el-table-column label="状态" width="140" class-name="mrr-table-status-column">
             <template #default="{ row }">
               <MrrStatusTag v-bind="statusMeta(row.status)" />
             </template>
@@ -602,16 +611,17 @@ onMounted(refreshAll)
       <template v-else>
         <AppEmpty v-if="!boxes.length" description="暂无箱号记录" />
         <el-table v-else :data="boxes" stripe>
+          <el-table-column v-bind="tableSequenceColumn(boxRowOffset, boxes.length)" />
           <el-table-column label="箱号" min-width="220">
             <template #default="{ row }">
-              <el-button link :auto-insert-space="false" class="box-link mrr-inline-action" @click="openBox(row.boxNo)">
+              <el-button link :auto-insert-space="false" class="box-link mrr-inline-action mrr-table-text-link" :title="row.boxNo" @click="openBox(row.boxNo)">
                 <span class="i-lucide:inbox" aria-hidden="true" />
                 {{ row.boxNo }}
               </el-button>
             </template>
           </el-table-column>
           <el-table-column prop="recordCount" label="箱内病案" width="112" />
-          <el-table-column label="异常记录" width="112">
+          <el-table-column label="异常记录" width="112" class-name="mrr-table-status-column">
             <template #default="{ row }">
               <el-tag :type="row.abnormalCount ? 'warning' : 'success'" effect="light">
                 {{ row.abnormalCount }}
@@ -647,7 +657,7 @@ onMounted(refreshAll)
           v-model:page-size="size"
           :total="total"
           :page-sizes="[10, 20, 50, 100]"
-          layout="sizes, prev, pager, next, jumper"
+          layout="total, prev, pager, next, jumper, sizes"
           @current-change="loadRecords"
           @size-change="handleRecordSizeChange"
         />
@@ -657,7 +667,7 @@ onMounted(refreshAll)
           v-model:page-size="boxSize"
           :total="boxTotal"
           :page-sizes="[10, 20, 50, 100]"
-          layout="sizes, prev, pager, next, jumper"
+          layout="total, prev, pager, next, jumper, sizes"
           @current-change="loadBoxes"
           @size-change="handleBoxSizeChange"
         />

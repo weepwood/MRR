@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import type { InputInstance } from 'element-plus'
-/* eslint-disable antfu/if-newline, curly */
 import type {
   ArchiveRelationDetail,
   ArchiveSearchResult,
@@ -12,6 +11,7 @@ import type {
   RelationCoverage,
   RepairPreview,
 } from '@/api/modules/data-relations'
+/* eslint-disable antfu/if-newline, curly */
 import type { MrrTableAction } from '@/components/MrrTableActions/types'
 import { ElMessage } from 'element-plus'
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
@@ -35,6 +35,7 @@ import MrrTableActions from '@/components/MrrTableActions/index.vue'
 import { useTableActionLayout } from '@/composables/useTableActionLayout'
 import { formatDateTime } from '@/utils/display-format'
 import { hasPermission } from '@/utils/session'
+import { tableSequenceColumn } from '@/utils/table-sequence'
 import ArchiveManifestCard from './ArchiveManifestCard.vue'
 import ArchiveScanInspector from './components/ArchiveScanInspector.vue'
 import QualityCaseReview from './components/QualityCaseReview.vue'
@@ -539,6 +540,7 @@ onMounted(() => {
 
           <MrrSectionCard class="section-card" title="关联检查结果" description="最近一次运行中与 archive_id、孤立数据和编号冲突相关的检查">
             <el-table :data="overview?.relationChecks ?? []" stripe empty-text="尚无关联检查结果">
+              <el-table-column v-bind="tableSequenceColumn()" />
               <el-table-column label="检查项" min-width="260">
                 <template #default="{ row }">
                   <strong>{{ checkName(row as QualityCheck) }}</strong>
@@ -547,7 +549,7 @@ onMounted(() => {
                   </div>
                 </template>
               </el-table-column>
-              <el-table-column label="级别" width="100">
+              <el-table-column label="级别" width="100" class-name="mrr-table-status-column">
                 <template #default="{ row }">
                   <MrrStatusTag :label="row.severity" :tone="row.severity === 'CRITICAL' ? 'danger' : 'warning'" />
                 </template>
@@ -622,13 +624,14 @@ onMounted(() => {
 
           <MrrSectionCard v-if="!archiveOnly && searchResults.length" class="section-card" title="病案主档候选" description="精确匹配优先；仅前导零差异标记为格式差异（FORMAT_ONLY）">
             <el-table :data="searchResults" row-key="id" :current-row-key="selectedArchive?.id" highlight-current-row @row-click="openArchive">
+              <el-table-column v-bind="tableSequenceColumn()" />
               <el-table-column prop="id" label="主档 ID" width="120" />
               <el-table-column prop="bah" label="病案号（BAH）" min-width="150" />
               <el-table-column prop="sjh" label="上架号（SJH）" min-width="150" />
               <el-table-column prop="patientName" label="患者" width="120" />
               <el-table-column prop="department" label="科室" min-width="140" />
               <el-table-column prop="scanCount" label="扫描数" width="100" />
-              <el-table-column label="匹配方式" min-width="180">
+              <el-table-column label="匹配方式" min-width="180" class-name="mrr-table-status-column">
                 <template #default="{ row }">
                   <el-tag :type="row.matchType === 'EXACT' ? 'success' : 'warning'">
                     {{ row.matchType === 'EXACT' ? '精确匹配（EXACT）' : row.matchType === 'FORMAT_ONLY' ? '格式差异（FORMAT_ONLY）' : row.matchType }}
@@ -735,11 +738,12 @@ onMounted(() => {
 
               <MrrSectionCard data-archive-section="comparison" tabindex="-1" class="section-card" title="跨表字段对比" description="区分完全一致、仅前导零差异、字段缺失和真实冲突">
                 <el-table :data="relationDetail.comparisons" stripe>
+                  <el-table-column v-bind="tableSequenceColumn()" />
                   <el-table-column prop="field" label="字段" width="120" />
                   <el-table-column prop="canonicalValue" label="mr_archive" min-width="150" />
                   <el-table-column prop="source" label="来源表" min-width="180" />
                   <el-table-column prop="sourceValue" label="来源值" min-width="150" />
-                  <el-table-column label="判断" width="140">
+                  <el-table-column label="判断" width="140" class-name="mrr-table-status-column">
                     <template #default="{ row }">
                       <MrrStatusTag :label="comparisonLabel(row.status) || row.status" :tone="comparisonTagType(row.status)" />
                     </template>
@@ -750,6 +754,7 @@ onMounted(() => {
               <el-tabs data-archive-section="records" tabindex="-1" class="detail-tabs" type="border-card">
                 <el-tab-pane :label="`统计记录 (${relationDetail.statistics.length})`">
                   <el-table :data="relationDetail.statistics" max-height="420">
+                    <el-table-column v-bind="tableSequenceColumn()" />
                     <el-table-column prop="id" label="ID" width="90" />
                     <el-table-column prop="relationMode" label="关联方式" width="130" />
                     <el-table-column prop="bah" label="BAH" width="120" />
@@ -761,6 +766,7 @@ onMounted(() => {
                 </el-tab-pane>
                 <el-tab-pane :label="`患者记录 (${relationDetail.patients.length})`">
                   <el-table :data="relationDetail.patients" max-height="420">
+                    <el-table-column v-bind="tableSequenceColumn()" />
                     <el-table-column prop="id" label="ID" width="90" />
                     <el-table-column prop="relationMode" label="关联方式" width="130" />
                     <el-table-column prop="bah" label="BAH" width="120" />
@@ -773,6 +779,7 @@ onMounted(() => {
                 </el-tab-pane>
                 <el-tab-pane :label="`装箱记录 (${relationDetail.boxes.length})`">
                   <el-table :data="relationDetail.boxes" max-height="420">
+                    <el-table-column v-bind="tableSequenceColumn()" />
                     <el-table-column prop="id" label="ID" width="90" />
                     <el-table-column prop="relationMode" label="关联方式" width="130" />
                     <el-table-column prop="boxNo" label="实际箱号" min-width="130" />
@@ -783,6 +790,7 @@ onMounted(() => {
                 </el-tab-pane>
                 <el-tab-pane :label="`扫描样本 (${relationDetail.scanSamples.length})`">
                   <el-table :data="relationDetail.scanSamples" max-height="420">
+                    <el-table-column v-bind="tableSequenceColumn()" />
                     <el-table-column prop="id" label="ID" width="100" />
                     <el-table-column prop="pages" label="页码" width="90" />
                     <el-table-column prop="filename" label="文件名" min-width="180" show-overflow-tooltip />
@@ -826,6 +834,7 @@ onMounted(() => {
               <MrrStatusTag v-if="qualitySummary?.running" label="检查运行中" tone="warning" />
             </template>
             <el-table :data="checks" stripe empty-text="尚未执行数据质量检查">
+              <el-table-column v-bind="tableSequenceColumn()" />
               <el-table-column label="规则" min-width="280">
                 <template #default="{ row }">
                   <strong>{{ checkName(row as QualityCheck) }}</strong>
@@ -834,7 +843,7 @@ onMounted(() => {
                   </div>
                 </template>
               </el-table-column>
-              <el-table-column label="严重程度" width="120">
+              <el-table-column label="严重程度" width="120" class-name="mrr-table-status-column">
                 <template #default="{ row }">
                   <MrrStatusTag :label="row.severity" :tone="row.severity === 'CRITICAL' ? 'danger' : 'warning'" />
                 </template>
@@ -869,7 +878,8 @@ onMounted(() => {
               </div>
             </template>
             <el-table :data="filteredIssues" stripe empty-text="当前没有异常样本">
-              <el-table-column label="级别" width="95">
+              <el-table-column v-bind="tableSequenceColumn()" />
+              <el-table-column label="级别" width="95" class-name="mrr-table-status-column">
                 <template #default="{ row }">
                   <MrrStatusTag :label="row.severity === 'CRITICAL' ? '严重' : '警告'" :tone="row.severity === 'CRITICAL' ? 'danger' : 'warning'" />
                 </template>
@@ -944,6 +954,7 @@ onMounted(() => {
 
           <h4>候选病案主档</h4>
           <el-table :data="repairPreview.candidateArchives" empty-text="没有候选病案主档">
+            <el-table-column v-bind="tableSequenceColumn()" />
             <el-table-column prop="id" label="archive_id" width="110" />
             <el-table-column prop="bah" label="BAH" />
             <el-table-column prop="sjh" label="SJH" />

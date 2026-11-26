@@ -154,20 +154,61 @@ body .el-table .el-table__body tr.current-row:hover > td.el-table__cell {
 body .el-pagination {
   --el-pagination-item-gap: 0px;
   --el-pagination-font-size: var(--mrr-font-size-xs);
-  --el-pagination-button-height: var(--mrr-control-height);
-  --el-pagination-button-width: var(--mrr-control-height);
+  --el-pagination-button-height: 28px;
+  --el-pagination-button-width: 28px;
+  --el-pagination-bg-color: transparent;
+  --el-pagination-button-disabled-bg-color: transparent;
 
   flex-wrap: wrap;
   gap: 4px;
+  justify-content: flex-end;
+  width: 100%;
   min-width: 0;
   font-size: var(--mrr-font-size-xs);
   font-variant-numeric: tabular-nums;
   white-space: normal;
 }
 
+.mrr-pagination-adapter {
+  width: 100%;
+  min-width: 0;
+}
+
+body .el-pagination .el-pagination__total {
+  min-width: 0;
+  margin-inline-end: auto;
+  color: var(--mrr-muted-foreground);
+  overflow-wrap: anywhere;
+}
+
+body .el-pagination .el-pagination__sizes .el-select__wrapper {
+  min-height: var(--el-pagination-button-height);
+  background: transparent;
+  box-shadow: none;
+}
+
+body .el-pagination .el-pagination__sizes .el-select__wrapper.is-focused {
+  box-shadow: inset 0 0 0 1px var(--mrr-ring), var(--mrr-focus-ring);
+}
+
+body .el-pagination .el-pagination__sizes .el-select__wrapper:hover {
+  background: var(--mrr-accent);
+}
+
+body .el-pagination .btn-prev .el-icon,
+body .el-pagination .btn-next .el-icon {
+  font-size: 12px;
+}
+
+.mrr-pagination-range-error {
+  color: var(--mrr-destructive);
+}
+
 /* 同一分页契约覆盖共享数据面板与既有页面，导航箭头不与页码分散。 */
 @media (max-width: 760px) {
   body .el-pagination {
+    --el-pagination-button-height: 32px;
+
     display: grid;
     grid-template-columns: auto minmax(0, 1fr) auto auto;
     width: 100%;
@@ -233,7 +274,6 @@ body .el-pagination .el-pager li {
 
 /* Distinguish groups without accumulating Element Plus default 16px margins. */
 @media (min-width: 761px) {
-  body .el-pagination .el-pagination__sizes + .btn-prev,
   body .el-pagination .el-pagination__total + .btn-prev {
     margin-inline-start: 8px;
   }
@@ -241,10 +281,39 @@ body .el-pagination .el-pager li {
   body .el-pagination .btn-next + .el-pagination__jump {
     margin-inline-start: 8px;
   }
+
+  body .el-pagination .el-pagination__sizes {
+    margin-inline-start: 8px;
+  }
+}
+
+/* Native size selector: intrinsic selected text, no reserved empty 128px field. */
+body .el-pagination .el-pagination__sizes .el-select {
+  width: max-content;
+}
+
+body .el-pagination .el-pagination__sizes .el-select__wrapper {
+  gap: 4px;
+  padding: 0 4px;
+  font-size: var(--mrr-font-size-xs);
+}
+
+body .el-pagination .el-pagination__sizes .el-select__selection {
+  flex: 0 0 auto;
+}
+
+body .el-pagination .el-pagination__sizes .el-select__placeholder {
+  position: static;
+  width: auto;
+  transform: none;
+}
+
+body .el-pagination .el-pagination__sizes .el-select__caret {
+  font-size: 12px;
 }
 
 body .el-pagination .el-pagination__jump {
-  gap: 2px;
+  gap: 0;
   margin-inline-start: 0;
   font-size: var(--mrr-font-size-xs);
   color: var(--mrr-muted-foreground);
@@ -257,7 +326,7 @@ body .el-pagination .el-pagination__classifier {
 }
 
 body .el-pagination .el-pagination__editor.el-input {
-  width: max(var(--el-pagination-button-width), calc(5ch + 8px));
+  width: calc(4ch + 4px);
   height: var(--el-pagination-button-height);
   font-size: inherit;
 }
@@ -265,7 +334,7 @@ body .el-pagination .el-pagination__editor.el-input {
 body .el-pagination .el-pagination__editor .el-input__wrapper {
   height: 100%;
   min-height: 0;
-  padding: 0 4px;
+  padding: 0 2px;
   background: transparent;
   border-radius: var(--mrr-radius-sm);
   box-shadow: none;
@@ -291,6 +360,19 @@ body .el-pagination .el-pagination__editor .el-input__inner {
   cursor: pointer;
 }
 
+@supports (field-sizing: content) {
+  body .el-pagination .el-pagination__editor.el-input {
+    width: max-content;
+    min-width: 0;
+  }
+
+  body .el-pagination .el-pagination__editor .el-input__inner {
+    width: auto;
+    min-width: 2ch;
+    field-sizing: content;
+  }
+}
+
 body .el-pagination .el-pagination__editor .el-input__inner:focus {
   color: var(--mrr-foreground);
   cursor: text;
@@ -302,7 +384,7 @@ body .el-pagination .el-pagination__editor .el-input__inner:focus {
   }
 
   body .el-pagination .el-pagination__jump {
-    gap: 2px;
+    gap: 0;
   }
 }
 
@@ -324,15 +406,15 @@ body .el-pagination .el-pagination__editor .el-input__inner:focus {
   }
 }
 
-.el-pagination button,
-.el-pagination .el-pager li {
+body .el-pagination button,
+body .el-pagination .el-pager li {
   color: var(--mrr-muted-foreground);
   background: transparent;
   border-radius: var(--mrr-radius-sm);
 }
 
-.el-pagination button:not(:disabled):hover,
-.el-pagination .el-pager li:hover {
+body .el-pagination button:not(:disabled):hover,
+body .el-pagination .el-pager li:hover {
   color: var(--mrr-foreground);
   background: var(--mrr-accent);
 }
@@ -343,7 +425,7 @@ body .el-pagination .el-pagination__editor .el-input__inner:focus {
  * 当前页只是位置指示，与导航选中态（浅底 + 深字）同一语汇。
  * 三个令牌均有 Chrome 86 静态回退（browser-compatibility.css）。
  */
-.el-pagination .el-pager li.is-active {
+body .el-pagination .el-pager li.is-active {
   font-weight: 600;
   color: var(--mrr-navigation-active-foreground);
   background: var(--mrr-tone-primary-soft);
@@ -356,4 +438,74 @@ body .el-pagination .el-pagination__editor .el-input__inner:focus {
   font-size: 12px;
   font-weight: 500;
   border-radius: var(--mrr-radius-sm);
+}
+
+/* Shared ordinal column: no business identity semantics. */
+body .el-table .mrr-table-sequence > .cell {
+  padding-inline: 8px;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+body .el-table td.mrr-table-sequence {
+  color: var(--mrr-muted-foreground);
+}
+
+/* A status badge is a control, not a line of ellipsized cell text.
+ * Known labels fit on one line; unexpected long values wrap without cutting
+ * the border or indicator. Keep ordinary text tooltip/ellipsis behavior. */
+body .el-table td.mrr-table-status-column > .cell {
+  text-overflow: clip;
+  white-space: normal;
+}
+
+body .el-table td.mrr-table-status-column .mrr-status-tag,
+body .el-table td.mrr-table-status-column .el-tag {
+  box-sizing: border-box;
+  max-width: 100%;
+  height: auto;
+  min-height: 24px;
+  white-space: normal;
+}
+
+body .el-table td.mrr-table-status-column .mrr-status-tag__label,
+body .el-table td.mrr-table-status-column .el-tag__content {
+  min-width: 0;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+}
+
+/* Text plus an action: only the text may shrink, never the action. */
+body .el-table .mrr-table-inline-content {
+  display: flex;
+  gap: 4px;
+  align-items: center;
+  min-width: 0;
+}
+
+body .el-table .mrr-table-inline-content__text {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+body .el-table .mrr-table-inline-content > .el-button {
+  flex: none;
+  margin: 0;
+}
+
+/* Long link labels remain readable on hover and do not push out of cells. */
+body .el-table .mrr-table-text-link.el-button {
+  min-width: 0;
+  max-width: 100%;
+}
+
+body .el-table .mrr-table-text-link.el-button > span {
+  display: block;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }

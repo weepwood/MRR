@@ -120,7 +120,7 @@ test('用户列表采用公共默认表格、独立身份字段及单一计数',
   await expect(page.getByRole('dialog', { name: '创建用户' })).not.toBeVisible()
 })
 
-test('每页条数以文本轮换，回到第一页且只发一次查询', async ({ page }) => {
+test('每页条数使用下拉，回到第一页且只发一次查询', async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 900 })
   await page.route('**/api/v1/auth/users?**', async (route) => {
     const response = await route.fetch()
@@ -130,23 +130,23 @@ test('每页条数以文本轮换，回到第一页且只发一次查询', async
   })
   await openUsers(page)
   const footer = page.locator('.users-pagination')
-  const size = footer.locator('.users-pagination__size')
-  await expect(footer.locator('.el-pagination__sizes')).toHaveCount(0)
-  await expect(size).toHaveText('20条/页')
+  const size = footer.locator('.el-pagination__sizes .el-select__wrapper')
+  await expect(footer.locator('.el-pagination__sizes')).toHaveCount(1)
+  await expect(size).toHaveText('20 条/页')
   await footer.locator('.btn-next').click()
   await expect(footer.locator('.el-pager .is-active')).toHaveText('2')
-  await expect(size).toBeEnabled()
+  await expect(footer.locator('.el-pagination__sizes [role=combobox]')).toBeEnabled()
   const requests: string[] = []
   page.on('request', (request) => {
     if (request.method() === 'GET' && new URL(request.url()).pathname.endsWith('/auth/users')) { requests.push(request.url()) }
   })
   for (const [index, count] of [50, 100, 10, 20].entries()) {
     const response = page.waitForResponse(r => new URL(r.url()).pathname.endsWith('/auth/users'))
-    if (index === 0) { await size.focus(); await size.press('Enter') }
-    else { await size.click() }
+    await size.click()
+    await page.getByRole('option', { name: `${count} 条/页`, exact: true }).click()
     await response
-    await expect(size).toHaveText(`${count}条/页`)
-    await expect(size).toBeEnabled()
+    await expect(size).toHaveText(`${count} 条/页`)
+    await expect(footer.locator('.el-pagination__sizes [role=combobox]')).toBeEnabled()
     await expect(footer.locator('.el-pager .is-active')).toHaveText('1')
     expect(requests).toHaveLength(index + 1)
     expect(Object.fromEntries(new URL(requests[index]!).searchParams)).toMatchObject({ page: '1', size: String(count) })

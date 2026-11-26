@@ -7,6 +7,7 @@ import AppError from '@/components/AppError/index.vue'
 import MrrSectionCard from '@/components/MrrSectionCard/index.vue'
 import { formatDateTime } from '@/utils/display-format'
 import { isSessionAccessDenied } from '@/utils/session-access-denied'
+import { tableSequenceColumn } from '@/utils/table-sequence'
 
 const props = defineProps<{ archiveId?: number, issueId?: number, deterministic?: boolean }>()
 const orders = ref<RepairOrder[]>([])
@@ -240,6 +241,7 @@ onBeforeUnmount(clear)
     <AppError v-if="failed" message="工单读取或操作失败，请刷新核对实际状态" @retry="load()" />
     <el-alert v-if="!enabled" title="修复写入不可用，现有工单仅供查看" type="info" :closable="false" />
     <el-table v-if="orders.length" :data="orders" row-key="id" highlight-current-row @row-click="select">
+      <el-table-column v-bind="tableSequenceColumn()" />
       <el-table-column prop="id" label="工单" width="90" />
       <el-table-column label="关联记录" min-width="140">
         <template #default="{ row }">
@@ -252,7 +254,7 @@ onBeforeUnmount(clear)
         </template>
       </el-table-column>
       <el-table-column prop="targetArchiveId" label="目标主档" min-width="120" />
-      <el-table-column label="状态" width="110">
+      <el-table-column label="状态" width="110" class-name="mrr-table-status-column">
         <template #default="{ row }">
           <el-tag effect="plain">
             {{ labels[row.status] || row.status }}

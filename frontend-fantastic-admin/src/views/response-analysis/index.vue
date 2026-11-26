@@ -128,6 +128,7 @@ onMounted(loadData)
             stripe
             empty-text="暂无慢接口数据"
           >
+            <el-table-column type="index" label="排名" width="64" align="center" />
             <el-table-column prop="method" label="方法" width="84">
               <template #default="{ row }">
                 <span class="endpoint-mono">{{ row.method }}</span>

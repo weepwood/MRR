@@ -2,6 +2,7 @@
 import type { ScanRecord } from '@/api/types'
 import type { MetricTone } from '@/components/MrrMetricCard/types'
 import type { MrrTableAction } from '@/components/MrrTableActions/types'
+import { useMediaQuery } from '@vueuse/core'
 import { computed, onBeforeUnmount, onMounted, reactive, ref } from 'vue'
 import { batchDownloadRecords, getScanCursor } from '@/api/modules/records'
 import AppEmpty from '@/components/AppEmpty/index.vue'
@@ -22,6 +23,7 @@ import { notify } from '@/utils/notification'
 import { tableSequenceColumn } from '@/utils/table-sequence'
 
 defineOptions({ name: 'RecordsPage' })
+const isNarrowScreen = useMediaQuery('(max-width: 760px)')
 
 // 业务状态（非 CRUD 通用部分）
 const downloading = ref(false)
@@ -349,7 +351,7 @@ function typeLabel(value: unknown) {
     </MrrDataTablePanel>
 
     <el-dialog v-model="detailVisible" align-center title="记录详情" width="720px" :close-on-click-modal="false">
-      <el-descriptions v-if="currentRecord" :column="2" border>
+      <el-descriptions v-if="currentRecord" direction="vertical" class="mrr-detail-descriptions" :column="isNarrowScreen ? 1 : 2" border>
         <el-descriptions-item label="病案号">
           {{ currentRecord.bah || '-' }}
         </el-descriptions-item>
@@ -358,9 +360,6 @@ function typeLabel(value: unknown) {
         </el-descriptions-item>
         <el-descriptions-item label="上架号">
           {{ currentRecord.sjh || '-' }}
-        </el-descriptions-item>
-        <el-descriptions-item label="文件名">
-          {{ currentRecord.filename || '-' }}
         </el-descriptions-item>
         <el-descriptions-item label="类型">
           {{ typeLabel(currentRecord.btype) }}
@@ -374,9 +373,6 @@ function typeLabel(value: unknown) {
         <el-descriptions-item label="上传标记">
           {{ currentRecord.uploadFlag || '-' }}
         </el-descriptions-item>
-        <el-descriptions-item label="目录" :span="2">
-          {{ currentRecord.folder || '-' }}
-        </el-descriptions-item>
         <el-descriptions-item label="迁移状态">
           <MrrStatusTag
             v-if="currentRecord.migrationStatus"
@@ -388,7 +384,13 @@ function typeLabel(value: unknown) {
         <el-descriptions-item label="文件大小">
           {{ currentRecord.fileSize ? `${(currentRecord.fileSize / 1024).toFixed(1)} KB` : '-' }}
         </el-descriptions-item>
-        <el-descriptions-item label="MD5" :span="2">
+        <el-descriptions-item label="文件名" :span="isNarrowScreen ? 1 : 2">
+          {{ currentRecord.filename || '-' }}
+        </el-descriptions-item>
+        <el-descriptions-item label="目录" :span="isNarrowScreen ? 1 : 2">
+          {{ currentRecord.folder || '-' }}
+        </el-descriptions-item>
+        <el-descriptions-item label="MD5" :span="isNarrowScreen ? 1 : 2">
           {{ currentRecord.checksumMd5 || '-' }}
         </el-descriptions-item>
       </el-descriptions>

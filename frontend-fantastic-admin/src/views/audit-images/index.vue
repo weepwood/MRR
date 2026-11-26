@@ -451,7 +451,7 @@ onMounted(loadData)
     <el-dialog v-model="detailVisible" align-center title="审计详情" width="min(820px, 92vw)" class="audit-detail">
       <AppLoading v-if="detailLoading" />
       <AppError v-else-if="detailError" :message="detailError" @retry="retryDetail" />
-      <el-descriptions v-else-if="currentLog" :column="isNarrowScreen ? 1 : 2" border>
+      <el-descriptions v-else-if="currentLog" direction="vertical" class="mrr-detail-descriptions" :column="isNarrowScreen ? 1 : 2" border>
         <el-descriptions-item label="Request ID">{{ currentLog.requestId || '-' }}</el-descriptions-item>
         <el-descriptions-item label="用户">{{ currentLog.username || '-' }}</el-descriptions-item>
         <el-descriptions-item label="访问类型">{{ currentLog.auditDescription || actionLabel(currentLog.auditAction) }}</el-descriptions-item>
@@ -460,11 +460,11 @@ onMounted(loadData)
         <el-descriptions-item label="身份证号">{{ auditIdentifiers(currentLog).idCard }}</el-descriptions-item>
         <el-descriptions-item label="客户端 IP">{{ currentLog.clientIp || '-' }}</el-descriptions-item>
         <el-descriptions-item label="状态码">{{ currentLog.responseStatus || '-' }}</el-descriptions-item>
-        <el-descriptions-item label="访问时间" :span="2">{{ formatDateTime(currentLog.accessTime) }}</el-descriptions-item>
-        <el-descriptions-item label="请求 URI" :span="2">{{ currentLog.requestUri || '-' }}</el-descriptions-item>
-        <el-descriptions-item label="接口模板" :span="2">{{ currentLog.endpointTemplate || '-' }}</el-descriptions-item>
-        <el-descriptions-item label="Referer" :span="2">{{ currentLog.referer || '-' }}</el-descriptions-item>
-        <el-descriptions-item label="查询参数" :span="2">{{ currentLog.queryString || '-' }}</el-descriptions-item>
+        <el-descriptions-item label="访问时间" :span="isNarrowScreen ? 1 : 2">{{ formatDateTime(currentLog.accessTime) }}</el-descriptions-item>
+        <el-descriptions-item label="请求 URI" :span="isNarrowScreen ? 1 : 2">{{ currentLog.requestUri || '-' }}</el-descriptions-item>
+        <el-descriptions-item label="接口模板" :span="isNarrowScreen ? 1 : 2">{{ currentLog.endpointTemplate || '-' }}</el-descriptions-item>
+        <el-descriptions-item label="Referer" :span="isNarrowScreen ? 1 : 2">{{ currentLog.referer || '-' }}</el-descriptions-item>
+        <el-descriptions-item label="查询参数" :span="isNarrowScreen ? 1 : 2">{{ currentLog.queryString || '-' }}</el-descriptions-item>
       </el-descriptions>
     </el-dialog>
   </MrrPageShell>

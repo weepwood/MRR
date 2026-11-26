@@ -1461,7 +1461,7 @@ onMounted(() => {
         <el-button v-if="jobDetailError" :loading="loading.detail" @click="reloadJobDetail">
           重新加载详情
         </el-button>
-        <el-descriptions v-if="jobDetail" :column="1" border>
+        <el-descriptions v-if="jobDetail" direction="vertical" class="mrr-detail-descriptions" :column="1" border>
           <el-descriptions-item label="任务 ID">
             {{ jobDetail.id }}
           </el-descriptions-item>
@@ -1620,7 +1620,7 @@ onMounted(() => {
 
 .filter-grid {
   display: grid;
-  grid-template-columns: repeat(4, minmax(150px, 1fr)) minmax(180px, auto);
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 160px), 1fr));
   gap: var(--mrr-space-3);
   align-items: end;
   margin-bottom: var(--mrr-space-3);
@@ -1631,7 +1631,8 @@ onMounted(() => {
 }
 
 .filter-actions :deep(.el-form-item__content) {
-  flex-wrap: nowrap;
+  flex-wrap: wrap;
+  gap: var(--mrr-space-2);
 }
 
 .record-actions {

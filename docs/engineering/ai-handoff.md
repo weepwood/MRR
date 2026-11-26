@@ -778,3 +778,7 @@ MrrCursorPagination 改用 ElPagination 原生页码、箭头、跳页、条数�
 ## 表格状态及控件防溢出（2026-11-26，本地候选）
 
 扫描记录 waiting_sjh 原映射缺失且112px列使用整单元格文本省略，现共享16种迁移状态文案映射，状态列最小132px，保留原始码title。19个页面文件37个状态列统一 mrr-table-status-column，已知文案单行优先、未知长文案换行、圆点不压缩。接口日志长Request ID与复制按钮分离，装箱和错误模块长链接内部省略。Chromium 4/4（九业务表格双主题、15路由控件几何排查、合成超长未知状态与Request ID），其中统计和慢接口路由未取得可测标签控件，其他13路由共456个匹配控件未发现越界；不能宣称所有状态组合已浏览器验收。定向单测24/24、TS、定向ESLint/Stylelint及Diff检查通过。此前序号扩展回归26/27，运维看板状态文案断言仍失败，未在本轮扩展范围。日志 /tmp/mrr-table-overflow-{after,unit,tsc2,style,eslint2}.log。未连接真实医疗数据，WebKit/Chrome86实机未验收，本地9037 HTTP200，未提交推送发布。
+
+## V1.2 页面级UI集中精修（2026-11-26）
+
+检查点88bf1b47（61文件）保存此前未提交成果；本批在同一工作区P2实施，具体变更及边界见 docs/design/v1.2-ui-system-roadmap.md 和 DESIGN.md 最后章节。99/99定向单测，Chromium首轮36/40，旧名称和测试环境修复后双引擎10/10，最终截图反馈两处精修后双引擎6/6。原运维状态文案断言已通过真实信息浮层交互。生产构建/Chrome86静态检查在最后两处微调前通过。未跑全量CI和全站视觉矩阵，未发布，未推送，未合并，保留真实医院数据与冻结 main 24152bee。WebKit使用现有外置缓存；本机Corepack缺失，临时入口转发仓库锁定且已安装pnpm 10.33.0，原lint-staged与commitlint正常执行，不跳过hooks。9037 Mock可用。

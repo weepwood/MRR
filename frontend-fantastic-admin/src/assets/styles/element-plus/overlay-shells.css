@@ -327,3 +327,36 @@ body .mrr-dialog-shell--business > .mrr-dialog-header:not(.mrr-overlay-border-bo
 body .mrr-dialog-shell--business > .mrr-overlay-footer:not(.mrr-overlay-border-top) {
   border: 0;
 }
+
+/* Read-only detail hierarchy: labels above values, no dense matrix of borders.
+ * Only the explicit detail role uses this; edit forms and specialist viewers are untouched. */
+body .el-descriptions.mrr-detail-descriptions .el-descriptions__table {
+  width: 100%;
+  table-layout: fixed;
+}
+
+body .el-descriptions.mrr-detail-descriptions .el-descriptions__label.el-descriptions__cell {
+  padding: var(--mrr-space-3) var(--mrr-space-3) var(--mrr-space-1);
+  font-size: var(--mrr-font-size-xs);
+  font-weight: var(--mrr-font-weight-label);
+  color: var(--mrr-muted-foreground);
+  background: transparent;
+  border: 0;
+}
+
+body .el-descriptions.mrr-detail-descriptions .el-descriptions__content.el-descriptions__cell {
+  padding: 0 var(--mrr-space-3) var(--mrr-space-3);
+  font-size: var(--mrr-font-size-sm);
+  line-height: 1.6;
+  vertical-align: top;
+  color: var(--mrr-card-foreground);
+  overflow-wrap: anywhere;
+  border: 0;
+  border-bottom: 1px solid var(--mrr-border);
+}
+
+body .el-descriptions.mrr-detail-descriptions .el-descriptions__content pre {
+  max-width: 100%;
+  overflow-wrap: anywhere;
+  white-space: pre-wrap;
+}

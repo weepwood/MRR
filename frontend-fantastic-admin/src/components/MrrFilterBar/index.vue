@@ -27,6 +27,9 @@ const props = withDefaults(defineProps<{
 })
 
 const slots = useSlots()
+const root = ref<HTMLElement>()
+const { width: rootWidth } = useElementSize(root)
+const narrow = computed(() => rootWidth.value > 0 && rootWidth.value < 560)
 const fields = ref<HTMLElement>()
 const { width: fieldsWidth } = useElementSize(computed(() => props.layout === 'grid' ? fields.value : undefined))
 const advancedExpanded = ref(true)
@@ -40,7 +43,7 @@ const columns = computed(() => {
 </script>
 
 <template>
-  <div class="mrr-filter-bar" :class="{ 'mrr-filter-bar--compact': props.compact, 'mrr-filter-bar--embedded': props.embedded, 'mrr-filter-bar--focus-ring': props.focusRing, 'mrr-filter-bar--labelled': props.labelled, 'mrr-filter-bar--grid': props.layout === 'grid' }">
+  <div ref="root" class="mrr-filter-bar" :class="{ 'mrr-filter-bar--narrow': narrow, 'mrr-filter-bar--compact': props.compact, 'mrr-filter-bar--embedded': props.embedded, 'mrr-filter-bar--focus-ring': props.focusRing, 'mrr-filter-bar--labelled': props.labelled, 'mrr-filter-bar--grid': props.layout === 'grid' }">
     <div ref="fields" class="mrr-filter-bar__fields" :data-grid-columns="columns">
       <slot />
       <div v-if="slots.advanced" v-show="advancedExpanded" :id="advancedId" class="mrr-filter-bar__advanced">
@@ -49,6 +52,7 @@ const columns = computed(() => {
     </div>
     <div v-if="slots.actions || slots.advanced" class="mrr-filter-bar__actions">
       <el-button v-if="slots.advanced" native-type="button" :aria-controls="advancedId" :aria-expanded="advancedExpanded" @click="advancedExpanded = !advancedExpanded">
+        <FaIcon :name="advancedExpanded ? 'i-lucide:chevron-up' : 'i-lucide:chevron-down'" aria-hidden="true" />
         {{ advancedExpanded ? '收起高级筛选' : '展开高级筛选' }}（已填写 {{ props.advancedCount }} 项）
       </el-button>
       <slot name="actions" />
@@ -147,9 +151,9 @@ const columns = computed(() => {
 .mrr-filter-bar--labelled :deep(.mrr-filter-field > label),
 .mrr-filter-bar--labelled :deep(.mrr-filter-field__label),
 .mrr-filter-bar--grid :deep(.el-form-item__label) {
-  font-size: 12px;
-  font-weight: 600;
-  line-height: 18px;
+  font-size: var(--mrr-font-size-xs);
+  font-weight: var(--mrr-font-weight-label);
+  line-height: var(--mrr-line-height-label);
   color: var(--mrr-card-foreground);
 }
 
@@ -244,6 +248,34 @@ const columns = computed(() => {
   .mrr-filter-bar__actions :deep(.el-button) {
     flex: 1 1 120px;
   }
+}
+
+/* Narrow content can occur even on desktop when both navigation rails are open. */
+.mrr-filter-bar--narrow {
+  flex-direction: column;
+  align-items: stretch;
+}
+
+.mrr-filter-bar--narrow .mrr-filter-bar__fields,
+.mrr-filter-bar--narrow .mrr-filter-bar__actions {
+  width: 100%;
+}
+
+.mrr-filter-bar--narrow .mrr-filter-bar__fields > :deep(*) {
+  min-width: 0;
+  max-width: 100%;
+}
+
+.mrr-filter-bar--narrow .mrr-filter-bar__actions {
+  justify-content: flex-end;
+  padding: var(--mrr-space-2) 0 0;
+  border-top: 1px solid var(--mrr-shell-divider);
+  border-left: 0;
+}
+
+.mrr-filter-bar--narrow .mrr-filter-bar__actions :deep(.el-button) {
+  flex: 1 1 120px;
+  min-width: 0;
 }
 
 /* Measured width takes precedence over viewport fallback, including range span. */

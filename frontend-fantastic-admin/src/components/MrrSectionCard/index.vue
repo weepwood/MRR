@@ -121,14 +121,16 @@ const hasHeader = computed(() => Boolean(
 
 .mrr-section-card__title-row {
   display: flex;
+  flex-wrap: wrap;
   gap: var(--mrr-space-2);
   align-items: center;
+  min-width: 0;
 }
 
 .mrr-section-card h2 {
   margin: 0;
-  font-size: 14px;
-  font-weight: 650;
+  font-size: var(--mrr-font-size-md);
+  font-weight: var(--mrr-font-weight-heading);
   line-height: 1.4;
   color: var(--mrr-card-foreground);
   letter-spacing: -0.01em;
@@ -136,7 +138,7 @@ const hasHeader = computed(() => Boolean(
 
 .mrr-section-card p {
   margin: 3px 0 0;
-  font-size: 12px;
+  font-size: var(--mrr-font-size-xs);
   line-height: 1.45;
   color: var(--mrr-muted-foreground);
 }

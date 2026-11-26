@@ -1,12 +1,12 @@
 /* MRR 业务指标卡片：现代 SaaS 仪表盘风格 */
 .mrr-metric-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, var(--mrr-metric-min-width)), 1fr));
   gap: var(--mrr-space-4);
 }
 
 .mrr-metric-grid--compact {
-  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, var(--mrr-metric-min-width)), 1fr));
   gap: var(--mrr-space-3);
 }
 
@@ -24,7 +24,7 @@
 
 /* 7 张左右的指标组用更宽的最小列宽，得到 4+3 的均衡排布。 */
 .mrr-metric-grid--wide {
-  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, var(--mrr-metric-wide-min-width)), 1fr));
 }
 
 /* 4 张指标组固定四列：用于设置、摘要这类需要与上方表格列宽对齐的页面，
@@ -134,7 +134,7 @@
   display: block;
   min-width: 0;
   margin: 0;
-  font-size: 12px;
+  font-size: var(--mrr-font-size-xs);
   font-weight: 550;
   line-height: 1.35;
   color: var(--mrr-muted-foreground);
@@ -145,14 +145,17 @@
 .mrr-metric-card__value-row {
   display: flex;
   flex-wrap: wrap;
-  gap: 5px;
+  gap: var(--mrr-space-1);
   align-items: baseline;
+  min-width: 0;
 }
 
 .mrr-metric-card__value {
   display: block;
+  min-width: 0;
+  max-width: 100%;
   margin: 0;
-  font-size: 26px;
+  font-size: var(--mrr-font-size-metric);
   font-weight: 680;
   font-variant-numeric: tabular-nums;
   line-height: 1.16;
@@ -167,14 +170,14 @@
 }
 
 .mrr-metric-card__value--compact {
-  font-size: 14px;
+  font-size: var(--mrr-font-size-md);
   font-weight: 550;
   line-height: 1.5;
   letter-spacing: 0;
 }
 
 .mrr-metric-card__suffix {
-  font-size: 12px;
+  font-size: var(--mrr-font-size-xs);
   font-weight: 550;
   color: var(--mrr-muted-foreground);
 }

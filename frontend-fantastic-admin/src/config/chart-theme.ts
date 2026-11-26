@@ -61,6 +61,18 @@ export function getMrrChartThemeTokens(): MrrChartThemeTokens {
   }
 }
 
+function chartFontSize(token: string) {
+  const value = Number.parseFloat(cssVariable(token, '12px'))
+  return Number.isFinite(value) && value > 0 ? value : 12
+}
+
+export function themeChartAnimationEnabled() {
+  return typeof document === 'undefined' || (
+    document.documentElement.dataset.motion !== 'off'
+    && !(typeof window.matchMedia === 'function' && window.matchMedia('(prefers-reduced-motion: reduce)').matches)
+  )
+}
+
 function themeAxis(axis: unknown, tokens: MrrChartThemeTokens) {
   if (!axis || typeof axis !== 'object') {
     return axis
@@ -83,12 +95,12 @@ function themeAxis(axis: unknown, tokens: MrrChartThemeTokens) {
     },
     axisLabel: {
       color: tokens.textSecondary,
-      fontSize: 11,
+      fontSize: chartFontSize('--mrr-chart-axis-font-size'),
       ...(source.axisLabel as Record<string, unknown> | undefined),
     },
     nameTextStyle: {
       color: tokens.textSecondary,
-      fontSize: 11,
+      fontSize: chartFontSize('--mrr-chart-axis-font-size'),
       ...(source.nameTextStyle as Record<string, unknown> | undefined),
     },
     splitLine: {
@@ -114,12 +126,13 @@ export function applyMrrChartTheme(option: ECOption, tokens = getMrrChartThemeTo
     ...option,
     color: option.color ?? tokens.palette,
     backgroundColor: 'transparent',
+    animation: themeChartAnimationEnabled() ? option.animation : false,
     animationDuration: option.animationDuration ?? 420,
     animationDurationUpdate: option.animationDurationUpdate ?? 260,
     animationEasing: option.animationEasing ?? 'cubicOut',
     textStyle: {
       color: tokens.textSecondary,
-      fontFamily: 'Inter, "HarmonyOS Sans SC", "PingFang SC", "Microsoft YaHei", sans-serif',
+      fontFamily: cssVariable('--mrr-font-sans', 'Inter, "HarmonyOS Sans SC", "Microsoft YaHei", sans-serif'),
       ...(option.textStyle ?? {}),
     },
     tooltip: option.tooltip
@@ -132,7 +145,8 @@ export function applyMrrChartTheme(option: ECOption, tokens = getMrrChartThemeTo
             color: tokens.textPrimary,
             fontSize: 12,
           },
-          extraCssText: 'border-radius:10px;box-shadow:0 12px 32px rgba(15,23,42,.12);',
+          confine: true,
+          extraCssText: `border-radius:${cssVariable('--mrr-radius-md', '8px')};box-shadow:${cssVariable('--mrr-shadow-md', '0 8px 24px rgba(15,23,42,.12)')};`,
           ...option.tooltip,
         }
       : undefined,
@@ -140,10 +154,10 @@ export function applyMrrChartTheme(option: ECOption, tokens = getMrrChartThemeTo
       ? {
           itemWidth: 12,
           itemHeight: 8,
-          itemGap: 18,
+          itemGap: 12,
           textStyle: {
             color: tokens.textSecondary,
-            fontSize: 11,
+            fontSize: chartFontSize('--mrr-chart-legend-font-size'),
           },
           ...option.legend,
         }

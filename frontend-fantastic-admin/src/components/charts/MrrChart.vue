@@ -59,6 +59,7 @@ function setChartRef(element: unknown) {
 .mrr-chart {
   position: relative;
   width: 100%;
+  min-width: 0;
   min-height: 160px;
 }
 
@@ -71,7 +72,7 @@ function setChartRef(element: unknown) {
   position: absolute;
   inset: 0;
   display: grid;
-  gap: 8px;
+  gap: var(--mrr-space-2);
   place-content: center;
   justify-items: center;
   color: var(--el-text-color-placeholder);
@@ -83,6 +84,6 @@ function setChartRef(element: unknown) {
 }
 
 .mrr-chart__empty span {
-  font-size: 13px;
+  font-size: var(--mrr-font-size-sm);
 }
 </style>

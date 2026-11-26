@@ -126,8 +126,14 @@ watch(() => props.resultKey, (next, previous) => {
   gap: var(--mrr-space-3);
   align-items: center;
   justify-content: space-between;
+  min-width: 0;
   padding: var(--mrr-space-3) var(--mrr-card-inset);
   border-bottom: 1px solid var(--mrr-shell-divider);
+}
+
+.mrr-data-table-panel__toolbar > :deep(*) {
+  min-width: 0;
+  max-width: 100%;
 }
 
 .mrr-data-table-panel__content {

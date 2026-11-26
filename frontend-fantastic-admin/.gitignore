@@ -31,3 +31,7 @@ export_to_markdown.py
 # Optional candidate cross-browser qualification reports
 /test-results-cross-browser/
 /playwright-cross-browser-report/
+
+# Local UI acceptance artifacts and authentication fixture
+/test-results-local-table-unify/
+/e2e/.auth/admin-local-table-unify.json

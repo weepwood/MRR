@@ -599,13 +599,12 @@ onMounted(async () => {
               </div>
             </el-alert>
 
-            <section class="mrr-metric-grid overview-metrics" aria-label="核心指标">
+            <section class="mrr-metric-grid mrr-metric-grid--four overview-metrics" aria-label="核心指标">
               <MrrMetricCard :label="overviewFailed ? '上次运行模式' : '运行模式'" icon="i-lucide:activity" compact-value :value="modeLabel(overview.readiness.mode)" :value-tone="modeType(overview.readiness.mode)" />
               <MrrMetricCard
                 label="待处理检查"
                 icon="i-lucide:clipboard-check"
                 tone="amber"
-                compact-value
                 :value="overviewChecks.length ? formatNumber(failedReadinessChecks.length) : '待检查'"
                 :note="overviewChecks.length ? `严重 ${criticalChecks.length} · 警告 ${failedReadinessChecks.length - criticalChecks.length}` : undefined"
               />
@@ -613,14 +612,12 @@ onMounted(async () => {
                 label="活跃导出任务"
                 icon="i-lucide:list-checks"
                 tone="teal"
-                compact-value
                 :value="tasksAvailable ? formatNumber(overview.taskSummary.active) : '不可用'"
                 :note="tasksAvailable ? `等待 ${formatNumber(taskCounts.PENDING)} · 处理中 ${formatNumber(taskCounts.PROCESSING)}` : '暂未取得统计数据'"
               />
               <MrrMetricCard
                 label="近 24 小时 5xx"
                 icon="i-lucide:triangle-alert"
-                compact-value
                 :value="overview.recentServerErrorsAvailable ? formatNumber(overview.recentServerErrors) : '不可用'"
                 :value-tone="overview.recentServerErrorsAvailable && overview.recentServerErrors > 0 ? 'danger' : undefined"
                 :action-label="canViewLogs ? '查看日志' : undefined"
@@ -1282,6 +1279,10 @@ onMounted(async () => {
 
 .two-column-layout > * {
   min-width: 0;
+}
+
+.overview-dashboard--compact .overview-metrics {
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, var(--mrr-metric-min-width)), 1fr));
 }
 
 .overview-dashboard--compact .two-column-layout {

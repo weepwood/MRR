@@ -420,7 +420,7 @@ function statusTagType(status: string | number) {
     <el-dialog v-model="detailVisible" align-center title="接口访问审计详情" width="min(900px, 92vw)" class="log-detail">
       <AppLoading v-if="detailLoading" />
       <AppError v-else-if="detailError" :message="detailError" @retry="retryDetail" />
-      <el-descriptions v-else-if="currentLog" :column="isNarrowScreen ? 1 : 2" border>
+      <el-descriptions v-else-if="currentLog" direction="vertical" class="mrr-detail-descriptions" :column="isNarrowScreen ? 1 : 2" border>
         <el-descriptions-item label="日志 ID">{{ currentLog.id || '-' }}</el-descriptions-item>
         <el-descriptions-item label="Request ID">
           <span class="detail-value">{{ currentLog.requestId || '-' }}</span>
@@ -444,34 +444,34 @@ function statusTagType(status: string | number) {
         <el-descriptions-item label="状态码">{{ currentLog.responseStatus || '-' }}</el-descriptions-item>
         <el-descriptions-item label="访问时间">{{ formatDateTime(currentLog.accessTime) }}</el-descriptions-item>
         <el-descriptions-item label="耗时">{{ formatExecuteTime(currentLog.executeTime) }}</el-descriptions-item>
-        <el-descriptions-item label="真实请求 URI" :span="2">
+        <el-descriptions-item label="真实请求 URI" :span="isNarrowScreen ? 1 : 2">
           <span class="detail-value">{{ currentLog.requestUri || '-' }}</span>
         </el-descriptions-item>
-        <el-descriptions-item label="接口模板" :span="2">
+        <el-descriptions-item label="接口模板" :span="isNarrowScreen ? 1 : 2">
           <span class="detail-value">{{ currentLog.endpointTemplate || '-' }}</span>
         </el-descriptions-item>
-        <el-descriptions-item label="Referer" :span="2">
+        <el-descriptions-item label="Referer" :span="isNarrowScreen ? 1 : 2">
           <span class="detail-value">{{ currentLog.referer || '-' }}</span>
         </el-descriptions-item>
-        <el-descriptions-item label="Query String" :span="2">
+        <el-descriptions-item label="Query String" :span="isNarrowScreen ? 1 : 2">
           <pre class="detail-pre">{{ currentLog.queryString || '-' }}</pre>
         </el-descriptions-item>
-        <el-descriptions-item label="Request Body" :span="2">
+        <el-descriptions-item label="Request Body" :span="isNarrowScreen ? 1 : 2">
           <pre class="detail-pre">{{ currentLog.requestBody || '-' }}</pre>
         </el-descriptions-item>
         <el-descriptions-item label="审计动作">{{ currentLog.auditAction || '-' }}</el-descriptions-item>
         <el-descriptions-item label="审计目标">{{ currentLog.auditTarget || '-' }}</el-descriptions-item>
-        <el-descriptions-item label="审计描述" :span="2">
+        <el-descriptions-item label="审计描述" :span="isNarrowScreen ? 1 : 2">
           <span class="detail-value">{{ currentLog.auditDescription || '-' }}</span>
         </el-descriptions-item>
-        <el-descriptions-item label="异常信息" :span="2">
+        <el-descriptions-item label="异常信息" :span="isNarrowScreen ? 1 : 2">
           <el-alert
             v-if="isRedactedLogText(currentLog.errorMessage)" type="info" :closable="false" show-icon
             title="该记录写入时异常正文被整体脱敏，原始内容未落盘、无法恢复；修复后新产生的记录会显示异常类名。"
           />
           <pre v-else class="detail-pre error-detail">{{ currentLog.errorMessage || '-' }}</pre>
         </el-descriptions-item>
-        <el-descriptions-item label="User-Agent" :span="2">
+        <el-descriptions-item label="User-Agent" :span="isNarrowScreen ? 1 : 2">
           <span class="detail-value">{{ currentLog.userAgent || '-' }}</span>
         </el-descriptions-item>
       </el-descriptions>

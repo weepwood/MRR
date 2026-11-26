@@ -89,7 +89,7 @@ watch(scrollTop, (val) => {
     position: fixed;
   }
 
-  &.topbar-sticky.hide {
+  &.topbar-sticky.hide:not(:focus-within) {
     transform: translateY(-100%);
   }
 }

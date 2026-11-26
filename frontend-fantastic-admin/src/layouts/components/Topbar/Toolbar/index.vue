@@ -35,19 +35,18 @@ defineOptions({
   align-items: center;
   min-width: 0;
   height: 100%;
-  padding-right: 48px;
+  padding-right: var(--mrr-space-3);
   overflow: hidden;
-  mask-image: linear-gradient(to right, #000 0%, #000 calc(100% - 36px), transparent);
 }
 
 .right-side {
   display: flex;
   flex: 0 0 auto;
-  gap: 4px;
+  gap: var(--mrr-space-1);
   align-items: center;
   justify-content: flex-end;
   height: 100%;
-  padding-left: 12px;
+  padding-left: var(--mrr-space-3);
   border-left: 1px solid var(--mrr-shell-divider);
 }
 

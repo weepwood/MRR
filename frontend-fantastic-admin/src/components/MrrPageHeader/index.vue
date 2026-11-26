@@ -84,7 +84,7 @@ const props = defineProps<{
   gap: var(--mrr-space-2);
   align-items: center;
   margin-top: var(--mrr-space-1);
-  font-size: 12px;
+  font-size: var(--mrr-font-size-xs);
   color: var(--mrr-muted-foreground);
 }
 

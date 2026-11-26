@@ -18,13 +18,14 @@
    * （Chrome 实测该处 24 个字形全部命中 NSimSun）。
    * 中文字体排在 Consolas 之后、通用族之前：Consolas 无汉字，缺字时才不会又退回宋体。
    */
+  --mrr-font-sans: inter, "HarmonyOS Sans SC", -apple-system, blinkmacsystemfont, "Segoe UI", "Microsoft YaHei", sans-serif;
   --mrr-font-mono: ui-monospace, "SFMono-Regular", "Menlo", "Monaco", "Consolas", "Liberation Mono", "Microsoft YaHei", "HarmonyOS Sans SC", monospace;
 
   /* 页面宽度 */
   --mrr-content-fluid: 1720px;
   --mrr-content-standard: 1440px;
   --mrr-content-narrow: 1120px;
-  --mrr-page-gap: 24px;
+  --mrr-page-gap: var(--mrr-space-5);
   --mrr-summary-min-height: calc(2px + var(--mrr-space-4) * 2 + var(--mrr-font-size-title-compact) * 1.3 + 7px + var(--mrr-font-size-sm) * 1.6);
 
   /* 4px 基础间距 */
@@ -110,6 +111,15 @@
   --mrr-font-size-lg: 16px;
   --mrr-font-size-title: 26px;
   --mrr-font-size-title-compact: 22px;
+  --mrr-font-size-metric: var(--mrr-font-size-title);
+  --mrr-font-weight-heading: 650;
+  --mrr-font-weight-label: 600;
+  --mrr-line-height-label: 1.5;
+  --mrr-metric-min-width: 220px;
+  --mrr-metric-wide-min-width: 260px;
+  --mrr-chart-axis-font-size: var(--mrr-font-size-xs);
+  --mrr-chart-legend-font-size: var(--mrr-font-size-xs);
+  --mrr-chart-loading-mask: rgb(255 255 255 / 72%);
 
   /* 控件尺寸 */
   --mrr-input-height: 33px;
@@ -283,6 +293,8 @@
   --color-border-strong: rgb(0 0 0 / 18%);
 
   &.dark {
+    --mrr-chart-loading-mask: rgb(16 20 28 / 72%);
+
     color-scheme: dark;
 
     --scrollbar-color: 240 3.7% 15.9%;

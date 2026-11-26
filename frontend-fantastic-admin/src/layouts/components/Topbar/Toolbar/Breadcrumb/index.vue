@@ -65,6 +65,32 @@ function pathCompile(path: string) {
  * key 不再带 index，跳转到同一模块下的兄弟页时，公共祖先节点保持不动，
  * 不会整条面包屑重播；原先的 30px 位移 + skewX(-50deg) 偏装饰、时长 300ms 也超出令牌。
  */
+.breadcrumb {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.breadcrumb :deep(.breadcrumb-item) {
+  flex: 0 1 auto;
+  min-width: 0;
+}
+
+.breadcrumb :deep(.breadcrumb-item .separator) {
+  flex: none;
+}
+
+.breadcrumb :deep(.breadcrumb-item .text) {
+  display: block;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.breadcrumb :deep(.breadcrumb-item:last-child) {
+  flex-shrink: 0;
+  max-width: 100%;
+}
+
 .breadcrumb-enter-active {
   transition: transform var(--mrr-motion-move) var(--mrr-ease-out), opacity var(--mrr-motion-move) var(--mrr-ease-out);
 }

@@ -1193,7 +1193,7 @@ p {
 }
 
 .relation-grid {
-  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 240px), 1fr));
 }
 
 .relation-card {
@@ -1226,7 +1226,7 @@ p {
 
 .relation-card dl {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(96px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 96px), 1fr));
   gap: var(--mrr-space-3);
   margin: var(--mrr-space-4) 0;
 }

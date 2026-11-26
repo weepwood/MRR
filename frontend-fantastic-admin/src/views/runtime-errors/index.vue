@@ -5,6 +5,7 @@ import type {
 } from '@/api/modules/system-errors'
 import type { MrrTableAction } from '@/components/MrrTableActions/types'
 /* eslint-disable vue/singleline-html-element-content-newline */
+import { useMediaQuery } from '@vueuse/core'
 import { RefreshCw as Refresh } from 'lucide-vue-next'
 import { computed, onBeforeUnmount, onDeactivated, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
@@ -35,6 +36,7 @@ import { isSessionAccessDenied } from '@/utils/session-access-denied'
 import { tableSequenceColumn } from '@/utils/table-sequence'
 
 defineOptions({ name: 'RuntimeErrorsPage' })
+const isNarrowScreen = useMediaQuery('(max-width: 760px)')
 
 const detailActions: MrrTableAction[] = [{ key: 'detail', label: '详情', icon: 'i-lucide:eye', tone: 'primary', placement: 'inline' }]
 const { maxInlineActions: detailMaxInlineActions, actionColumnWidth: detailActionColumnWidth } = useTableActionLayout(1, 1)
@@ -484,7 +486,7 @@ function levelTagType(level: string) {
       </div>
       <AppLoading v-if="detailLoading" type="card" :cols="1" />
       <AppError v-else-if="detailError" :message="detailError" @retry="retryDetail" />
-      <el-descriptions v-else-if="current" :column="2" border>
+      <el-descriptions v-else-if="current" direction="vertical" class="mrr-detail-descriptions" :column="isNarrowScreen ? 1 : 2" border>
         <el-descriptions-item label="错误编号">
           <code class="detail-code">{{ current.errorId }}</code>
           <el-button link type="primary" @click="copyText(current?.errorId || '', '错误编号已复制')">
@@ -498,19 +500,19 @@ function levelTagType(level: string) {
         <el-descriptions-item label="模块">{{ current.module || '-' }}</el-descriptions-item>
         <el-descriptions-item label="首次发生">{{ formatDateTime(current.firstSeenAt) }}</el-descriptions-item>
         <el-descriptions-item label="最后发生">{{ formatDateTime(current.lastSeenAt) }}</el-descriptions-item>
-        <el-descriptions-item label="线程" :span="2">{{ current.threadName || '-' }}</el-descriptions-item>
-        <el-descriptions-item label="Request ID" :span="2">
+        <el-descriptions-item label="线程" :span="isNarrowScreen ? 1 : 2">{{ current.threadName || '-' }}</el-descriptions-item>
+        <el-descriptions-item label="Request ID" :span="isNarrowScreen ? 1 : 2">
           <code class="detail-code">{{ current.requestId || '-' }}</code>
           <el-button v-if="current?.requestId" link type="primary" @click="copyText(current?.requestId || '', 'Request ID 已复制')">
             复制
           </el-button>
         </el-descriptions-item>
-        <el-descriptions-item label="记录器" :span="2">{{ current.loggerName }}</el-descriptions-item>
-        <el-descriptions-item label="异常类型" :span="2">{{ current.exceptionType || '-' }}</el-descriptions-item>
-        <el-descriptions-item label="错误摘要" :span="2">
+        <el-descriptions-item label="记录器" :span="isNarrowScreen ? 1 : 2">{{ current.loggerName }}</el-descriptions-item>
+        <el-descriptions-item label="异常类型" :span="isNarrowScreen ? 1 : 2">{{ current.exceptionType || '-' }}</el-descriptions-item>
+        <el-descriptions-item label="错误摘要" :span="isNarrowScreen ? 1 : 2">
           <pre class="detail-pre summary-pre">{{ summaryDisplay(current) }}</pre>
         </el-descriptions-item>
-        <el-descriptions-item label="异常堆栈" :span="2">
+        <el-descriptions-item label="异常堆栈" :span="isNarrowScreen ? 1 : 2">
           <pre class="detail-pre">{{ current.stackTrace || '该事件没有异常堆栈。' }}</pre>
         </el-descriptions-item>
       </el-descriptions>

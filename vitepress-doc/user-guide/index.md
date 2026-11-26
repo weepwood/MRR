@@ -4,12 +4,17 @@ MRR 用于管理医疗机构的患者、病案主档、扫描记录、病案图�
 
 > 页面、菜单和可执行操作会随账号权限、系统设置及部署方式变化。菜单不可见通常表示权限不足或管理员在系统设置中隐藏了该菜单。
 
+![病案业务操作路径](./assets/business-workflow.svg)
+
+*流程示意，非实际页面截图。*
+
 ## 从这里开始
 
 | 使用场景 | 推荐文档 |
 | --- | --- |
 | 第一次登录或注册 | [账号、注册与登录](./accounts.md) |
 | 查询患者和病案 | [病案与记录](./patients.md) |
+| 批量导入或条件导出 | [数据交换中心](./data-exchange.md) |
 | 查看、下载或导出图片 | [影像档案袋](./images.md) |
 | 管理 OSS 迁移 | [OSS 迁移管理](./oss-migration.md) |
 | 浏览 OSS 或 Nginx 文件 | [存储与文件浏览](./storage-browser.md) |
@@ -31,6 +36,7 @@ MRR 用于管理医疗机构的患者、病案主档、扫描记录、病案图�
 | [OSS 迁移管理](./oss-migration.md) | Nginx 原图迁移、等待补齐、重试和校验 | `record:read` |
 | [存储与文件浏览](./storage-browser.md) | 只读浏览 OSS 和 Nginx 静态资源 | `record:read` |
 | [系统管理](./admin.md) | 用户、权限、系统设置和图片来源 | `user:manage` / `role:read` / `system:read` |
+| [数据交换中心](./data-exchange.md) | 模板、预校验、确认导入及条件导出 | 由数据集和操作权限决定 |
 | [数据关系工作台](./data-relation-workbench.md) | 检查病案、患者、统计、扫描和装箱关系 | `system:read` |
 | [运维诊断中心](./operations-center.md) | 部署体检、图片来源诊断、完整性、任务、权限矩阵和维护模式 | `system:read` |
 | [日志、审计与监控](./logs.md) | 操作日志、运行错误、访问审计、接口分析和服务状态 | `log:read` / `system:read` / `system:error:read` |

@@ -1,6 +1,6 @@
 # 更新说明
 
-> 本页对应 **v0.9.0**；实际发布提交和制品摘要以 GitHub Release 及包内清单为准。完整提交历史见 [Git 更新记录](./changelog)，数据库和回滚条件以 `release-baseline.json` 为准。
+> 以下为 v0.9.0 及更早版本的历史发布说明；实际发布提交和制品摘要以 GitHub Release 及包内清单为准。完整提交历史见 [Git 更新记录](./changelog)，数据库和回滚条件以 `release-baseline.json` 为准。
 
 ## 0.9.0 重点变化
 

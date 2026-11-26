@@ -66,6 +66,8 @@ export default defineConfig({
           { text: 'OSS 迁移管理', link: '/oss-migration' },
           { text: '存储与文件浏览', link: '/storage-browser' },
           { text: '数据关系工作台', link: '/data-relation-workbench' },
+          { text: '数据交换中心', link: '/data-exchange' },
+          { text: '数据交换核对清单', link: '/data-exchange-checklist' },
         ],
       },
       {

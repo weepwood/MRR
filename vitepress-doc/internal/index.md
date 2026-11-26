@@ -1,6 +1,6 @@
 # MRR 内部文档
 
-> 面向开发、测试、数据库、部署和运维人员。根目录 `VERSION` 当前为 **0.8.0**，正式标签为 `v0.8.0`。事实来源依次为当前代码与 Flyway、`application.properties`、`VERSION`、`release-baseline.json`、自动化测试和运行中的 OpenAPI。
+> 面向开发、测试、数据库、部署和运维人员。产品版本由根目录 `VERSION` 与站点构建配置统一读取；当前研发候选不等同正式 Release。事实来源依次为当前代码与 Flyway、`application.properties`、`VERSION`、`release-baseline.json`、自动化测试和运行中的 OpenAPI。
 
 ## 按任务查找文档
 

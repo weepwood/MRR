@@ -540,8 +540,8 @@ public class ArchiveExportJobService {
         if (job.getOwnerUserId() != null) {
             return Objects.equals(session.getId(), job.getOwnerUserId());
         }
-        // 仅兼容迁移前没有 owner_user_id 的历史任务。
-        return Objects.equals(session.getUsername(), job.getOwnerUsername());
+        // 历史用户名不能证明当前账号拥有医疗导出资源；仅保留上方管理员访问契约。
+        return false;
     }
 
     private String normalizeFormat(String value) {

@@ -40,6 +40,7 @@ public class DataQualityServiceImpl implements DataQualityService {
     );
 
     private final JdbcTemplate jdbcTemplate;
+    private final QualityTaskConnections taskConnections = new QualityTaskConnections();
     private final DeploymentReadinessService readiness;
     private final MaintenanceModeService maintenance;
     private static final String RUN_FIELDS = """
@@ -101,7 +102,7 @@ public class DataQualityServiceImpl implements DataQualityService {
         try {
             refreshMetricsFromLatestRun(deadlineFromNow(3));
         } catch (Exception exception) {
-            logger.warn("Unable to initialize data quality metrics: {}", exception.getMessage());
+            logger.warn("Unable to initialize data quality metrics: {}", exception.getClass().getSimpleName());
         }
     }
 
@@ -125,14 +126,22 @@ public class DataQualityServiceImpl implements DataQualityService {
 
     @Override
     public Map<String, Object> getRun(long runId) {
+        return getRun(runId, jdbcTemplate);
+    }
+
+    private Map<String, Object> getRun(long runId, JdbcTemplate read) {
         if (runId <= 0) throw new BusinessException(400, "检查批次编号无效");
-        var runs = jdbcTemplate.queryForList("SELECT " + RUN_FIELDS
+        var runs = read.queryForList("SELECT " + RUN_FIELDS
                 + " FROM app.mrr_data_quality_run WHERE id=?", runId);
         if (runs.isEmpty()) throw new BusinessException(404, "检查批次不存在或已清理");
-        return summary(runs);
+        return summary(runs, read);
     }
 
     private Map<String, Object> summary(List<Map<String, Object>> runs) {
+        return summary(runs, jdbcTemplate);
+    }
+
+    private Map<String, Object> summary(List<Map<String, Object>> runs, JdbcTemplate read) {
         Map<String, Object> result = new LinkedHashMap<>();
         result.put("running", running.get());
         result.put("enabled", enabled);
@@ -147,7 +156,7 @@ public class DataQualityServiceImpl implements DataQualityService {
             result.put("running", Set.of("PENDING", "RUNNING", "CANCEL_REQUESTED").contains(String.valueOf(latestRun.get("status"))));
         }
         result.put("latestRun", latestRun);
-        result.put("checks", jdbcTemplate.queryForList("""
+        result.put("checks", read.queryForList("""
                 SELECT check_code, check_name, severity, issue_count, sampled_count, checked_at
                 FROM app.mrr_data_quality_check_result
                 WHERE run_id = ?
@@ -277,14 +286,14 @@ public class DataQualityServiceImpl implements DataQualityService {
     // Historical unmanaged RUNNING rows are not treated as live jobs.
     private long admit(String status, String trigger, Long actor, long deadline) {
         try {
-            var ids = jdbcTemplate.query("""
+            var ids = taskJdbc(deadline).query("""
                     INSERT INTO app.mrr_data_quality_run
                     (status, triggered_by, task_managed, deadline_at, claimed_at, requested_by)
                     VALUES (?, ?, true, clock_timestamp() + make_interval(secs => ?),
                         CASE WHEN ? = 'RUNNING' THEN clock_timestamp() ELSE NULL END, ?)
                     RETURNING id
                     """, statement -> {
-                statement.setQueryTimeout(remainingQuerySeconds(deadline));
+                QualityTaskConnections.applyTimeout(statement, deadline);
                 statement.setString(1, status);
                 statement.setString(2, normalizeTrigger(trigger));
                 statement.setDouble(3, remainingBudgetSeconds(deadline));
@@ -321,20 +330,21 @@ public class DataQualityServiceImpl implements DataQualityService {
         long deadline = deadlineFromNow(budgetSeconds());
         recoverExpired(deadline);
         long id = admit("PENDING", triggeredBy, actorId, deadline);
-        return getRun(id);
+        return getRun(id, taskJdbc(deadlineFromNow(3)));
     }
 
     @Override
     public Map<String, Object> cancelRun(long runId, long actorId) {
         if (runId <= 0 || actorId <= 0) throw new BusinessException(400, "无效检查批次或操作者");
-        int changed = controlUpdate("""
+        long deadline = deadlineFromNow(3);
+        int changed = budgetedUpdate(deadline, """
                 UPDATE app.mrr_data_quality_run
                 SET status=CASE WHEN status='PENDING' THEN 'CANCELLED' ELSE 'CANCEL_REQUESTED' END,
                     completed_at=CASE WHEN status='PENDING' THEN CURRENT_TIMESTAMP ELSE NULL END,
                     cancelled_by=?
                 WHERE id=? AND task_managed AND status IN ('PENDING','RUNNING')
                 """, actorId, runId);
-        var state = getRun(runId);
+        var state = getRun(runId, taskJdbc(deadline));
         var row = (Map<?, ?>) state.get("latestRun");
         if (changed == 0 && !Set.of("CANCEL_REQUESTED","CANCELLED").contains(String.valueOf(row.get("status")))) {
             throw new BusinessException(409, "检查已结束或不能取消");
@@ -347,9 +357,10 @@ public class DataQualityServiceImpl implements DataQualityService {
     public void processPending() {
         if (!asyncEnabled || !canExecute() || !running.compareAndSet(false, true)) return;
         long started = System.nanoTime();
+        long controlDeadline = deadlineFromNow(3);
         try {
-            recoverExpired(deadlineFromNow(3));
-            var claimed = jdbcTemplate.query("""
+            recoverExpired(controlDeadline);
+            var claimed = taskJdbc(controlDeadline).query("""
                     UPDATE app.mrr_data_quality_run
                     SET status='RUNNING', claimed_at=clock_timestamp()
                     WHERE id=(SELECT id FROM app.mrr_data_quality_run
@@ -357,7 +368,7 @@ public class DataQualityServiceImpl implements DataQualityService {
                         ORDER BY id LIMIT 1 FOR UPDATE SKIP LOCKED)
                         AND status='PENDING' AND deadline_at>clock_timestamp()
                     RETURNING id, GREATEST(0, EXTRACT(EPOCH FROM deadline_at-clock_timestamp())) AS remaining
-                    """, statement -> statement.setQueryTimeout(3),
+                    """, statement -> QualityTaskConnections.applyTimeout(statement, controlDeadline),
                     (rs, n) -> new long[]{rs.getLong("id"), (long)(rs.getDouble("remaining") * 1_000_000_000L)});
             if (claimed.isEmpty()) return;
             long[] lease = claimed.getFirst();
@@ -384,7 +395,7 @@ public class DataQualityServiceImpl implements DataQualityService {
             var session = com.zjcxph.imgapi.utils.AuthContext.getCurrentUser();
             long id = admit("RUNNING", triggeredBy, session == null ? null : session.getId(), deadline);
             executeRun(id, deadline);
-            return getRun(id);
+            return getRun(id, taskJdbc(deadlineFromNow(3)));
         } finally {
             runningGauge.set(0);
             running.set(false);
@@ -393,11 +404,11 @@ public class DataQualityServiceImpl implements DataQualityService {
 
     private void requireActive(long runId, long deadline) {
         if (!canExecute()) throw new IllegalStateException("数据质量检查因只读模式暂停");
-        var rows = jdbcTemplate.query("""
+        var rows = taskJdbc(deadline).query("""
                 SELECT id FROM app.mrr_data_quality_run
                 WHERE id=? AND status='RUNNING' AND task_managed AND deadline_at>clock_timestamp()
                 """, statement -> {
-            statement.setQueryTimeout(remainingQuerySeconds(deadline));
+            QualityTaskConnections.applyTimeout(statement, deadline);
             statement.setLong(1, runId);
         }, (rs, n) -> rs.getLong(1));
         if (rows.isEmpty()) throw new IllegalStateException("检查运行状态已变化或已取消");
@@ -413,15 +424,15 @@ public class DataQualityServiceImpl implements DataQualityService {
 
             for (DataQualityCheckDefinition check : checks) {
                 requireActive(runId, deadline);
-                Long countValue = jdbcTemplate.query(check.countSql(), statement -> statement.setQueryTimeout(remainingQuerySeconds(deadline)),
+                Long countValue = taskJdbc(deadline).query(check.countSql(), statement -> QualityTaskConnections.applyTimeout(statement, deadline),
                         resultSet -> { if (!resultSet.next()) return null; long value = resultSet.getLong(1); return resultSet.wasNull() ? null : value; });
                 if (countValue == null) throw new IllegalStateException("统计信息不可用: " + check.code());
                 long issueCount = countValue;
                 requireActive(runId, deadline);
                 List<Map<String, Object>> samples = issueCount == 0
                         ? List.of()
-                        : jdbcTemplate.query(check.sampleSql() + " LIMIT ?", statement -> {
-                            statement.setQueryTimeout(remainingQuerySeconds(deadline));
+                        : taskJdbc(deadline).query(check.sampleSql() + " LIMIT ?", statement -> {
+                            QualityTaskConnections.applyTimeout(statement, deadline);
                             statement.setInt(1, safeSampleLimit);
                         }, new ColumnMapRowMapper());
                 if (!canExecute()) throw new IllegalStateException("数据质量检查因只读模式暂停");
@@ -461,6 +472,10 @@ public class DataQualityServiceImpl implements DataQualityService {
             }
             throw new IllegalStateException("数据质量检查失败，请检查追踪编号或后台安全堆栈", exception);
         }
+    }
+
+    private JdbcTemplate taskJdbc(long deadline) {
+        return taskConnections.template(jdbcTemplate, deadline, remainingQuerySeconds(deadline));
     }
 
     private int remainingQuerySeconds(long deadline) {
@@ -521,8 +536,8 @@ public class DataQualityServiceImpl implements DataQualityService {
     }
 
     private int budgetedUpdate(long deadline, String sql, Object... args) {
-        return jdbcTemplate.update(sql, (PreparedStatementSetter) statement -> {
-            statement.setQueryTimeout(remainingQuerySeconds(deadline));
+        return taskJdbc(deadline).update(sql, (PreparedStatementSetter) statement -> {
+            QualityTaskConnections.applyTimeout(statement, deadline);
             for (int i = 0; i < args.length; i++) statement.setObject(i + 1, args[i]);
         });
     }
@@ -637,9 +652,9 @@ public class DataQualityServiceImpl implements DataQualityService {
     }
 
     private void refreshMetricsFromLatestRun(long deadline) {
-        var runs = jdbcTemplate.query(
+        var runs = taskJdbc(Math.min(deadline, deadlineFromNow(3))).query(
                 "SELECT id, EXTRACT(EPOCH FROM completed_at)::bigint AS completed_epoch FROM app.mrr_data_quality_run WHERE status = 'SUCCESS' ORDER BY id DESC LIMIT 1",
-                statement -> statement.setQueryTimeout(remainingQuerySeconds(Math.min(deadline, deadlineFromNow(3)))),
+                statement -> QualityTaskConnections.applyTimeout(statement, Math.min(deadline, deadlineFromNow(3))),
                 (rs, n) -> new long[]{rs.getLong("id"), rs.getLong("completed_epoch")}
         );
         if (!runs.isEmpty()) {
@@ -648,12 +663,12 @@ public class DataQualityServiceImpl implements DataQualityService {
     }
 
     private void refreshMetrics(long runId, long completedEpoch, long deadline) {
-        List<Map<String, Object>> rows = jdbcTemplate.query("""
+        List<Map<String, Object>> rows = taskJdbc(Math.min(deadline, deadlineFromNow(3))).query("""
                 SELECT check_code, severity, issue_count
                 FROM app.mrr_data_quality_check_result
                 WHERE run_id = ?
                 """, statement -> {
-                    statement.setQueryTimeout(remainingQuerySeconds(Math.min(deadline,deadlineFromNow(3))));
+                    QualityTaskConnections.applyTimeout(statement, Math.min(deadline,deadlineFromNow(3)));
                     statement.setLong(1,runId);
                 },new ColumnMapRowMapper());
         List<MultiGauge.Row<?>> gaugeRows = new ArrayList<>();

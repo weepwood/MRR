@@ -45,7 +45,7 @@ public record ArchiveExportJobResponse(
                 job.getFileName(),
                 job.getSha256(),
                 Boolean.TRUE.equals(job.getCancelRequested()),
-                job.getErrorMessage(),
+                safeError(job.getErrorMessage()),
                 value(job.getDownloadCount()),
                 job.getLastDownloadedAt(),
                 job.getExpiresAt(),
@@ -53,6 +53,16 @@ public record ArchiveExportJobResponse(
                 job.getStartedAt(),
                 job.getCompletedAt()
         );
+    }
+
+    private static String safeError(String value) {
+        if (value == null || value.isBlank()) return null;
+        return switch (value) {
+            case "异步导出队列已满，请稍后重试",
+                 "病案导出失败，请使用任务编号联系管理员",
+                 com.zjcxph.imgapi.utils.ExportSizeLimitOutputStream.LIMIT_MESSAGE -> value;
+            default -> "病案导出失败，请使用任务编号联系管理员";
+        };
     }
 
     private static int value(Integer value) {

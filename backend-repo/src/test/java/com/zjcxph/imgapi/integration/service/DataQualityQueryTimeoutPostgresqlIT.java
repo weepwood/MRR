@@ -411,7 +411,10 @@ class DataQualityQueryTimeoutPostgresqlIT extends PostgresqlIntegrationTestSuppo
             try(var held=pool.getConnection()) {
                 result=executor.submit(()->assertThatThrownBy(()->service.submitRun(trigger,101L))
                         .isInstanceOf(org.springframework.dao.QueryTimeoutException.class));
-                Thread.sleep(1500);
+                // Require timeout while the only connection is STILL held.
+                // The old implementation waits for the pool's independent timeout.
+                result.get(1400,java.util.concurrent.TimeUnit.MILLISECONDS);
+                assertThat(pool.getHikariPoolMXBean().getActiveConnections()).isEqualTo(1);
             }
             result.get(5,java.util.concurrent.TimeUnit.SECONDS);
             System.out.printf("MRR_POOL_BUDGET rejection_ms=%.3f%n",(System.nanoTime()-start)/1e6);

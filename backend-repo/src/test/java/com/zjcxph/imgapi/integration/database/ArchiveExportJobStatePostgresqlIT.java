@@ -53,6 +53,19 @@ class ArchiveExportJobStatePostgresqlIT extends PostgresqlIntegrationTestSupport
     @TempDir Path directory;
 
     @Test
+    void legacyOwnerCannotLeakThroughIdempotencyOrListLookup() {
+        var repository = new ArchiveExportJobRepository(jdbc);
+        String id = insert(repository);
+        jdbc.update("UPDATE app.archive_export_job SET owner_user_id=NULL,idempotency_key='synthetic-legacy-key' WHERE id=CAST(? AS UUID)",id);
+        assertThat(repository.findByIdempotency(42L,"synthetic-export-user","synthetic-legacy-key")).isEmpty();
+        assertThat(repository.findActiveByOwner(42L,"synthetic-export-user","ZIP",20)).isEmpty();
+        jdbc.update("UPDATE app.archive_export_job SET owner_user_id=42 WHERE id=CAST(? AS UUID)",id);
+        assertThat(repository.findByIdempotency(42L,"renamed-user","synthetic-legacy-key")).get().extracting(ArchiveExportJob::getId).isEqualTo(id);
+        assertThat(repository.findActiveByOwner(42L,"renamed-user","ZIP",20)).extracting(ArchiveExportJob::getId).containsExactly(id);
+        assertThat(repository.findActiveByOwner(43L,"synthetic-export-user","ZIP",20)).isEmpty();
+    }
+
+    @Test
     void cancellationAtEndOfWritingCannotPublishASuccessfulFile() throws Exception {
         ArchiveExportJobRepository repository = new ArchiveExportJobRepository(jdbc);
         String id = insert(repository);

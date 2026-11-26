@@ -8,11 +8,13 @@ import hashlib
 import hmac
 import http.client
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
-from threading import Thread
+from threading import Thread, Event
 import json
 import os
 from pathlib import Path
 import secrets
+import queue
+import re
 import shutil
 import signal
 import socket
@@ -76,11 +78,19 @@ def main():
     parser.add_argument("--java-home", type=Path, required=True)
     parser.add_argument("--seconds", type=int, default=90)
     parser.add_argument("--extended", action="store_true", help="explicitly authorize a longer isolated soak (up to 7200s)")
+    parser.add_argument("--checkpoint-seconds", type=int, default=60)
     args = parser.parse_args()
+    if not 15 <= args.checkpoint_seconds <= 60:
+        parser.error("checkpoint interval must be 15..60 seconds")
     if not 30 <= args.seconds <= (7200 if args.extended else 600):
         parser.error("duration must be 30..600 seconds (7200 with --extended)")
     if shutil.disk_usage(args.lab_root).free < 5 * 1024**3:
         parser.error("isolated lab requires at least 5 GiB free")
+    stop = Event()
+    def interrupt(_signum, _frame):
+        stop.set()
+        raise KeyboardInterrupt("isolated soak interrupted")
+    signal.signal(signal.SIGTERM, interrupt)
     lab = Path(tempfile.mkdtemp(prefix="mrr-http-soak-", dir=args.lab_root))
     print("LAB=" + str(lab), flush=True)
     for name in ("socket", "app-tmp", "home", "images", "exports"):
@@ -90,11 +100,11 @@ def main():
     dbport, httpport, management = port(), port(), port()
     # Independent PG instance; no caller-supplied DB endpoint.
     def pgcmd(*command, **kwargs):
-        return subprocess.run([str(pg / command[0]), *map(str, command[1:])], check=True, **kwargs)
+        return subprocess.run([str(pg / command[0]), *map(str, command[1:])], check=True, timeout=45, **kwargs)
     def sql(statement):
         return subprocess.check_output([str(pg / "psql"), "-h", str(lab / "socket"), "-p", str(dbport),
                                         "-U", "imgapi", "-d", "imgapi", "-At", "-v", "ON_ERROR_STOP=1",
-                                        "-c", statement], text=True).strip()
+                                        "-c", statement], text=True, timeout=30).strip()
     pgcmd("initdb", "-D", lab / "data", "-U", "imgapi", "-A", "trust", "--no-locale",
           stdout=subprocess.DEVNULL)
     pgcmd("pg_ctl", "-D", lab / "data", "-l", lab / "pg.log",
@@ -169,7 +179,7 @@ def main():
             print("FULL_APP_REACHABLE", flush=True)
             username = "synthetic-full-soak"
             sql("INSERT INTO app.mr_auth_role(code,name,permissions) VALUES "
-                "('SYNTHETIC_SOAK','synthetic','system:read,system:manage,record:read,log:read')")
+                "('SYNTHETIC_SOAK','synthetic','system:read,system:manage,record:read,record:download,log:read')")
             uid = int(sql("INSERT INTO app.mr_auth_user(username,display_name,password_hash,role_code,status,must_change_password,password_version) "
                           f"VALUES ('{username}','synthetic','not-a-password','SYNTHETIC_SOAK','active',false,1) RETURNING id").splitlines()[0])
             token, jti = jwt(uid, username, secret, args.seconds + 600)
@@ -181,6 +191,47 @@ def main():
             scan = int(sql("SELECT min(id) FROM app.mr_scan WHERE folder='synthetic-soak'"))
             run = int(sql("INSERT INTO app.mrr_data_quality_run(status,triggered_by) VALUES ('SUCCESS','synthetic-full-soak') RETURNING id").splitlines()[0])
             sql(f"INSERT INTO app.mrr_data_quality_issue(run_id,check_code,check_name,severity,entity_id) VALUES ({run},'SOAK','synthetic','WARNING','synthetic')")
+            # Historical export ownership and actual serialized log fields; never use real data.
+            own, foreign, legacy = (str(uuid.uuid4()) for _ in range(3))
+            for job_id, owner in ((own, str(uid)), (foreign, str(uid + 100000)), (legacy, "NULL")):
+                sql("INSERT INTO app.archive_export_job(id,owner_user_id,owner_username,format,scope,status,"
+                    "file_name,bah,error_message,expires_at) VALUES "
+                    f"('{job_id}',{owner},'{username}','ZIP','SELECTED_IMAGES','SUCCESS',"
+                    "'synthetic.zip','7654300','SYNTHETIC_PRIVATE_EXPORT',CURRENT_TIMESTAMP+interval '3 hours')")
+            historical_id = int(sql("INSERT INTO app.access_log(username,request_uri,endpoint_template,method,access_time,"
+                "query_string,request_body,audit_action,audit_target,error_message) VALUES "
+                "('synthetic-historical','/synthetic/private','/api/v1/img/content/{id}','GET',CURRENT_TIMESTAMP-interval '1200 days',"
+                "'status=SYNTHETIC_PRIVATE_LOG&page=123456789012345678',"
+                "'{\"status\":\"SYNTHETIC_PRIVATE_LOG\",\"page\":2}','VIEW_IMAGE',"
+                "'hmac:v1:SYNTHETIC_PRIVATE_LOG','SYNTHETIC_PRIVATE_LOG') RETURNING id").splitlines()[0])
+            probe_results = []
+            with closing(http.client.HTTPConnection("127.0.0.1", httpport, timeout=8)) as conn:
+                def probe(path, expected, method="GET", forbidden=()):
+                    code, headers, body = request(conn, path, token, method)
+                    assert code == expected, (method, path, code)
+                    assert all(x.encode() not in body for x in forbidden), (method,path,"private response field")
+                    probe_results.append(dict(method=method,path=path,status=code))
+                    return headers, body
+                prefix="/api/v1/archive-exports/jobs"
+                _, own_body=probe(f"{prefix}/{own}",200,forbidden=("SYNTHETIC_PRIVATE_EXPORT","ownerUserId","filePath"))
+                assert json.loads(own_body)["data"]["id"] == own
+                _, listed=probe(prefix+"?format=ZIP&limit=20",200,forbidden=(foreign,legacy,"SYNTHETIC_PRIVATE_EXPORT","filePath"))
+                assert [job["id"] for job in json.loads(listed)["data"]] == [own]
+                for denied in (foreign,legacy):
+                    probe(f"{prefix}/{denied}",403,forbidden=("7654300","SYNTHETIC_PRIVATE_EXPORT"))
+                    probe(f"{prefix}/{denied}/download",403)
+                    probe(f"{prefix}/{denied}/cancel",403,"POST")
+                _, log_body=probe(f"/api/v1/logs/{historical_id}",200,forbidden=("SYNTHETIC_PRIVATE_LOG","123456789012345678"))
+                assert json.loads(log_body)["data"]["id"] == historical_id
+                _, searched=probe("/api/v1/logs/search?username=synthetic-historical",200,
+                    forbidden=("SYNTHETIC_PRIVATE_LOG","123456789012345678"))
+                assert str(historical_id).encode() in searched
+                headers, exported=probe("/api/v1/logs/retention/export",200,
+                    forbidden=("SYNTHETIC_PRIVATE_LOG","123456789012345678"))
+                assert b"synthetic-historical" in exported
+                assert "no-store" in headers.get("Cache-Control","")
+            (lab / "resource-probes.json").write_text(json.dumps(probe_results,indent=2))
+            print("RESOURCE_PROBES " + json.dumps(probe_results), flush=True)
             paths = ["/api/v1/system/data-quality/summary",
                      f"/api/v1/system/data-quality/issues?limit=10&runId={run}",
                      "/api/v1/scan/page?page=30&size=20", "/api/v1/scan/cursor?afterId=0&size=20",
@@ -233,6 +284,7 @@ def main():
             initial = scrape()
             start = time.monotonic()
             deadline = start + args.seconds
+            completed = queue.SimpleQueue()
             def worker(index):
                 results = []
                 errors = []
@@ -243,7 +295,9 @@ def main():
                         path = paths[i % len(paths)]
                         try:
                             trace = checked(conn, path)
-                            results.append((i % len(paths), tick-start, (time.monotonic()-tick)*1000, trace))
+                            record = (i % len(paths), tick-start, (time.monotonic()-tick)*1000, trace)
+                            results.append(record)
+                            completed.put(record)
                         except Exception as exc:
                             errors.append(type(exc).__name__ + ": " + str(exc))
                             conn.close()
@@ -251,7 +305,48 @@ def main():
                         time.sleep(.06)
                 return results, errors
             samples = []
-            stop = __import__("threading").Event()
+            pending = {}
+            verified = 0
+            checkpoint_next = args.checkpoint_seconds
+            def checkpoint(elapsed):
+                nonlocal verified
+                while True:
+                    try:
+                        item = completed.get_nowait()
+                    except queue.Empty:
+                        break
+                    pending[item[3]] = item
+                # Let the asynchronous audit writer flush before checking a trace.
+                eligible = [trace for trace,item in pending.items() if item[1]+item[2]/1000 <= elapsed-10]
+                missing, duplicates, mismatched = 0,0,0
+                for off in range(0,len(eligible),500):
+                    ids = eligible[off:off+500]
+                    # Application request IDs are 16 hexadecimal characters.
+                    if not all(re.fullmatch(r"[0-9a-f]{16}", t) for t in ids):
+                        raise RuntimeError("unexpected request trace format")
+                    values = ",".join("'" + t + "'" for t in ids)
+                    observed = sql("SELECT request_id,count(*),bool_and(audit_action='VIEW_IMAGE' AND "
+                        "audit_target ~ '^hmac:v1:[0-9a-f]{64}(;hmac:v1:[0-9a-f]{64})?$') "
+                        f"FROM app.access_log WHERE username='{username}' AND request_id IN ({values}) GROUP BY request_id")
+                    rows = {line.split("|")[0]:line.split("|")[1:] for line in observed.splitlines() if line}
+                    for trace in ids:
+                        if trace not in rows:
+                            missing += 1
+                            continue
+                        count,protected = rows[trace]
+                        if int(count)!=1:
+                            duplicates += 1
+                        elif pending[trace][0]==4 and protected!="t":
+                            mismatched += 1
+                        else:
+                            verified += 1
+                            pending.pop(trace)
+                progress = dict(elapsed=round(elapsed,3),verified=verified,pending=len(pending),
+                    eligible=len(eligible),missing=missing,duplicates=duplicates,unprotected_images=mismatched)
+                with (lab/"audit-checkpoints.jsonl").open("a") as out:
+                    out.write(json.dumps(progress)+"\n")
+                print("AUDIT_CHECKPOINT "+json.dumps(progress),flush=True)
+                return progress
             with concurrent.futures.ThreadPoolExecutor(max_workers=8) as pool:
                 futures = [pool.submit(worker, i) for i in range(8)]
                 while time.monotonic() < deadline:
@@ -265,6 +360,14 @@ def main():
                         stop.set()
                         raise
                     print("SOAK_SAMPLE " + json.dumps(samples[-1]), flush=True)
+                    elapsed = time.monotonic()-start
+                    if elapsed >= checkpoint_next:
+                        try:
+                            checkpoint(elapsed)
+                        except Exception:
+                            stop.set()
+                            raise
+                        checkpoint_next += args.checkpoint_seconds
                 results, errors = [], []
                 for future in futures:
                     ok, failed = future.result(timeout=12)
@@ -297,7 +400,7 @@ def main():
                          audit_rows=audit_rows, image_audit_rows=image_rows, missing_trace=missing_trace, duplicate_trace=duplicate_trace,
                          protected_image_audit_rows=protected_rows,
                          initial=initial, final=final, samples=samples, windows=windows,
-                         async_submit_http=status)
+                         async_submit_http=status, periodic_verified=verified, resource_probes=len(probe_results))
             with closing(http.client.HTTPConnection("127.0.0.1", httpport, timeout=8)) as conn:
                 if managed_id:
                     status, _, body = request(conn, f"/api/v1/system/data-quality/runs/{managed_id}", token)
@@ -316,6 +419,7 @@ def main():
             assert image_rows >= stats["by_path"][4] and protected_rows == image_rows
             assert audit_rows >= len(results), "missing audit rows"
             assert missing_trace == duplicate_trace == 0, "audit trace mismatch"
+            assert elapsed >= args.seconds, "duration incomplete"
     finally:
         if app is not None and app.poll() is None:
             os.killpg(app.pid, signal.SIGTERM)

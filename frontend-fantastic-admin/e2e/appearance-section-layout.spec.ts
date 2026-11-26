@@ -15,6 +15,7 @@ for (const palette of ['mrr', 'gr8r']) {
       const header = page.locator('.settings-panel-header')
       const panel = page.locator('.settings-content .app-config-panel')
       await expect(header.locator('.config-summary')).toBeVisible()
+      await expect(header.locator('.config-save-feedback')).toHaveCount(0)
       await expect(header.locator('.config-summary')).toHaveCSS('border-top-width', '0px')
       await expect(header.locator('.config-summary')).toHaveCSS('margin-bottom', '0px')
       await expect(panel.locator('.config-summary')).toHaveCount(0)
@@ -26,6 +27,15 @@ for (const palette of ['mrr', 'gr8r']) {
         await panel.getByRole('tab', { name: tab, exact: true }).click()
         for (const width of [1920, 1440, 1024, 375]) {
           await page.setViewportSize({ width, height: 900 })
+          const track = panel.locator('.appearance-tabs > .el-tabs__header .el-tabs__nav')
+          await expect.poll(() => track.evaluate((el) => {
+            const base = getComputedStyle(el).backgroundColor
+            const active = getComputedStyle(el.querySelector('.el-tabs__active-bar')!).backgroundColor
+            let parent = el.parentElement
+            while (parent && ['transparent', 'rgba(0, 0, 0, 0)'].includes(getComputedStyle(parent).backgroundColor)) { parent = parent.parentElement }
+            const canvas = parent ? getComputedStyle(parent).backgroundColor : ''
+            return base !== active && base !== canvas && active !== canvas
+          })).toBe(true)
           const cards = panel.locator('.appearance-tab-content .config-section:visible')
           await expect(cards).toHaveCount(3)
           for (let i = 0; i < labels.length; i++) {
@@ -72,4 +82,22 @@ test('外观分区命令保留真实导出、导入及抽屉独立入口', async
   await expect(drawer.getByRole('button', { name: '导出配置' })).toBeVisible()
   await drawer.getByRole('tab', { name: '工作区组件' }).click()
   await expect(drawer.locator('.subsection-heading').first()).toContainText('标签栏')
+})
+
+test('外观同步失败仍明确反馈并保留本机设置', async ({ page }) => {
+  await isolateLocalVisualSettings(page)
+  await page.route('**/api/v1/settings', async (route) => {
+    if (route.request().method() === 'PUT') {
+      await route.fulfill({ status: 500, json: { code: 500, message: '合成同步失败' } })
+    }
+    else { await route.fallback() }
+  })
+  await page.goto('/settings?section=appearance')
+  const header = page.locator('.settings-panel-header')
+  await expect(header.locator('.config-save-feedback')).toHaveCount(0)
+  const panel = page.locator('.settings-content .app-config-panel')
+  await panel.getByRole('tab', { name: '主页、版权与其他' }).click()
+  await panel.getByRole('textbox', { name: '主页名称' }).fill('合成同步失败测试')
+  await expect(header.locator('.config-save-feedback')).toContainText('同步全站失败')
+  await expect.poll(() => page.evaluate(() => JSON.parse(localStorage.getItem('MRR-ADMIN:app-settings') || '{}').home?.title)).toBe('合成同步失败测试')
 })

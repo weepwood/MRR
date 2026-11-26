@@ -304,7 +304,7 @@ body .el-button.mrr-button-secondary.is-text.is-disabled:focus {
   width: 100%;
   min-width: 0;
   padding: 4px;
-  background: var(--mrr-muted);
+  background: var(--mrr-segmented-track);
   border-radius: var(--mrr-control-radius);
   transform: none !important;
 }
@@ -322,7 +322,7 @@ body .el-button.mrr-button-secondary.is-text.is-disabled:focus {
   z-index: 0;
   height: calc(100% - 8px);
   pointer-events: none;
-  background: var(--mrr-card);
+  background: var(--mrr-segmented-selection);
   border-radius: var(--mrr-radius-sm);
   box-shadow: inset 0 0 0 1px var(--mrr-border), var(--mrr-shadow-xs);
   transition: transform var(--mrr-motion-move) var(--mrr-ease-out), width var(--mrr-motion-move) var(--mrr-ease-out);

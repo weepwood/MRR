@@ -193,7 +193,7 @@ function handleReset() {
   <div ref="panelRef" class="app-config-panel" :class="{ 'app-config-panel--drawer': props.drawer, 'app-config-panel--compact': compactRows }">
     <Teleport :to="props.commandTarget || 'body'" :disabled="!props.commandTarget">
       <div class="config-summary" :class="{ 'config-summary--embedded': !!props.commandTarget, 'config-summary--warning': settingsStore.uiSettingsSyncState === 'failed' }">
-        <div class="config-save-feedback" role="status">
+        <div v-if="props.drawer || settingsStore.uiSettingsSyncState === 'failed'" class="config-save-feedback" role="status">
           <strong class="autosave-state">
             <FaIcon :name="settingsStore.uiSettingsSyncState === 'failed' ? 'i-lucide:triangle-alert' : 'i-lucide:save'" aria-hidden="true" />
             {{ autoSaveLabel }}
@@ -720,7 +720,7 @@ function handleReset() {
   flex-wrap: wrap;
   gap: var(--mrr-space-3);
   align-items: center;
-  justify-content: space-between;
+  justify-content: flex-end;
   padding: var(--mrr-space-3) var(--mrr-space-4);
   margin-bottom: var(--mrr-space-4);
   background: var(--mrr-card);

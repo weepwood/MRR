@@ -175,6 +175,8 @@
   --mrr-secondary: hsl(var(--secondary));
   --mrr-secondary-foreground: hsl(var(--secondary-foreground));
   --mrr-muted: hsl(var(--muted));
+  --mrr-segmented-track: #e4eaf2;
+  --mrr-segmented-selection: var(--mrr-card);
   --mrr-muted-foreground: hsl(var(--muted-foreground));
   --mrr-accent: hsl(var(--accent));
   --mrr-accent-foreground: hsl(var(--accent-foreground));
@@ -295,6 +297,8 @@
 
   &.dark {
     --mrr-chart-loading-mask: rgb(16 20 28 / 72%);
+    --mrr-segmented-track: #252b37;
+    --mrr-segmented-selection: #394352;
 
     color-scheme: dark;
 

@@ -832,3 +832,6 @@ MrrCursorPagination 改用 ElPagination 原生页码、箭头、跳页、条数�
 
 ## 外观分区命令与分组统一（2026-11-26）
 基线ea721776。完整设置页命令Teleport至实例专属分区头，去掉独立卡面及重复内边距，抽屉独立入口保持。工作区及其他六组采用同一层卡面、公共分组标题、64px基础行高，保留自动保存与字段禁用联动。首轮Chromium/WebKit相关36/36；最终头部去描边后定向10/10，含64组主题/宽度/页签/浏览器几何断言及真实导出、合成JSON导入和抽屉验证。TypeScript与定向lint通过。截图/Volumes/data/AI-Development/artifacts/mrr-appearance-groups-20261126，日志/tmp/mrr-appearance-group-*.log。未执行全量CI、生产构建和医院实际环境验收，不推送合并发布。
+
+## 外观标题简化及页签表面（2026-11-26）
+基线acbabe2b。完整设置页仅保留标题及三项命令，去掉正常状态说明（抽屉原样，失败显式反馈），不修改保存契约；公共页签使用静态轨道/选中令牌，明暗两配色区分页面、轨道和选中表面。主题/兼容单测30/30、双引擎页签/布局/动效24/24、合成同步失败2/2，TypeScript及定向lint通过。8组截图位于/Volumes/data/AI-Development/artifacts/mrr-appearance-track-20261126，日志/tmp/mrr-appearance-track-*.log。未执行全量CI、生产构建或医院实际环境验收，不推送合并发布。

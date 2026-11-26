@@ -1,7 +1,7 @@
 import { defineFakeRoute } from 'vite-plugin-fake-server/client'
 import { MEDICAL_RECORD_TYPES } from '@/constants/medical-record-types'
 import { requiresSjhForBah, toMedicalRecordCodeSearchTerm } from '@/utils/medical-record-code'
-import { ARCHIVE_BAH, archiveImages } from '../mock-support/archive-images'
+import { ARCHIVE_BAH, archiveImages, findLargeArchiveImage, getLargeArchiveImages, LARGE_ARCHIVE_BAH } from '../mock-support/archive-images'
 import { pageSvg } from '../mock-support/image'
 import { demoRecords } from '../mock-support/records'
 import { demoError, demoOk } from '../mock-support/response'
@@ -113,6 +113,9 @@ export default defineFakeRoute([
       if (!sjh && bah === toMedicalRecordCodeSearchTerm(ARCHIVE_BAH)) {
         return { ...ok(archiveImages), meta: lookupMeta() }
       }
+      if (!sjh && bah === toMedicalRecordCodeSearchTerm(LARGE_ARCHIVE_BAH)) {
+        return { ...ok(getLargeArchiveImages()), meta: lookupMeta() }
+      }
       const images = sharedArchiveImages(bah, sjh)
       return { ...ok(images), meta: lookupMeta(images.length ? undefined : 'NO_MATCHING_IMAGES') }
     },
@@ -165,6 +168,9 @@ export default defineFakeRoute([
     url: '/api/v1/search/patient/:bah',
     response: ({ params }) => {
       const bah = toMedicalRecordCodeSearchTerm(params.bah)
+      if (bah === toMedicalRecordCodeSearchTerm(LARGE_ARCHIVE_BAH)) {
+        return ok([{ id: 990600000, bah: LARGE_ARCHIVE_BAH, name: '合成长病案', department: '模拟科室', admissionTime: '2026-07-13 08:00:00' }])
+      }
       const patient = demoRecords.patients.find(item => toMedicalRecordCodeSearchTerm(item.bah) === bah)
       if (patient) {
         const { id, name, department, admissiontime } = patient
@@ -244,6 +250,11 @@ export default defineFakeRoute([
       const scan = demoRecords.scans.find(item => item.id === id)
       if (scan && Number.isFinite(btype)) {
         scan.btype = btype
+        return ok(null, '图片类型已更新（模拟）')
+      }
+      const largeImage = findLargeArchiveImage(id)
+      if (largeImage && Number.isFinite(btype)) {
+        largeImage.btype = btype
         return ok(null, '图片类型已更新（模拟）')
       }
       for (const list of [...imagesByBah.values(), archiveImages]) {

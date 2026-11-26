@@ -28,6 +28,7 @@ import AppEmpty from '@/components/AppEmpty/index.vue'
 import AppError from '@/components/AppError/index.vue'
 import AppLoading from '@/components/AppLoading/index.vue'
 import MrrFilterActionButton from '@/components/MrrFilterActionButton/index.vue'
+import MrrFilterBar from '@/components/MrrFilterBar/index.vue'
 import MrrResizeHandle from '@/components/MrrResizeHandle/index.vue'
 import MrrSectionCard from '@/components/MrrSectionCard/index.vue'
 import MrrStatusTag from '@/components/MrrStatusTag/index.vue'
@@ -82,6 +83,17 @@ let sessionVersion = 0
 const relationDetail = ref<ArchiveRelationDetail | null>(null)
 const issueSeverity = ref('ALL')
 const issueKeyword = ref('')
+const issueRule = ref('')
+const issueRules = computed(() => [...new Map(issues.value.map(issue => [issueCode(issue), issueName(issue)]))].filter(([code]) => !!code).map(([code, name]) => ({ code, name })))
+const issueFiltersActive = computed(() => issueSeverity.value !== 'ALL' || !!issueRule.value || !!issueKeyword.value.trim())
+function resetIssueFilters() {
+  issueSeverity.value = 'ALL'
+  issueRule.value = ''
+  issueKeyword.value = ''
+}
+watch(issueRules, (rules) => {
+  if (issueRule.value && !rules.some(rule => rule.code === issueRule.value)) issueRule.value = ''
+})
 const repairPreview = ref<RepairPreview | null>(null)
 const previewVisible = ref(false)
 const previewError = ref(false)
@@ -130,7 +142,7 @@ function resetPage() {
   overview.value = null
   qualitySummary.value = null
   issues.value = []
-  issueKeyword.value = ''
+  resetIssueFilters()
   overviewLoading.value = false
   checking.value = false
   activeTab.value = props.archiveOnly ? 'archive' : 'overview'
@@ -185,6 +197,7 @@ const filteredIssues = computed(() => {
   const keyword = issueKeyword.value.trim().toLowerCase()
   return issues.value.filter((issue) => {
     if (issueSeverity.value !== 'ALL' && issue.severity !== issueSeverity.value) return false
+    if (issueRule.value && issueCode(issue) !== issueRule.value) return false
     if (!keyword) return true
     return [
       issue.checkCode,
@@ -873,17 +886,30 @@ onMounted(() => {
           </MrrSectionCard>
 
           <MrrSectionCard class="section-card" title="异常样本" description="当前显示最近一次检查保存的有界样本，不直接返回全量异常">
-            <template #actions>
-              <div class="issue-filters">
-                <el-select v-model="issueSeverity" aria-label="异常级别筛选" class="severity-select">
+            <MrrFilterBar embedded :focus-ring="false">
+              <div class="mrr-filter-field">
+                <el-select v-model="issueSeverity" aria-label="异常级别筛选">
                   <el-option label="全部级别" value="ALL" />
                   <el-option label="严重" value="CRITICAL" />
                   <el-option label="警告" value="WARNING" />
                 </el-select>
+              </div>
+              <div class="mrr-filter-field mrr-filter-field--code">
+                <el-select v-model="issueRule" aria-label="异常规则筛选" class="issue-rule-select" clearable placeholder="全部规则">
+                  <el-option v-for="rule in issueRules" :key="rule.code" :label="rule.name || rule.code" :value="rule.code" />
+                </el-select>
+              </div>
+              <div class="mrr-filter-field mrr-filter-field--keyword">
                 <el-input v-model="issueKeyword" aria-label="异常关键字筛选" clearable placeholder="筛选规则、表、BAH 或 SJH" />
               </div>
-            </template>
-            <el-table :data="filteredIssues" stripe empty-text="当前没有异常样本">
+              <template #actions>
+                <MrrFilterActionButton action="reset" feedback="request" :disabled="!issueFiltersActive" aria-label="重置异常样本筛选" @click="resetIssueFilters" />
+              </template>
+            </MrrFilterBar>
+            <div class="issue-sample-count" role="status">
+              匹配 {{ filteredIssues.length }} / 已加载 {{ issues.length }} 个样本
+            </div>
+            <el-table :data="filteredIssues" stripe :empty-text="issueFiltersActive && issues.length ? '没有符合筛选条件的样本' : '当前没有异常样本'">
               <el-table-column v-bind="tableSequenceColumn()" />
               <el-table-column label="级别" width="95" class-name="mrr-table-status-column">
                 <template #default="{ row }">
@@ -980,7 +1006,6 @@ onMounted(() => {
   min-width: 0;
 }
 
-.issue-filters,
 .search-row,
 .archive-header,
 .relation-card__header,
@@ -1319,10 +1344,6 @@ p {
   width: 100%;
 }
 
-.severity-select {
-  width: 180px;
-}
-
 .archive-detail-status {
   margin: 0;
   color: var(--mrr-muted-foreground);
@@ -1363,18 +1384,6 @@ p {
   border-radius: var(--mrr-radius-card);
 }
 
-.issue-filters {
-  flex: 1 1 360px;
-  flex-wrap: wrap;
-  min-width: 0;
-  max-width: 100%;
-}
-
-.issue-filters .el-input {
-  flex: 1 1 230px;
-  min-width: 0;
-}
-
 .preview-content pre {
   padding: var(--mrr-space-3);
   overflow: auto;
@@ -1394,8 +1403,14 @@ p {
   }
 }
 
+.issue-sample-count {
+  padding-block: var(--mrr-space-2);
+  font-size: var(--mrr-font-size-xs);
+  font-variant-numeric: tabular-nums;
+  color: var(--mrr-muted-foreground);
+}
+
 @media (max-width: 760px) {
-  .issue-filters,
   .search-row {
     flex-direction: column;
     align-items: stretch;
@@ -1406,23 +1421,12 @@ p {
     flex: 0 1 auto;
   }
 
-  .issue-filters {
-    flex-wrap: wrap;
-    width: 100%;
-  }
-
-  .issue-filters,
-  .issue-filters .el-input {
-    flex: 0 1 auto;
-  }
-
   .relation-grid,
   .relation-count-grid {
     grid-template-columns: 1fr;
   }
 
-  .search-type,
-  .severity-select {
+  .search-type {
     width: 100%;
   }
 }

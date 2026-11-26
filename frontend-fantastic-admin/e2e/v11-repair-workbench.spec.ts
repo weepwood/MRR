@@ -266,3 +266,32 @@ test('真实深色主题独立工作台与原图查看器在桌面和窄屏内�
   await expect(page.getByAltText('待核对影像')).toHaveAttribute('style', /rotate\(90deg\)/)
   await page.screenshot({ path: test.info().outputPath('archive-workspace-dark-mobile.png'), fullPage: true })
 })
+
+test('异常样本按规则和级别筛选，明确区分无匹配与无样本', async ({ page }, testInfo) => {
+  const issues = [
+    { id: 1, check_code: 'DEMO_A', check_name: '合成规则甲', severity: 'WARNING', entity_type: 'mr_scan', entity_id: '1', detail: '合成样本甲' },
+    { id: 2, check_code: 'DEMO_B', check_name: '合成规则乙', severity: 'CRITICAL', entity_type: 'mr_scan', entity_id: '2', detail: '合成样本乙' },
+  ]
+  let writes = 0
+  await page.route('**/api/v1/system/data-quality/issues?*', route => route.fulfill({ json: { code: 200, data: issues } }))
+  page.on('request', (request) => {
+    if (request.url().includes('/system/data-quality/') && request.method() === 'POST') {
+      writes++
+    }
+  })
+  await page.goto('/data-relations')
+  await page.getByRole('tab', { name: '检查与异常' }).click()
+  const count = page.locator('.issue-sample-count')
+  await expect(count).toHaveText('匹配 2 / 已加载 2 个样本')
+  await page.locator('.issue-rule-select').click()
+  await page.getByRole('option', { name: '合成规则甲' }).click()
+  await expect(count).toHaveText('匹配 1 / 已加载 2 个样本')
+  await page.getByRole('textbox', { name: '异常关键字筛选' }).fill('无匹配')
+  await expect(count).toHaveText('匹配 0 / 已加载 2 个样本')
+  await expect(page.getByText('没有符合筛选条件的样本', { exact: true })).toBeVisible()
+  await page.getByRole('button', { name: '重置异常样本筛选' }).click()
+  await expect(count).toHaveText('匹配 2 / 已加载 2 个样本')
+  expect(writes).toBe(0)
+  await count.scrollIntoViewIfNeeded()
+  await page.screenshot({ path: testInfo.outputPath('quality-samples.png'), animations: 'disabled' })
+})

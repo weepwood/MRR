@@ -85,6 +85,11 @@ const archiveSettings = reactive<EffectiveSystemSettings>(createDefaultSystemSet
 const selectedType = ref<number | 'all'>('all')
 const selectedImageIndex = ref(0)
 const viewMode = ref<ViewMode>('thumb')
+let viewModeRevision = 0
+function selectViewMode(mode: ViewMode) {
+  viewModeRevision++
+  viewMode.value = mode
+}
 const previewMode = ref<ArchivePreviewMode>('single')
 const typeDisplayMode = ref<ArchiveTypeDisplayMode>('double-column')
 const archiveLocalPreferences = ref<ArchiveLocalPreferences>(readArchiveLocalPreferences())
@@ -312,9 +317,11 @@ async function confirmCancel(label: string): Promise<boolean> {
   }
 }
 
-function applyArchiveSettings(settings: EffectiveSystemSettings) {
+function applyArchiveSettings(settings: EffectiveSystemSettings, applyDefaultView = true) {
   Object.assign(archiveSettings, settings)
-  viewMode.value = settings.archiveDefaultView
+  if (applyDefaultView) {
+    viewMode.value = settings.archiveDefaultView
+  }
   previewMode.value = archiveDisplaySettings.value.archivePreviewMode
   typeDisplayMode.value = archiveDisplaySettings.value.archiveTypeDisplayMode
 }
@@ -329,14 +336,15 @@ function updateArchiveLocalPreferences(preferences: ArchiveLocalPreferences) {
 function resetArchiveLocalPreferences() {
   clearArchiveLocalPreferences()
   archiveLocalPreferences.value = {}
-  viewMode.value = archiveSettings.archiveDefaultView
+  selectViewMode(archiveSettings.archiveDefaultView)
   previewMode.value = archiveDisplaySettings.value.archivePreviewMode
   typeDisplayMode.value = archiveDisplaySettings.value.archiveTypeDisplayMode
 }
 
 async function loadArchiveSettings() {
+  const revision = viewModeRevision
   const { settings } = await loadEffectiveSystemSettings()
-  applyArchiveSettings(settings)
+  applyArchiveSettings(settings, revision === viewModeRevision)
 }
 
 function handleRuntimeSettingsUpdated(event: Event) {
@@ -850,7 +858,7 @@ onUnmounted(() => {
       :wall-density="archiveDisplaySettings.archiveWallDensity"
       :wall-show-meta="archiveDisplaySettings.archiveWallShowMeta"
       :has-local-preferences="Object.keys(archiveLocalPreferences).length > 0"
-      @update:view-mode="viewMode = $event"
+      @update:view-mode="selectViewMode"
       @update:preview-mode="updateArchiveLocalPreferences({ archivePreviewMode: $event })"
       @update:type-display-mode="updateArchiveLocalPreferences({ archiveTypeDisplayMode: $event })"
       @update:fit-mode="updateArchiveLocalPreferences({ archiveFitMode: $event })"

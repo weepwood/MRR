@@ -898,3 +898,6 @@ MrrCursorPagination 改用 ElPagination 原生页码、箭头、跳页、条数�
 
 ## V1.2 正式候选准备与分段审查（2026-11-26）
 cc8dbbc4，65未推送/259文件，集成69/266，main120/707；关键权限、查询/序号/游标、公共组件、设置和影像、构建与发布流程二次风险审查，4个后端生产文件全量差异阅读，不等于独立人工全量审计。main继承9项新增Flyway，集成差异无迁移；修正PR草稿范围与回滚说明。VERSION/POM冻结1.0.0-rc.1，正式身份待授权；真实终端未选择，Windows与正式CI未执行。远端refs经ls-remote核对，GitHub API EOF，旧治理失败仍待正式确认。仅文档，保持9037、真实数据安全、无推送合并发布；不重复既有专项。证据/Volumes/data/AI-Development/artifacts/mrr-v12-preparation-20261126，详见v1.2-release-preparation.md。
+
+## 产品研发第一批（2026-11-26）
+基线503b2fb2，暂停正式版本准备，任务池见docs/product/ROADMAP.md。原版UI-Vault四个Skills本地复用，新增项目路由Skill，历史AGENTS归档。影像列表≥100使用现有VueUse固定高度虚拟化，序号直达、独立勾选和异步初始设置保护；新增600张合成病案00800999。数据治理异常样本复用公共筛选、匹配计数、空状态区分，不新增接口。定向Chromium/WebKit：旧列表交互2/2、实际600张样本2/2、规则/关键词筛选与重置2/2；中间失败及复验保留日志，类型检查通过。证据/Volumes/data/AI-Development/artifacts/mrr-product-20261126。未新增依赖，未重跑全量CI/数据库/生产构建；高分辨率引擎、多面板、剩余工作台待研发。9037保持，真实数据未接触，不推送合并发布。

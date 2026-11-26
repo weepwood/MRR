@@ -26,6 +26,36 @@ class DataQualityControllerTest {
     private DataQualityController controller;
 
     @Test
+    void patientBearingPreviewRequiresBothPermissions() throws Exception {
+        var authorization = new com.zjcxph.imgapi.interceptors.AuthorizationInterceptor();
+        var handler = new org.springframework.web.method.HandlerMethod(controller,
+                DataQualityController.class.getMethod("repairPreview", long.class));
+        String path = "/api/v1/system/data-quality/issues/9/repair-preview";
+        var anonymous = new org.springframework.mock.web.MockHttpServletResponse();
+        assertThat(authorization.preHandle(new org.springframework.mock.web.MockHttpServletRequest("GET", path),
+                anonymous, handler)).isFalse();
+        assertThat(anonymous.getStatus()).isEqualTo(401);
+        for (var permissions : List.of(List.<String>of(), List.of("system:read"),
+                List.of("record:read"), List.of("system:manage"))) {
+            var request = new org.springframework.mock.web.MockHttpServletRequest("GET", path);
+            var session = new com.zjcxph.imgapi.common.AuthSession();
+            session.setPermissions(permissions);
+            request.setAttribute(com.zjcxph.imgapi.interceptors.AuthorizationInterceptor.AUTH_SESSION_ATTRIBUTE, session);
+            var response = new org.springframework.mock.web.MockHttpServletResponse();
+            assertThat(authorization.preHandle(request, response, handler)).isFalse();
+            assertThat(response.getStatus()).isEqualTo(403);
+        }
+        var request = new org.springframework.mock.web.MockHttpServletRequest("GET", path);
+        var session = new com.zjcxph.imgapi.common.AuthSession();
+        session.setPermissions(List.of("system:read", "record:read"));
+        request.setAttribute(com.zjcxph.imgapi.interceptors.AuthorizationInterceptor.AUTH_SESSION_ATTRIBUTE, session);
+        assertThat(authorization.preHandle(request, new org.springframework.mock.web.MockHttpServletResponse(), handler)).isTrue();
+        session.setPermissions(List.of("system:manage", "record:manage"));
+        assertThat(authorization.preHandle(request, new org.springframework.mock.web.MockHttpServletResponse(), handler)).isTrue();
+        org.mockito.Mockito.verifyNoInteractions(dataQualityService);
+    }
+
+    @Test
     void summaryReturnsServicePayload() {
         Map<String, Object> summary = Map.of("running", false, "enabled", true);
         when(dataQualityService.getSummary()).thenReturn(summary);

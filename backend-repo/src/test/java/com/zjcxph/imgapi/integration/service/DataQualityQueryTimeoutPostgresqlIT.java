@@ -64,6 +64,34 @@ class DataQualityQueryTimeoutPostgresqlIT extends PostgresqlIntegrationTestSuppo
         }
     }
 
+    @Test
+    void latestRunSampleQueryKeepsSeverityOrderLimitAndEmptyRunSemantics() {
+        var metrics = new SimpleMeterRegistry();
+        var service = new DataQualityServiceImpl(jdbc, metrics);
+        String trigger = "synthetic-sample-query-test";
+        try {
+            long older = jdbc.queryForObject("INSERT INTO app.mrr_data_quality_run(status,triggered_by) VALUES ('SUCCESS',?) RETURNING id", Long.class, trigger);
+            long latest = jdbc.queryForObject("INSERT INTO app.mrr_data_quality_run(status,triggered_by) VALUES ('SUCCESS',?) RETURNING id", Long.class, trigger);
+            String insert = """
+                    INSERT INTO app.mrr_data_quality_issue
+                        (run_id,check_code,check_name,severity,entity_type,entity_id,detail)
+                    VALUES (?,'SYNTHETIC','synthetic',?,'mr_scan',?,'synthetic')
+                    """;
+            jdbc.update(insert, older, "CRITICAL", "old");
+            jdbc.update(insert, latest, "WARNING", "new-warning");
+            jdbc.update(insert, latest, "CRITICAL", "new-critical");
+            assertThat(service.getIssues(1)).extracting(row -> row.get("entity_id"))
+                    .containsExactly("new-critical");
+            assertThat(service.getIssues(500)).extracting(row -> row.get("entity_id"))
+                    .containsExactly("new-critical", "new-warning");
+            jdbc.update("INSERT INTO app.mrr_data_quality_run(status,triggered_by) VALUES ('RUNNING',?)", trigger);
+            assertThat(service.getIssues(500)).isEmpty();
+        } finally {
+            jdbc.update("DELETE FROM app.mrr_data_quality_run WHERE triggered_by=?", trigger);
+            metrics.close();
+        }
+    }
+
     private Object check(String code, String name, String severity, String countSql, String sampleSql)
             throws ReflectiveOperationException {
         // 测试限定的慢规则，不为夹具扩大生产检查目录的可见性。

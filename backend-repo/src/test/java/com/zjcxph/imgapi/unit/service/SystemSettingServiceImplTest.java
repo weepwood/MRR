@@ -38,6 +38,40 @@ class SystemSettingServiceImplTest {
     }
 
     @Test
+    void developerSettingsAreNotPublishedBeforeCommitOrAfterRollback() {
+        org.springframework.transaction.support.TransactionSynchronizationManager.initSynchronization();
+        org.springframework.transaction.support.TransactionSynchronizationManager.setActualTransactionActive(true);
+        try {
+            service.saveSettings(Map.of(DeveloperModeService.SETTING_KEY, "true"), "admin");
+            org.mockito.Mockito.verifyNoInteractions(developerModeService, developerApiAccessService);
+            var callbacks = org.springframework.transaction.support.TransactionSynchronizationManager.getSynchronizations();
+            assertThat(callbacks).isNotEmpty();
+            callbacks.forEach(callback -> callback.afterCompletion(
+                    org.springframework.transaction.support.TransactionSynchronization.STATUS_ROLLED_BACK));
+            org.mockito.Mockito.verifyNoInteractions(developerModeService, developerApiAccessService);
+        } finally {
+            org.springframework.transaction.support.TransactionSynchronizationManager.clear();
+        }
+    }
+
+    @Test
+    void committedDeveloperSettingsInvalidateBothCachesWithoutReplayingValues() {
+        org.springframework.transaction.support.TransactionSynchronizationManager.initSynchronization();
+        org.springframework.transaction.support.TransactionSynchronizationManager.setActualTransactionActive(true);
+        try {
+            service.setSetting(DeveloperApiAccessService.SETTING_KEY, "true", "admin");
+            org.mockito.Mockito.verifyNoInteractions(developerModeService, developerApiAccessService);
+            var callbacks = org.springframework.transaction.support.TransactionSynchronizationManager.getSynchronizations();
+            assertThat(callbacks).isNotEmpty();
+            callbacks.forEach(org.springframework.transaction.support.TransactionSynchronization::afterCommit);
+            verify(developerModeService).invalidate();
+            verify(developerApiAccessService).invalidate();
+        } finally {
+            org.springframework.transaction.support.TransactionSynchronizationManager.clear();
+        }
+    }
+
+    @Test
     void saveSettings_shouldUpsertAll() {
         when(mapper.upsertAll(anyList())).thenReturn(2);
         service.saveSettings(Map.of("k1", "v1", "k2", "v2"), "admin");
@@ -45,28 +79,26 @@ class SystemSettingServiceImplTest {
     }
 
     @Test
-    void saveSettings_shouldRefreshDeveloperModeAndApiAccess() {
+    void saveSettings_shouldInvalidateDeveloperModeAndApiAccess() {
         Map<String, String> settings = Map.of(
                 DeveloperModeService.SETTING_KEY, "true",
                 DeveloperModeService.ALLOWED_SOURCES_SETTING_KEY, "192.168.10.0/24",
                 DeveloperApiAccessService.SETTING_KEY, "true"
         );
         when(mapper.upsertAll(anyList())).thenReturn(3);
-        when(developerModeService.isEnabled()).thenReturn(true);
 
         service.saveSettings(settings, "admin");
 
-        verify(developerModeService).refreshFromValue("true");
-        verify(developerModeService).refreshAllowedSourcesFromValue("192.168.10.0/24");
-        verify(developerApiAccessService).refreshFromValue("true");
+        verify(developerModeService).invalidate();
+        verify(developerApiAccessService).invalidate();
     }
 
     @Test
-    void saveSettings_shouldDisableApiAccessWhenDeveloperModeIsOff() {
+    void saveSettings_shouldInvalidateBothCachesWhenDeveloperModeIsOff() {
         when(mapper.upsertAll(anyList())).thenReturn(1);
-        when(developerModeService.isEnabled()).thenReturn(false);
         service.saveSettings(Map.of(DeveloperModeService.SETTING_KEY, "false"), "admin");
-        verify(developerApiAccessService).disableImmediately();
+        verify(developerModeService).invalidate();
+        verify(developerApiAccessService).invalidate();
     }
 
     @Test
@@ -77,17 +109,19 @@ class SystemSettingServiceImplTest {
     }
 
     @Test
-    void setSetting_shouldRefreshDeveloperAllowedSources() {
+    void setSetting_shouldInvalidateDeveloperAllowedSources() {
         when(mapper.upsert(any())).thenReturn(1);
         service.setSetting(DeveloperModeService.ALLOWED_SOURCES_SETTING_KEY, "10.20.0.0/16", "admin");
-        verify(developerModeService).refreshAllowedSourcesFromValue("10.20.0.0/16");
+        verify(developerModeService).invalidate();
+        verify(developerApiAccessService).invalidate();
     }
 
     @Test
-    void setSetting_shouldRefreshDeveloperApiAccess() {
+    void setSetting_shouldInvalidateDeveloperApiAccess() {
         when(mapper.upsert(any())).thenReturn(1);
         service.setSetting(DeveloperApiAccessService.SETTING_KEY, "true", "admin");
-        verify(developerApiAccessService).refreshFromValue("true");
+        verify(developerModeService).invalidate();
+        verify(developerApiAccessService).invalidate();
     }
 
     @Test

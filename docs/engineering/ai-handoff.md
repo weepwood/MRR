@@ -907,3 +907,6 @@ cc8dbbc4，65未推送/259文件，集成69/266，main120/707；关键权限、�
 
 ## 产品研发第三批（2026-11-26）
 基线8649f59b，P2读取状态修复，规则表不回退独立概览数据，双请求结算后拒绝优先、清理样本及筛选；普通错误保留旧结果。新增两项RED复现，最终独立9041 Mock双浏览器8/8，类型及修改文件ESLint通过；首轮WebKit缓存与选择器定位问题已纠正。详见docs/product/product-batch3-audit.md；证据/Volumes/data/AI-Development/artifacts/mrr-product3-20261126。下一步GOV-03/OPS-02，不推送、合并、发布，不接触真实医疗数据。
+
+## 后端治理第一批（2026-11-26）
+基线5926edc8，维护者明确暂停前端主动功能开发，优先后端。实际修复修复预览双读权限、设置事务提交后缓存失效、最新批次样本单SQL；前后测试证据、PG16独立实例4/4与10000样本SQL短时对照见docs/backend/governance-batch1.md；风险任务池docs/backend/ROADMAP.md。不改Flyway、真实数据、远端及正式版本，不将短时SQL指标当HTTP吞吐。

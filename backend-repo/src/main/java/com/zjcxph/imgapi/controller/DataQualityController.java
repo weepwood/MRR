@@ -50,6 +50,7 @@ public class DataQualityController {
 
     @Operation(summary = "预览异常的建议修复，不修改数据")
     @GetMapping("/issues/{issueId}/repair-preview")
+    @RequirePermissions({"system:read", "record:read"})
     public Result<Map<String, Object>> repairPreview(@PathVariable long issueId) {
         return Result.<Map<String, Object>>success("获取修复预览成功")
                 .data(dataQualityService.previewRepair(issueId));

@@ -140,37 +140,28 @@ class DataQualityServiceImplTest {
 
     @Test
     void issuesReturnsEmptyListWhenNoRunExists() {
-        when(jdbcTemplate.query(anyString(), org.mockito.ArgumentMatchers.<RowMapper<Long>>any()))
+        when(jdbcTemplate.queryForList(contains("SELECT id FROM app.mrr_data_quality_run"), eq(100)))
                 .thenReturn(List.of());
-
-        List<Map<String, Object>> result = service.getIssues(100);
-
-        assertThat(result).isEmpty();
-        verify(jdbcTemplate, never()).queryForList(anyString(), any(Object[].class));
+        assertThat(service.getIssues(100)).isEmpty();
+        verify(jdbcTemplate).queryForList(contains("SELECT id FROM app.mrr_data_quality_run"), eq(100));
+        verify(jdbcTemplate, never()).query(anyString(), org.mockito.ArgumentMatchers.<RowMapper<Long>>any());
     }
 
     @Test
     void issuesClampsRequestedLimitToFiveHundred() {
         List<Map<String, Object>> issues = List.of(Map.of("id", 1L));
-        when(jdbcTemplate.query(anyString(), org.mockito.ArgumentMatchers.<RowMapper<Long>>any()))
-                .thenReturn(List.of(7L));
-        when(jdbcTemplate.queryForList(anyString(), eq(7L), eq(500))).thenReturn(issues);
-
-        List<Map<String, Object>> result = service.getIssues(5_000);
-
-        assertThat(result).isSameAs(issues);
-        verify(jdbcTemplate).queryForList(anyString(), eq(7L), eq(500));
+        when(jdbcTemplate.queryForList(contains("SELECT id FROM app.mrr_data_quality_run"), eq(500)))
+                .thenReturn(issues);
+        assertThat(service.getIssues(5_000)).isSameAs(issues);
+        verify(jdbcTemplate).queryForList(contains("SELECT id FROM app.mrr_data_quality_run"), eq(500));
     }
 
     @Test
     void issuesClampsNonPositiveLimitToOne() {
-        when(jdbcTemplate.query(anyString(), org.mockito.ArgumentMatchers.<RowMapper<Long>>any()))
-                .thenReturn(List.of(8L));
-        when(jdbcTemplate.queryForList(anyString(), eq(8L), eq(1))).thenReturn(List.of());
-
+        when(jdbcTemplate.queryForList(contains("SELECT id FROM app.mrr_data_quality_run"), eq(1)))
+                .thenReturn(List.of());
         service.getIssues(0);
-
-        verify(jdbcTemplate).queryForList(anyString(), eq(8L), eq(1));
+        verify(jdbcTemplate).queryForList(contains("SELECT id FROM app.mrr_data_quality_run"), eq(1));
     }
 
     @Test

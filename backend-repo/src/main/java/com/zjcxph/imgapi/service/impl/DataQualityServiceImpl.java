@@ -122,21 +122,15 @@ public class DataQualityServiceImpl implements DataQualityService {
     @Override
     public List<Map<String, Object>> getIssues(int limit) {
         int safeLimit = Math.max(1, Math.min(limit, 500));
-        List<Long> runIds = jdbcTemplate.query(
-                "SELECT id FROM app.mrr_data_quality_run ORDER BY id DESC LIMIT 1",
-                (resultSet, rowNumber) -> resultSet.getLong(1)
-        );
-        if (runIds.isEmpty()) {
-            return List.of();
-        }
+        // Select the run and its samples in one database statement/snapshot.
         return jdbcTemplate.queryForList("""
                 SELECT id, check_code, check_name, severity, entity_type, entity_id,
                        bah, sjh, detail, detected_at
                 FROM app.mrr_data_quality_issue
-                WHERE run_id = ?
+                WHERE run_id = (SELECT id FROM app.mrr_data_quality_run ORDER BY id DESC LIMIT 1)
                 ORDER BY CASE severity WHEN 'CRITICAL' THEN 1 ELSE 2 END, id DESC
                 LIMIT ?
-                """, runIds.getFirst(), safeLimit);
+                """, safeLimit);
     }
 
     @Override

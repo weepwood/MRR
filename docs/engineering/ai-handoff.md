@@ -841,3 +841,6 @@ MrrCursorPagination 改用 ElPagination 原生页码、箭头、跳页、条数�
 
 ## 侧栏悬停及选中指示线（2026-11-26）
 基线824bffcb。参考 https://github.com/weepwood/UI-Vault/blob/main/demos/components/endfield-nav-tab/index.html 的竖条机制，不引入字体/插画。公共Menu/item.vue叶子链接右侧伪元素，按下10px、实际路由选中22px、宽3px、内距3px，180ms高度/120ms透明度；移除图标缩放与横移，保留一级展开箭头、键盘焦点、减少动效。SubSidebar选中叶子去有色描边，保持布局。首轮双引擎28/28，最终选中描边与动效端点8/8，定向lint/TypeScript通过；实际截图位于/Volumes/data/AI-Development/artifacts/mrr-sidebar-selection-20261126。日志/tmp/mrr-sidebar-selection-*.log。未执行全量CI、生产构建、医院终端验收；不修改菜单路由权限，不推送合并发布。
+
+## 侧栏选中色条连续性修订（2026-11-26）
+基线6ba190f0。用户反馈动画有小问题，源码存在按压短线解除与异步路由激活间的缩回风险；改为固定几何scaleY、真实路由选中驱动、旧线立即隐藏，保留背景按压反馈及右侧位置。Chromium/WebKit 20/20，包含8组真实requestAnimationFrame采样，验证选中后存在中间帧、高度单调、最多一根可见色条及取消按压；TypeScript与定向lint通过。未单独验证快速多路由竞争、真实终端帧率或全量CI/生产构建。未推送、合并、发布。

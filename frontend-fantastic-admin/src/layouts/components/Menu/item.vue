@@ -173,35 +173,32 @@ defineExpose({
 }
 
 /* The selection rail belongs to the route, never to the hover target.
- * It expands inside the existing padding without changing hit area or layout. */
+ * A fixed-size rail scales around its center; pointer release never resets it.
+ * Hide the previous route rail immediately so only one visible selection remains. */
 a.menu-item-container::after {
   position: absolute;
   inset-inline-end: 3px;
   top: 50%;
   z-index: 1;
   width: 3px;
-  height: 0;
+  height: 22px;
   pointer-events: none;
   content: "";
   background: var(--mrr-primary);
   border-radius: 2px;
   opacity: 0;
-  transform: translateY(-50%);
-  transition: height var(--mrr-motion-move) var(--mrr-ease-out), opacity var(--mrr-motion-feedback) var(--mrr-ease-out), background-color var(--mrr-motion-feedback) var(--mrr-ease-out);
+  transform: translateY(-50%) scaleY(0);
+  transform-origin: center;
+  transition: transform var(--mrr-motion-move) var(--mrr-ease-out);
 }
 
 a.menu-item-container:not(.active):active {
   background: var(--mrr-navigation-active);
 }
 
-a.menu-item-container:not(.active):active::after {
-  height: 10px;
-  opacity: 0.65;
-}
-
 a.menu-item-container[aria-current="page"]::after {
-  height: 22px;
   opacity: 1;
+  transform: translateY(-50%) scaleY(1);
 }
 
 @media (forced-colors: active) {

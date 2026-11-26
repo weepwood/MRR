@@ -52,19 +52,9 @@ public class Patient {
         this.bah = MedicalRecordCodeUtils.normalize(bah);
     }
 
+    /** Diagnostic identity only; patient fields must not enter ordinary logs. */
     @Override
     public String toString() {
-        return "Patient{" +
-                "id=" + id +
-                ", idCard='" + idCard + '\'' +
-//                ", brxh='" + brxh + '\'' +
-                ", bah='" + bah + '\'' +
-                ", name='" + name + '\'' +
-                ", ruyuan=" + ruyuan +
-                ", admissionTime=" + admissiontime +
-                ", department='" + department + '\'' +
-                ", bingqu='" + bingqu + '\'' +
-                ", chuangwei='" + chuangwei + '\'' +
-                '}';
+        return "Patient{id=" + id + '}';
     }
 }

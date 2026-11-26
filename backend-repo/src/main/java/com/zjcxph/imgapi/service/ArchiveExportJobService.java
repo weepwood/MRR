@@ -441,7 +441,7 @@ public class ArchiveExportJobService {
         } catch (ArchiveExportCancelledException exception) {
             repository.markCancelled(id, LocalDateTime.now());
         } catch (Exception exception) {
-            logger.error("Archive export job failed: jobId={}", id, exception);
+            logger.error("Archive export job failed: jobId={}, errorType={}", id, exception.getClass().getSimpleName());
             if (repository.markFailed(id, publicFailureMessage(exception), LocalDateTime.now()) == 0
                     && repository.isCancelRequested(id)) {
                 repository.markCancelled(id, LocalDateTime.now());

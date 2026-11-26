@@ -103,6 +103,31 @@ class ArchiveExportServiceImplTest {
     }
 
     @Test
+    void zipFailureLogDoesNotExposeStorageDiagnosticsOrArchiveEntry() throws Exception {
+        PathDO item = new PathDO("synthetic", "synthetic-private-filename.png", "1", "123");
+        item.setScanId(7);
+        IOException failure = new IOException("synthetic source unavailable");
+        failure.addSuppressed(new IOException("synthetic-private-source-detail"));
+        when(imageStorage.open(item)).thenThrow(failure);
+        var logger = (ch.qos.logback.classic.Logger) org.slf4j.LoggerFactory.getLogger(ArchiveExportServiceImpl.class);
+        var appender = new ch.qos.logback.core.read.ListAppender<ch.qos.logback.classic.spi.ILoggingEvent>();
+        appender.start();
+        logger.addAppender(appender);
+        try {
+            var service = new ArchiveExportServiceImpl(scanService, imageStorage);
+            assertThatThrownBy(() -> service.writeBatchZip(new ArchiveExportService.BatchZipExport(List.of(item)),
+                    new ByteArrayOutputStream())).isInstanceOf(IOException.class);
+            assertThat(appender.list).isNotEmpty().allSatisfy(event -> {
+                assertThat(event.getFormattedMessage()).doesNotContain("synthetic-private-filename", "synthetic-private-source-detail");
+                assertThat(event.getThrowableProxy()).isNull();
+            });
+        } finally {
+            logger.detachAppender(appender);
+            appender.stop();
+        }
+    }
+
+    @Test
     void failsZipWhenAnyPlannedImageCannotBeOpened() throws Exception {
         PathDO first = new PathDO("25.03.15", "page-1.jpg", "605746", "00789508");
         PathDO missing = new PathDO("25.03.15", "page-2.jpg", "605746", "00789508");

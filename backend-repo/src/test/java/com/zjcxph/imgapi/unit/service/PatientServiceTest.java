@@ -109,4 +109,19 @@ class PatientServiceTest {
                 .hasMessageContaining("完全重复");
         verify(searchMapper, never()).updatePatient(any(Patient.class));
     }
+
+    @Test
+    void patientDiagnosticStringOmitsSensitiveFields() {
+        var patient = new com.zjcxph.imgapi.entity.Patient();
+        patient.setId(7);
+        patient.setIdCard("synthetic-private-card");
+        patient.setName("synthetic-private-name");
+        patient.setBah("synthetic-private-record");
+        patient.setDepartment("synthetic-private-department");
+        patient.setBingqu("synthetic-private-ward");
+        patient.setChuangwei("synthetic-private-bed");
+        patient.setAdmissiontime("synthetic-private-time");
+        assertThat(patient.toString()).contains("7").doesNotContain("synthetic-private");
+        assertThat(patient.getIdCard()).isEqualTo("synthetic-private-card");
+    }
 }

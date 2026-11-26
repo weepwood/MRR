@@ -164,7 +164,7 @@ public class ArchiveExportServiceImpl implements ArchiveExportService {
                 } catch (ArchiveExportCancelledException exception) {
                     throw exception;
                 } catch (IOException exception) {
-                    logger.error("ZIP 导出影像失败: entry={}", entryName, exception);
+                    logger.error("ZIP 导出影像失败: scanId={}, errorType={}", item.getScanId(), exception.getClass().getSimpleName());
                     throw exportReadFailure("无法读取导出影像: " + entryName, exception);
                 }
                 completed++;
@@ -234,7 +234,7 @@ public class ArchiveExportServiceImpl implements ArchiveExportService {
         } catch (IOException exception) {
             throw exception;
         } catch (RuntimeException exception) {
-            logger.error("病案 PDF 生成失败", exception);
+            logger.error("病案 PDF 生成失败: errorType={}", exception.getClass().getSimpleName());
             throw new IOException("病案 PDF 生成失败", exception);
         }
     }

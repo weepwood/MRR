@@ -63,3 +63,53 @@ test('局部日期与多行输入保留状态且不影响全站主题', async ({
   expect(await page.evaluate(() => localStorage.getItem('MRR-ADMIN:app-settings'))).toBe(settings)
   await preview.screenshot({ path: testInfo.outputPath('local-fields.png'), animations: 'disabled' })
 })
+
+test('局部暗色状态矩阵不污染全局对话框和抽屉', async ({ page }) => {
+  await isolateLocalVisualSettings(page)
+  await page.addInitScript(() => localStorage.setItem('MRR-ADMIN:app-settings', JSON.stringify({
+    app: { themePalette: 'mrr', colorScheme: 'light', enableMotion: false },
+    menu: { mode: 'single' },
+    layout: { enableMobileAdaptation: true },
+  })))
+  await page.setViewportSize({ width: 1440, height: 900 })
+  await page.goto('/ui-components')
+  const preview = page.getByRole('region', { name: '局部主题与尺寸对照' })
+  await preview.getByText('暖色暗', { exact: true }).click()
+  const surface = preview.locator('.local-theme-preview__surface')
+  await expect(surface).toHaveCSS('background-color', 'rgb(34, 34, 32)')
+  const state = preview.getByRole('radiogroup', { name: '局部操作状态' })
+  await state.getByText('加载', { exact: true }).click()
+  await expect(preview.getByRole('button', { name: '执行示例' })).toBeDisabled()
+  await state.getByText('默认', { exact: true }).click()
+  await expect(preview.getByRole('button', { name: '执行示例' })).toBeEnabled()
+  const mixed = preview.getByRole('checkbox', { name: '半选示例' })
+  await expect(mixed).toHaveJSProperty('indeterminate', true)
+  await mixed.focus()
+  await mixed.press('Space')
+  await expect(mixed).toHaveJSProperty('indeterminate', false)
+  await expect(mixed).toBeChecked()
+  const before = await page.evaluate(() => {
+    const probe = document.createElement('span')
+    probe.style.backgroundColor = 'var(--mrr-card)'
+    document.body.appendChild(probe)
+    const card = getComputedStyle(probe).backgroundColor
+    probe.style.backgroundColor = 'hsl(var(--background))'
+    const result = { card, drawer: getComputedStyle(probe).backgroundColor, settings: localStorage.getItem('MRR-ADMIN:app-settings') }
+    probe.remove()
+    return result
+  })
+  for (const [trigger, title, panelClass] of [['打开对话框', '对话框示例', '.gallery-demo-dialog'], ['打开抽屉', '抽屉示例', '.gallery-demo-drawer']]) {
+    await page.getByRole('button', { name: trigger, exact: true }).click()
+    const overlay = page.getByRole('dialog', { name: title, exact: true })
+    await expect(overlay).toBeVisible()
+    const panel = page.locator(panelClass)
+    await expect(panel).toBeVisible()
+    await expect(panel).toHaveCSS('background-color', panelClass === '.gallery-demo-dialog' ? before.card : before.drawer)
+    expect(await panel.evaluate(el => el.closest('.local-theme-preview__surface'))).toBeNull()
+    await page.keyboard.press('Escape')
+    await expect(overlay).not.toBeVisible()
+  }
+  await expect(surface).toHaveCSS('background-color', 'rgb(34, 34, 32)')
+  await expect(mixed).toBeChecked()
+  expect(await page.evaluate(() => localStorage.getItem('MRR-ADMIN:app-settings'))).toBe(before.settings)
+})

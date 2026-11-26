@@ -546,12 +546,12 @@ onUnmounted(() => {
             </el-button>
           </div>
 
-          <div v-else-if="activeSection === 'runtime'" class="settings-actions" :class="{ dirty: runtimeSettingsRef?.isDirty }">
+          <div v-else-if="activeSection === 'runtime'" class="settings-actions settings-actions--runtime" :class="{ dirty: runtimeSettingsRef?.isDirty }">
             <div class="save-status" role="status" :class="{ dirty: runtimeSettingsRef?.isDirty, unavailable: !runtimeSettingsRef?.synced }">
               <span class="status-dot" />
               <div>
                 <strong>{{ runtimeSettingsRef?.statusLabel || '运行参数尚未读取' }}</strong>
-                <small>保存后立即生效，不需要重启服务。</small>
+                <small>可在线修改的参数保存并核对后生效。</small>
               </div>
             </div>
             <el-button

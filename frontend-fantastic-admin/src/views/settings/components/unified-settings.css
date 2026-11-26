@@ -177,7 +177,9 @@
 }
 
 .settings-panel-header--inline .settings-actions--server { flex: 0 1 560px; }
-.settings-panel-header--inline .settings-actions--department { flex: 0 1 420px; }
+
+.settings-panel-header--inline .settings-actions--department,
+.settings-panel-header--inline .settings-actions--runtime { flex: 0 1 420px; }
 .settings-panel-header--inline .settings-pending { flex: 1 1 100%; }
 
 .system-panel { display: grid; gap: var(--mrr-space-3); min-width: 0; }

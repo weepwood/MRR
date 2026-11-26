@@ -76,7 +76,7 @@ for (const theme of ['light', 'dark']) {
             : url.includes('/issues')
               ? [issue]
               : url.includes('/summary')
-                ? { running: false, enabled: true, latestRun: null, checks: [] }
+                ? { running: false, enabled: true, latestRun: { id: 91001, status: 'SUCCESS', total_issues: 1, critical_count: 1, warning_count: 0 }, checks: [] }
                 : { relations: [], relationChecks: [], notes: [] }
       await route.fulfill({ json: { code: 200, data } })
     })

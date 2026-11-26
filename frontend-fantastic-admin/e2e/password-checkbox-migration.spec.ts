@@ -111,7 +111,7 @@ test('修改密码校验、失败恢复、成功退出及复选框禁用保持�
   await demo.focus()
   await demo.press('Space')
   await expect(demo).not.toBeChecked()
-  await expect(page.getByRole('checkbox', { name: '禁用复选框' })).toBeDisabled()
+  await expect(page.getByRole('checkbox', { name: '禁用复选框', exact: true })).toBeDisabled()
   await page.getByRole('button', { name: /账号菜单：/ }).first().click()
   await page.getByText('个人设置', { exact: true }).click()
   const form = page.getByRole('dialog').locator('form')

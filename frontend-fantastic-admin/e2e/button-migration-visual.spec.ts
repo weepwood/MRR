@@ -19,7 +19,8 @@ for (const palette of ['mrr', 'gr8r'] as const) {
         await page.getByLabel('查找组件', { exact: true }).fill('按钮与操作')
         const article = page.locator('article').filter({ has: page.getByRole('heading', { name: '按钮与操作', exact: true }) })
         const state = article.getByRole('radiogroup', { name: '按钮示例状态' })
-        const rows = article.locator('.example-row')
+        // The local-theme preview is a separate matrix with its own controls.
+        const rows = article.locator('.example-stack > .example-row')
         await expect(rows).toHaveCount(4)
         for (const mode of ['默认', '禁用', '加载']) {
           await state.getByText(mode, { exact: true }).click()

@@ -83,11 +83,11 @@ onBeforeUnmount(clear)
     <AppEmpty v-else-if="!data?.events.length" size="compact" description="当前范围暂无已采集事件，不代表未发生故障" />
     <template v-else>
       <MrrFilterBar embedded :focus-ring="false">
-        <el-select v-model="source" aria-label="存储历史来源">
+        <el-select v-model="source" class="mrr-single-select" aria-label="存储历史来源">
           <el-option label="全部来源" value="" />
           <el-option v-for="kind in ['NAS', 'HTTP', 'NGINX', 'OSS']" :key="kind" :label="kind" :value="kind" />
         </el-select>
-        <el-select v-model="eventType" aria-label="存储历史事件类型">
+        <el-select v-model="eventType" class="mrr-single-select" aria-label="存储历史事件类型">
           <el-option label="全部事件" value="" />
           <el-option v-for="(label, value) in labels" :key="value" :label="label" :value="value" />
         </el-select>

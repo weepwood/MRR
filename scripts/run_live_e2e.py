@@ -121,7 +121,69 @@ def free_port() -> int:
         return listener.getsockname()[1]
 
 
-def run(jar: Path, embedded: bool = False) -> None:
+class NativePostgres:
+    """A new, invocation-owned PostgreSQL 16 cluster, never an external database."""
+
+    def __init__(self, binaries: Path, temporary: Path, env: dict[str, str], password: str):
+        if os.name != "posix":
+            raise ValueError("Native PostgreSQL qualification currently requires POSIX.")
+        self.binaries = binaries.resolve(strict=True)
+        self.directory = temporary / "native-postgres"
+        self.directory.mkdir(mode=0o700)
+        self.data = self.directory / "data"
+        self.env = env
+        self.password = password
+        self.port = free_port()
+        version = self.command("initdb", "--version")
+        if not re.search(r"PostgreSQL\) 16(?:\.|\s|$)", version):
+            raise ValueError("Native qualification requires PostgreSQL 16.")
+
+    def command(self, name: str, *args: str, sql: str | None = None,
+                authenticated: bool = False) -> str:
+        env = self.env | ({"PGPASSWORD": self.password} if authenticated else {})
+        try:
+            result = subprocess.run([str(self.binaries / name), *args],
+                                    input=sql, text=True, encoding="utf-8",
+                                    capture_output=True, env=env, timeout=90)
+        except (OSError, subprocess.TimeoutExpired):
+            raise RuntimeError(f"Native PostgreSQL {name} could not complete.") from None
+        if result.returncode:
+            raise RuntimeError(f"Native PostgreSQL {name} failed.")
+        return result.stdout.strip()
+
+    def start(self) -> int:
+        password_file = self.directory / "password"
+        # Exclusive creation with restricted permissions, removed even if initdb fails.
+        fd = os.open(password_file, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
+        try:
+            with os.fdopen(fd, "w", encoding="utf-8") as stream:
+                stream.write(self.password + "\n")
+            self.command("initdb", "-D", str(self.data), "-U", "postgres",
+                         "--auth-local=scram-sha-256", "--auth-host=scram-sha-256",
+                         "--no-locale", "--pwfile", str(password_file))
+        finally:
+            password_file.unlink(missing_ok=True)
+        # All clients use authenticated TCP; do not create a Unix socket (path
+        # length limits on macOS also make long isolated workspaces unreliable).
+        options = f"-h 127.0.0.1 -p {self.port} -c unix_socket_directories=''"
+        self.command("pg_ctl", "-D", str(self.data), "-l", str(self.directory / "server.log"),
+                     "-o", options, "-w", "start")
+        self.command("createdb", "-h", "127.0.0.1", "-p", str(self.port),
+                     "-U", "postgres", "mrr_e2e", authenticated=True)
+        return self.port
+
+    def psql(self, *args: str, sql: str | None = None) -> str:
+        return self.command("psql", "-X", "-h", "127.0.0.1", "-p", str(self.port),
+                            "-U", "postgres", "-d", "mrr_e2e", "-v", "ON_ERROR_STOP=1",
+                            *args, sql=sql, authenticated=True)
+
+    def close(self) -> None:
+        # Even a partial start may have created the PID file; only our data dir is eligible.
+        if (self.data / "postmaster.pid").exists():
+            self.command("pg_ctl", "-D", str(self.data), "-m", "fast", "-w", "stop")
+
+
+def run(jar: Path, embedded: bool = False, native_pg_bin: Path | None = None) -> None:
     if not jar.is_file():
         raise ValueError("Build the backend executable JAR first (--jar).")
     if embedded:
@@ -146,23 +208,27 @@ def run(jar: Path, embedded: bool = False) -> None:
 
     with tempfile.TemporaryDirectory(prefix="mrr-live-e2e-") as directory:
         temporary = Path(directory)
+        native = NativePostgres(native_pg_bin, temporary, env, password) if native_pg_bin else None
         image_source = ThreadingHTTPServer(("127.0.0.1", 0), SyntheticImageSource)
         Thread(target=image_source.serve_forever, daemon=True).start()
         try:
-            docker("run", "--detach", "--name", container, "--label", "mrr.test=live-e2e",
-                   "-p", "127.0.0.1::5432", "-e", "POSTGRES_PASSWORD",
-                   "-e", "POSTGRES_DB=mrr_e2e", "postgres:16-alpine")
-            mapping = docker("port", container, "5432/tcp")
-            db_port = int(mapping.rsplit(":", 1)[1])
-            deadline = time.monotonic() + 60
-            while True:
-                try:
-                    docker("exec", container, "pg_isready", "-U", "postgres", "-d", "mrr_e2e")
-                    break
-                except RuntimeError:
-                    if time.monotonic() > deadline:
-                        raise
-                    time.sleep(1)
+            if native:
+                db_port = native.start()
+            else:
+                docker("run", "--detach", "--name", container, "--label", "mrr.test=live-e2e",
+                       "-p", "127.0.0.1::5432", "-e", "POSTGRES_PASSWORD",
+                       "-e", "POSTGRES_DB=mrr_e2e", "postgres:16-alpine")
+                mapping = docker("port", container, "5432/tcp")
+                db_port = int(mapping.rsplit(":", 1)[1])
+                deadline = time.monotonic() + 60
+                while True:
+                    try:
+                        docker("exec", container, "pg_isready", "-U", "postgres", "-d", "mrr_e2e")
+                        break
+                    except RuntimeError:
+                        if time.monotonic() > deadline:
+                            raise
+                        time.sleep(1)
             app_env = env | {
                 "SPRING_DATASOURCE_URL": f"jdbc:postgresql://127.0.0.1:{db_port}/mrr_e2e?currentSchema=app",
                 "SPRING_DATASOURCE_USERNAME": "postgres", "SPRING_DATASOURCE_PASSWORD": password,
@@ -194,13 +260,16 @@ def run(jar: Path, embedded: bool = False) -> None:
                     time.sleep(1)
 
                 assert_documentation_requires_session(url)
-                # These fixtures exist only after Flyway in our newly created container.
+                # These fixtures exist only after Flyway in our newly created database.
                 sql = f"""CREATE EXTENSION IF NOT EXISTS pgcrypto;
 INSERT INTO app.mr_auth_user (username, display_name, password_hash, role_code, status)
 VALUES ('e2e_editor', 'Synthetic Editor', public.crypt('{password}', public.gen_salt('bf', 12)), 'DOCTOR', 'active'),
        ('e2e_reader', 'Synthetic Reader', public.crypt('{password}', public.gen_salt('bf', 12)), 'READER', 'active');
 """
-                docker("exec", "-i", container, "psql", "-U", "postgres", "-d", "mrr_e2e", "-v", "ON_ERROR_STOP=1", sql=sql)
+                if native:
+                    native.psql(sql=sql)
+                else:
+                    docker("exec", "-i", container, "psql", "-U", "postgres", "-d", "mrr_e2e", "-v", "ON_ERROR_STOP=1", sql=sql)
                 test_env = env | {"MRR_LIVE_MANAGED": "1", "MRR_LIVE_API_URL": url,
                                   "MRR_LIVE_WEB_PORT": str(web_port), "MRR_LIVE_PASSWORD": password,
                                   "MRR_LIVE_API_PREFIX": "" if embedded else "/proxy",
@@ -234,21 +303,23 @@ VALUES ('e2e_editor', 'Synthetic Editor', public.crypt('{password}', public.gen_
                 print(report)
                 if browser.returncode:
                     raise RuntimeError("Real browser tests failed.")
-                count = docker("exec", container, "psql", "-U", "postgres", "-d", "mrr_e2e", "-Atc",
-                               "SELECT count(*) FROM app.mr_patient WHERE bah='E2E-SYNTHETIC-0001'")
+                count_query = "SELECT count(*) FROM app.mr_patient WHERE bah='E2E-SYNTHETIC-0001'"
+                count = (native.psql("-Atc", count_query) if native else
+                         docker("exec", container, "psql", "-U", "postgres", "-d", "mrr_e2e", "-Atc", count_query))
                 if count != "1":
                     raise RuntimeError("Database assertion failed: expected exactly one imported synthetic row.")
                 print("Live E2E passed; PostgreSQL 16 confirms exactly one synthetic row.")
         finally:
-            # The unpredictable name is created by this invocation; no other containers/volumes are touched.
+            # Only invocation-owned temporary resources are eligible for cleanup.
             cleanup_resources([lambda: stop_process(browser), lambda: stop_process(vite),
                                lambda: stop_process(backend), image_source.shutdown,
-                               image_source.server_close, lambda: docker("rm", "--force", container)])
+                               image_source.server_close, native.close if native else lambda: docker("rm", "--force", container)])
 
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--jar", type=Path, required=True)
     parser.add_argument("--embedded", action="store_true", help="Exercise the production frontend served by the candidate JAR, without Vite.")
+    parser.add_argument("--native-pg-bin", type=Path, help="POSIX only: initialize a new temporary PostgreSQL 16 cluster using this binary directory.")
     args = parser.parse_args()
-    run(args.jar, args.embedded)
+    run(args.jar, args.embedded, args.native_pg_bin)

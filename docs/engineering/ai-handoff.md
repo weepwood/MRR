@@ -944,3 +944,6 @@ cc8dbbc4，65未推送/259文件，集成69/266，main120/707；关键权限、�
 
 ## 后端治理第十二批（2026-11-26）
 基线7ea42b78；详见docs/backend/governance-batch12.md及governance-cumulative-review-batch12.md。103定向/89PG、四轮7517请求4510双阶段配对、原分组A63.31/62.12RPS对快照B63.08/60.76，无收益默认不启用。原值OUTCOME恢复、外部凭据SUCCESS事务、本地条件PUT及双实例目录隔离通过；全局迁移启动恢复默认关闭，仅明确独占维护开启。实际客户端断流和外部独立终态缓冲工具操作被拦截未完成；跨主机租约、现场存储/孤儿、剩余权限、平台与长时待验。证据/Volumes/data/AI-Development/artifacts/mrr-backend12-20261126/，仅本地。
+
+## 后端治理第十三批（2026-11-26）
+基线30f5cc47。真实OCR错配RED及安全查询/缓存修复，迁移字段与错误码投影、任务终态/独占维护、受控Blob预览；74Java/33PG/44前端/54HTTP，累计54/276。docs/backend/governance-batch13.md、governance-stage-freeze-batch13.md、migration-maintenance-batch13.md。实验引擎冻结；222路由、跨主机存储围栏/实际OSS、外部终态与正式平台/长时/独立审查待验。证据/Volumes/data/AI-Development/artifacts/mrr-backend13-20261126/，仅本地。

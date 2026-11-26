@@ -42,6 +42,54 @@ class OssMigrationManagementMapperPostgresqlIT extends PostgresqlIntegrationTest
     @Autowired private com.zjcxph.imgapi.mapper.MigrationJobMapper migrationJobs;
     @org.junit.jupiter.api.io.TempDir java.nio.file.Path temporary;
 
+    @Autowired org.springframework.transaction.PlatformTransactionManager transactionManager;
+
+    @Test
+    @org.springframework.transaction.annotation.Transactional(propagation=org.springframework.transaction.annotation.Propagation.NOT_SUPPORTED)
+    void maintenanceConflictRollsBackAndExclusiveRecoveryUpdatesBothDomains()throws Exception{
+        int id=jdbcTemplate.queryForObject("""
+            INSERT INTO app.mr_scan(bah,sjh,brxh,filename,folder,uploadflag,source_type,source_ref)
+            VALUES ('8765453','12345678','8765453','synthetic.jpg','synthetic',1,'LOCAL','synthetic.jpg') RETURNING id
+            """,Integer.class);
+        long job=jdbcTemplate.queryForObject("INSERT INTO app.migration_job(status,mode) VALUES ('running','folder') RETURNING id",Long.class);
+        var tx=new org.springframework.transaction.support.TransactionTemplate(transactionManager);
+        var recovery=new com.zjcxph.imgapi.service.impl.MigrationMaintenanceRecovery(jdbcTemplate,migrationJobs,scanMapper,transactionManager);
+        var locked=new java.util.concurrent.CountDownLatch(1);var release=new java.util.concurrent.CountDownLatch(1);
+        var executor=java.util.concurrent.Executors.newSingleThreadExecutor();
+        try{
+            assertThat(scanMapper.markMigrationStarted(scanMapper.findById(id),"synthetic-maintenance")).isEqualTo(1);
+            var blocker=executor.submit(()->tx.executeWithoutResult(status->{
+                jdbcTemplate.execute("LOCK TABLE app.mr_scan IN ROW EXCLUSIVE MODE");
+                locked.countDown();
+                try{if(!release.await(10,java.util.concurrent.TimeUnit.SECONDS))throw new IllegalStateException("fixture timeout");}
+                catch(InterruptedException e){Thread.currentThread().interrupt();throw new IllegalStateException(e);}
+            }));
+            assertThat(locked.await(5,java.util.concurrent.TimeUnit.SECONDS)).isTrue();
+            try{
+                org.assertj.core.api.Assertions.assertThatThrownBy(recovery::recoverExclusive).isInstanceOf(RuntimeException.class);
+                assertThat(migrationJobs.findById(job).getStatus()).isEqualTo("running");
+                assertThat(jdbcTemplate.queryForObject("SELECT migration_claim_id FROM app.mr_scan WHERE id=?",String.class,id)).isEqualTo("synthetic-maintenance");
+            }finally{release.countDown();}
+            blocker.get(10,java.util.concurrent.TimeUnit.SECONDS);
+            var recovered=recovery.recoverExclusive();
+            assertThat(recovered.jobs()).isGreaterThanOrEqualTo(1);
+            assertThat(recovered.scans()).isGreaterThanOrEqualTo(1);
+            assertThat(migrationJobs.findById(job).getStatus()).isEqualTo("interrupted");
+            assertThat(jdbcTemplate.queryForObject("SELECT migration_status FROM app.mr_scan WHERE id=?",String.class,id)).isEqualTo("retry_wait");
+            System.out.println("MRR_MAINTENANCE_CONFLICT real SQL lock denied; no partial recovery; exclusive recovery committed");
+        }finally{release.countDown();executor.shutdownNow();jdbcTemplate.update("DELETE FROM app.migration_job WHERE id=?",job);jdbcTemplate.update("DELETE FROM app.mr_scan WHERE id=?",id);}
+    }
+
+    @Test
+    void lateWorkerCannotRewriteTerminalJob(){
+        long id=jdbcTemplate.queryForObject("INSERT INTO app.migration_job(status,mode) VALUES ('running','folder') RETURNING id",Long.class);
+        jdbcTemplate.update("UPDATE app.migration_job SET status='interrupted',processed_count=7 WHERE id=?",id);
+        assertThat(migrationJobs.updateProgress(id,100,0,java.math.BigDecimal.TEN)).isZero();
+        assertThat(migrationJobs.complete(id,"completed",100,100,0,java.math.BigDecimal.valueOf(100),null,new java.util.Date())).isZero();
+        assertThat(migrationJobs.findById(id).getStatus()).isEqualTo("interrupted");
+        assertThat(migrationJobs.findById(id).getProcessedCount()).isEqualTo(7L);
+    }
+
     @Test
     @org.springframework.transaction.annotation.Transactional(propagation=org.springframework.transaction.annotation.Propagation.NOT_SUPPORTED)
     void secondServiceStartupDoesNotReleaseLiveClaimOrJob(){

@@ -81,7 +81,7 @@ public class OcrJobService {
         var image=scans.findById(scan);
         if (image==null || image.getArchiveId()==null || !mapper.belongs(scan,image.getArchiveId()))
             throw new BusinessException(404,"没有有效关联影像");
-        Fact fact=mapper.fact(scan);
+        Fact fact=mapper.factForCurrentArchive(scan,image.getArchiveId());
         return fact==null?new FactView(scan,image.getArchiveId(),"PENDING",null,null,null,null,null,null):fact.view(full);
     }
     /** Claims one page, keeping database transactions out of file IO and inference. */

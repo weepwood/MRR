@@ -91,6 +91,7 @@ def main():
     parser.add_argument("--external-strict-intent",action="store_true",help="enable dedicated external intent verification")
     parser.add_argument("--medical-admission",action="store_true",help="enable experimental separate medical event gate")
     parser.add_argument("--admission-capacity",action="store_true",help="test actual first-byte admission and logical capacity rejection, then exit")
+    parser.add_argument("--batch13-probes",action="store_true",help="run only targeted business authorization probes in a fresh lab")
     parser.add_argument("--medical-probes", action="store_true", help="exercise synthetic patient, OCR ownership, migration log and export-plan responses")
     parser.add_argument("--signed-external", action="store_true", help="real HMAC ticket and session chain plus role probes")
     parser.add_argument("--external-probes", action="store_true", help="exercise synthetic external session, current scope and privacy headers before load")
@@ -238,6 +239,106 @@ def main():
                 "SELECT '7654300','7654300','synthetic.png','synthetic-soak',1,n,'LOCAL','synthetic.png' FROM generate_series(1,1000) n")
             sql("ANALYZE app.mr_scan")
             scan = int(sql("SELECT min(id) FROM app.mr_scan WHERE folder='synthetic-soak'"))
+            if args.batch13_probes:
+                # No load benchmark: only new business routes in a disposable database.
+                roles={"none":"system:read","read":"record:read","edit":"record:read,record:edit","pdf":"record:read,record:pdf:export","ocr":"record:read,ocr:read","ocrfull":"record:read,ocr:read,ocr:text-read"}
+                tokens={}; actor_ids={}
+                for label,permissions in roles.items():
+                    role="SYNTHETIC_BATCH13_"+label.upper()
+                    name="synthetic-batch13-"+label
+                    sql(f"INSERT INTO app.mr_auth_role(code,name,permissions) VALUES ('{role}','synthetic','{permissions}')")
+                    actor=int(sql(f"INSERT INTO app.mr_auth_user(username,display_name,password_hash,role_code,status,must_change_password,password_version) VALUES ('{name}','synthetic','not-a-password','{role}','active',false,1) RETURNING id").splitlines()[0])
+                    tokens[label]=jwt(actor,name,secret,600)[0];actor_ids[label]=actor
+                pending=int(sql("INSERT INTO app.mr_scan(bah,sjh,brxh,filename,folder,uploadflag,pages,source_type,source_node,source_ref,openerno) VALUES ('7654387','12345678','7654387','synthetic.png','synthetic-pending',1,1,'LOCAL','SYNTHETIC_PRIVATE_NODE','SYNTHETIC_PRIVATE_SOURCE','SYNTHETIC_PRIVATE_OPENER') RETURNING id").splitlines()[0])
+                waiting=int(sql("INSERT INTO app.mr_scan(bah,brxh,filename,folder,uploadflag,pages,source_type,source_ref) VALUES ('7654388','7654388','synthetic.png','synthetic-waiting',1,1,'LOCAL','SYNTHETIC_PRIVATE_SOURCE') RETURNING id").splitlines()[0])
+                sql(f"UPDATE app.mr_scan SET migration_error_code='SYNTHETIC_PRIVATE_CODE' WHERE id={pending}")
+                job=int(sql("INSERT INTO app.migration_job(status,mode,scope_value,error_message) VALUES ('running','folder','SYNTHETIC_PRIVATE_SCOPE','SYNTHETIC_PRIVATE_ERROR') RETURNING id").splitlines()[0])
+                box=int(sql("INSERT INTO app.mr_archive_box_record(bah,sjh,box_no,status,remark) VALUES ('7654389','12345679','SYNTHETIC_BOX','NORMAL','synthetic note') RETURNING id").splitlines()[0])
+                archive=sql(f"SELECT archive_id FROM app.mr_scan WHERE id={pending}")
+                if not archive:
+                    archive=sql("INSERT INTO app.mr_archive(bah,sjh) VALUES ('7654387','12345678') RETURNING id").splitlines()[0]
+                    sql(f"UPDATE app.mr_scan SET archive_id={archive} WHERE id={pending}")
+                other_archive=sql("INSERT INTO app.mr_archive(bah,sjh) VALUES ('7654397','12345697') RETURNING id").splitlines()[0]
+                fact_text="SYNTHETIC_OCR_FACT_TEXT"
+                sql(f"INSERT INTO app.mr_scan_ocr(scan_id,archive_id,status,ocr_text,text_length) VALUES ({pending},{archive},'SUCCEEDED','{fact_text}',{len(fact_text)})")
+                job_ocr=str(uuid.uuid4())
+                sql(f"INSERT INTO app.mr_smart_classification_job(id,archive_id,status,owner_user_id,created_by,idempotency_key,rule_set_version,lexicon_version) VALUES ('{job_ocr}',{archive},'SUCCESS',{actor_ids['ocr']},'synthetic-batch13-ocr','{job_ocr}','synthetic','synthetic')")
+                probes=[]
+                with closing(http.client.HTTPConnection("127.0.0.1",httpport,timeout=15)) as conn:
+                    def probe(method,path,role,expected,body=None,forbidden=()):
+                        headers={"Authorization":"Bearer "+tokens[role],"Content-Type":"application/json"}
+                        conn.request(method,path,body=None if body is None else json.dumps(body),headers=headers)
+                        response=conn.getresponse();payload=response.read()
+                        assert response.status==expected,(method,path,role,response.status,expected)
+                        assert all(x.encode() not in payload for x in forbidden),(method,path,"private fields")
+                        probes.append(dict(method=method,path=path,role=role,status=response.status))
+                        if response.getheader("Content-Type","").startswith("application/json"):return json.loads(payload).get("data")
+                        return payload
+                    private=("SYNTHETIC_PRIVATE_NODE","SYNTHETIC_PRIVATE_SOURCE","SYNTHETIC_PRIVATE_OPENER","SYNTHETIC_PRIVATE_CODE","SYNTHETIC_PRIVATE_SCOPE","SYNTHETIC_PRIVATE_ERROR")
+                    for path,expected_id in (
+                        ("/api/v1/oss/migration/pending?folder=synthetic-pending",pending),
+                        ("/api/v1/oss/migration/management/pending?bah=7654387",pending),
+                        ("/api/v1/oss/migration/management/waiting-sjh?bah=7654388",waiting)):
+                        probe("GET",path,"none",403,forbidden=private)
+                        rows=probe("GET",path,"read",200,forbidden=private)["list"]
+                        assert [r["id"] for r in rows]==[expected_id],(path,rows)
+                    path="/api/v1/oss/migration/readiness?sampleSize=1"
+                    probe("GET",path,"none",403,forbidden=private)
+                    assert probe("GET",path,"read",200,forbidden=private)["activeJob"]["id"]==job
+                    for path in ("/api/v1/oss/migration/statistics","/api/v1/oss/migration/pending-folders"):
+                        probe("GET",path,"none",403);probe("GET",path,"read",200)
+                    prefix="/api/v1/archive-box-records"
+                    for path in (prefix+"?bah=7654389",prefix+"/"+str(box),prefix+"/record/7654389",prefix+"/box/SYNTHETIC_BOX",prefix+"/summary",prefix+"/boxes?keyword=SYNTHETIC_BOX"):
+                        probe("GET",path,"none",403)
+                        data=probe("GET",path,"read",200);assert data is not None
+                    body={"bah":"7654390","sjh":"12345680","boxNo":"SYNTHETIC_NEW_BOX","status":"NORMAL"}
+                    probe("POST",prefix,"read",403,body)
+                    created=probe("POST",prefix,"edit",200,body)["id"]
+                    body["boxNo"]="SYNTHETIC_UPDATED_BOX"
+                    probe("PUT",prefix+"/"+str(created),"read",403,body)
+                    assert probe("PUT",prefix+"/"+str(created),"edit",200,body)["boxNo"]=="SYNTHETIC_UPDATED_BOX"
+                    probe("DELETE",prefix+"/"+str(created),"read",403)
+                    probe("DELETE",prefix+"/"+str(created),"edit",200)
+                    assert sql(f"SELECT count(*) FROM app.mr_archive_box_record WHERE id={created}")=="0"
+                    path="/api/v1/archive-exports/plan/pdf/selection"
+                    probe("POST",path,"read",403,{"ids":[str(scan)]})
+                    assert probe("POST",path,"pdf",200,{"ids":[str(scan)]}) is not None
+                    path="/api/v1/archive-exports/plan/pdf?bah=7654300&selectedCount=1"
+                    probe("GET",path,"read",403)
+                    assert probe("GET",path,"pdf",200) is not None
+                    path=f"/api/v1/img/content/{scan}"
+                    probe("GET",path,"none",403)
+                    assert probe("GET",path,"read",200)==content
+                    path=f"/api/v1/oss/url/{scan}"
+                    probe("GET",path,"none",403)
+                    probe("GET",path,"read",409)
+                    sql(f"INSERT INTO app.image_migration_log(scan_id,local_path,migration_status,error_message) VALUES ({pending},'SYNTHETIC_PRIVATE_LOG_PATH','failed','迁移失败：SOURCE_OR_OSS_TIMEOUT'),({pending},'SYNTHETIC_PRIVATE_LOG_PATH','failed','SYNTHETIC_PRIVATE_LOG_ERROR')")
+                    for path in ("/api/v1/oss/migration/logs?status=failed","/api/v1/oss/migration/management/logs?status=failed&scanId="+str(pending)):
+                        secret_markers=("SYNTHETIC_PRIVATE_LOG_PATH","SYNTHETIC_PRIVATE_LOG_ERROR")
+                        probe("GET",path,"none",403,forbidden=secret_markers)
+                        logs=probe("GET",path,"read",200,forbidden=secret_markers)["list"]
+                        assert len(logs)==2 and {r["errorMessage"] for r in logs}=={"迁移诊断：SOURCE_OR_OSS_TIMEOUT","迁移诊断已保护，请按记录ID核对"}
+                    path=f"/api/v1/scan/{pending}/ocr"
+                    probe("GET",path,"read",403,forbidden=(fact_text,))
+                    summary=probe("GET",path,"ocr",200,forbidden=(fact_text,))
+                    assert summary["status"]=="SUCCEEDED" and summary.get("text") is None
+                    probe("GET",path+"?full=true","ocr",403,forbidden=(fact_text,))
+                    assert probe("GET",path+"?full=true","ocrfull",200)["text"]==fact_text
+                    sql(f"UPDATE app.mr_scan_ocr SET archive_id={other_archive} WHERE scan_id={pending}")
+                    stale=probe("GET",path+"?full=true","ocrfull",200,forbidden=(fact_text,))
+                    assert stale["status"]=="PENDING" and stale.get("text") is None
+                    path=f"/api/v1/archive-records/{archive}/ocr/jobs"
+                    probe("GET",path,"read",403)
+                    assert [x["id"] for x in probe("GET",path,"ocr",200)]==[job_ocr]
+                    assert probe("GET",path,"ocrfull",200)==[]
+                    path="/api/v1/ocr/jobs/"+job_ocr
+                    probe("GET",path,"ocrfull",403)
+                    assert probe("GET",path,"ocr",200)["id"]==job_ocr
+                    probe("GET",path+"/items","ocrfull",403)
+                    assert probe("GET",path+"/items","ocr",200)==[]
+                (lab/"batch13-probes.json").write_text(json.dumps(probes,indent=2))
+                print("BATCH13_PROBES "+json.dumps(probes),flush=True)
+                return
             if args.admission_capacity:
                 # Hold an independent real PG table lock so a full two-slot gate cannot drain.
                 with (lab/"admission-lock.log").open("w") as lock_output:

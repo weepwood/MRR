@@ -38,7 +38,7 @@ public interface MigrationJobMapper {
     int markRunning(@Param("id") Long id, @Param("startedAt") Date startedAt);
 
     @Update("update migration_job set processed_count = #{processedCount}, failed_count = #{failedCount}, " +
-            "rate = #{rate}, updated_at = NOW() where id = #{id}")
+            "rate = #{rate}, updated_at = NOW() where id = #{id} and status in ('running', 'cancelling')")
     int updateProgress(@Param("id") Long id,
                        @Param("processedCount") long processedCount,
                        @Param("failedCount") long failedCount,
@@ -51,7 +51,7 @@ public interface MigrationJobMapper {
             "error_message = CASE WHEN cancel_requested " +
             "THEN COALESCE(NULLIF(#{errorMessage}, ''), '管理员已请求安全取消，任务已停止') " +
             "ELSE #{errorMessage} END, completed_at = #{completedAt}, updated_at = NOW() " +
-            "where id = #{id}")
+            "where id = #{id} and status in ('pending', 'running', 'cancelling')")
     int complete(@Param("id") Long id,
                  @Param("status") String status,
                  @Param("totalCount") long totalCount,

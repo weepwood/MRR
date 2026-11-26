@@ -23,3 +23,5 @@
 后端治理第十一批：[报告](../backend/governance-batch11.md)，前置分组与外部专用候选默认关闭，迁移来源及历史任务字段保护，保留正式验收门禁。
 
 后端治理第十二批：[报告](../backend/governance-batch12.md)，外部凭据严格终态与迁移启动保护，审计候选保持关闭，保留正式采用门禁。
+
+后端治理第十三批：[报告](../backend/governance-batch13.md)、[阶段冻结](../backend/governance-stage-freeze-batch13.md)，迁移受控预览及OCR当前事实关联保护；实验引擎冻结，保留正式采用门禁。

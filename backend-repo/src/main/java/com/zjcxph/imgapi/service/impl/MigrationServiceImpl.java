@@ -102,6 +102,8 @@ public class MigrationServiceImpl implements MigrationService {
 
     @org.springframework.beans.factory.annotation.Value("${app.migration.recover-on-startup:false}")
     private boolean recoverOnStartup;
+    @org.springframework.beans.factory.annotation.Autowired
+    private MigrationMaintenanceRecovery maintenanceRecovery;
 
     @PostConstruct
     public void recoverInterruptedMigrationState() {
@@ -110,15 +112,15 @@ public class MigrationServiceImpl implements MigrationService {
             return;
         }
         try {
-            int interruptedJobs = migrationJobMapper.interruptActiveJobs();
-            int releasedScans = scanMapper.recoverInterruptedMigrations();
+            var recovered=maintenanceRecovery.recoverExclusive();
+            int interruptedJobs=recovered.jobs(),releasedScans=recovered.scans();
             if (interruptedJobs > 0 || releasedScans > 0) {
                 logger.warn("Recovered OSS migration state after restart: jobs={}, scans={}",
                         interruptedJobs, releasedScans);
                 invalidateSummaryCaches();
             }
         } catch (Exception exception) {
-            logger.warn("Unable to recover interrupted OSS migration state during startup", exception);
+            logger.warn("Exclusive migration recovery refused: type={}",exception.getClass().getSimpleName());
         }
     }
 
@@ -657,6 +659,10 @@ public class MigrationServiceImpl implements MigrationService {
             boolean exhausted = false;
 
             while (processed < plannedTotal) {
+                MigrationJob observed=migrationJobMapper.findById(jobId);
+                if(observed==null||!("running".equals(observed.getStatus())||"cancelling".equals(observed.getStatus()))){
+                    invalidateSummaryCaches();return;
+                }
                 if (Boolean.TRUE.equals(migrationJobMapper.isCancelRequested(jobId))) {
                     cancelled = true;
                     break;
@@ -676,6 +682,10 @@ public class MigrationServiceImpl implements MigrationService {
 
                 for (Scan scan : batch) {
                     afterId = Math.max(afterId, scan.getId());
+                    MigrationJob current=migrationJobMapper.findById(jobId);
+                    if(current==null||!("running".equals(current.getStatus())||"cancelling".equals(current.getStatus()))){
+                        invalidateSummaryCaches();return;
+                    }
                     if (Boolean.TRUE.equals(migrationJobMapper.isCancelRequested(jobId))) {
                         cancelled = true;
                         break;
@@ -685,7 +695,7 @@ public class MigrationServiceImpl implements MigrationService {
                     try {
                         result = uploadLoadedScanForJob(scan);
                     } catch (Exception exception) {
-                        logger.error("Migration failed for scan {}", scan.getId(), exception);
+                        logger.error("Migration failed: scanId={}, type={}",scan.getId(),exception.getClass().getSimpleName());
                         result = new OssUploadResult(
                                 scan.getId(),
                                 "failed",
@@ -700,12 +710,15 @@ public class MigrationServiceImpl implements MigrationService {
                     }
                 }
 
-                migrationJobMapper.updateProgress(
+                if(migrationJobMapper.updateProgress(
                         jobId,
                         processed,
                         failed,
                         calculateRate(processed, plannedTotal)
-                );
+                )!=1){
+                    logger.warn("Migration job no longer active: jobId={}",jobId);
+                    invalidateSummaryCaches();return;
+                }
                 if (cancelled) {
                     break;
                 }
@@ -749,7 +762,7 @@ public class MigrationServiceImpl implements MigrationService {
                     failed
             );
         } catch (Exception exception) {
-            logger.error("Migration job {} error", jobId, exception);
+            logger.error("Migration job error: jobId={}, type={}",jobId,exception.getClass().getSimpleName());
             boolean cancelled = Boolean.TRUE.equals(migrationJobMapper.isCancelRequested(jobId));
             migrationJobMapper.complete(
                     jobId,

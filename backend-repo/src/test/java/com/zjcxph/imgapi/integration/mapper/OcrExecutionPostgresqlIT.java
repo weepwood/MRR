@@ -23,6 +23,19 @@ class OcrExecutionPostgresqlIT extends PostgresqlIntegrationTestSupport {
     @Autowired OcrMapper mapper;
     @Autowired JdbcTemplate jdbc;
 
+    @Test void currentFactRequiresMatchingArchiveAndValidImage(){
+        Job current=job(), historical=job();int scan=scan(current.getArchiveId());
+        Fact original=fact(scan,current.getArchiveId());mapper.saveFact(original);
+        assertThat(mapper.factForCurrentArchive(scan,current.getArchiveId()).getOcrText()).isEqualTo(original.getOcrText());
+        jdbc.update("UPDATE app.mr_scan_ocr SET archive_id=? WHERE scan_id=?",historical.getArchiveId(),scan);
+        assertThat(mapper.factForCurrentArchive(scan,current.getArchiveId())).isNull();
+        assertThat(mapper.factForCurrentArchive(scan,historical.getArchiveId())).isNull();
+        assertThat(mapper.fact(scan).getOcrText()).isEqualTo(original.getOcrText());
+        jdbc.update("UPDATE app.mr_scan_ocr SET archive_id=? WHERE scan_id=?",current.getArchiveId(),scan);
+        jdbc.update("UPDATE app.mr_scan SET uploadflag=0 WHERE id=?",scan);
+        assertThat(mapper.factForCurrentArchive(scan,current.getArchiveId())).isNull();
+    }
+
     @Test void claimsWithFencingAndRecoversExpiredPageWithoutLosingProgress() {
         Job job=job(); int scan=scan(job.getArchiveId()); mapper.insert(job); mapper.insertItem(job.getId(),scan); mapper.planned(job.getId(),1);
         Job claimed=mapper.claim("token-one"); assertThat(claimed.getId()).isEqualTo(job.getId());

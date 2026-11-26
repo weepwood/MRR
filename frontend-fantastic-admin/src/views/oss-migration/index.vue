@@ -19,6 +19,7 @@ import {
   CirclePlay as VideoPlay,
 } from 'lucide-vue-next'
 import { computed, onActivated, onBeforeUnmount, onDeactivated, onMounted, reactive, ref, watch } from 'vue'
+import { getReviewImage } from '@/api/modules/classification'
 import {
   cancelMigrationJob,
   createMigrationJob,
@@ -81,7 +82,7 @@ const jobActions: MrrTableAction[] = [{
 }]
 const logViewAction: MrrTableAction = {
   key: 'view-image',
-  label: '查看 OSS 图片',
+  label: '查看当前影像',
   icon: 'i-lucide:image',
   tone: 'primary',
   placement: 'inline',
@@ -813,15 +814,48 @@ function resetLogFilters() {
   void loadLogs()
 }
 
-function openOssUrl(url?: string) {
-  if (!url) {
-    return
-  }
-  window.open(url, '_blank', 'noopener,noreferrer')
+const migrationPreviewVisible = ref(false)
+const migrationPreviewUrl = ref('')
+const migrationPreviewLoading = ref(false)
+const migrationPreviewError = ref('')
+let previewRequest: AbortController | undefined
+
+function clearMigrationPreview() {
+  previewRequest?.abort()
+  previewRequest = undefined
+  if (migrationPreviewUrl.value) { URL.revokeObjectURL(migrationPreviewUrl.value) }
+  migrationPreviewUrl.value = ''
+  migrationPreviewLoading.value = false
+  migrationPreviewError.value = ''
 }
+onDeactivated(() => { migrationPreviewVisible.value = false; clearMigrationPreview() })
+onBeforeUnmount(clearMigrationPreview)
+watch(migrationPreviewVisible, (visible) => {
+  if (!visible) { clearMigrationPreview() }
+}, { flush: 'sync' })
 
 function logActions(row: MigrationLogRecord): MrrTableAction[] {
-  return row.ossUrl ? [logViewAction] : []
+  return row.migrationStatus === 'success' && Number.isSafeInteger(row.scanId) && Number(row.scanId) > 0 ? [logViewAction] : []
+}
+
+async function showMigrationPreview(scanId: number) {
+  clearMigrationPreview()
+  migrationPreviewVisible.value = true
+  migrationPreviewLoading.value = true
+  const controller = new AbortController()
+  previewRequest = controller
+  try {
+    const blob = await getReviewImage(scanId, controller.signal)
+    if (previewRequest !== controller || controller.signal.aborted) { return }
+    if (!blob.type.startsWith('image/')) { throw new Error('影像格式不支持预览') }
+    migrationPreviewUrl.value = URL.createObjectURL(blob)
+  }
+  catch {
+    if (previewRequest === controller && !controller.signal.aborted) { migrationPreviewError.value = '当前影像不可读取或无访问权限' }
+  }
+  finally {
+    if (previewRequest === controller) { migrationPreviewLoading.value = false }
+  }
 }
 
 function handleJobAction(action: string, row: MigrationJob) {
@@ -831,8 +865,8 @@ function handleJobAction(action: string, row: MigrationJob) {
 }
 
 function handleLogAction(action: string, row: MigrationLogRecord) {
-  if (action === 'view-image' && row.ossUrl) {
-    openOssUrl(row.ossUrl)
+  if (action === 'view-image' && logActions(row).length && row.scanId) {
+    void showMigrationPreview(row.scanId)
   }
 }
 
@@ -1414,6 +1448,16 @@ onMounted(() => {
         </template>
       </MrrDataTablePanel>
     </template>
+
+    <el-dialog v-model="migrationPreviewVisible" align-center title="当前影像预览" width="min(900px, 92vw)">
+      <p class="text-sm text-gray-500">
+        按当前有效 Scan ID 重新授权读取，不代表历史迁移时的字节快照。
+      </p>
+      <div v-loading="migrationPreviewLoading" style="min-height: 160px; text-align: center;">
+        <el-alert v-if="migrationPreviewError" :title="migrationPreviewError" type="warning" :closable="false" />
+        <img v-if="migrationPreviewUrl" :src="migrationPreviewUrl" alt="当前影像" style="max-width: 100%; max-height: 65vh; object-fit: contain;">
+      </div>
+    </el-dialog>
 
     <el-dialog v-model="uploadResultVisible" align-center title="手工上传结果" width="min(900px, 92vw)">
       <div v-if="uploadResult" class="upload-summary">

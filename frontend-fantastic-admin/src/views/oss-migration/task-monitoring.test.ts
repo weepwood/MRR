@@ -2,6 +2,7 @@ import type { MigrationJob } from '@/api/modules/oss'
 import { flushPromises, mount, shallowMount } from '@vue/test-utils'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { h, KeepAlive, nextTick, ref } from 'vue'
+import { getReviewImage } from '@/api/modules/classification'
 import * as api from '@/api/modules/oss'
 import Page from './index.vue'
 
@@ -15,6 +16,7 @@ vi.mock('./composables/useMigrationPolling', async (importOriginal) => {
 vi.mock('@/composables/useTableActionLayout', () => ({ useTableActionLayout: () => ({ maxInlineActions: ref(1), actionColumnWidth: ref(120) }) }))
 vi.mock('element-plus', () => ({ ElMessage: { error, success: vi.fn(), warning: vi.fn() } }))
 vi.mock('@/ui/components/ActionDialog', () => ({ actionDialog: { confirm: vi.fn() } }))
+vi.mock('@/api/modules/classification', () => ({ getReviewImage: vi.fn() }))
 vi.mock('@/api/modules/oss', () => Object.fromEntries(['cancelMigrationJob', 'createMigrationJob', 'getMigrationJob', 'getMigrationJobs', 'getMigrationLogs', 'getMigrationReadiness', 'getMigrationStatistics', 'getPendingFolders', 'getPendingManagementRecords', 'getWaitingSjhRecords', 'retryMigrationScans', 'uploadByBah', 'uploadToOss'].map(name => [name, vi.fn()])))
 
 interface State {
@@ -30,6 +32,12 @@ interface State {
   jobHistoryPage?: number
   jobDetailError: boolean
   jobDrawerVisible: boolean
+  migrationPreviewVisible: boolean
+  migrationPreviewUrl: string
+  migrationPreviewLoading: boolean
+  migrationPreviewError: string
+  showMigrationPreview: (id: number) => Promise<void>
+  logActions: (row: { scanId?: number, migrationStatus?: string, ossUrl?: string }) => unknown[]
 }
 function deferred<T>() {
   let resolve!: (value: T) => void
@@ -59,6 +67,48 @@ beforeEach(() => {
 afterEach(() => {
   wrappers.splice(0).forEach(wrapper => wrapper.unmount())
   vi.restoreAllMocks()
+})
+
+describe('迁移受控影像预览', () => {
+  it('成功日志无签名地址也可通过当前 Scan ID 预览，关闭时回收 Blob', async () => {
+    const create = vi.fn(() => 'blob:synthetic-preview')
+    const revoke = vi.fn()
+    vi.stubGlobal('URL', class extends URL {
+      static createObjectURL = create
+      static revokeObjectURL = revoke
+    })
+    try {
+      const { vm } = await setup()
+      expect(vm.logActions({ scanId: 7, migrationStatus: 'success' })).toHaveLength(1)
+      expect(vm.logActions({ scanId: 8, migrationStatus: 'failed', ossUrl: 'https://invalid.example/' })).toHaveLength(0)
+      vi.mocked(getReviewImage).mockResolvedValueOnce(new Blob(['synthetic'], { type: 'image/png' }))
+      await vm.showMigrationPreview(7)
+      expect(getReviewImage).toHaveBeenCalledWith(7, expect.any(AbortSignal))
+      expect(vm.migrationPreviewUrl).toBe('blob:synthetic-preview')
+      vm.migrationPreviewVisible = false
+      await nextTick()
+      expect(revoke).toHaveBeenCalledWith('blob:synthetic-preview')
+      expect(vm.migrationPreviewUrl).toBe('')
+    }
+    finally { vi.unstubAllGlobals() }
+  })
+  it('关闭预览后拒绝迟到内容，并将拒绝响应显示为安全提示', async () => {
+    const { vm } = await setup()
+    const pending = deferred<Blob>()
+    vi.mocked(getReviewImage).mockReturnValueOnce(pending.promise)
+    const task = vm.showMigrationPreview(7)
+    const signal = vi.mocked(getReviewImage).mock.calls.at(-1)?.[1]
+    vm.migrationPreviewVisible = false
+    await nextTick()
+    expect(signal?.aborted).toBe(true)
+    pending.resolve(new Blob(['synthetic'], { type: 'image/png' }))
+    await task
+    expect(vm.migrationPreviewUrl).toBe('')
+    vi.mocked(getReviewImage).mockRejectedValueOnce(new Error('synthetic forbidden'))
+    await vm.showMigrationPreview(8)
+    expect(vm.migrationPreviewError).toBe('当前影像不可读取或无访问权限')
+    expect(vm.migrationPreviewLoading).toBe(false)
+  })
 })
 
 describe('oSS任务监控一致性', () => {

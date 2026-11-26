@@ -171,7 +171,9 @@ public class OssController {
     @GetMapping("/migration/readiness")
     public Result<MigrationReadinessDTO> getMigrationReadiness(
             @RequestParam(defaultValue = "100") int sampleSize) {
-        return Result.success(migrationService.getReadiness(sampleSize));
+        var readiness=migrationService.getReadiness(sampleSize);
+        com.zjcxph.imgapi.utils.MigrationLogPrivacy.sanitizeJob(readiness.getActiveJob());
+        return Result.success(readiness);
     }
 
     @Operation(summary = "获取待迁移记录列表")
@@ -182,7 +184,7 @@ public class OssController {
         int safeLimit = Math.max(1, Math.min(limit, MAX_PENDING_LIMIT));
         List<Scan> pending = migrationService.getPendingMigrations(safeLimit, folder);
         Map<String, Object> response = new HashMap<>();
-        response.put("list", pending);
+        response.put("list", pending.stream().map(com.zjcxph.imgapi.utils.MigrationLogPrivacy::migrationRecord).toList());
         response.put("total", pending.size());
         response.put("limit", safeLimit);
         return Result.success(response);

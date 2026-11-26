@@ -48,3 +48,5 @@
 第十一批见 [报告](governance-batch11.md)、[P1提案](governance-batch11-proposal.md)、[资源清单](api-resource-review-batch11.tsv)。双阶段分组/集合候选，实际同代码A40.65/B64.06RPS，最终63.14RPS/P95 117.654ms仍不采用；三轮5063请求3041配对零漏重。真实批量医疗事件/迁移提交确认丢失、外部专用失败回滚及历史任务隐私；累计32路由。剩余前置尾延迟、收尾恢复/多实例、外部终态、实际OSS条件写入及孤儿盘点、受控预览/244路由、Windows/长时及正式门禁。
 
 第十二批见 [报告](governance-batch12.md)、[累计风险审查](governance-cumulative-review-batch12.md)、[P1提案](governance-batch12-proposal.md)、[资源清单](api-resource-review-batch12.tsv)。103定向/89PG、四轮7517请求4510配对；两组快照AB均无性能改善，不启用。OUTCOME同进程恢复、外部凭据SUCCESS事务、条件PUT实际字节校验、默认禁全局启动恢复已验证。保留断流/异步超时、外部流终态、跨实例租约、实际OSS/孤儿、244路由及平台/长时/正式门禁。
+
+第十三批见 [报告](governance-batch13.md)、[维护恢复](migration-maintenance-batch13.md)、[阶段冻结](governance-stage-freeze-batch13.md)、[资源清单](api-resource-review-batch13.tsv)。新增22路由，累计54/276；74Java/33PG/44前端/54HTTP；OCR关联、迁移响应/终态、独占维护与受控预览修复。冻结审计实验引擎扩张；222路由及真实跨主机租约/存储围栏、现场平台/外部终态、正式门禁未闭合。

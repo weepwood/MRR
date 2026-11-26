@@ -2,7 +2,7 @@
 import type { PatientRecord } from '@/api/modules/patients'
 import type { MrrTableAction } from '@/components/MrrTableActions/types'
 import type { EffectiveSystemSettings } from '@/utils/system-settings'
-import { computed, onMounted, onUnmounted, reactive, ref } from 'vue'
+import { computed, onMounted, onUnmounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { getPatients } from '@/api/modules/patients'
 import AppEmpty from '@/components/AppEmpty/index.vue'
@@ -14,24 +14,20 @@ import MrrFilterBar from '@/components/MrrFilterBar/index.vue'
 import MrrPageHeader from '@/components/MrrPageHeader/index.vue'
 import MrrPageShell from '@/components/MrrPageShell/index.vue'
 import MrrTableActions from '@/components/MrrTableActions/index.vue'
+import { useCrudList } from '@/composables/useCrudList'
 import { useTableActionLayout } from '@/composables/useTableActionLayout'
+import { useUserStore } from '@/store/modules/user'
 import useAuth from '@/utils/composables/useAuth'
 import { copyText as copyToClipboard } from '@/utils/copy-text'
 import { loadEffectiveSystemSettings, SYSTEM_SETTINGS_UPDATED_EVENT } from '@/utils/system-settings'
-import { pageRowOffset, tableSequenceColumn } from '@/utils/table-sequence'
+import { tableSequenceColumn } from '@/utils/table-sequence'
 import PatientAnalyticsPanel from './components/PatientAnalyticsPanel.vue'
 import PatientEditDialog from './components/PatientEditDialog.vue'
 
 defineOptions({ name: 'PatientsPage' })
 
 const router = useRouter()
-const loading = ref(false)
-const tableData = ref<PatientRecord[]>([])
 const error = ref('')
-const page = ref(1)
-const size = ref(20)
-const total = ref(0)
-const loadedRowOffset = ref(0)
 const revealedIdCards = ref(new Set<string>())
 const patientIdCardRevealEnabled = ref(false)
 const patientIdCardCopyEnabled = ref(false)
@@ -41,7 +37,56 @@ const analyticsRefreshKey = ref(0)
 const { auth } = useAuth()
 const canEditPatients = computed(() => auth('record:edit'))
 
-const filters = reactive({ keyword: '' })
+const userStore = useUserStore()
+const canReadPatients = computed(() => userStore.isSessionVerified && auth('record:read'))
+const {
+  list: tableData,
+  total,
+  loadedRowOffset,
+  pageNum: page,
+  pageSize: size,
+  loading,
+  query: filters,
+  loadData,
+  handleSearch,
+  resetFilters,
+  handlePageChange,
+  handleSizeChange,
+} = useCrudList<PatientRecord, { keyword: string }>({
+  defaultQuery: { keyword: '' },
+  immediate: false,
+  session: {
+    key: () => String(userStore.sessionEpoch),
+    allowed: () => canReadPatients.value,
+    onReset: () => {
+      error.value = ''
+      revealedIdCards.value.clear()
+      editDialogVisible.value = false
+      editingPatient.value = undefined
+    },
+  },
+  fetchApi: async (params, { isCurrent }) => {
+    if (isCurrent()) { error.value = '' }
+    try {
+      const res = await getPatients({ page: params.page, size: params.size, ...(params.keyword.trim() && { keyword: params.keyword.trim() }) })
+      if (isCurrent()) { revealedIdCards.value.clear() }
+      const payload = res.data
+      return {
+        list: Array.isArray(payload?.list) ? payload.list : [],
+        total: Number(payload?.total || 0),
+        page: payload?.page ?? params.page,
+        size: payload?.size ?? params.size,
+      }
+    }
+    catch (err: unknown) {
+      if (isCurrent()) {
+        error.value = err instanceof Error ? err.message : '患者列表加载失败'
+        revealedIdCards.value.clear()
+      }
+      return { list: [], total: 0, page: params.page, size: params.size }
+    }
+  },
+})
 const patientActions: MrrTableAction[] = [
   {
     key: 'edit',
@@ -56,52 +101,9 @@ const {
   actionColumnWidth: patientActionColumnWidth,
 } = useTableActionLayout(patientActions.length, 1)
 
-async function loadData() {
-  loading.value = true
-  try {
-    error.value = ''
-    const params = { page: page.value, size: size.value, ...(filters.keyword.trim() && { keyword: filters.keyword.trim() }) }
-    const res = await getPatients(params)
-    const payload = res.data ?? { list: [], total: 0 }
-    tableData.value = Array.isArray(payload.list) ? payload.list : []
-    loadedRowOffset.value = pageRowOffset(res.data?.page ?? params.page, res.data?.size ?? params.size)
-    total.value = Number(payload.total || 0)
-    revealedIdCards.value.clear()
-  }
-  catch (err: unknown) {
-    tableData.value = []
-    total.value = 0
-    error.value = err instanceof Error ? err.message : '患者列表加载失败'
-  }
-  finally {
-    loading.value = false
-  }
-}
-
 function refreshAll() {
   void loadData()
   analyticsRefreshKey.value += 1
-}
-
-function handleSearch() {
-  page.value = 1
-  void loadData()
-}
-
-function resetFilters() {
-  filters.keyword = ''
-  handleSearch()
-}
-
-function handlePageChange(nextPage: number) {
-  page.value = nextPage
-  void loadData()
-}
-
-function handleSizeChange(nextSize: number) {
-  size.value = nextSize
-  page.value = 1
-  void loadData()
 }
 
 function openDataExchange() {
@@ -120,6 +122,7 @@ function handlePatientAction(action: string, row: PatientRecord) {
 }
 
 function handlePatientSaved(updated: PatientRecord) {
+  if (!canReadPatients.value || editingPatient.value?.id !== updated.id) { return }
   const index = tableData.value.findIndex(item => item.id === updated.id)
   if (index >= 0) {
     tableData.value[index] = updated

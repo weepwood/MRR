@@ -16,6 +16,8 @@ const half = ref(true)
 const mixed = ref(false)
 const previewCount = ref(3)
 const previewSource = ref('local')
+const previewNote = ref('')
+const previewDate = ref('2026-11-26')
 const previewStyle = computed(() => {
   if (scheme.value === 'follow') { return undefined }
   if (scheme.value === 'classic-light' || scheme.value === 'classic-dark') {
@@ -154,8 +156,6 @@ const previewStyle = computed(() => {
           <el-form-item label="校验示例" :error="validation.trim() ? '' : '请输入示例值'">
             <el-input v-model="validation" aria-label="局部校验输入" />
           </el-form-item>
-        </el-form>
-        <el-form label-position="top" class="mrr-edit-form mrr-edit-form--paired">
           <el-form-item label="数字输入">
             <el-input-number v-model="previewCount" :min="0" :max="10" aria-label="局部数字输入" />
           </el-form-item>
@@ -164,8 +164,14 @@ const previewStyle = computed(() => {
               <el-option label="本地" value="local" /><el-option label="归档" value="archive" />
             </el-select>
           </el-form-item>
+          <el-form-item label="日期选择">
+            <el-date-picker v-model="previewDate" type="date" value-format="YYYY-MM-DD" aria-label="局部日期" :teleported="false" />
+          </el-form-item>
           <el-form-item label="禁用输入">
             <el-input model-value="禁用状态" disabled />
+          </el-form-item>
+          <el-form-item label="多行输入">
+            <el-input v-model="previewNote" type="textarea" :rows="2" aria-label="局部备注" />
           </el-form-item>
         </el-form>
         <div class="example-row">

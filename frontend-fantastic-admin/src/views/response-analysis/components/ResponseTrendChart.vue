@@ -92,6 +92,7 @@ function formatDateKey(bucket: string) {
       <MrrRequestHeatmap
         :data="requestHeatmap"
         :days="365"
+        fit-width
       />
     </section>
 

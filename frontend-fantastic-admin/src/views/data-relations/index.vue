@@ -535,7 +535,9 @@ onMounted(() => {
                 </div>
                 <div>
                   <dt>缺失</dt>
-                  <dd>{{ formatNumber(relation.missingCount) }}</dd>
+                  <dd :class="{ 'relation-count--missing': Number(relation.missingCount) > 0 }">
+                    {{ formatNumber(relation.missingCount) }}
+                  </dd>
                 </div>
               </dl>
               <small class="relation-card__provenance">来源：{{ relation.source }} · 统计时间：{{ formatDateTime(relation.analyzedAt) }}</small>
@@ -1231,7 +1233,7 @@ p {
 }
 
 .relation-card p {
-  margin: var(--mrr-space-3) 0;
+  margin: var(--mrr-space-2) 0;
   font-size: var(--mrr-font-size-sm);
   line-height: 1.5;
   color: var(--el-text-color-secondary);
@@ -1248,10 +1250,14 @@ p {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(min(100%, 96px), 1fr));
   gap: var(--mrr-space-3);
-  padding: var(--mrr-space-3) 0;
-  margin: var(--mrr-space-3) 0;
+  padding: var(--mrr-space-2) 0;
+  margin: var(--mrr-space-2) 0;
   border-top: 1px solid var(--mrr-border);
   border-bottom: 1px solid var(--mrr-border);
+}
+
+.relation-count--missing {
+  color: var(--mrr-tone-warning-ink);
 }
 
 .relation-card__provenance {

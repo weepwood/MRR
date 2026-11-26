@@ -313,3 +313,5 @@ base.css 的 mrr-nav-leaf 负责所有叶子选中色条及动效，按语义ARI
 专业构图深化：表单定宽与帮助文字归公共forms-geometry-viewer.css，监控窄屏摘要显式变体归metric-card.css，图表通用轴/图例归chart-theme.ts；局部暖色预览复用正式palette与warm-flat.css的明确作用域，不持久化、不影响浮层。影像墙比例由ArchiveWall负责，抽屉过渡由overlay-shells.css负责。
 
 V1.2 第三轮：外壳阴影及分隔归公共tokens；权限角色排版和运维问题行归业务页面，影像阅读表面归PreviewPanel/ThumbStrip/PreviewActionBar；热力图与排行各自管理数据图形几何，经典局部预览读取正式主题配置并仅映射自身控件色彩，不写入全站。
+
+重点视觉收口：热力图尺寸适配归 MrrRequestHeatmap 显式 fit-width 选项，调用方仅开启；图表失活任务清理归 useMrrChart，运行错误技术分区归业务详情，局部日期/多行输入归展厅，不另建主题或日期选择组件。

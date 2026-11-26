@@ -26,7 +26,7 @@ const labels = computed(() => props.data.map((item, index) => (
   props.showRank ? `${index + 1}. ${item.label}` : item.label
 )))
 
-const labelGutter = computed(() => Math.max(28, ...props.data.map(item => Number(item.count).toLocaleString('zh-CN').length * 7 + 12)))
+const labelGutter = computed(() => props.data.reduce((gutter, item) => Math.max(gutter, Number(item.count).toLocaleString('zh-CN').length * 8 + 16), 28))
 
 const option = computed<ECOption>(() => ({
   tooltip: {

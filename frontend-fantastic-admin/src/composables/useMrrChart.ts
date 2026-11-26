@@ -79,7 +79,7 @@ export function useMrrChart(
   }
 
   function scheduleThemeRender() {
-    if (themeFrame !== null) {
+    if (!active || themeFrame !== null) {
       return
     }
     // 同一帧内的多次属性变更合并成一次检查。
@@ -214,6 +214,11 @@ export function useMrrChart(
 
   onDeactivated(() => {
     active = false
+    clearRetryTimer()
+    if (themeFrame !== null) {
+      window.cancelAnimationFrame(themeFrame)
+      themeFrame = null
+    }
   })
 
   onBeforeUnmount(() => {

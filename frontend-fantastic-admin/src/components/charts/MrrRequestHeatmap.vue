@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import type { MrrRequestHeatmapItem } from '@/types/chart'
+import { useElementSize } from '@vueuse/core'
 import { computed, onBeforeUnmount, ref } from 'vue'
 
 defineOptions({ name: 'MrrRequestHeatmap' })
@@ -9,11 +10,13 @@ const props = withDefaults(defineProps<{
   days?: number
   cellSize?: number
   cellGap?: number
+  fitWidth?: boolean
   emptyDescription?: string
 }>(), {
   days: 365,
   cellSize: 11,
   cellGap: 3,
+  fitWidth: false,
   emptyDescription: '近一年暂无请求数据',
 })
 
@@ -95,11 +98,16 @@ const calendarDays = computed<HeatmapDay[]>(() => {
 })
 
 const weekCount = computed(() => Math.ceil(calendarDays.value.length / 7))
+const scrollRegion = ref<HTMLElement>()
+const { width: availableWidth } = useElementSize(scrollRegion)
+const fittedCellSize = computed(() => props.fitWidth && availableWidth.value > 0
+  ? Math.max(props.cellSize, Math.min(18, Math.floor((availableWidth.value - 40 - Math.max(0, weekCount.value - 1) * props.cellGap) / weekCount.value)))
+  : props.cellSize)
 const gridWidth = computed(() => (
-  weekCount.value * props.cellSize + Math.max(0, weekCount.value - 1) * props.cellGap
+  weekCount.value * fittedCellSize.value + Math.max(0, weekCount.value - 1) * props.cellGap
 ))
 const chartStyle = computed(() => ({
-  '--heatmap-cell-size': `${props.cellSize}px`,
+  '--heatmap-cell-size': `${fittedCellSize.value}px`,
   '--heatmap-cell-gap': `${props.cellGap}px`,
   '--heatmap-grid-width': `${gridWidth.value}px`,
   '--heatmap-week-count': weekCount.value,
@@ -306,7 +314,7 @@ onBeforeUnmount(hideTooltip)
     </header>
 
     <div class="heatmap-viewport" @pointerleave="hideTooltip">
-      <div class="heatmap-scroll" @scroll.passive="hideTooltip" @wheel.passive="hideTooltip">
+      <div ref="scrollRegion" class="heatmap-scroll" @scroll.passive="hideTooltip" @wheel.passive="hideTooltip">
         <div class="heatmap-content">
           <div class="month-labels" aria-hidden="true">
             <span

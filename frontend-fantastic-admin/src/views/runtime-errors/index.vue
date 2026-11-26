@@ -488,36 +488,44 @@ function levelTagType(level: string) {
       </div>
       <AppLoading v-if="detailLoading" type="card" :cols="1" />
       <AppError v-else-if="detailError" :message="detailError" @retry="retryDetail" />
-      <el-descriptions v-else-if="current" direction="vertical" class="mrr-detail-descriptions" :column="isNarrowScreen ? 1 : 2" border>
-        <el-descriptions-item label="错误编号">
-          <code class="detail-code">{{ current.errorId }}</code>
-          <el-button link type="primary" @click="copyText(current?.errorId || '', '错误编号已复制')">
-            复制
-          </el-button>
-        </el-descriptions-item>
-        <el-descriptions-item label="级别">
-          <el-tag :type="levelTagType(current.level)">{{ current.level }}</el-tag>
-        </el-descriptions-item>
-        <el-descriptions-item label="累计次数">{{ current.occurrenceCount }}</el-descriptions-item>
-        <el-descriptions-item label="模块">{{ current.module || '-' }}</el-descriptions-item>
-        <el-descriptions-item label="首次发生">{{ formatDateTime(current.firstSeenAt) }}</el-descriptions-item>
-        <el-descriptions-item label="最后发生">{{ formatDateTime(current.lastSeenAt) }}</el-descriptions-item>
-        <el-descriptions-item label="线程" :span="isNarrowScreen ? 1 : 2">{{ current.threadName || '-' }}</el-descriptions-item>
-        <el-descriptions-item label="Request ID" :span="isNarrowScreen ? 1 : 2">
-          <code class="detail-code">{{ current.requestId || '-' }}</code>
-          <el-button v-if="current?.requestId" link type="primary" @click="copyText(current?.requestId || '', 'Request ID 已复制')">
-            复制
-          </el-button>
-        </el-descriptions-item>
-        <el-descriptions-item label="记录器" :span="isNarrowScreen ? 1 : 2">{{ current.loggerName }}</el-descriptions-item>
-        <el-descriptions-item label="异常类型" :span="isNarrowScreen ? 1 : 2">{{ current.exceptionType || '-' }}</el-descriptions-item>
-        <el-descriptions-item label="错误摘要" :span="isNarrowScreen ? 1 : 2">
+      <div v-else-if="current" class="error-detail-content">
+        <h3 class="error-detail-heading">事件概况</h3>
+        <el-descriptions direction="vertical" class="mrr-detail-descriptions" :column="isNarrowScreen ? 1 : 2" border>
+          <el-descriptions-item label="错误编号">
+            <code class="detail-code">{{ current.errorId }}</code>
+            <el-button link type="primary" @click="copyText(current?.errorId || '', '错误编号已复制')">
+              复制
+            </el-button>
+          </el-descriptions-item>
+          <el-descriptions-item label="级别">
+            <el-tag :type="levelTagType(current.level)">{{ current.level }}</el-tag>
+          </el-descriptions-item>
+          <el-descriptions-item label="累计次数">{{ current.occurrenceCount }}</el-descriptions-item>
+          <el-descriptions-item label="模块">{{ current.module || '-' }}</el-descriptions-item>
+          <el-descriptions-item label="首次发生">{{ formatDateTime(current.firstSeenAt) }}</el-descriptions-item>
+          <el-descriptions-item label="最后发生">{{ formatDateTime(current.lastSeenAt) }}</el-descriptions-item>
+        </el-descriptions>
+        <h3 class="error-detail-heading">请求与技术信息</h3>
+        <el-descriptions direction="vertical" class="mrr-detail-descriptions" :column="isNarrowScreen ? 1 : 2" border>
+          <el-descriptions-item label="线程">{{ current.threadName || '-' }}</el-descriptions-item>
+          <el-descriptions-item label="Request ID">
+            <code class="detail-code">{{ current.requestId || '-' }}</code>
+            <el-button v-if="current?.requestId" link type="primary" @click="copyText(current?.requestId || '', 'Request ID 已复制')">
+              复制
+            </el-button>
+          </el-descriptions-item>
+          <el-descriptions-item label="记录器">{{ current.loggerName }}</el-descriptions-item>
+          <el-descriptions-item label="异常类型">{{ current.exceptionType || '-' }}</el-descriptions-item>
+        </el-descriptions>
+        <section class="error-detail-diagnostics" aria-labelledby="error-summary-heading">
+          <h3 id="error-summary-heading" class="error-detail-heading">错误摘要</h3>
           <pre class="detail-pre summary-pre">{{ summaryDisplay(current) }}</pre>
-        </el-descriptions-item>
-        <el-descriptions-item label="异常堆栈" :span="isNarrowScreen ? 1 : 2">
+        </section>
+        <section class="error-detail-diagnostics" aria-labelledby="error-stack-heading">
+          <h3 id="error-stack-heading" class="error-detail-heading">异常堆栈</h3>
           <pre class="detail-pre">{{ current.stackTrace || '该事件没有异常堆栈。' }}</pre>
-        </el-descriptions-item>
-      </el-descriptions>
+        </section>
+      </div>
     </el-dialog>
   </MrrPageShell>
 </template>
@@ -576,6 +584,25 @@ function levelTagType(level: string) {
   font-variant-numeric: tabular-nums;
 }
 
+.error-detail-content {
+  display: grid;
+  gap: var(--mrr-space-3);
+  min-width: 0;
+}
+
+.error-detail-heading {
+  margin: 0;
+  font-size: var(--mrr-font-size-md);
+  font-weight: var(--mrr-font-weight-heading);
+  color: var(--mrr-foreground);
+}
+
+.error-detail-diagnostics {
+  display: grid;
+  gap: var(--mrr-space-2);
+  min-width: 0;
+}
+
 .detail-pre {
   box-sizing: border-box;
   max-height: 420px;
@@ -583,8 +610,9 @@ function levelTagType(level: string) {
   padding: var(--mrr-space-3);
   overflow: auto;
   border-radius: var(--mrr-radius-md);
-  background: var(--el-fill-color-light);
-  color: var(--el-text-color-primary);
+  background: var(--mrr-muted);
+  border: 1px solid var(--mrr-border);
+  color: var(--mrr-foreground);
   font-family: var(--mrr-font-mono);
   font-size: var(--mrr-font-size-xs);
   line-height: 1.6;

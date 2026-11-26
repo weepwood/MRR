@@ -206,11 +206,11 @@
 | `statistics` | `mr_statistics` | `record:read` | 否 | `bah`/`sjh`/`patientid` 后 4 位、`patientname` 保留首字 | 启用 |
 | `data_quality_issue` | `mrr_data_quality_issue` | `record:read` | 否 | `bah`/`sjh` 后 4 位，`detail` 截断 500 | 启用 |
 | `system_error_event` | `system_error_event` | `system:error:read` | 否 | `error_ids` 整列剪掉，堆栈截断 2000 | 启用 |
-| `access_log` | `access_log` | `system:manage` | 否 | `query_string`/`request_body`/`referer` 整列剪掉 | 启用 |
+| `access_log` | `access_log` | `system:manage` | 否 | `query_string`/`request_body`/`referer`/`request_uri`/`endpoint_template`/`user_agent`/`audit_description`/`error_message` 整列剪掉；`audit_target` 按审计对象策略保护 | 启用 |
 | `auth_user` | `mr_auth_user` | `system:manage` | 否 | `password_hash`/`password_version` 整列剪掉；`display_name` 保留首字；`contact_info` 电话脱敏 | 启用 |
 | `auth_role` | `mr_auth_role` | `system:manage` | 否 | 角色名称非个人数据，原样返回 | 启用 |
 | `archive_ip_binding` | `mr_archive_ip_binding` | `system:manage` | 否 | 无 | 启用 |
-| `external_access_log` | `mr_external_archive_access_log` | `system:manage` | 否 | `bah`/`sjh` 后 4 位 | 启用 |
+| `external_access_log` | `mr_external_archive_access_log` | `system:manage` | 否 | `bah`/`sjh` 后 4 位；`user_agent`/`detail` 整列剪掉 | 启用 |
 | `archive_search_history` | `mr_archive_search_history` | `system:manage` | 否 | `bah`/`sjh` 后 4 位 | 启用 |
 | `migration_job` | `migration_job` | `system:read` | 否 | 无 | 启用 |
 | `image_migration_log` | `image_migration_log` | `system:read` | 否 | `local_path` 只留文件名、`oss_url` 整列剪掉 | 启用 |

@@ -136,10 +136,27 @@ class DbBrowseRegistryTest {
         assertThat(registry.find("auth_user").orElseThrow().returnedColumns())
                 .extracting(DbBrowseColumn::name)
                 .doesNotContain("password_hash", "password_version");
-        assertThat(registry.find("access_log").orElseThrow().returnedColumns())
+        DbBrowseTable accessLog = registry.find("access_log").orElseThrow();
+        Set<String> hiddenAccessColumns = Set.of(
+                "query_string", "request_body", "referer", "request_uri",
+                "endpoint_template", "user_agent", "audit_description", "error_message");
+        assertThat(accessLog.columns().stream().filter(column -> !column.returned())
+                .map(DbBrowseColumn::name).collect(Collectors.toSet()))
+                .isEqualTo(hiddenAccessColumns);
+        assertThat(accessLog.returnedColumns())
                 .extracting(DbBrowseColumn::name)
-                .doesNotContain("query_string", "request_body", "referer");
-        assertThat(registry.find("access_log").orElseThrow().omittedColumnCount()).isEqualTo(3);
+                .doesNotContainAnyElementsOf(hiddenAccessColumns);
+        assertThat(accessLog.omittedColumnCount()).isEqualTo(8);
+        assertThat(accessLog.column("audit_target").orElseThrow().mask())
+                .isEqualTo(MaskStrategy.AUDIT_TARGET);
+
+        DbBrowseTable externalLog = registry.find("external_access_log").orElseThrow();
+        assertThat(externalLog.columns().stream().filter(column -> !column.returned())
+                .map(DbBrowseColumn::name).collect(Collectors.toSet()))
+                .containsExactlyInAnyOrder("user_agent", "detail");
+        assertThat(externalLog.returnedColumns())
+                .extracting(DbBrowseColumn::name)
+                .doesNotContain("user_agent", "detail");
         // 任务租约令牌等同凭据：拿到它就能冒充 worker 续租/领任务，必须整列不返回。
         assertThat(registry.find("smart_classification_job").orElseThrow().returnedColumns())
                 .extracting(DbBrowseColumn::name)

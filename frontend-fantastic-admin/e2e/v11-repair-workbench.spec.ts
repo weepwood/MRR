@@ -291,6 +291,12 @@ test('异常样本按规则和级别筛选，明确区分无匹配与无样本',
   await page.locator('.issue-rule-select').click()
   await page.getByRole('option', { name: '合成规则甲' }).click()
   await expect(count).toHaveText('匹配 1 / 已加载 2 个样本')
+  await page.locator('.el-select').filter({ has: page.getByRole('combobox', { name: '异常级别筛选' }) }).click()
+  await page.getByRole('option', { name: '严重', exact: true }).click()
+  await expect(count).toHaveText('匹配 0 / 已加载 2 个样本')
+  await page.locator('.el-select').filter({ has: page.getByRole('combobox', { name: '异常级别筛选' }) }).click()
+  await page.getByRole('option', { name: '警告', exact: true }).click()
+  await expect(count).toHaveText('匹配 1 / 已加载 2 个样本')
   await page.getByRole('textbox', { name: '异常关键字筛选' }).fill('无匹配')
   await expect(count).toHaveText('匹配 0 / 已加载 2 个样本')
   await expect(page.getByText('没有符合筛选条件的样本', { exact: true })).toBeVisible()
@@ -326,4 +332,55 @@ test('规则直接定位样本，失败时明确保留旧结果并可重试', as
   await region.getByRole('button', { name: '刷新样本' }).click()
   await expect(page.getByText('异常样本刷新失败，以下为上次成功读取的结果')).toHaveCount(0)
   await region.screenshot({ path: testInfo.outputPath('sample-drilldown.png'), animations: 'disabled' })
+})
+
+test('异常样本首次读取失败不可显示为无异常，成功空结果可恢复', async ({ page }) => {
+  let failed = true
+  await page.route('**/api/v1/system/data-quality/summary', route => route.fulfill({ json: { code: 200, data: { running: false, checks: [] } } }))
+  await page.route('**/api/v1/system/data-quality/issues?*', route => failed
+    ? route.fulfill({ status: 400, json: { code: 400, message: '合成失败' } })
+    : route.fulfill({ json: { code: 200, data: [] } }))
+  await page.goto('/data-relations')
+  await page.getByRole('tab', { name: '检查与异常' }).click()
+  const region = page.getByRole('region', { name: '异常样本检查区' })
+  await expect(page.getByText('异常样本读取失败，不能判断当前是否存在异常')).toBeVisible()
+  await expect(region.getByRole('status')).toHaveText('尚未取得样本')
+  await expect(region.getByText('当前没有异常样本', { exact: true })).toHaveCount(0)
+  await expect(page.getByText('规则结果尚未取得', { exact: true })).toBeVisible()
+  failed = false
+  await region.getByRole('button', { name: '刷新样本' }).click()
+  await expect(region.getByRole('status')).toHaveText('匹配 0 / 已加载 0 个样本')
+  await expect(region.getByText('当前没有异常样本', { exact: true })).toBeVisible()
+})
+
+test('异常样本并发刷新普通失败后访问拒绝必须清除已加载证据', async ({ page }) => {
+  let denied = false
+  const sample = { id: 51, check_code: 'SYNTHETIC', check_name: '合成独立规则', severity: 'WARNING', entity_type: 'mr_scan', entity_id: '51' }
+  await page.route('**/api/v1/system/data-quality/summary', route => denied
+    ? route.fulfill({ status: 400, json: { code: 400, message: '合成普通失败' } })
+    : route.fulfill({ json: { code: 200, data: { running: false, checks: [{ checkCode: 'SYNTHETIC', checkName: '合成独立规则', severity: 'WARNING', issueCount: 1 }] } } }))
+  await page.route('**/api/v1/system/data-quality/issues?*', async (route) => {
+    if (denied) {
+      // 故意延后拒绝，复现普通错误先到达的并发顺序。
+      await new Promise(resolve => setTimeout(resolve, 600))
+      await route.fulfill({ status: 403, json: { code: 403, message: '合成访问拒绝' } })
+    }
+    else {
+      await route.fulfill({ json: { code: 200, data: [sample] } })
+    }
+  })
+  await page.goto('/data-relations')
+  await page.getByRole('tab', { name: '检查与异常' }).click()
+  const region = page.getByRole('region', { name: '异常样本检查区' })
+  await expect(region.getByRole('status')).toHaveText('匹配 1 / 已加载 1 个样本')
+  await page.getByRole('button', { name: '查看规则 合成独立规则 的样本' }).click()
+  denied = true
+  await region.getByRole('button', { name: '刷新样本' }).click()
+  await expect(region.getByRole('status')).toHaveText('尚未取得样本')
+  await expect(region.getByText('合成独立规则', { exact: true })).toHaveCount(0)
+  await expect(page.getByRole('button', { name: '查看规则 合成独立规则 的样本' })).toHaveCount(0)
+  await expect(page.getByText('异常样本刷新失败，以下为上次成功读取的结果')).toHaveCount(0)
+  denied = false
+  await region.getByRole('button', { name: '刷新样本' }).click()
+  await expect(region.getByRole('status')).toHaveText('匹配 1 / 已加载 1 个样本')
 })

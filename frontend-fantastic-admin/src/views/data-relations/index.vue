@@ -197,7 +197,7 @@ function archiveActions(row: ArchiveSearchResult): MrrTableAction[] {
 }
 
 const latestRun = computed(() => qualitySummary.value?.latestRun ?? overview.value?.latestQualityRun ?? null)
-const checks = computed<QualityCheck[]>(() => qualitySummary.value?.checks ?? overview.value?.relationChecks ?? [])
+const checks = computed<QualityCheck[]>(() => qualitySummary.value?.checks ?? [])
 const issueRules = computed(() => [...new Map([...checks.value.map(check => [checkCode(check), checkName(check)] as const), ...issues.value.map(issue => [issueCode(issue), issueName(issue)] as const)])].filter(([code]) => !!code).map(([code, name]) => ({ code, name })))
 watch(issueRules, (rules) => {
   if (issueRule.value && !rules.some(rule => rule.code === issueRule.value)) issueRule.value = ''
@@ -321,11 +321,18 @@ async function loadQualityData() {
   qualityLoading.value = true
   qualityFailed.value = false
   try {
-    const [summaryResponse, issueResponse] = await Promise.all([
+    // A transport failure must not mask a later access denial from the other read.
+    const [summaryResult, issueResult] = await Promise.allSettled([
       getDataQualitySummary(),
       getDataQualityIssues(300),
     ])
     if (current !== qualityVersion) return
+    const failures = [summaryResult, issueResult].filter(result => result.status === 'rejected')
+    const failure = failures.find(result => isSessionAccessDenied(result.reason)) ?? failures[0]
+    if (failure) throw failure.reason
+    if (summaryResult.status !== 'fulfilled' || issueResult.status !== 'fulfilled') throw new Error('Invalid quality response')
+    const summaryResponse = summaryResult.value
+    const issueResponse = issueResult.value
     if (!summaryResponse.data || !Array.isArray(issueResponse.data)) throw new Error('Invalid quality response')
     qualitySummary.value = summaryResponse.data
     issues.value = issueResponse.data
@@ -901,7 +908,7 @@ onMounted(() => {
             <template #actions>
               <MrrStatusTag v-if="qualitySummary?.running" label="检查运行中" tone="warning" />
             </template>
-            <el-table :data="checks" stripe empty-text="尚未执行数据质量检查">
+            <el-table :data="checks" stripe :empty-text="qualityLoaded ? '尚未执行数据质量检查' : '规则结果尚未取得'">
               <el-table-column v-bind="tableSequenceColumn()" />
               <el-table-column label="规则" min-width="280">
                 <template #default="{ row }">
@@ -972,7 +979,7 @@ onMounted(() => {
               <div class="issue-sample-count" role="status">
                 {{ qualityLoaded ? `匹配 ${filteredIssues.length} / 已加载 ${issues.length} 个样本` : '尚未取得样本' }}
               </div>
-              <el-table :data="filteredIssues" stripe :empty-text="!qualityLoaded ? '样本尚未取得' : issueFiltersActive ? '没有符合筛选条件的样本' : '当前没有异常样本'">
+              <el-table :data="filteredIssues" stripe :empty-text="!qualityLoaded ? '样本尚未取得' : issues.length && issueFiltersActive ? '没有符合筛选条件的样本' : '当前没有异常样本'">
                 <el-table-column v-bind="tableSequenceColumn()" />
                 <el-table-column label="级别" width="95" class-name="mrr-table-status-column">
                   <template #default="{ row }">

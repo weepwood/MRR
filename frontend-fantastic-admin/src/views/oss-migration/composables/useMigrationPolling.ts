@@ -53,9 +53,11 @@ export function useMigrationPolling(
       if (!canPoll() || generation !== started || currentJob.value?.id !== jobId) {
         return
       }
-      if (response.data) {
-        currentJob.value = response.data
+      // A malformed or misrouted response must not replace the selected task.
+      if (!response.data || response.data.id !== jobId) {
+        throw new Error('Invalid migration job response')
       }
+      currentJob.value = response.data
       if (TERMINAL_STATUSES.has(currentJob.value?.status ?? '')) {
         stopPolling()
         await refreshAll()

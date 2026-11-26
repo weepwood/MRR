@@ -929,7 +929,7 @@ onMounted(() => {
             </div>
           </div>
 
-          <div class="facts">
+          <div class="facts readiness-facts">
             <span>抽样缺失 {{ readiness?.sampleMissingCount ?? 0 }}</span>
             <span>路径异常 {{ readiness?.sampleInvalidCount ?? 0 }}</span>
             <span>当前可领取 {{ formatNumber(readiness?.pendingCount) }}</span>
@@ -958,7 +958,7 @@ onMounted(() => {
         </MrrSectionCard>
 
         <MrrSectionCard title="创建迁移任务" description="同一时刻只运行一个任务；创建时固定数据快照上界。">
-          <el-form label-position="top">
+          <el-form label-position="top" class="mrr-edit-form migration-job-form">
             <el-form-item label="迁移阶段">
               <el-radio-group v-model="jobForm.mode">
                 <el-radio-button value="pilot">
@@ -1588,6 +1588,22 @@ onMounted(() => {
 .facts {
   margin: var(--mrr-space-3) 0;
   color: var(--el-text-color-secondary);
+}
+
+.readiness-facts {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 145px), 1fr));
+  gap: var(--mrr-space-2);
+  padding: var(--mrr-space-3);
+  font-size: var(--mrr-font-size-xs);
+  background: var(--mrr-muted);
+  border-radius: var(--mrr-radius-md);
+}
+
+.migration-job-form > .el-button {
+  justify-self: start;
+  max-width: 100%;
+  margin-top: var(--mrr-space-1);
 }
 
 .warning-list {

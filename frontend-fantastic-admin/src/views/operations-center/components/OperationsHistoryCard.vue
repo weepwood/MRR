@@ -88,8 +88,8 @@ function modeLabel(mode: OperationsHistorySample['mode']) {
 function chart(series: { name: string, value: (row: OperationsHistorySample) => number | null }[]): ECOption {
   return {
     tooltip: { trigger: 'axis' },
-    legend: { top: 0 },
-    grid: { top: 44, left: 12, right: 20, bottom: 36, containLabel: true },
+    legend: series.length > 1 ? { top: 0, left: 0, right: 0, type: 'scroll' } : undefined,
+    grid: { top: series.length > 1 ? 36 : 12, left: 12, right: 16, bottom: 28, containLabel: true },
     xAxis: { type: 'time', axisLabel: { hideOverlap: true } },
     yAxis: { type: 'value', min: 0 },
     dataZoom: [{ type: 'inside' }],
@@ -134,9 +134,18 @@ const riskChart = computed(() => chart([
         已取得 {{ history.samples.length }} / {{ slots.length }} 个时间桶 · 最近采样 {{ formatDateTime(latest?.sampledAt) }} · 依赖检查 {{ formatDateTime(latest?.readinessCheckedAt) }}
       </p>
       <div class="history-charts">
-        <MrrChart :option="resourceChart" :height="235" aria-label="JVM 堆内存历史" />
-        <MrrChart :option="riskChart" :height="235" aria-label="运维风险历史" />
-        <MrrChart :option="capacityChart" :height="235" aria-label="扫描表容量历史" />
+        <section class="history-chart-panel" aria-label="内存使用">
+          <h3>JVM 堆内存</h3>
+          <MrrChart :option="resourceChart" :height="240" aria-label="JVM 堆内存历史" />
+        </section>
+        <section class="history-chart-panel" aria-label="风险变化">
+          <h3>风险与等待</h3>
+          <MrrChart :option="riskChart" :height="240" aria-label="运维风险历史" />
+        </section>
+        <section class="history-chart-panel" aria-label="容量变化">
+          <h3>扫描表与索引容量（GiB）</h3>
+          <MrrChart :option="capacityChart" :height="240" aria-label="扫描表容量历史" />
+        </section>
       </div>
       <h3>相邻采样状态变化</h3>
       <AppEmpty v-if="!changes.length" size="compact" description="未观察到相邻采样的状态变化；不排除缺口内发生故障" />
@@ -160,14 +169,29 @@ const riskChart = computed(() => chart([
 }
 
 .history-note {
-  font-size: 12px;
+  margin: var(--mrr-space-3) 0;
+  font-size: var(--mrr-font-size-xs);
   color: var(--el-text-color-secondary);
 }
 
 .history-charts {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(min(100%, 300px), 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 320px), 1fr));
   gap: var(--mrr-space-3);
+}
+
+.history-chart-panel {
+  min-width: 0;
+  padding: var(--mrr-space-3);
+  border: 1px solid var(--mrr-border);
+  border-radius: var(--mrr-radius-md);
+}
+
+.history-chart-panel h3 {
+  margin: 0 0 var(--mrr-space-2);
+  font-size: var(--mrr-font-size-sm);
+  font-weight: var(--mrr-font-weight-heading);
+  color: var(--mrr-card-foreground);
 }
 
 .history-events {

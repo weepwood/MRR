@@ -411,3 +411,86 @@ body .el-image-viewer__actions__divider {
     background: rgb(0 0 0 / 78%);
   }
 }
+
+/* Business edit forms only. Keep native Element Plus form contracts; do not
+ * apply edit spacing to filter bars, login or settings switches. */
+body .el-form.mrr-edit-form {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--mrr-space-4);
+  align-items: start;
+  min-width: 0;
+}
+
+body .el-form.mrr-edit-form--paired {
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, max(190px, calc((100% - var(--mrr-space-4)) / 2))), 1fr));
+}
+
+body .el-form.mrr-edit-form > .el-form-item {
+  min-width: 0;
+  margin-bottom: 0;
+}
+
+body .el-form.mrr-edit-form > .mrr-edit-form__full,
+body .el-form.mrr-edit-form > .mrr-edit-form__section {
+  grid-column: 1 / -1;
+}
+
+body .el-form.mrr-edit-form .el-form-item__label {
+  height: auto;
+  padding: 0;
+  margin-bottom: var(--mrr-space-2);
+  font-size: var(--mrr-font-size-sm);
+  font-weight: var(--mrr-font-weight-label);
+  line-height: var(--mrr-line-height-label);
+  white-space: normal;
+}
+
+body .el-form.mrr-edit-form .el-form-item__content {
+  gap: var(--mrr-space-1);
+  min-width: 0;
+}
+
+body .el-form.mrr-edit-form .el-form-item__error {
+  position: static;
+  flex: 0 0 100%;
+  padding-top: 0;
+  overflow-wrap: anywhere;
+}
+
+body .el-form.mrr-edit-form .el-input,
+body .el-form.mrr-edit-form .el-select,
+body .el-form.mrr-edit-form .el-date-editor {
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+}
+
+body .el-form.mrr-edit-form .el-input-number {
+  max-width: 100%;
+}
+
+body .el-form.mrr-edit-form .el-input-number .el-input {
+  width: 100%;
+}
+
+.mrr-edit-form__section {
+  padding-top: var(--mrr-space-3);
+  margin: 0;
+  font-size: var(--mrr-font-size-md);
+  font-weight: var(--mrr-font-weight-heading);
+  line-height: var(--mrr-line-height-label);
+  color: var(--mrr-card-foreground);
+  border-top: 1px solid var(--mrr-shell-divider);
+}
+
+.mrr-edit-form__section:first-child {
+  padding-top: 0;
+  border-top: 0;
+}
+
+.mrr-edit-form__unit {
+  flex: none;
+  font-size: var(--mrr-font-size-xs);
+  color: var(--mrr-muted-foreground);
+}

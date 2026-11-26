@@ -251,6 +251,10 @@ function relationTagType(status: RelationCoverage['status']) {
   return 'danger'
 }
 
+function relationStatusLabel(status: RelationCoverage['status']) {
+  return { HEALTHY: '正常', WARNING: '警告', CRITICAL: '严重', LEGACY: '遗留关联', UNKNOWN: '未知' }[status] ?? status
+}
+
 function comparisonTagType(status: ComparisonStatus) {
   if (status === 'EXACT') return 'success'
   if (status === 'FORMAT_ONLY' || status === 'NO_CANONICAL') return 'warning'
@@ -495,7 +499,7 @@ onMounted(() => {
       <el-tab-pane v-if="!archiveOnly" label="关系总览" name="overview">
         <AppLoading v-if="overviewLoading && !overview" type="card" :cols="3" />
         <div v-else v-loading="overviewLoading" class="overview-stack">
-          <section class="relation-grid">
+          <section class="relation-grid" aria-label="各数据表关联覆盖率">
             <el-card
               v-for="relation in overview?.relations ?? []"
               :key="relation.tableName"
@@ -507,7 +511,7 @@ onMounted(() => {
                   <strong>{{ relation.label }}</strong>
                   <code>{{ relation.tableName }}</code>
                 </div>
-                <MrrStatusTag :label="relation.status" :tone="relationTagType(relation.status)" />
+                <MrrStatusTag :label="relationStatusLabel(relation.status)" :title="relation.status" :tone="relationTagType(relation.status)" />
               </div>
               <p>{{ relation.relation }}</p>
               <div class="coverage-row">
@@ -534,7 +538,7 @@ onMounted(() => {
                   <dd>{{ formatNumber(relation.missingCount) }}</dd>
                 </div>
               </dl>
-              <small>来源：{{ relation.source }} · 统计时间：{{ formatDateTime(relation.analyzedAt) }}</small>
+              <small class="relation-card__provenance">来源：{{ relation.source }} · 统计时间：{{ formatDateTime(relation.analyzedAt) }}</small>
             </el-card>
           </section>
 
@@ -1201,9 +1205,17 @@ p {
   border-radius: var(--mrr-radius-card);
 }
 
+.relation-card__header {
+  flex-wrap: wrap;
+  align-items: flex-start;
+}
+
 .relation-card__header > div {
   display: grid;
+  flex: 1 1 auto;
   gap: var(--mrr-space-1);
+  min-width: 0;
+  overflow-wrap: anywhere;
 }
 
 .relation-card code,
@@ -1213,13 +1225,15 @@ p {
 }
 
 .relation-card p {
-  min-height: 42px;
-  margin: var(--mrr-space-4) 0;
+  margin: var(--mrr-space-3) 0;
+  font-size: var(--mrr-font-size-sm);
+  line-height: 1.5;
   color: var(--el-text-color-secondary);
+  overflow-wrap: anywhere;
 }
 
 .coverage-row strong {
-  font-size: 24px;
+  font-size: var(--mrr-font-size-metric);
   font-variant-numeric: tabular-nums;
   letter-spacing: -0.02em;
 }
@@ -1228,7 +1242,17 @@ p {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(min(100%, 96px), 1fr));
   gap: var(--mrr-space-3);
-  margin: var(--mrr-space-4) 0;
+  padding: var(--mrr-space-3) 0;
+  margin: var(--mrr-space-3) 0;
+  border-top: 1px solid var(--mrr-shell-divider);
+  border-bottom: 1px solid var(--mrr-shell-divider);
+}
+
+.relation-card__provenance {
+  display: block;
+  font-size: var(--mrr-font-size-xs);
+  line-height: 1.5;
+  overflow-wrap: anywhere;
 }
 
 .relation-card dl div {

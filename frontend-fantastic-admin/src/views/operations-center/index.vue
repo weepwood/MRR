@@ -625,6 +625,91 @@ onMounted(async () => {
               />
             </section>
 
+            <section class="two-column-layout overview-priority" aria-label="当前问题与运行状态">
+              <div class="overview-priority__stack">
+                <MrrSectionCard title="待处理问题" description="严重问题优先">
+                  <AppEmpty
+                    v-if="failedReadinessChecks.length === 0"
+                    :icon="overviewChecks.length ? 'i-lucide:circle-check' : 'i-lucide:hourglass'"
+                    :description="overviewChecks.length ? '最近检查无未通过项目' : '等待首次依赖检查'"
+                  />
+                  <div v-else class="issue-list">
+                    <div v-for="check in failedReadinessChecks" :key="check.code" class="issue-row">
+                      <div>
+                        <strong>{{ check.name }}</strong>
+                        <p>{{ check.message }}</p>
+                      </div>
+                      <el-tag :type="check.severity === 'CRITICAL' ? 'danger' : 'warning'">
+                        {{ check.severity === 'CRITICAL' ? '严重' : '警告' }}
+                      </el-tag>
+                      <el-button v-if="canManage" text type="primary" @click="selectTab('diagnostics')">
+                        查看体检
+                      </el-button>
+                    </div>
+                  </div>
+                  <p v-if="failedReadinessChecks.length && !canManage" class="overview-hint">
+                    请联系有运维管理权限的人员执行全面体检。
+                  </p>
+                </MrrSectionCard>
+
+                <MrrSectionCard title="依赖检查" description="最近一次部署就绪检查">
+                  <el-table :data="overviewChecks" empty-text="等待首次依赖检查">
+                    <el-table-column v-bind="tableSequenceColumn()" />
+                    <el-table-column prop="name" label="检查项" />
+                    <el-table-column label="状态" width="100" class-name="mrr-table-status-column">
+                      <template #default="{ row }">
+                        <el-tag :type="row.passed ? 'success' : row.severity === 'CRITICAL' ? 'danger' : 'warning'">
+                          {{ row.passed ? '通过' : '未通过' }}
+                        </el-tag>
+                      </template>
+                    </el-table-column>
+                  </el-table>
+                </MrrSectionCard>
+              </div>
+              <div class="overview-priority__stack">
+                <MrrSectionCard title="后端运行">
+                  <el-descriptions :column="1" size="small">
+                    <el-descriptions-item label="应用版本">
+                      {{ overview.runtime.applicationVersion || '未知' }}
+                    </el-descriptions-item>
+                    <el-descriptions-item label="启动时间">
+                      {{ formatTime(overview.runtime.startedAt) }}
+                    </el-descriptions-item>
+                    <el-descriptions-item label="运行时长">
+                      {{ formatDuration(overview.runtime.uptimeMs) }}
+                    </el-descriptions-item>
+                  </el-descriptions>
+                  <p>JVM 堆内存 {{ formatBytes(overview.runtime.heapUsedBytes) }} / {{ overview.runtime.heapMaxBytes > 0 ? formatBytes(overview.runtime.heapMaxBytes) : '上限未知' }}</p>
+                  <el-progress v-if="overview.runtime.heapMaxBytes > 0" aria-label="JVM 堆内存使用率" :percentage="heapUsage" />
+                </MrrSectionCard>
+
+                <MrrSectionCard title="导出任务状态" description="横条表示所列四种状态中的占比">
+                  <template v-if="canViewTasks" #actions>
+                    <el-button text type="primary" @click="selectTab('tasks')">
+                      查看任务
+                    </el-button>
+                  </template>
+                  <div v-if="tasksAvailable" class="overview-task-states">
+                    <div v-for="state in taskStates" :key="state.code">
+                      <div class="task-state-label">
+                        <span>{{ state.label }}</span>
+                        <strong>{{ formatNumber(taskCounts[state.code]) }}</strong>
+                      </div>
+                      <el-progress
+                        :aria-label="`${state.label}任务占比`"
+                        :percentage="taskTotal ? Math.round((taskCounts[state.code] || 0) / taskTotal * 100) : 0"
+                        :show-text="false"
+                        :status="state.status"
+                      />
+                    </div>
+                  </div>
+                  <p v-else>
+                    暂未取得导出任务统计。
+                  </p>
+                </MrrSectionCard>
+              </div>
+            </section>
+
             <OperationsHistoryCard v-if="activeTab === 'overview'" />
             <StorageCircuitHistoryCard v-if="activeTab === 'overview'" />
             <NginxConfigurationCard v-if="activeTab === 'overview'" />
@@ -740,88 +825,6 @@ onMounted(async () => {
                 每节点保留最近 16 条，合计展示最近 12 条。累计次数不是故障率；重启前记录和未采样事件不可恢复。
               </p>
             </MrrSectionCard>
-
-            <div class="two-column-layout">
-              <MrrSectionCard title="待处理问题" description="严重问题优先">
-                <AppEmpty
-                  v-if="failedReadinessChecks.length === 0"
-                  :icon="overviewChecks.length ? 'i-lucide:circle-check' : 'i-lucide:hourglass'"
-                  :description="overviewChecks.length ? '最近检查无未通过项目' : '等待首次依赖检查'"
-                />
-                <div v-else class="issue-list">
-                  <div v-for="check in failedReadinessChecks" :key="check.code" class="issue-row">
-                    <div>
-                      <strong>{{ check.name }}</strong>
-                      <p>{{ check.message }}</p>
-                    </div>
-                    <el-tag :type="check.severity === 'CRITICAL' ? 'danger' : 'warning'">
-                      {{ check.severity === 'CRITICAL' ? '严重' : '警告' }}
-                    </el-tag>
-                    <el-button v-if="canManage" text type="primary" @click="selectTab('diagnostics')">
-                      查看体检
-                    </el-button>
-                  </div>
-                </div>
-                <p v-if="failedReadinessChecks.length && !canManage" class="overview-hint">
-                  请联系有运维管理权限的人员执行全面体检。
-                </p>
-              </MrrSectionCard>
-
-              <MrrSectionCard title="后端运行">
-                <el-descriptions :column="1" size="small">
-                  <el-descriptions-item label="应用版本">
-                    {{ overview.runtime.applicationVersion || '未知' }}
-                  </el-descriptions-item>
-                  <el-descriptions-item label="启动时间">
-                    {{ formatTime(overview.runtime.startedAt) }}
-                  </el-descriptions-item>
-                  <el-descriptions-item label="运行时长">
-                    {{ formatDuration(overview.runtime.uptimeMs) }}
-                  </el-descriptions-item>
-                </el-descriptions>
-                <p>JVM 堆内存 {{ formatBytes(overview.runtime.heapUsedBytes) }} / {{ overview.runtime.heapMaxBytes > 0 ? formatBytes(overview.runtime.heapMaxBytes) : '上限未知' }}</p>
-                <el-progress v-if="overview.runtime.heapMaxBytes > 0" aria-label="JVM 堆内存使用率" :percentage="heapUsage" />
-              </MrrSectionCard>
-
-              <MrrSectionCard title="依赖检查" description="最近一次部署就绪检查">
-                <el-table :data="overviewChecks" empty-text="等待首次依赖检查">
-                  <el-table-column v-bind="tableSequenceColumn()" />
-                  <el-table-column prop="name" label="检查项" />
-                  <el-table-column label="状态" width="100" class-name="mrr-table-status-column">
-                    <template #default="{ row }">
-                      <el-tag :type="row.passed ? 'success' : row.severity === 'CRITICAL' ? 'danger' : 'warning'">
-                        {{ row.passed ? '通过' : '未通过' }}
-                      </el-tag>
-                    </template>
-                  </el-table-column>
-                </el-table>
-              </MrrSectionCard>
-
-              <MrrSectionCard title="导出任务状态" description="横条表示所列四种状态中的占比">
-                <template v-if="canViewTasks" #actions>
-                  <el-button text type="primary" @click="selectTab('tasks')">
-                    查看任务
-                  </el-button>
-                </template>
-                <div v-if="tasksAvailable" class="overview-task-states">
-                  <div v-for="state in taskStates" :key="state.code">
-                    <div class="task-state-label">
-                      <span>{{ state.label }}</span>
-                      <strong>{{ formatNumber(taskCounts[state.code]) }}</strong>
-                    </div>
-                    <el-progress
-                      :aria-label="`${state.label}任务占比`"
-                      :percentage="taskTotal ? Math.round((taskCounts[state.code] || 0) / taskTotal * 100) : 0"
-                      :show-text="false"
-                      :status="state.status"
-                    />
-                  </div>
-                </div>
-                <p v-else>
-                  暂未取得导出任务统计。
-                </p>
-              </MrrSectionCard>
-            </div>
 
             <DeliveryStatusCard :mode="overview.imageDeliveryMode" :mode-stale="overviewFailed" />
 
@@ -1262,10 +1265,6 @@ onMounted(async () => {
   margin-block-start: var(--mrr-space-3);
 }
 
-.overview-metrics {
-  margin-top: var(--mrr-space-4);
-}
-
 /* 指标组统一使用 MrrMetricCard，只保留与页面节奏相关的间距。 */
 .metric-row {
   margin-top: var(--mrr-space-4);
@@ -1275,9 +1274,17 @@ onMounted(async () => {
   display: grid;
   grid-template-columns: minmax(0, 1.25fr) minmax(320px, 0.75fr);
   gap: var(--mrr-space-4);
+  align-items: start;
 }
 
 .two-column-layout > * {
+  min-width: 0;
+}
+
+.overview-priority__stack {
+  display: grid;
+  gap: var(--mrr-space-4);
+  align-content: start;
   min-width: 0;
 }
 
@@ -1307,7 +1314,12 @@ onMounted(async () => {
   border-bottom: 1px solid var(--el-border-color-lighter);
 }
 
+.issue-row:first-child {
+  padding-top: 0;
+}
+
 .issue-row:last-child {
+  padding-bottom: 0;
   border-bottom: 0;
 }
 

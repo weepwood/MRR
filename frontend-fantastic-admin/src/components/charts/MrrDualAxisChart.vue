@@ -47,7 +47,7 @@ const option = computed<ECOption>(() => ({
     data: [...props.bars, ...props.lines].map(item => item.name),
   },
   grid: {
-    top: 48,
+    top: 52,
     right: 28,
     bottom: 28,
     left: 24,
@@ -56,7 +56,7 @@ const option = computed<ECOption>(() => ({
   xAxis: {
     type: 'category',
     data: props.categories,
-    axisLabel: { hideOverlap: true, margin: 12 },
+    axisLabel: { hideOverlap: true, margin: 12, formatter: value => /^\d{4}-\d{2}-\d{2}$/.test(value) ? value.slice(5).replace('-', '/') : value },
     splitLine: { show: false },
   },
   yAxis: [
@@ -71,6 +71,7 @@ const option = computed<ECOption>(() => ({
     {
       type: 'value',
       name: props.rightAxisName,
+      minInterval: 1,
       splitLine: { show: false },
       axisLabel: {
         formatter: (value: string | number) => `${Number(value).toLocaleString('zh-CN')}${props.rightUnit ? ` ${props.rightUnit}` : ''}`,

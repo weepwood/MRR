@@ -788,18 +788,18 @@ onMounted(loadData)
 
     <MrrDialog v-model="createVisible" title="创建用户" width="520px" :close-on-click-overlay="false">
       <el-alert type="info" :closable="false" show-icon title="管理员创建的用户默认启用。系统将生成一次性临时密码，首次登录后必须修改。" />
-      <el-form ref="createFormRef" :model="createForm" :rules="createRules" label-position="top" class="dialog-form">
+      <el-form ref="createFormRef" :model="createForm" :rules="createRules" label-position="top" class="dialog-form mrr-edit-form mrr-edit-form--paired">
         <el-form-item label="用户名" prop="username"><el-input v-model="createForm.username" autocomplete="off" placeholder="例如 zhangsan" /></el-form-item>
         <el-form-item label="显示名称"><el-input v-model="createForm.displayName" placeholder="例如 张三" /></el-form-item>
         <el-form-item label="角色" prop="roleCode"><el-select v-model="createForm.roleCode" class="full-width"><el-option v-for="role in roles" :key="role.code" :label="role.name || role.code" :value="role.code!" /></el-select></el-form-item>
-        <el-form-item label="临时密码有效期"><el-input-number v-model="createForm.temporaryPasswordValidHours" :min="1" :max="168" /><span class="unit">小时</span></el-form-item>
+        <el-form-item label="临时密码有效期"><el-input-number v-model="createForm.temporaryPasswordValidHours" :min="1" :max="168" /><span class="mrr-edit-form__unit">小时</span></el-form-item>
       </el-form>
       <template #footer><el-button @click="createVisible = false">取消</el-button><el-button type="primary" :loading="createSaving" @click="handleCreate">创建用户</el-button></template>
     </MrrDialog>
 
     <MrrDialog v-model="editVisible" title="编辑用户" width="480px" :close-on-click-overlay="false">
-      <el-form ref="editFormRef" :model="editForm" :rules="editRules" label-position="top" class="dialog-form">
-        <el-form-item label="用户名"><div class="readonly-field">{{ editTarget?.username }}</div></el-form-item>
+      <el-form ref="editFormRef" :model="editForm" :rules="editRules" label-position="top" class="dialog-form mrr-edit-form mrr-edit-form--paired">
+        <el-form-item label="用户名"><div class="readonly-field"><span>{{ editTarget?.username }}</span></div></el-form-item>
         <el-form-item label="显示名称"><el-input v-model="editForm.displayName" /></el-form-item>
         <el-form-item label="角色" prop="roleCode"><el-select v-model="editForm.roleCode" class="full-width"><el-option v-for="role in roles" :key="role.code" :label="role.name || role.code" :value="role.code!" /></el-select></el-form-item>
         <el-form-item label="状态" prop="status"><el-select v-model="editForm.status" class="full-width"><el-option v-for="option in editableStatusOptions" :key="option.value" v-bind="option" /></el-select></el-form-item>
@@ -809,9 +809,9 @@ onMounted(loadData)
 
     <MrrDialog v-model="resetVisible" title="重置用户密码" width="500px" :close-on-click-overlay="false">
       <el-alert type="warning" :closable="false" show-icon :title="`重置后「${resetTarget?.displayName || resetTarget?.username}」的旧 Token 将立即失效，下次登录必须修改密码。`" />
-      <el-form ref="resetFormRef" :model="resetForm" :rules="resetRules" label-position="top" class="dialog-form">
+      <el-form ref="resetFormRef" :model="resetForm" :rules="resetRules" label-position="top" class="dialog-form mrr-edit-form">
         <el-form-item label="当前管理员密码" prop="administratorPassword"><el-input v-model="resetForm.administratorPassword" type="password" autocomplete="current-password" show-password /></el-form-item>
-        <el-form-item label="临时密码有效期"><el-input-number v-model="resetForm.temporaryPasswordValidHours" :min="1" :max="168" /><span class="unit">小时</span></el-form-item>
+        <el-form-item label="临时密码有效期"><el-input-number v-model="resetForm.temporaryPasswordValidHours" :min="1" :max="168" /><span class="mrr-edit-form__unit">小时</span></el-form-item>
       </el-form>
       <template #footer><el-button @click="resetVisible = false">取消</el-button><el-button type="danger" :icon="KeyRound" :loading="showResetLoading" :disabled="resetSaving" @click="handleResetPassword">确认重置</el-button></template>
     </MrrDialog>
@@ -883,9 +883,9 @@ onMounted(loadData)
 /* Shared registration summary: review is the reference layout in every mode. */
 .registration-dialog-content { display: grid; min-width: 0; gap: var(--mrr-space-4); }
 .registration-review-form :deep(.el-form-item) { margin-bottom: 0; }
-.unit { margin-left: var(--mrr-space-2); font-size: var(--mrr-font-size-xs); color: var(--mrr-muted-foreground); }
-.dialog-form { display: grid; gap: 2px; margin-top: var(--mrr-space-4); }
-.readonly-field { display: flex; align-items: center; width: 100%; min-height: var(--mrr-control-height); padding: 0 var(--mrr-space-3); color: var(--mrr-muted-foreground); background: var(--mrr-muted); border: 1px solid var(--mrr-border); border-radius: var(--mrr-radius-md); }
+.dialog-form { margin-top: var(--mrr-space-4); }
+.dialog-form:first-child { margin-top: 0; }
+.readonly-field { display: flex; align-items: center; width: 100%; min-height: var(--mrr-control-height); padding: var(--mrr-space-1) var(--mrr-space-3); overflow-wrap: anywhere; color: var(--mrr-muted-foreground); background: var(--mrr-muted); border: 1px solid var(--mrr-border); border-radius: var(--mrr-radius-md); }
 .full-width { width: 100%; }
 .credential-panel { display: grid; gap: var(--mrr-space-3); padding: var(--mrr-space-4); margin-top: var(--mrr-space-4); background: var(--mrr-muted); border: 1px solid var(--mrr-border); border-radius: var(--mrr-radius-lg); }
 .credential-panel > div { display: grid; grid-template-columns: 90px 1fr; gap: var(--mrr-space-3); align-items: start; }

@@ -139,47 +139,52 @@ watch(
       class="edit-alert"
     />
 
-    <el-form ref="formRef" :model="form" :rules="rules" label-width="96px">
-      <div class="form-grid">
-        <el-form-item label="病案号" prop="bah">
-          <el-input v-model="form.bah" clearable autocomplete="off" />
-        </el-form-item>
-        <el-form-item label="姓名" prop="name">
-          <el-input v-model="form.name" clearable autocomplete="off" />
-        </el-form-item>
-        <el-form-item label="身份证号" prop="idCard" class="full-width">
-          <el-input v-model="form.idCard" clearable autocomplete="off" />
-        </el-form-item>
-        <el-form-item label="入院日期" prop="ruyuan">
-          <el-date-picker
-            v-model="form.ruyuan"
-            type="date"
-            value-format="YYYY-MM-DD"
-            placeholder="选择入院日期"
-            clearable
-            class="field-control"
-          />
-        </el-form-item>
-        <el-form-item label="入院时间" prop="admissiontime">
-          <el-date-picker
-            v-model="form.admissiontime"
-            type="datetime"
-            value-format="YYYY-MM-DD HH:mm:ss"
-            placeholder="选择入院时间"
-            clearable
-            class="field-control"
-          />
-        </el-form-item>
-        <el-form-item label="科室" prop="department">
-          <el-input v-model="form.department" clearable autocomplete="off" />
-        </el-form-item>
-        <el-form-item label="病区" prop="bingqu">
-          <el-input v-model="form.bingqu" clearable autocomplete="off" />
-        </el-form-item>
-        <el-form-item label="床位" prop="chuangwei">
-          <el-input v-model="form.chuangwei" clearable autocomplete="off" />
-        </el-form-item>
-      </div>
+    <el-form ref="formRef" :model="form" :rules="rules" label-position="top" class="mrr-edit-form mrr-edit-form--paired">
+      <h3 class="mrr-edit-form__section">
+        患者基本信息
+      </h3>
+      <el-form-item label="病案号" prop="bah">
+        <el-input v-model="form.bah" clearable autocomplete="off" />
+      </el-form-item>
+      <el-form-item label="姓名" prop="name">
+        <el-input v-model="form.name" clearable autocomplete="off" />
+      </el-form-item>
+      <el-form-item label="身份证号" prop="idCard" class="mrr-edit-form__full">
+        <el-input v-model="form.idCard" clearable autocomplete="off" />
+      </el-form-item>
+      <h3 class="mrr-edit-form__section">
+        入院信息
+      </h3>
+      <el-form-item label="入院日期" prop="ruyuan">
+        <el-date-picker
+          v-model="form.ruyuan"
+          type="date"
+          value-format="YYYY-MM-DD"
+          placeholder="选择入院日期"
+          clearable
+        />
+      </el-form-item>
+      <el-form-item label="入院时间" prop="admissiontime">
+        <el-date-picker
+          v-model="form.admissiontime"
+          type="datetime"
+          value-format="YYYY-MM-DD HH:mm:ss"
+          placeholder="选择入院时间"
+          clearable
+        />
+      </el-form-item>
+      <h3 class="mrr-edit-form__section">
+        科室与床位
+      </h3>
+      <el-form-item label="科室" prop="department">
+        <el-input v-model="form.department" clearable autocomplete="off" />
+      </el-form-item>
+      <el-form-item label="病区" prop="bingqu">
+        <el-input v-model="form.bingqu" clearable autocomplete="off" />
+      </el-form-item>
+      <el-form-item label="床位" prop="chuangwei">
+        <el-input v-model="form.chuangwei" clearable autocomplete="off" />
+      </el-form-item>
     </el-form>
 
     <template #footer>
@@ -196,29 +201,5 @@ watch(
 <style scoped>
 .edit-alert {
   margin-bottom: var(--mrr-space-4);
-}
-
-.form-grid {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  column-gap: var(--mrr-space-4);
-}
-
-.full-width {
-  grid-column: 1 / -1;
-}
-
-.field-control {
-  width: 100%;
-}
-
-@media (max-width: 640px) {
-  .form-grid {
-    grid-template-columns: 1fr;
-  }
-
-  .full-width {
-    grid-column: auto;
-  }
 }
 </style>

@@ -117,7 +117,7 @@ const dateRange = computed(() => {
   }
 })
 
-const trendCategories = computed(() => sortedDateData.value.map(item => formatDateShort(item.date)))
+const trendCategories = computed(() => sortedDateData.value.map(item => formatDate(item.date)))
 const trendBars = computed<MrrBarSeries[]>(() => [{
   name: '扫描页数',
   data: sortedDateData.value.map(item => Number(item.totalPages ?? item.pages ?? 0)),
@@ -161,15 +161,6 @@ function formatDate(dateStr?: string) {
     return '无日期'
   }
   return dateStr.replace(/\//g, '-')
-}
-
-function formatDateShort(dateStr?: string) {
-  if (!dateStr) {
-    return ''
-  }
-  const normalized = dateStr.replace(/\//g, '-')
-  const parts = normalized.split('-')
-  return parts.length >= 3 ? `${parts.at(-2)}/${parts.at(-1)}` : normalized
 }
 
 function formatNumber(value: number, maximumFractionDigits = 0) {
@@ -363,15 +354,16 @@ onMounted(refreshAll)
       />
       <MrrMetricCard
         label="统计时间范围"
+        class="statistics-range-metric"
         icon="i-lucide:chart-no-axes-combined"
         compact-value
-        :value="`${dateRange.start} — ${dateRange.end}`"
+        :value="`${dateRange.start}\n至 ${dateRange.end}`"
       />
     </section>
 
     <MrrChartCard
       title="扫描趋势"
-      description="柱形展示扫描页数，折线展示扫描记录数；默认展示近 90 日，可在图表内滚动鼠标滚轮调整时间范围"
+      description="柱形展示扫描页数，折线展示扫描记录数；默认展示最近 90 个有数据的统计日，可在图表内滚动鼠标滚轮调整时间范围"
       :loading="overviewLoading"
       :empty="!sortedDateData.length"
       empty-description="暂无扫描趋势数据"
@@ -382,13 +374,13 @@ onMounted(refreshAll)
         </el-tag>
       </template>
       <template #summary>
-        <div class="mrr-stat-strip mrr-stat-strip--3" aria-label="扫描趋势摘要">
+        <div class="mrr-stat-strip mrr-stat-strip--3" aria-label="全部已返回统计日摘要">
           <div class="mrr-stat-tile">
-            <span class="mrr-stat-tile__label">区间记录</span>
+            <span class="mrr-stat-tile__label">统计记录</span>
             <strong class="mrr-stat-tile__value">{{ formatNumber(trendRecordTotal) }}</strong>
           </div>
           <div class="mrr-stat-tile">
-            <span class="mrr-stat-tile__label">区间页数</span>
+            <span class="mrr-stat-tile__label">统计页数</span>
             <strong class="mrr-stat-tile__value">{{ formatNumber(trendPageTotal) }}</strong>
           </div>
           <div class="mrr-stat-tile">
@@ -518,6 +510,11 @@ onMounted(refreshAll)
 </template>
 
 <style scoped>
+.statistics-range-metric :deep(.mrr-metric-card__value) {
+  line-height: 1.4;
+  white-space: pre-line;
+}
+
 /*
  * 页面壳层与页头由 MrrPageShell / MrrPageHeader 统一提供；底部留白交给布局工作区。
  * 明细列表使用 MrrDataTablePanel + MrrFilterBar（与用户、记录等列表页同一结构）：

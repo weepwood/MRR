@@ -22,6 +22,7 @@ async function saveDemo() {
 }
 
 const empty = ref(false)
+const chartLoading = ref(false)
 const points = ref(16)
 const dates = Array.from({ length: 24 }, (_, i) => `2026-11-${String(i + 1).padStart(2, '0')}`)
 const series = computed(() => empty.value
@@ -78,12 +79,14 @@ const series = computed(() => empty.value
     <div class="example-row">
       <el-switch v-model="empty" aria-label="模拟无图表数据" />
       <span>模拟空结果</span>
+      <el-switch v-model="chartLoading" aria-label="模拟图表加载" />
+      <span>模拟加载</span>
       <el-select v-model="points" aria-label="示例趋势范围" class="demo-trend-range mrr-single-select" style="width: 180px;">
         <el-option label="最近 16 个记录日" :value="16" />
         <el-option label="全部记录日" :value="24" />
       </el-select>
     </div>
-    <MrrLineChart :categories="empty ? [] : dates" :series="series" :visible-points="points" unit="ms" :height="260" :min-interval="0" />
-    <MrrHorizontalBarChart :data="empty ? [] : [{ label: '接口 A', count: 240 }, { label: '接口 B', count: 135 }, { label: '接口 C', count: 78 }]" :height="180" unit="ms" />
+    <MrrLineChart :loading="chartLoading" :categories="empty ? [] : dates" :series="series" :visible-points="points" unit="ms" :height="260" :min-interval="0" />
+    <MrrHorizontalBarChart :loading="chartLoading" :data="empty ? [] : [{ label: '接口 A', count: 240 }, { label: '接口 B', count: 135 }, { label: '接口 C', count: 78 }]" :height="180" unit="ms" />
   </div>
 </template>

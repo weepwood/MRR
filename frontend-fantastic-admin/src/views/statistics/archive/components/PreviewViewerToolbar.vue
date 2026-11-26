@@ -28,40 +28,57 @@ function toggleFitMode() {
     既压在影像上又脱离工具条。这里把页码放进胶囊末尾，与缩放/旋转图标同一行。
     样式挂在 element-plus-overrides.css 的查看器配色段里（.el-image-viewer__actions__divider）。
   -->
-  <el-icon class="viewer-action" title="缩小" @click="props.actions('zoomOut')">
-    <ZoomOut />
-  </el-icon>
-  <el-icon class="viewer-action" title="放大" @click="props.actions('zoomIn')">
-    <ZoomIn />
-  </el-icon>
-  <i class="el-image-viewer__actions__divider" />
-  <el-icon class="viewer-action" :title="fitMode ? '按原始尺寸查看' : '适应窗口'" @click="toggleFitMode">
-    <component :is="fitMode ? FullScreen : ScaleToOriginal" />
-  </el-icon>
-  <i class="el-image-viewer__actions__divider" />
-  <el-icon class="viewer-action" title="向左旋转" @click="props.actions('anticlockwise')">
-    <RefreshLeft />
-  </el-icon>
-  <el-icon class="viewer-action" title="向右旋转" @click="props.actions('clockwise')">
-    <RefreshRight />
-  </el-icon>
+  <button type="button" class="viewer-action" title="缩小" aria-label="缩小" @keydown.space.stop @keydown.enter.stop @click="props.actions('zoomOut')">
+    <el-icon><ZoomOut /></el-icon>
+  </button>
+  <button type="button" class="viewer-action" title="放大" aria-label="放大" @keydown.space.stop @keydown.enter.stop @click="props.actions('zoomIn')">
+    <el-icon><ZoomIn /></el-icon>
+  </button>
+  <i class="el-image-viewer__actions__divider" aria-hidden="true" />
+  <button type="button" class="viewer-action" :title="fitMode ? '按原始尺寸查看' : '适应窗口'" :aria-label="fitMode ? '按原始尺寸查看' : '适应窗口'" @keydown.space.stop @keydown.enter.stop @click="toggleFitMode">
+    <el-icon><component :is="fitMode ? FullScreen : ScaleToOriginal" /></el-icon>
+  </button>
+  <i class="el-image-viewer__actions__divider" aria-hidden="true" />
+  <button type="button" class="viewer-action" title="向左旋转" aria-label="向左旋转" @keydown.space.stop @keydown.enter.stop @click="props.actions('anticlockwise')">
+    <el-icon><RefreshLeft /></el-icon>
+  </button>
+  <button type="button" class="viewer-action" title="向右旋转" aria-label="向右旋转" @keydown.space.stop @keydown.enter.stop @click="props.actions('clockwise')">
+    <el-icon><RefreshRight /></el-icon>
+  </button>
   <span class="viewer-progress">{{ props.activeIndex + 1 }} / {{ props.total }}</span>
 </template>
 
 <style scoped>
 .viewer-action {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  font-size: 20px;
+  color: inherit;
   cursor: pointer;
-  transition: color var(--mrr-motion-feedback) var(--mrr-ease-out);
+  background: transparent;
+  border: 0;
+  border-radius: var(--mrr-radius-sm);
+  transition: color var(--mrr-motion-feedback) var(--mrr-ease-out), background-color var(--mrr-motion-feedback) var(--mrr-ease-out);
 }
 
 .viewer-action:hover {
   color: var(--mrr-primary);
+  background: var(--mrr-control-bg-hover);
+}
+
+.viewer-action:focus-visible {
+  outline: 2px solid var(--mrr-ring);
+  outline-offset: 1px;
 }
 
 .viewer-progress {
-  padding-left: 16px;
-  margin-left: -8px;
-  font-size: 13px;
+  padding-left: var(--mrr-space-2);
+  font-size: var(--mrr-font-size-sm);
   font-variant-numeric: tabular-nums;
   color: var(--text-secondary);
   white-space: nowrap;

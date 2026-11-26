@@ -315,3 +315,5 @@ base.css 的 mrr-nav-leaf 负责所有叶子选中色条及动效，按语义ARI
 V1.2 第三轮：外壳阴影及分隔归公共tokens；权限角色排版和运维问题行归业务页面，影像阅读表面归PreviewPanel/ThumbStrip/PreviewActionBar；热力图与排行各自管理数据图形几何，经典局部预览读取正式主题配置并仅映射自身控件色彩，不写入全站。
 
 重点视觉收口：热力图尺寸适配归 MrrRequestHeatmap 显式 fit-width 选项，调用方仅开启；图表失活任务清理归 useMrrChart，运行错误技术分区归业务详情，局部日期/多行输入归展厅，不另建主题或日期选择组件。
+
+影像阅读精修：查看器原生按钮与焦点归 PreviewViewerToolbar，共享浮层与窄屏位置归 forms-geometry-viewer.css，分类工具条归 PreviewActionBar，列表复选框/失败键/节点引用归 ThumbStrip；排行标签取图表语义色，加载组合示例归 BusinessExamples。

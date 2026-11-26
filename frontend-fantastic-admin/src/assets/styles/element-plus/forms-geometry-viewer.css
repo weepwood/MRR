@@ -371,29 +371,42 @@ body .el-image-viewer__img {
  * 操作控件（缩放条、左右翻页、关闭、页码）Element 默认是「深灰底 + 白图标」。
  * 这套配色只在纯黑遮罩上成立，一到浅色主题就像贴了块深色补丁 —— 与页面里
  * 所有浮层（工具条、下拉、对话框）的语言都不一致。
- * 改成跟随主题的浮层卡片：亮色主题是白色玻璃 + 深色图标，暗色主题自动反转为
- * 深色玻璃 + 浅色图标。遮罩仍保持半透明黑 —— 看图要压暗背景才有对比，与控件无关。
- * 透明度走 `hsl(var(--card) / 92%)`（而非 color-mix），基线 Chrome 86 可直接解析。
+ * 改成跟随主题的不透明浮层卡片：亮底深字、暗底浅字。遮罩仍保持半透明黑，
+ * 控件使用统一 popover 令牌，避免背景影像改变可读性。
  */
 body .el-image-viewer__actions,
 body .el-image-viewer__prev,
 body .el-image-viewer__next,
 body .el-image-viewer__close {
   color: var(--text-primary);
-  background-color: hsl(var(--card) / 92%);
+  background-color: var(--mrr-popover);
   border: 1px solid var(--divider);
   box-shadow: var(--mrr-shadow-md);
   opacity: 1;
 }
 
 body .el-image-viewer__actions__inner {
+  gap: var(--mrr-space-2);
   color: inherit;
+}
+
+@media (max-width: 720px) {
+  body .el-image-viewer__actions {
+    bottom: 112px;
+    width: max-content;
+    max-width: calc(100vw - 16px);
+  }
+
+  body .el-image-viewer__actions__inner {
+    gap: var(--mrr-space-1);
+    padding-inline: var(--mrr-space-2);
+  }
 }
 
 body .el-image-viewer__prev:hover,
 body .el-image-viewer__next:hover,
 body .el-image-viewer__close:hover {
-  background-color: hsl(var(--card));
+  background-color: var(--mrr-control-bg-hover);
   border-color: var(--mrr-primary);
 }
 

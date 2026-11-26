@@ -38,6 +38,11 @@ const { thumbItemWidth, pageSize, visibleCount, resetVisible } = useThumbLayout(
 )
 
 const displayed = computed(() => props.images.slice(0, visibleCount.value))
+watch(() => props.images, (images) => {
+  const keys = new Set(images.map(imageKey))
+  failedImageKeys.value = new Set([...failedImageKeys.value].filter(key => keys.has(key)))
+  thumbRefs.value.length = Math.min(images.length, visibleCount.value)
+})
 
 function selectItem(index: number) {
   emit('select', index)
@@ -167,6 +172,7 @@ defineExpose({ resetVisible, scrollToIndex })
             :class="{ checked: props.isSelected(img) }"
             role="checkbox"
             :aria-checked="props.isSelected(img)"
+            :aria-label="`勾选第 ${index + 1} 张影像`"
             tabindex="0"
             @click="toggleItem(img, $event)"
             @keydown="onToggleKeydown(img, $event)"
@@ -243,11 +249,9 @@ defineExpose({ resetVisible, scrollToIndex })
   transition: border-color var(--mrr-motion-feedback) var(--mrr-ease-out), box-shadow var(--mrr-motion-feedback) var(--mrr-ease-out);
 }
 
-/* 键盘焦点不再单独画圈：@focus → selectItem 让预览跟随焦点，active 圈即唯一指示；
- * 这里压掉浏览器 UA 的默认焦点圈（卡片基类没设 outline:none，必须显式关掉）。
- * 勾选框是独立控件，保留自己的焦点外圈。 */
 .thumb-item:focus-visible {
-  outline: none;
+  outline: 2px solid var(--mrr-ring);
+  outline-offset: 1px;
 }
 
 .thumb-check:focus-visible {
@@ -437,6 +441,21 @@ defineExpose({ resetVisible, scrollToIndex })
   padding: 0;
   background: none;
   border-radius: 0;
+}
+
+/* List metadata is on a themed surface rather than the dark image mask. */
+.thumb-strip.list .thumb-meta {
+  max-width: 100%;
+}
+
+.thumb-strip.list .thumb-check:not(.checked) {
+  background: var(--mrr-control-bg);
+  border-color: var(--mrr-control-border);
+}
+
+.thumb-strip.list .thumb-check:not(.checked):hover {
+  background: var(--mrr-control-bg-hover);
+  border-color: var(--mrr-control-border-hover);
 }
 
 .thumb-strip.list .thumb-page {

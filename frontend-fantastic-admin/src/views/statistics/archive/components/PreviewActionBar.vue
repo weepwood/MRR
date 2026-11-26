@@ -104,7 +104,7 @@ watch(() => props.image, () => {
   min-width: 0;
   padding: 8px;
   background: var(--mrr-popover);
-  border: 1px solid var(--divider);
+  border: 1px solid var(--mrr-border);
   border-radius: var(--mrr-radius-md);
   box-shadow: var(--mrr-shadow-md);
 }
@@ -135,7 +135,11 @@ watch(() => props.image, () => {
 
 .page-navigation {
   flex: none;
-  gap: 2px;
+  gap: var(--mrr-space-1);
+}
+
+.page-navigation :deep(.el-button) {
+  margin: 0;
 }
 
 .preview-type-select {

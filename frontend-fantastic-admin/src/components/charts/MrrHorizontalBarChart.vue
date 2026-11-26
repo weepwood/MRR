@@ -80,6 +80,7 @@ const option = computed<ECOption>(() => ({
         position: 'right',
         formatter: params => Number(params.value).toLocaleString('zh-CN'),
         fontSize: 12,
+        color: mrrChartColorToken('neutral'),
       },
     },
   ],

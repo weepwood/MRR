@@ -859,3 +859,6 @@ MrrCursorPagination 改用 ElPagination 原生页码、箭头、跳页、条数�
 
 ## 目录容器背景归一（2026-11-26）
 基线8d04a864。设置及展厅使用共享mrr-directory-panel，展厅去除重复外边距；不改变菜单逻辑或响应式契约。Chromium/WebKit 18/18，含四种主题配色下两个目录实际背景、描边、圆角、内距一致性，375px宽度及搜索分类回归。定向ESLint、Stylelint及diff检查通过（首轮注释空行格式修正）。截图/Volumes/data/AI-Development/artifacts/mrr-directory-panel-20261126，日志/tmp/mrr-directory-panel-e2e.log。未执行全量CI、生产构建、类型全检及医院终端验收，不推送合并发布。
+
+## 组件展厅目录精简（2026-11-26）
+基线62e10bfe。删除目录底部两行说明及仅为其服务的计算/样式，保留搜索、分类计数、公共卡片和选中色条。实际明暗主题目录高度292px，无受检横向溢出；Chromium/WebKit 16/16，定向lint与diff通过（首轮多余空行已修正）。截图/Volumes/data/AI-Development/artifacts/mrr-gallery-note-20261126，日志/tmp/mrr-gallery-note-e2e.log。后续UI方案为建议，未实施扩展范围；未执行全量CI、生产构建、类型全检和医院终端验收，不推送合并发布。

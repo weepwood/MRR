@@ -56,6 +56,8 @@ for (const palette of ['mrr', 'gr8r']) {
         }
         else {
           expect(actualSurface).toEqual(settingsSurface)
+          await expect(panel).not.toContainText('个组件与样式入口')
+          await expect(panel).not.toContainText('跟随全站外观设置')
         }
         const nav = page.locator(selector)
         const selected = nav.locator(active)

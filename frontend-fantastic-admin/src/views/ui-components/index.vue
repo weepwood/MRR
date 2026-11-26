@@ -11,11 +11,9 @@ import TokenExamples from './components/TokenExamples.vue'
 
 defineOptions({ name: 'UiComponentGallery' })
 
-const settingsStore = useSettingsStore()
 const keyword = ref('')
 const category = ref<string>('all')
 const revision = ref(0)
-const componentCount = new Set(examples.flatMap(example => [...example.components])).size
 const visibleExamples = computed(() => {
   const query = keyword.value.trim().toLowerCase()
   return examples.filter(example => (category.value === 'all' || example.category === category.value)
@@ -57,10 +55,6 @@ function resetExamples() {
             <span class="gallery-category-count mrr-directory-nav-count">{{ item.id === 'all' ? examples.length : examples.filter(example => example.category === item.id).length }}</span>
           </button>
         </nav>
-        <p class="gallery-directory-note">
-          {{ componentCount }} 个组件与样式入口<br>
-          当前{{ settingsStore.currentColorScheme === 'dark' ? '暗色' : '亮色' }}主题，跟随全站外观设置。
-        </p>
       </aside>
 
       <main class="gallery-content" aria-label="组件预览">
@@ -139,20 +133,11 @@ function resetExamples() {
   gap: var(--mrr-space-1);
 }
 
-.gallery-directory-note,
 .gallery-results {
-  margin: var(--mrr-space-5) 0 0;
+  margin: 0 0 var(--mrr-space-5);
   font-size: 12px;
   line-height: 1.7;
   color: var(--mrr-muted-foreground);
-}
-
-.gallery-directory-note {
-  margin: 0;
-}
-
-.gallery-results {
-  margin: 0 0 var(--mrr-space-5);
 }
 
 .gallery-content,

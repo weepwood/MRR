@@ -185,13 +185,26 @@ public interface ScanMapper {
 
     long countByCondition(@Param("request") ScanRequest request);
 
-    @Update("UPDATE mr_scan SET oss_url = #{ossUrl}, file_size = #{fileSize}, " +
-            "checksum_md5 = #{checksumMd5}, migration_status = #{migrationStatus}, " +
-            "migration_attempts = 0, migration_error_code = NULL, migration_next_retry_at = NULL, " +
-            "migration_updated_at = NOW(), migrated_at = NOW() WHERE id = #{id}")
-    int updateOssInfo(@Param("id") Integer id, @Param("ossUrl") String ossUrl,
-                      @Param("fileSize") Long fileSize, @Param("checksumMd5") String checksumMd5,
-                      @Param("migrationStatus") String migrationStatus);
+    // The object write is outside the database transaction. Commit only the still-current claim/source.
+    @Update("""
+            UPDATE mr_scan SET oss_url=#{ossUrl},file_size=#{fileSize},checksum_md5=#{checksumMd5},
+              migration_status='migrated',migration_attempts=0,migration_error_code=NULL,migration_next_retry_at=NULL,
+              migration_updated_at=NOW(),migrated_at=NOW()
+            WHERE id=#{scan.id} AND uploadflag<>0 AND (oss_url IS NULL OR oss_url='')
+              AND migration_status='migrating' AND migration_attempts=#{attempt}
+              AND archive_id IS NOT DISTINCT FROM #{scan.archiveId,jdbcType=BIGINT}
+              AND bah IS NOT DISTINCT FROM #{scan.bah,jdbcType=VARCHAR}
+              AND sjh IS NOT DISTINCT FROM #{scan.sjh,jdbcType=VARCHAR}
+              AND brxh IS NOT DISTINCT FROM #{scan.brxh,jdbcType=VARCHAR}
+              AND filename IS NOT DISTINCT FROM #{scan.filename,jdbcType=VARCHAR}
+              AND folder IS NOT DISTINCT FROM #{scan.folder,jdbcType=VARCHAR}
+              AND source_type IS NOT DISTINCT FROM #{scan.sourceType,jdbcType=VARCHAR}
+              AND source_node IS NOT DISTINCT FROM #{scan.sourceNode,jdbcType=VARCHAR}
+              AND source_ref IS NOT DISTINCT FROM #{scan.sourceRef,jdbcType=VARCHAR}
+            """)
+    int completeClaimedMigration(@Param("scan") Scan scan,@Param("attempt") int attempt,
+                                 @Param("ossUrl") String ossUrl,@Param("fileSize") Long fileSize,
+                                 @Param("checksumMd5") String checksumMd5);
 
     @Select("SELECT * FROM mr_scan WHERE uploadflag != 0 " +
             "AND (oss_url IS NULL OR oss_url = '') AND " + MIGRATION_ELIGIBLE_EXPRESSION +

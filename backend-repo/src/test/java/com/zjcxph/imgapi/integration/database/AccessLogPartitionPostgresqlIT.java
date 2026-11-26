@@ -99,8 +99,8 @@ class AccessLogPartitionPostgresqlIT extends PostgresqlIntegrationTestSupport {
                 var mapper=new org.mybatis.spring.SqlSessionTemplate(builder.getObject()).getMapper(com.zjcxph.imgapi.mapper.LogMapper.class);
                 var jdbc=new org.springframework.jdbc.core.JdbcTemplate(ds);
                 var manager=new org.springframework.jdbc.datasource.DataSourceTransactionManager(ds);
-                var first=new com.zjcxph.imgapi.audit.DurableAuditDelivery(mapper,jdbc,manager);
-                var second=new com.zjcxph.imgapi.audit.DurableAuditDelivery(mapper,jdbc,manager);
+                var first=new com.zjcxph.imgapi.audit.DurableAuditDelivery(mapper,jdbc,manager,true);
+                var second=new com.zjcxph.imgapi.audit.DurableAuditDelivery(mapper,jdbc,manager,true);
                 var row=new com.zjcxph.imgapi.entity.Log();row.setRequestId("retired-cooperative");
                 row.setAccessTime(new java.util.Date());row.setUsername("synthetic");
                 row.setRequestUri("/synthetic");row.setMethod("GET");row.setResponseStatus("200");

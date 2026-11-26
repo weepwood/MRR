@@ -48,6 +48,17 @@ class OssControllerTest {
     private OssController controller;
 
     @Test
+    void gatewayMigrationLogsNeverReturnHistoricalObjectKeyOrIssueSignature() {
+        deliveryProperties.setMode(ImageDeliveryProperties.Mode.GATEWAY);
+        var row=new com.zjcxph.imgapi.entity.ImageMigrationLog();
+        row.setScanId(1);row.setMigrationStatus("success");row.setOssUrl("SYNTHETIC_HISTORICAL_OBJECT_KEY");
+        when(migrationService.getMigrationLogs("success",1,20)).thenReturn(List.of(row));
+        when(migrationService.countMigrationLogs("success")).thenReturn(1L);
+        assertThat(controller.getMigrationLogs("success",1,20).getData().getList().getFirst().getOssUrl()).isNull();
+        verify(migrationService,org.mockito.Mockito.never()).enrichWithPresignedUrl(org.mockito.ArgumentMatchers.any());
+    }
+
+    @Test
     void gatewayModeDoesNotIssueLegacyScanSignedUrl() {
         deliveryProperties.setMode(ImageDeliveryProperties.Mode.GATEWAY);
         assertThat(controller.getOssUrl(1).getCode()).isEqualTo(409);

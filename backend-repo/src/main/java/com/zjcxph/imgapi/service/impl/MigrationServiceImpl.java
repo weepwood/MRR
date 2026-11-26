@@ -199,10 +199,14 @@ public class MigrationServiceImpl implements MigrationService {
                 ossService.uploadFile(sourcePath, ossKey, md5);
             }
 
-            int updated = scanMapper.updateOssInfo(scanId, ossKey, fileSize, md5, "migrated");
-            if (updated > 0) {
-                invalidateScanSourceCachesAfterCommit(scanId, scan.getArchiveId());
+            int updated = scanMapper.completeClaimedMigration(scan, currentAttempt, ossKey, fileSize, md5);
+            if (updated != 1) {
+                // Keep the object for integrity-checked reconciliation; never delete a potentially shared object.
+                logger.warn("Migration object persisted but claim/source changed: scanId={}", scanId);
+                logMigration(scanId, sourceDescription, null, "failed", "MIGRATION_COMMIT_CONFLICT", fileSize, md5);
+                return new OssUploadResult(scanId,"failed","存储对象已处理，但数据库迁移状态未确认，请复核");
             }
+            invalidateScanSourceCachesAfterCommit(scanId, scan.getArchiveId());
             logMigration(scanId, sourceDescription, ossKey, "success", null, fileSize, md5);
 
             OssUploadResult result = new OssUploadResult();
@@ -447,14 +451,17 @@ public class MigrationServiceImpl implements MigrationService {
 
     @Override
     public void enrichWithPresignedUrl(ImageMigrationLog log) {
-        if ("success".equals(log.getMigrationStatus())
-                && log.getOssUrl() != null
-                && !log.getOssUrl().isBlank()) {
-            try {
-                log.setOssUrl(ossService.generatePresignedUrl(log.getOssUrl()));
-            } catch (Exception exception) {
-                logger.warn("Failed to generate presigned URL for log id={}", log.getId(), exception);
-            }
+        if (log == null) return;
+        String historicalKey = log.getOssUrl();
+        log.setOssUrl(null);
+        if (!"success".equals(log.getMigrationStatus()) || historicalKey == null || historicalKey.isBlank()
+                || log.getScanId() == null || log.getScanId() <= 0) return;
+        try {
+            Scan current=scanMapper.findActiveByIds(List.of(log.getScanId())).stream().findFirst().orElse(null);
+            if(current!=null && historicalKey.equals(current.getOssUrl()))
+                log.setOssUrl(ossService.generatePresignedUrl(historicalKey));
+        } catch(Exception exception) {
+            logger.warn("Migration log preview unavailable: logId={}, type={}",log.getId(),exception.getClass().getSimpleName());
         }
     }
 

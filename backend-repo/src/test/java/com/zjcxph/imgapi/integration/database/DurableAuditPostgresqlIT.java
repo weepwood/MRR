@@ -47,7 +47,7 @@ class DurableAuditPostgresqlIT extends PostgresqlIntegrationTestSupport {
     }
 
     @Test void twoCooperatingWritersSerializeAndRejectIdentityConflicts() throws Exception {
-        var delivery=new DurableAuditDelivery(mapper,jdbc,tx);
+        var delivery=new DurableAuditDelivery(mapper,jdbc,tx,true);
         var record=row("batch8-cooperative");
         var executor=Executors.newFixedThreadPool(2);
         var start=new CountDownLatch(1);
@@ -62,6 +62,21 @@ class DurableAuditPostgresqlIT extends PostgresqlIntegrationTestSupport {
         } finally {executor.shutdownNow();jdbc.update("DELETE FROM app.access_log WHERE request_id=?",record.getRequestId());}
     }
 
+    @Test void batchReplayMatchesAllFieldsAndConflictingBatchRollsBack() {
+        var delivery=new DurableAuditDelivery(mapper,jdbc,tx,true);
+        var a=row("batch9-a");var b=row("batch9-b");var c=row("batch9-c");
+        try{
+            delivery.deliver(List.of(a,b,a));
+            delivery.deliver(List.of(a,b));
+            assertThat(mapper.countRequestIdentity(a.getRequestId())).isEqualTo(1);
+            assertThat(mapper.countRequestIdentity(b.getRequestId())).isEqualTo(1);
+            var conflict=row(a.getRequestId());conflict.setAccessTime(a.getAccessTime());conflict.setRequestBody("different");
+            assertThatThrownBy(()->delivery.deliver(List.of(c,conflict))).isInstanceOf(IllegalStateException.class);
+            assertThat(mapper.countRequestIdentity(c.getRequestId())).isZero();
+            assertThat(mapper.matchesDurableAudit(a)).isTrue();
+        }finally{jdbc.update("DELETE FROM app.access_log WHERE request_id IN (?,?,?)",a.getRequestId(),b.getRequestId(),c.getRequestId());}
+    }
+
     private DurableAuditDelivery delivery(String url) throws Exception {
         var ds=new DriverManagerDataSource(url,postgresqlUsername(),postgresqlPassword());
         var factory=new org.mybatis.spring.SqlSessionFactoryBean();
@@ -70,12 +85,13 @@ class DurableAuditPostgresqlIT extends PostgresqlIntegrationTestSupport {
         config.addMapper(LogMapper.class);
         factory.setConfiguration(config);
         var session=new org.mybatis.spring.SqlSessionTemplate(factory.getObject());
-        return new DurableAuditDelivery(session.getMapper(LogMapper.class),new JdbcTemplate(ds),new DataSourceTransactionManager(ds));
+        return new DurableAuditDelivery(session.getMapper(LogMapper.class),new JdbcTemplate(ds),new DataSourceTransactionManager(ds),true);
     }
 
     @Test @EnabledOnOs({OS.MAC,OS.LINUX})
     void actualCommitAcknowledgementLostOnTcpWireThenEncryptedReplayConverges() throws Exception {
         var record=row("batch8-wire-commit");
+        var second=row("batch9-wire-second");
         Path root=Files.createDirectory(temp.toRealPath().resolve("spool"),
                 PosixFilePermissions.asFileAttribute(PosixFilePermissions.fromString("rwx------")));
         byte[] key=new byte[32];
@@ -83,23 +99,25 @@ class DurableAuditPostgresqlIT extends PostgresqlIntegrationTestSupport {
         try {
             try(var spool=new EncryptedAuditSpool(root,key,10,65536,new ObjectMapper());
                 var proxy=new DropCommitProxy(target.getHost(),target.getPort())) {
-                spool.append(record);
+                spool.appendGroup(List.of(record,second));
                 String proxyUrl="jdbc:postgresql://127.0.0.1:"+proxy.port()+target.getPath()+"?currentSchema=app&sslmode=disable&gssEncMode=disable&connectTimeout=3&socketTimeout=5";
                 var proxied=delivery(proxyUrl);
-                assertThatThrownBy(()->proxied.deliver(List.of(spool.peek(1).getFirst().log()))).isInstanceOf(RuntimeException.class);
+                assertThatThrownBy(()->proxied.deliver(spool.peek(50).stream().map(EncryptedAuditSpool.Entry::log).toList())).isInstanceOf(RuntimeException.class);
                 assertThat(proxy.dropped.await(5,TimeUnit.SECONDS)).isTrue();
                 assertThat(mapper.countRequestIdentity(record.getRequestId())).isEqualTo(1);
-                assertThat(spool.pendingCount()).isEqualTo(1);
+                assertThat(mapper.countRequestIdentity(second.getRequestId())).isEqualTo(1);
+                assertThat(spool.pendingCount()).isEqualTo(2);
             }
             try(var reopened=new EncryptedAuditSpool(root,key,10,65536,new ObjectMapper())) {
                 var entries=reopened.peek(50);
-                new DurableAuditDelivery(mapper,jdbc,tx).deliver(entries.stream().map(EncryptedAuditSpool.Entry::log).toList());
-                reopened.acknowledge(entries.getFirst().name());
+                new DurableAuditDelivery(mapper,jdbc,tx,true).deliver(entries.stream().map(EncryptedAuditSpool.Entry::log).toList());
+                reopened.acknowledgeSegments(entries.stream().map(EncryptedAuditSpool.Entry::name).toList());
                 assertThat(mapper.countRequestIdentity(record.getRequestId())).isEqualTo(1);
+                assertThat(mapper.countRequestIdentity(second.getRequestId())).isEqualTo(1);
                 assertThat(reopened.pendingCount()).isZero();
             }
             System.out.println("MRR_DURABLE_WIRE real server COMMIT acknowledgement intercepted and connection closed; restart replay exactly once");
-        } finally {jdbc.update("DELETE FROM app.access_log WHERE request_id=?",record.getRequestId());}
+        } finally {jdbc.update("DELETE FROM app.access_log WHERE request_id IN (?,?)",record.getRequestId(),second.getRequestId());}
     }
 
     /** Plain PG protocol only on isolated loopback: forwards all frames until real COMMIT CommandComplete. */

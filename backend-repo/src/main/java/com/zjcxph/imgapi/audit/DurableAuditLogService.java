@@ -30,6 +30,7 @@ public class DurableAuditLogService implements AsyncLogService {
     private static final Logger logger = LoggerFactory.getLogger(DurableAuditLogService.class);
     private final EncryptedAuditSpool spool;
     private final DurableAuditDelivery delivery;
+    private final GroupedAuditAdmission grouped;
     private final ReentrantLock flushLock = new ReentrantLock();
     private final AtomicLong rejected = new AtomicLong();
     private final AtomicLong failures = new AtomicLong();
@@ -46,9 +47,15 @@ public class DurableAuditLogService implements AsyncLogService {
                     env.getProperty("mrr.audit.spool.max-records",Integer.class,10000),
                     env.getProperty("mrr.audit.spool.max-bytes",Long.class,64L*1024*1024),mapper);
         } finally { Arrays.fill(key,(byte)0); }
-        delivery = new DurableAuditDelivery(logs,jdbc,manager);
+        boolean groupEnabled=env.getProperty("mrr.audit.spool.grouped",Boolean.class,false);
+        grouped=groupEnabled?new GroupedAuditAdmission(spool):null;
+        delivery = new DurableAuditDelivery(logs,jdbc,manager,groupEnabled);
         metrics.gauge("mrr.audit.pending",spool,EncryptedAuditSpool::pendingCount);
         metrics.gauge("mrr.audit.spool.bytes",spool,EncryptedAuditSpool::pendingBytes);
+        metrics.gauge("mrr.audit.spool.published.segments",spool,EncryptedAuditSpool::publishedSegments);
+        metrics.gauge("mrr.audit.spool.published.bytes",spool,EncryptedAuditSpool::publishedBytes);
+        metrics.gauge("mrr.audit.spool.file.forces",spool,EncryptedAuditSpool::fileForces);
+        metrics.gauge("mrr.audit.spool.directory.forces",spool,EncryptedAuditSpool::directoryForces);
         metrics.gauge("mrr.audit.dropped",rejected);
         metrics.gauge("mrr.audit.spool.delivery.failures",failures);
     }
@@ -56,7 +63,7 @@ public class DurableAuditLogService implements AsyncLogService {
     // Intentionally synchronous: no volatile executor queue before durable admission.
     // Servlet afterCompletion is already too late to retract a response.
     @Override public void saveLogAsync(Log log) {
-        try { if (closing) throw new IOException("Audit service closing"); spool.append(log); }
+        try { if (closing) throw new IOException("Audit service closing"); if(grouped==null)spool.append(log); else grouped.append(log); }
         catch (IOException | RuntimeException failure) {
             long total = rejected.incrementAndGet();
             if (total == 1 || total % 100 == 0) {
@@ -78,7 +85,9 @@ public class DurableAuditLogService implements AsyncLogService {
             var entries = spool.peek(50);
             if (entries.isEmpty()) return;
             delivery.deliver(entries.stream().map(EncryptedAuditSpool.Entry::log).toList());
-            for (var entry : entries) spool.acknowledge(entry.name());
+            if(grouped==null && entries.stream().map(EncryptedAuditSpool.Entry::name).distinct().count()==entries.size()) {
+                for(var entry:entries)spool.acknowledge(entry.name());
+            } else spool.acknowledgeSegments(entries.stream().map(EncryptedAuditSpool.Entry::name).toList());
         } catch (IOException | RuntimeException failure) {
             long total = failures.incrementAndGet();
             if (total == 1 || total % 100 == 0)
@@ -94,6 +103,7 @@ public class DurableAuditLogService implements AsyncLogService {
 
     @PreDestroy public void close() throws IOException {
         // No unbounded shutdown drain; published ciphertext remains for restart.
+        if(grouped!=null)grouped.close();
         closing = true;
         if (flushLock.tryLock()) {
             try { spool.close(); } finally { flushLock.unlock(); }

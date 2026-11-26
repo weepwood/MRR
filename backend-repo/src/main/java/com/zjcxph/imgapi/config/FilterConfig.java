@@ -26,7 +26,8 @@ public class FilterConfig {
     public FilterRegistrationBean<com.zjcxph.imgapi.filter.ExternalArchivePrivacyFilter> externalArchivePrivacyFilter() {
         var registration = new FilterRegistrationBean<com.zjcxph.imgapi.filter.ExternalArchivePrivacyFilter>();
         registration.setFilter(new com.zjcxph.imgapi.filter.ExternalArchivePrivacyFilter());
-        registration.addUrlPatterns("/api/v1/external/archive/*", "/api/v1/integration/archive/tickets");
+        registration.addUrlPatterns("/api/v1/external/archive/*", "/api/v1/integration/archive/tickets",
+                "/api/v1/patients", "/api/v1/patients/*", "/api/v1/oss/migration/*");
         registration.setOrder(0);
         registration.setAsyncSupported(true);
         registration.setName("externalArchivePrivacyFilter");

@@ -57,6 +57,18 @@ public interface LogMapper {
     @Options(timeout=3, useCache=false, flushCache=Options.FlushCachePolicy.TRUE)
     boolean matchesDurableAudit(Log log);
 
+    @Select({"<script>",
+            "WITH incoming(request_id,username,client_ip,request_uri,endpoint_template,method,user_agent,access_time,query_string,request_body,response_status,execute_time,referer,error_message,audit_action,audit_target,audit_description) AS (VALUES",
+            "<foreach item='row' collection='rows' separator=','>",
+            "(CAST(#{row.requestId,jdbcType=VARCHAR} AS text), CAST(#{row.username,jdbcType=VARCHAR} AS text), CAST(#{row.clientIp,jdbcType=VARCHAR} AS text), CAST(#{row.requestUri,jdbcType=VARCHAR} AS text), CAST(#{row.endpointTemplate,jdbcType=VARCHAR} AS text), CAST(#{row.method,jdbcType=VARCHAR} AS text), CAST(#{row.userAgent,jdbcType=VARCHAR} AS text), CAST(#{row.accessTime,jdbcType=TIMESTAMP} AS timestamp), CAST(#{row.queryString,jdbcType=VARCHAR} AS text), CAST(#{row.requestBody,jdbcType=VARCHAR} AS text), CAST(#{row.responseStatus,jdbcType=VARCHAR} AS text), CAST(#{row.executeTime,jdbcType=BIGINT} AS bigint), CAST(#{row.referer,jdbcType=VARCHAR} AS text), CAST(#{row.errorMessage,jdbcType=VARCHAR} AS text), CAST(#{row.auditAction,jdbcType=VARCHAR} AS text), CAST(#{row.auditTarget,jdbcType=VARCHAR} AS text), CAST(#{row.auditDescription,jdbcType=VARCHAR} AS text))",
+            "</foreach>", ")",
+            "SELECT i.request_id, count(l.id) AS existing_count,",
+            "count(l.id) FILTER (WHERE ROW(l.username, l.client_ip, l.request_uri, l.endpoint_template, l.method, l.user_agent, l.access_time, l.query_string, l.request_body, l.response_status, l.execute_time, l.referer, l.error_message, l.audit_action, l.audit_target, l.audit_description) IS NOT DISTINCT FROM ROW(i.username, i.client_ip, i.request_uri, i.endpoint_template, i.method, i.user_agent, i.access_time, i.query_string, i.request_body, i.response_status, i.execute_time, i.referer, i.error_message, i.audit_action, i.audit_target, i.audit_description)) AS matched_count",
+            "FROM incoming i LEFT JOIN access_log l ON l.request_id=i.request_id GROUP BY i.request_id",
+            "</script>"})
+    @Options(timeout=3, useCache=false, flushCache=Options.FlushCachePolicy.TRUE)
+    List<java.util.Map<String,Object>> reconcileAuditBatch(@Param("rows") List<Log> rows);
+
     @Select("SELECT " + BASE_COLUMNS + " FROM access_log ORDER BY access_time DESC LIMIT #{limit} OFFSET #{offset}")
     List<Log> findAll(@Param("limit") int limit, @Param("offset") int offset);
 

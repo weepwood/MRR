@@ -70,7 +70,9 @@ public class OssController {
         try {
             List<OssUploadResult> results = new ArrayList<>();
             for (Integer scanId : request.getScanIds()) {
-                results.add(migrationService.uploadSingleScan(scanId));
+                OssUploadResult result=migrationService.uploadSingleScan(scanId);
+                if(deliveryProperties.isGateway())result.setOssUrl(null);
+                results.add(result);
             }
             return Result.success(uploadSummary(results)).message("上传完成");
         } catch (IllegalArgumentException | IllegalStateException e) {
@@ -90,6 +92,7 @@ public class OssController {
         }
         try {
             List<OssUploadResult> results = migrationService.uploadByBah(bah.trim());
+            if(deliveryProperties.isGateway())results.forEach(result->result.setOssUrl(null));
             Map<String, Object> response = uploadSummary(results);
             response.put("bah", bah.trim());
             return Result.success(response).message("上传完成");
@@ -198,7 +201,8 @@ public class OssController {
         List<ImageMigrationLog> logs = migrationService.getMigrationLogs(status, page, size);
         long total = migrationService.countMigrationLogs(status);
         for (ImageMigrationLog log : logs) {
-            migrationService.enrichWithPresignedUrl(log);
+            if(deliveryProperties.isGateway()) log.setOssUrl(null);
+            else migrationService.enrichWithPresignedUrl(log);
         }
         return Result.success(PageResult.of(logs, total, page, size));
     }

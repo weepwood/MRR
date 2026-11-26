@@ -28,6 +28,7 @@ class ScanMapperIntegrationTest {
 
     @Autowired
     private ScanMapper scanMapper;
+    @Autowired private org.springframework.jdbc.core.JdbcTemplate jdbc;
 
     private Scan sampleScan() {
         Scan s = new Scan();
@@ -102,7 +103,9 @@ class ScanMapperIntegrationTest {
     @Test
     @DisplayName("updateOssInfo — 更新 OSS 信息")
     void updateOssInfo() {
-        int affected = scanMapper.updateOssInfo(1, "https://oss/test.jpg", 1024L, "md5hash", "migrated");
+        Scan snapshot=scanMapper.findById(1);
+        jdbc.update("UPDATE mr_scan SET migration_status='migrating',migration_attempts=1 WHERE id=1");
+        int affected = scanMapper.completeClaimedMigration(snapshot,1,"https://oss/test.jpg",1024L,"md5hash");
         assertThat(affected).isEqualTo(1);
         Scan updated = scanMapper.findById(1);
         assertThat(updated).isNotNull();

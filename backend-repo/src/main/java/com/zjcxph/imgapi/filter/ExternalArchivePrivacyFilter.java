@@ -10,7 +10,7 @@ import org.springframework.http.HttpHeaders;
 
 import java.io.IOException;
 
-/** Bound only to external archive/session/ticket endpoints; applies before MVC validation. */
+/** Bound to explicitly selected sensitive endpoints; applies before MVC validation. */
 public final class ExternalArchivePrivacyFilter implements Filter {
     @Override
     public void doFilter(ServletRequest request, ServletResponse response, FilterChain chain)

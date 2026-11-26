@@ -18,6 +18,14 @@ CREATE TABLE IF NOT EXISTS mr_scan (
     file_size   BIGINT,
     checksum_md5 VARCHAR(64),
     migration_status VARCHAR(32),
+    migration_attempts INTEGER,
+    migration_error_code VARCHAR(100),
+    migration_next_retry_at TIMESTAMP,
+    migration_updated_at TIMESTAMP,
+    archive_id BIGINT,
+    source_type VARCHAR(32),
+    source_node VARCHAR(100),
+    source_ref VARCHAR(512),
     migrated_at TIMESTAMP
 );
 

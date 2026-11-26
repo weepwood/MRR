@@ -78,6 +78,42 @@ class EncryptedAuditSpoolTest {
             assertThat(spool.peek(1).getFirst().log().getRequestId()).isEqualTo("large");
         }
     }
+    @Test void sealedGroupUsesOneFileForceAndRecoversAllOrNone() throws Exception {
+        Path p=directory();
+        try(var spool=open(p,5,KEY)){
+            spool.append(log("legacy"));
+            spool.appendGroup(List.of(log("group-a"),log("group-b"),log("group-c")));
+            assertThat(spool.pendingCount()).isEqualTo(4);
+            assertThat(spool.fileForces()).isEqualTo(2);
+            assertThat(spool.publishedSegments()).isEqualTo(2);
+            assertThatThrownBy(()->spool.appendGroup(List.of(log("overflow-a"),log("overflow-b")))).isInstanceOf(EncryptedAuditSpool.CapacityException.class);
+        }
+        try(var spool=open(p,5,KEY)){
+            var rows=spool.peek(50);
+            assertThat(rows).extracting(x->x.log().getRequestId()).containsExactlyInAnyOrder("legacy","group-a","group-b","group-c");
+            assertThat(rows.stream().map(EncryptedAuditSpool.Entry::name).distinct().count()).isEqualTo(2);
+            spool.acknowledgeSegments(rows.stream().map(EncryptedAuditSpool.Entry::name).toList());
+            assertThat(spool.pendingCount()).isZero();
+        }
+    }
+    @Test void concurrentAdmissionWaitsForDurableGroupAndReleasesAllCallers() throws Exception {
+        Path p=directory();
+        try(var spool=open(p,100,KEY);var admission=new GroupedAuditAdmission(spool)){
+            var pool=java.util.concurrent.Executors.newFixedThreadPool(8);
+            var gate=new java.util.concurrent.CountDownLatch(1);
+            try{
+                var futures=new ArrayList<java.util.concurrent.Future<?>>();
+                for(int i=0;i<32;i++){int id=i;futures.add(pool.submit(()->{gate.await();admission.append(log("parallel-"+id));return null;}));}
+                gate.countDown();
+                for(var f:futures)f.get(10,TimeUnit.SECONDS);
+                assertThat(spool.pendingCount()).isEqualTo(32);
+                assertThat(spool.fileForces()).isLessThan(32);
+                System.out.println("MRR_GROUP_FORCE records=32 file_forces="+spool.fileForces()+" bytes="+spool.publishedBytes());
+            }finally{pool.shutdownNow();}
+        }
+        try(var spool=open(p,100,KEY)){assertThat(spool.peek(50)).hasSize(32);}
+    }
+
     @Test void actualChildJvmKillReleasesLockAndRecoversPublishedRecord() throws Exception {
         Path p=directory();
         String java=Path.of(System.getProperty("java.home"),"bin","java").toString();
@@ -92,7 +128,7 @@ class EncryptedAuditSpoolTest {
             child.destroyForcibly();
             assertThat(child.waitFor(10,TimeUnit.SECONDS)).isTrue();
             try(var spool=open(p,10,KEY)) {
-                assertThat(spool.peek(1).getFirst().log().getRequestId()).isEqualTo("child-published");
+                assertThat(spool.peek(16)).extracting(x->x.log().getRequestId()).containsExactly("child-published","child-second");
             }
             System.out.println("MRR_SPOOL_KILL child forcibly terminated, encrypted published record recovered");
         } finally {if(child.isAlive()) child.destroyForcibly();}
@@ -100,7 +136,7 @@ class EncryptedAuditSpoolTest {
     public static class Child {
         public static void main(String[] args) throws Exception {
             try(var spool=open(Path.of(args[0]),10,KEY)) {
-                spool.append(log("child-published"));
+                spool.appendGroup(List.of(log("child-published"),log("child-second")));
                 System.out.println("PUBLISHED");System.out.flush();
                 Thread.sleep(60000);
             }

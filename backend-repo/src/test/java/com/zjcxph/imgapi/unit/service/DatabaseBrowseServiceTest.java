@@ -68,6 +68,20 @@ class DatabaseBrowseServiceTest {
     // ------------------------------------------------------------ 访问控制
 
     @Test
+    void historicalAuditBrowseNeverReturnsRawPrivateText() {
+        login(Permissions.SYSTEM_DB_BROWSE, Permissions.SYSTEM_MANAGE);
+        var actual=new DbBrowseRegistry();
+        when(registry.find("access_log")).thenReturn(actual.find("access_log"));
+        var row=new LinkedHashMap<String,Object>();
+        row.put("id",1L);
+        for (String key:List.of("request_uri","endpoint_template","user_agent","audit_target","audit_description","error_message"))
+            row.put(key,"SYNTHETIC_PRIVATE_BROWSE_VALUE");
+        when(repository.query(anyString(),anyList())).thenReturn(List.of(row));
+        var result=service.readRows("access_log",null,null,"desc",1,10,null);
+        assertThat(result.rows().getFirst().values()).doesNotContain("SYNTHETIC_PRIVATE_BROWSE_VALUE");
+    }
+
+    @Test
     @DisplayName("功能开关关闭时返回 3007，且不访问注册表与数据库")
     void rejectsWhenDisabled() {
         service = new DatabaseBrowseService(registry, repository, objectMapper, false);

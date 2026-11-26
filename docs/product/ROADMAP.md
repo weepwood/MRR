@@ -1,6 +1,6 @@
 # MRR 产品任务池
 
-阶段：后端治理研发（5926edc8 后，维护者明确授权）。优先安全、事务、SQL及真实资源/故障实验；[当前后端任务池](../backend/ROADMAP.md) 与 [第一批报告](../backend/governance-batch1.md)、[第二批报告](../backend/governance-batch2.md)、[第三批报告](../backend/governance-batch3.md)、[第四批报告](../backend/governance-batch4.md)、[第五批报告](../backend/governance-batch5.md)、[第六批报告](../backend/governance-batch6.md)、[第七批报告](../backend/governance-batch7.md)。以下为保留的前端产品任务池，暂停主动扩展，必要安全/兼容联动按后端任务执行。非正式发布准备。
+阶段：后端治理研发（5926edc8 后，维护者明确授权）。优先安全、事务、SQL及真实资源/故障实验；[当前后端任务池](../backend/ROADMAP.md) 与 [第一批报告](../backend/governance-batch1.md)、[第二批报告](../backend/governance-batch2.md)、[第三批报告](../backend/governance-batch3.md)、[第四批报告](../backend/governance-batch4.md)、[第五批报告](../backend/governance-batch5.md)、[第六批报告](../backend/governance-batch6.md)、[第七批报告](../backend/governance-batch7.md)、[第八批报告](../backend/governance-batch8.md)。以下为保留的前端产品任务池，暂停主动扩展，必要安全/兼容联动按后端任务执行。非正式发布准备。
 
 | ID | 用户任务 | 状态 / 完成条件 |
 | --- | --- | --- |

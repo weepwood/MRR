@@ -1,0 +1,109 @@
+package com.zjcxph.imgapi.audit;
+
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.zjcxph.imgapi.entity.Log;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
+import org.junit.jupiter.api.condition.EnabledOnOs;
+import org.junit.jupiter.api.condition.OS;
+
+import java.nio.file.*;
+import java.nio.file.attribute.PosixFilePermissions;
+import java.util.*;
+import java.util.concurrent.TimeUnit;
+import java.nio.charset.StandardCharsets;
+import static org.assertj.core.api.Assertions.*;
+
+@EnabledOnOs({OS.MAC, OS.LINUX})
+class EncryptedAuditSpoolTest {
+    @TempDir Path temp;
+    private static final byte[] KEY = new byte[32]; // synthetic fixture only
+    private static final String MARKER="SYNTHETIC_PRIVATE_AUDIT_BODY";
+    private static final ObjectMapper JSON=new ObjectMapper();
+
+    static Log log(String id) {
+        var row=new Log();row.setRequestId(id);row.setAccessTime(new Date(1760000000000L));
+        row.setUsername("synthetic");row.setRequestUri("/synthetic");row.setRequestBody(MARKER);
+        row.setMethod("GET");row.setResponseStatus("200");
+        return row;
+    }
+    private Path directory() throws Exception {
+        return Files.createDirectory(temp.toRealPath().resolve("spool"),PosixFilePermissions.asFileAttribute(PosixFilePermissions.fromString("rwx------")));
+    }
+    private static EncryptedAuditSpool open(Path p,int max,byte[] key) throws Exception {
+        return new EncryptedAuditSpool(p,key,max,65536,JSON);
+    }
+    @Test void encryptedAdmissionSurvivesReopenAndCapacityDoesNotEvict() throws Exception {
+        Path p=directory();
+        try(var spool=open(p,2,KEY)) {
+            spool.append(log("first"));spool.append(log("second"));
+            assertThatThrownBy(()->spool.append(log("third"))).isInstanceOf(EncryptedAuditSpool.CapacityException.class);
+            assertThat(spool.pendingCount()).isEqualTo(2);
+            try(var files=Files.list(p)) {
+                for(var f:files.filter(x->x.toString().endsWith(".pending")).toList()) {
+                    assertThat(Files.getPosixFilePermissions(f)).isEqualTo(PosixFilePermissions.fromString("rw-------"));
+                    assertThat(new String(Files.readAllBytes(f),StandardCharsets.ISO_8859_1)).doesNotContain(MARKER,"first","second");
+                }
+            }
+            assertThatThrownBy(()->open(p,2,KEY)).isInstanceOf(java.io.IOException.class);
+        }
+        byte[] wrong=new byte[32];wrong[0]=1;
+        assertThatThrownBy(()->open(p,2,wrong)).isInstanceOf(java.io.IOException.class);
+        try(var spool=open(p,2,KEY)) {
+            var rows=spool.peek(50);
+            assertThat(rows).extracting(x->x.log().getRequestId()).containsExactlyInAnyOrder("first","second");
+            assertThat(rows).allSatisfy(x->assertThat(x.log().getRequestBody()).isEqualTo(MARKER));
+            spool.acknowledge(rows.getFirst().name());
+        }
+        try(var spool=open(p,2,KEY)) {assertThat(spool.pendingCount()).isEqualTo(1);}
+    }
+    @Test void rejectsInsecureDirectoryAndTamperedCiphertext() throws Exception {
+        Path p=directory();
+        Files.setPosixFilePermissions(p,PosixFilePermissions.fromString("rwxr-xr-x"));
+        assertThatThrownBy(()->open(p,10,KEY)).isInstanceOf(java.io.IOException.class);
+        Files.setPosixFilePermissions(p,PosixFilePermissions.fromString("rwx------"));
+        String file;
+        try(var spool=open(p,10,KEY)) {spool.append(log("tampered"));file=spool.peek(1).getFirst().name();}
+        Path f=p.resolve(file);byte[] data=Files.readAllBytes(f);data[data.length-1]^=1;Files.write(f,data);
+        assertThatThrownBy(()->open(p,10,KEY)).isInstanceOf(java.io.IOException.class);
+        assertThat(f).exists();
+    }
+    @Test void rejectsByteBudgetAndOversizeWithoutDeletingAcceptedRecords() throws Exception {
+        try(var spool=open(directory(),100,KEY)) {
+            var row=log("large");row.setRequestBody("x".repeat(40000));spool.append(row);
+            var next=log("next");next.setRequestBody("y".repeat(40000));
+            assertThatThrownBy(()->spool.append(next)).isInstanceOf(EncryptedAuditSpool.CapacityException.class);
+            next.setRequestBody("z".repeat(70000));
+            assertThatThrownBy(()->spool.append(next)).isInstanceOf(EncryptedAuditSpool.CapacityException.class);
+            assertThat(spool.peek(1).getFirst().log().getRequestId()).isEqualTo("large");
+        }
+    }
+    @Test void actualChildJvmKillReleasesLockAndRecoversPublishedRecord() throws Exception {
+        Path p=directory();
+        String java=Path.of(System.getProperty("java.home"),"bin","java").toString();
+        var child=new ProcessBuilder(java,"-cp",System.getProperty("java.class.path"),Child.class.getName(),p.toString())
+                .redirectErrorStream(true).redirectOutput(temp.resolve("child.log").toFile()).start();
+        try {
+            long deadline=System.nanoTime()+TimeUnit.SECONDS.toNanos(10);
+            while(System.nanoTime()<deadline && child.isAlive() && !Files.readString(temp.resolve("child.log")).contains("PUBLISHED"))
+                Thread.sleep(20);
+            assertThat(Files.readString(temp.resolve("child.log"))).contains("PUBLISHED");
+            assertThatThrownBy(()->open(p,10,KEY)).isInstanceOf(java.io.IOException.class);
+            child.destroyForcibly();
+            assertThat(child.waitFor(10,TimeUnit.SECONDS)).isTrue();
+            try(var spool=open(p,10,KEY)) {
+                assertThat(spool.peek(1).getFirst().log().getRequestId()).isEqualTo("child-published");
+            }
+            System.out.println("MRR_SPOOL_KILL child forcibly terminated, encrypted published record recovered");
+        } finally {if(child.isAlive()) child.destroyForcibly();}
+    }
+    public static class Child {
+        public static void main(String[] args) throws Exception {
+            try(var spool=open(Path.of(args[0]),10,KEY)) {
+                spool.append(log("child-published"));
+                System.out.println("PUBLISHED");System.out.flush();
+                Thread.sleep(60000);
+            }
+        }
+    }
+}

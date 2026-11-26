@@ -31,6 +31,32 @@ public interface LogMapper {
     @Options(timeout = 3, useCache = false)
     boolean containsAudit(Log log);
 
+    @Select("SELECT count(*) FROM access_log WHERE request_id=#{requestId}")
+    @Options(timeout=3, useCache=false, flushCache=Options.FlushCachePolicy.TRUE)
+    long countRequestIdentity(@Param("requestId") String requestId);
+
+    @Select("""
+            SELECT EXISTS (SELECT 1 FROM access_log WHERE request_id=#{requestId}
+                AND access_time IS NOT DISTINCT FROM CAST(#{accessTime,jdbcType=TIMESTAMP} AS timestamp)
+                AND username IS NOT DISTINCT FROM #{username,jdbcType=VARCHAR}
+                AND client_ip IS NOT DISTINCT FROM #{clientIp,jdbcType=VARCHAR}
+                AND request_uri IS NOT DISTINCT FROM #{requestUri,jdbcType=VARCHAR}
+                AND endpoint_template IS NOT DISTINCT FROM #{endpointTemplate,jdbcType=VARCHAR}
+                AND method IS NOT DISTINCT FROM #{method,jdbcType=VARCHAR}
+                AND user_agent IS NOT DISTINCT FROM #{userAgent,jdbcType=VARCHAR}
+                AND query_string IS NOT DISTINCT FROM #{queryString,jdbcType=VARCHAR}
+                AND request_body IS NOT DISTINCT FROM #{requestBody,jdbcType=VARCHAR}
+                AND response_status IS NOT DISTINCT FROM #{responseStatus,jdbcType=VARCHAR}
+                AND execute_time IS NOT DISTINCT FROM #{executeTime,jdbcType=BIGINT}
+                AND referer IS NOT DISTINCT FROM #{referer,jdbcType=VARCHAR}
+                AND error_message IS NOT DISTINCT FROM #{errorMessage,jdbcType=VARCHAR}
+                AND audit_action IS NOT DISTINCT FROM #{auditAction,jdbcType=VARCHAR}
+                AND audit_target IS NOT DISTINCT FROM #{auditTarget,jdbcType=VARCHAR}
+                AND audit_description IS NOT DISTINCT FROM #{auditDescription,jdbcType=VARCHAR})
+            """)
+    @Options(timeout=3, useCache=false, flushCache=Options.FlushCachePolicy.TRUE)
+    boolean matchesDurableAudit(Log log);
+
     @Select("SELECT " + BASE_COLUMNS + " FROM access_log ORDER BY access_time DESC LIMIT #{limit} OFFSET #{offset}")
     List<Log> findAll(@Param("limit") int limit, @Param("offset") int offset);
 

@@ -22,6 +22,7 @@ import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.locks.ReentrantLock;
 
 @Service
+@org.springframework.boot.autoconfigure.condition.ConditionalOnProperty(name="mrr.audit.spool.enabled",havingValue="false",matchIfMissing=true)
 public class AsyncLogServiceImpl implements AsyncLogService {
     private static final Logger logger = LoggerFactory.getLogger(AsyncLogServiceImpl.class);
     private static final int BATCH_SIZE = 50;

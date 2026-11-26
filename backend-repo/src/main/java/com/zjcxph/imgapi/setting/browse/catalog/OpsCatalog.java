@@ -86,7 +86,7 @@ public final class OpsCatalog {
                 .schemaName("app")
                 .tableName("access_log")
                 .label("访问审计")
-                .description("接口访问与业务审计记录；请求体、查询串与来源页可能含敏感信息，整列不返回")
+                .description("接口访问与业务审计记录；历史自由文本、请求体、查询串及来源页不返回；审计对象受保护")
                 .enabled(true)
                 .requiredPermissions(List.of(Permissions.SYSTEM_MANAGE))
                 .keyColumns(List.of("id"))
@@ -99,10 +99,10 @@ public final class OpsCatalog {
                         DbBrowseColumn.number("id", "主键", false, true),
                         DbBrowseColumn.text("username", "账号", true, false),
                         DbBrowseColumn.text("client_ip", "来源 IP", true, false),
-                        DbBrowseColumn.text("request_uri", "请求地址", true, false, 200),
+                        DbBrowseColumn.hidden("request_uri", "请求地址", ColumnType.TEXT),
                         DbBrowseColumn.text("method", "请求方法", true, false),
-                        DbBrowseColumn.text("endpoint_template", "端点模板", true, false, 200),
-                        DbBrowseColumn.text("user_agent", "客户端标识", false, false, 120),
+                        DbBrowseColumn.hidden("endpoint_template", "端点模板", ColumnType.TEXT),
+                        DbBrowseColumn.hidden("user_agent", "客户端标识", ColumnType.TEXT),
                         DbBrowseColumn.dateTime("access_time", "访问时间", true),
                         DbBrowseColumn.hidden("query_string", "查询串", ColumnType.TEXT),
                         DbBrowseColumn.hidden("request_body", "请求体", ColumnType.TEXT),
@@ -110,10 +110,10 @@ public final class OpsCatalog {
                         DbBrowseColumn.text("response_status", "响应状态", true, false),
                         DbBrowseColumn.number("execute_time", "耗时(ms)", true, false),
                         DbBrowseColumn.text("audit_action", "审计动作", true, false),
-                        DbBrowseColumn.text("audit_target", "审计对象", true, false, 200),
-                        DbBrowseColumn.text("audit_description", "审计说明", false, false, 200),
+                        DbBrowseColumn.masked("audit_target", "审计对象", MaskStrategy.AUDIT_TARGET, false, false, Set.of(FilterOp.EQ)),
+                        DbBrowseColumn.hidden("audit_description", "审计说明", ColumnType.TEXT),
                         DbBrowseColumn.text("request_id", "请求编号", true, false),
-                        DbBrowseColumn.text("error_message", "错误信息", false, false, 500)
+                        DbBrowseColumn.hidden("error_message", "错误信息", ColumnType.TEXT)
                 ))
                 .build();
     }
@@ -236,10 +236,10 @@ public final class OpsCatalog {
                         DbBrowseColumn.text("action", "动作", true, false),
                         DbBrowseColumn.number("image_id", "影像编号", true, false),
                         DbBrowseColumn.text("client_ip", "来源 IP", true, false),
-                        DbBrowseColumn.text("user_agent", "客户端标识", false, false, 120),
+                        DbBrowseColumn.hidden("user_agent", "客户端标识", ColumnType.TEXT),
                         DbBrowseColumn.text("result", "结果", true, false),
                         DbBrowseColumn.text("request_id", "请求编号", true, false),
-                        DbBrowseColumn.text("detail", "详情", false, false, 200),
+                        DbBrowseColumn.hidden("detail", "详情", ColumnType.TEXT),
                         DbBrowseColumn.dateTime("created_at", "发生时间", true)
                 ))
                 .build();

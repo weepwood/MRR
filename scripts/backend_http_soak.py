@@ -23,6 +23,8 @@ import subprocess
 import tempfile
 import time
 import uuid
+import io
+import zipfile
 import zlib
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -79,8 +81,13 @@ def main():
     parser.add_argument("--seconds", type=int, default=90)
     parser.add_argument("--extended", action="store_true", help="explicitly authorize a longer isolated soak (up to 7200s)")
     parser.add_argument("--checkpoint-seconds", type=int, default=60)
+    parser.add_argument("--audit-outage", action="store_true", help="stop only the newly created isolated PG, then verify durable admission and restart")
+    parser.add_argument("--durable-audit", action="store_true", help="opt in to experimental encrypted POSIX spool")
+    parser.add_argument("--signed-external", action="store_true", help="real HMAC ticket and session chain plus role probes")
     parser.add_argument("--external-probes", action="store_true", help="exercise synthetic external session, current scope and privacy headers before load")
     args = parser.parse_args()
+    if args.audit_outage and not args.durable_audit:
+        parser.error("audit outage requires explicit durable candidate")
     if not 15 <= args.checkpoint_seconds <= 60:
         parser.error("checkpoint interval must be 15..60 seconds")
     if not 30 <= args.seconds <= (7200 if args.extended else 600):
@@ -127,6 +134,8 @@ def main():
         pgcmd("createdb", "-h", lab / "socket", "-p", dbport, "-U", "imgapi", "imgapi")
         sql("CREATE EXTENSION pg_stat_statements WITH SCHEMA public")
         secret = secrets.token_hex(32)
+        integration_secret = secrets.token_hex(32)
+        spool_key = base64.b64encode(secrets.token_bytes(32)).decode()
         config = (BACKEND / "src/main/resources/application.properties").read_text()
         config += "\n" + "\n".join(f"{key}={value}" for key, value in {
             "server.address": "127.0.0.1", "server.port": httpport,
@@ -149,11 +158,20 @@ def main():
             "app.access-log-partition.maintenance-cron": "-", "mrr.developer-mode.allowed": "false",
             "aes.secret.key": "", "spring.devtools.restart.enabled": "false",
         }.items()) + "\n"
+        if args.signed_external:
+            config += "\nmrr.integration.enabled=true\nmrr.integration.clients[0].client-id=synthetic-his\nmrr.integration.clients[0].enabled=true\nmrr.integration.clients[0].allowed-ips[0]=127.0.0.1\n"
+        if args.durable_audit:
+            (lab/"audit-spool").mkdir(mode=0o700)
+            config += f"\nmrr.audit.spool.enabled=true\nmrr.audit.spool.directory={(lab/'audit-spool').resolve()}\n"
         (lab / "application.properties").write_text(config)
         env = {"HOME": os.environ["HOME"], "JAVA_HOME": str(args.java_home),
                "PATH": str(args.java_home / "bin") + ":/opt/homebrew/bin:/usr/bin:/bin",
                "LANG": "en_US.UTF-8", "SPRING_CONFIG_LOCATION": "file:" + str(lab / "application.properties"),
                "JWT_SECRET_KEY": secret, "MRR_AUDIT_HMAC_KEY": secrets.token_hex(32)}
+        if args.signed_external:
+            env["SPRING_APPLICATION_JSON"]=json.dumps({"mrr":{"integration":{"clients":[{"client-id":"synthetic-his","enabled":True,"allowed-ips":["127.0.0.1"],"secret":integration_secret}]}}})
+        if args.durable_audit:
+            env["MRR_AUDIT_SPOOL_KEY"]=spool_key
         cmd = [str(BACKEND / "mvnw"), "-o", "-B", "-ntp",
                "-Dmaven.repo.local=" + str(args.maven_repo),
                "-Dspring-boot.run.workingDirectory=" + str(lab),
@@ -277,6 +295,126 @@ def main():
                 sql("ANALYZE app.mr_scan")
                 (lab/"external-probes.json").write_text(json.dumps(external_results,indent=2))
                 print("EXTERNAL_PROBES "+json.dumps(external_results),flush=True)
+            if args.signed_external:
+                # Real signed POST and exchange, no fabricated session DB row.
+                scan_id = int(sql("INSERT INTO app.mr_scan(bah,brxh,filename,folder,uploadflag,pages,source_type,source_ref) "
+                    "VALUES ('7654393','7654393','synthetic.png','synthetic-signed',1,1,'LOCAL','synthetic.png') RETURNING id").splitlines()[0])
+                signed_probes=[]
+                with closing(http.client.HTTPConnection("127.0.0.1",httpport,timeout=12)) as conn:
+                    ticket_path="/api/v1/integration/archive/tickets"
+                    prefix="/api/v1/external/archive"
+                    body=json.dumps({"externalUserId":"synthetic-doctor","bah":"7654393","allowDownload":True},separators=(",",":")).encode()
+                    timestamp=str(int(time.time()))
+                    nonce=uuid.uuid4().hex
+                    canonical="\n".join(("POST",ticket_path,timestamp,nonce,hashlib.sha256(body).hexdigest()))
+                    signed={"X-MRR-Client-Id":"synthetic-his","X-MRR-Timestamp":timestamp,"X-MRR-Nonce":nonce,
+                            "X-MRR-Signature":hmac.new(integration_secret.encode(),canonical.encode(),hashlib.sha256).hexdigest(),
+                            "Content-Type":"application/json"}
+                    def call(method,path,expected,headers=None,body=None):
+                        conn.request(method,path,body=body,headers=headers or {})
+                        response=conn.getresponse()
+                        payload=response.read(); h=dict(response.getheaders())
+                        assert response.status==expected,(method,path,response.status)
+                        assert "no-store" in h.get("Cache-Control",""),(method,path,"no-store")
+                        assert h.get("Referrer-Policy")=="no-referrer",(method,path,"referrer")
+                        signed_probes.append(dict(method=method,path=path,status=response.status))
+                        return payload,h
+                    invalid=dict(signed);invalid["X-MRR-Signature"]="0"*64
+                    call("POST",ticket_path,401,invalid,body)
+                    payload,_=call("POST",ticket_path,200,signed,body)
+                    ticket=json.loads(payload)["data"]["ticket"]
+                    call("POST",ticket_path,409,signed,body)
+                    exchange=json.dumps({"ticket":ticket}).encode()
+                    payload,h=call("POST",prefix+"/session",200,{"Content-Type":"application/json"},exchange)
+                    cookie=h["Set-Cookie"].split(";",1)[0]
+                    assert "HttpOnly" in h["Set-Cookie"] and "SameSite=Lax" in h["Set-Cookie"]
+                    session={"Cookie":cookie}
+                    call("POST",prefix+"/session",401,{"Content-Type":"application/json"},exchange)
+                    call("GET",prefix+"/context",200,session)
+                    payload,_=call("GET",prefix+"/images?bah=7654393",200,session)
+                    assert [x["id"] for x in json.loads(payload)["data"]]==[scan_id]
+                    payload,_=call("GET",prefix+f"/image/{scan_id}",200,session)
+                    assert payload==content
+                    payload,_=call("GET",prefix+"/download?bah=7654393",200,session)
+                    with zipfile.ZipFile(io.BytesIO(payload)) as archive:
+                        assert len(archive.namelist())==1 and archive.read(archive.namelist()[0])==content
+                    call("GET",prefix+"/download?bah=7654300",403,session)
+                    call("POST",prefix+"/logout",200,session)
+                    call("GET",prefix+"/context",401,session)
+                sql(f"DELETE FROM app.mr_scan WHERE id={scan_id}")
+                sql("ANALYZE app.mr_scan")
+                (lab/"signed-external-probes.json").write_text(json.dumps(signed_probes,indent=2))
+                print("SIGNED_EXTERNAL_PROBES "+json.dumps(signed_probes),flush=True)
+                # Browser allowlist and medical permission in real application. Use synthetic historical free text.
+                sql("INSERT INTO app.mr_auth_role(code,name,permissions) VALUES "
+                    "('SYNTHETIC_BROWSER','synthetic','system:db:browse'),"
+                    "('SYNTHETIC_BROWSER_MED','synthetic','system:db:browse,record:read'),"
+                    "('SYNTHETIC_BROWSER_OPS','synthetic','system:db:browse,system:manage')")
+                browser_tokens={}
+                for role in ("SYNTHETIC_BROWSER","SYNTHETIC_BROWSER_MED","SYNTHETIC_BROWSER_OPS"):
+                    name=role.lower()
+                    bid=int(sql("INSERT INTO app.mr_auth_user(username,display_name,password_hash,role_code,status,must_change_password,password_version) "
+                        f"VALUES ('{name}','synthetic','not-a-password','{role}','active',false,1) RETURNING id").splitlines()[0])
+                    browser_tokens[role]=jwt(bid,name,secret,args.seconds+600)[0]
+                sql("UPDATE app.access_log SET request_uri='/synthetic/SYNTHETIC_PRIVATE_BROWSE',endpoint_template='SYNTHETIC_PRIVATE_BROWSE',"
+                    "audit_target='SYNTHETIC_PRIVATE_BROWSE',audit_description='SYNTHETIC_PRIVATE_BROWSE',"
+                    f"error_message='SYNTHETIC_PRIVATE_BROWSE',user_agent='SYNTHETIC_PRIVATE_BROWSE' WHERE id={historical_id}")
+                browse_probes=[]
+                with closing(http.client.HTTPConnection("127.0.0.1",httpport,timeout=8)) as conn:
+                    prefix="/api/v1/system/database/browse/tables"
+                    def browse(path,t,expected):
+                        code,h,payload=request(conn,path,t)
+                        assert code==expected,(path,code,expected)
+                        assert "no-store" in h.get("Cache-Control",""),(path,"no-store")
+                        assert b"SYNTHETIC_PRIVATE_BROWSE" not in payload
+                        browse_probes.append(dict(path=path,status=code))
+                        return json.loads(payload)
+                    basic=browser_tokens["SYNTHETIC_BROWSER"]
+                    med=browser_tokens["SYNTHETIC_BROWSER_MED"]
+                    ops=browser_tokens["SYNTHETIC_BROWSER_OPS"]
+                    tables=browse(prefix,basic,200)
+                    assert "scan" not in [x["tableKey"] for x in tables["data"]]
+                    browse(prefix+"/scan/rows",basic,404)
+                    browse(prefix+"/scan",med,200)
+                    rows=browse(prefix+"/scan/rows?size=1",med,200)["data"]["rows"]
+                    assert rows and "oss_url" not in rows[0] and rows[0]["bah"]!="7654300"
+                    browse(prefix+"/access_log/rows",med,404)
+                    browse(prefix+"/access_log",ops,200)
+                    browse(prefix+"/access_log/rows?order=asc&size=1",ops,200)
+                (lab/"browse-probes.json").write_text(json.dumps(browse_probes,indent=2))
+                print("BROWSE_PROBES "+json.dumps(browse_probes),flush=True)
+            if args.audit_outage:
+                # Stop only the fresh lab database, not the developer or production service.
+                spool_dir=lab/"audit-spool"
+                deadline=time.monotonic()+15
+                while any(spool_dir.glob("*.pending")) and time.monotonic()<deadline:
+                    time.sleep(.1)
+                assert not any(spool_dir.glob("*.pending")), "pre-outage audit backlog"
+                pgcmd("pg_ctl","-D",lab/"data","-m","fast","-w","stop")
+                outage_trace=None
+                try:
+                    assert not (lab/"data"/"postmaster.pid").exists()
+                    with closing(http.client.HTTPConnection("127.0.0.1",httpport,timeout=10)) as conn:
+                        code,h,_=request(conn,"/api/v1/external/archive/context")
+                        assert code==401,(code,"anonymous external context must remain denied")
+                        outage_trace=next(v for k,v in h.items() if k.lower()=="x-request-id")
+                    deadline=time.monotonic()+5
+                    while not any(spool_dir.glob("*.pending")) and time.monotonic()<deadline:
+                        time.sleep(.05)
+                    frames=list(spool_dir.glob("*.pending"))
+                    assert frames and all(outage_trace.encode() not in f.read_bytes() for f in frames)
+                    print("AUDIT_OUTAGE encrypted pending="+str(len(frames))+" db_stopped=true",flush=True)
+                finally:
+                    pgcmd("pg_ctl","-D",lab/"data","-l",lab/"pg.log",
+                          "-o",f"-h 127.0.0.1 -p {dbport} -k {lab/'socket'} -c shared_preload_libraries=pg_stat_statements","-w","start")
+                deadline=time.monotonic()+25
+                while time.monotonic()<deadline:
+                    count=int(sql(f"SELECT count(*) FROM app.access_log WHERE request_id='{outage_trace}'"))
+                    if count==1 and not any(spool_dir.glob("*.pending")):break
+                    time.sleep(.25)
+                assert count==1 and not any(spool_dir.glob("*.pending")), "outage recovery did not converge"
+                (lab/"audit-outage.json").write_text(json.dumps({"pg_stopped":True,"ciphertext_pending":len(frames),"recovered":count,"pending_after":0}))
+                print("AUDIT_OUTAGE recovered exactly once; pending=0",flush=True)
             paths = ["/api/v1/system/data-quality/summary",
                      f"/api/v1/system/data-quality/issues?limit=10&runId={run}",
                      "/api/v1/scan/page?page=30&size=20", "/api/v1/scan/cursor?afterId=0&size=20",
@@ -431,6 +569,28 @@ def main():
             counts_by_trace = Counter(observed)
             missing_trace = sum(counts_by_trace[r[3]] == 0 for r in results)
             duplicate_trace = sum(counts_by_trace[r[3]] > 1 for r in results)
+            # Preserve the fixed-six-second observation even if the candidate needs longer.
+            pre_drain = dict(audit_rows=audit_rows,image_audit_rows=image_rows,
+                             missing_trace=missing_trace,duplicate_trace=duplicate_trace)
+            if args.durable_audit:
+                # Record both the latency failure and the final reconciliation, not one in place of the other.
+                (lab/"synthetic-load-traces.json").write_text(json.dumps([{"id":r[3],"image":r[0]==4} for r in results]))
+                drain_started=time.monotonic()
+                pending_at_six_seconds=len(list((lab/"audit-spool").glob("*.pending")))
+                drain_deadline=drain_started+25
+                while any((lab/"audit-spool").glob("*.pending")) and time.monotonic()<drain_deadline:
+                    time.sleep(.1)
+                drain_elapsed=round(time.monotonic()-drain_started,3)
+                remaining=len(list((lab/"audit-spool").glob("*.pending")))
+                assert remaining==0,"durable audit drain deadline exceeded"
+                counts=sql(f"SELECT count(*),count(*) FILTER (WHERE audit_action='VIEW_IMAGE'),"
+                           "count(*) FILTER (WHERE audit_action='VIEW_IMAGE' AND audit_target LIKE 'hmac:v1:%') "
+                           f"FROM app.access_log WHERE username='{username}'")
+                audit_rows,image_rows,protected_rows=map(int,counts.split("|"))
+                counts_by_trace=Counter(sql(f"SELECT request_id FROM app.access_log WHERE username='{username}'").splitlines())
+                missing_trace=sum(counts_by_trace[r[3]]==0 for r in results)
+                duplicate_trace=sum(counts_by_trace[r[3]]>1 for r in results)
+                pre_drain.update(pending=pending_at_six_seconds,extra_drain_seconds=drain_elapsed)
             assert len({r[3] for r in results}) == len(results), "duplicate HTTP response trace"
             windows = []
             for w in range(0, args.seconds, 15):
@@ -446,6 +606,8 @@ def main():
                          protected_image_audit_rows=protected_rows,
                          initial=initial, final=final, samples=samples, windows=windows,
                          async_submit_http=status, periodic_verified=verified, resource_probes=len(probe_results))
+            if args.durable_audit:
+                stats["fixed_six_second_reconciliation"]=pre_drain
             with closing(http.client.HTTPConnection("127.0.0.1", httpport, timeout=8)) as conn:
                 if managed_id:
                     status, _, body = request(conn, f"/api/v1/system/data-quality/runs/{managed_id}", token)
@@ -457,6 +619,15 @@ def main():
                 digest = hashlib.sha256(jti.encode()).hexdigest()
                 sql(f"INSERT INTO app.token_revocation(token_hash,expires_at) VALUES ('{digest}',CURRENT_TIMESTAMP+interval '1 hour')")
                 assert request(conn, paths[0], token)[0] == 401
+            if args.durable_audit:
+                # HTTP completion callbacks can run immediately after the last control response.
+                # Do not destroy the synthetic key or stop PG with unacknowledged ciphertext.
+                time.sleep(.5)
+                deadline=time.monotonic()+25
+                while any((lab/"audit-spool").glob("*.pending")) and time.monotonic()<deadline:
+                    time.sleep(.1)
+                stats["spool_pending_after_controls"]=len(list((lab/"audit-spool").glob("*.pending")))
+                assert stats["spool_pending_after_controls"]==0, "durable audit shutdown backlog"
             (lab / "result.json").write_text(json.dumps(stats, indent=2))
             (lab / "errors.json").write_text(json.dumps(errors[:20], indent=2))
             print("SOAK_RESULT " + json.dumps(stats), flush=True)

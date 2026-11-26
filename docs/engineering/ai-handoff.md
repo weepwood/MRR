@@ -835,3 +835,6 @@ MrrCursorPagination 改用 ElPagination 原生页码、箭头、跳页、条数�
 
 ## 外观标题简化及页签表面（2026-11-26）
 基线acbabe2b。完整设置页仅保留标题及三项命令，去掉正常状态说明（抽屉原样，失败显式反馈），不修改保存契约；公共页签使用静态轨道/选中令牌，明暗两配色区分页面、轨道和选中表面。主题/兼容单测30/30、双引擎页签/布局/动效24/24、合成同步失败2/2，TypeScript及定向lint通过。8组截图位于/Volumes/data/AI-Development/artifacts/mrr-appearance-track-20261126，日志/tmp/mrr-appearance-track-*.log。未执行全量CI、生产构建或医院实际环境验收，不推送合并发布。
+
+## 侧栏分组横向间距（2026-11-26）
+基线e412d382。SubSidebar统一竖线、子项背景边界、内距与图标间距变量，移除额外2px缩进。实际经典明亮232px侧栏，竖线间隙2→8px，子项宽190→184px，右侧12px保持；五分组26项展开检查无文字截断。Chromium/WebKit 20/20（含32组配色/明暗/视口几何），键盘、折叠浮层、减少动效及移动导航回归通过。TypeScript、ESLint、Stylelint通过。截图/Volumes/data/AI-Development/artifacts/mrr-sidebar-spacing-20261126，日志/tmp/mrr-sidebar-spacing-e2e.log。未执行全量CI、生产构建及医院终端验收，不修改菜单权限和路由，不推送合并发布。

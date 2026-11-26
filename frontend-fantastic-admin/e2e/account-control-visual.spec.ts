@@ -132,6 +132,11 @@ test('登录表单保留密码切换、失败恢复、请求体与记住用户�
 })
 
 test('注册密码不一致阻止进入下一步，切换可见性及修正后保留输入', async ({ page }) => {
+  let submissions = 0
+  page.on('request', (request) => {
+    if (request.method() === 'POST' && new URL(request.url()).pathname.endsWith('/auth/register')) { submissions++ }
+  })
+
   await page.route('**/api/v1/public/status/developer-mode', route => route.fulfill({ json: { code: 200, data: { enabled: false, accessMode: 'DISABLED' } } }))
   await page.goto('/login?mode=register')
   await page.locator('#register-account').fill('synthetic.user')
@@ -154,4 +159,5 @@ test('注册密码不一致阻止进入下一步，切换可见性及修正后�
   await page.getByRole('button', { name: '返回身份信息' }).click()
   await expect(password).toHaveValue('Synthetic-123')
   await expect(confirm).toHaveValue('Synthetic-123')
+  expect(submissions, '分步返回不得提交注册').toBe(0)
 })

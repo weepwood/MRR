@@ -57,7 +57,7 @@ const form = useForm({
   },
 })
 
-const onSubmit = form.handleSubmit(async (values) => {
+const submitValidated = form.handleSubmit(async (values) => {
   if (!isApplicationStep.value) {
     isApplicationStep.value = true
     await nextTick()
@@ -87,7 +87,23 @@ const onSubmit = form.handleSubmit(async (values) => {
   }
 })
 
+// Protect validation as well as the network request. An overlapping identity
+// submit must never be reinterpreted as the application step after validation.
+let submitting = false
+async function onSubmit(event: SubmitEvent) {
+  event.preventDefault()
+  if (submitting) { return }
+  submitting = true
+  try {
+    await submitValidated(event)
+  }
+  finally {
+    submitting = false
+  }
+}
+
 async function handlePrevious() {
+  if (submitting) { return }
   isApplicationStep.value = false
   await nextTick()
   document.getElementById('register-account')?.focus()

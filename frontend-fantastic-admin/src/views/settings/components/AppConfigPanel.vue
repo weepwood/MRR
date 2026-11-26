@@ -12,6 +12,7 @@ defineOptions({ name: 'AppConfigPanel' })
 
 const props = withDefaults(defineProps<{
   drawer?: boolean
+  commandTarget?: HTMLElement
 }>(), {
   drawer: false,
 })
@@ -21,6 +22,7 @@ const autoSaveState = ref<'idle' | 'saving' | 'saved'>('idle')
 const tabsId = useId()
 const panelRef = ref<HTMLElement>()
 const { width: panelWidth } = useElementSize(panelRef)
+const compactRows = computed(() => panelWidth.value > 0 && panelWidth.value < 560)
 const iconOnlyGroups = computed(() => props.drawer || (panelWidth.value > 0 && panelWidth.value < 680))
 
 const activeGroup = ref<string | number>('theme')
@@ -188,30 +190,32 @@ function handleReset() {
 </script>
 
 <template>
-  <div ref="panelRef" class="app-config-panel" :class="{ 'app-config-panel--drawer': props.drawer }">
-    <div class="config-summary" :class="{ 'config-summary--warning': settingsStore.uiSettingsSyncState === 'failed' }">
-      <div class="config-save-feedback" role="status">
-        <strong class="autosave-state">
-          <FaIcon :name="settingsStore.uiSettingsSyncState === 'failed' ? 'i-lucide:triangle-alert' : 'i-lucide:save'" aria-hidden="true" />
-          {{ autoSaveLabel }}
-        </strong>
-        <p>{{ syncScopeDescription }}</p>
+  <div ref="panelRef" class="app-config-panel" :class="{ 'app-config-panel--drawer': props.drawer, 'app-config-panel--compact': compactRows }">
+    <Teleport :to="props.commandTarget || 'body'" :disabled="!props.commandTarget">
+      <div class="config-summary" :class="{ 'config-summary--embedded': !!props.commandTarget, 'config-summary--warning': settingsStore.uiSettingsSyncState === 'failed' }">
+        <div class="config-save-feedback" role="status">
+          <strong class="autosave-state">
+            <FaIcon :name="settingsStore.uiSettingsSyncState === 'failed' ? 'i-lucide:triangle-alert' : 'i-lucide:save'" aria-hidden="true" />
+            {{ autoSaveLabel }}
+          </strong>
+          <p>{{ syncScopeDescription }}</p>
+        </div>
+        <div class="config-summary-actions">
+          <el-button @click="handleReset">
+            <FaIcon name="i-lucide:rotate-cw" />
+            恢复默认
+          </el-button>
+          <el-button @click="handleExport">
+            <FaIcon name="i-lucide:download" />
+            导出配置
+          </el-button>
+          <el-button @click="triggerImport">
+            <FaIcon name="i-lucide:upload" />
+            导入配置
+          </el-button>
+        </div>
       </div>
-      <div class="config-summary-actions">
-        <el-button @click="handleReset">
-          <FaIcon name="i-lucide:rotate-cw" />
-          恢复默认
-        </el-button>
-        <el-button @click="handleExport">
-          <FaIcon name="i-lucide:download" />
-          导出配置
-        </el-button>
-        <el-button @click="triggerImport">
-          <FaIcon name="i-lucide:upload" />
-          导入配置
-        </el-button>
-      </div>
-    </div>
+    </Teleport>
     <input ref="importInput" class="import-input" type="file" accept="application/json,.json" @change="handleImport">
 
     <MrrSegmentedTabs v-model="groupTab" label="外观设置分类" class="appearance-tabs" :class="{ 'appearance-tabs--icons': iconOnlyGroups }">
@@ -502,96 +506,90 @@ function handleReset() {
           </span>
         </template>
         <div v-if="activeGroup === 'workspace'" class="appearance-tab-content">
-          <div class="config-subsection">
-            <div class="subsection-heading">
+          <div class="config-section">
+            <div class="subsection-heading group-heading">
               <strong>标签栏</strong>
-              <small>管理已打开页面及其快捷操作。</small>
+              <p>管理已打开页面及其快捷操作。</p>
             </div>
-            <div class="config-section config-section--nested">
-              <div class="setting-item">
-                <div class="label-copy">
-                  <strong>启用标签栏</strong>
-                </div>
-                <el-switch v-model="settingsStore.settings.tabbar.enable" aria-label="启用标签栏" />
+            <div class="setting-item">
+              <div class="label-copy">
+                <strong>启用标签栏</strong>
               </div>
-              <div class="setting-item">
-                <div class="label-copy">
-                  <strong>显示页面图标</strong>
-                </div>
-                <el-switch v-model="settingsStore.settings.tabbar.enableIcon" :disabled="!settingsStore.settings.tabbar.enable" aria-label="显示页面图标" />
+              <el-switch v-model="settingsStore.settings.tabbar.enable" aria-label="启用标签栏" />
+            </div>
+            <div class="setting-item">
+              <div class="label-copy">
+                <strong>显示页面图标</strong>
               </div>
-              <div class="setting-item">
-                <div class="label-copy">
-                  <strong>标签栏快捷键</strong>
-                </div>
-                <el-switch v-model="settingsStore.settings.tabbar.enableHotkeys" :disabled="!settingsStore.settings.tabbar.enable" aria-label="标签栏快捷键" />
+              <el-switch v-model="settingsStore.settings.tabbar.enableIcon" :disabled="!settingsStore.settings.tabbar.enable" aria-label="显示页面图标" />
+            </div>
+            <div class="setting-item">
+              <div class="label-copy">
+                <strong>标签栏快捷键</strong>
               </div>
+              <el-switch v-model="settingsStore.settings.tabbar.enableHotkeys" :disabled="!settingsStore.settings.tabbar.enable" aria-label="标签栏快捷键" />
             </div>
           </div>
 
-          <div class="config-subsection">
-            <div class="subsection-heading">
+          <div class="config-section">
+            <div class="subsection-heading group-heading">
               <strong>工具栏</strong>
-              <small>控制页面顶部常用工具的显示。</small>
+              <p>控制页面顶部常用工具的显示。</p>
             </div>
-            <div class="config-section config-section--nested">
-              <div class="setting-item">
-                <div class="label-copy">
-                  <strong>启用工具栏</strong>
-                </div>
-                <el-switch v-model="settingsStore.settings.toolbar.enable" aria-label="启用工具栏" />
+            <div class="setting-item">
+              <div class="label-copy">
+                <strong>启用工具栏</strong>
               </div>
-              <div v-if="settingsStore.mode === 'pc'" class="setting-item">
-                <div class="label-copy">
-                  <strong>面包屑导航</strong>
-                </div>
-                <el-switch v-model="settingsStore.settings.toolbar.breadcrumb" :disabled="!settingsStore.settings.toolbar.enable" aria-label="面包屑导航" />
+              <el-switch v-model="settingsStore.settings.toolbar.enable" aria-label="启用工具栏" />
+            </div>
+            <div v-if="settingsStore.mode === 'pc'" class="setting-item">
+              <div class="label-copy">
+                <strong>面包屑导航</strong>
               </div>
-              <div class="setting-item">
-                <div class="label-copy">
-                  <strong>导航搜索</strong>
-                </div>
-                <el-switch v-model="settingsStore.settings.toolbar.navSearch" :disabled="!settingsStore.settings.toolbar.enable" aria-label="导航搜索" />
+              <el-switch v-model="settingsStore.settings.toolbar.breadcrumb" :disabled="!settingsStore.settings.toolbar.enable" aria-label="面包屑导航" />
+            </div>
+            <div class="setting-item">
+              <div class="label-copy">
+                <strong>导航搜索</strong>
               </div>
-              <div v-if="settingsStore.mode === 'pc'" class="setting-item">
-                <div class="label-copy">
-                  <strong>全屏入口</strong>
-                </div>
-                <el-switch v-model="settingsStore.settings.toolbar.fullscreen" :disabled="!settingsStore.settings.toolbar.enable" aria-label="全屏入口" />
+              <el-switch v-model="settingsStore.settings.toolbar.navSearch" :disabled="!settingsStore.settings.toolbar.enable" aria-label="导航搜索" />
+            </div>
+            <div v-if="settingsStore.mode === 'pc'" class="setting-item">
+              <div class="label-copy">
+                <strong>全屏入口</strong>
               </div>
-              <div class="setting-item">
-                <div class="label-copy">
-                  <strong>页面刷新入口</strong>
-                </div>
-                <el-switch v-model="settingsStore.settings.toolbar.pageReload" :disabled="!settingsStore.settings.toolbar.enable" aria-label="页面刷新入口" />
+              <el-switch v-model="settingsStore.settings.toolbar.fullscreen" :disabled="!settingsStore.settings.toolbar.enable" aria-label="全屏入口" />
+            </div>
+            <div class="setting-item">
+              <div class="label-copy">
+                <strong>页面刷新入口</strong>
               </div>
-              <div class="setting-item">
-                <div class="label-copy">
-                  <strong>主题切换入口</strong>
-                </div>
-                <el-switch v-model="settingsStore.settings.toolbar.colorScheme" :disabled="!settingsStore.settings.toolbar.enable" aria-label="主题切换入口" />
+              <el-switch v-model="settingsStore.settings.toolbar.pageReload" :disabled="!settingsStore.settings.toolbar.enable" aria-label="页面刷新入口" />
+            </div>
+            <div class="setting-item">
+              <div class="label-copy">
+                <strong>主题切换入口</strong>
               </div>
+              <el-switch v-model="settingsStore.settings.toolbar.colorScheme" :disabled="!settingsStore.settings.toolbar.enable" aria-label="主题切换入口" />
             </div>
           </div>
 
-          <div class="config-subsection">
-            <div class="subsection-heading">
+          <div class="config-section">
+            <div class="subsection-heading group-heading">
               <strong>快捷键</strong>
-              <small>控制主页和导航搜索的键盘操作。</small>
+              <p>控制主页和导航搜索的键盘操作。</p>
             </div>
-            <div class="config-section config-section--nested">
-              <div class="setting-item">
-                <div class="label-copy">
-                  <strong>主页快捷键</strong>
-                </div>
-                <el-switch v-model="settingsStore.settings.mainPage.enableHotkeys" :disabled="!settingsStore.settings.toolbar.enable" aria-label="主页快捷键" />
+            <div class="setting-item">
+              <div class="label-copy">
+                <strong>主页快捷键</strong>
               </div>
-              <div class="setting-item">
-                <div class="label-copy">
-                  <strong>导航搜索快捷键</strong>
-                </div>
-                <el-switch v-model="settingsStore.settings.navSearch.enableHotkeys" :disabled="!settingsStore.settings.toolbar.navSearch" aria-label="导航搜索快捷键" />
+              <el-switch v-model="settingsStore.settings.mainPage.enableHotkeys" :disabled="!settingsStore.settings.toolbar.enable" aria-label="主页快捷键" />
+            </div>
+            <div class="setting-item">
+              <div class="label-copy">
+                <strong>导航搜索快捷键</strong>
               </div>
+              <el-switch v-model="settingsStore.settings.navSearch.enableHotkeys" :disabled="!settingsStore.settings.toolbar.navSearch" aria-label="导航搜索快捷键" />
             </div>
           </div>
         </div>
@@ -605,96 +603,90 @@ function handleReset() {
           </span>
         </template>
         <div v-if="activeGroup === 'other'" class="appearance-tab-content">
-          <div class="config-subsection">
-            <div class="subsection-heading">
+          <div class="config-section">
+            <div class="subsection-heading group-heading">
               <strong>主页</strong>
-              <small>控制登录后的默认入口与名称。</small>
+              <p>控制登录后的默认入口与名称。</p>
             </div>
-            <div class="config-section config-section--nested">
-              <div class="setting-item">
-                <div class="label-copy">
-                  <strong>启用主页</strong>
-                </div>
-                <el-switch v-model="settingsStore.settings.home.enable" aria-label="启用主页" />
+            <div class="setting-item">
+              <div class="label-copy">
+                <strong>启用主页</strong>
               </div>
-              <div class="setting-item">
-                <div class="label-copy">
-                  <strong>主页名称</strong>
-                </div>
-                <el-input v-model="settingsStore.settings.home.title" class="appearance-field" aria-label="主页名称" />
+              <el-switch v-model="settingsStore.settings.home.enable" aria-label="启用主页" />
+            </div>
+            <div class="setting-item">
+              <div class="label-copy">
+                <strong>主页名称</strong>
               </div>
+              <el-input v-model="settingsStore.settings.home.title" class="appearance-field" aria-label="主页名称" />
             </div>
           </div>
 
-          <div class="config-subsection">
-            <div class="subsection-heading">
+          <div class="config-section">
+            <div class="subsection-heading group-heading">
               <strong>底部版权</strong>
-              <small>设置页脚展示的版权与备案信息。</small>
+              <p>设置页脚展示的版权与备案信息。</p>
             </div>
-            <div class="config-section config-section--nested">
-              <div class="setting-item">
-                <div class="label-copy">
-                  <strong>启用底部版权</strong>
-                </div>
-                <el-switch v-model="settingsStore.settings.copyright.enable" aria-label="启用底部版权" />
+            <div class="setting-item">
+              <div class="label-copy">
+                <strong>启用底部版权</strong>
               </div>
-              <div class="setting-item">
-                <div class="label-copy">
-                  <strong>日期</strong>
-                </div>
-                <el-input v-model="settingsStore.settings.copyright.dates" :disabled="!settingsStore.settings.copyright.enable" class="appearance-field" aria-label="日期" />
+              <el-switch v-model="settingsStore.settings.copyright.enable" aria-label="启用底部版权" />
+            </div>
+            <div class="setting-item">
+              <div class="label-copy">
+                <strong>日期</strong>
               </div>
-              <div class="setting-item">
-                <div class="label-copy">
-                  <strong>公司</strong>
-                </div>
-                <el-input v-model="settingsStore.settings.copyright.company" :disabled="!settingsStore.settings.copyright.enable" class="appearance-field" aria-label="公司" />
+              <el-input v-model="settingsStore.settings.copyright.dates" :disabled="!settingsStore.settings.copyright.enable" class="appearance-field" aria-label="日期" />
+            </div>
+            <div class="setting-item">
+              <div class="label-copy">
+                <strong>公司</strong>
               </div>
-              <div class="setting-item">
-                <div class="label-copy">
-                  <strong>网址</strong>
-                </div>
-                <el-input v-model="settingsStore.settings.copyright.website" :disabled="!settingsStore.settings.copyright.enable" class="appearance-field" aria-label="网址" />
+              <el-input v-model="settingsStore.settings.copyright.company" :disabled="!settingsStore.settings.copyright.enable" class="appearance-field" aria-label="公司" />
+            </div>
+            <div class="setting-item">
+              <div class="label-copy">
+                <strong>网址</strong>
               </div>
-              <div class="setting-item">
-                <div class="label-copy">
-                  <strong>备案号</strong>
-                </div>
-                <el-input v-model="settingsStore.settings.copyright.beian" :disabled="!settingsStore.settings.copyright.enable" class="appearance-field" aria-label="备案号" />
+              <el-input v-model="settingsStore.settings.copyright.website" :disabled="!settingsStore.settings.copyright.enable" class="appearance-field" aria-label="网址" />
+            </div>
+            <div class="setting-item">
+              <div class="label-copy">
+                <strong>备案号</strong>
               </div>
+              <el-input v-model="settingsStore.settings.copyright.beian" :disabled="!settingsStore.settings.copyright.enable" class="appearance-field" aria-label="备案号" />
             </div>
           </div>
 
-          <div class="config-subsection">
-            <div class="subsection-heading">
+          <div class="config-section">
+            <div class="subsection-heading group-heading">
               <strong>其他功能</strong>
-              <small>权限、载入反馈和辅助显示选项。</small>
+              <p>权限、载入反馈和辅助显示选项。</p>
             </div>
-            <div class="config-section config-section--nested">
-              <div class="setting-item">
-                <div class="label-copy">
-                  <strong>启用权限控制</strong>
-                </div>
-                <el-switch v-model="settingsStore.settings.app.enablePermission" aria-label="启用权限控制" />
+            <div class="setting-item">
+              <div class="label-copy">
+                <strong>启用权限控制</strong>
               </div>
-              <div class="setting-item">
-                <div class="label-copy">
-                  <strong>显示载入进度条</strong>
-                </div>
-                <el-switch v-model="settingsStore.settings.app.enableProgress" aria-label="显示载入进度条" />
+              <el-switch v-model="settingsStore.settings.app.enablePermission" aria-label="启用权限控制" />
+            </div>
+            <div class="setting-item">
+              <div class="label-copy">
+                <strong>显示载入进度条</strong>
               </div>
-              <div class="setting-item">
-                <div class="label-copy">
-                  <strong>色弱模式</strong>
-                </div>
-                <el-switch v-model="settingsStore.settings.app.enableColorAmblyopiaMode" aria-label="色弱模式" />
+              <el-switch v-model="settingsStore.settings.app.enableProgress" aria-label="显示载入进度条" />
+            </div>
+            <div class="setting-item">
+              <div class="label-copy">
+                <strong>色弱模式</strong>
               </div>
-              <div class="setting-item">
-                <div class="label-copy">
-                  <strong>动态页面标题</strong>
-                </div>
-                <el-switch v-model="settingsStore.settings.app.enableDynamicTitle" aria-label="动态页面标题" />
+              <el-switch v-model="settingsStore.settings.app.enableColorAmblyopiaMode" aria-label="色弱模式" />
+            </div>
+            <div class="setting-item">
+              <div class="label-copy">
+                <strong>动态页面标题</strong>
               </div>
+              <el-switch v-model="settingsStore.settings.app.enableDynamicTitle" aria-label="动态页面标题" />
             </div>
           </div>
         </div>
@@ -734,6 +726,16 @@ function handleReset() {
   background: var(--mrr-card);
   border: 1px solid var(--mrr-border);
   border-radius: var(--mrr-radius-card);
+}
+
+.config-summary.config-summary--embedded {
+  width: 100%;
+  min-width: 0;
+  padding: 0;
+  margin: 0;
+  background: transparent;
+  border: 0;
+  border-radius: 0;
 }
 
 .config-save-feedback {
@@ -810,18 +812,14 @@ function handleReset() {
   border-radius: var(--mrr-radius-card);
 }
 
-.config-section--nested {
-  border-radius: var(--mrr-radius-md);
-}
-
 .setting-item {
   display: flex;
   flex-wrap: wrap;
   gap: var(--mrr-space-3) var(--mrr-space-5);
   align-items: center;
   justify-content: space-between;
-  min-height: 66px;
-  padding: 12px var(--mrr-space-3);
+  min-height: 64px;
+  padding: var(--mrr-space-3) var(--settings-group-inset, var(--mrr-space-4));
 }
 
 .setting-item + .setting-item {
@@ -852,7 +850,7 @@ function handleReset() {
   margin-top: 4px;
   font-size: var(--mrr-font-size-xs);
   line-height: 1.5;
-  color: var(--el-text-color-secondary);
+  color: var(--mrr-muted-foreground);
 }
 
 .theme-tabs {
@@ -1144,30 +1142,30 @@ function handleReset() {
   justify-content: flex-end;
 }
 
-.config-subsection + .config-subsection {
-  margin-top: var(--mrr-space-4);
-}
+.appearance-tab-content { display: grid; gap: var(--mrr-space-4); min-width: 0; }
 
 .subsection-heading {
-  margin-bottom: var(--mrr-space-2);
+  padding: var(--mrr-space-3) var(--settings-group-inset, var(--mrr-space-4));
+  border-bottom: 1px solid var(--mrr-border);
 }
 
 .subsection-heading strong,
-.subsection-heading small {
+.subsection-heading p {
   display: block;
 }
 
 .subsection-heading strong {
-  font-size: var(--mrr-font-size-sm);
-  font-weight: 600;
-  color: var(--el-text-color-primary);
+  font-size: var(--mrr-font-size-md);
+  font-weight: 650;
+  line-height: 1.4;
+  color: var(--mrr-card-foreground);
 }
 
-.subsection-heading small {
-  margin-top: 3px;
+.subsection-heading p {
+  margin: var(--mrr-space-1) 0 0;
   font-size: var(--mrr-font-size-xs);
   line-height: 1.6;
-  color: var(--el-text-color-secondary);
+  color: var(--mrr-muted-foreground);
 }
 
 .menu-mode {
@@ -1288,14 +1286,18 @@ function handleReset() {
   border-radius: 0 4px 4px 0;
 }
 
+.app-config-panel--compact .setting-item--stack { flex-direction: column; align-items: stretch; }
+.app-config-panel--compact .setting-item--stack .label-copy { flex-basis: auto; }
+.app-config-panel--compact .setting-item:not(.setting-item--stack) .label-copy { flex-basis: 120px; }
+.app-config-panel--compact .setting-item > .el-switch { flex: none; margin-inline-start: auto; }
+.app-config-panel--compact .appearance-field { flex: 0 1 200px; }
+
 @media (max-width: 720px) {
-  .config-save-feedback,
-  .label-copy {
+  .config-save-feedback {
     flex-basis: auto;
   }
 
-  .config-summary,
-  .setting-item {
+  .config-summary {
     flex-direction: column;
     align-items: stretch;
   }

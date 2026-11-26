@@ -829,3 +829,6 @@ MrrCursorPagination 改用 ElPagination 原生页码、箭头、跳页、条数�
 
 ## 外观导航、暖色描边与页签动画（2026-11-26）
 基线36a7b31f。窄内容/抽屉四等宽图标保留无障碍名称，MrrSegmentedTabs复用Element Plus原生活动条、180ms连续位移及120ms文字过渡；颜色主题/标题风格/分类/展厅迁移。暖色明亮输入描边#918B83→#99938A、暗黑#929087→#716E66，主要卡面静态边界对比至少3:1，悬停和焦点独立。30项定向单测与36项Chromium/WebKit回归通过，新增测试实际采集动画中间位移、reduced-motion、三种抽屉视口及输入焦点颜色；TypeScript和定向lint通过。截图 /Volumes/data/AI-Development/artifacts/mrr-appearance-tabs-20261126/final，日志/tmp/mrr-appearance-*.log。未执行全量CI、生产构建、实际旧浏览器及全站视觉矩阵；保留main 24152bee、9037 Mock，不推送合并发布。
+
+## 外观分区命令与分组统一（2026-11-26）
+基线ea721776。完整设置页命令Teleport至实例专属分区头，去掉独立卡面及重复内边距，抽屉独立入口保持。工作区及其他六组采用同一层卡面、公共分组标题、64px基础行高，保留自动保存与字段禁用联动。首轮Chromium/WebKit相关36/36；最终头部去描边后定向10/10，含64组主题/宽度/页签/浏览器几何断言及真实导出、合成JSON导入和抽屉验证。TypeScript与定向lint通过。截图/Volumes/data/AI-Development/artifacts/mrr-appearance-groups-20261126，日志/tmp/mrr-appearance-group-*.log。未执行全量CI、生产构建和医院实际环境验收，不推送合并发布。

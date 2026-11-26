@@ -58,6 +58,7 @@ const ocrSettingsRef = ref<OcrClassificationSettingsRef>()
 const runtimeSettingsRef = ref<RuntimeSettingsRef>()
 const externalLinksRef = ref<{ linkScopeDescription: string }>()
 const appConfigRef = ref<AppConfigPanelRef>()
+const appearanceCommandTarget = ref<HTMLElement>()
 const contentRef = ref<HTMLElement>()
 const layoutRef = ref<HTMLElement>()
 const { width: layoutWidth } = useElementSize(layoutRef)
@@ -601,6 +602,7 @@ onUnmounted(() => {
               </div>
             </div>
           </div>
+          <div v-else-if="activeSection === 'appearance'" ref="appearanceCommandTarget" class="settings-actions settings-actions--appearance" />
           <div v-if="isDirty && !isServerSettingSection" class="settings-pending" role="status">
             <span>另有 {{ changedKeys.length }} 项系统配置尚未保存</span>
             <el-button link type="primary" @click="navigateSection('system')">
@@ -640,7 +642,7 @@ onUnmounted(() => {
           <RuntimeSettings v-else-if="activeSection === 'runtime'" ref="runtimeSettingsRef" />
           <DepartmentThemeSettings v-else-if="activeSection === 'department'" ref="departmentThemeRef" />
           <ExternalLinksSettings v-else-if="activeSection === 'external-links'" ref="externalLinksRef" />
-          <AppConfigPanel v-else ref="appConfigRef" />
+          <AppConfigPanel v-else ref="appConfigRef" :command-target="appearanceCommandTarget" />
         </div>
       </div>
     </div>

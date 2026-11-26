@@ -113,7 +113,7 @@ function scrollToIndex(index: number, smooth = true) {
     if (!container || !target) {
       return
     }
-    const top = target.offsetTop - (container.clientHeight - target.clientHeight) / 2
+    const top = container.scrollTop + target.getBoundingClientRect().top - container.getBoundingClientRect().top - container.clientTop - (container.clientHeight - target.clientHeight) / 2
     const scrollTop = Math.max(0, top)
     if (smooth && isMotionEnabled() && 'scrollBehavior' in document.documentElement.style) {
       container.scrollTo({ top: scrollTop, behavior: 'smooth' })

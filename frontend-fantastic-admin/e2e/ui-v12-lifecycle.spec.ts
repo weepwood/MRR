@@ -9,11 +9,16 @@ test('图表反复挂载卸载与加载状态资源采样', async ({ page, brows
   const search = page.getByLabel('查找组件', { exact: true })
   const samples: Array<{ cycle: number, canvases: number, heap?: number, nodes?: number, documents?: number, listeners?: number }> = []
   const cdp = browserName === 'chromium' ? await page.context().newCDPSession(page) : undefined
-  for (let i = 0; i < 12; i++) {
+  const cycles = Number(process.env.MRR_LIFECYCLE_CYCLES || 12)
+  for (let i = 0; i < cycles; i++) {
     await search.fill('图表与时间范围')
     const chart = page.locator('.gallery-example .mrr-chart')
     await expect(chart).toHaveCount(2)
     await expect(chart.first().locator('canvas').first()).toBeVisible()
+    if (i % 2 === 0) {
+      await page.locator('.el-switch').filter({ has: page.getByRole('switch', { name: '组合图模式' }) }).locator('.el-switch__core').click()
+      await expect(page.getByRole('img', { name: '双坐标轴组合图' })).toBeVisible()
+    }
     const loading = page.locator('.el-switch').filter({ has: page.getByRole('switch', { name: '模拟图表加载' }) }).locator('.el-switch__core')
     await loading.click()
     await expect(chart.first()).toHaveAttribute('aria-busy', 'true')
@@ -22,7 +27,7 @@ test('图表反复挂载卸载与加载状态资源采样', async ({ page, brows
     await search.fill('不存在的组件')
     await expect(page.locator('.gallery-example .mrr-chart canvas')).toHaveCount(0)
     const sample: typeof samples[number] = { cycle: i + 1, canvases: await page.locator('canvas').count() }
-    if (cdp && [2, 5, 8, 11].includes(i)) {
+    if (cdp && (i + 1) % Math.max(3, Math.floor(cycles / 4)) === 0) {
       // Let the existing 80ms resize debounce and native overlay animations settle before sampling.
       await page.waitForTimeout(500)
       await cdp.send('HeapProfiler.collectGarbage')

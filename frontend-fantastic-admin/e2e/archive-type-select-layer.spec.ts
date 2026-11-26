@@ -587,3 +587,28 @@ test('列表复选框可辨认且全屏工具栏键盘操作与窄屏布局独�
   await page.keyboard.press('Escape')
   await expect(viewer).toBeHidden()
 })
+
+test('中等宽度保持缩略图与原图并排，窄屏回到纵向阅读', async ({ page }, testInfo) => {
+  await page.setViewportSize({ width: 1000, height: 900 })
+  await page.goto('/archive?bah=00800001')
+  const thumbs = page.locator('.viewer-layout')
+  const preview = page.locator('.preview-panel')
+  await expect(thumbs).toBeVisible()
+  await expect(preview).toBeVisible()
+  await expect(thumbs.locator('.thumb-item').first()).toBeVisible()
+  await expect(preview.locator('.fit-image')).toBeVisible()
+  await expect.poll(() => preview.locator('.fit-image').evaluate((img: HTMLImageElement) => img.naturalWidth)).toBeGreaterThan(0)
+  await expect.poll(async () => {
+    const a = await thumbs.boundingBox()
+    const b = await preview.boundingBox()
+    return !!a && !!b && Math.abs(a.y - b.y) < 2 && a.x + a.width <= b.x && b.width > 400
+  }).toBe(true)
+  await expect(page.locator('.archive-page .el-loading-mask:visible')).toHaveCount(0)
+  await page.screenshot({ path: testInfo.outputPath('reading-medium.png'), animations: 'disabled' })
+  await page.setViewportSize({ width: 375, height: 900 })
+  await expect.poll(async () => {
+    const a = await thumbs.boundingBox()
+    const b = await preview.boundingBox()
+    return !!a && !!b && a.y + a.height <= b.y
+  }).toBe(true)
+})

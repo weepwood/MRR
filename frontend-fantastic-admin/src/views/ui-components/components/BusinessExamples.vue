@@ -2,7 +2,7 @@
 import type { FormInstance } from 'element-plus'
 import type { ExampleId } from '../catalog'
 import { computed, reactive, ref } from 'vue'
-import { MrrHorizontalBarChart, MrrLineChart } from '@/components/charts'
+import { MrrDualAxisChart, MrrHorizontalBarChart, MrrLineChart } from '@/components/charts'
 import { mrrChartColorToken } from '@/config/chart-theme'
 
 defineProps<{ example: ExampleId }>()
@@ -23,6 +23,7 @@ async function saveDemo() {
 
 const empty = ref(false)
 const chartLoading = ref(false)
+const dualAxis = ref(false)
 const points = ref(16)
 const dates = Array.from({ length: 24 }, (_, i) => `2026-11-${String(i + 1).padStart(2, '0')}`)
 const series = computed(() => empty.value
@@ -81,12 +82,15 @@ const series = computed(() => empty.value
       <span>模拟空结果</span>
       <el-switch v-model="chartLoading" aria-label="模拟图表加载" />
       <span>模拟加载</span>
+      <el-switch v-model="dualAxis" aria-label="组合图模式" />
+      <span>双轴组合</span>
       <el-select v-model="points" aria-label="示例趋势范围" class="demo-trend-range mrr-single-select" style="width: 180px;">
         <el-option label="最近 16 个记录日" :value="16" />
         <el-option label="全部记录日" :value="24" />
       </el-select>
     </div>
-    <MrrLineChart :loading="chartLoading" :categories="empty ? [] : dates" :series="series" :visible-points="points" unit="ms" :height="260" :min-interval="0" />
+    <MrrDualAxisChart v-if="dualAxis" :loading="chartLoading" :categories="empty ? [] : dates" :bars="empty ? [] : [{ name: '扫描页数', data: dates.map((_, i) => 200 + i * 13), color: mrrChartColorToken('primary') }]" :lines="empty ? [] : [{ name: '扫描记录', data: dates.map((_, i) => 20 + i * 2), color: mrrChartColorToken('neutral'), smooth: false }]" left-axis-name="页数" right-axis-name="记录数" left-unit="页" right-unit="条" :initial-visible-count="points" :height="260" />
+    <MrrLineChart v-else :loading="chartLoading" :categories="empty ? [] : dates" :series="series" :visible-points="points" unit="ms" :height="260" :min-interval="0" />
     <MrrHorizontalBarChart :loading="chartLoading" :data="empty ? [] : [{ label: '接口 A', count: 240 }, { label: '接口 B', count: 135 }, { label: '接口 C', count: 78 }]" :height="180" unit="ms" />
   </div>
 </template>

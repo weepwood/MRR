@@ -317,3 +317,5 @@ V1.2 第三轮：外壳阴影及分隔归公共tokens；权限角色排版和运
 重点视觉收口：热力图尺寸适配归 MrrRequestHeatmap 显式 fit-width 选项，调用方仅开启；图表失活任务清理归 useMrrChart，运行错误技术分区归业务详情，局部日期/多行输入归展厅，不另建主题或日期选择组件。
 
 影像阅读精修：查看器原生按钮与焦点归 PreviewViewerToolbar，共享浮层与窄屏位置归 forms-geometry-viewer.css，分类工具条归 PreviewActionBar，列表复选框/失败键/节点引用归 ThumbStrip；排行标签取图表语义色，加载组合示例归 BusinessExamples。
+
+生产候选：影像标准阅读断点归archive.vue，缩略图实际容器几何归useThumbLayout，滚动定位归ThumbStrip，患者字段排版归PatientCard；双轴组合演示复用MrrDualAxisChart，独立生产Mock环境隔离归Vite构建配置与专用Playwright配置。

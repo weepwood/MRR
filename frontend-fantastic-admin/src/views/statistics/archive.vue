@@ -1230,13 +1230,13 @@ onUnmounted(() => {
 .archive-workspace.has-viewer {
   display: grid;
   grid-template-columns: minmax(280px, 320px) var(--archive-thumb-column-width, 218px) minmax(0, 1fr);
-  gap: 12px;
+  gap: var(--mrr-space-3);
   height: 100%;
   min-height: 0;
 }
 
 .archive-workspace.has-viewer.is-list-mode {
-  grid-template-columns: minmax(280px, 320px) var(--archive-thumb-column-width, 218px) minmax(0, 1fr);
+  grid-template-columns: minmax(280px, 320px) minmax(160px, 200px) minmax(0, 1fr);
 }
 
 .archive-workspace.has-viewer.is-wall-layout {
@@ -1509,6 +1509,30 @@ onUnmounted(() => {
 
   .archive-wall-toolbar-controls {
     justify-content: flex-start;
+  }
+}
+
+@media (min-width: 761px) and (max-width: 1100px) {
+  .archive-workspace.has-viewer:not(.is-wall-layout),
+  .archive-workspace.has-viewer.is-list-mode:not(.is-wall-layout) {
+    grid-template-columns: minmax(160px, min(28%, var(--archive-thumb-column-width, 218px))) minmax(0, 1fr);
+  }
+
+  .archive-workspace.has-viewer.is-list-mode:not(.is-wall-layout) {
+    grid-template-columns: minmax(160px, 200px) minmax(0, 1fr);
+  }
+
+  .archive-workspace.has-viewer .archive-sidebar {
+    grid-column: 1 / -1;
+  }
+
+  .archive-workspace.has-viewer .viewer-layout {
+    height: min(68vh, 640px);
+    min-height: 420px;
+  }
+
+  .archive-workspace.has-viewer .viewer-layout :deep(.thumb-panel) {
+    max-height: none;
   }
 }
 

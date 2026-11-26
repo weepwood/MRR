@@ -128,6 +128,33 @@ test('维护模式确认保留非空校验，按 Esc 退出确认不发送写请
   expect(disables).toBe(1)
 })
 
+test('维护状态读取失败时禁止变更，重新检查后恢复', async ({ page }) => {
+  let reads = 0
+  let writes = 0
+  await page.route(overviewUrl, route => route.fulfill({ json: { code: 200, data: snapshot('READ_WRITE') } }))
+  await page.route('**/api/v1/operations/readiness**', route => route.fulfill({ json: { code: 200, data: snapshot('READ_WRITE').readiness } }))
+  await page.route('**/api/v1/operations/maintenance', async (route) => {
+    reads++
+    if (reads === 1) {
+      await route.fulfill({ status: 503, json: { code: 503, message: '合成测试：维护状态读取失败' } })
+      return
+    }
+    await route.fulfill({ json: { code: 200, data: { enabled: false } } })
+  })
+  await page.route('**/api/v1/operations/maintenance/enable', async (route) => {
+    writes++
+    await route.fulfill({ json: { code: 200, data: { enabled: true } } })
+  })
+  await page.goto('/operations-center?tab=maintenance')
+  await expect(page.getByText('维护状态读取失败，请重新检查')).toBeVisible()
+  await expect(page.getByText('主动维护模式未启用', { exact: true })).toHaveCount(0)
+  await expect(page.getByRole('button', { name: '进入维护模式', exact: true })).toHaveCount(0)
+  await page.getByRole('button', { name: '重新检查', exact: true }).click()
+  await expect(page.getByText('主动维护模式未启用', { exact: true })).toBeVisible()
+  await expect(page.getByRole('button', { name: '进入维护模式', exact: true })).toBeEnabled()
+  expect(writes).toBe(0)
+})
+
 test('shows configured delivery mode and read-only partition status, labels stale on failure', async ({ page }) => {
   await page.route(overviewUrl, route => route.fulfill({
     json: { code: 200, data: { ...snapshot('READ_WRITE'), imageDeliveryMode: 'gateway' } },

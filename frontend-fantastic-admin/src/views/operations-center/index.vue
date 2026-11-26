@@ -13,7 +13,7 @@ import type {
 } from '@/api/modules/operations'
 import { useElementSize } from '@vueuse/core'
 import { ElMessage } from 'element-plus'
-import { computed, nextTick, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue'
+import { computed, nextTick, onActivated, onBeforeUnmount, onDeactivated, onMounted, reactive, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import {
   diagnoseImageSource,
@@ -37,6 +37,7 @@ import AppLoading from '@/components/AppLoading/index.vue'
 import MrrPageHeader from '@/components/MrrPageHeader/index.vue'
 import MrrPageShell from '@/components/MrrPageShell/index.vue'
 import MrrSectionCard from '@/components/MrrSectionCard/index.vue'
+import { useUserStore } from '@/store/modules/user'
 import { actionDialog } from '@/ui/components/ActionDialog'
 import { formatDateTime as formatTime } from '@/utils/display-format'
 import { hasAnyPermission, hasPermission } from '@/utils/session'
@@ -73,6 +74,7 @@ const { width: dashboardWidth } = useElementSize(dashboardRef)
 const compactDashboard = computed(() => dashboardWidth.value > 0 && dashboardWidth.value < 850)
 const networkChanges = ref<string[]>([])
 let overviewRequest: Promise<void> | undefined
+const userStore = useUserStore()
 const canManage = computed(() => hasPermission('system:manage'))
 const canViewTasks = computed(() => hasPermission('record:read'))
 const canViewLogs = computed(() => hasPermission('log:read'))
@@ -104,6 +106,20 @@ const quickLinks = computed(() => (overview.value?.quickLinks || []).filter((lin
 const diagnosticRun = ref<OperationsDiagnosticRun>()
 const readiness = ref<ReadinessSnapshot>()
 const maintenance = ref<MaintenanceStatus>()
+const maintenanceError = ref('')
+const permissionError = ref('')
+const canSaveSnapshot = computed(() => canManage.value && hasPermission('role:read'))
+const operationPending = ref(false)
+let operationGeneration = 0
+let pageActive = true
+function operationContext() {
+  const generation = operationGeneration
+  const epoch = userStore.sessionEpoch
+  return () => pageActive && userStore.isSessionVerified && generation === operationGeneration && epoch === userStore.sessionEpoch
+}
+onActivated(() => { pageActive = true })
+onDeactivated(() => { pageActive = false; operationGeneration++ })
+onBeforeUnmount(() => { pageActive = false; operationGeneration++ })
 const imageForm = reactive<{ bah: string, sjh: string, imageId?: number }>({
   bah: '',
   sjh: '',
@@ -156,6 +172,27 @@ async function runContentVerification() {
 const integrity = ref<IntegritySummary>()
 const exportJobs = ref<ExportCenterJob[]>([])
 const permissionMatrix = ref<PermissionMatrix>()
+function invalidateOperationContext() {
+  operationGeneration++
+  maintenance.value = undefined
+  readiness.value = undefined
+  permissionMatrix.value = undefined
+  maintenanceError.value = ''
+  permissionError.value = ''
+}
+watch([() => userStore.sessionEpoch, () => userStore.isSessionVerified, canManage, canSaveSnapshot], invalidateOperationContext, { flush: 'sync' })
+watch(activeTab, (_, previous) => {
+  operationGeneration++
+  if (previous === 'maintenance') {
+    maintenance.value = undefined
+    maintenanceError.value = ''
+  }
+  if (previous === 'permissions') {
+    permissionMatrix.value = undefined
+    permissionError.value = ''
+  }
+}, { flush: 'sync' })
+onDeactivated(invalidateOperationContext)
 const auditEntries = ref<OperationAuditEntry[]>([])
 const endpointKeyword = ref('')
 const exportStatus = ref('')
@@ -422,9 +459,19 @@ async function loadTasks() {
 }
 
 async function loadPermissions() {
+  if (!pageActive || !userStore.isSessionVerified || loading.permissions || operationPending.value) { return }
+  const current = operationContext()
   loading.permissions = true
+  permissionError.value = ''
   try {
-    permissionMatrix.value = await getPermissionMatrix(true)
+    const matrix = await getPermissionMatrix(true)
+    if (current()) { permissionMatrix.value = matrix }
+  }
+  catch {
+    if (current()) {
+      permissionMatrix.value = undefined
+      permissionError.value = '权限矩阵读取失败，请重新加载'
+    }
   }
   finally {
     loading.permissions = false
@@ -432,82 +479,149 @@ async function loadPermissions() {
 }
 
 async function savePermissionSnapshot() {
-  const version = await actionDialog.prompt('请输入权限矩阵版本名称', '保存权限版本', {
-    confirmButtonText: '保存',
-    cancelButtonText: '取消',
-    inputPlaceholder: '例如 v0.7.0-before',
-    inputValidator: value => Boolean(value && value.trim()) || '版本名称不能为空',
-  }).then(result => result.value).catch(() => '')
-  if (!version) {
-    return
+  if (!pageActive || !canSaveSnapshot.value || activeTab.value !== 'permissions'
+    || operationPending.value || loading.permissions || !permissionMatrix.value) { return }
+  const context = operationContext()
+  const current = () => context() && canSaveSnapshot.value && activeTab.value === 'permissions'
+  operationPending.value = true
+  let saved = false
+  try {
+    const version = await actionDialog.prompt('请输入权限矩阵版本名称', '保存权限版本', {
+      confirmButtonText: '保存',
+      cancelButtonText: '取消',
+      inputPlaceholder: '例如 v0.7.0-before',
+      inputValidator: value => Boolean(value && value.trim()) || '版本名称不能为空',
+    }).then(result => result.value).catch(() => '')
+    if (!version?.trim() || !current()) { return }
+    await savePermissionMatrixSnapshot(version.trim())
+    if (!current()) { return }
+    ElMessage.success('权限矩阵快照已保存')
+    saved = true
   }
-  await savePermissionMatrixSnapshot(version.trim())
-  ElMessage.success('权限矩阵快照已保存')
-  await loadPermissions()
+  catch {
+    if (current()) {
+      permissionMatrix.value = undefined
+      permissionError.value = '快照保存结果未核对，请刷新权限矩阵'
+    }
+  }
+  finally {
+    operationPending.value = false
+  }
+  if (saved && current()) { await loadPermissions() }
 }
 
 async function loadMaintenance(refresh = false) {
+  if (!pageActive || !userStore.isSessionVerified || operationPending.value || loading.maintenance) { return }
+  const current = operationContext()
   loading.maintenance = true
+  maintenanceError.value = ''
   try {
     const [maintenanceStatus, readinessStatus] = await Promise.all([
       getMaintenanceStatus(),
       getDeploymentReadiness(refresh),
     ])
-    maintenance.value = maintenanceStatus
-    readiness.value = readinessStatus
+    if (current()) {
+      maintenance.value = maintenanceStatus
+      readiness.value = readinessStatus
+    }
+  }
+  catch {
+    if (current()) {
+      maintenance.value = undefined
+      readiness.value = undefined
+      maintenanceError.value = '维护状态读取失败，请重新检查'
+    }
   }
   finally {
     loading.maintenance = false
   }
 }
 
+function canChangeMaintenance(enabled: boolean) {
+  return pageActive && userStore.isSessionVerified && canManage.value
+    && activeTab.value === 'maintenance' && !operationPending.value && !loading.maintenance
+    && maintenance.value?.enabled === enabled && !maintenanceError.value
+}
+
 async function enableMaintenance() {
-  const reason = await actionDialog.prompt('请输入本次维护原因', '进入主动维护模式', {
-    confirmButtonText: '进入维护模式',
-    cancelButtonText: '取消',
-    inputPlaceholder: '例如：数据库升级、批量数据修复',
-    inputValidator: value => Boolean(value && value.trim()) || '维护原因不能为空',
-    type: 'warning',
-  }).then(result => result.value).catch(() => '')
-  if (!reason) {
-    return
-  }
-  loading.maintenance = true
+  if (!canChangeMaintenance(false)) { return }
+  const context = operationContext()
+  const current = () => context() && canManage.value && activeTab.value === 'maintenance'
+  operationPending.value = true
   try {
-    maintenance.value = await enableMaintenanceMode(reason.trim())
+    const reason = await actionDialog.prompt('请输入本次维护原因', '进入主动维护模式', {
+      confirmButtonText: '进入维护模式',
+      cancelButtonText: '取消',
+      inputPlaceholder: '例如：数据库升级、批量数据修复',
+      inputValidator: value => Boolean(value && value.trim()) || '维护原因不能为空',
+      type: 'warning',
+    }).then(result => result.value).catch(() => '')
+    if (!reason?.trim() || !current() || maintenance.value?.enabled !== false) { return }
+    const status = await enableMaintenanceMode(reason.trim())
+    if (!current()) { return }
+    maintenance.value = status
     ElMessage.warning('系统已进入主动维护只读模式')
     await overviewRequest
-    await loadOverview()
+    if (current()) {
+      readiness.value = undefined
+      await loadOverview()
+    }
+  }
+  catch {
+    if (current()) {
+      maintenance.value = undefined
+      readiness.value = undefined
+      maintenanceError.value = '维护操作结果未核对，请重新检查'
+    }
   }
   finally {
-    loading.maintenance = false
+    operationPending.value = false
   }
 }
 
 async function disableMaintenance(event: MouseEvent) {
+  if (!canChangeMaintenance(true)) { return }
+  const context = operationContext()
+  const current = () => context() && canManage.value && activeTab.value === 'maintenance'
   const trigger = event.currentTarget instanceof HTMLElement ? event.currentTarget : null
+  operationPending.value = true
+  let restoreFocus = false
   try {
-    await actionDialog.confirm(
-      '关闭主动维护模式不会绕过数据库、磁盘、Nginx 或 OSS 故障导致的自动降级。是否继续？',
-      '退出主动维护模式',
-      { type: 'warning', confirmButtonText: '确认退出', cancelButtonText: '取消' },
-    )
-  }
-  catch {
-    // Keep the initiating control reachable after Escape, including Safari mouse activation.
-    await nextTick()
-    if (trigger?.isConnected) { trigger.focus({ preventScroll: true }) }
-    return
-  }
-  loading.maintenance = true
-  try {
-    maintenance.value = await disableMaintenanceMode()
+    try {
+      await actionDialog.confirm(
+        '关闭主动维护模式不会绕过数据库、磁盘、Nginx 或 OSS 故障导致的自动降级。是否继续？',
+        '退出主动维护模式',
+        { type: 'warning', confirmButtonText: '确认退出', cancelButtonText: '取消' },
+      )
+    }
+    catch {
+      restoreFocus = true
+      return
+    }
+    if (!current() || maintenance.value?.enabled !== true) { return }
+    const status = await disableMaintenanceMode()
+    if (!current()) { return }
+    maintenance.value = status
     ElMessage.success('主动维护模式已关闭')
     await overviewRequest
-    await loadOverview()
+    if (current()) {
+      readiness.value = undefined
+      await loadOverview()
+    }
+  }
+  catch {
+    if (current()) {
+      maintenance.value = undefined
+      readiness.value = undefined
+      maintenanceError.value = '维护操作结果未核对，请重新检查'
+    }
   }
   finally {
-    loading.maintenance = false
+    operationPending.value = false
+    if (restoreFocus) {
+      await nextTick()
+      if (current() && trigger?.isConnected) { trigger.focus({ preventScroll: true }) }
+    }
   }
 }
 
@@ -566,7 +680,7 @@ onMounted(async () => {
       description="集中发现问题、执行维护、跳转处理、重新验证并保留操作记录。"
     >
       <template #badge>
-        <el-tag v-if="activeTab !== 'overview' && readiness" :type="modeType(readiness.mode)" effect="dark" size="large">
+        <el-tag v-if="activeTab !== 'overview' && readiness && !operationPending && (activeTab !== 'maintenance' || maintenance)" :type="modeType(readiness.mode)" effect="dark" size="large">
           {{ modeLabel(readiness.mode) }}
         </el-tag>
       </template>
@@ -1116,15 +1230,16 @@ onMounted(async () => {
             <el-tag v-if="permissionMatrix?.diff.available" :type="permissionMatrix.diff.changes.length ? 'warning' : 'success'">
               变化 {{ permissionMatrix.diff.changes.length }} 项
             </el-tag>
-            <el-button @click="savePermissionSnapshot">
+            <el-button v-if="canSaveSnapshot" :disabled="operationPending || loading.permissions || !permissionMatrix" @click="savePermissionSnapshot">
               保存版本快照
             </el-button>
-            <el-button :loading="loading.permissions" @click="loadPermissions">
+            <el-button :loading="loading.permissions" :disabled="operationPending" @click="loadPermissions">
               刷新
             </el-button>
           </div>
         </div>
-        <el-table :data="filteredEndpoints" border height="600">
+        <AppError v-if="permissionError" :message="permissionError" @retry="loadPermissions" />
+        <el-table v-else :data="filteredEndpoints" border height="600">
           <el-table-column v-bind="tableSequenceColumn()" fixed />
           <el-table-column prop="method" label="方法" width="90" fixed />
           <el-table-column prop="path" label="接口" min-width="260" show-overflow-tooltip fixed />
@@ -1155,11 +1270,15 @@ onMounted(async () => {
       <el-tab-pane label="维护模式" name="maintenance">
         <div class="toolbar-row">
           <span>主动维护用于版本升级、数据库维护和批量修复；自动降级由关键依赖检查独立控制。</span>
-          <el-button :loading="loading.maintenance" @click="loadMaintenance(true)">
+          <el-button :loading="loading.maintenance" :disabled="operationPending" @click="loadMaintenance(true)">
             重新检查
           </el-button>
         </div>
+        <AppError v-if="maintenanceError" :message="maintenanceError" @retry="loadMaintenance(true)" />
+        <AppLoading v-else-if="!maintenance && loading.maintenance" type="stats" :cols="3" />
+        <AppEmpty v-else-if="!maintenance" description="维护状态尚未核对，请重新检查" />
         <el-alert
+          v-else-if="maintenance"
           :title="maintenance?.enabled ? '主动维护模式已启用' : '主动维护模式未启用'"
           :type="maintenance?.enabled ? 'warning' : 'success'"
           :closable="false"
@@ -1174,7 +1293,7 @@ onMounted(async () => {
             </p>
           </template>
         </el-alert>
-        <section class="mrr-metric-grid mrr-metric-grid--three section-card">
+        <section v-if="maintenance && readiness && !operationPending" class="mrr-metric-grid mrr-metric-grid--three section-card">
           <MrrMetricCard icon="i-lucide:activity" label="有效模式" compact-value :value="modeLabel(readiness?.mode)" :value-tone="modeType(readiness?.mode)" />
           <MrrMetricCard
             icon="i-lucide:shield-alert"
@@ -1194,10 +1313,10 @@ onMounted(async () => {
         <MrrSectionCard class="section-card" title="维护操作" description="所有操作通过现有访问日志保留 requestId、用户和结果">
           <template #actions>
             <div class="toolbar-actions">
-              <el-button v-if="!maintenance?.enabled" type="warning" @click="enableMaintenance">
+              <el-button v-if="canManage && maintenance?.enabled === false" type="warning" :disabled="operationPending || loading.maintenance" @click="enableMaintenance">
                 进入维护模式
               </el-button>
-              <el-button v-else type="success" @click="disableMaintenance">
+              <el-button v-else-if="canManage && maintenance?.enabled === true" type="success" :disabled="operationPending || loading.maintenance" @click="disableMaintenance">
                 退出主动维护
               </el-button>
             </div>

@@ -62,6 +62,7 @@ MRR/
 - 继续当前独立工作区及 9037 Mock，仅本地开发，风险分级验收，中文提交；正式 main 与远端 #850 保持不变，任何推送/合并/发布需明确授权。
 - 第二批产品研发：数据治理规则直达样本与只读审计证据、运维排查入口及存储事件筛选，跨页面主要操作调查见 [产品功能调查](docs/product/product-batch2-audit.md)。历史前端研发记录，不新建重复监控或关系编辑引擎。
 - 第三批产品研发：异常样本首次失败、组合筛选、并发拒绝清理及恢复，定向双浏览器8/8、类型及修改文件ESLint通过；详见 [第三批审查](docs/product/product-batch3-audit.md)。前端待办 GOV-03/OPS-02 暂缓，保持仅本地研发。
+- 后端治理第二批：273条API声明矩阵，病案关系双读权限，外部撤销及票据缓存修复，旧查询SQL预算、质量样本与汇总原子持久化，详见 [第二批报告](docs/backend/governance-batch2.md)。仅本地研发，保留前端兼容与正式发布待办。
 - [历史优先级及设计决策](docs/engineering/v1.2-agents-history.md)、[已有候选验收](docs/engineering/v1.2-candidate-closure.md)、[候选准备](docs/engineering/v1.2-release-preparation.md) 仅用于查阅，不再作为当前任务队列。旧版独立审查及发布阻塞保留，不能当作已通过。
 
 ## 4. 风险等级

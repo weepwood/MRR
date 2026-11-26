@@ -92,6 +92,42 @@ class DataQualityQueryTimeoutPostgresqlIT extends PostgresqlIntegrationTestSuppo
         }
     }
 
+    @Test
+    void invalidSecondSampleDoesNotPublishHalfOfRuleAndNextRunRecovers() throws Exception {
+        var metrics = new SimpleMeterRegistry();
+        var service = new DataQualityServiceImpl(jdbc, metrics);
+        ReflectionTestUtils.setField(service, "sampleLimit", 1000);
+        ReflectionTestUtils.setField(service, "retentionDays", 90);
+        String trigger = "synthetic-atomic-samples";
+        String samples = """
+                SELECT 'mr_scan' AS entity_type,
+                       CASE WHEN n=2 THEN repeat('x',161) ELSE n::text END AS entity_id,
+                       NULL::text AS bah, NULL::text AS sjh, 'synthetic' AS detail
+                FROM generate_series(1,2) n ORDER BY n
+                """;
+        try {
+            ReflectionTestUtils.setField(service, "checks", List.of(check(
+                    "SYNTHETIC_ATOMIC", "synthetic", "WARNING", "SELECT 2::bigint", samples)));
+            assertThatThrownBy(() -> service.runChecks(trigger)).isInstanceOf(IllegalStateException.class);
+            var failed = jdbc.queryForMap("SELECT id,status FROM app.mrr_data_quality_run WHERE triggered_by=? ORDER BY id DESC LIMIT 1", trigger);
+            assertThat(failed.get("status")).isEqualTo("FAILED");
+            assertThat(jdbc.queryForObject("SELECT count(*) FROM app.mrr_data_quality_issue WHERE run_id=?", Long.class, failed.get("id"))).isZero();
+            assertThat(jdbc.queryForObject("SELECT count(*) FROM app.mrr_data_quality_check_result WHERE run_id=?", Long.class, failed.get("id"))).isZero();
+            ReflectionTestUtils.setField(service, "checks", List.of(check(
+                    "SYNTHETIC_ATOMIC", "synthetic", "WARNING", "SELECT 1000::bigint",
+                    "SELECT 'mr_scan' AS entity_type, n::text AS entity_id, NULL::text AS bah, NULL::text AS sjh, 'synthetic' AS detail FROM generate_series(1,1000) n ORDER BY n")));
+            service.runChecks(trigger);
+            var success = jdbc.queryForMap("SELECT id,status FROM app.mrr_data_quality_run WHERE triggered_by=? ORDER BY id DESC LIMIT 1", trigger);
+            assertThat(success.get("status")).isEqualTo("SUCCESS");
+            assertThat(jdbc.queryForObject("SELECT count(*) FROM app.mrr_data_quality_issue WHERE run_id=?", Long.class, success.get("id"))).isEqualTo(1000L);
+            assertThat(jdbc.queryForObject("SELECT sampled_count FROM app.mrr_data_quality_check_result WHERE run_id=?", Integer.class, success.get("id"))).isEqualTo(1000);
+            assertThat(metrics.get("mrr.data.quality.running").gauge().value()).isZero();
+        } finally {
+            jdbc.update("DELETE FROM app.mrr_data_quality_run WHERE triggered_by=?", trigger);
+            metrics.close();
+        }
+    }
+
     private Object check(String code, String name, String severity, String countSql, String sampleSql)
             throws ReflectiveOperationException {
         // 测试限定的慢规则，不为夹具扩大生产检查目录的可见性。

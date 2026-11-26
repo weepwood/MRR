@@ -36,6 +36,7 @@ public class DataRelationController {
 
     @Operation(summary = "按 archive_id、BAH 或 SJH 搜索病案主档")
     @GetMapping("/archives/search")
+    @RequirePermissions({"system:read", "record:read"})
     public Result<List<Map<String, Object>>> search(
             @Parameter(description = "ARCHIVE_ID、BAH 或 SJH")
             @RequestParam(defaultValue = "BAH") String type,
@@ -60,6 +61,7 @@ public class DataRelationController {
 
     @Operation(summary = "获取一份病案的跨表关系详情")
     @GetMapping("/archives/{archiveId}")
+    @RequirePermissions({"system:read", "record:read"})
     public Result<Map<String, Object>> archiveRelation(@PathVariable long archiveId) {
         return Result.<Map<String, Object>>success("获取病案关系详情成功")
                 .data(dataRelationService.getArchiveRelation(archiveId));

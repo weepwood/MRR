@@ -70,7 +70,7 @@ class ScanMapperIntegrationTest {
     @Test
     @DisplayName("findByBah — 按病案号查询")
     void findByBah() {
-        List<Scan> results = scanMapper.findByBah("00789508");
+        List<Scan> results = scanMapper.findByBah("00789508", "789508", 1001);
         assertThat(results).hasSize(1);
         assertThat(results.get(0).getFilename()).isEqualTo("test.jpg");
     }
@@ -78,7 +78,7 @@ class ScanMapperIntegrationTest {
     @Test
     @DisplayName("findByBrxh — 按住院号查询")
     void findByBrxh() {
-        List<Scan> results = scanMapper.findByBrxh("605746");
+        List<Scan> results = scanMapper.findByBrxh("605746", 1001);
         assertThat(results).hasSize(1);
     }
 

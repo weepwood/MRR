@@ -153,24 +153,21 @@ public interface ScanMapper {
     Scan findById(Integer id);
 
     @Select("SELECT * FROM mr_scan WHERE BAH = #{normalizedBah} " +
-            "OR " + BAH_SEARCH_EXPRESSION + " = #{searchCode} ORDER BY pages")
+            "OR " + BAH_SEARCH_EXPRESSION + " = #{searchCode} ORDER BY pages LIMIT #{limit}")
+    @Options(timeout = 3)
     List<Scan> findByBah(
             @Param("normalizedBah") String normalizedBah,
-            @Param("searchCode") String searchCode
+            @Param("searchCode") String searchCode,
+            @Param("limit") int limit
     );
 
-    default List<Scan> findByBah(String bah) {
-        return findByBah(
-                MedicalRecordCodeUtils.normalizeOrEmpty(bah),
-                MedicalRecordCodeUtils.toSearchTerm(bah)
-        );
-    }
+    @Select("SELECT * FROM mr_scan WHERE folder = #{folder} ORDER BY id LIMIT #{limit}")
+    @Options(timeout = 3)
+    List<Scan> findByFolder(@Param("folder") String folder, @Param("limit") int limit);
 
-    @Select("SELECT * FROM mr_scan WHERE folder = #{folder} ORDER BY id")
-    List<Scan> findByFolder(@Param("folder") String folder);
-
-    @Select("SELECT * FROM mr_scan WHERE BRXH = #{brxh} ORDER BY id")
-    List<Scan> findByBrxh(@Param("brxh") String brxh);
+    @Select("SELECT * FROM mr_scan WHERE BRXH = #{brxh} ORDER BY id LIMIT #{limit}")
+    @Options(timeout = 3)
+    List<Scan> findByBrxh(@Param("brxh") String brxh, @Param("limit") int limit);
 
     @Select("SELECT * FROM mr_scan ORDER BY id LIMIT #{limit} OFFSET #{offset}")
     @Options(timeout = 3)

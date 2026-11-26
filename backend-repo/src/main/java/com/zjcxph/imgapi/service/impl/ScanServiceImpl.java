@@ -265,15 +265,22 @@ public class ScanServiceImpl implements ScanService {
 
     @Override
     public List<Scan> findByBah(String bah) {
-        return scanMapper.findByBah(
+        return requireCompleteLegacyLookup(scanMapper.findByBah(
                 MedicalRecordCodeUtils.normalizeOrEmpty(bah),
-                MedicalRecordCodeUtils.toSearchTerm(bah)
-        );
+                MedicalRecordCodeUtils.toSearchTerm(bah), MAX_LEGACY_QUERY_LIMIT + 1
+        ));
     }
 
     @Override
     public List<Scan> findByBrxh(String brxh) {
-        return scanMapper.findByBrxh(brxh);
+        return requireCompleteLegacyLookup(scanMapper.findByBrxh(brxh, MAX_LEGACY_QUERY_LIMIT + 1));
+    }
+
+    private List<Scan> requireCompleteLegacyLookup(List<Scan> rows) {
+        if (rows.size() > MAX_LEGACY_QUERY_LIMIT) {
+            throw new BusinessException(413, "扫描记录超过旧接口查询上限，请缩小范围或使用分页查询");
+        }
+        return rows;
     }
 
     @Override

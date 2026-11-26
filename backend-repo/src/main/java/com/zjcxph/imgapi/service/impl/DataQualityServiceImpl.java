@@ -233,13 +233,7 @@ public class DataQualityServiceImpl implements DataQualityService {
                             statement.setInt(1, safeSampleLimit);
                         }, new ColumnMapRowMapper());
 
-                jdbcTemplate.update("""
-                        INSERT INTO app.mrr_data_quality_check_result
-                            (run_id, check_code, check_name, severity, issue_count, sampled_count)
-                        VALUES (?, ?, ?, ?, ?, ?)
-                        """, runId, check.code(), check.name(), check.severity(), issueCount, samples.size());
-
-                saveSamples(runId, check, samples);
+                saveRuleResult(runId, check, issueCount, samples);
                 totalIssues += issueCount;
                 if ("CRITICAL".equals(check.severity())) {
                     criticalCount += issueCount;
@@ -269,28 +263,42 @@ public class DataQualityServiceImpl implements DataQualityService {
         }
     }
 
-    private void saveSamples(
-            long runId,
-            DataQualityCheckDefinition check,
-            List<Map<String, Object>> samples
-    ) {
-        for (Map<String, Object> sample : samples) {
+    /**
+     * All samples and the corresponding count for a rule are published atomically.
+     * The SQL shape is generated only from the already bounded sample count; every value is bound.
+     */
+    private void saveRuleResult(long runId, DataQualityCheckDefinition check,
+                                long issueCount, List<Map<String, Object>> samples) {
+        if (samples.isEmpty()) {
             jdbcTemplate.update("""
-                    INSERT INTO app.mrr_data_quality_issue
-                        (run_id, check_code, check_name, severity,
-                         entity_type, entity_id, bah, sjh, detail)
-                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-                    """,
-                    runId,
-                    check.code(),
-                    check.name(),
-                    check.severity(),
-                    sample.get("entity_type"),
-                    sample.get("entity_id"),
-                    sample.get("bah"),
-                    sample.get("sjh"),
-                    sample.get("detail"));
+                    INSERT INTO app.mrr_data_quality_check_result
+                        (run_id, check_code, check_name, severity, issue_count, sampled_count)
+                    VALUES (?, ?, ?, ?, ?, 0)
+                    """, runId, check.code(), check.name(), check.severity(), issueCount);
+            return;
         }
+        if (samples.size() > 1000) throw new IllegalStateException("异常样本超过持久化上限");
+
+        String placeholders = String.join(",", java.util.Collections.nCopies(samples.size(),
+                "(?, ?, ?, ?, ?, ?, ?, ?, ?)"));
+        List<Object> parameters = new ArrayList<>(samples.size() * 9 + 5);
+        for (Map<String, Object> sample : samples) {
+            java.util.Collections.addAll(parameters, runId, check.code(), check.name(), check.severity(),
+                    sample.get("entity_type"), sample.get("entity_id"), sample.get("bah"),
+                    sample.get("sjh"), sample.get("detail"));
+        }
+        java.util.Collections.addAll(parameters, runId, check.code(), check.name(), check.severity(), issueCount);
+        jdbcTemplate.update("""
+                WITH inserted AS (
+                    INSERT INTO app.mrr_data_quality_issue
+                        (run_id, check_code, check_name, severity, entity_type, entity_id, bah, sjh, detail)
+                    VALUES %s
+                    RETURNING 1
+                )
+                INSERT INTO app.mrr_data_quality_check_result
+                    (run_id, check_code, check_name, severity, issue_count, sampled_count)
+                SELECT ?, ?, ?, ?, ?, count(*)::integer FROM inserted
+                """.formatted(placeholders), parameters.toArray());
     }
 
     private List<Map<String, Object>> findArchiveCandidates(String bah, String sjh) {

@@ -58,6 +58,20 @@ class ScanMapperPostgresqlIT extends PostgresqlIntegrationTestSupport {
     private com.zjcxph.imgapi.mapper.ImageContentMapper imageContentMapper;
 
     @Test
+    void legacyLookupLimitsAreEnforcedInPostgresql() {
+        jdbcTemplate.update("""
+                INSERT INTO app.mr_scan(bah,brxh,filename,folder,uploadflag,pages)
+                SELECT '7654321','7654321','synthetic-' || n || '.jpg','synthetic',1,n
+                FROM generate_series(1,2005) n
+                """);
+        assertThat(scanMapper.findByBah("7654321", "7654321", 1001)).hasSize(1001);
+        assertThat(scanMapper.findByBah("7654321", "7654321", 2001)).hasSize(2001);
+        assertThat(scanMapper.findByBrxh("7654321", 1001)).hasSize(1001);
+        assertThat(scanMapper.findByFolder("synthetic", 1001)).hasSize(1001);
+        assertThat(jdbcTemplate.queryForObject("SELECT count(*) FROM app.mr_scan WHERE bah='7654321'", Long.class)).isEqualTo(2005L);
+    }
+
+    @Test
     void legacyImageLookupIsExactActiveAndBounded() {
         jdbcTemplate.update("""
                 INSERT INTO app.mr_scan(bah,brxh,filename,folder,uploadflag)

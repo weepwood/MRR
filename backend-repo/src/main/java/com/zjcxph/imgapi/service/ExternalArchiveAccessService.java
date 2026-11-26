@@ -152,7 +152,10 @@ public class ExternalArchiveAccessService {
         if (stored == null) {
             throw new BusinessException(401, "外部影像会话已过期或已退出");
         }
-        accessMapper.touchSession(sessionHash);
+        // A concurrent revocation/expiry between SELECT and UPDATE must deny this request.
+        if (accessMapper.touchSession(sessionHash) != 1) {
+            throw new BusinessException(401, "外部影像会话已过期或已退出");
+        }
         return toGrant(stored);
     }
 

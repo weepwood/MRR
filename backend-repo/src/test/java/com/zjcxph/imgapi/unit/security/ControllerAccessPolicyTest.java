@@ -57,6 +57,43 @@ class ControllerAccessPolicyTest {
         assertThat(ApiAccessPolicy.isPublicApiPath(ApiAccessPolicy.REGISTRATION_PATH)).isTrue();
     }
 
+    @Test
+    void exportDeclaredAccessMatrix() throws Exception {
+        var scanner = new ClassPathScanningCandidateComponentProvider(false);
+        scanner.addIncludeFilter(new AnnotationTypeFilter(RestController.class));
+        var rows = new java.util.TreeSet<String>();
+        for (BeanDefinition candidate : scanner.findCandidateComponents(CONTROLLER_PACKAGE)) {
+            if (candidate.getBeanClassName() == null) continue;
+            Class<?> type = ClassUtils.forName(candidate.getBeanClassName(), getClass().getClassLoader());
+            var classPaths = mappingPaths(AnnotatedElementUtils.findMergedAnnotation(type, RequestMapping.class));
+            for (Method method : type.getDeclaredMethods()) {
+                var mapping = AnnotatedElementUtils.findMergedAnnotation(method, RequestMapping.class);
+                if (mapping == null) continue;
+                var declaration = resolveDeclaration(type,
+                        AnnotatedElementUtils.findMergedAnnotation(method, RequirePermissions.class),
+                        hasAuthenticatedOnly(method));
+                var methods = mappingMethods(mapping).stream().map(RequestMethod::name).toList();
+                if (methods.isEmpty()) methods = List.of("ANY");
+                for (String verb : methods) {
+                    for (String path : combinePaths(classPaths, mappingPaths(mapping))) {
+                        String[] override = ApiAccessPolicy.requiredPermissionOverride(verb, path);
+                        String access = ApiAccessPolicy.isPublicApiPath(path) ? "PUBLIC_PATH"
+                                : override != null ? String.join(" + ", override)
+                                : declaration.authenticatedOnly() ? "AUTHENTICATED"
+                                : declaration.permissions() == null ? "UNDECLARED"
+                                : String.join(" + ", declaration.permissions().value());
+                        rows.add(verb + "\t" + path + "\t" + type.getSimpleName() + "#" + method.getName() + "\t" + access);
+                    }
+                }
+            }
+        }
+        assertThat(rows).isNotEmpty().noneMatch(row -> row.endsWith("\tUNDECLARED"));
+        var output = java.nio.file.Path.of("target", "api-access-matrix.tsv");
+        java.nio.file.Files.createDirectories(output.getParent());
+        java.nio.file.Files.writeString(output, "method\tpath\thandler\tdeclared_access\n" + String.join("\n", rows) + "\n");
+        System.out.println("MRR declared API matrix rows: " + rows.size());
+    }
+
     private void inspectController(Class<?> controllerClass, List<String> violations) {
         RequestMapping classMapping = AnnotatedElementUtils.findMergedAnnotation(controllerClass, RequestMapping.class);
         List<String> classPaths = mappingPaths(classMapping);

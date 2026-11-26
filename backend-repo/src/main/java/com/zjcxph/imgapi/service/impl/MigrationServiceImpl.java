@@ -252,7 +252,8 @@ public class MigrationServiceImpl implements MigrationService {
     @Override
     public List<OssUploadResult> uploadByBah(String bah) {
         assertManualUploadAllowed();
-        List<Scan> scans = scanMapper.findByBah(bah);
+        List<Scan> scans = scanMapper.findByBah(MedicalRecordCodeUtils.normalizeOrEmpty(bah),
+                MedicalRecordCodeUtils.toSearchTerm(bah), MAX_MANUAL_BAH_FILES + 1);
         List<OssUploadResult> results = new ArrayList<>();
 
         if (scans == null || scans.isEmpty()) {

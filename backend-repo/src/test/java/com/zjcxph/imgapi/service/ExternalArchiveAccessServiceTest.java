@@ -141,11 +141,22 @@ class ExternalArchiveAccessServiceTest {
         ExternalArchiveStoredGrant storedSession = storedGrant(session.grant().cases());
         storedSession.setExpiresAt(LocalDateTime.now().plusMinutes(30));
         when(accessMapper.findSession(anyString())).thenReturn(storedSession);
+        when(accessMapper.touchSession(anyString())).thenReturn(1);
 
         assertThat(service.requireSession(session.token()).externalUserId()).isEqualTo("HIS-USER-10086");
         assertThatThrownBy(() -> service.consumeTicket(ticket.token(), "127.0.0.1"))
                 .isInstanceOf(BusinessException.class)
                 .hasMessageContaining("无效");
+    }
+
+    @Test
+    void rejectsSessionRevokedBetweenReadAndTouch() throws Exception {
+        var stored = storedGrant(List.of());
+        stored.setExpiresAt(LocalDateTime.now().plusMinutes(30));
+        when(accessMapper.findSession(anyString())).thenReturn(stored);
+        when(accessMapper.touchSession(anyString())).thenReturn(0);
+        assertThatThrownBy(() -> service.requireSession("synthetic-session"))
+                .isInstanceOf(BusinessException.class).hasMessageContaining("过期或已退出");
     }
 
     @Test

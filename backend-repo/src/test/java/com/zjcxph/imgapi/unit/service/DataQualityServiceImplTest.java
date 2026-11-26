@@ -193,11 +193,11 @@ class DataQualityServiceImplTest {
     @Test
     void scheduledRunUsesScheduledTriggerWhenEnabled() {
         DataQualityServiceImpl spyService = spy(service);
-        doReturn(Map.of()).when(spyService).runChecks("scheduled");
+        doReturn(Map.of()).when(spyService).submitRun("scheduled", null);
 
         spyService.scheduledRun();
 
-        verify(spyService).runChecks("scheduled");
+        verify(spyService).submitRun("scheduled", null);
     }
 
     @Test
@@ -214,9 +214,8 @@ class DataQualityServiceImplTest {
 
     @Test
     void failedRunIsRecordedAndAlwaysResetsRunningGauge() {
-        when(jdbcTemplate.queryForObject(
-                contains("INSERT INTO app.mrr_data_quality_run"), eq(Long.class), eq("manual")))
-                .thenReturn(77L);
+        stubAdmission();
+        stubActive();
         when(jdbcTemplate.query(anyString(), org.mockito.ArgumentMatchers.<org.springframework.jdbc.core.PreparedStatementSetter>any(),
                 org.mockito.ArgumentMatchers.<org.springframework.jdbc.core.ResultSetExtractor<Long>>any()))
                 .thenThrow(new DataAccessResourceFailureException("db offline"));
@@ -227,7 +226,7 @@ class DataQualityServiceImplTest {
                 .hasCauseInstanceOf(DataAccessResourceFailureException.class);
 
         verify(jdbcTemplate).update(
-                contains("SET status = 'FAILED'"), eq("DataAccessResourceFailureException"), eq(77L));
+                contains("WHERE id = ? AND status IN"), any(PreparedStatementSetter.class));
         assertThat(meterRegistry.get("mrr.data.quality.running").gauge().value()).isZero();
         AtomicBoolean running = (AtomicBoolean) ReflectionTestUtils.getField(service, "running");
         assertThat(running).isNotNull();
@@ -237,8 +236,8 @@ class DataQualityServiceImplTest {
     @Test
     void sampleUsesBoundedStatementAndLeavesSharedTemplateUnchanged() throws Exception {
         ReflectionTestUtils.setField(service, "sampleLimit", 5000);
-        when(jdbcTemplate.queryForObject(contains("INSERT INTO app.mrr_data_quality_run"), eq(Long.class), eq("manual")))
-                .thenReturn(77L);
+        stubAdmission();
+        stubActive();
         when(jdbcTemplate.query(anyString(), any(PreparedStatementSetter.class),
                 org.mockito.ArgumentMatchers.<org.springframework.jdbc.core.ResultSetExtractor<Long>>any())).thenReturn(1L);
         doAnswer(invocation -> {
@@ -253,21 +252,34 @@ class DataQualityServiceImplTest {
         assertThatThrownBy(() -> service.runChecks("manual")).hasCauseInstanceOf(QueryTimeoutException.class);
 
         verify(jdbcTemplate, never()).setQueryTimeout(org.mockito.ArgumentMatchers.anyInt());
-        verify(jdbcTemplate).update(contains("SET status = 'FAILED'"), eq("QueryTimeoutException"), eq(77L));
+        verify(jdbcTemplate).update(contains("WHERE id = ? AND status IN"), any(PreparedStatementSetter.class));
         assertThat(meterRegistry.get("mrr.data.quality.running").gauge().value()).isZero();
     }
 
     @Test
     void retentionFailureMustNotRewriteSuccessfulRun() {
         ReflectionTestUtils.setField(service, "checks", List.of());
-        when(jdbcTemplate.queryForObject(contains("INSERT INTO app.mrr_data_quality_run"), eq(Long.class), eq("manual")))
-                .thenReturn(77L);
-        when(jdbcTemplate.update(contains("SET status = 'SUCCESS'"), eq(0), eq(0L), eq(0L), eq(0L), eq(77L))).thenReturn(1);
-        when(jdbcTemplate.update(contains("DELETE FROM app.mrr_data_quality_run"), eq(90)))
+        stubAdmission();
+        when(jdbcTemplate.update(contains("SET status = 'SUCCESS'"), any(PreparedStatementSetter.class))).thenReturn(1);
+        when(jdbcTemplate.update(contains("DELETE FROM app.mrr_data_quality_run"), any(PreparedStatementSetter.class)))
                 .thenThrow(new DataAccessResourceFailureException("synthetic retention failure"));
+        when(jdbcTemplate.update(contains("AND deadline_at <= clock_timestamp()"), any(PreparedStatementSetter.class))).thenReturn(0);
+        when(jdbcTemplate.queryForList(contains("WHERE id=?"), eq(77L)))
+                .thenReturn(List.of(Map.of("id", 77L, "status", "SUCCESS")));
+        when(jdbcTemplate.queryForList(contains("WHERE run_id = ?"), eq(77L))).thenReturn(List.of());
         assertThatCode(() -> service.runChecks("manual")).doesNotThrowAnyException();
-        verify(jdbcTemplate, never()).update(contains("SET status = 'FAILED'"), anyString(), eq(77L));
+        verify(jdbcTemplate, never()).update(contains("WHERE id = ? AND status IN"), any(PreparedStatementSetter.class));
         assertThat(meterRegistry.get("mrr.data.quality.running").gauge().value()).isZero();
+    }
+
+    private void stubAdmission() {
+        when(jdbcTemplate.query(contains("INSERT INTO app.mrr_data_quality_run"), any(PreparedStatementSetter.class),
+                org.mockito.ArgumentMatchers.<RowMapper<Long>>any())).thenReturn(List.of(77L));
+    }
+
+    private void stubActive() {
+        when(jdbcTemplate.query(contains("WHERE id=? AND status='RUNNING'"), any(PreparedStatementSetter.class),
+                org.mockito.ArgumentMatchers.<RowMapper<Long>>any())).thenReturn(List.of(77L));
     }
 
     @Test

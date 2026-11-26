@@ -131,7 +131,7 @@ class DiagnosticEndpointPermissionsTest {
     }
 
     @Test void anonymousRequestGets401WithoutExistenceEvidence() throws Exception {
-        var login = new LoginInterceptor(mock(TokenBlacklist.class), mock(AuthUserMapper.class), mock(DeveloperModeService.class), mock(DeveloperApiAccessService.class));
+        var login = new LoginInterceptor(mock(AuthUserMapper.class), mock(DeveloperModeService.class), mock(DeveloperApiAccessService.class));
         var response = new MockHttpServletResponse();
         assertThat(login.preHandle(new MockHttpServletRequest("POST","/api/v1/operations/query-diagnostics"), response, new Object())).isFalse();
         assertThat(response.getStatus()).isEqualTo(401);

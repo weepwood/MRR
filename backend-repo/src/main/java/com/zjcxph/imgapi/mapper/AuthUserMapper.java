@@ -35,6 +35,21 @@ public interface AuthUserMapper {
             "u.password_version as passwordVersion, " +
             "u.temporary_password_expires_at as temporaryPasswordExpiresAt, u.last_login_at as lastLoginAt ";
 
+    /** A sentinel row preserves revocation precedence even for deleted users. */
+    class SessionState extends AuthUser {
+        private Boolean tokenRevoked;
+        public Boolean getTokenRevoked() { return tokenRevoked; }
+        public void setTokenRevoked(Boolean tokenRevoked) { this.tokenRevoked = tokenRevoked; }
+    }
+
+    @Select("select " + SESSION_COLUMNS + ", v.revoked as tokenRevoked " +
+            "from (select exists(select 1 from app.token_revocation " +
+            "where token_hash = #{tokenHash} and expires_at > CURRENT_TIMESTAMP) as revoked) v " +
+            "left join app.mr_auth_user u on u.id = #{id,jdbcType=BIGINT} " +
+            "left join app.mr_auth_role r on r.code = u.role_code")
+    @org.apache.ibatis.annotations.Options(useCache = false, timeout = 3)
+    SessionState observeSession(@Param("id") Long id, @Param("tokenHash") String tokenHash);
+
     @Select("select " + SESSION_COLUMNS +
             "from mr_auth_user u left join mr_auth_role r on r.code = u.role_code where u.id = #{id}")
     AuthUser findSessionById(@Param("id") Long id);

@@ -1,9 +1,7 @@
 package com.zjcxph.imgapi.interceptors;
 
 import com.zjcxph.imgapi.common.AuthSession;
-import com.zjcxph.imgapi.entity.AuthUser;
 import com.zjcxph.imgapi.mapper.AuthUserMapper;
-import com.zjcxph.imgapi.security.TokenBlacklist;
 import com.zjcxph.imgapi.service.DeveloperApiAccessService;
 import com.zjcxph.imgapi.service.DeveloperModeService;
 import com.zjcxph.imgapi.utils.JwtUtil;
@@ -18,6 +16,8 @@ import org.springframework.mock.web.MockHttpServletResponse;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -25,7 +25,6 @@ import static org.mockito.Mockito.when;
 @ExtendWith(MockitoExtension.class)
 class LoginInterceptorDeveloperModeTest {
 
-    @Mock private TokenBlacklist tokenBlacklist;
     @Mock private AuthUserMapper authUserMapper;
     @Mock private DeveloperModeService developerModeService;
     @Mock private DeveloperApiAccessService developerApiAccessService;
@@ -36,7 +35,6 @@ class LoginInterceptorDeveloperModeTest {
     void setUp() {
         JwtUtil.configure("test-jwt-secret-key-for-auth-tests-1234567890");
         loginInterceptor = new LoginInterceptor(
-                tokenBlacklist,
                 authUserMapper,
                 developerModeService,
                 developerApiAccessService
@@ -52,14 +50,14 @@ class LoginInterceptorDeveloperModeTest {
     @Test
     void revocationStoreFailureRejectsAuthenticationWithoutLoadingPatientOrUserData() throws Exception {
         String token = JwtUtil.getToken("synthetic-user");
-        when(tokenBlacklist.isRevoked(anyString())).thenThrow(new org.springframework.dao.DataAccessResourceFailureException("SYNTHETIC-PRIVATE-DATA"));
+        when(authUserMapper.observeSession(isNull(), anyString())).thenThrow(new org.springframework.dao.DataAccessResourceFailureException("SYNTHETIC-PRIVATE-DATA"));
         var request = new MockHttpServletRequest("GET", "/api/v1/statistics/dashboard");
         request.addHeader("Authorization", "Bearer " + token);
         var response = new MockHttpServletResponse();
         assertThat(loginInterceptor.preHandle(request, response, new Object())).isFalse();
         assertThat(response.getStatus()).isEqualTo(503);
         assertThat(response.getContentAsString()).doesNotContain("SYNTHETIC-PRIVATE-DATA");
-        org.mockito.Mockito.verifyNoInteractions(authUserMapper);
+        org.mockito.Mockito.verify(authUserMapper).observeSession(isNull(), anyString());
     }
 
     @Test
@@ -110,10 +108,9 @@ class LoginInterceptorDeveloperModeTest {
     void shouldKeepRealIdentityAndGrantEffectivePermissionsAfterValidLogin() throws Exception {
         AuthSession tokenUser = tokenSession(20L, "doctor.test");
         String token = JwtUtil.getToken(tokenUser);
-        AuthUser databaseUser = activeUser(20L, "doctor.test", "DOCTOR", "record:read");
+        AuthUserMapper.SessionState databaseUser = activeUser(20L, "doctor.test", "DOCTOR", "record:read");
 
-        when(tokenBlacklist.isRevoked(anyString())).thenReturn(false);
-        when(authUserMapper.findSessionById(20L)).thenReturn(databaseUser);
+        when(authUserMapper.observeSession(eq(20L), anyString())).thenReturn(databaseUser);
 
         MockHttpServletRequest request = new MockHttpServletRequest("POST", "/api/v1/oss/migration/jobs");
         request.addHeader("Authorization", "Bearer " + token);
@@ -139,10 +136,9 @@ class LoginInterceptorDeveloperModeTest {
     void shouldKeepConfiguredPermissionsWhenBypassIsDisabled() throws Exception {
         AuthSession tokenUser = tokenSession(21L, "nurse.test");
         String token = JwtUtil.getToken(tokenUser);
-        AuthUser databaseUser = activeUser(21L, "nurse.test", "NURSE", "record:read");
+        AuthUserMapper.SessionState databaseUser = activeUser(21L, "nurse.test", "NURSE", "record:read");
 
-        when(tokenBlacklist.isRevoked(anyString())).thenReturn(false);
-        when(authUserMapper.findSessionById(21L)).thenReturn(databaseUser);
+        when(authUserMapper.observeSession(eq(21L), anyString())).thenReturn(databaseUser);
 
         MockHttpServletRequest request = new MockHttpServletRequest("GET", "/api/v1/scan/1");
         request.addHeader("Authorization", "Bearer " + token);
@@ -200,8 +196,7 @@ class LoginInterceptorDeveloperModeTest {
         AuthSession tokenUser = tokenSession(22L, "doctor.fail");
         String token = JwtUtil.getToken(tokenUser);
 
-        when(tokenBlacklist.isRevoked(anyString())).thenReturn(false);
-        when(authUserMapper.findSessionById(22L)).thenThrow(new IllegalStateException("database unavailable"));
+        when(authUserMapper.observeSession(eq(22L), anyString())).thenThrow(new IllegalStateException("database unavailable"));
 
         MockHttpServletRequest request = new MockHttpServletRequest("GET", "/api/v1/img/search");
         request.addHeader("Authorization", "Bearer " + token);
@@ -221,8 +216,9 @@ class LoginInterceptorDeveloperModeTest {
         return session;
     }
 
-    private AuthUser activeUser(Long id, String username, String roleCode, String permissions) {
-        AuthUser user = new AuthUser();
+    private AuthUserMapper.SessionState activeUser(Long id, String username, String roleCode, String permissions) {
+        AuthUserMapper.SessionState user = new AuthUserMapper.SessionState();
+        user.setTokenRevoked(false);
         user.setId(id);
         user.setUsername(username);
         user.setDisplayName(username);

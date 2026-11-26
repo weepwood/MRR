@@ -2,10 +2,8 @@ package com.zjcxph.imgapi.interceptors;
 
 import com.zjcxph.imgapi.common.AuthSession;
 import com.zjcxph.imgapi.config.ImageDeliveryProperties;
-import com.zjcxph.imgapi.entity.AuthUser;
 import com.zjcxph.imgapi.mapper.AuthUserMapper;
 import com.zjcxph.imgapi.security.ImageAccessCookieService;
-import com.zjcxph.imgapi.security.TokenBlacklist;
 import com.zjcxph.imgapi.service.DeveloperApiAccessService;
 import com.zjcxph.imgapi.service.DeveloperModeService;
 import com.zjcxph.imgapi.utils.JwtUtil;
@@ -24,6 +22,7 @@ import org.springframework.mock.web.MockHttpServletResponse;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
@@ -35,7 +34,6 @@ class LoginInterceptorImageAccessTest {
 
     private static final long USER_ID = 31L;
 
-    @Mock private TokenBlacklist tokenBlacklist;
     @Mock private AuthUserMapper authUserMapper;
     @Mock private DeveloperModeService developerModeService;
     @Mock private DeveloperApiAccessService developerApiAccessService;
@@ -48,7 +46,7 @@ class LoginInterceptorImageAccessTest {
         JwtUtil.configure("login-image-access-test-secret-0123456789abcdef");
         ImageDeliveryProperties properties = new ImageDeliveryProperties();
         properties.setMode(ImageDeliveryProperties.Mode.GATEWAY);
-        loginInterceptor = new LoginInterceptor(tokenBlacklist, authUserMapper, developerModeService,
+        loginInterceptor = new LoginInterceptor(authUserMapper, developerModeService,
                 developerApiAccessService, new ImageAccessCookieService(properties));
 
         AuthSession tokenUser = new AuthSession();
@@ -70,8 +68,7 @@ class LoginInterceptorImageAccessTest {
     void issuesCookieOnListRequestAndAcceptsItOnContentGateway() throws Exception {
         String cookie = issueCookie();
 
-        when(tokenBlacklist.isRevokedHash(anyString())).thenReturn(false);
-        when(authUserMapper.findSessionById(USER_ID)).thenReturn(user("active", 2));
+        when(authUserMapper.observeSession(eq(USER_ID), anyString())).thenReturn(user("active", 2));
         MockHttpServletRequest content = contentRequest(cookie);
         MockHttpServletResponse response = new MockHttpServletResponse();
 
@@ -86,10 +83,12 @@ class LoginInterceptorImageAccessTest {
     }
 
     @Test
-    @DisplayName("签发令牌已登出（撤销）后 Cookie 立即失效，且不加载用户")
+    @DisplayName("签发令牌已登出（撤销）后 Cookie 立即失效，撤销优先")
     void rejectsCookieOfRevokedToken() throws Exception {
         String cookie = issueCookie();
-        when(tokenBlacklist.isRevokedHash(anyString())).thenReturn(true);
+        var revoked = new AuthUserMapper.SessionState();
+        revoked.setTokenRevoked(true);
+        when(authUserMapper.observeSession(eq(USER_ID), anyString())).thenReturn(revoked);
         MockHttpServletResponse response = new MockHttpServletResponse();
 
         assertThat(loginInterceptor.preHandle(contentRequest(cookie), response, new Object())).isFalse();
@@ -101,14 +100,13 @@ class LoginInterceptorImageAccessTest {
     @DisplayName("密码变更或账号停用后 Cookie 失效")
     void rejectsCookieAfterPasswordChangeOrDisable() throws Exception {
         String cookie = issueCookie();
-        when(tokenBlacklist.isRevokedHash(anyString())).thenReturn(false);
 
-        when(authUserMapper.findSessionById(USER_ID)).thenReturn(user("active", 3));
+        when(authUserMapper.observeSession(eq(USER_ID), anyString())).thenReturn(user("active", 3));
         MockHttpServletResponse changed = new MockHttpServletResponse();
         assertThat(loginInterceptor.preHandle(contentRequest(cookie), changed, new Object())).isFalse();
         assertThat(changed.getContentAsString()).contains("AUTH_CREDENTIAL_CHANGED");
 
-        when(authUserMapper.findSessionById(USER_ID)).thenReturn(user("disabled", 2));
+        when(authUserMapper.observeSession(eq(USER_ID), anyString())).thenReturn(user("disabled", 2));
         MockHttpServletResponse disabled = new MockHttpServletResponse();
         assertThat(loginInterceptor.preHandle(contentRequest(cookie), disabled, new Object())).isFalse();
         assertThat(disabled.getContentAsString()).contains("DISABLED_USER");
@@ -123,7 +121,7 @@ class LoginInterceptorImageAccessTest {
         assertThat(loginInterceptor.preHandle(contentRequest(forged), response, new Object())).isFalse();
         assertThat(response.getStatus()).isEqualTo(401);
         assertThat(response.getContentAsString()).contains("INVALID_IMAGE_ACCESS");
-        verifyNoInteractions(tokenBlacklist, authUserMapper);
+        verifyNoInteractions(authUserMapper);
     }
 
     @Test
@@ -137,14 +135,14 @@ class LoginInterceptorImageAccessTest {
 
         assertThat(loginInterceptor.preHandle(other, response, new Object())).isFalse();
         assertThat(response.getStatus()).isEqualTo(401);
-        verify(tokenBlacklist, never()).isRevokedHash(anyString());
+        verifyNoInteractions(authUserMapper);
     }
 
     @Test
     @DisplayName("直连模式下内容网关不接受 Cookie")
     void ignoresCookieWhenGatewayDisabled() throws Exception {
         String cookie = issueCookie();
-        LoginInterceptor direct = new LoginInterceptor(tokenBlacklist, authUserMapper, developerModeService,
+        LoginInterceptor direct = new LoginInterceptor(authUserMapper, developerModeService,
                 developerApiAccessService, ImageAccessCookieService.disabled());
         MockHttpServletRequest content = contentRequest(cookie);
         when(developerModeService.isArchiveLegacyRequestAllowed(content)).thenReturn(false);
@@ -152,26 +150,25 @@ class LoginInterceptorImageAccessTest {
 
         assertThat(direct.preHandle(content, response, new Object())).isFalse();
         assertThat(response.getStatus()).isEqualTo(401);
-        verify(tokenBlacklist, never()).isRevokedHash(anyString());
+        verifyNoInteractions(authUserMapper);
     }
 
     @Test
     @DisplayName("撤销状态存储故障时 fail-closed 返回 503")
     void failsClosedWhenRevocationStoreUnavailable() throws Exception {
         String cookie = issueCookie();
-        when(tokenBlacklist.isRevokedHash(anyString()))
+        when(authUserMapper.observeSession(eq(USER_ID), anyString()))
                 .thenThrow(new DataAccessResourceFailureException("SYNTHETIC-PRIVATE-DATA"));
         MockHttpServletResponse response = new MockHttpServletResponse();
 
         assertThat(loginInterceptor.preHandle(contentRequest(cookie), response, new Object())).isFalse();
         assertThat(response.getStatus()).isEqualTo(503);
         assertThat(response.getContentAsString()).doesNotContain("SYNTHETIC-PRIVATE-DATA");
-        verifyNoInteractions(authUserMapper);
+        verify(authUserMapper).observeSession(eq(USER_ID), anyString());
     }
 
     private String issueCookie() throws Exception {
-        when(tokenBlacklist.isRevoked(anyString())).thenReturn(false);
-        when(authUserMapper.findSessionById(USER_ID)).thenReturn(user("active", 2));
+        when(authUserMapper.observeSession(eq(USER_ID), anyString())).thenReturn(user("active", 2));
         MockHttpServletRequest list = new MockHttpServletRequest("GET", "/api/v1/img/search");
         list.addHeader("Authorization", "Bearer " + bearerToken);
         MockHttpServletResponse response = new MockHttpServletResponse();
@@ -180,7 +177,7 @@ class LoginInterceptorImageAccessTest {
         loginInterceptor.afterCompletion(list, response, new Object(), null);
         String header = response.getHeader(HttpHeaders.SET_COOKIE);
         assertThat(header).startsWith(ImageAccessCookieService.COOKIE_NAME + "=v1." + USER_ID + ".2.");
-        org.mockito.Mockito.clearInvocations(tokenBlacklist, authUserMapper);
+        org.mockito.Mockito.clearInvocations(authUserMapper);
         String pair = header.substring(0, header.indexOf(';'));
         return pair.substring(pair.indexOf('=') + 1);
     }
@@ -191,8 +188,9 @@ class LoginInterceptorImageAccessTest {
         return request;
     }
 
-    private static AuthUser user(String status, int passwordVersion) {
-        AuthUser user = new AuthUser();
+    private static AuthUserMapper.SessionState user(String status, int passwordVersion) {
+        AuthUserMapper.SessionState user = new AuthUserMapper.SessionState();
+        user.setTokenRevoked(false);
         user.setId(USER_ID);
         user.setUsername("synthetic.reader");
         user.setDisplayName("synthetic.reader");

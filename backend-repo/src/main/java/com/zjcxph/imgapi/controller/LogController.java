@@ -158,6 +158,7 @@ public class LogController {
 
         return ResponseEntity.ok()
                 .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=" + fileName)
+                .header(HttpHeaders.CACHE_CONTROL, "no-store")
                 .header("X-Export-Total", String.valueOf(total))
                 .header("X-Export-Cutoff", cutoff.toString())
                 .contentType(MediaType.parseMediaType("text/csv"))
@@ -387,6 +388,9 @@ public class LogController {
 
     private String csvCell(Object value) {
         String text = value == null ? "" : String.valueOf(value);
+        if (value instanceof String) {
+            text = com.zjcxph.imgapi.service.importer.DataExchangeImportSupport.protectSpreadsheetValue(text);
+        }
         String escaped = text.replace("\"", "\"\"");
         return "\"" + escaped + "\"";
     }

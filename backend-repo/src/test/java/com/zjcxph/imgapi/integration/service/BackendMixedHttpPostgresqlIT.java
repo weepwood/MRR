@@ -90,7 +90,7 @@ class BackendMixedHttpPostgresqlIT extends PostgresqlIntegrationTestSupport {
                 "SELECT 0::bigint FROM pg_sleep(2)", "SELECT 1")));
         var blacklist = new TokenBlacklist(jdbc);
         var mode = new DeveloperModeService(settings, false, "127.0.0.1,::1", new ImageDeliveryProperties());
-        var login = new LoginInterceptor(blacklist, users, mode, new DeveloperApiAccessService(settings, mode));
+        var login = new LoginInterceptor(users, mode, new DeveloperApiAccessService(settings, mode));
         var tomcat = new Tomcat();
         tomcat.setBaseDir(directory.toString());
         tomcat.setPort(0);
@@ -193,7 +193,7 @@ class BackendMixedHttpPostgresqlIT extends PostgresqlIntegrationTestSupport {
                     long[] after = sqlCounts();
                     for(int i=0;i<after.length;i++) after[i]-=before[i];
                     System.out.println("MRR_HTTP_SQL_COUNTS [revocation,user_lookup,scan_count,scan_page,scan_cursor,quality_pinned]=" + Arrays.toString(after));
-                    assertThat(after).containsExactly(4001,4001,1000,1000,1000,1000);
+                    assertThat(after).containsExactly(0,4001,1000,1000,1000,1000);
                 }
             } finally {
                 sampler.shutdownNow();
@@ -224,7 +224,7 @@ class BackendMixedHttpPostgresqlIT extends PostgresqlIntegrationTestSupport {
     private long[] sqlCounts() {
         var row = jdbc.queryForMap("""
                 SELECT COALESCE(sum(calls) FILTER (WHERE query LIKE 'SELECT EXISTS(%FROM app.token_revocation%'),0) AS revocation,
-                       COALESCE(sum(calls) FILTER (WHERE query LIKE 'select u.id as id,%' AND query LIKE '%where u.id =%'),0) AS user_lookup,
+                       COALESCE(sum(calls) FILTER (WHERE query LIKE 'select u.id as id,%' AND query LIKE '%from app.token_revocation%'),0) AS user_lookup,
                        COALESCE(sum(calls) FILTER (WHERE query LIKE 'SELECT COUNT(*) FROM mr_scan%'),0) AS scan_count,
                        COALESCE(sum(calls) FILTER (WHERE query LIKE 'SELECT * FROM mr_scan ORDER BY id LIMIT%OFFSET%'),0) AS scan_page,
                        COALESCE(sum(calls) FILTER (WHERE query LIKE 'SELECT * FROM mr_scan WHERE id >%'),0) AS scan_cursor,

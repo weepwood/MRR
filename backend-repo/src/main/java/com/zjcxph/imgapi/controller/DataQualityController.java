@@ -58,6 +58,33 @@ public class DataQualityController {
                 .data(dataQualityService.previewRepair(issueId));
     }
 
+    @Operation(summary = "提交持久化数据质量检查")
+    @PostMapping("/runs")
+    @RequirePermissions({"system:manage"})
+    public Result<Map<String, Object>> submit() {
+        return Result.success(dataQualityService.submitRun("manual", actor()));
+    }
+
+    @Operation(summary = "读取指定数据质量检查批次状态")
+    @GetMapping("/runs/{runId}")
+    public Result<Map<String, Object>> runStatus(@PathVariable long runId) {
+        return Result.success(dataQualityService.getRun(runId));
+    }
+
+    @Operation(summary = "取消指定数据质量检查")
+    @PostMapping("/runs/{runId}/cancel")
+    @RequirePermissions({"system:manage"})
+    public Result<Map<String, Object>> cancel(@PathVariable long runId) {
+        return Result.success(dataQualityService.cancelRun(runId, actor()));
+    }
+
+    private long actor() {
+        var session = com.zjcxph.imgapi.utils.AuthContext.getCurrentUser();
+        if (session == null || session.getId() == null || session.getId() <= 0)
+            throw new com.zjcxph.imgapi.exception.BusinessException(401, "未登录");
+        return session.getId();
+    }
+
     @Operation(summary = "立即执行一次数据质量检查")
     @PostMapping("/run")
     @RequirePermissions({"system:manage"})

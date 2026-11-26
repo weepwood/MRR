@@ -218,6 +218,129 @@ class DataQualityQueryTimeoutPostgresqlIT extends PostgresqlIntegrationTestSuppo
         }
     }
 
+    @Test
+    void managedQueueSurvivesServiceRecreationAndSerializesIndependentAdmission() throws Exception {
+        String trigger = "synthetic-managed-queue";
+        var metrics1 = new SimpleMeterRegistry();
+        var metrics2 = new SimpleMeterRegistry();
+        var a = managedService(metrics1);
+        var b = managedService(metrics2);
+        ReflectionTestUtils.setField(b, "checks", List.of(check("QUEUE_TEST", "synthetic", "WARNING",
+                "SELECT 0::bigint", "SELECT 1")));
+        var executor = java.util.concurrent.Executors.newFixedThreadPool(2);
+        try {
+            var gate = new java.util.concurrent.CountDownLatch(1);
+            java.util.concurrent.Callable<Long> submitA = () -> {
+                gate.await();
+                try { return runId(a.submitRun(trigger, 101L)); }
+                catch (com.zjcxph.imgapi.exception.BusinessException e) {
+                    assertThat(e.getCode()).isEqualTo(409); return 0L;
+                }
+            };
+            java.util.concurrent.Callable<Long> submitB = () -> {
+                gate.await();
+                try { return runId(b.submitRun(trigger, 102L)); }
+                catch (com.zjcxph.imgapi.exception.BusinessException e) {
+                    assertThat(e.getCode()).isEqualTo(409); return 0L;
+                }
+            };
+            var one = executor.submit(submitA);
+            var two = executor.submit(submitB);
+            gate.countDown();
+            long first = one.get(10, java.util.concurrent.TimeUnit.SECONDS);
+            long second = two.get(10, java.util.concurrent.TimeUnit.SECONDS);
+            assertThat(first == 0L ^ second == 0L).isTrue();
+            long id = Math.max(first, second);
+            assertThat(status(b.getRun(id))).isEqualTo("PENDING");
+            assertThatThrownBy(() -> b.runChecks(trigger)).isInstanceOf(com.zjcxph.imgapi.exception.BusinessException.class);
+            // Only the new service instance is used to process the persisted submission.
+            b.processPending();
+            assertThat(status(b.getRun(id))).isEqualTo("SUCCESS");
+            assertThat(b.getRun(id).get("running")).isEqualTo(false);
+            assertThat(jdbc.queryForObject("SELECT count(*) FROM app.mrr_data_quality_check_result WHERE run_id=?", Long.class, id)).isEqualTo(1L);
+            long cancelled = runId(a.submitRun(trigger, 101L));
+            assertThat(status(a.cancelRun(cancelled, 103L))).isEqualTo("CANCELLED");
+            b.processPending();
+            assertThat(status(a.cancelRun(cancelled, 104L))).isEqualTo("CANCELLED");
+            assertThat(jdbc.queryForObject("SELECT cancelled_by FROM app.mrr_data_quality_run WHERE id=?", Long.class, cancelled)).isEqualTo(103L);
+            long crashed = runId(a.submitRun(trigger, 101L));
+            jdbc.update("UPDATE app.mrr_data_quality_run SET status='RUNNING',claimed_at=clock_timestamp(),deadline_at=clock_timestamp()-interval '1 second' WHERE id=?", crashed);
+            b.processPending();
+            assertThat(status(b.getRun(crashed))).isEqualTo("FAILED");
+            assertThat(jdbc.queryForObject("SELECT error_message FROM app.mrr_data_quality_run WHERE id=?", String.class, crashed)).isEqualTo("RUN_DEADLINE_EXPIRED");
+            long recovered = runId(b.submitRun(trigger, 102L));
+            b.processPending();
+            assertThat(status(b.getRun(recovered))).isEqualTo("SUCCESS");
+        } finally {
+            executor.shutdownNow();
+            jdbc.update("DELETE FROM app.mrr_data_quality_run WHERE triggered_by=?", trigger);
+            metrics1.close(); metrics2.close();
+        }
+    }
+
+    @Test
+    void cancelRunningCheckPreventsRulePublicationAndReleasesDurableSlot() throws Exception {
+        String trigger = "synthetic-managed-cancel";
+        var metrics = new SimpleMeterRegistry();
+        var service = managedService(metrics);
+        ReflectionTestUtils.setField(service, "checks", List.of(check("CANCEL_TEST", "synthetic", "WARNING",
+                "SELECT 1::bigint FROM pg_sleep(2)", "SELECT 'mr_scan' AS entity_type,'1' AS entity_id,NULL::text AS bah,NULL::text AS sjh,'synthetic' AS detail")));
+        var executor = java.util.concurrent.Executors.newSingleThreadExecutor();
+        try {
+            long id = runId(service.submitRun(trigger, 101L));
+            var worker = executor.submit(service::processPending);
+            long until = System.nanoTime() + java.util.concurrent.TimeUnit.SECONDS.toNanos(5);
+            while (System.nanoTime() < until && !status(service.getRun(id)).equals("RUNNING")) Thread.sleep(10);
+            assertThat(status(service.getRun(id))).isEqualTo("RUNNING");
+            assertThat(status(service.cancelRun(id, 102L))).isIn("CANCEL_REQUESTED", "CANCELLED");
+            worker.get(10, java.util.concurrent.TimeUnit.SECONDS);
+            assertThat(status(service.getRun(id))).isEqualTo("CANCELLED");
+            assertThat(jdbc.queryForObject("SELECT count(*) FROM app.mrr_data_quality_issue WHERE run_id=?", Long.class, id)).isZero();
+            assertThat(jdbc.queryForObject("SELECT count(*) FROM app.mrr_data_quality_check_result WHERE run_id=?", Long.class, id)).isZero();
+            assertThat(runId(service.submitRun(trigger, 101L))).isGreaterThan(id);
+        } finally {
+            executor.shutdownNow();
+            executor.awaitTermination(5, java.util.concurrent.TimeUnit.SECONDS);
+            jdbc.update("DELETE FROM app.mrr_data_quality_run WHERE triggered_by=?", trigger);
+            metrics.close();
+        }
+    }
+
+    @Test
+    void historicalErrorTextIsNotPublishedInQualitySummaryOrRelationOverview() {
+        var metrics = new SimpleMeterRegistry();
+        var service = managedService(metrics);
+        String trigger = "synthetic-historical-error";
+        try {
+            long id = jdbc.queryForObject("INSERT INTO app.mrr_data_quality_run(status,triggered_by,error_message) VALUES ('FAILED',?,'SYNTHETIC private patient and directory') RETURNING id", Long.class, trigger);
+            assertThat(((java.util.Map<?, ?>)service.getRun(id).get("latestRun")).get("error_message"))
+                    .isEqualTo("HISTORICAL_ERROR_REDACTED");
+            var repository = new com.zjcxph.imgapi.repository.DataRelationRepository(jdbc);
+            assertThat(repository.latestQualityRun().get("errorMessage")).isEqualTo("HISTORICAL_ERROR_REDACTED");
+            assertThat(jdbc.queryForObject("SELECT error_message FROM app.mrr_data_quality_run WHERE id=?", String.class,id))
+                    .isEqualTo("SYNTHETIC private patient and directory");
+        } finally {
+            jdbc.update("DELETE FROM app.mrr_data_quality_run WHERE triggered_by=?", trigger);
+            metrics.close();
+        }
+    }
+
+    private DataQualityServiceImpl managedService(SimpleMeterRegistry metrics) {
+        var service = new DataQualityServiceImpl(jdbc, metrics);
+        ReflectionTestUtils.setField(service, "enabled", true);
+        ReflectionTestUtils.setField(service, "retentionDays", 90);
+        ReflectionTestUtils.setField(service, "runBudgetSeconds", 30);
+        return service;
+    }
+
+    private static long runId(java.util.Map<String, Object> summary) {
+        return ((Number)((java.util.Map<?, ?>)summary.get("latestRun")).get("id")).longValue();
+    }
+
+    private static String status(java.util.Map<String, Object> summary) {
+        return String.valueOf(((java.util.Map<?, ?>)summary.get("latestRun")).get("status"));
+    }
+
     private Object check(String code, String name, String severity, String countSql, String sampleSql)
             throws ReflectiveOperationException {
         // 测试限定的慢规则，不为夹具扩大生产检查目录的可见性。

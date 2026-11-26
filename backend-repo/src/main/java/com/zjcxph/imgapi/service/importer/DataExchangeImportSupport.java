@@ -240,9 +240,15 @@ public final class DataExchangeImportSupport {
         }
         String candidate = value.substring(index);
         char first = candidate.charAt(0);
-        if (first == '=' || first == '+' || first == '-' || first == '@'
-                || first == '\t' || first == '\r') {
-            return true;
+        if (first == '\t' || first == '\r' || first == '\n') return true;
+        // Spreadsheet applications may ignore leading whitespace/BOM before a formula.
+        int significant = 0;
+        while (significant < candidate.length() &&
+                (Character.isWhitespace(candidate.charAt(significant)) || Character.isSpaceChar(candidate.charAt(significant))
+                 || candidate.charAt(significant) == '\ufeff')) significant++;
+        if (significant < candidate.length()) {
+            char marker = candidate.charAt(significant);
+            if ("=+-@＝＋－＠".indexOf(marker) >= 0) return true;
         }
         return candidate.matches("0\\d+") || candidate.matches("\\d{16,}");
     }

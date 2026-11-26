@@ -16,4 +16,10 @@ public interface DataQualityService {
     Map<String, Object> previewRepair(long issueId);
 
     Map<String, Object> runChecks(String triggeredBy);
+
+    Map<String, Object> submitRun(String triggeredBy, Long actorId);
+
+    Map<String, Object> getRun(long runId);
+
+    Map<String, Object> cancelRun(long runId, long actorId);
 }

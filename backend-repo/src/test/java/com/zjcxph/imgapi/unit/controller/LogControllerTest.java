@@ -46,6 +46,21 @@ class LogControllerTest {
     @InjectMocks
     private LogController controller;
 
+    @Test
+    void retentionCsvTreatsUntrustedUsernameAsText() throws Exception {
+        var log = new Log();
+        log.setUsername("=1+1");
+        log.setQueryString("  +1+1");
+        when(logRetentionProperties.getRetentionDays()).thenReturn(30);
+        when(logRetentionProperties.getBatchSize()).thenReturn(10);
+        when(logService.countOlderThan(any())).thenReturn(1);
+        when(logService.findOlderThan(any(), eq(10), eq(0))).thenReturn(List.of(log));
+        when(logService.findOlderThan(any(), eq(10), eq(1))).thenReturn(List.of());
+        var output = new java.io.ByteArrayOutputStream();
+        controller.exportRetentionLogs().getBody().writeTo(output);
+        assertThat(output.toString(java.nio.charset.StandardCharsets.UTF_8)).contains("\"'=1+1\"", "\"'  +1+1\"");
+    }
+
     @Nested
     @DisplayName("getLogById")
     class GetLogById {

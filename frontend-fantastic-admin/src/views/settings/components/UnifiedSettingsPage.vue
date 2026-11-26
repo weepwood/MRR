@@ -66,10 +66,8 @@ const narrowFallback = useMediaQuery('(max-width: 480px)')
 const compactLayout = computed(() => layoutWidth.value > 0 ? layoutWidth.value < 800 : compactFallback.value)
 const narrowLayout = computed(() => layoutWidth.value > 0 ? layoutWidth.value < 480 : narrowFallback.value)
 const panelHeaderRef = ref<HTMLElement>()
-const { height: panelHeaderHeight, width: panelHeaderWidth } = useElementSize(panelHeaderRef)
+const { width: panelHeaderWidth } = useElementSize(panelHeaderRef)
 const inlineHeader = computed(() => panelHeaderWidth.value >= 820)
-const tallViewport = useMediaQuery('(min-height: 700px)')
-const stickyHeader = computed(() => !compactLayout.value && tallViewport.value && panelHeaderHeight.value <= 180)
 const sectionSwitching = ref(false)
 const sectionHeadingRef = ref<HTMLElement>()
 const sectionHeadingId = useId()
@@ -144,9 +142,7 @@ async function openSearchResult(result: SettingsSearchResult) {
 
   target.focus({ preventScroll: true })
   const bounds = target.getBoundingClientRect()
-  const header = panelHeaderRef.value
-  const stickyTop = header && stickyHeader.value && !header.contains(target) ? Number.parseFloat(getComputedStyle(header).top) + header.getBoundingClientRect().height + 12 : 0
-  const margin = Math.max(Number.parseFloat(getComputedStyle(target).scrollMarginTop) || 16, stickyTop)
+  const margin = Number.parseFloat(getComputedStyle(target).scrollMarginTop) || 16
   if (bounds.top < margin || bounds.bottom > window.innerHeight - 16) {
     window.scrollTo({ top: window.scrollY + bounds.top - margin, behavior: 'auto' })
   }
@@ -450,7 +446,7 @@ onUnmounted(() => {
       </template>
     </MrrPageHeader>
 
-    <div ref="layoutRef" class="settings-layout" :class="{ 'settings-layout--compact': compactLayout, 'settings-layout--narrow': narrowLayout, 'settings-layout--sticky': stickyHeader }">
+    <div ref="layoutRef" class="settings-layout" :class="{ 'settings-layout--compact': compactLayout, 'settings-layout--narrow': narrowLayout }">
       <aside class="settings-sidebar" aria-label="设置目录">
         <SettingsSearch @select="openSearchResult" />
         <nav class="settings-nav" aria-label="设置分类" @keydown="handleNavKey">

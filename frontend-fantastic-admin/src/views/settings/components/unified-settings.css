@@ -188,12 +188,6 @@
     max-height: calc(100vh - var(--settings-sticky-top) - var(--mrr-space-3));
     overflow-y: auto;
   }
-
-  .settings-layout--sticky .settings-panel-header {
-    position: sticky;
-    top: var(--settings-sticky-top);
-    z-index: 2;
-  }
 }
 
 /* Match the actual available workspace, including the application sidebar. */

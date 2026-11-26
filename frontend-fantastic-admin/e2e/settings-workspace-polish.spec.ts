@@ -10,16 +10,26 @@ test.beforeEach(async ({ page }) => {
   })))
 })
 
-test('长设置页面目录与保存命令保持可见，键盘切换返回新分区', async ({ page }) => {
+test('长设置页面目录固定，分区标题自然滚动且不遮挡内容，键盘切换返回新分区', async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 900 })
   await page.goto('/settings?section=archive')
   const header = page.locator('.settings-panel-header')
   const sidebar = page.locator('.settings-sidebar')
   await expect(page.getByRole('button', { name: '保存设置', exact: true })).toBeDisabled()
-  await expect(header).toHaveCSS('position', 'sticky')
+  await expect(header).toHaveCSS('position', 'static')
+  await expect(sidebar).toHaveCSS('position', 'sticky')
+  const initialTop = (await header.boundingBox())!.y
   await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight))
   await expect.poll(() => page.evaluate(() => window.scrollY)).toBeGreaterThan(100)
-  await expect(header).toBeInViewport()
+  await expect.poll(async () => {
+    const top = (await header.boundingBox())!.y
+    const scroll = await page.evaluate(() => window.scrollY)
+    return Math.abs(initialTop - top - scroll)
+  }).toBeLessThanOrEqual(1)
+  await expect.poll(() => header.evaluate((el) => {
+    const content = document.querySelector('.settings-content')!
+    return el.getBoundingClientRect().bottom <= content.getBoundingClientRect().top
+  })).toBe(true)
   await expect(sidebar.getByRole('button', { name: '访问安全', exact: true })).toBeInViewport()
   const archive = sidebar.getByRole('button', { name: '档案浏览', exact: true })
   await archive.focus()

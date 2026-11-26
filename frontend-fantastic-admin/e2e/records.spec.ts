@@ -45,8 +45,13 @@ test('免登录模式下可以查看扫描记录详情', async ({ page }) => {
     await page.setViewportSize({ width, height: 812 })
     await expect.poll(() => detail.locator('.el-dialog').evaluate((el) => {
       const r = el.getBoundingClientRect()
-      return Math.abs(r.left + r.width / 2 - innerWidth / 2) <= 1
-        && Math.abs(r.top + r.height / 2 - innerHeight / 2) <= 1
+      // The fixed overlay uses the scrollbar-adjusted layout viewport.
+      const overlay = el.closest('.el-overlay-dialog')!.getBoundingClientRect()
+      return Math.abs(overlay.left) <= 1 && Math.abs(overlay.top) <= 1
+        && Math.abs(overlay.right - document.documentElement.getBoundingClientRect().right) <= 1
+        && Math.abs(overlay.bottom - innerHeight) <= 1
+        && Math.abs(r.left + r.width / 2 - (overlay.left + overlay.width / 2)) <= 1
+        && Math.abs(r.top + r.height / 2 - (overlay.top + overlay.height / 2)) <= 1
     })).toBe(true)
   }
 })

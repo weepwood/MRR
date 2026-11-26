@@ -24,6 +24,8 @@ test('申请详情审核恢复共用业务弹窗与字段布局，四主题窄�
         await page.setViewportSize({ width, height: 812 })
         const readGeometry = () => summary.evaluate((el) => {
           const r = el.getBoundingClientRect()
+          // The fixed overlay uses the scrollbar-adjusted layout viewport.
+          const overlay = el.closest('.el-overlay-dialog')!.getBoundingClientRect()
           const header = el.querySelector('.mrr-dialog-header')!
           const body = el.querySelector('.mrr-dialog-body')!
           const footer = el.querySelector('.mrr-overlay-footer')!
@@ -40,7 +42,7 @@ test('申请详情审核恢复共用业务弹窗与字段布局，四主题窄�
             labelsAligned: Math.max(...labels) - Math.min(...labels) <= 1,
             valuesAligned: Math.max(...values) - Math.min(...values) <= 1,
             fits: r.left >= -1 && r.right <= innerWidth + 1 && r.bottom <= innerHeight + 1,
-            centered: Math.abs(r.left + r.width / 2 - innerWidth / 2) <= 1 && Math.abs(r.top + r.height / 2 - innerHeight / 2) <= 1,
+            centered: Math.abs(overlay.left) <= 1 && Math.abs(overlay.top) <= 1 && Math.abs(overlay.right - document.documentElement.getBoundingClientRect().right) <= 1 && Math.abs(overlay.bottom - innerHeight) <= 1 && Math.abs(r.left + r.width / 2 - (overlay.left + overlay.width / 2)) <= 1 && Math.abs(r.top + r.height / 2 - (overlay.top + overlay.height / 2)) <= 1,
             scrollFits: body.scrollWidth <= body.clientWidth + 1,
             footerVisible: footer.getBoundingClientRect().bottom <= innerHeight + 1,
           }

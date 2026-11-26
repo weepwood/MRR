@@ -106,7 +106,8 @@ jobs:
 
       - name: 定向 Mock 浏览器回归
         if: github.event_name == 'pull_request' && needs.scope.outputs.targeted_e2e_specs != '' && needs.scope.outputs.targeted_e2e_specs != '[]'
-        timeout-minutes: 10
+        # Cumulative PRs can select dozens of specs; retain all assertions and retries.
+        timeout-minutes: 20
         env:
           TARGETED_E2E_SPECS: ${{ needs.scope.outputs.targeted_e2e_specs }}
         run: python3 ../scripts/ci_targeted_e2e.py run

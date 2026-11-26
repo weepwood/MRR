@@ -77,6 +77,43 @@ class DurableAuditPostgresqlIT extends PostgresqlIntegrationTestSupport {
         }finally{jdbc.update("DELETE FROM app.access_log WHERE request_id IN (?,?,?)",a.getRequestId(),b.getRequestId(),c.getRequestId());}
     }
 
+    @Test @EnabledOnOs({OS.MAC,OS.LINUX})
+    void deterministicConflictAndExplicitExpiryHoldCiphertextWithoutBlockingHealthySegment()throws Exception{
+        Path root=Files.createDirectory(temp.toRealPath().resolve("held-spool"),
+            PosixFilePermissions.asFileAttribute(PosixFilePermissions.fromString("rwx------")));
+        byte[] key=new byte[32];key[0]=23;
+        var conflict=row("batch10-conflict");var healthy=row("batch10-healthy");var expired=row("batch10-expired");
+        expired.setAccessTime(new Date(System.currentTimeMillis()-java.time.Duration.ofDays(9).toMillis()));
+        try{
+            new DurableAuditDelivery(mapper,jdbc,tx,true).deliver(List.of(conflict));
+            var mismatch=row(conflict.getRequestId());mismatch.setAccessTime(conflict.getAccessTime());mismatch.setRequestBody("different");
+            try(var spool=new EncryptedAuditSpool(root,key,10,65536,new ObjectMapper())){
+                spool.append(mismatch);spool.append(expired);spool.append(healthy);
+            }
+            var env=new org.springframework.mock.env.MockEnvironment()
+                .withProperty("MRR_AUDIT_SPOOL_KEY",Base64.getEncoder().encodeToString(key))
+                .withProperty("mrr.audit.spool.directory",root.toString())
+                .withProperty("mrr.audit.spool.grouped","true")
+                .withProperty("mrr.audit.spool.max-replay-age-days","7");
+            var metrics=new io.micrometer.core.instrument.simple.SimpleMeterRegistry();
+            try{
+                var service=new com.zjcxph.imgapi.audit.DurableAuditLogService(env,new ObjectMapper(),mapper,jdbc,tx,metrics);
+                try{
+                    service.flush();service.flush();service.flush();
+                    assertThat(metrics.get("mrr.audit.spool.held").gauge().value()).isEqualTo(2);
+                    assertThat(mapper.countRequestIdentity(healthy.getRequestId())).isEqualTo(1);
+                    assertThat(mapper.matchesDurableAudit(conflict)).isTrue();
+                    assertThat(mapper.countRequestIdentity(expired.getRequestId())).isZero();
+                }finally{service.close();}
+            }finally{metrics.close();}
+            try(var spool=new EncryptedAuditSpool(root,key,10,65536,new ObjectMapper())){
+                assertThat(spool.heldCount()).isEqualTo(2);
+                assertThat(spool.peek(50)).isEmpty();
+            }
+            System.out.println("MRR_HELD_SEGMENTS conflict/expired preserved; healthy delivered; existing DB unchanged");
+        }finally{jdbc.update("DELETE FROM app.access_log WHERE request_id IN (?,?,?)",conflict.getRequestId(),healthy.getRequestId(),expired.getRequestId());}
+    }
+
     private DurableAuditDelivery delivery(String url) throws Exception {
         var ds=new DriverManagerDataSource(url,postgresqlUsername(),postgresqlPassword());
         var factory=new org.mybatis.spring.SqlSessionFactoryBean();

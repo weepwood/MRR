@@ -114,6 +114,43 @@ class EncryptedAuditSpoolTest {
         try(var spool=open(p,100,KEY)){assertThat(spool.peek(50)).hasSize(32);}
     }
 
+    @Test void rotationRequiresOldKeyUntilAllOldSegmentsAreAcknowledged() throws Exception {
+        Path p=directory();byte[] old=new byte[32],next=new byte[32];old[0]=11;next[0]=12;
+        try(var spool=open(p,10,KEY)){spool.append(log("legacy"));}
+        try(var spool=new EncryptedAuditSpool(p,KEY,Map.of("old",old),"old",10,65536,JSON)){
+            spool.appendGroup(List.of(log("old-a"),log("old-b")));
+        }
+        assertThatThrownBy(()->new EncryptedAuditSpool(p,KEY,Map.of("next",next),"next",10,65536,JSON)).isInstanceOf(java.io.IOException.class);
+        try(var spool=new EncryptedAuditSpool(p,KEY,Map.of("old",old,"next",next),"next",10,65536,JSON)){
+            spool.append(log("next"));
+            var rows=spool.peek(50);
+            assertThat(rows).extracting(x->x.log().getRequestId()).containsExactlyInAnyOrder("legacy","old-a","old-b","next");
+            spool.acknowledgeSegments(rows.stream().filter(x->!x.log().getRequestId().equals("next")).map(EncryptedAuditSpool.Entry::name).toList());
+        }
+        try(var spool=new EncryptedAuditSpool(p,KEY,Map.of("next",next),"next",10,65536,JSON)){
+            assertThat(spool.peek(50)).extracting(x->x.log().getRequestId()).containsExactly("next");
+        }
+    }
+
+    @Test void heldSegmentsSurviveRestartAndRemainInCapacityWithoutBlockingNextPending()throws Exception{
+        Path p=directory();
+        try(var spool=open(p,3,KEY)){
+            spool.appendGroup(List.of(log("conflict-a"),log("conflict-b")));
+            spool.hold(spool.peek(50).getFirst().name());
+            spool.append(log("healthy"));
+            assertThat(spool.heldCount()).isEqualTo(2);
+            assertThat(spool.pendingCount()).isEqualTo(3);
+            assertThatThrownBy(()->spool.append(log("full"))).isInstanceOf(EncryptedAuditSpool.CapacityException.class);
+        }
+        try(var spool=open(p,3,KEY)){
+            assertThat(spool.heldCount()).isEqualTo(2);
+            var rows=spool.peek(50);
+            assertThat(rows).extracting(x->x.log().getRequestId()).containsExactly("healthy");
+            spool.acknowledge(rows.getFirst().name());
+            assertThat(spool.pendingCount()).isEqualTo(2);
+        }
+    }
+
     @Test void actualChildJvmKillReleasesLockAndRecoversPublishedRecord() throws Exception {
         Path p=directory();
         String java=Path.of(System.getProperty("java.home"),"bin","java").toString();

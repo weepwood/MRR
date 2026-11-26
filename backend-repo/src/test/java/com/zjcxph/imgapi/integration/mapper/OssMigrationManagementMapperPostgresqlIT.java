@@ -44,6 +44,69 @@ class OssMigrationManagementMapperPostgresqlIT extends PostgresqlIntegrationTest
 
     @Test
     @org.springframework.transaction.annotation.Transactional(propagation=org.springframework.transaction.annotation.Propagation.NOT_SUPPORTED)
+    void oldClaimCannotCompleteOrFailReusedAttemptNumber(){
+        int id=jdbcTemplate.queryForObject("""
+            INSERT INTO app.mr_scan(bah,sjh,brxh,filename,folder,uploadflag,source_type,source_ref)
+            VALUES ('8765439','12345678','8765439','old.jpg','synthetic',1,'LOCAL','old.jpg') RETURNING id
+            """,Integer.class);
+        try{
+            Scan first=scanMapper.findById(id);
+            assertThat(scanMapper.markMigrationStarted(first,"old-claim")).isEqualTo(1);
+            assertThat(scanMapper.markMigrationFailed(id,"old-claim","SYNTHETIC")).isEqualTo(1);
+            assertThat(scanMapper.resetMigrationFailures(List.of(id))).isEqualTo(1);
+            Scan second=scanMapper.findById(id);
+            assertThat(scanMapper.markMigrationStarted(second,"new-claim")).isEqualTo(1);
+            assertThat(scanMapper.completeClaimedMigration(first,1,"old-claim","old-key",3L,"md5")).isZero();
+            assertThat(scanMapper.markMigrationFailed(id,"old-claim","STALE")).isZero();
+            assertThat(scanMapper.markMigrationRetryWait(id,"old-claim","STALE",new java.util.Date())).isZero();
+            assertThat(scanMapper.completeClaimedMigration(second,1,"new-claim","new-key",3L,"md5")).isEqualTo(1);
+            assertThat(scanMapper.findById(id).getOssUrl()).isEqualTo("new-key");
+        }finally{jdbcTemplate.update("DELETE FROM app.mr_scan WHERE id=?",id);}
+    }
+
+    @Test
+    @org.springframework.transaction.annotation.Transactional(propagation=org.springframework.transaction.annotation.Propagation.NOT_SUPPORTED)
+    void objectWriteAcknowledgementLostThenIntegrityCheckedRetryReusesObject()throws Exception{
+        int id=jdbcTemplate.queryForObject("""
+            INSERT INTO app.mr_scan(bah,sjh,brxh,filename,folder,uploadflag,source_type,source_ref)
+            VALUES ('8765440','12345678','8765440','test.jpg','synthetic',1,'LOCAL','test.jpg') RETURNING id
+            """,Integer.class);
+        var source=temporary.resolve("ack-source.jpg");var object=temporary.resolve("ack-object");
+        byte[] content={4,3,2,1};
+        java.nio.file.Files.write(source,content);
+        String hash=org.apache.commons.codec.digest.DigestUtils.md5Hex(content);
+        var oss=org.mockito.Mockito.mock(com.zjcxph.imgapi.service.OssService.class);
+        var resolver=org.mockito.Mockito.mock(com.zjcxph.imgapi.service.impl.MigrationSourceResolver.class);
+        org.mockito.Mockito.when(resolver.describe(org.mockito.ArgumentMatchers.any())).thenReturn("LOCAL:scan:"+id);
+        org.mockito.Mockito.when(resolver.resolve(org.mockito.ArgumentMatchers.any())).thenReturn(
+            new com.zjcxph.imgapi.service.impl.MigrationSourceResolver.ResolvedSource(source,"LOCAL:scan:"+id,false));
+        org.mockito.Mockito.when(oss.calculateMd5(source.toString())).thenReturn(hash);
+        org.mockito.Mockito.when(oss.getFileSize(source.toString())).thenReturn((long)content.length);
+        org.mockito.Mockito.when(oss.doesObjectExist(org.mockito.ArgumentMatchers.anyString()))
+            .thenAnswer(call->java.nio.file.Files.exists(object));
+        org.mockito.Mockito.when(oss.verifyUploadIntegrity(org.mockito.ArgumentMatchers.anyString(),org.mockito.ArgumentMatchers.eq(hash)))
+            .thenAnswer(call->hash.equals(org.apache.commons.codec.digest.DigestUtils.md5Hex(java.nio.file.Files.readAllBytes(object))));
+        org.mockito.Mockito.when(oss.uploadFile(org.mockito.ArgumentMatchers.anyString(),org.mockito.ArgumentMatchers.anyString(),org.mockito.ArgumentMatchers.anyString()))
+            .thenAnswer(call->{java.nio.file.Files.copy(source,object);throw new RuntimeException("synthetic connection acknowledgement lost");});
+        var service=new com.zjcxph.imgapi.service.impl.MigrationServiceImpl(oss,scanMapper,migrationLogs,migrationJobs,
+            resolver,Runnable::run,org.mockito.Mockito.mock(org.springframework.cache.CacheManager.class));
+        try{
+            assertThat(service.uploadSingleScan(id).getStatus()).isEqualTo("retry_wait");
+            assertThat(scanMapper.findById(id).getOssUrl()).isNull();
+            assertThat(java.nio.file.Files.readAllBytes(object)).isEqualTo(content);
+            jdbcTemplate.update("UPDATE app.mr_scan SET migration_next_retry_at=NOW()-interval '1 second' WHERE id=?",id);
+            assertThat(service.uploadSingleScan(id).getStatus()).isEqualTo("success");
+            assertThat(scanMapper.findById(id).getOssUrl()).isNotBlank();
+            assertThat(scanMapper.findById(id).getChecksumMd5()).isEqualTo(hash);
+            org.mockito.Mockito.verify(oss,org.mockito.Mockito.times(1)).uploadFile(org.mockito.ArgumentMatchers.anyString(),org.mockito.ArgumentMatchers.anyString(),org.mockito.ArgumentMatchers.anyString());
+            org.mockito.Mockito.verify(oss,org.mockito.Mockito.times(1)).verifyUploadIntegrity(org.mockito.ArgumentMatchers.anyString(),org.mockito.ArgumentMatchers.eq(hash));
+            org.mockito.Mockito.verify(oss,org.mockito.Mockito.never()).deleteObject(org.mockito.ArgumentMatchers.anyString());
+            System.out.println("MRR_OBJECT_ACK_LOSS actual local write followed by injected acknowledgement failure; integrity checked retry no second upload");
+        }finally{jdbcTemplate.update("DELETE FROM app.mr_scan WHERE id=?",id);}
+    }
+
+    @Test
+    @org.springframework.transaction.annotation.Transactional(propagation=org.springframework.transaction.annotation.Propagation.NOT_SUPPORTED)
     void realLocalObjectSideEffectAndCommittedSourceChangeDoNotPublishFalseSuccess() throws Exception {
         int id=jdbcTemplate.queryForObject("""
                 INSERT INTO app.mr_scan(bah,sjh,brxh,filename,folder,uploadflag,source_type,source_ref)
@@ -93,15 +156,15 @@ class OssMigrationManagementMapperPostgresqlIT extends PostgresqlIntegrationTest
                 """,Integer.class);
         try {
             Scan snapshot=scanMapper.findById(id);
-            assertThat(scanMapper.markMigrationStarted(id)).isEqualTo(1);
+            assertThat(scanMapper.markMigrationStarted(snapshot,"claim-a")).isEqualTo(1);
             jdbcTemplate.update("UPDATE app.mr_scan SET bah='8765433',filename='new.jpg',source_ref='new.jpg' WHERE id=?",id);
-            assertThat(scanMapper.completeClaimedMigration(snapshot,1,"synthetic-old-key",3L,"md5")).isZero();
+            assertThat(scanMapper.completeClaimedMigration(snapshot,1,"claim-a","synthetic-old-key",3L,"md5")).isZero();
             assertThat(scanMapper.findById(id).getOssUrl()).isNull();
             // A current independently re-read claim can still commit; no stale object becomes the source.
             Scan current=scanMapper.findById(id);
-            assertThat(scanMapper.completeClaimedMigration(current,1,"synthetic-new-key",3L,"md5")).isEqualTo(1);
+            assertThat(scanMapper.completeClaimedMigration(current,1,"claim-a","synthetic-new-key",3L,"md5")).isEqualTo(1);
             assertThat(scanMapper.findById(id).getOssUrl()).isEqualTo("synthetic-new-key");
-            assertThat(scanMapper.completeClaimedMigration(current,1,"synthetic-old-key",3L,"md5")).isZero();
+            assertThat(scanMapper.completeClaimedMigration(current,1,"claim-a","synthetic-old-key",3L,"md5")).isZero();
         } finally {jdbcTemplate.update("DELETE FROM app.mr_scan WHERE id=?",id);}
     }
 

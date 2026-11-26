@@ -127,6 +127,7 @@ public class OssController {
 
     @Operation(summary = "浏览 OSS 迁移文件目录")
     @GetMapping("/browser")
+    @RequirePermissions({"record:manage"})
     public Result<OssBrowserPageDTO> browseOssFiles(
             @RequestParam(required = false) String prefix,
             @RequestParam(required = false) String continuationToken,
@@ -134,16 +135,18 @@ public class OssController {
         try {
             return Result.success(ossService.browseObjects(prefix, continuationToken, maxKeys));
         } catch (IllegalArgumentException | IllegalStateException e) {
-            return Result.fail(e.getMessage());
+            return Result.fail("OSS 浏览参数或服务状态无效");
         } catch (Exception e) {
-            logger.error("浏览 OSS 文件失败：prefix={}", prefix, e);
+            logger.warn("浏览 OSS 文件失败：type={}",e.getClass().getSimpleName());
             return Result.fail("读取 OSS 目录失败");
         }
     }
 
     @Operation(summary = "获取 OSS 浏览器文件签名 URL")
     @GetMapping("/browser/url")
+    @RequirePermissions({"record:manage"})
     public Result<Map<String, Object>> getBrowserOssUrl(@RequestParam String key) {
+        if(deliveryProperties.isGateway())return Result.fail(409,"网关模式不允许按对象 Key 签发地址");
         try {
             String signedUrl = ossService.generateBrowserPresignedUrl(key);
             Map<String, Object> response = new HashMap<>();
@@ -151,9 +154,9 @@ public class OssController {
             response.put("ossUrl", signedUrl);
             return Result.success(response);
         } catch (IllegalArgumentException | IllegalStateException e) {
-            return Result.fail(e.getMessage());
+            return Result.fail("OSS 浏览参数或服务状态无效");
         } catch (Exception e) {
-            logger.error("获取 OSS 浏览文件 URL 失败：key={}", key, e);
+            logger.warn("获取 OSS 浏览文件 URL 失败：type={}",e.getClass().getSimpleName());
             return Result.fail("获取 OSS 文件地址失败");
         }
     }
@@ -201,6 +204,7 @@ public class OssController {
         List<ImageMigrationLog> logs = migrationService.getMigrationLogs(status, page, size);
         long total = migrationService.countMigrationLogs(status);
         for (ImageMigrationLog log : logs) {
+            com.zjcxph.imgapi.utils.MigrationLogPrivacy.sanitize(log);
             if(deliveryProperties.isGateway()) log.setOssUrl(null);
             else migrationService.enrichWithPresignedUrl(log);
         }

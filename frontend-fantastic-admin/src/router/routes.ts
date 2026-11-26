@@ -240,7 +240,7 @@ const asyncRoutes: Route.recordMainRaw[] = [
       {
         path: '/oss-browser',
         component: () => import('@/views/oss-browser/index.vue'),
-        meta: { title: 'OSS 文件浏览', icon: 'i-lucide:folder-open', auth: ['record:read'], cache: true },
+        meta: { title: 'OSS 文件浏览', icon: 'i-lucide:folder-open', auth: ['record:manage'], cache: true },
       },
       nginxBrowserRoute,
       archiveWorkbenchRoute,

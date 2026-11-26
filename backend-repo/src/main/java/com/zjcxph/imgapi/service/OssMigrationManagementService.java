@@ -47,6 +47,7 @@ public class OssMigrationManagementService {
 
     private void enrichWithPresignedUrl(ImageMigrationLog log) {
         if(log==null)return;
+        com.zjcxph.imgapi.utils.MigrationLogPrivacy.sanitize(log);
         if(deliveryProperties.isGateway())log.setOssUrl(null);
         else migrationService.enrichWithPresignedUrl(log);
     }

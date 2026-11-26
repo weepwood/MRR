@@ -935,3 +935,6 @@ cc8dbbc4，65未推送/259文件，集成69/266，main120/707；关键权限、�
 
 ## 后端治理第九批（2026-11-26）
 基线05ce99b8。v2不可变加密分组段/集合幂等SQL双开关实验候选，默认内存不变；两轮A/B中位A50.39/B95.395RPS、P95 292.709/33.496ms，120.197秒11399成功零漏重/8周期零逾期/控制后队列0。87定向/56PG/1H2；真实双条TCP提交确认丢失、PG停止恢复、分区退役和本地对象副作用与来源变化，迁移完成CAS及历史签发治理。16医疗探测新增8路由，累计25/276。详见docs/backend/governance-batch9.md及audit-durable-admission-design.md；证据/Volumes/data/AI-Development/artifacts/mrr-backend9-20261126/。响应前准入、Windows/密钥、保留期、专用审计、异常隔离、完整WAL、OSS浏览器、跨业务与剩余权限、真实长时和物理写入未收口。仅本地，不推送合并发布。
+
+## 后端治理第十批（2026-11-26）
+基线a004e4b5。独立医疗INTENT/OUTCOME gate默认关闭，新前向V20261126221000事件账本及UUID领取，v3 key ring重启式轮换/held保留、OSS浏览管理权限与网关Key签发拒绝、诊断字段保护。77定向/81PG、真实HTTP容量200/503/200、实际子JVM强杀、对象本地写入ACK丢失、20医疗探测；最终1049请求629双阶段配对零漏重、P95 386.573ms性能未通过。累计30/276。报告docs/backend/governance-batch10.md、audit-durable-operations-batch10.md；证据/Volumes/data/AI-Development/artifacts/mrr-backend10-20261126/。默认不切换，前置分组、Windows/物理I/O/热轮换/外部专用审计、保留期、活动WAL、完整资源权限与跨实例事务及长时仍待，仅本地。

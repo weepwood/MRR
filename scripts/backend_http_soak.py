@@ -84,10 +84,14 @@ def main():
     parser.add_argument("--audit-outage", action="store_true", help="stop only the newly created isolated PG, then verify durable admission and restart")
     parser.add_argument("--grouped-audit", action="store_true", help="use sealed group commit and batched SQL candidate")
     parser.add_argument("--durable-audit", action="store_true", help="opt in to experimental encrypted POSIX spool")
+    parser.add_argument("--medical-admission",action="store_true",help="enable experimental separate medical event gate")
+    parser.add_argument("--admission-capacity",action="store_true",help="test actual first-byte admission and logical capacity rejection, then exit")
     parser.add_argument("--medical-probes", action="store_true", help="exercise synthetic patient, OCR ownership, migration log and export-plan responses")
     parser.add_argument("--signed-external", action="store_true", help="real HMAC ticket and session chain plus role probes")
     parser.add_argument("--external-probes", action="store_true", help="exercise synthetic external session, current scope and privacy headers before load")
     args = parser.parse_args()
+    if args.admission_capacity and not args.medical_admission:
+        parser.error("capacity requires explicit medical admission")
     if args.grouped_audit and not args.durable_audit:
         parser.error("grouped audit requires explicit durable candidate")
     if args.audit_outage and not args.durable_audit:
@@ -169,6 +173,11 @@ def main():
             config += f"\nmrr.audit.spool.enabled=true\nmrr.audit.spool.directory={(lab/'audit-spool').resolve()}\n"
         if args.grouped_audit:
             config += "\nmrr.audit.spool.grouped=true\n"
+        if args.medical_admission:
+            (lab/"medical-spool").mkdir(mode=0o700)
+            config += f"\nmrr.audit.admission.enabled=true\nmrr.audit.admission.directory={(lab/'medical-spool').resolve()}\n"
+            if args.admission_capacity:
+                config += "mrr.audit.admission.max-records=2\n"
         (lab / "application.properties").write_text(config)
         env = {"HOME": os.environ["HOME"], "JAVA_HOME": str(args.java_home),
                "PATH": str(args.java_home / "bin") + ":/opt/homebrew/bin:/usr/bin:/bin",
@@ -178,6 +187,8 @@ def main():
             env["SPRING_APPLICATION_JSON"]=json.dumps({"mrr":{"integration":{"clients":[{"client-id":"synthetic-his","enabled":True,"allowed-ips":["127.0.0.1"],"secret":integration_secret}]}}})
         if args.durable_audit:
             env["MRR_AUDIT_SPOOL_KEY"]=spool_key
+        if args.medical_admission:
+            env["MRR_MEDICAL_AUDIT_KEY"]=base64.b64encode(secrets.token_bytes(32)).decode()
         cmd = [str(BACKEND / "mvnw"), "-o", "-B", "-ntp",
                "-Dmaven.repo.local=" + str(args.maven_repo),
                "-Dspring-boot.run.workingDirectory=" + str(lab),
@@ -214,6 +225,57 @@ def main():
                 "SELECT '7654300','7654300','synthetic.png','synthetic-soak',1,n,'LOCAL','synthetic.png' FROM generate_series(1,1000) n")
             sql("ANALYZE app.mr_scan")
             scan = int(sql("SELECT min(id) FROM app.mr_scan WHERE folder='synthetic-soak'"))
+            if args.admission_capacity:
+                # Hold an independent real PG table lock so a full two-slot gate cannot drain.
+                with (lab/"admission-lock.log").open("w") as lock_output:
+                    locker=subprocess.Popen([str(pg/"psql"),"-h",str(lab/"socket"),"-p",str(dbport),"-U","imgapi","-d","imgapi",
+                        "-v","ON_ERROR_STOP=1","-c","BEGIN; LOCK TABLE app.medical_audit_event IN ACCESS EXCLUSIVE MODE; SELECT pg_sleep(8); COMMIT"],
+                        stdout=lock_output,stderr=subprocess.STDOUT)
+                    try:
+                        end=time.monotonic()+5
+                        while time.monotonic()<end:
+                            if sql("SELECT count(*) FROM pg_locks WHERE relation='app.medical_audit_event'::regclass AND mode='AccessExclusiveLock' AND granted")=="1":break
+                            time.sleep(.05)
+                        else:raise RuntimeError("gate lab did not acquire exclusive lock")
+                        path=f"/api/v1/img/content/{scan}"
+                        with closing(http.client.HTTPConnection("127.0.0.1",httpport,timeout=5)) as conn:
+                            conn.request("GET",path,headers={"Authorization":"Bearer "+token})
+                            response=conn.getresponse()
+                            assert response.status==200
+                            first_trace=response.getheader("X-Request-Id")
+                            frames=list((lab/"medical-spool").glob("*.pending"))
+                            assert frames and all(first_trace.encode() not in f.read_bytes() for f in frames)
+                            assert response.read()==content
+                            code,h,body=request(conn,path,token)
+                            assert code==503 and json.loads(body)["code"]==503 and body!=content
+                            denied_trace=h["X-Request-Id"]
+                            print("MEDICAL_CAPACITY first-byte encrypted intent exists; second stream rejected 503",flush=True)
+                    finally:
+                        locker.wait(timeout=20)
+                deadline=time.monotonic()+15
+                while time.monotonic()<deadline:
+                    count=sql(f"SELECT count(*) FROM app.medical_audit_event WHERE request_id='{first_trace}'")
+                    if count=="2" and not list((lab/"medical-spool").glob("*.pending")):break
+                    time.sleep(.1)
+                assert count=="2"
+                assert sql(f"SELECT count(*) FROM app.medical_audit_event WHERE request_id='{denied_trace}'")=="0"
+                assert not list((lab/"medical-spool").glob("*.pending"))
+                assert sql(f"SELECT count(*) FROM app.medical_audit_event WHERE request_id='{first_trace}' AND phase='OUTCOME' AND http_status='200'")=="1"
+                # After releasing capacity the same protected request is admitted again.
+                with closing(http.client.HTTPConnection("127.0.0.1",httpport,timeout=5)) as conn:
+                    code,h,b=request(conn,path,token)
+                    assert code==200 and b==content
+                    third_trace=h["X-Request-Id"]
+                deadline=time.monotonic()+15
+                while time.monotonic()<deadline:
+                    if sql(f"SELECT count(*) FROM app.medical_audit_event WHERE request_id='{third_trace}'")=="2" and not list((lab/"medical-spool").glob("*.pending")):break
+                    time.sleep(.1)
+                assert sql(f"SELECT count(*) FROM app.medical_audit_event WHERE request_id='{third_trace}'")=="2"
+                assert not list((lab/"medical-spool").glob("*.pending"))
+                (lab/"admission-capacity.json").write_text(json.dumps({"first":200,"denied":503,"recovered":200,
+                    "first_trace":first_trace,"denied_trace":denied_trace,"third_trace":third_trace,"events":4,"pending":0}))
+                print("MEDICAL_CAPACITY recovered after actual lock release; four events, no event for denied request",flush=True)
+                return
             run = int(sql("INSERT INTO app.mrr_data_quality_run(status,triggered_by) VALUES ('SUCCESS','synthetic-full-soak') RETURNING id").splitlines()[0])
             sql(f"INSERT INTO app.mrr_data_quality_issue(run_id,check_code,check_name,severity,entity_id) VALUES ({run},'SOAK','synthetic','WARNING','synthetic')")
             # Historical export ownership and actual serialized log fields; never use real data.
@@ -396,9 +458,10 @@ def main():
                 sql("INSERT INTO app.mr_auth_role(code,name,permissions) VALUES "
                     "('SYNTHETIC_MED_NONE','synthetic','system:read'),"
                     "('SYNTHETIC_MED_READ','synthetic','record:read'),"
-                    "('SYNTHETIC_MED_OCR','synthetic','record:read,ocr:run,ocr:batch-run')")
+                    "('SYNTHETIC_MED_OCR','synthetic','record:read,ocr:run,ocr:batch-run'),"
+                    "('SYNTHETIC_MED_MANAGE','synthetic','record:read,record:manage')")
                 actors={}
-                for label,role in (("none","SYNTHETIC_MED_NONE"),("read","SYNTHETIC_MED_READ"),("ocr1","SYNTHETIC_MED_OCR"),("ocr2","SYNTHETIC_MED_OCR")):
+                for label,role in (("none","SYNTHETIC_MED_NONE"),("read","SYNTHETIC_MED_READ"),("ocr1","SYNTHETIC_MED_OCR"),("ocr2","SYNTHETIC_MED_OCR"),("manage","SYNTHETIC_MED_MANAGE")):
                     name="synthetic-med-"+label
                     actor=int(sql("INSERT INTO app.mr_auth_user(username,display_name,password_hash,role_code,status,must_change_password,password_version) "
                         f"VALUES ('{name}','synthetic','not-a-password','{role}','active',false,1) RETURNING id").splitlines()[0])
@@ -408,7 +471,7 @@ def main():
                     owner=actors[label][0]
                     sql("INSERT INTO app.mr_ocr_batch(id,owner_user_id,created_by,idempotency_key,status,after_id,upper_id,cursor_id,max_pages,config_snapshot,rule_set_version,lexicon_version) "
                         f"VALUES ('{batch_id}',{owner},'synthetic-med-{label}','{batch_id}','PAUSED',0,1,0,1,'{{}}','synthetic','synthetic')")
-                sql(f"INSERT INTO app.image_migration_log(scan_id,local_path,oss_url,migration_status) VALUES ({scan},'SYNTHETIC_SOURCE','SYNTHETIC_HISTORICAL_OBJECT_KEY','success')")
+                sql(f"INSERT INTO app.image_migration_log(scan_id,local_path,oss_url,migration_status,error_message) VALUES ({scan},'SYNTHETIC_PRIVATE_PATH','SYNTHETIC_HISTORICAL_OBJECT_KEY','success','SYNTHETIC_PRIVATE_ERROR')")
                 with closing(http.client.HTTPConnection("127.0.0.1",httpport,timeout=10)) as conn:
                     def med(path,label,expected,private=False,forbidden=()):
                         auth=token if label=="load" else actors[label][1]
@@ -432,9 +495,13 @@ def main():
                     med(prefix+"/"+batch_ids[1]+"/jobs","ocr1",403,True)
                     med(prefix+"/"+batch_ids[0]+"/jobs","ocr1",200,True)
                     for path in ("/api/v1/oss/migration/logs?status=success",f"/api/v1/oss/migration/management/logs?status=success&scanId={scan}"):
-                        med(path,"none",403,True,("SYNTHETIC_HISTORICAL_OBJECT_KEY",))
-                        rows=med(path,"read",200,True,("SYNTHETIC_HISTORICAL_OBJECT_KEY",))["data"]["list"]
+                        med(path,"none",403,True,("SYNTHETIC_HISTORICAL_OBJECT_KEY","SYNTHETIC_PRIVATE_PATH","SYNTHETIC_PRIVATE_ERROR"))
+                        rows=med(path,"read",200,True,("SYNTHETIC_HISTORICAL_OBJECT_KEY","SYNTHETIC_PRIVATE_PATH","SYNTHETIC_PRIVATE_ERROR"))["data"]["list"]
                         assert rows and rows[0]["scanId"]==scan and rows[0].get("ossUrl") is None
+                    med("/api/v1/oss/browser","read",403,True)
+                    med("/api/v1/oss/browser","manage",200,True)
+                    med("/api/v1/oss/browser/url?key=medical-records/SYNTHETIC_PRIVATE_KEY.jpg","read",403,True,("SYNTHETIC_PRIVATE_KEY",))
+                    med("/api/v1/oss/browser/url?key=medical-records/SYNTHETIC_PRIVATE_KEY.jpg","manage",409,True,("SYNTHETIC_PRIVATE_KEY",))
                     med("/api/v1/archive-exports/plan/zip?bah=7654300","read",403)
                     assert med("/api/v1/archive-exports/plan/zip?bah=7654300","load",200)["data"]["totalCount"]==1000
                 (lab/"medical-probes.json").write_text(json.dumps(medical,indent=2))
@@ -512,7 +579,7 @@ def main():
                     if not line or line.startswith("#"):
                         continue
                     name = line.split("{", 1)[0].split(" ", 1)[0]
-                    if name.startswith("mrr_audit_") or name in {"process_cpu_usage", "process_cpu_time_ns", "process_files_open_files", "process_files_max_files", "jvm_threads_live_threads", "jvm_gc_pause_seconds_count",
+                    if name.startswith(("mrr_audit_","mrr_medical_audit_")) or name in {"process_cpu_usage", "process_cpu_time_ns", "process_files_open_files", "process_files_max_files", "jvm_threads_live_threads", "jvm_gc_pause_seconds_count",
                                 "jvm_gc_pause_seconds_sum", "hikaricp_connections_active",
                                 "hikaricp_connections_pending", "hikaricp_connections_usage_seconds_count",
                                 "hikaricp_connections_usage_seconds_sum", "hikaricp_connections_acquire_seconds_count",
@@ -700,6 +767,24 @@ def main():
                 assert stats["spool_pending_after_controls"]==0, "durable audit shutdown backlog"
                 stats["audit_final_metrics"]={k:v for k,v in scrape().items() if k.startswith("mrr_audit_")}
                 assert stats["audit_final_metrics"].get("mrr_audit_dropped",0)==0,"durable admission failures"
+            if args.medical_admission:
+                end=time.monotonic()+25
+                while any((lab/"medical-spool").glob("*.pending")) and time.monotonic()<end:time.sleep(.1)
+                assert not any((lab/"medical-spool").glob("*.pending")), "medical admission drain incomplete"
+                from collections import Counter
+                observed=Counter(tuple(row.split("|")) for row in sql(
+                    f"SELECT request_id,phase FROM app.medical_audit_event WHERE actor_id={uid}").splitlines())
+                expected=[r[3] for r in results if r[0] in (2,3,4)]
+                assert all(observed[(trace,phase)]==1 for trace in expected for phase in ("INTENT","OUTCOME"))
+                assert all(observed[(r[3],phase)]==0 for r in results if r[0] in (0,1) for phase in ("INTENT","OUTCOME"))
+                stats["medical_final_metrics"]={k:v for k,v in scrape().items() if k.startswith("mrr_medical_audit_")}
+                assert stats["medical_final_metrics"].get("mrr_medical_audit_pending")==0
+                assert stats["medical_final_metrics"].get("mrr_medical_audit_reserved")==0
+                assert stats["medical_final_metrics"].get("mrr_medical_audit_rejected_total")==0
+                assert stats["medical_final_metrics"].get("mrr_medical_audit_failure_total")==0
+                stats["medical_admission"]={"protected_requests":len(expected),"exact_pairs":len(expected),"pending":0,
+                    "unprotected_requests":len(results)-len(expected)}
+                (lab/"medical-admission-traces.json").write_text(json.dumps(expected))
             (lab / "result.json").write_text(json.dumps(stats, indent=2))
             (lab / "errors.json").write_text(json.dumps(errors[:20], indent=2))
             print("SOAK_RESULT " + json.dumps(stats), flush=True)

@@ -17,3 +17,5 @@
 | HOLD-01 | 正式版本、CI、Windows、医院落地 | 暂缓；已有门禁见候选文档，恢复发布阶段再核查 |
 
 初查范围：影像阅读（ThumbStrip/PreviewPanel）、病案与数据治理（DataRelationWorkbenchPage、Manifest、QualityCaseReview、RepairOrderPanel）、运维（OperationsHistoryCard、StorageCircuitHistoryCard）、普通记录/患者、装箱、统计、用户/权限、设置、OCR、数据导入导出及存储浏览目录。第一批仅前两组深入实施。第二批针对运维与治理实现并执行22项跨页主要操作调查，详见 [功能调查](product-batch2-audit.md)。不是全部角色、路由、边界或写入链路验收。
+
+后端治理第十批：[报告](../backend/governance-batch10.md)，医疗前置准入候选默认关闭，OSS浏览权限收紧及迁移状态保护，保留正式验收门禁。

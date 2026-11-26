@@ -469,12 +469,12 @@ class ScanMapperPostgresqlIT extends PostgresqlIntegrationTestSupport {
                 RETURNING id
                 """, Integer.class);
 
-        assertThat(scanMapper.markMigrationStarted(migratedId)).isZero();
-        assertThat(scanMapper.markMigrationStarted(futureRetryId)).isZero();
-        assertThat(scanMapper.markMigrationStarted(waitingSjhId)).isZero();
+        assertThat(scanMapper.markMigrationStarted(scanMapper.findById(migratedId),"test-claim")).isZero();
+        assertThat(scanMapper.markMigrationStarted(scanMapper.findById(futureRetryId),"test-claim")).isZero();
+        assertThat(scanMapper.markMigrationStarted(scanMapper.findById(waitingSjhId),"test-claim")).isZero();
 
         jdbcTemplate.update("UPDATE app.mr_scan SET sjh = '33330003' WHERE id = ?", waitingSjhId);
-        assertThat(scanMapper.markMigrationStarted(waitingSjhId)).isEqualTo(1);
+        assertThat(scanMapper.markMigrationStarted(scanMapper.findById(waitingSjhId),"test-claim")).isEqualTo(1);
 
         assertThat(jdbcTemplate.queryForObject(
                 "SELECT migration_status FROM app.mr_scan WHERE id = ?",

@@ -185,13 +185,7 @@ public interface ScanMapper {
 
     long countByCondition(@Param("request") ScanRequest request);
 
-    // The object write is outside the database transaction. Commit only the still-current claim/source.
-    @Update("""
-            UPDATE mr_scan SET oss_url=#{ossUrl},file_size=#{fileSize},checksum_md5=#{checksumMd5},
-              migration_status='migrated',migration_attempts=0,migration_error_code=NULL,migration_next_retry_at=NULL,
-              migration_updated_at=NOW(),migrated_at=NOW()
-            WHERE id=#{scan.id} AND uploadflag<>0 AND (oss_url IS NULL OR oss_url='')
-              AND migration_status='migrating' AND migration_attempts=#{attempt}
+    String MIGRATION_SOURCE_MATCH = """
               AND archive_id IS NOT DISTINCT FROM #{scan.archiveId,jdbcType=BIGINT}
               AND bah IS NOT DISTINCT FROM #{scan.bah,jdbcType=VARCHAR}
               AND sjh IS NOT DISTINCT FROM #{scan.sjh,jdbcType=VARCHAR}
@@ -201,8 +195,17 @@ public interface ScanMapper {
               AND source_type IS NOT DISTINCT FROM #{scan.sourceType,jdbcType=VARCHAR}
               AND source_node IS NOT DISTINCT FROM #{scan.sourceNode,jdbcType=VARCHAR}
               AND source_ref IS NOT DISTINCT FROM #{scan.sourceRef,jdbcType=VARCHAR}
-            """)
-    int completeClaimedMigration(@Param("scan") Scan scan,@Param("attempt") int attempt,
+            """;
+
+    // The object write is outside the database transaction. Commit only the still-current claim/source.
+    @Update("""
+            UPDATE mr_scan SET oss_url=#{ossUrl},file_size=#{fileSize},checksum_md5=#{checksumMd5},
+              migration_status='migrated',migration_attempts=0,migration_error_code=NULL,migration_next_retry_at=NULL,
+              migration_updated_at=NOW(),migrated_at=NOW(),migration_claim_id=NULL
+            WHERE id=#{scan.id} AND uploadflag<>0 AND (oss_url IS NULL OR oss_url='')
+              AND migration_status='migrating' AND migration_attempts=#{attempt} AND migration_claim_id=#{claimId}
+            """ + MIGRATION_SOURCE_MATCH)
+    int completeClaimedMigration(@Param("scan") Scan scan,@Param("attempt") int attempt,@Param("claimId") String claimId,
                                  @Param("ossUrl") String ossUrl,@Param("fileSize") Long fileSize,
                                  @Param("checksumMd5") String checksumMd5);
 
@@ -235,36 +238,38 @@ public interface ScanMapper {
             "</script>")
     long countEligibleMigrations(@Param("maxScanId") int maxScanId, @Param("folder") String folder);
 
-    @Update("UPDATE mr_scan SET migration_status = 'migrating', " +
+    @Update("UPDATE mr_scan SET migration_status = 'migrating', migration_claim_id=#{claimId}, " +
             "migration_attempts = COALESCE(migration_attempts, 0) + 1, " +
             "migration_error_code = NULL, migration_next_retry_at = NULL, migration_updated_at = NOW() " +
-            "WHERE id = #{id} AND uploadflag != 0 AND (oss_url IS NULL OR oss_url = '') AND " +
-            MIGRATION_ELIGIBLE_EXPRESSION)
-    int markMigrationStarted(@Param("id") Integer id);
+            "WHERE id = #{scan.id} AND uploadflag != 0 AND (oss_url IS NULL OR oss_url = '') AND " +
+            MIGRATION_ELIGIBLE_EXPRESSION + " AND COALESCE(migration_attempts,0)=COALESCE(#{scan.migrationAttempts,jdbcType=INTEGER},0) " +
+            MIGRATION_SOURCE_MATCH)
+    int markMigrationStarted(@Param("scan") Scan scan,@Param("claimId") String claimId);
 
-    @Update("UPDATE mr_scan SET migration_status = 'failed', migration_error_code = #{errorCode}, " +
-            "migration_next_retry_at = NULL, migration_updated_at = NOW() " +
-            "WHERE id = #{id} AND (oss_url IS NULL OR oss_url = '')")
-    int markMigrationFailed(@Param("id") Integer id, @Param("errorCode") String errorCode);
+    String CURRENT_MIGRATION_CLAIM = " WHERE id=#{id} AND uploadflag<>0 AND (oss_url IS NULL OR oss_url='')" +
+            " AND migration_status='migrating' AND migration_claim_id=#{claimId}";
 
-    @Update("UPDATE mr_scan SET migration_status = 'waiting_sjh', migration_error_code = 'MISSING_SJH', " +
-            "migration_next_retry_at = NULL, migration_updated_at = NOW() " +
-            "WHERE id = #{id} AND (oss_url IS NULL OR oss_url = '')")
+    @Update("UPDATE mr_scan SET migration_status='failed',migration_error_code=#{errorCode}, " +
+            "migration_claim_id=NULL,migration_next_retry_at=NULL,migration_updated_at=NOW()" + CURRENT_MIGRATION_CLAIM)
+    int markMigrationFailed(@Param("id") Integer id,@Param("claimId") String claimId,@Param("errorCode") String errorCode);
+
+    @Update("UPDATE mr_scan SET migration_status='waiting_sjh',migration_error_code='MISSING_SJH', " +
+            "migration_claim_id=NULL,migration_next_retry_at=NULL,migration_updated_at=NOW() " +
+            "WHERE id=#{id} AND uploadflag<>0 AND (oss_url IS NULL OR oss_url='') AND NOT " + VALID_SJH_EXPRESSION +
+            " AND (migration_status IS NULL OR migration_status IN ('not_migrated','waiting_sjh','retry_wait'))")
     int markMigrationWaitingSjh(@Param("id") Integer id);
 
-    @Update("UPDATE mr_scan SET migration_status = 'retry_wait', migration_error_code = #{errorCode}, " +
-            "migration_next_retry_at = #{nextRetryAt}, migration_updated_at = NOW() " +
-            "WHERE id = #{id} AND (oss_url IS NULL OR oss_url = '')")
-    int markMigrationRetryWait(@Param("id") Integer id,
-                               @Param("errorCode") String errorCode,
-                               @Param("nextRetryAt") Date nextRetryAt);
+    @Update("UPDATE mr_scan SET migration_status='retry_wait',migration_error_code=#{errorCode}, " +
+            "migration_claim_id=NULL,migration_next_retry_at=#{nextRetryAt},migration_updated_at=NOW()" + CURRENT_MIGRATION_CLAIM)
+    int markMigrationRetryWait(@Param("id") Integer id,@Param("claimId") String claimId,
+                               @Param("errorCode") String errorCode,@Param("nextRetryAt") Date nextRetryAt);
 
-    @Update("UPDATE mr_scan SET migration_status = 'retry_wait', migration_error_code = 'APPLICATION_RESTART', " +
-            "migration_next_retry_at = NOW(), migration_updated_at = NOW() " +
-            "WHERE migration_status = 'migrating' AND (oss_url IS NULL OR oss_url = '')")
+    @Update("UPDATE mr_scan SET migration_status='retry_wait',migration_error_code='APPLICATION_RESTART', " +
+            "migration_claim_id=NULL,migration_next_retry_at=NOW(),migration_updated_at=NOW() " +
+            "WHERE migration_status='migrating' AND (oss_url IS NULL OR oss_url='')")
     int recoverInterruptedMigrations();
 
-    @Update("<script>UPDATE mr_scan SET migration_status = 'not_migrated', migration_attempts = 0, " +
+    @Update("<script>UPDATE mr_scan SET migration_status = 'not_migrated', migration_attempts = 0, migration_claim_id=NULL, " +
             "migration_error_code = NULL, migration_next_retry_at = NULL, migration_updated_at = NOW() " +
             "WHERE migration_status = 'failed' AND (oss_url IS NULL OR oss_url = '') AND id IN " +
             "<foreach collection='ids' item='id' open='(' separator=',' close=')'>#{id}</foreach>" +

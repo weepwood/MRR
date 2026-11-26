@@ -93,8 +93,8 @@ GET	/api/v1/operations/permission-matrix	OperationsDiagnosticsController#permiss
 GET	/api/v1/operations/read-only	OperationsDiagnosticsController#readOnly	system:read
 GET	/api/v1/operations/readiness	OperationsDiagnosticsController#readiness	system:read
 GET	/api/v1/operations/storage-circuit-history	StorageCircuitHistoryController#history	system:read
-GET	/api/v1/oss/browser	OssController#browseOssFiles	record:read
-GET	/api/v1/oss/browser/url	OssController#getBrowserOssUrl	record:read
+GET	/api/v1/oss/browser	OssController#browseOssFiles	record:manage
+GET	/api/v1/oss/browser/url	OssController#getBrowserOssUrl	record:manage
 GET	/api/v1/oss/migration/jobs	OssController#listMigrationJobs	record:read
 GET	/api/v1/oss/migration/jobs/{id}	OssController#getMigrationJob	record:read
 GET	/api/v1/oss/migration/logs	OssController#getMigrationLogs	record:read

@@ -23,7 +23,7 @@ import java.util.regex.Pattern;
  * One exclusive owner per private directory; a published record survives JVM termination.
  */
 public final class EncryptedAuditSpool implements AutoCloseable {
-    private static final int VERSION = 1, GROUP_VERSION = 2, MAX_GROUP = 16, NONCE_BYTES = 12, TAG_BITS = 128, MAX_RECORD = 64 * 1024;
+    private static final int VERSION = 1, GROUP_VERSION = 2, KEYED_VERSION = 3, MAX_GROUP = 16, NONCE_BYTES = 12, TAG_BITS = 128, MAX_RECORD = 64 * 1024;
     private static final Pattern PENDING = Pattern.compile("[0-9a-f-]{36}\\.pending");
     private static final Pattern TEMP = Pattern.compile("[0-9a-f-]{36}\\.tmp");
     private static final Set<PosixFilePermission> PRIVATE_DIR = PosixFilePermissions.fromString("rwx------");
@@ -31,11 +31,16 @@ public final class EncryptedAuditSpool implements AutoCloseable {
     private final Path root;
     private final ObjectMapper mapper;
     private final SecretKeySpec key;
+    private final Map<String,SecretKeySpec> keys;
+    private final String activeKeyId;
     private final int maxRecords;
     private final long maxBytes;
     private final SecureRandom random = new SecureRandom();
     private record Segment(long bytes, int records) {}
     private final LinkedHashMap<String, Segment> pending = new LinkedHashMap<>();
+    private final LinkedHashMap<String, Segment> held = new LinkedHashMap<>();
+    private static final Pattern HELD = Pattern.compile("[0-9a-f-]{36}\\.held");
+    private static final Pattern KEY_ID=Pattern.compile("[A-Za-z0-9_-]{1,32}");
     private int records;
     private long publishedSegments, publishedBytes, fileForces, directoryForces;
     private final FileChannel lockChannel;
@@ -49,6 +54,11 @@ public final class EncryptedAuditSpool implements AutoCloseable {
     }
 
     public EncryptedAuditSpool(Path directory, byte[] rawKey, int maxRecords, long maxBytes, ObjectMapper mapper) throws IOException {
+        this(directory,rawKey,Map.of(),null,maxRecords,maxBytes,mapper);
+    }
+
+    public EncryptedAuditSpool(Path directory,byte[] rawKey,Map<String,byte[]> keyRing,String activeKeyId,
+                               int maxRecords,long maxBytes,ObjectMapper mapper)throws IOException {
         if (rawKey == null || rawKey.length != 32 || maxRecords <= 0 || maxRecords > 100_000
                 || maxBytes < MAX_RECORD || maxBytes > 1024L * 1024 * 1024) {
             throw new IllegalArgumentException("Invalid audit spool configuration");
@@ -56,6 +66,15 @@ public final class EncryptedAuditSpool implements AutoCloseable {
         this.root = directory.toAbsolutePath().normalize();
         this.mapper = Objects.requireNonNull(mapper);
         this.key = new SecretKeySpec(rawKey, "AES");
+        if(keyRing.size()>8 || (activeKeyId==null&&!keyRing.isEmpty()) || (activeKeyId!=null&&!keyRing.containsKey(activeKeyId)))
+            throw new IOException("Invalid audit key ring");
+        var configured=new HashMap<String,SecretKeySpec>();
+        for(var entry:keyRing.entrySet()){
+            if(!KEY_ID.matcher(entry.getKey()).matches()||entry.getValue()==null||entry.getValue().length!=32)
+                throw new IOException("Invalid audit key ring");
+            configured.put(entry.getKey(),new SecretKeySpec(entry.getValue(),"AES"));
+        }
+        this.keys=Map.copyOf(configured);this.activeKeyId=activeKeyId;
         this.maxRecords = maxRecords;
         this.maxBytes = maxBytes;
         if (!Files.isDirectory(root, LinkOption.NOFOLLOW_LINKS) || !root.equals(root.toRealPath())
@@ -96,24 +115,25 @@ public final class EncryptedAuditSpool implements AutoCloseable {
                         || !Files.getOwner(path).equals(Files.getOwner(root))) throw new IOException("Invalid audit spool file");
                 // Temporary files were never acknowledged by append; they are not published records.
                 if (TEMP.matcher(name).matches()) { Files.delete(path); continue; }
-                if (!PENDING.matcher(name).matches()) throw new IOException("Unknown audit spool file");
+                boolean heldFile=HELD.matcher(name).matches();
+                if (!PENDING.matcher(name).matches()&&!heldFile) throw new IOException("Unknown audit spool file");
                 long size = Files.size(path);
-                if (size > (long) MAX_GROUP * (MAX_RECORD + 1) + 64 || size < 30) throw new IOException("Invalid audit spool frame size");
+                if (size > (long) MAX_GROUP * (MAX_RECORD + 1) + 128 || size < 30) throw new IOException("Invalid audit spool frame size");
                 if (bytes + size > maxBytes) throw new CapacityException();
-                int count = decode(name, path).size(); // Wrong key or corruption blocks startup.
+                int count = decode(heldFile?pendingName(name):name, path).size(); // Wrong key or corruption blocks startup.
                 if (records + count > maxRecords) throw new CapacityException();
-                pending.put(name,new Segment(size,count)); bytes += size; records += count;
+                (heldFile?held:pending).put(name,new Segment(size,count)); bytes += size; records += count;
             }
         }
     }
 
     public synchronized void append(Log log) throws IOException {
-        publish(List.of(log), VERSION);
+        publish(List.of(log), activeKeyId==null?VERSION:KEYED_VERSION);
     }
 
     /** Sealed append-only segment: all callers are acknowledged only after both durable barriers. */
     public synchronized void appendGroup(List<Log> rows) throws IOException {
-        publish(rows, GROUP_VERSION);
+        publish(rows, activeKeyId==null?GROUP_VERSION:KEYED_VERSION);
     }
 
     private void publish(List<Log> rows, int version) throws IOException {
@@ -134,17 +154,21 @@ public final class EncryptedAuditSpool implements AutoCloseable {
                 length+=row.length;
             }
             ByteBuffer payload=ByteBuffer.allocate(length);
-            if(version==GROUP_VERSION) payload.put((byte)'[');
+            if(version!=VERSION) payload.put((byte)'[');
             for(int i=0;i<serialized.size();i++){
                 if(i>0) payload.put((byte)',');
                 payload.put(serialized.get(i));
             }
-            if(version==GROUP_VERSION)payload.put((byte)']');
+            if(version!=VERSION)payload.put((byte)']');
             plain=payload.array();
             String id=UUID.randomUUID().toString(), name=id+".pending";
             byte[] nonce=new byte[NONCE_BYTES];random.nextBytes(nonce);
-            byte[] cipher=crypt(Cipher.ENCRYPT_MODE,version,name,nonce,plain);
-            byte[] frame=ByteBuffer.allocate(1+nonce.length+cipher.length).put((byte)version).put(nonce).put(cipher).array();
+            String keyId=version==KEYED_VERSION?activeKeyId:null;
+            byte[] keyHeader=keyId==null?new byte[0]:keyId.getBytes(java.nio.charset.StandardCharsets.US_ASCII);
+            byte[] cipher=crypt(Cipher.ENCRYPT_MODE,version,name,keyId,nonce,plain);
+            ByteBuffer framed=ByteBuffer.allocate(1+(keyId==null?0:1+keyHeader.length)+nonce.length+cipher.length).put((byte)version);
+            if(keyId!=null)framed.put((byte)keyHeader.length).put(keyHeader);
+            byte[] frame=framed.put(nonce).put(cipher).array();
             if(bytes+frame.length>maxBytes)throw new CapacityException();
             Path temporary=root.resolve(id+".tmp"),destination=root.resolve(name);
             try {
@@ -202,13 +226,20 @@ public final class EncryptedAuditSpool implements AutoCloseable {
     private List<Log> decode(String name,Path path) throws IOException {
         byte[] frame;
         try(var input=Files.newInputStream(path,LinkOption.NOFOLLOW_LINKS)){
-            frame=input.readNBytes(MAX_GROUP*(MAX_RECORD+1)+65);
+            frame=input.readNBytes(MAX_GROUP*(MAX_RECORD+1)+129);
         }
-        if(frame.length<30||frame.length>MAX_GROUP*(MAX_RECORD+1)+64
-                ||(frame[0]!=VERSION&&frame[0]!=GROUP_VERSION))throw new IOException("Invalid audit frame");
+        if(frame.length<30||frame.length>MAX_GROUP*(MAX_RECORD+1)+128
+                ||(frame[0]!=VERSION&&frame[0]!=GROUP_VERSION&&frame[0]!=KEYED_VERSION))throw new IOException("Invalid audit frame");
         int version=frame[0];
         if(version==VERSION&&frame.length>MAX_RECORD+64)throw new IOException("Invalid single audit frame");
-        byte[] plain=crypt(Cipher.DECRYPT_MODE,version,name,Arrays.copyOfRange(frame,1,13),Arrays.copyOfRange(frame,13,frame.length));
+        String keyId=null;int start=1;
+        if(version==KEYED_VERSION){
+            int len=Byte.toUnsignedInt(frame[start++]);
+            if(len<1||len>32||frame.length<start+len+NONCE_BYTES+16)throw new IOException("Invalid audit key identifier");
+            keyId=new String(frame,start,len,java.nio.charset.StandardCharsets.US_ASCII);start+=len;
+            if(!KEY_ID.matcher(keyId).matches()||!keys.containsKey(keyId))throw new IOException("Unknown audit key identifier");
+        }
+        byte[] plain=crypt(Cipher.DECRYPT_MODE,version,name,keyId,Arrays.copyOfRange(frame,start,start+12),Arrays.copyOfRange(frame,start+12,frame.length));
         try {
             List<Log> rows=version==VERSION?List.of(mapper.readValue(plain,Log.class)):
                     mapper.readValue(plain,new com.fasterxml.jackson.core.type.TypeReference<List<Log>>(){});
@@ -219,14 +250,30 @@ public final class EncryptedAuditSpool implements AutoCloseable {
         finally{Arrays.fill(plain,(byte)0);}
     }
 
-    private byte[] crypt(int mode,int version,String name,byte[] nonce,byte[] input)throws IOException{
+    private byte[] crypt(int mode,int version,String name,String keyId,byte[] nonce,byte[] input)throws IOException{
         try{
             Cipher cipher=Cipher.getInstance("AES/GCM/NoPadding");
-            cipher.init(mode,key,new GCMParameterSpec(TAG_BITS,nonce));
-            cipher.updateAAD(("mrr-audit-v"+version+":"+name).getBytes(java.nio.charset.StandardCharsets.US_ASCII));
+            cipher.init(mode,keyId==null?key:keys.get(keyId),new GCMParameterSpec(TAG_BITS,nonce));
+            cipher.updateAAD(("mrr-audit-v"+version+":"+name+(keyId==null?"":":"+keyId)).getBytes(java.nio.charset.StandardCharsets.US_ASCII));
             return cipher.doFinal(input);
         }catch(GeneralSecurityException failure){throw new IOException("Audit authentication/encryption failed");}
     }
+
+    private static String pendingName(String heldName){
+        return heldName.substring(0,heldName.length()-5)+".pending";
+    }
+
+    /** Preserve ciphertext and budget. Only deterministic conflicts/explicit age policy may call this. */
+    public synchronized void hold(String name)throws IOException{
+        requireOpen();
+        Segment segment=pending.get(name);
+        if(segment==null)throw new IOException("Unknown audit segment");
+        String destination=name.substring(0,name.length()-8)+".held";
+        Files.move(root.resolve(name),root.resolve(destination),StandardCopyOption.ATOMIC_MOVE);
+        pending.remove(name);held.put(destination,segment);
+        syncDirectory();
+    }
+    public synchronized int heldCount(){return held.values().stream().mapToInt(Segment::records).sum();}
 
     private void syncDirectory() throws IOException {
         try (FileChannel channel = FileChannel.open(root, StandardOpenOption.READ)) { channel.force(true); directoryForces++; }

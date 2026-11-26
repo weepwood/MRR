@@ -11,6 +11,9 @@ import java.util.*;
 
 /** Database transaction fence for cooperating durable writers, including retired partitions. */
 public final class DurableAuditDelivery {
+    public static final class IdentityConflictException extends IllegalStateException {
+        public IdentityConflictException(){super("Audit request identity conflict");}
+    }
     private final LogMapper mapper;
     private final JdbcTemplate jdbc;
     private final TransactionTemplate transaction;
@@ -50,7 +53,7 @@ public final class DurableAuditDelivery {
                 if (count == 0) {
                     mapper.insert(row);
                 } else if (count != 1 || !mapper.matchesDurableAudit(row)) {
-                    throw new IllegalStateException("Audit request identity conflict");
+                    throw new IdentityConflictException();
                 }
             }
         });
@@ -60,7 +63,7 @@ public final class DurableAuditDelivery {
         Map<String,Log> distinct=new LinkedHashMap<>();
         for(Log row:ordered) {
             Log previous=distinct.putIfAbsent(row.getRequestId(),row);
-            if(previous!=null&&!payload(previous).equals(payload(row)))throw new IllegalStateException("Audit request identity conflict");
+            if(previous!=null&&!payload(previous).equals(payload(row)))throw new IdentityConflictException();
         }
         var rows=List.copyOf(distinct.values());
         // One statement to lock all hash keys in a deterministic numeric order.
@@ -77,7 +80,7 @@ public final class DurableAuditDelivery {
             long count=((Number)item.get("existing_count")).longValue();
             long matched=((Number)item.get("matched_count")).longValue();
             if(count==0)missing.add(row);
-            else if(count!=1||matched!=1)throw new IllegalStateException("Audit request identity conflict");
+            else if(count!=1||matched!=1)throw new IdentityConflictException();
         }
         if(!distinct.isEmpty())throw new IllegalStateException("Audit batch reconciliation incomplete");
         if(!missing.isEmpty()&&mapper.batchInsert(missing)!=missing.size())throw new IllegalStateException("Audit batch insert incomplete");

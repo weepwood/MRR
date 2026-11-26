@@ -19,6 +19,7 @@ CREATE TABLE IF NOT EXISTS mr_scan (
     checksum_md5 VARCHAR(64),
     migration_status VARCHAR(32),
     migration_attempts INTEGER,
+    migration_claim_id VARCHAR(36),
     migration_error_code VARCHAR(100),
     migration_next_retry_at TIMESTAMP,
     migration_updated_at TIMESTAMP,

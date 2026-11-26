@@ -17,8 +17,6 @@ import org.springframework.transaction.PlatformTransactionManager;
 
 import java.io.IOException;
 import java.nio.file.Path;
-import java.util.Arrays;
-import java.util.Base64;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.locks.ReentrantLock;
@@ -31,6 +29,7 @@ public class DurableAuditLogService implements AsyncLogService {
     private final EncryptedAuditSpool spool;
     private final DurableAuditDelivery delivery;
     private final GroupedAuditAdmission grouped;
+    private final int maxReplayAgeDays;
     private final ReentrantLock flushLock = new ReentrantLock();
     private final AtomicLong rejected = new AtomicLong();
     private final AtomicLong failures = new AtomicLong();
@@ -38,20 +37,17 @@ public class DurableAuditLogService implements AsyncLogService {
 
     public DurableAuditLogService(Environment env, ObjectMapper mapper, LogMapper logs, JdbcTemplate jdbc,
                                   PlatformTransactionManager manager, MeterRegistry metrics) throws IOException {
-        byte[] key;
-        try { key = Base64.getDecoder().decode(env.getRequiredProperty("MRR_AUDIT_SPOOL_KEY")); }
-        catch (RuntimeException failure) { throw new IOException("Independent audit spool key required"); }
-        try {
-            if (key.length != 32 || java.util.Arrays.equals(key, new byte[32])) throw new IOException("Invalid audit spool key");
-            spool = new EncryptedAuditSpool(Path.of(env.getRequiredProperty("mrr.audit.spool.directory")),key,
-                    env.getProperty("mrr.audit.spool.max-records",Integer.class,10000),
-                    env.getProperty("mrr.audit.spool.max-bytes",Long.class,64L*1024*1024),mapper);
-        } finally { Arrays.fill(key,(byte)0); }
+        spool=AuditSpoolKeys.open(env,"MRR_AUDIT_SPOOL",Path.of(env.getRequiredProperty("mrr.audit.spool.directory")),
+                env.getProperty("mrr.audit.spool.max-records",Integer.class,10000),
+                env.getProperty("mrr.audit.spool.max-bytes",Long.class,64L*1024*1024),mapper);
+        maxReplayAgeDays=env.getProperty("mrr.audit.spool.max-replay-age-days",Integer.class,0);
+        if(maxReplayAgeDays<0||maxReplayAgeDays>3650){spool.close();throw new IOException("Invalid audit replay policy");}
         boolean groupEnabled=env.getProperty("mrr.audit.spool.grouped",Boolean.class,false);
         grouped=groupEnabled?new GroupedAuditAdmission(spool):null;
         delivery = new DurableAuditDelivery(logs,jdbc,manager,groupEnabled);
         metrics.gauge("mrr.audit.pending",spool,EncryptedAuditSpool::pendingCount);
         metrics.gauge("mrr.audit.spool.bytes",spool,EncryptedAuditSpool::pendingBytes);
+        metrics.gauge("mrr.audit.spool.held",spool,EncryptedAuditSpool::heldCount);
         metrics.gauge("mrr.audit.spool.published.segments",spool,EncryptedAuditSpool::publishedSegments);
         metrics.gauge("mrr.audit.spool.published.bytes",spool,EncryptedAuditSpool::publishedBytes);
         metrics.gauge("mrr.audit.spool.file.forces",spool,EncryptedAuditSpool::fileForces);
@@ -84,7 +80,24 @@ public class DurableAuditLogService implements AsyncLogService {
         try {
             var entries = spool.peek(50);
             if (entries.isEmpty()) return;
-            delivery.deliver(entries.stream().map(EncryptedAuditSpool.Entry::log).toList());
+            if(maxReplayAgeDays>0){
+                long cutoff=System.currentTimeMillis()-java.time.Duration.ofDays(maxReplayAgeDays).toMillis();
+                var expired=entries.stream().filter(e->e.log().getAccessTime().getTime()<cutoff)
+                        .map(EncryptedAuditSpool.Entry::name).distinct().toList();
+                for(String name:expired){spool.hold(name);logger.error("Expired audit segment held for review");}
+                if(!expired.isEmpty())return;
+            }
+            try{delivery.deliver(entries.stream().map(EncryptedAuditSpool.Entry::log).toList());}
+            catch(DurableAuditDelivery.IdentityConflictException conflict){
+                // Reconcile independent sealed segments; a deterministic conflict cannot discard the evidence.
+                var segments=new java.util.LinkedHashMap<String,List<Log>>();
+                for(var entry:entries)segments.computeIfAbsent(entry.name(),k->new java.util.ArrayList<>()).add(entry.log());
+                for(var segment:segments.entrySet()){
+                    try{delivery.deliver(segment.getValue());spool.acknowledge(segment.getKey());}
+                    catch(DurableAuditDelivery.IdentityConflictException confirmed){spool.hold(segment.getKey());logger.error("Conflicting audit segment held for review");}
+                }
+                return;
+            }
             if(grouped==null && entries.stream().map(EncryptedAuditSpool.Entry::name).distinct().count()==entries.size()) {
                 for(var entry:entries)spool.acknowledge(entry.name());
             } else spool.acknowledgeSegments(entries.stream().map(EncryptedAuditSpool.Entry::name).toList());

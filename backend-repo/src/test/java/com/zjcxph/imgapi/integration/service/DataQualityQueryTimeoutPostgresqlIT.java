@@ -292,8 +292,10 @@ class DataQualityQueryTimeoutPostgresqlIT extends PostgresqlIntegrationTestSuppo
             long until = System.nanoTime() + java.util.concurrent.TimeUnit.SECONDS.toNanos(5);
             while (System.nanoTime() < until && !status(service.getRun(id)).equals("RUNNING")) Thread.sleep(10);
             assertThat(status(service.getRun(id))).isEqualTo("RUNNING");
+            long cancelStarted = System.nanoTime();
             assertThat(status(service.cancelRun(id, 102L))).isIn("CANCEL_REQUESTED", "CANCELLED");
             worker.get(10, java.util.concurrent.TimeUnit.SECONDS);
+            System.out.printf("MRR_CANCEL_LATENCY_MS %.3f%n",(System.nanoTime()-cancelStarted)/1e6);
             assertThat(status(service.getRun(id))).isEqualTo("CANCELLED");
             assertThat(jdbc.queryForObject("SELECT count(*) FROM app.mrr_data_quality_issue WHERE run_id=?", Long.class, id)).isZero();
             assertThat(jdbc.queryForObject("SELECT count(*) FROM app.mrr_data_quality_check_result WHERE run_id=?", Long.class, id)).isZero();
@@ -323,6 +325,99 @@ class DataQualityQueryTimeoutPostgresqlIT extends PostgresqlIntegrationTestSuppo
             jdbc.update("DELETE FROM app.mrr_data_quality_run WHERE triggered_by=?", trigger);
             metrics.close();
         }
+    }
+
+    @Test
+    void killedJvmCannotPublishMoreRulesAndRestartRecoversDurableSlot() throws Exception {
+        String trigger = "synthetic-jvm-crash";
+        var metrics = new SimpleMeterRegistry();
+        var service = managedService(metrics);
+        ReflectionTestUtils.setField(service, "runBudgetSeconds", 16);
+        Process victim = null, competitor = null, restarted = null;
+        try {
+            long id = runId(service.submitRun(trigger, 101L));
+            victim = child("slow");
+            long until = System.nanoTime() + java.util.concurrent.TimeUnit.SECONDS.toNanos(8);
+            while (System.nanoTime() < until && jdbc.queryForObject(
+                    "SELECT count(*) FROM app.mrr_data_quality_check_result WHERE run_id=?", Long.class,id) == 0)
+                Thread.sleep(25);
+            assertThat(status(service.getRun(id))).isEqualTo("RUNNING");
+            assertThat(jdbc.queryForObject("SELECT count(*) FROM app.mrr_data_quality_check_result WHERE run_id=?",Long.class,id)).isEqualTo(1L);
+            competitor = child("fast");
+            assertThat(competitor.waitFor(5,java.util.concurrent.TimeUnit.SECONDS)).isTrue();
+            assertThat(competitor.exitValue()).isZero();
+            assertThat(status(service.getRun(id))).isEqualTo("RUNNING");
+            victim.destroyForcibly();
+            assertThat(victim.waitFor(5,java.util.concurrent.TimeUnit.SECONDS)).isTrue();
+            assertThat(victim.exitValue()).isNotZero();
+            assertThat(status(service.getRun(id))).isEqualTo("RUNNING");
+            // Wait for the real persisted database deadline; no synthetic status or time rewrite.
+            until = System.nanoTime() + java.util.concurrent.TimeUnit.SECONDS.toNanos(20);
+            while (System.nanoTime() < until && Boolean.TRUE.equals(jdbc.queryForObject(
+                    "SELECT deadline_at>clock_timestamp() FROM app.mrr_data_quality_run WHERE id=?",Boolean.class,id)))
+                Thread.sleep(50);
+            restarted = child("fast");
+            assertThat(restarted.waitFor(5,java.util.concurrent.TimeUnit.SECONDS)).isTrue();
+            assertThat(restarted.exitValue()).isZero();
+            assertThat(status(service.getRun(id))).isEqualTo("FAILED");
+            assertThat(jdbc.queryForObject("SELECT error_message FROM app.mrr_data_quality_run WHERE id=?",String.class,id))
+                    .isEqualTo("RUN_DEADLINE_EXPIRED");
+            assertThat(jdbc.queryForObject("SELECT count(*) FROM app.mrr_data_quality_check_result WHERE run_id=?",Long.class,id)).isEqualTo(1L);
+            long next = runId(service.submitRun(trigger, 102L));
+            restarted = child("fast");
+            assertThat(restarted.waitFor(5,java.util.concurrent.TimeUnit.SECONDS)).isTrue();
+            assertThat(restarted.exitValue()).isZero();
+            assertThat(status(service.getRun(next))).as("Recovered run: %s",service.getRun(next)).isEqualTo("SUCCESS");
+            assertThat(jdbc.queryForObject("SELECT count(*) FROM app.mrr_data_quality_check_result WHERE run_id=?",Long.class,next)).isEqualTo(2L);
+            System.out.println("MRR_CRASH_RECOVERY child JVM killed; competing JVM excluded; partial rule retained; deadline recovery; new JVM succeeds");
+        } finally {
+            for (Process process : new Process[]{victim,competitor,restarted}) {
+                if (process != null && process.isAlive()) { process.destroyForcibly(); process.waitFor(5,java.util.concurrent.TimeUnit.SECONDS); }
+            }
+            jdbc.update("DELETE FROM app.mrr_data_quality_run WHERE triggered_by=?",trigger);
+            metrics.close();
+        }
+    }
+
+    private Process child(String mode) throws java.io.IOException {
+        String cp = System.getProperty("surefire.test.class.path",System.getProperty("java.class.path"));
+        var builder = new ProcessBuilder(java.nio.file.Path.of(System.getProperty("java.home"),"bin","java").toString(),
+                "-Xmx128m","-cp",cp,QualityCrashWorker.class.getName(),mode);
+        builder.environment().put("MRR_CRASH_JDBC",postgresqlJdbcUrl());
+        builder.environment().put("MRR_CRASH_USER",postgresqlUsername());
+        builder.environment().put("MRR_CRASH_PASSWORD",postgresqlPassword());
+        java.nio.file.Path output=java.nio.file.Files.createTempFile("mrr-quality-crash-worker-",".log");
+        System.out.println("MRR_CRASH_CHILD_LOG "+output);
+        return builder.redirectErrorStream(true).redirectOutput(output.toFile()).start();
+    }
+
+    @Test
+    void expiredAdmissionAfterPoolWaitDoesNotCreateRun() throws Exception {
+        String trigger="synthetic-pool-budget";
+        var config=new com.zaxxer.hikari.HikariConfig();
+        config.setJdbcUrl(postgresqlJdbcUrl());
+        config.setUsername(postgresqlUsername());
+        config.setPassword(postgresqlPassword());
+        config.setMaximumPoolSize(1);
+        config.setMinimumIdle(0);
+        config.setConnectionTimeout(3000);
+        var metrics=new SimpleMeterRegistry();
+        var executor=java.util.concurrent.Executors.newSingleThreadExecutor();
+        try(var pool=new com.zaxxer.hikari.HikariDataSource(config)) {
+            var service=new DataQualityServiceImpl(new JdbcTemplate(pool),metrics);
+            ReflectionTestUtils.setField(service,"runBudgetSeconds",1);
+            java.util.concurrent.Future<?> result;
+            long start=System.nanoTime();
+            try(var held=pool.getConnection()) {
+                result=executor.submit(()->assertThatThrownBy(()->service.submitRun(trigger,101L))
+                        .isInstanceOf(org.springframework.dao.QueryTimeoutException.class));
+                Thread.sleep(1500);
+            }
+            result.get(5,java.util.concurrent.TimeUnit.SECONDS);
+            System.out.printf("MRR_POOL_BUDGET rejection_ms=%.3f%n",(System.nanoTime()-start)/1e6);
+            assertThat(jdbc.queryForObject("SELECT count(*) FROM app.mrr_data_quality_run WHERE triggered_by=?",Long.class,trigger)).isZero();
+            assertThat(pool.getHikariPoolMXBean().getActiveConnections()).isZero();
+        } finally {executor.shutdownNow();metrics.close();}
     }
 
     private DataQualityServiceImpl managedService(SimpleMeterRegistry metrics) {

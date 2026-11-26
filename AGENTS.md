@@ -65,6 +65,7 @@ MRR/
 - 后端治理第二批：273条API声明矩阵，病案关系双读权限，外部撤销及票据缓存修复，旧查询SQL预算、质量样本与汇总原子持久化，详见 [第二批报告](docs/backend/governance-batch2.md)。仅本地研发，保留前端兼容与正式发布待办。
 - 后端治理第三批：医疗质量样本双读权限、固定运行批次、规则读写预算/终态保护、认证字段最小化、票据并发及真实HTTP实验；详见 [第三批报告](docs/backend/governance-batch3.md)。持久化异步取消、完整权限与长时负载未完成；仅本地。
 - 后端治理第四批：持久化质量任务活动槽、异步提交/状态/协作式取消与过期恢复，单SQL认证，历史错误/CSV安全及真实完整应用混合HTTP；276条声明矩阵，详见 [第四批报告](docs/backend/governance-batch4.md)。新增前向迁移仅隔离PG16验证，旧同步接口保留；未证明吞吐提升，正式门禁仍待执行。
+- 后端治理第五批：异步Servlet身份及MDC清理、审计请求ID保留、就绪错误脱敏、质量预算与只读准入，真实子JVM强杀/竞争恢复、局部认证AB、276路由1100授权探测、完整应用逐请求审计对账；详见 [第五批报告](docs/backend/governance-batch5.md)。严格硬截止、实际小时级、逐业务字段与全死锁矩阵未完成；仅本地。
 - [历史优先级及设计决策](docs/engineering/v1.2-agents-history.md)、[已有候选验收](docs/engineering/v1.2-candidate-closure.md)、[候选准备](docs/engineering/v1.2-release-preparation.md) 仅用于查阅，不再作为当前任务队列。旧版独立审查及发布阻塞保留，不能当作已通过。
 
 ## 4. 风险等级

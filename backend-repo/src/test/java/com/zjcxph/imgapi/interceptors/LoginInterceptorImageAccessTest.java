@@ -64,6 +64,21 @@ class LoginInterceptorImageAccessTest {
     }
 
     @Test
+    void asyncHandoffClearsServletThreadWithoutRemovingRequestIdentity() throws Exception {
+        var request = new MockHttpServletRequest("GET", "/api/v1/img/content/42");
+        var response = new MockHttpServletResponse();
+        var session = new AuthSession();
+        session.setId(USER_ID);
+        request.setAttribute(AuthorizationInterceptor.AUTH_SESSION_ATTRIBUTE, session);
+        com.zjcxph.imgapi.utils.AuthContext.setCurrentUser(session);
+        assertThat(loginInterceptor).isInstanceOf(org.springframework.web.servlet.AsyncHandlerInterceptor.class);
+        ((org.springframework.web.servlet.AsyncHandlerInterceptor)(Object) loginInterceptor)
+                .afterConcurrentHandlingStarted(request, response, new Object());
+        assertThat(com.zjcxph.imgapi.utils.AuthContext.getCurrentUser()).isNull();
+        assertThat(request.getAttribute(AuthorizationInterceptor.AUTH_SESSION_ATTRIBUTE)).isSameAs(session);
+    }
+
+    @Test
     @DisplayName("Bearer 认证的档案袋列表请求签发 Cookie，随后无 Token 的内容网关请求凭 Cookie 通过")
     void issuesCookieOnListRequestAndAcceptsItOnContentGateway() throws Exception {
         String cookie = issueCookie();

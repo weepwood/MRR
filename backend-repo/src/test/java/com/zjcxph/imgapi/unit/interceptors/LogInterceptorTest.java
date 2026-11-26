@@ -37,6 +37,45 @@ class LogInterceptorTest {
     }
 
     @Test
+    void asyncHandoffPreservesOriginalTraceAndClearsThreadContext() throws Exception {
+        var request = new MockHttpServletRequest("GET", "/api/v1/img/content/42");
+        var response = new MockHttpServletResponse();
+        request.setAttribute(HandlerMapping.BEST_MATCHING_PATTERN_ATTRIBUTE, "/api/v1/img/content/{id}");
+        interceptor.preHandle(request, response, new Object());
+        String original = response.getHeader("X-Request-Id");
+        request.setAttribute("startTime", 123L);
+        assertThat(interceptor).isInstanceOf(org.springframework.web.servlet.AsyncHandlerInterceptor.class);
+        ((org.springframework.web.servlet.AsyncHandlerInterceptor)(Object) interceptor)
+                .afterConcurrentHandlingStarted(request, response, new Object());
+        assertThat(MDC.get("requestId")).isNull();
+        request.setDispatcherType(jakarta.servlet.DispatcherType.ASYNC);
+        interceptor.preHandle(request, response, new Object());
+        assertThat(response.getHeader("X-Request-Id")).isEqualTo(original);
+        assertThat(request.getAttribute("startTime")).isEqualTo(123L);
+        interceptor.afterCompletion(request, response, new Object(), null);
+        verify(asyncLogService).saveLogAsync(any(Log.class));
+        assertThat(MDC.get("requestId")).isNull();
+    }
+
+    @Test
+    void auditDoesNotAttributeAnonymousRequestToStaleThreadSession() {
+        var request = new MockHttpServletRequest("GET", "/api/v1/img/content/42");
+        var response = new MockHttpServletResponse();
+        var stale = new AuthSession();
+        stale.setUsername("synthetic-stale");
+        try {
+            com.zjcxph.imgapi.utils.AuthContext.setCurrentUser(stale);
+            interceptor.preHandle(request, response, new Object());
+            interceptor.afterCompletion(request, response, new Object(), null);
+            var captor = org.mockito.ArgumentCaptor.forClass(Log.class);
+            verify(asyncLogService).saveLogAsync(captor.capture());
+            assertThat(captor.getValue().getUsername()).isNull();
+        } finally {
+            com.zjcxph.imgapi.utils.AuthContext.clear();
+        }
+    }
+
+    @Test
     void exposesRequestIdEndpointTemplateAndServerTiming() throws Exception {
         MockHttpServletRequest request = new MockHttpServletRequest("GET", "/api/v1/scans/42");
         MockHttpServletResponse response = new MockHttpServletResponse();

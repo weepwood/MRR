@@ -20,7 +20,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
-import org.springframework.web.servlet.HandlerInterceptor;
+import org.springframework.web.servlet.AsyncHandlerInterceptor;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -28,7 +28,7 @@ import java.util.List;
 import java.util.Map;
 
 @Component
-public class LoginInterceptor implements HandlerInterceptor {
+public class LoginInterceptor implements AsyncHandlerInterceptor {
 
     public static final String DEVELOPER_MODE_ATTRIBUTE = "MRR_DEVELOPER_MODE";
     public static final String DEVELOPER_MODE_REASON_ATTRIBUTE = "MRR_DEVELOPER_MODE_REASON";
@@ -69,6 +69,7 @@ public class LoginInterceptor implements HandlerInterceptor {
 
     @Override
     public boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler) throws Exception {
+        AuthContext.clear();
         if ("OPTIONS".equalsIgnoreCase(request.getMethod()) || isPublicAuthenticationRequest(request)) {
             return true;
         }
@@ -199,6 +200,11 @@ public class LoginInterceptor implements HandlerInterceptor {
             return null;
         }
         return state;
+    }
+
+    @Override
+    public void afterConcurrentHandlingStarted(HttpServletRequest request, HttpServletResponse response, Object handler) {
+        AuthContext.clear();
     }
 
     @Override

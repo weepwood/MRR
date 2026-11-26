@@ -201,6 +201,18 @@ class DataQualityServiceImplTest {
     }
 
     @Test
+    void synchronousRunCannotAdmitWhileReadOnlyEvenWithNoRules() {
+        var readiness=mock(com.zjcxph.imgapi.service.DeploymentReadinessService.class);
+        when(readiness.isReadOnly()).thenReturn(true);
+        var guarded=new DataQualityServiceImpl(jdbcTemplate,meterRegistry,readiness,
+                mock(com.zjcxph.imgapi.service.MaintenanceModeService.class));
+        ReflectionTestUtils.setField(guarded,"checks",List.of());
+        assertThatThrownBy(()->guarded.runChecks("manual"))
+                .isInstanceOf(com.zjcxph.imgapi.exception.BusinessException.class);
+        verifyNoInteractions(jdbcTemplate);
+    }
+
+    @Test
     void concurrentRunIsRejectedBeforeDatabaseAccess() {
         AtomicBoolean running = (AtomicBoolean) ReflectionTestUtils.getField(service, "running");
         assertThat(running).isNotNull();
@@ -284,7 +296,7 @@ class DataQualityServiceImplTest {
 
     @Test
     void metricInitializationDoesNotPreventApplicationStartupWhenDatabaseIsUnavailable() {
-        when(jdbcTemplate.query(anyString(), org.mockito.ArgumentMatchers.<RowMapper<Long>>any()))
+        when(jdbcTemplate.query(anyString(), any(PreparedStatementSetter.class), org.mockito.ArgumentMatchers.<RowMapper<long[]>>any()))
                 .thenThrow(new DataAccessResourceFailureException("database unavailable"));
 
         assertThatCode(service::initializeMetrics).doesNotThrowAnyException();

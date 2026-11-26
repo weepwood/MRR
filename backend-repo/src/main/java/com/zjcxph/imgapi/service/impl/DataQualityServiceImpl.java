@@ -20,7 +20,6 @@ import org.springframework.jdbc.core.ColumnMapRowMapper;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 
-import java.time.Instant;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -100,7 +99,7 @@ public class DataQualityServiceImpl implements DataQualityService {
     @PostConstruct
     public void initializeMetrics() {
         try {
-            refreshMetricsFromLatestRun();
+            refreshMetricsFromLatestRun(deadlineFromNow(3));
         } catch (Exception exception) {
             logger.warn("Unable to initialize data quality metrics: {}", exception.getMessage());
         }
@@ -288,7 +287,7 @@ public class DataQualityServiceImpl implements DataQualityService {
                 statement.setQueryTimeout(remainingQuerySeconds(deadline));
                 statement.setString(1, status);
                 statement.setString(2, normalizeTrigger(trigger));
-                statement.setInt(3, remainingBudgetSeconds(deadline));
+                statement.setDouble(3, remainingBudgetSeconds(deadline));
                 statement.setString(4, status);
                 statement.setObject(5, actor, java.sql.Types.BIGINT);
             }, (rs, n) -> rs.getLong(1));
@@ -298,14 +297,14 @@ public class DataQualityServiceImpl implements DataQualityService {
         }
     }
 
-    private int remainingBudgetSeconds(long deadline) {
+    private double remainingBudgetSeconds(long deadline) {
         long nanos = deadline - System.nanoTime();
         if (nanos <= 0) throw new org.springframework.dao.QueryTimeoutException("数据质量检查预算已耗尽");
-        return (int) Math.min(600, (nanos + 999_999_999L) / 1_000_000_000L);
+        return Math.min(600.0, nanos / 1_000_000_000.0);
     }
 
-    private void recoverExpired() {
-        controlUpdate("""
+    private void recoverExpired(long deadline) {
+        budgetedUpdate(Math.min(deadline, deadlineFromNow(3)),"""
                 UPDATE app.mrr_data_quality_run
                 SET status = CASE WHEN status='CANCEL_REQUESTED' THEN 'CANCELLED' ELSE 'FAILED' END,
                     completed_at=CURRENT_TIMESTAMP,
@@ -320,7 +319,7 @@ public class DataQualityServiceImpl implements DataQualityService {
         if (!asyncEnabled || !canExecute()) throw new BusinessException(503, "数据质量检查已暂停");
         if (actorId != null && actorId <= 0) throw new BusinessException(400, "无效操作者");
         long deadline = deadlineFromNow(budgetSeconds());
-        recoverExpired();
+        recoverExpired(deadline);
         long id = admit("PENDING", triggeredBy, actorId, deadline);
         return getRun(id);
     }
@@ -349,7 +348,7 @@ public class DataQualityServiceImpl implements DataQualityService {
         if (!asyncEnabled || !canExecute() || !running.compareAndSet(false, true)) return;
         long started = System.nanoTime();
         try {
-            recoverExpired();
+            recoverExpired(deadlineFromNow(3));
             var claimed = jdbcTemplate.query("""
                     UPDATE app.mrr_data_quality_run
                     SET status='RUNNING', claimed_at=clock_timestamp()
@@ -374,13 +373,14 @@ public class DataQualityServiceImpl implements DataQualityService {
 
     @Override
     public Map<String, Object> runChecks(String triggeredBy) {
+        if (!canExecute()) throw new BusinessException(503, "数据质量检查已暂停");
         if (!running.compareAndSet(false, true)) {
             throw new IllegalStateException("数据质量检查正在运行，请稍后重试");
         }
         runningGauge.set(1);
         try {
             long deadline = deadlineFromNow(budgetSeconds());
-            recoverExpired();
+            recoverExpired(deadline);
             var session = com.zjcxph.imgapi.utils.AuthContext.getCurrentUser();
             long id = admit("RUNNING", triggeredBy, session == null ? null : session.getId(), deadline);
             executeRun(id, deadline);
@@ -424,12 +424,14 @@ public class DataQualityServiceImpl implements DataQualityService {
                             statement.setQueryTimeout(remainingQuerySeconds(deadline));
                             statement.setInt(1, safeSampleLimit);
                         }, new ColumnMapRowMapper());
+                if (!canExecute()) throw new IllegalStateException("数据质量检查因只读模式暂停");
                 saveRuleResult(runId, check, issueCount, samples, deadline);
                 totalIssues += issueCount;
                 if ("CRITICAL".equals(check.severity())) criticalCount += issueCount;
                 else warningCount += issueCount;
             }
 
+            if (!canExecute()) throw new IllegalStateException("数据质量检查因只读模式暂停");
             int finalized = budgetedUpdate(deadline, """
                     UPDATE app.mrr_data_quality_run
                     SET status = 'SUCCESS', check_count = ?, total_issues = ?, critical_count = ?,
@@ -439,12 +441,12 @@ public class DataQualityServiceImpl implements DataQualityService {
             if (finalized != 1) throw new IllegalStateException("检查运行状态已变化");
             succeeded = true;
             try {
-                cleanupExpiredRuns();
+                cleanupExpiredRuns(deadline);
             } catch (Exception exception) {
                 logger.warn("Data quality retention cleanup failed: {}", exception.getClass().getSimpleName());
             }
             try {
-                refreshMetricsFromLatestRun();
+                refreshMetricsFromLatestRun(deadline);
             } catch (Exception exception) {
                 logger.warn("Data quality metric refresh failed: {}", exception.getClass().getSimpleName());
             }
@@ -622,9 +624,9 @@ public class DataQualityServiceImpl implements DataQualityService {
         return "MANUAL_REVIEW";
     }
 
-    private void cleanupExpiredRuns() {
+    private void cleanupExpiredRuns(long deadline) {
         int safeRetentionDays = Math.max(7, retentionDays);
-        controlUpdate("""
+        budgetedUpdate(Math.min(deadline,deadlineFromNow(3)), """
                 DELETE FROM app.mrr_data_quality_run WHERE id IN (
                     SELECT id FROM app.mrr_data_quality_run
                     WHERE started_at < CURRENT_TIMESTAMP - make_interval(days => ?)
@@ -634,22 +636,26 @@ public class DataQualityServiceImpl implements DataQualityService {
                 """, safeRetentionDays);
     }
 
-    private void refreshMetricsFromLatestRun() {
-        List<Long> ids = jdbcTemplate.query(
-                "SELECT id FROM app.mrr_data_quality_run WHERE status = 'SUCCESS' ORDER BY id DESC LIMIT 1",
-                (resultSet, rowNumber) -> resultSet.getLong(1)
+    private void refreshMetricsFromLatestRun(long deadline) {
+        var runs = jdbcTemplate.query(
+                "SELECT id, EXTRACT(EPOCH FROM completed_at)::bigint AS completed_epoch FROM app.mrr_data_quality_run WHERE status = 'SUCCESS' ORDER BY id DESC LIMIT 1",
+                statement -> statement.setQueryTimeout(remainingQuerySeconds(Math.min(deadline, deadlineFromNow(3)))),
+                (rs, n) -> new long[]{rs.getLong("id"), rs.getLong("completed_epoch")}
         );
-        if (!ids.isEmpty()) {
-            refreshMetrics(ids.getFirst());
+        if (!runs.isEmpty()) {
+            refreshMetrics(runs.getFirst()[0], runs.getFirst()[1], deadline);
         }
     }
 
-    private void refreshMetrics(long runId) {
-        List<Map<String, Object>> rows = jdbcTemplate.queryForList("""
+    private void refreshMetrics(long runId, long completedEpoch, long deadline) {
+        List<Map<String, Object>> rows = jdbcTemplate.query("""
                 SELECT check_code, severity, issue_count
                 FROM app.mrr_data_quality_check_result
                 WHERE run_id = ?
-                """, runId);
+                """, statement -> {
+                    statement.setQueryTimeout(remainingQuerySeconds(Math.min(deadline,deadlineFromNow(3))));
+                    statement.setLong(1,runId);
+                },new ColumnMapRowMapper());
         List<MultiGauge.Row<?>> gaugeRows = new ArrayList<>();
         long total = 0;
         for (Map<String, Object> row : rows) {
@@ -665,7 +671,7 @@ public class DataQualityServiceImpl implements DataQualityService {
         }
         issuesGauge.register(gaugeRows, true);
         totalIssuesGauge.set(total);
-        lastSuccessTimestampGauge.set(Instant.now().getEpochSecond());
+        lastSuccessTimestampGauge.set(completedEpoch);
     }
 
     private void recordFailedRun(long runId, Exception exception) {

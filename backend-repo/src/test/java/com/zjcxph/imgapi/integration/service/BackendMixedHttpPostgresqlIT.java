@@ -221,6 +221,78 @@ class BackendMixedHttpPostgresqlIT extends PostgresqlIntegrationTestSupport {
         }
     }
 
+    @Test
+    void authenticationOnlyPairedRoundsKeepDataAndPoolFixed() throws Exception {
+        String role = "SYNTHETIC_AUTH_AB";
+        String username = "synthetic-auth-ab";
+        var blacklist = new TokenBlacklist(jdbc);
+        long id = 0;
+        var workers = Executors.newFixedThreadPool(8);
+        try {
+            jdbc.update("INSERT INTO app.mr_auth_role(code,name,permissions) VALUES (?,?,'record:read')",role,role);
+            id = jdbc.queryForObject("INSERT INTO app.mr_auth_user(username,display_name,password_hash,role_code,status,must_change_password,password_version) VALUES (?,?,'synthetic',?,'active',false,1) RETURNING id",Long.class,username,username,role);
+            final long uid = id;
+            String hash = TokenBlacklist.tokenHash("synthetic-ab");
+            Runnable a = () -> {
+                assertThat(blacklist.isRevokedHash(hash)).isFalse();
+                assertThat(users.findSessionById(uid).getPermissions()).contains("record:read");
+            };
+            Runnable b = () -> {
+                var state = users.observeSession(uid,hash);
+                assertThat(state.getTokenRevoked()).isFalse();
+                assertThat(state.getPermissions()).contains("record:read");
+            };
+            for (int j=0;j<100;j++) { a.run(); b.run(); }
+            var pool = dataSource.unwrap(HikariDataSource.class).getHikariPoolMXBean();
+            var recording = new jdk.jfr.Recording(jdk.jfr.Configuration.getConfiguration("profile"));
+            recording.setMaxSize(32L*1024*1024);
+            for(String event:List.of("jdk.InitialEnvironmentVariable","jdk.InitialSystemProperty","jdk.SystemProcess")) recording.disable(event);
+            recording.start();
+            try {
+                for (String variant : List.of("A","B","B","A")) {
+                    var sampler = Executors.newSingleThreadScheduledExecutor();
+                    var waits = new java.util.concurrent.ConcurrentLinkedQueue<Integer>();
+                    sampler.scheduleAtFixedRate(()->waits.add(pool.getThreadsAwaitingConnection()),0,2,TimeUnit.MILLISECONDS);
+                    var gate = new CountDownLatch(1);
+                    var jobs = new ArrayList<Future<long[]>>();
+                    Runnable action = variant.equals("A") ? a : b;
+                    for (int w=0;w<8;w++) jobs.add(workers.submit(()->{
+                        gate.await();
+                        long[] values=new long[250];
+                        for(int k=0;k<values.length;k++) {
+                            long start=System.nanoTime(); action.run(); values[k]=System.nanoTime()-start;
+                        }
+                        return values;
+                    }));
+                    long start=System.nanoTime(); gate.countDown();
+                    var times=new ArrayList<Long>();
+                    try {
+                        for(var job:jobs) for(long value:job.get(20,TimeUnit.SECONDS)) times.add(value);
+                    } finally { sampler.shutdownNow(); }
+                    double elapsed=(System.nanoTime()-start)/1e9;
+                    long[] sorted=times.stream().mapToLong(Long::longValue).sorted().toArray();
+                    System.out.printf(Locale.ROOT,"MRR_AUTH_AB %s n=%d rps=%.2f p50=%.3f p95=%.3f p99=%.3f wait_samples=%d wait_nonzero=%d wait_peak=%d%n",
+                            variant,sorted.length,sorted.length/elapsed,percentile(sorted,.50),percentile(sorted,.95),percentile(sorted,.99),
+                            waits.size(),waits.stream().filter(v->v>0).count(),waits.stream().mapToInt(Integer::intValue).max().orElse(0));
+                    assertThat(pool.getActiveConnections()).isZero();
+                }
+            } finally {
+                recording.stop();
+                java.nio.file.Path out=java.nio.file.Path.of("target","mrr-auth-ab.jfr");
+                recording.dump(out); recording.close();
+            }
+            // Same mapper query shape, parameters bound; no production token or medical data.
+            String query = "EXPLAIN (ANALYZE, BUFFERS) SELECT " + AuthUserMapper.SESSION_COLUMNS +
+                ", v.revoked FROM (SELECT EXISTS(SELECT 1 FROM app.token_revocation WHERE token_hash=? AND expires_at>CURRENT_TIMESTAMP) AS revoked) v " +
+                "LEFT JOIN app.mr_auth_user u ON u.id=? LEFT JOIN app.mr_auth_role r ON r.code=u.role_code";
+            jdbc.queryForList(query,String.class,hash,uid).forEach(line->System.out.println("MRR_AUTH_PLAN "+line));
+        } finally {
+            workers.shutdownNow();
+            if(id>0) jdbc.update("DELETE FROM app.mr_auth_user WHERE id=?",id);
+            jdbc.update("DELETE FROM app.mr_auth_role WHERE code=?",role);
+        }
+    }
+
     private long[] sqlCounts() {
         var row = jdbc.queryForMap("""
                 SELECT COALESCE(sum(calls) FILTER (WHERE query LIKE 'SELECT EXISTS(%FROM app.token_revocation%'),0) AS revocation,

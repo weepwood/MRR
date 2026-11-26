@@ -13,6 +13,7 @@ import json
 import os
 from pathlib import Path
 import secrets
+import shutil
 import signal
 import socket
 import struct
@@ -32,13 +33,13 @@ def port():
         return sock.getsockname()[1]
 
 
-def jwt(user_id, username, secret):
+def jwt(user_id, username, secret, duration=3600):
     def encode(value):
         return base64.urlsafe_b64encode(value).rstrip(b"=")
     jti = str(uuid.uuid4())
     header = encode(b'{"alg":"HS256","typ":"JWT"}')
     body = encode(json.dumps(dict(id=user_id, username=username, tokenType="access",
-                                  passwordVersion=1, jti=jti, exp=int(time.time()) + 3600),
+                                  passwordVersion=1, jti=jti, exp=int(time.time()) + duration),
                              separators=(",", ":")).encode())
     signing = header + b"." + body
     return (signing + b"." + encode(hmac.digest(secret.encode(), signing, "sha256"))).decode(), jti
@@ -62,6 +63,8 @@ def request(connection, path, token=None, method="GET"):
 
 def pct(values, p):
     values = sorted(values)
+    if not values:
+        return None
     return round(values[max(0, min(len(values)-1, int(len(values)*p + .999999)-1))], 3)
 
 
@@ -72,9 +75,12 @@ def main():
     parser.add_argument("--lab-root", type=Path, required=True)
     parser.add_argument("--java-home", type=Path, required=True)
     parser.add_argument("--seconds", type=int, default=90)
+    parser.add_argument("--extended", action="store_true", help="explicitly authorize a longer isolated soak (up to 7200s)")
     args = parser.parse_args()
-    if not 30 <= args.seconds <= 600:
-        parser.error("duration must be 30..600 seconds")
+    if not 30 <= args.seconds <= (7200 if args.extended else 600):
+        parser.error("duration must be 30..600 seconds (7200 with --extended)")
+    if shutil.disk_usage(args.lab_root).free < 5 * 1024**3:
+        parser.error("isolated lab requires at least 5 GiB free")
     lab = Path(tempfile.mkdtemp(prefix="mrr-http-soak-", dir=args.lab_root))
     print("LAB=" + str(lab), flush=True)
     for name in ("socket", "app-tmp", "home", "images", "exports"):
@@ -141,7 +147,8 @@ def main():
                "-Dmaven.repo.local=" + str(args.maven_repo),
                "-Dspring-boot.run.workingDirectory=" + str(lab),
                "-Dspring-boot.run.jvmArguments=-Xmx512m -Djava.io.tmpdir=" + str(lab / "app-tmp")
-               + " -Duser.home=" + str(lab / "home") + " -Xlog:gc:file=" + str(lab / "gc.log"),
+               + " -Duser.home=" + str(lab / "home") + " -Xlog:gc:file=" + str(lab / "gc.log")
+               + " -XX:StartFlightRecording=filename=" + str(lab / "soak.jfr") + ",settings=profile,maxsize=64m,dumponexit=true",
                "spring-boot:run"]
         with (lab / "boot.log").open("w") as output:
             app = subprocess.Popen(cmd, cwd=BACKEND, env=env, stdout=output, stderr=subprocess.STDOUT,
@@ -165,7 +172,7 @@ def main():
                 "('SYNTHETIC_SOAK','synthetic','system:read,system:manage,record:read,log:read')")
             uid = int(sql("INSERT INTO app.mr_auth_user(username,display_name,password_hash,role_code,status,must_change_password,password_version) "
                           f"VALUES ('{username}','synthetic','not-a-password','SYNTHETIC_SOAK','active',false,1) RETURNING id").splitlines()[0])
-            token, jti = jwt(uid, username, secret)
+            token, jti = jwt(uid, username, secret, args.seconds + 600)
             content = png()
             (lab / "images" / "synthetic.png").write_bytes(content)
             sql("INSERT INTO app.mr_scan(bah,brxh,filename,folder,uploadflag,pages,source_type,source_ref) "
@@ -187,6 +194,10 @@ def main():
                         raise RuntimeError("image bytes or cache-control mismatch")
                 elif json.loads(body).get("code") != 200:
                     raise RuntimeError("business response failure")
+                request_id = next((v for k,v in headers.items() if k.lower()=="x-request-id"), None)
+                if not request_id:
+                    raise RuntimeError("missing request trace")
+                return request_id
             # Warm up and use actual async submit API; any rejected submission is reported.
             with closing(http.client.HTTPConnection("127.0.0.1", httpport, timeout=8)) as conn:
                 for path in paths:
@@ -211,7 +222,7 @@ def main():
                     if not line or line.startswith("#"):
                         continue
                     name = line.split("{", 1)[0].split(" ", 1)[0]
-                    if name in {"process_cpu_usage", "process_cpu_time_ns", "jvm_gc_pause_seconds_count",
+                    if name in {"process_cpu_usage", "process_cpu_time_ns", "process_files_open_files", "process_files_max_files", "jvm_threads_live_threads", "jvm_gc_pause_seconds_count",
                                 "jvm_gc_pause_seconds_sum", "hikaricp_connections_active",
                                 "hikaricp_connections_pending", "hikaricp_connections_usage_seconds_count",
                                 "hikaricp_connections_usage_seconds_sum", "hikaricp_connections_acquire_seconds_count",
@@ -227,12 +238,12 @@ def main():
                 errors = []
                 with closing(http.client.HTTPConnection("127.0.0.1", httpport, timeout=8)) as conn:
                     i = index
-                    while time.monotonic() < deadline:
+                    while time.monotonic() < deadline and not stop.is_set():
                         tick = time.monotonic()
                         path = paths[i % len(paths)]
                         try:
-                            checked(conn, path)
-                            results.append((i % len(paths), tick-start, (time.monotonic()-tick)*1000))
+                            trace = checked(conn, path)
+                            results.append((i % len(paths), tick-start, (time.monotonic()-tick)*1000, trace))
                         except Exception as exc:
                             errors.append(type(exc).__name__ + ": " + str(exc))
                             conn.close()
@@ -240,11 +251,19 @@ def main():
                         time.sleep(.06)
                 return results, errors
             samples = []
+            stop = __import__("threading").Event()
             with concurrent.futures.ThreadPoolExecutor(max_workers=8) as pool:
                 futures = [pool.submit(worker, i) for i in range(8)]
                 while time.monotonic() < deadline:
                     time.sleep(min(5, max(0, deadline-time.monotonic())))
-                    samples.append({"elapsed": round(time.monotonic()-start, 3), **scrape()})
+                    if shutil.disk_usage(lab).free < 5 * 1024**3:
+                        stop.set()
+                        raise RuntimeError("disk budget exhausted")
+                    try:
+                        samples.append({"elapsed": round(time.monotonic()-start, 3), **scrape()})
+                    except Exception:
+                        stop.set()
+                        raise
                     print("SOAK_SAMPLE " + json.dumps(samples[-1]), flush=True)
                 results, errors = [], []
                 for future in futures:
@@ -258,6 +277,13 @@ def main():
                          "count(*) FILTER (WHERE audit_action='VIEW_IMAGE' AND audit_target LIKE 'hmac:v1:%') "
                          f"FROM app.access_log WHERE username='{username}'")
             audit_rows, image_rows, protected_rows = map(int, counts.split("|"))
+            # Compare the exact returned request identities, not just an aggregate count.
+            observed = sql(f"SELECT request_id FROM app.access_log WHERE username='{username}'").splitlines()
+            from collections import Counter
+            counts_by_trace = Counter(observed)
+            missing_trace = sum(counts_by_trace[r[3]] == 0 for r in results)
+            duplicate_trace = sum(counts_by_trace[r[3]] > 1 for r in results)
+            assert len({r[3] for r in results}) == len(results), "duplicate HTTP response trace"
             windows = []
             for w in range(0, args.seconds, 15):
                 v = [r[2] for r in results if w <= r[1] < w+15]
@@ -268,7 +294,7 @@ def main():
                          p50=pct([r[2] for r in results],.5), p95=pct([r[2] for r in results],.95),
                          p99=pct([r[2] for r in results],.99),
                          by_path=[sum(r[0]==i for r in results) for i in range(len(paths))],
-                         audit_rows=audit_rows, image_audit_rows=image_rows,
+                         audit_rows=audit_rows, image_audit_rows=image_rows, missing_trace=missing_trace, duplicate_trace=duplicate_trace,
                          protected_image_audit_rows=protected_rows,
                          initial=initial, final=final, samples=samples, windows=windows,
                          async_submit_http=status)
@@ -289,6 +315,7 @@ def main():
             assert not errors, errors[:5]
             assert image_rows >= stats["by_path"][4] and protected_rows == image_rows
             assert audit_rows >= len(results), "missing audit rows"
+            assert missing_trace == duplicate_trace == 0, "audit trace mismatch"
     finally:
         if app is not None and app.poll() is None:
             os.killpg(app.pid, signal.SIGTERM)

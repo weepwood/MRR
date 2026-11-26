@@ -586,7 +586,7 @@ public class DeploymentReadinessService {
     }
 
     private Map<String, Object> failed(String code, String name, String severity, Exception exception) {
-        return check(code, name, false, severity, safeMessage(exception), Map.of());
+        return check(code, name, false, severity, "检查失败（" + exception.getClass().getSimpleName() + "）", Map.of());
     }
 
     private Map<String, Object> check(
@@ -607,13 +607,7 @@ public class DeploymentReadinessService {
         return Map.copyOf(result);
     }
 
-    private String safeMessage(Exception exception) {
-        String message = exception.getMessage();
-        if (!StringUtils.hasText(message)) {
-            return exception.getClass().getSimpleName();
-        }
-        return message.length() <= 300 ? message : message.substring(0, 300);
-    }
+
 
     private record HttpProbe(boolean reachable, int statusCode) {
     }

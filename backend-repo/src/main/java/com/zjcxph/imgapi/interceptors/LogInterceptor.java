@@ -9,7 +9,6 @@ import com.zjcxph.imgapi.entity.Log;
 import com.zjcxph.imgapi.service.AsyncLogService;
 import com.zjcxph.imgapi.setting.SettingDefinition;
 import com.zjcxph.imgapi.setting.SettingRegistry;
-import com.zjcxph.imgapi.utils.AuthContext;
 import com.zjcxph.imgapi.utils.IpUtil;
 import io.micrometer.core.instrument.Counter;
 import io.micrometer.core.instrument.MeterRegistry;
@@ -19,7 +18,7 @@ import jakarta.servlet.http.HttpServletResponse;
 import org.slf4j.MDC;
 import org.springframework.lang.NonNull;
 import org.springframework.stereotype.Component;
-import org.springframework.web.servlet.HandlerInterceptor;
+import org.springframework.web.servlet.AsyncHandlerInterceptor;
 import org.springframework.web.servlet.HandlerMapping;
 import org.springframework.web.servlet.ModelAndView;
 import org.springframework.web.servlet.resource.ResourceHttpRequestHandler;
@@ -43,7 +42,7 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 @Component
-public class LogInterceptor implements HandlerInterceptor {
+public class LogInterceptor implements AsyncHandlerInterceptor {
 
     /** MDC 键名，与 {@code logback-spring.xml} 的 {@code includeMdcKeyName} 一一对应。 */
     public static final String MDC_USER_ID = "userId";
@@ -111,6 +110,12 @@ public class LogInterceptor implements HandlerInterceptor {
             return true;
         }
 
+        if (request.getDispatcherType() == jakarta.servlet.DispatcherType.ASYNC
+                && request.getAttribute(REQUEST_ID_ATTR) instanceof String original) {
+            MDC.put("requestId", original);
+            MDC.put("clientIp", IpUtil.getClientIp(request));
+            return true;
+        }
         String requestId = UUID.randomUUID().toString().replace("-", "").substring(0, 16);
         MDC.put("requestId", requestId);
         MDC.put("clientIp", IpUtil.getClientIp(request));
@@ -152,62 +157,67 @@ public class LogInterceptor implements HandlerInterceptor {
     }
 
     @Override
+    public void afterConcurrentHandlingStarted(HttpServletRequest request, HttpServletResponse response, Object handler) {
+        MDC.clear();
+    }
+
+    @Override
     public void afterCompletion(@NonNull HttpServletRequest request, @NonNull HttpServletResponse response, @NonNull Object handler, Exception ex) {
         if (shouldSkipLogging(request, handler)) {
             return;
         }
 
-        Long startTime = (Long) request.getAttribute(START_TIME_ATTR);
-        long executeTime = startTime != null ? System.currentTimeMillis() - startTime : 0;
-        Log log = new Log();
+        try {
+            Long startTime = (Long) request.getAttribute(START_TIME_ATTR);
+            long executeTime = startTime != null ? System.currentTimeMillis() - startTime : 0;
+            Log log = new Log();
 
-        String archiveUserId = stringAttribute(request, ArchiveAccessAttributes.USER_ID);
-        if (archiveUserId != null) {
-            log.setUsername(archiveUserId);
-        } else {
-            AuthSession currentUser = (AuthSession) request.getAttribute(AUTH_SESSION_ATTR);
-            if (currentUser == null) {
-                currentUser = AuthContext.getCurrentUser();
+            String archiveUserId = stringAttribute(request, ArchiveAccessAttributes.USER_ID);
+            if (archiveUserId != null) {
+                log.setUsername(archiveUserId);
+            } else {
+                AuthSession currentUser = (AuthSession) request.getAttribute(AUTH_SESSION_ATTR);
+                if (currentUser != null && currentUser.getUsername() != null) {
+                    log.setUsername(currentUser.getUsername());
+                }
             }
-            if (currentUser != null && currentUser.getUsername() != null) {
-                log.setUsername(currentUser.getUsername());
+
+            log.setRequestId(stringAttribute(request, REQUEST_ID_ATTR));
+            log.setClientIp(IpUtil.getClientIp(request));
+            log.setRequestUri(sanitizeRequestUri(request));
+            log.setEndpointTemplate(endpointTemplate(request));
+            log.setMethod(request.getMethod());
+            log.setUserAgent("[USER AGENT OMITTED]");
+            log.setAccessTime(new Date());
+            log.setQueryString(sanitizeQueryString(request.getQueryString()));
+            log.setRequestBody(getRequestBody(request));
+            log.setResponseStatus(String.valueOf(response.getStatus()));
+            log.setExecuteTime(executeTime);
+            log.setReferer(sanitizeReferer(request.getHeader("Referer")));
+            log.setErrorMessage(formatError(ex));
+
+            enrichAuditFields(log, request);
+            if (log.getAuditTarget() != null && (log.getAuditAction() == null || !log.getAuditAction().startsWith("SETTING_"))) {
+                log.setAuditTarget(com.zjcxph.imgapi.utils.AuditPayloadSanitizer.protectedTarget(log.getAuditTarget()));
             }
+            asyncLogService.saveLogAsync(log);
+
+            Counter.builder("http.requests.total")
+                    .tag("method", request.getMethod())
+                    .tag("status", String.valueOf(response.getStatus()))
+                    .description("HTTP 请求总数（按方法和状态码）")
+                    .register(meterRegistry)
+                    .increment();
+            Timer.builder("http.requests.duration")
+                    .tag("method", request.getMethod())
+                    .tag("uri", endpointTemplate(request))
+                    .description("HTTP 请求耗时分布")
+                    .register(meterRegistry)
+                    .record(executeTime, java.util.concurrent.TimeUnit.MILLISECONDS);
+
+        } finally {
+            MDC.clear();
         }
-
-        log.setRequestId(stringAttribute(request, REQUEST_ID_ATTR));
-        log.setClientIp(IpUtil.getClientIp(request));
-        log.setRequestUri(sanitizeRequestUri(request));
-        log.setEndpointTemplate(endpointTemplate(request));
-        log.setMethod(request.getMethod());
-        log.setUserAgent("[USER AGENT OMITTED]");
-        log.setAccessTime(new Date());
-        log.setQueryString(sanitizeQueryString(request.getQueryString()));
-        log.setRequestBody(getRequestBody(request));
-        log.setResponseStatus(String.valueOf(response.getStatus()));
-        log.setExecuteTime(executeTime);
-        log.setReferer(sanitizeReferer(request.getHeader("Referer")));
-        log.setErrorMessage(formatError(ex));
-
-        enrichAuditFields(log, request);
-        if (log.getAuditTarget() != null && (log.getAuditAction() == null || !log.getAuditAction().startsWith("SETTING_"))) {
-            log.setAuditTarget(com.zjcxph.imgapi.utils.AuditPayloadSanitizer.protectedTarget(log.getAuditTarget()));
-        }
-        asyncLogService.saveLogAsync(log);
-
-        Counter.builder("http.requests.total")
-                .tag("method", request.getMethod())
-                .tag("status", String.valueOf(response.getStatus()))
-                .description("HTTP 请求总数（按方法和状态码）")
-                .register(meterRegistry)
-                .increment();
-        Timer.builder("http.requests.duration")
-                .tag("method", request.getMethod())
-                .tag("uri", endpointTemplate(request))
-                .description("HTTP 请求耗时分布")
-                .register(meterRegistry)
-                .record(executeTime, java.util.concurrent.TimeUnit.MILLISECONDS);
-
-        MDC.clear();
     }
 
     private String endpointTemplate(HttpServletRequest request) {

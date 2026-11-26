@@ -89,6 +89,7 @@ const {
   loaded,
   loadError,
   saving,
+  actionPending,
   settings,
   changedKeys,
   isDirty,
@@ -388,6 +389,7 @@ function handleNavKey(event: KeyboardEvent) {
 onBeforeRouteLeave(async (to) => {
   // 会话失效后跳登录页时不拦截：此时保存请求大概率会 401，拦下来只会卡住跳转。
   if (to.name === 'login' || to.path.startsWith('/login')) { return true }
+  if (actionPending.value) { return false }
   if (!hasUnsavedChanges.value) { return true }
   return confirmLeavingUnsavedChanges('page')
 })

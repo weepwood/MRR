@@ -367,8 +367,8 @@ function levelTagType(level: string) {
     <MrrDataTablePanel title="运行错误组" :loading="loading" :result-key="resultVersion" class="runtime-errors-panel">
       <template #filters>
         <!-- 筛选栏对齐用户管理页模式：无可见标签，控件 aria-label + 自描述占位符 -->
-        <MrrFilterBar embedded>
-          <div class="runtime-errors-filter__field runtime-errors-filter__keyword">
+        <MrrFilterBar embedded :focus-ring="false">
+          <div class="runtime-errors-filter__field runtime-errors-filter__keyword mrr-filter-field--keyword">
             <el-input
               id="runtime-errors-keyword"
               v-model="query.keyword"
@@ -376,7 +376,9 @@ function levelTagType(level: string) {
               aria-label="关键字"
               placeholder="错误编号 / Request ID / 异常 / 消息"
               @keyup.enter="handleSearch"
-            />
+            >
+              <template #prefix><FaIcon name="i-lucide:search" aria-hidden="true" /></template>
+            </el-input>
           </div>
           <div class="runtime-errors-filter__field runtime-errors-filter__select">
             <el-select
@@ -592,29 +594,6 @@ function levelTagType(level: string) {
 
 .summary-pre {
   max-height: 180px;
-}
-
-.runtime-errors-filter__field {
-  display: grid;
-  min-width: 0;
-}
-
-.runtime-errors-filter__keyword {
-  flex: 1 1 320px;
-  min-width: 260px;
-}
-
-.runtime-errors-filter__select {
-  flex: 0 1 190px;
-  width: 190px;
-}
-
-@media (max-width: 760px) {
-  .runtime-errors-filter__keyword,
-  .runtime-errors-filter__select {
-    flex: 1 1 100%;
-    width: 100%;
-  }
 }
 
 /* 频次热的错误组用数据编码色提示；纯色声明，Chrome 86 安全。 */

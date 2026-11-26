@@ -103,11 +103,18 @@ const defaultQuery: LogsQuery = {
 const routeRequestId = computed(() => typeof route.query.requestId === 'string' ? route.query.requestId.trim() : '')
 const linkedRequestId = ref(routeRequestId.value)
 
+type AdvancedKey = 'clientIp' | 'requestUri' | 'method' | 'responseStatus'
+const advancedKeys: AdvancedKey[] = ['clientIp', 'requestUri', 'method', 'responseStatus']
+function advancedSnapshot(values: Partial<Record<AdvancedKey, unknown>>) {
+  return advancedKeys.map(key => String(values[key] ?? '').trim())
+}
+const appliedAdvanced = ref<string[] | null>(null)
+
 const { clearResults, list, total, loadedRowOffset, loading, resultVersion, pageNum, pageSize, query, handleSearch, handlePageChange, loadData } = useCrudList<
   LogRecord,
   LogsQuery
 >({
-  session: { resetQuery: defaultQuery, key: () => userStore.token, allowed: () => canReadLogs.value, onReset: () => { error.value = ''; lastRefreshedAt.value = ''; linkedRequestId.value = ''; closeDetail() } },
+  session: { resetQuery: defaultQuery, key: () => userStore.token, allowed: () => canReadLogs.value, onReset: () => { appliedAdvanced.value = null; error.value = ''; lastRefreshedAt.value = ''; linkedRequestId.value = ''; closeDetail() } },
   fetchApi: async (params, { isCurrent, silent }) => {
     const { page, size, keyword, username, clientIp, requestUri, method, responseStatus, timeRange } = params
     const apiParams: Parameters<typeof searchSystemLogs>[0] = { page, size }
@@ -124,6 +131,7 @@ const { clearResults, list, total, loadedRowOffset, loading, resultVersion, page
     try {
       const response = await searchSystemLogs(apiParams, userStore.token)
       if (isCurrent()) {
+        appliedAdvanced.value = advancedSnapshot(apiParams)
         error.value = ''
         lastRefreshedAt.value = new Date().toLocaleTimeString('zh-CN', { hour12: false })
       }
@@ -138,14 +146,16 @@ const { clearResults, list, total, loadedRowOffset, loading, resultVersion, page
       // 静默轮询失败返回 undefined：useCrudList 保留现有列表，不进空态/错误态。
       if (silent) { return undefined }
       const msg = e instanceof Error ? e.message : '加载日志记录失败'
-      if (isCurrent()) error.value = msg
+      if (isCurrent()) { error.value = msg; appliedAdvanced.value = null }
       return { list: [], total: 0, page: 1, size: 20 } as PaginatedResult<LogRecord>
     }
   },
   defaultQuery: { ...defaultQuery, keyword: linkedRequestId.value },
 })
 
-const advancedCount = computed(() => [query.clientIp, query.requestUri, query.method, query.responseStatus].filter(value => String(value ?? '').trim()).length)
+const advancedCount = computed(() => advancedSnapshot(query).filter(Boolean).length)
+const appliedAdvancedCount = computed(() => appliedAdvanced.value?.filter(Boolean).length)
+const advancedDirty = computed(() => appliedAdvanced.value !== null && JSON.stringify(advancedSnapshot(query)) !== JSON.stringify(appliedAdvanced.value))
 
 function searchFromStart(keyword = '') {
   Object.assign(query, defaultQuery, { keyword, timeRange: [] })
@@ -159,6 +169,12 @@ watch([() => route.path, routeRequestId], ([path, requestId]) => {
   detailVisible.value = false
   void searchFromStart(requestId)
 })
+
+function handleFilterEnter(event: Event | KeyboardEvent) {
+  if (!(event instanceof KeyboardEvent) || event.isComposing || event.repeat) { return }
+  event.preventDefault()
+  void handleSearch()
+}
 
 function resetFilters() {
   if (linkedRequestId.value) {
@@ -282,20 +298,20 @@ function statusTagType(status: string | number) {
     <MrrDataTablePanel title="日志记录" :loading="loading" :result-key="resultVersion">
       <template #filters>
         <el-form label-position="top" @submit.prevent>
-          <MrrFilterBar embedded layout="grid" :advanced-count="advancedCount">
-            <el-form-item label="关键字" for="logs-keyword">
+          <MrrFilterBar embedded :focus-ring="false" :advanced-count="advancedCount" :applied-advanced-count="appliedAdvancedCount" :advanced-dirty="advancedDirty">
+            <el-form-item class="mrr-filter-field--keyword" label="关键字" for="logs-keyword">
               <el-input
                 id="logs-keyword"
                 v-model="query.keyword"
                 clearable
                 placeholder="Request ID / URI / 参数 / 审计目标"
-                @keyup.enter="handleSearch"
+                @keydown.enter="handleFilterEnter"
               />
             </el-form-item>
-            <el-form-item label="访问时间" class="mrr-filter-bar__range">
+            <el-form-item label="访问时间" class="mrr-filter-field--datetime">
               <el-date-picker
                 v-model="query.timeRange"
-                type="datetimerange"
+                aria-label="访问时间（未选择则不限时间）" type="datetimerange"
                 :popper-options="rangePickerPopperOptions"
                 range-separator="至"
                 start-placeholder="开始时间"
@@ -303,9 +319,8 @@ function statusTagType(status: string | number) {
                 value-format="YYYY-MM-DD HH:mm:ss"
                 format="YYYY-MM-DD HH:mm:ss"
               />
-              <span class="log-time-hint">{{ query.timeRange?.length === 2 ? '点击查询应用所选时间范围' : '未选择时不限访问时间' }}</span>
             </el-form-item>
-            <el-form-item label="用户" for="logs-username">
+            <el-form-item class="mrr-filter-field--keyword" label="用户" for="logs-username">
               <MrrUserSearchSelect
                 id="logs-username"
                 v-model="query.username"
@@ -315,10 +330,10 @@ function statusTagType(status: string | number) {
             </el-form-item>
             <template #advanced>
               <el-form-item label="客户端 IP" for="logs-client-ip">
-                <el-input id="logs-client-ip" v-model="query.clientIp" clearable placeholder="127.0.0.1" @keyup.enter="handleSearch" />
+                <el-input id="logs-client-ip" v-model="query.clientIp" clearable placeholder="127.0.0.1" @keydown.enter="handleFilterEnter" />
               </el-form-item>
-              <el-form-item label="请求 URI" for="logs-request-uri">
-                <el-input id="logs-request-uri" v-model="query.requestUri" clearable placeholder="真实路径或接口模板" @keyup.enter="handleSearch" />
+              <el-form-item class="mrr-filter-field--keyword" label="请求 URI" for="logs-request-uri">
+                <el-input id="logs-request-uri" v-model="query.requestUri" clearable placeholder="真实路径或接口模板" @keydown.enter="handleFilterEnter" />
               </el-form-item>
               <el-form-item label="方法" for="logs-method">
                 <el-select id="logs-method" v-model="query.method" class="mrr-single-select" clearable placeholder="全部请求方法">
@@ -481,13 +496,6 @@ function statusTagType(status: string | number) {
 </template>
 
 <style scoped>
-.log-time-hint {
-  flex-basis: 100%;
-  font-size: var(--mrr-font-size-xs);
-  line-height: 1.4;
-  color: var(--mrr-muted-foreground);
-}
-
 .auto-refresh-note {
   font-variant-numeric: tabular-nums;
 }

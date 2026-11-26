@@ -430,10 +430,14 @@ onMounted(refreshAll)
             v-model="listSearchKeyword"
             placeholder="搜索病案号 / 上架号 / 操作员"
             clearable
-            class="search-keyword"
+            class="search-keyword mrr-filter-field--keyword"
             aria-label="病案明细关键词"
             @keyup.enter="handleListSearch"
-          />
+          >
+            <template #prefix>
+              <FaIcon name="i-lucide:search" aria-hidden="true" />
+            </template>
+          </el-input>
           <el-select
             v-model="listSearchType"
             placeholder="全部类型"
@@ -452,6 +456,7 @@ onMounted(refreshAll)
           </el-select>
           <el-date-picker
             v-model="listSearchDateRange"
+            aria-label="归档日期范围"
             type="daterange"
             :popper-options="rangePickerPopperOptions"
             :shortcuts="yearShortcuts"
@@ -459,7 +464,7 @@ onMounted(refreshAll)
             start-placeholder="开始日期"
             end-placeholder="结束日期"
             value-format="YYYY-MM-DD"
-            class="search-date"
+            class="search-date mrr-filter-field--range"
             @change="handleDateRangeChange"
           />
           <template #actions>
@@ -520,30 +525,4 @@ onMounted(refreshAll)
  * 明细列表使用 MrrDataTablePanel + MrrFilterBar（与用户、记录等列表页同一结构）：
  * 此前自写的灰底搜索条、居中分页与 15px 卡头，与其他列表页的留白、对齐和分页位置都不一致。
  */
-
-/* 字段宽度：关键词与日期可伸展，类型固定宽，与筛选栏 embedded 的拉伸上限配合。 */
-.search-keyword {
-  flex: 1 1 220px;
-  min-width: 180px;
-}
-
-.search-type {
-  flex: 0 1 180px;
-  width: 180px;
-}
-
-.search-date {
-  flex: 1 1 280px;
-  min-width: 240px;
-}
-
-@media (max-width: 760px) {
-  .search-keyword,
-  .search-type,
-  .search-date {
-    flex: 1 1 100%;
-    width: 100%;
-    min-width: 0;
-  }
-}
 </style>

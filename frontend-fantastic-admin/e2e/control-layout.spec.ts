@@ -48,14 +48,15 @@ for (const path of ['/logs', '/patients', '/records', '/data-exchange', '/statis
 test('记录分页各控件保持可见间距并垂直对齐', async ({ page }) => {
   await prepare(page, 1366)
   await page.goto('/records')
-  const pager = page.locator('.pager')
+  const pager = page.locator('.mrr-cursor-pagination')
   await expect(pager).toBeVisible()
-  const boxes = await pager.locator(':scope > .el-select, .pager__navigation > *').evaluateAll(elements => elements.map((element) => {
+  const boxes = await pager.locator(':scope > .btn-prev, :scope > .el-pager, :scope > .btn-next, :scope > .el-pagination__jump, :scope > .el-pagination__sizes').evaluateAll(elements => elements.map((element) => {
     const rect = element.getBoundingClientRect()
     return { left: rect.left, right: rect.right, middle: rect.top + rect.height / 2 }
   }))
   for (let index = 1; index < boxes.length; index++) {
-    expect(boxes[index].left - boxes[index - 1].right).toBeGreaterThanOrEqual(7)
+    // 当前原生分页沿用公共 4px 紧凑间距。
+    expect(boxes[index].left - boxes[index - 1].right).toBeGreaterThanOrEqual(4)
     expect(Math.abs(boxes[index].middle - boxes[index - 1].middle)).toBeLessThanOrEqual(1)
   }
 })

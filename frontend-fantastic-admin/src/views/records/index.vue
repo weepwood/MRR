@@ -218,31 +218,41 @@ function typeLabel(value: unknown) {
 
     <MrrDataTablePanel title="扫描记录" description="按条件查询，结果按批次读取。">
       <template #filters>
-        <MrrFilterBar embedded labelled class="records-filter-bar">
-          <div class="mrr-filter-field records-filter__field">
-            <label for="records-bah">病案号</label>
-            <el-input id="records-bah" v-model="query.bah" clearable aria-label="病案号" placeholder="病案号" @keyup.enter="handleSearch" />
+        <MrrFilterBar embedded :focus-ring="false" class="records-filter-bar">
+          <div class="mrr-filter-field records-filter__field mrr-filter-field--code">
+            <el-input id="records-bah" v-model="query.bah" clearable aria-label="病案号" @keyup.enter="handleSearch">
+              <template #prefix>
+                <label for="records-bah" class="mrr-filter-prefix">病案号</label>
+              </template>
+            </el-input>
+          </div>
+          <div class="mrr-filter-field records-filter__field mrr-filter-field--code">
+            <el-input id="records-brxh" v-model="query.brxh" clearable aria-label="病人序号" @keyup.enter="handleSearch">
+              <template #prefix>
+                <label for="records-brxh" class="mrr-filter-prefix">病人序号</label>
+              </template>
+            </el-input>
+          </div>
+          <div class="mrr-filter-field records-filter__field mrr-filter-field--code">
+            <el-input id="records-sjh" v-model="query.sjh" clearable aria-label="上架号" @keyup.enter="handleSearch">
+              <template #prefix>
+                <label for="records-sjh" class="mrr-filter-prefix">上架号</label>
+              </template>
+            </el-input>
+          </div>
+          <div class="mrr-filter-field records-filter__field mrr-filter-field--code">
+            <el-input id="records-opener" v-model="query.openerNo" clearable aria-label="扫描人员" @keyup.enter="handleSearch">
+              <template #prefix>
+                <label for="records-opener" class="mrr-filter-prefix">扫描人员</label>
+              </template>
+            </el-input>
           </div>
           <div class="mrr-filter-field records-filter__field">
-            <label for="records-brxh">病人序号</label>
-            <el-input id="records-brxh" v-model="query.brxh" clearable aria-label="病人序号" placeholder="病人序号" @keyup.enter="handleSearch" />
-          </div>
-          <div class="mrr-filter-field records-filter__field">
-            <label for="records-sjh">上架号</label>
-            <el-input id="records-sjh" v-model="query.sjh" clearable aria-label="上架号" placeholder="上架号" @keyup.enter="handleSearch" />
-          </div>
-          <div class="mrr-filter-field records-filter__field">
-            <label for="records-opener">扫描人员</label>
-            <el-input id="records-opener" v-model="query.openerNo" clearable aria-label="扫描人员" placeholder="扫描人员工号" @keyup.enter="handleSearch" />
-          </div>
-          <div class="mrr-filter-field records-filter__field">
-            <label for="records-btype">类型</label>
             <el-select id="records-btype" v-model="query.btype" class="mrr-single-select" clearable aria-label="类型" placeholder="全部类型">
               <el-option v-for="item in typeOptions" :key="item.value" :label="item.label" :value="item.value" />
             </el-select>
           </div>
-          <div class="mrr-filter-field records-filter__field">
-            <span class="mrr-filter-field__label">匹配方式</span>
+          <div class="mrr-filter-field records-filter__field mrr-filter-field--option">
             <el-checkbox id="records-legacy-contains" v-model="query.legacyContains" class="records-legacy-option">
               兼容包含查询
             </el-checkbox>
@@ -399,11 +409,6 @@ function typeLabel(value: unknown) {
 </template>
 
 <style scoped>
-/* 标签排版与操作区底边对齐由 MrrFilterBar 的 labelled 模式统一提供，这里只保留列宽。 */
-.records-filter__field {
-  flex: 1 1 150px;
-}
-
 .records-legacy-option {
   height: var(--mrr-input-height);
   min-height: var(--mrr-input-height);
@@ -451,11 +456,6 @@ function typeLabel(value: unknown) {
 }
 
 @media (max-width: 760px) {
-  .records-filter__field {
-    flex: 1 1 100%;
-    width: 100%;
-  }
-
   .records-batch-actions {
     justify-content: space-between;
     width: 100%;

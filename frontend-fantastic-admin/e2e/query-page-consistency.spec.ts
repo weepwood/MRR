@@ -46,7 +46,8 @@ for (const item of pages) {
           const field = control.locator('xpath=ancestor::div[contains(concat(" ",normalize-space(@class)," ")," el-form-item ")][1]')
           const labelBox = await field.locator('label').boundingBox()
           const controlBox = await control.boundingBox()
-          expect(labelBox!.y + labelBox!.height).toBeLessThanOrEqual(controlBox!.y + 1)
+          expect(labelBox!.x + labelBox!.width).toBeLessThanOrEqual(controlBox!.x + 1)
+          expect(Math.abs(labelBox!.y + labelBox!.height / 2 - controlBox!.y - controlBox!.height / 2)).toBeLessThanOrEqual(5)
           await page.keyboard.press('Escape')
           // A teleported select popper can still cover the next field during its
           // leave transition. Wait for the actual collapsed and hidden state
@@ -90,7 +91,6 @@ for (const item of pages) {
     await openPage(page, item.path)
     const form = page.locator('form').first()
     const keyword = form.getByLabel('关键字', { exact: true })
-    await keyword.fill('synthetic-filter')
     // 用户筛选已升级为可搜索下拉（MrrUserSearchSelect）：fill 只产生检索文本，
     // 需等 allow-create 的创建项出现后点选，值才会提交。
     await form.getByLabel('用户', { exact: true }).fill('synthetic-user')
@@ -99,10 +99,12 @@ for (const item of pages) {
     // Move focus explicitly from the teleported select popup back to the keyword.
     // WebKit may keep the select's focus restoration queued after choosing a created option.
     await expect(page.locator('.el-select-dropdown__item').filter({ hasText: 'synthetic-user' })).not.toBeVisible()
+    await form.getByRole('button', { name: '查询', exact: true }).click({ trial: true })
+    await keyword.fill('synthetic-filter')
     await keyword.click()
     await expect(keyword).toBeFocused()
     const query = waitQuery()
-    await page.keyboard.press('Enter')
+    await keyword.press('Enter')
     expect(Object.fromEntries(new URL((await query).url()).searchParams)).toMatchObject({ keyword: 'synthetic-filter', username: 'synthetic-user', page: '1', size: '20' })
     await expect(page.getByText(item.empty, { exact: true })).toBeVisible()
     const reset = waitQuery()
@@ -125,6 +127,7 @@ for (const item of pages) {
     const disclosure = form.getByRole('button', { name: /高级筛选/ })
     await input.fill('192.0.2.42')
     await expect(disclosure).toContainText('已填写 1 项')
+    await expect(form.locator('.mrr-filter-bar__summary')).toContainText('列表已应用 0 项高级条件')
     const expandedHeight = (await form.boundingBox())!.height
     await disclosure.click()
     await expect(disclosure).toHaveAttribute('aria-expanded', 'false')
@@ -134,6 +137,7 @@ for (const item of pages) {
     const request = page.waitForRequest(req => req.method() === 'GET' && new URL(req.url()).pathname.endsWith(item.endpoint))
     await form.getByRole('button', { name: '查询', exact: true }).click()
     expect(new URL((await request).url()).searchParams.get('clientIp')).toBe('192.0.2.42')
+    await expect(form.locator('.mrr-filter-bar__summary')).toContainText('列表已应用 1 项高级条件')
     await expect(form.getByRole('button', { name: '重置', exact: true })).toHaveAttribute('aria-disabled', 'false')
     const reset = page.waitForRequest(req => req.method() === 'GET' && new URL(req.url()).pathname.endsWith(item.endpoint))
     await form.getByRole('button', { name: '重置', exact: true }).click()

@@ -27,7 +27,7 @@ function mountPage() {
         },
         'el-table': { template: '<div class="test-table"><slot /></div>' },
         'el-button': { emits: ['click'], template: '<button @click="$emit(\'click\', $event)"><slot /></button>' },
-        'el-input': { props: ['modelValue'], template: '<input :value="modelValue" @input="$emit(\'update:modelValue\', $event.target.value)" @keyup.enter="$emit(\'keyup.enter\')">' },
+        'el-input': { props: ['modelValue'], inheritAttrs: false, template: '<div><slot name="prefix" /><input v-bind="$attrs" :value="modelValue" @input="$emit(\'update:modelValue\', $event.target.value)" @keyup.enter="$emit(\'keyup.enter\')"></div>' },
         'el-select': { props: ['modelValue'], template: '<select :value="modelValue" @change="$emit(\'update:modelValue\', Number($event.target.value)); $emit(\'change\', Number($event.target.value))"><slot /></select>' },
         'el-checkbox': { props: ['modelValue'], template: '<input type="checkbox" :checked="modelValue" @change="$emit(\'update:modelValue\', $event.target.checked)">' },
         'el-option': { props: ['value', 'label'], template: '<option :value="value">{{ label }}</option>' },
@@ -66,7 +66,7 @@ describe('扫描记录查询', () => {
     expect(wrapper.get('label[for="records-brxh"]').text()).toBe('病人序号')
     expect(wrapper.get('label[for="records-sjh"]').text()).toBe('上架号')
     expect(wrapper.get('label[for="records-opener"]').text()).toBe('扫描人员')
-    expect(wrapper.get('label[for="records-btype"]').text()).toBe('类型')
+    expect(wrapper.get('#records-btype').attributes('aria-label')).toBe('类型')
     await wrapper.get('#records-bah').setValue('00789508')
     expect(wrapper.text()).toContain('已提交条件：全部记录')
     expect(wrapper.text()).toContain('筛选条件已修改')

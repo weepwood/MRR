@@ -1091,10 +1091,11 @@ onMounted(() => {
           </div>
         </div>
 
-        <el-form class="filter-grid" label-position="top">
-          <el-form-item label="目录">
+        <MrrFilterBar embedded :focus-ring="false">
+          <el-form-item class="mrr-filter-field--keyword" label="目录" for="oss-filter-folder">
             <el-select
-              v-model="recordFilters.folder"
+              id="oss-filter-folder"
+              v-model="recordFilters.folder" class="mrr-single-select" aria-label="目录"
               clearable
               filterable
               placeholder="全部目录"
@@ -1107,40 +1108,40 @@ onMounted(() => {
               />
             </el-select>
           </el-form-item>
-          <el-form-item label="病案号">
+          <el-form-item class="mrr-filter-field--code" label="病案号" for="oss-filter-bah">
             <el-input
-              v-model="recordFilters.bah"
+              id="oss-filter-bah" v-model="recordFilters.bah" aria-label="病案号"
               clearable
               placeholder="精确病案号"
               @keyup.enter="loadRecords"
             />
           </el-form-item>
-          <el-form-item label="上架号">
+          <el-form-item class="mrr-filter-field--code" label="上架号" for="oss-filter-sjh">
             <el-input
-              v-model="recordFilters.sjh"
+              id="oss-filter-sjh" v-model="recordFilters.sjh" aria-label="上架号"
               clearable
               placeholder="精确上架号"
               @keyup.enter="loadRecords"
             />
           </el-form-item>
-          <el-form-item label="返回数量">
+          <el-form-item label="返回数量" for="oss-filter-limit">
             <el-input-number
-              v-model="recordFilters.limit"
+              id="oss-filter-limit" v-model="recordFilters.limit" aria-label="返回数量"
               :min="20"
               :max="500"
               :step="20"
               controls-position="right"
             />
           </el-form-item>
-          <el-form-item class="filter-actions" label="操作">
+          <template #actions>
             <MrrFilterActionButton action="search" :pending="loading.records" :busy="loading.records" @click="loadRecords">
               查询
             </MrrFilterActionButton>
             <MrrFilterActionButton action="reset" :pending="loading.records" :busy="loading.records" @click="resetRecordFilters">
               重置
             </MrrFilterActionButton>
-          </el-form-item>
-        </el-form>
+          </template>
+        </MrrFilterBar>
 
         <el-alert
           v-if="recordTab === 'waiting'"
@@ -1321,9 +1322,9 @@ onMounted(() => {
             show-icon
           />
 
-          <el-form class="log-filter" inline>
-            <el-form-item label="结果">
-              <el-select v-model="logStatus" clearable placeholder="全部状态">
+          <MrrFilterBar embedded :focus-ring="false">
+            <el-form-item label="结果" for="oss-filter-log-status">
+              <el-select id="oss-filter-log-status" v-model="logStatus" class="mrr-single-select" aria-label="结果" clearable placeholder="全部状态">
                 <el-option label="成功" value="success" />
                 <el-option label="永久失败" value="failed" />
                 <el-option label="等待重试" value="retry_wait" />
@@ -1331,23 +1332,23 @@ onMounted(() => {
                 <el-option label="已跳过" value="skipped" />
               </el-select>
             </el-form-item>
-            <el-form-item label="Scan ID">
+            <el-form-item label="Scan ID" for="oss-filter-log-id">
               <el-input-number
-                v-model="logScanId"
+                id="oss-filter-log-id" v-model="logScanId" aria-label="Scan ID"
                 :min="1"
                 controls-position="right"
                 placeholder="精确 ID"
               />
             </el-form-item>
-            <el-form-item>
+            <template #actions>
               <MrrFilterActionButton action="search" :pending="loading.logs" :busy="loading.logs" @click="loadLogs">
                 查询
               </MrrFilterActionButton>
               <MrrFilterActionButton action="reset" :pending="loading.logs" :busy="loading.logs" @click="resetLogFilters">
                 重置
               </MrrFilterActionButton>
-            </el-form-item>
-          </el-form>
+            </template>
+          </MrrFilterBar>
         </template>
 
         <el-table
@@ -1634,23 +1635,6 @@ onMounted(() => {
   margin-bottom: var(--mrr-space-3);
 }
 
-.filter-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(min(100%, 160px), 1fr));
-  gap: var(--mrr-space-3);
-  align-items: end;
-  margin-bottom: var(--mrr-space-3);
-}
-
-.filter-grid :deep(.el-form-item) {
-  margin-bottom: 0;
-}
-
-.filter-actions :deep(.el-form-item__content) {
-  flex-wrap: wrap;
-  gap: var(--mrr-space-2);
-}
-
 .record-actions {
   padding-top: var(--mrr-space-3);
   margin-top: var(--mrr-space-3);
@@ -1659,18 +1643,6 @@ onMounted(() => {
 
 .manual-bah :deep(.el-input) {
   width: 220px;
-}
-
-.log-filter {
-  padding: var(--mrr-space-3);
-  margin-bottom: var(--mrr-space-3);
-  background: var(--mrr-muted);
-  border: 1px solid var(--mrr-border);
-  border-radius: var(--mrr-radius-md);
-}
-
-.log-filter :deep(.el-select) {
-  width: 160px;
 }
 
 .upload-summary {
@@ -1686,18 +1658,10 @@ onMounted(() => {
   .primary-grid {
     grid-template-columns: 1fr;
   }
-
-  .filter-grid {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
 }
 
 @media (max-width: 720px) {
   .check-grid,
-  .filter-grid {
-    grid-template-columns: 1fr;
-  }
-
   .section-header,
   .record-actions {
     flex-direction: column;

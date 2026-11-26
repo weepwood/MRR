@@ -10,7 +10,7 @@ import type {
 import type { MetricTone, MetricValueTone } from '@/components/MrrMetricCard/types'
 import type { MrrTableAction } from '@/components/MrrTableActions/types'
 import { ElMessage } from 'element-plus'
-import { Plus, RefreshCw as Refresh, Search } from 'lucide-vue-next'
+import { Plus, RefreshCw as Refresh } from 'lucide-vue-next'
 import { computed, onMounted, reactive, ref } from 'vue'
 import {
   createArchiveBoxRecord,
@@ -493,40 +493,46 @@ onMounted(refreshAll)
           </span>
         </div>
 
-        <MrrFilterBar embedded labelled class="archive-filter-bar">
+        <MrrFilterBar embedded :focus-ring="false" class="archive-filter-bar">
           <template v-if="activeView === 'records'">
-            <div class="mrr-filter-field archive-filter__keyword">
-              <label for="archive-keyword">综合搜索</label>
+            <div class="mrr-filter-field archive-filter__keyword mrr-filter-field--keyword">
               <el-input id="archive-keyword" v-model="filters.keyword" clearable aria-label="综合搜索" placeholder="编号、箱号、状态或备注" @keyup.enter="handleSearch">
                 <template #prefix>
-                  <el-icon><Search /></el-icon>
+                  <FaIcon name="i-lucide:search" aria-hidden="true" />
+                </template>
+              </el-input>
+            </div>
+            <div class="mrr-filter-field archive-filter__field mrr-filter-field--code">
+              <el-input id="archive-bah" v-model="filters.bah" clearable aria-label="病案号" @keyup.enter="handleSearch">
+                <template #prefix>
+                  <label for="archive-bah" class="mrr-filter-prefix">病案号</label>
+                </template>
+              </el-input>
+            </div>
+            <div class="mrr-filter-field archive-filter__field mrr-filter-field--code">
+              <el-input id="archive-sjh" v-model="filters.sjh" clearable aria-label="上架号" @keyup.enter="handleSearch">
+                <template #prefix>
+                  <label for="archive-sjh" class="mrr-filter-prefix">上架号</label>
+                </template>
+              </el-input>
+            </div>
+            <div class="mrr-filter-field archive-filter__field mrr-filter-field--code">
+              <el-input id="archive-box-number" v-model="filters.boxNo" clearable aria-label="实际箱号" @keyup.enter="handleSearch">
+                <template #prefix>
+                  <label for="archive-box-number" class="mrr-filter-prefix">实际箱号</label>
                 </template>
               </el-input>
             </div>
             <div class="mrr-filter-field archive-filter__field">
-              <label for="archive-bah">病案号</label>
-              <el-input id="archive-bah" v-model="filters.bah" clearable aria-label="病案号" @keyup.enter="handleSearch" />
-            </div>
-            <div class="mrr-filter-field archive-filter__field">
-              <label for="archive-sjh">上架号</label>
-              <el-input id="archive-sjh" v-model="filters.sjh" clearable aria-label="上架号" @keyup.enter="handleSearch" />
-            </div>
-            <div class="mrr-filter-field archive-filter__field">
-              <label for="archive-box-number">实际箱号</label>
-              <el-input id="archive-box-number" v-model="filters.boxNo" clearable aria-label="实际箱号" @keyup.enter="handleSearch" />
-            </div>
-            <div class="mrr-filter-field archive-filter__field">
-              <label for="archive-status">装箱状态</label>
               <el-select id="archive-status" v-model="filters.status" class="mrr-single-select" clearable aria-label="装箱状态" placeholder="全部状态">
                 <el-option v-for="item in statusOptions" :key="item.value" :label="item.label" :value="item.value" />
               </el-select>
             </div>
           </template>
-          <div v-else class="mrr-filter-field archive-filter__keyword">
-            <label for="archive-box-keyword">搜索箱号</label>
-            <el-input id="archive-box-keyword" v-model="boxKeyword" clearable aria-label="搜索箱号" @keyup.enter="searchBoxes">
+          <div v-else class="mrr-filter-field archive-filter__keyword mrr-filter-field--keyword">
+            <el-input id="archive-box-keyword" v-model="boxKeyword" clearable aria-label="搜索箱号" placeholder="搜索箱号" @keyup.enter="searchBoxes">
               <template #prefix>
-                <el-icon><Search /></el-icon>
+                <FaIcon name="i-lucide:search" aria-hidden="true" />
               </template>
             </el-input>
           </div>
@@ -755,14 +761,6 @@ onMounted(refreshAll)
   color: var(--mrr-muted-foreground);
 }
 
-.archive-filter__field {
-  flex: 1 1 116px;
-}
-
-.archive-filter__keyword {
-  flex: 2 1 204px;
-}
-
 .record-code,
 .box-link {
   font-variant-numeric: tabular-nums;
@@ -789,11 +787,5 @@ onMounted(refreshAll)
   color: var(--mrr-navigation-active-foreground);
   text-decoration: underline;
   text-underline-offset: 2px;
-}
-
-@media (max-width: 760px) {
-  .archive-filter__keyword {
-    flex: 1 1 100%;
-  }
 }
 </style>

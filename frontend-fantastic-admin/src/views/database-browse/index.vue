@@ -385,7 +385,7 @@ onMounted(loadTables)
           />
         </div>
         <template #actions>
-          <MrrFilterActionButton action="search" type="primary" feedback="request" :pending="loading" :busy="loading" :disabled="loading" @click="search">
+          <MrrFilterActionButton action="search" feedback="request" :pending="loading" :busy="loading" :disabled="loading" @click="search">
             查询
           </MrrFilterActionButton>
           <MrrFilterActionButton action="reset" feedback="request" :busy="loading" :disabled="loading" @click="resetFilters">

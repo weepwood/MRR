@@ -220,14 +220,13 @@ onUnmounted(() => {
           :result-key="tableData"
         >
           <template #filters>
-            <MrrFilterBar embedded labelled>
-              <div class="mrr-filter-field patient-keyword">
-                <label for="patients-keyword">关键词</label>
+            <MrrFilterBar embedded :focus-ring="false">
+              <div class="mrr-filter-field patient-keyword mrr-filter-field--keyword">
                 <el-input
                   id="patients-keyword"
                   v-model="filters.keyword"
                   aria-label="关键词"
-                  placeholder="例如病案号或姓名"
+                  placeholder="搜索病案号或姓名"
                   clearable
                   @keyup.enter="handleSearch"
                 >
@@ -340,10 +339,6 @@ onUnmounted(() => {
 </template>
 
 <style scoped>
-.patient-keyword {
-  flex: 1 1 280px;
-}
-
 /* 身份证号用等宽字体：掩码 * 与数字等宽，逐行上下对齐，掩码位数一眼可数。 */
 .id-card-toggle,
 .id-card-copy,
@@ -377,11 +372,5 @@ onUnmounted(() => {
   color: var(--mrr-navigation-active-foreground);
   text-decoration: underline;
   text-underline-offset: 2px;
-}
-
-@media (max-width: 760px) {
-  .patient-keyword {
-    flex: 1 1 100%;
-  }
 }
 </style>

@@ -17,6 +17,9 @@ const props = withDefaults(defineProps<{
   layout?: 'inline' | 'grid'
   /** Number of filled advanced fields; never implies a successful query. */
   advancedCount?: number
+  /** Count of advanced fields in the last successfully returned list, not draft values. */
+  appliedAdvancedCount?: number
+  advancedDirty?: boolean
 }>(), {
   compact: false,
   embedded: false,
@@ -30,6 +33,7 @@ const slots = useSlots()
 const root = ref<HTMLElement>()
 const { width: rootWidth } = useElementSize(root)
 const narrow = computed(() => rootWidth.value > 0 && rootWidth.value < 560)
+const tiny = computed(() => rootWidth.value > 0 && rootWidth.value < 280)
 const fields = ref<HTMLElement>()
 const { width: fieldsWidth } = useElementSize(computed(() => props.layout === 'grid' ? fields.value : undefined))
 const advancedExpanded = ref(true)
@@ -43,29 +47,36 @@ const columns = computed(() => {
 </script>
 
 <template>
-  <div ref="root" class="mrr-filter-bar" :class="{ 'mrr-filter-bar--narrow': narrow, 'mrr-filter-bar--compact': props.compact, 'mrr-filter-bar--embedded': props.embedded, 'mrr-filter-bar--focus-ring': props.focusRing, 'mrr-filter-bar--labelled': props.labelled, 'mrr-filter-bar--grid': props.layout === 'grid' }">
+  <div ref="root" class="mrr-filter-bar" :class="{ 'mrr-filter-bar--narrow': narrow, 'mrr-filter-bar--tiny': tiny, 'mrr-filter-bar--compact': props.compact, 'mrr-filter-bar--embedded': props.embedded, 'mrr-filter-bar--focus-ring': props.focusRing, 'mrr-filter-bar--labelled': props.labelled, 'mrr-filter-bar--grid': props.layout === 'grid' }">
     <div ref="fields" class="mrr-filter-bar__fields" :data-grid-columns="columns">
       <slot />
-      <div v-if="slots.advanced" v-show="advancedExpanded" :id="advancedId" class="mrr-filter-bar__advanced">
-        <slot name="advanced" />
-      </div>
     </div>
     <div v-if="slots.actions || slots.advanced" class="mrr-filter-bar__actions">
-      <el-button v-if="slots.advanced" native-type="button" :aria-controls="advancedId" :aria-expanded="advancedExpanded" @click="advancedExpanded = !advancedExpanded">
+      <slot name="actions" />
+      <el-button v-if="slots.advanced" class="mrr-filter-bar__disclosure" native-type="button" :aria-controls="advancedId" :aria-expanded="advancedExpanded" @click="advancedExpanded = !advancedExpanded">
         <FaIcon :name="advancedExpanded ? 'i-lucide:chevron-up' : 'i-lucide:chevron-down'" aria-hidden="true" />
         {{ advancedExpanded ? '收起高级筛选' : '展开高级筛选' }}（已填写 {{ props.advancedCount }} 项）
       </el-button>
-      <slot name="actions" />
     </div>
+    <div v-if="slots.business" class="mrr-filter-bar__business">
+      <slot name="business" />
+    </div>
+    <div v-if="slots.advanced" v-show="advancedExpanded" :id="advancedId" class="mrr-filter-bar__advanced">
+      <slot name="advanced" />
+    </div>
+    <p v-if="slots.advanced && props.appliedAdvancedCount !== undefined && (props.appliedAdvancedCount > 0 || props.advancedDirty)" class="mrr-filter-bar__summary" role="status">
+      列表已应用 {{ props.appliedAdvancedCount }} 项高级条件<span v-if="props.advancedDirty"> · 当前高级条件与列表结果不同</span>
+    </p>
   </div>
 </template>
 
 <style scoped>
 .mrr-filter-bar {
   display: flex;
-  gap: var(--mrr-space-3);
+  flex-wrap: wrap;
+  gap: var(--mrr-space-3) var(--mrr-space-2);
   align-items: center;
-  justify-content: space-between;
+  justify-content: flex-start;
   min-width: 0;
   padding: var(--mrr-space-3) var(--mrr-card-inset);
   color: var(--mrr-card-foreground);
@@ -95,72 +106,159 @@ const columns = computed(() => {
   box-shadow: none;
 }
 
-/*
- * embedded（无标签）模式下字段允许拉伸填满所在行：换行后的次行控件不再
- * 以固定宽度孤零零靠左（N4「差半个字段」观感），而是与首行一样铺满行宽。
- * 单个次行字段由上限约束，避免被拉成整行长的超大控件。
- */
-.mrr-filter-bar--embedded:not(.mrr-filter-bar--grid) .mrr-filter-bar__fields > :deep(*) {
-  flex-grow: 1;
-  max-width: 460px;
-}
-
-@media (max-width: 760px) {
-  /* 窄屏下字段已是整行宽，解除上限避免被压成 460px。 */
-  .mrr-filter-bar--embedded:not(.mrr-filter-bar--grid) .mrr-filter-bar__fields > :deep(*) {
-    max-width: 100%;
-  }
-}
-
-.mrr-filter-bar__fields {
-  display: flex;
-  flex: 1 1 auto;
-  flex-wrap: wrap;
-  gap: var(--mrr-space-2);
-  align-items: center;
-  min-width: 0;
-}
-
+/* Shared semantic field widths. Native controls still own height, colors and focus. */
+.mrr-filter-bar__fields,
 .mrr-filter-bar__advanced {
-  display: contents;
-}
-
-.mrr-filter-bar__actions {
   display: flex;
   flex: 0 1 auto;
   flex-wrap: wrap;
+  gap: var(--mrr-space-3) var(--mrr-space-2);
+  align-items: center;
+  min-width: 0;
+  max-width: 100%;
+}
+
+/* On wide/medium containers, individual fields and the query pair share one
+ * wrapping flow. This avoids stranding the query pair on a third row. */
+.mrr-filter-bar:not(.mrr-filter-bar--narrow):not(.mrr-filter-bar--grid) .mrr-filter-bar__fields {
+  display: contents;
+}
+
+.mrr-filter-bar__fields > :deep(*),
+.mrr-filter-bar__advanced > :deep(*) {
+  flex: 0 1 144px;
+  width: 144px;
+  min-width: 0;
+  max-width: 100%;
+  margin: 0;
+}
+
+.mrr-filter-bar :deep(.mrr-filter-field--code) {
+  flex: 0 1 160px;
+  width: 160px;
+}
+
+.mrr-filter-bar :deep(.mrr-filter-field--keyword) {
+  flex: 1 1 280px;
+  width: 280px;
+  max-width: 360px;
+}
+
+.mrr-filter-bar :deep(.mrr-filter-field--range) {
+  flex: 1 1 300px;
+  width: 300px;
+  max-width: 360px;
+}
+
+.mrr-filter-bar :deep(.mrr-filter-field--datetime) {
+  flex: 1 1 380px;
+  width: 380px;
+  max-width: 100%;
+}
+
+/* Form-item labels have their own width; don't steal from usable input space. */
+.mrr-filter-bar :deep(.el-form-item:not(.mrr-filter-field--keyword):not(.mrr-filter-field--range):not(.mrr-filter-field--datetime)) {
+  flex-basis: 200px;
+  width: 200px;
+}
+
+.mrr-filter-bar :deep(.el-form-item.mrr-filter-field--datetime) {
+  flex-basis: 420px;
+  width: 420px;
+}
+
+.mrr-filter-bar__summary {
+  flex: 1 1 100%;
+  margin: 0;
+  font-size: var(--mrr-font-size-xs);
+  line-height: var(--mrr-line-height-label);
+  color: var(--mrr-muted-foreground);
+}
+
+.mrr-filter-bar :deep(.mrr-filter-field--option) {
+  flex: 0 1 auto;
+  width: auto;
+}
+
+.mrr-filter-bar :deep(.mrr-filter-field > .el-input),
+.mrr-filter-bar :deep(.mrr-filter-field > .el-select),
+.mrr-filter-bar :deep(.el-form-item__content > .el-input),
+.mrr-filter-bar :deep(.el-form-item__content > .el-select),
+.mrr-filter-bar :deep(.el-form-item__content > .el-date-editor),
+.mrr-filter-bar :deep(.el-form-item__content > .el-input-number) {
+  width: 100%;
+  min-width: 0;
+}
+
+.mrr-filter-bar :deep(.mrr-filter-prefix) {
+  flex: none;
+  font-size: var(--mrr-font-size-xs);
+  font-weight: var(--mrr-font-weight-label);
+  color: var(--mrr-muted-foreground);
+  white-space: nowrap;
+}
+
+.mrr-filter-bar :deep(.el-form-item) {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  margin: 0;
+}
+
+.mrr-filter-bar :deep(.el-form-item__content) {
+  min-width: 0;
+}
+
+.mrr-filter-bar :deep(.el-form-item__label) {
+  flex: none;
+  padding-right: var(--mrr-space-2);
+  font-size: var(--mrr-font-size-xs);
+  font-weight: var(--mrr-font-weight-label);
+  line-height: var(--mrr-line-height-label);
+  color: var(--mrr-muted-foreground);
+}
+
+.mrr-filter-bar__actions,
+.mrr-filter-bar__business {
+  display: flex;
+  flex: 0 0 auto;
+  flex-wrap: wrap;
   gap: var(--mrr-space-2);
   align-items: center;
   min-width: 0;
-  padding-left: var(--mrr-space-3);
-  border-left: 1px solid var(--mrr-shell-divider);
+  max-width: 100%;
 }
 
-.mrr-filter-bar__actions :deep(.el-button + .el-button) {
-  margin-left: 0;
+.mrr-filter-bar__actions :deep(.el-button),
+.mrr-filter-bar__business :deep(.el-button) {
+  flex: none;
+  min-width: 72px;
+  margin: 0;
 }
 
-/* 字段宽度（flex）交给页面决定：组件选择器优先级更高，写在这里会压掉页面的局部列宽。 */
+.mrr-filter-bar__business {
+  margin-inline-start: auto;
+}
+
+.mrr-filter-bar__advanced {
+  flex: 1 1 100%;
+  padding-top: var(--mrr-space-3);
+  border-top: 1px solid var(--mrr-shell-divider);
+}
+
+/* Explicit grid stays available for schema-driven or complex labelled fields. */
 .mrr-filter-bar--labelled :deep(.mrr-filter-field) {
   display: grid;
   gap: var(--mrr-space-1);
   min-width: 0;
 }
 
-/* Both native-labelled fields and Element Plus grid forms use the same label contract. */
 .mrr-filter-bar--labelled :deep(.mrr-filter-field > label),
-.mrr-filter-bar--labelled :deep(.mrr-filter-field__label),
-.mrr-filter-bar--grid :deep(.el-form-item__label) {
+.mrr-filter-bar--labelled :deep(.mrr-filter-field__label) {
   font-size: var(--mrr-font-size-xs);
   font-weight: var(--mrr-font-weight-label);
   line-height: var(--mrr-line-height-label);
   color: var(--mrr-card-foreground);
-}
-
-.mrr-filter-bar--labelled .mrr-filter-bar__actions {
-  flex: 0 0 auto;
-  flex-wrap: nowrap;
-  align-self: flex-end;
 }
 
 .mrr-filter-bar--grid {
@@ -173,114 +271,12 @@ const columns = computed(() => {
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: var(--mrr-space-3) var(--mrr-space-4);
   align-items: end;
-}
-
-.mrr-filter-bar--grid :deep(.el-form-item) {
-  min-width: 0;
-  margin: 0;
-}
-
-.mrr-filter-bar--grid :deep(.el-form-item__label) {
-  margin-bottom: var(--mrr-space-1);
-}
-
-.mrr-filter-bar--grid :deep(.el-input),
-.mrr-filter-bar--grid :deep(.el-select),
-.mrr-filter-bar--grid :deep(.el-date-editor) {
-  width: 100%;
-  min-width: 0;
-}
-
-.mrr-filter-bar--grid :deep(.mrr-filter-bar__range) {
-  grid-column: span 2;
-}
-
-.mrr-filter-bar--grid .mrr-filter-bar__actions {
-  justify-content: flex-end;
-  padding-left: 0;
-  border-left: 0;
-}
-
-@media (max-width: 1100px) {
-  .mrr-filter-bar--grid .mrr-filter-bar__fields {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-}
-
-/*
- * 控件底色 / 最小高度 / 焦点态背景此前在此用 color-mix 局部覆盖；现已统一提升到
- * tokens.css 的 --mrr-control-bg（含 Chrome 86 静态回退），此处不再重复定义。
- */
-
-@media (max-width: 600px) {
-  .mrr-filter-bar--grid .mrr-filter-bar__fields {
-    grid-template-columns: minmax(0, 1fr);
-  }
-
-  .mrr-filter-bar--grid :deep(.mrr-filter-bar__range) {
-    grid-column: auto;
-  }
-}
-
-@media (max-width: 760px) {
-  .mrr-filter-bar {
-    flex-direction: column;
-    align-items: stretch;
-  }
-
-  .mrr-filter-bar__fields,
-  .mrr-filter-bar__actions {
-    width: 100%;
-  }
-
-  .mrr-filter-bar__fields > :deep(*) {
-    min-width: 0;
-    max-width: 100%;
-  }
-
-  .mrr-filter-bar__actions {
-    padding-top: var(--mrr-space-3);
-    padding-left: 0;
-    border-top: 1px solid var(--mrr-shell-divider);
-    border-left: 0;
-  }
-
-  .mrr-filter-bar__actions :deep(.el-button) {
-    flex: 1 1 120px;
-  }
-}
-
-/* Narrow content can occur even on desktop when both navigation rails are open. */
-.mrr-filter-bar--narrow {
-  flex-direction: column;
-  align-items: stretch;
-}
-
-.mrr-filter-bar--narrow .mrr-filter-bar__fields,
-.mrr-filter-bar--narrow .mrr-filter-bar__actions {
   width: 100%;
 }
 
-.mrr-filter-bar--narrow .mrr-filter-bar__fields > :deep(*) {
-  min-width: 0;
+.mrr-filter-bar--grid .mrr-filter-bar__fields > :deep(*) {
+  width: 100%;
   max-width: 100%;
-}
-
-.mrr-filter-bar--narrow .mrr-filter-bar__actions {
-  justify-content: flex-end;
-  padding: var(--mrr-space-2) 0 0;
-  border-top: 1px solid var(--mrr-shell-divider);
-  border-left: 0;
-}
-
-.mrr-filter-bar--narrow .mrr-filter-bar__actions :deep(.el-button) {
-  flex: 1 1 120px;
-  min-width: 0;
-}
-
-/* Measured width takes precedence over viewport fallback, including range span. */
-.mrr-filter-bar--grid .mrr-filter-bar__fields[data-grid-columns="3"] {
-  grid-template-columns: repeat(3, minmax(0, 1fr));
 }
 
 .mrr-filter-bar--grid .mrr-filter-bar__fields[data-grid-columns="2"] {
@@ -291,8 +287,50 @@ const columns = computed(() => {
   grid-template-columns: minmax(0, 1fr);
 }
 
-.mrr-filter-bar--grid .mrr-filter-bar__fields[data-grid-columns="1"] :deep(.mrr-filter-bar__range) {
-  grid-column: auto;
+.mrr-filter-bar--grid .mrr-filter-bar__actions {
+  justify-content: flex-end;
+}
+
+.mrr-filter-bar--narrow {
+  flex-direction: column;
+  align-items: stretch;
+}
+
+.mrr-filter-bar--narrow:not(.mrr-filter-bar--grid) .mrr-filter-bar__fields,
+.mrr-filter-bar--narrow .mrr-filter-bar__advanced {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  width: 100%;
+}
+
+.mrr-filter-bar--tiny:not(.mrr-filter-bar--grid) .mrr-filter-bar__fields,
+.mrr-filter-bar--tiny .mrr-filter-bar__advanced {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.mrr-filter-bar--narrow .mrr-filter-bar__fields > :deep(*),
+.mrr-filter-bar--narrow .mrr-filter-bar__advanced > :deep(*) {
+  width: 100%;
+  max-width: 100%;
+}
+
+.mrr-filter-bar--narrow .mrr-filter-bar__advanced > :deep(.el-form-item),
+.mrr-filter-bar--narrow .mrr-filter-bar__fields > :deep(.el-form-item) {
+  width: 100%;
+}
+
+.mrr-filter-bar--narrow :deep(.mrr-filter-field--keyword),
+.mrr-filter-bar--narrow :deep(.mrr-filter-field--range),
+.mrr-filter-bar--narrow :deep(.mrr-filter-field--datetime),
+.mrr-filter-bar--narrow :deep(.mrr-filter-field--option),
+.mrr-filter-bar--narrow :deep(.el-form-item) {
+  grid-column: 1 / -1;
+}
+
+.mrr-filter-bar--narrow .mrr-filter-bar__actions,
+.mrr-filter-bar--narrow .mrr-filter-bar__business {
+  justify-content: flex-end;
+  width: 100%;
 }
 
 /*

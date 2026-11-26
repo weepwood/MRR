@@ -295,3 +295,7 @@ FaIcon、FaKbd、FaPinInput、FaScrollArea、FaSmartFixedBlock、FaPasswordStren
 ## 视觉令牌及图表归属最终补充（2026-11-26）
 
 表面及交替行归 data-display.css 和 tokens.css；状态与指标语义前景归 tones.css，各组件仅消费 ink 令牌；图表色值解析、坐标与提示归 chart-theme.ts，图表实例与同配置交互保留归 useMrrChart.ts。仅业务字段换行和批量选中反馈保留页面级样式。不要新增重复的 Element Plus 暗色覆盖、逐页硬编码颜色或全局重置表格。
+
+## 普通业务筛选归属补充（2026-11-26）
+
+MrrFilterBar 统一拥有字段流式/网格布局、容器响应式、语义宽度、动作分组与高级区域结构；MrrFilterActionButton 统一查询/重置反馈，MrrDataTablePanel 继续拥有表格及分页。页面拥有字段值、权限、请求、已应用快照和业务操作；不复制普通筛选尺寸/间距。动态数据库筛选保留带标签网格，专用影像身份查询/侧栏及即时筛选保留专业布局。

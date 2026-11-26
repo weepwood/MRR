@@ -466,28 +466,40 @@ onBeforeUnmount(() => {
     </section>
 
     <MrrSectionCard title="档案筛选" description="可按患者姓名、病人 ID、住院科室、设备、负责人或日期定位档案袋">
-      <div class="filter-grid">
-        <el-input v-model="filters.bah" class="filter-bah" clearable aria-label="病案号" placeholder="病案号" @keyup.enter="handleSearch" />
-        <el-input v-model="filters.sjh" class="filter-sjh" clearable aria-label="上架号" placeholder="上架号" @keyup.enter="handleSearch" />
-        <el-input v-model="filters.keyword" class="filter-keyword" clearable aria-label="综合筛选" placeholder="患者姓名、病人 ID、科室、设备或负责人"
-          @keyup.enter="handleSearch" />
-        <el-select v-model="filters.type" class="filter-type" clearable aria-label="档案类型" placeholder="全部类型" @change="handleSearch">
+      <MrrFilterBar embedded :focus-ring="false">
+        <el-input id="detail-filter-bah" v-model="filters.bah" class="filter-bah mrr-filter-field--code" clearable aria-label="病案号" @keyup.enter="handleSearch">
+          <template #prefix>
+            <label for="detail-filter-bah" class="mrr-filter-prefix">病案号</label>
+          </template>
+        </el-input>
+        <el-input id="detail-filter-sjh" v-model="filters.sjh" class="filter-sjh mrr-filter-field--code" clearable aria-label="上架号" @keyup.enter="handleSearch">
+          <template #prefix>
+            <label for="detail-filter-sjh" class="mrr-filter-prefix">上架号</label>
+          </template>
+        </el-input>
+        <el-input v-model="filters.keyword" class="filter-keyword mrr-filter-field--keyword" clearable aria-label="综合筛选" placeholder="患者姓名、病人 ID、科室、设备或负责人"
+          @keyup.enter="handleSearch">
+          <template #prefix>
+            <FaIcon name="i-lucide:search" aria-hidden="true" />
+          </template>
+        </el-input>
+        <el-select v-model="filters.type" class="filter-type mrr-single-select" clearable aria-label="档案类型" placeholder="全部类型" @change="handleSearch">
           <el-option v-for="item in typeOptions" :key="item" :label="item" :value="item" />
         </el-select>
-        <el-date-picker v-model="filters.dateRange" class="filter-date" type="daterange" :popper-options="rangePickerPopperOptions" range-separator="至"
+        <el-date-picker v-model="filters.dateRange" class="filter-date mrr-filter-field--range" aria-label="归档日期范围" type="daterange" :popper-options="rangePickerPopperOptions" range-separator="至"
           start-placeholder="归档开始日期" end-placeholder="归档结束日期" value-format="YYYY-MM-DD" />
-        <el-select v-model="sortKey" class="filter-sort" aria-label="排序方式" @change="handleSearch">
+        <el-select v-model="sortKey" class="filter-sort mrr-single-select" aria-label="排序方式" @change="handleSearch">
           <el-option v-for="item in sortOptions" :key="item.key" :label="item.label" :value="item.key" />
         </el-select>
-        <div class="filter-actions">
+        <template #actions>
           <MrrFilterActionButton action="search" :pending="loading" :busy="loading" @click="handleSearch">
             查询
           </MrrFilterActionButton>
           <MrrFilterActionButton action="reset" :pending="loading" :busy="loading" @click="resetSearch">
             重置
           </MrrFilterActionButton>
-        </div>
-      </div>
+        </template>
+      </MrrFilterBar>
     </MrrSectionCard>
 
     <section class="content-layout">
@@ -666,40 +678,6 @@ onBeforeUnmount(() => {
 </template>
 
 <style scoped>
-.filter-grid {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--mrr-space-3);
-  align-items: center;
-}
-
-.filter-bah,
-.filter-sjh {
-  flex: 0 0 140px;
-}
-
-.filter-keyword {
-  flex: 1 1 300px;
-  min-width: 240px;
-}
-
-.filter-type,
-.filter-sort {
-  flex: 0 0 190px;
-}
-
-.filter-date {
-  flex: 1 1 290px;
-  min-width: 260px;
-}
-
-.filter-actions {
-  display: flex;
-  flex: 0 0 auto;
-  gap: var(--mrr-space-2);
-  margin-left: auto;
-}
-
 .content-layout,
 .archive-shelf {
   display: grid;
@@ -1028,20 +1006,6 @@ onBeforeUnmount(() => {
 
 .archive-folder-card:hover .folder-action span {
   transform: var(--mrr-motion-decor, translateX(3px));
-}
-
-@media (max-width: 720px) {
-  .filter-bah,
-  .filter-sjh,
-  .filter-keyword,
-  .filter-type,
-  .filter-date,
-  .filter-sort,
-  .filter-actions {
-    flex: 1 1 100%;
-    min-width: 0;
-    margin-left: 0;
-  }
 }
 
 @media (max-width: 480px) {

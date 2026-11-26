@@ -645,7 +645,7 @@ onMounted(loadData)
       <template #filters>
         <div class="users-toolbar">
           <MrrFilterBar class="users-filter-bar" embedded :focus-ring="false">
-            <div class="users-filter__field users-filter__keyword">
+            <div class="users-filter__field users-filter__keyword mrr-filter-field--keyword">
               <el-input id="users-filter-keyword" v-model="filters.keyword" aria-label="关键词" clearable placeholder="搜索用户名、显示名、联系方式或角色…" @keyup.enter="handleSearch">
                 <template #prefix><FaIcon name="i-lucide:search" aria-hidden="true" /></template>
               </el-input>
@@ -664,10 +664,12 @@ onMounted(loadData)
               <MrrFilterActionButton action="search" feedback="request" :pending="dataLoadingAction === 'search'" :busy="loading || dataLoadingAction !== null" @click="handleSearch">查询</MrrFilterActionButton>
               <MrrFilterActionButton action="reset" feedback="request" :pending="dataLoadingAction === 'reset'" :busy="loading || dataLoadingAction !== null" @click="resetFilters">重置</MrrFilterActionButton>
             </template>
+            <template v-if="canManage" #business>
+              <el-button type="primary" class="users-toolbar__create" @click="openCreate">
+                <FaIcon name="i-lucide:user-round-plus" aria-hidden="true" />创建用户
+              </el-button>
+            </template>
           </MrrFilterBar>
-          <el-button v-if="canManage" type="primary" class="users-toolbar__create" @click="openCreate">
-            <FaIcon name="i-lucide:user-round-plus" aria-hidden="true" />创建用户
-          </el-button>
         </div>
       </template>
 
@@ -855,17 +857,6 @@ onMounted(loadData)
 <style scoped>
 /* stylelint-disable @stylistic/block-closing-brace-newline-after, @stylistic/selector-list-comma-newline-after, at-rule-empty-line-before, order/properties-order */
 
-/* Search is the primary field; enumerated filters need only predictable width.
- * Retain the shared filter bar and its mobile wrapping contract. */
-.users-filter__field { display: grid; min-width: 0; }
-.users-filter-bar :deep(.mrr-filter-bar__fields > .users-filter__keyword) { width: 100%; max-width: none; min-width: 0; }
-.users-filter-bar :deep(.mrr-filter-bar__fields > .users-filter__select) { width: 100%; max-width: none; min-width: 0; }
-.users-toolbar { display: flex; flex-wrap: wrap; align-items: flex-start; gap: var(--mrr-space-3); }
-.users-toolbar > .users-filter-bar.mrr-filter-bar--embedded { flex: 1 1 640px; min-width: 0; justify-content: flex-start; }
-.users-toolbar__create { flex: none; margin-inline-start: auto; }
-.users-filter-bar :deep(.mrr-filter-bar__fields) { display: grid; flex: 0 1 784px; grid-template-columns: minmax(0, 1fr) 144px 144px; }
-.users-filter-bar :deep(.mrr-filter-bar__actions) { flex-shrink: 0; align-self: flex-end; padding-left: 0; border-left: 0; }
-
 .users-state { display: grid; min-height: 280px; padding: var(--mrr-space-5); place-items: center; }
 .user-identity { display: flex; gap: var(--mrr-space-2); align-items: center; min-width: 0; }
 .user-avatar { display: grid; flex: 0 0 28px; width: 28px; height: 28px; font-size: var(--mrr-font-size-xs); font-weight: 600; color: var(--mrr-primary); background: var(--mrr-tone-primary-soft); border: 1px solid var(--mrr-border); border-radius: 50%; place-items: center; }
@@ -904,10 +895,6 @@ onMounted(loadData)
 .credential-actions { display: flex; gap: var(--mrr-space-2); margin-top: var(--mrr-space-4); }
 .acknowledge { margin-top: var(--mrr-space-4); }
 @media (max-width: 760px) {
-  .users-filter-bar :deep(.mrr-filter-bar__fields > .users-filter__keyword),
-  .users-filter-bar :deep(.mrr-filter-bar__fields > .users-filter__select) { flex: 1 1 100%; width: 100%; max-width: 100%; min-width: 0; }
-  .users-filter-bar :deep(.mrr-filter-bar__fields) { flex: 1 1 auto; grid-template-columns: minmax(0, 1fr); }
-
   .credential-actions { flex-direction: column; }
 }
 </style>

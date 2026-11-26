@@ -53,10 +53,9 @@ function search(reset = false) {
     <MrrDataTablePanel title="组件验收示例" :count="cursorMode ? undefined : matches.length" :result-key="visibleRows">
       <template #filters>
         <form @submit.prevent="search()">
-          <MrrFilterBar embedded labelled layout="grid">
-            <div class="mrr-filter-field example-full-width">
-              <label :for="`${id}-query`">筛选示例</label>
-              <el-input :id="`${id}-query`" v-model="keyword" placeholder="示例编号或名称" class="example-full-width" />
+          <MrrFilterBar embedded :focus-ring="false">
+            <div class="mrr-filter-field mrr-filter-field--keyword">
+              <el-input :id="`${id}-query`" v-model="keyword" aria-label="筛选示例" placeholder="示例编号或名称" />
             </div>
             <template #actions>
               <MrrFilterActionButton action="search" feedback="request" :auto-insert-space="false" native-type="submit">

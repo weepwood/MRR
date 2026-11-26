@@ -74,12 +74,9 @@ for (const palette of ['mrr', 'gr8r'] as const) {
             expect(label.weight, `${route} filter label weight`).toBe('600')
           }
           if (route === 'logs' || route === 'audit-images') {
-            const grid = page.locator('.mrr-filter-bar--grid .mrr-filter-bar__fields')
-            await expect.poll(() => grid.evaluate((el) => {
-              const w = el.getBoundingClientRect().width
-              const columns = getComputedStyle(el).gridTemplateColumns.trim().split(/\s+/).length
-              return columns === (w >= 760 ? 3 : w >= 480 ? 2 : 1)
-            })).toBe(true)
+            const advanced = page.locator('.mrr-filter-bar__advanced')
+            await expect(advanced).toBeVisible()
+            await expect.poll(() => advanced.evaluate(el => el.scrollWidth <= el.clientWidth + 1)).toBe(true)
           }
           if (route === 'audit-images') {
             const summary = page.locator('.mrr-metric-grid--five')

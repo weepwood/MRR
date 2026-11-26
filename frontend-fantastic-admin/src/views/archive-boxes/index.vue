@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import type {
   ArchiveBoxGroup,
-  ArchiveBoxQuery,
   ArchiveBoxRecord,
   ArchiveBoxRecordPayload,
   ArchiveBoxStatus,
@@ -11,7 +10,7 @@ import type { MetricTone, MetricValueTone } from '@/components/MrrMetricCard/typ
 import type { MrrTableAction } from '@/components/MrrTableActions/types'
 import { ElMessage } from 'element-plus'
 import { Plus, RefreshCw as Refresh } from 'lucide-vue-next'
-import { computed, onMounted, reactive, ref } from 'vue'
+import { computed, onMounted, onScopeDispose, reactive, ref, toRef, watch } from 'vue'
 import {
   createArchiveBoxRecord,
   deleteArchiveBoxRecord,
@@ -30,9 +29,12 @@ import MrrPageHeader from '@/components/MrrPageHeader/index.vue'
 import MrrPageShell from '@/components/MrrPageShell/index.vue'
 import MrrStatusTag from '@/components/MrrStatusTag/index.vue'
 import MrrTableActions from '@/components/MrrTableActions/index.vue'
+import { useCrudList } from '@/composables/useCrudList'
 import { useTableActionLayout } from '@/composables/useTableActionLayout'
+import { useUserStore } from '@/store/modules/user'
 import { actionDialog } from '@/ui/components/ActionDialog'
-import { pageRowOffset, tableSequenceColumn } from '@/utils/table-sequence'
+import useAuth from '@/utils/composables/useAuth'
+import { tableSequenceColumn } from '@/utils/table-sequence'
 
 defineOptions({ name: 'ArchiveBoxesPage' })
 
@@ -53,34 +55,92 @@ const statusOptions: StatusOption[] = [
 ]
 
 const activeView = ref<ViewMode>('records')
-const loading = ref(false)
-const error = ref('')
-const records = ref<ArchiveBoxRecord[]>([])
-const boxes = ref<ArchiveBoxGroup[]>([])
-const summary = ref<ArchiveBoxSummary>({
-  totalRecords: 0,
-  totalBoxes: 0,
-  missingCount: 0,
-  abnormalCount: 0,
+const userStore = useUserStore()
+const { auth } = useAuth()
+const canRead = computed(() => userStore.isSessionVerified && auth('record:read'))
+const canEdit = computed(() => canRead.value && auth('record:edit'))
+const session = { key: () => String(userStore.sessionEpoch), allowed: () => canRead.value }
+const recordsError = ref('')
+const boxesError = ref('')
+const summaryError = ref('')
+const summary = ref<ArchiveBoxSummary>()
+const {
+  list: records,
+  loadedRowOffset: recordRowOffset,
+  pageNum: page,
+  pageSize: size,
+  total,
+  loading: recordsLoading,
+  query: filters,
+  loadData: loadRecords,
+  handleSearch,
+  resetFilters,
+  handlePageChange: changeRecordPage,
+  handleSizeChange: changeRecordSize,
+  resultVersion: recordVersion,
+} = useCrudList<ArchiveBoxRecord, { keyword: string, bah: string, sjh: string, boxNo: string, status: ArchiveBoxStatus | '' }>({
+  defaultQuery: { keyword: '', bah: '', sjh: '', boxNo: '', status: '' },
+  defaultPageSize: 100,
+  immediate: false,
+  session: { ...session, onReset: () => { recordsError.value = '' } },
+  fetchApi: async (params, { isCurrent }) => {
+    if (isCurrent()) { recordsError.value = '' }
+    try {
+      return await getArchiveBoxRecords({
+        page: params.page,
+        size: params.size,
+        sortBy: 'updatedAt',
+        sortOrder: 'desc',
+        ...(params.keyword.trim() && { keyword: params.keyword.trim() }),
+        ...(params.bah.trim() && { bah: params.bah.trim() }),
+        ...(params.sjh.trim() && { sjh: params.sjh.trim() }),
+        ...(params.boxNo.trim() && { boxNo: params.boxNo.trim() }),
+        ...(params.status && { status: params.status }),
+      })
+    }
+    catch (cause: unknown) {
+      if (isCurrent()) { recordsError.value = cause instanceof Error ? cause.message : '装箱明细加载失败' }
+      return { list: [], total: 0, page: params.page, size: params.size }
+    }
+  },
 })
-
-const recordRowOffset = ref(0)
-const boxRowOffset = ref(0)
-const page = ref(1)
-const size = ref(100)
-const total = ref(0)
-const boxPage = ref(1)
-const boxSize = ref(100)
-const boxTotal = ref(0)
-const boxKeyword = ref('')
-
-const filters = reactive({
-  keyword: '',
-  bah: '',
-  sjh: '',
-  boxNo: '',
-  status: '' as ArchiveBoxStatus | '',
+const {
+  list: boxes,
+  loadedRowOffset: boxRowOffset,
+  pageNum: boxPage,
+  pageSize: boxSize,
+  total: boxTotal,
+  loading: boxesLoading,
+  query: boxQuery,
+  loadData: loadBoxes,
+  handleSearch: searchBoxes,
+  resetFilters: resetBoxSearch,
+  handlePageChange: changeBoxPage,
+  handleSizeChange: changeBoxSize,
+} = useCrudList<ArchiveBoxGroup, { keyword: string }>({
+  defaultQuery: { keyword: '' },
+  defaultPageSize: 100,
+  immediate: false,
+  session: { ...session, onReset: () => { boxesError.value = '' } },
+  fetchApi: async (params, { isCurrent }) => {
+    if (isCurrent()) { boxesError.value = '' }
+    try {
+      return await getArchiveBoxGroups({ page: params.page, size: params.size, ...(params.keyword.trim() && { keyword: params.keyword.trim() }) })
+    }
+    catch (cause: unknown) {
+      if (isCurrent()) { boxesError.value = cause instanceof Error ? cause.message : '箱号汇总加载失败' }
+      return { list: [], total: 0, page: params.page, size: params.size }
+    }
+  },
 })
+const boxKeyword = toRef(boxQuery, 'keyword')
+const loading = computed(() => activeView.value === 'records' ? recordsLoading.value : boxesLoading.value)
+const error = computed(() => activeView.value === 'records' ? recordsError.value : boxesError.value)
+let summaryGeneration = 0
+let disposed = false
+let operationGeneration = 0
+let viewGeneration = 0
+const deleting = ref(false)
 
 const dialogVisible = ref(false)
 const submitting = ref(false)
@@ -109,6 +169,7 @@ const recordActions: MrrTableAction[] = [
     tone: 'danger',
   },
 ]
+const availableRecordActions = computed(() => recordActions.map(action => ({ ...action, disabled: submitting.value || deleting.value })))
 const boxActions: MrrTableAction[] = [
   {
     key: 'view',
@@ -139,35 +200,37 @@ interface MetricCard {
   valueTone?: MetricValueTone
 }
 
-const metricCards = computed<MetricCard[]>(() => [
-  {
-    label: '装箱病案',
-    value: summary.value.totalRecords,
-    icon: 'i-lucide:folder-archive',
-    tone: 'blue',
-  },
-  {
-    label: '已用箱数',
-    value: summary.value.totalBoxes,
-    icon: 'i-lucide:package',
-    tone: 'green',
-  },
-  {
-    label: '缺失病案',
-    value: summary.value.missingCount,
-    icon: 'i-lucide:file-question',
-    tone: 'danger',
-    valueTone: summary.value.missingCount > 0 ? 'danger' : 'default',
-  },
-  {
-    label: '异常记录',
-    value: summary.value.abnormalCount,
-    icon: 'i-lucide:triangle-alert',
-    note: '缺失、错箱、冲突及其他异常',
-    tone: 'amber',
-    valueTone: summary.value.abnormalCount > 0 ? 'warning' : 'default',
-  },
-])
+const metricCards = computed<MetricCard[]>(() => summary.value
+  ? [
+      {
+        label: '装箱病案',
+        value: summary.value.totalRecords,
+        icon: 'i-lucide:folder-archive',
+        tone: 'blue',
+      },
+      {
+        label: '已用箱数',
+        value: summary.value.totalBoxes,
+        icon: 'i-lucide:package',
+        tone: 'green',
+      },
+      {
+        label: '缺失病案',
+        value: summary.value.missingCount,
+        icon: 'i-lucide:file-question',
+        tone: 'danger',
+        valueTone: summary.value.missingCount > 0 ? 'danger' : 'default',
+      },
+      {
+        label: '异常记录',
+        value: summary.value.abnormalCount,
+        icon: 'i-lucide:triangle-alert',
+        note: '缺失、错箱、冲突及其他异常',
+        tone: 'amber',
+        valueTone: summary.value.abnormalCount > 0 ? 'warning' : 'default',
+      },
+    ]
+  : [])
 
 /* 空库/空筛态下数值指标全零时收纳指标区，为表格让出首屏（N5）。 */
 const hasMetricActivity = computed(() => metricCards.value.some(card => Number(card.value) > 0))
@@ -192,73 +255,20 @@ function formatDateTime(value?: string) {
   return value.replace('T', ' ').slice(0, 19)
 }
 
-function buildQuery(): ArchiveBoxQuery {
-  return {
-    page: page.value,
-    size: size.value,
-    sortBy: 'updatedAt',
-    sortOrder: 'desc',
-    ...(filters.keyword.trim() && { keyword: filters.keyword.trim() }),
-    ...(filters.bah.trim() && { bah: filters.bah.trim() }),
-    ...(filters.sjh.trim() && { sjh: filters.sjh.trim() }),
-    ...(filters.boxNo.trim() && { boxNo: filters.boxNo.trim() }),
-    ...(filters.status && { status: filters.status }),
-  }
-}
-
 async function loadSummary() {
-  const response = await getArchiveBoxSummary()
-  summary.value = response.data ?? {
-    totalRecords: 0,
-    totalBoxes: 0,
-    missingCount: 0,
-    abnormalCount: 0,
-  }
-}
-
-async function loadRecords() {
-  loading.value = true
-  error.value = ''
+  if (disposed || !canRead.value) { return }
+  const token = ++summaryGeneration
+  const current = () => !disposed && token === summaryGeneration && canRead.value
+  summaryError.value = ''
   try {
-    const params = buildQuery()
-    const response = await getArchiveBoxRecords(params)
-    const payload = response.data
-    records.value = Array.isArray(payload?.list) ? payload.list : []
-    recordRowOffset.value = pageRowOffset(payload?.page ?? params.page ?? 1, payload?.size ?? params.size ?? 100)
-    total.value = Number(payload?.total || 0)
+    const response = await getArchiveBoxSummary()
+    if (current()) { summary.value = response.data }
   }
   catch (cause: unknown) {
-    records.value = []
-    total.value = 0
-    error.value = cause instanceof Error ? cause.message : '装箱明细加载失败'
-  }
-  finally {
-    loading.value = false
-  }
-}
-
-async function loadBoxes() {
-  loading.value = true
-  error.value = ''
-  try {
-    const params = {
-      page: boxPage.value,
-      size: boxSize.value,
-      ...(boxKeyword.value.trim() && { keyword: boxKeyword.value.trim() }),
+    if (current()) {
+      summary.value = undefined
+      summaryError.value = cause instanceof Error ? cause.message : '装箱概况加载失败'
     }
-    const response = await getArchiveBoxGroups(params)
-    const payload = response.data
-    boxes.value = Array.isArray(payload?.list) ? payload.list : []
-    boxRowOffset.value = pageRowOffset(payload?.page ?? params.page, payload?.size ?? params.size)
-    boxTotal.value = Number(payload?.total || 0)
-  }
-  catch (cause: unknown) {
-    boxes.value = []
-    boxTotal.value = 0
-    error.value = cause instanceof Error ? cause.message : '箱号汇总加载失败'
-  }
-  finally {
-    loading.value = false
   }
 }
 
@@ -269,30 +279,11 @@ async function refreshAll() {
   ])
 }
 
-function handleSearch() {
-  page.value = 1
-  void loadRecords()
-}
-
-function resetFilters() {
-  filters.keyword = ''
-  filters.bah = ''
-  filters.sjh = ''
-  filters.boxNo = ''
-  filters.status = ''
-  handleSearch()
-}
-
-function searchBoxes() {
-  boxPage.value = 1
-  void loadBoxes()
-}
-
 function openBox(boxNo: string) {
+  if (!canRead.value) { return }
   activeView.value = 'records'
   filters.boxNo = boxNo
-  page.value = 1
-  void loadRecords()
+  void handleSearch()
 }
 
 function resetForm() {
@@ -308,11 +299,13 @@ function resetForm() {
 }
 
 function openCreate() {
+  if (!canEdit.value || disposed || submitting.value || deleting.value) { return }
   resetForm()
   dialogVisible.value = true
 }
 
 function openEdit(row: ArchiveBoxRecord) {
+  if (!canEdit.value || disposed || submitting.value || deleting.value || !row.id) { return }
   editingId.value = row.id
   Object.assign(form, {
     bah: row.bah ?? '',
@@ -350,52 +343,59 @@ function buildPayload(): ArchiveBoxRecordPayload | null {
 }
 
 async function submitForm() {
+  if (!canEdit.value || disposed || !dialogVisible.value || submitting.value || deleting.value) { return }
   const payload = buildPayload()
-  if (!payload) {
-    return
-  }
-
+  if (!payload) { return }
+  const id = editingId.value
+  const token = operationGeneration
+  const current = () => !disposed && canEdit.value && operationGeneration === token
   submitting.value = true
   try {
-    if (editingId.value) {
-      await updateArchiveBoxRecord(editingId.value, payload)
-      ElMessage.success('装箱记录已更新')
-    }
-    else {
-      await createArchiveBoxRecord(payload)
-      ElMessage.success('装箱记录已新增')
-    }
+    if (id) { await updateArchiveBoxRecord(id, payload) }
+    else { await createArchiveBoxRecord(payload) }
+    if (!current()) { return }
+    ElMessage.success(id ? '装箱记录已更新' : '装箱记录已新增')
     dialogVisible.value = false
     await refreshAll()
   }
+  catch {
+    // API layer reports current failures; leave the form available for retry.
+  }
   finally {
-    submitting.value = false
+    if (current()) { submitting.value = false }
   }
 }
 
 async function removeRecord(row: ArchiveBoxRecord) {
-  if (!row.id) {
-    return
-  }
-
+  const id = row.id
+  if (!id || !canEdit.value || disposed || deleting.value || submitting.value || loading.value || activeView.value !== 'records') { return }
+  const token = operationGeneration
+  const view = viewGeneration
+  const version = recordVersion.value
+  const current = () => !disposed && canEdit.value && operationGeneration === token
+  deleting.value = true
   try {
     await actionDialog.confirm(
-      `确定删除上架号 ${normalizeText(row.sjh)} 的装箱记录吗？`,
+      `确定删除病案号 ${normalizeText(row.bah)}、上架号 ${normalizeText(row.sjh)} 的装箱记录吗？`,
       '删除装箱记录',
-      {
-        confirmButtonText: '删除',
-        cancelButtonText: '取消',
-        type: 'warning',
-      },
+      { confirmButtonText: '删除', confirmButtonType: 'danger', cancelButtonText: '取消', type: 'warning' },
     )
+    if (!current()) { return }
+    if (view !== viewGeneration || version !== recordVersion.value || recordsLoading.value || !records.value.some(record => record.id === id)) {
+      ElMessage.warning('装箱列表已变化，请重新确认删除对象')
+      return
+    }
+    await deleteArchiveBoxRecord(id)
+    if (!current()) { return }
+    ElMessage.success('装箱记录已删除')
+    await refreshAll()
   }
   catch {
-    return
+    // Cancellation or an API failure must not be reported as success.
   }
-
-  await deleteArchiveBoxRecord(row.id)
-  ElMessage.success('装箱记录已删除')
-  await refreshAll()
+  finally {
+    if (current()) { deleting.value = false }
+  }
 }
 
 function handleRecordAction(action: string, row: ArchiveBoxRecord) {
@@ -416,7 +416,6 @@ function handleBoxAction(action: string, row: ArchiveBoxGroup) {
 function handleViewChange(value: string | number | boolean | undefined) {
   const view: ViewMode = value === 'boxes' ? 'boxes' : 'records'
   activeView.value = view
-  error.value = ''
   if (view === 'records') {
     void loadRecords()
   }
@@ -426,19 +425,37 @@ function handleViewChange(value: string | number | boolean | undefined) {
 }
 
 function handleRecordSizeChange() {
-  page.value = 1
-  void loadRecords()
+  void changeRecordSize(size.value)
 }
 
 function handleBoxSizeChange() {
-  boxPage.value = 1
-  void loadBoxes()
+  void changeBoxSize(boxSize.value)
 }
 
-function resetBoxSearch() {
-  boxKeyword.value = ''
-  searchBoxes()
+watch(dialogVisible, (visible) => { if (!visible) { resetForm() } }, { flush: 'sync' })
+watch(activeView, () => { viewGeneration++ }, { flush: 'sync' })
+function invalidateWrites() {
+  operationGeneration++
+  submitting.value = false
+  deleting.value = false
+  dialogVisible.value = false
+  resetForm()
 }
+watch([session.key, canRead], () => {
+  summaryGeneration++
+  summary.value = undefined
+  summaryError.value = ''
+  invalidateWrites()
+}, { flush: 'sync' })
+watch(canEdit, invalidateWrites, { flush: 'sync' })
+watch([session.key, canRead], ([, allowed]) => {
+  if (allowed) { void refreshAll() }
+})
+onScopeDispose(() => {
+  disposed = true
+  summaryGeneration++
+  invalidateWrites()
+})
 
 onMounted(refreshAll)
 </script>
@@ -454,13 +471,14 @@ onMounted(refreshAll)
         <el-button :icon="Refresh" :loading="loading" @click="refreshAll">
           刷新
         </el-button>
-        <el-button type="primary" :icon="Plus" @click="openCreate">
+        <el-button v-if="canEdit" type="primary" :icon="Plus" :disabled="submitting || deleting" @click="openCreate">
           新增装箱记录
         </el-button>
       </template>
     </MrrPageHeader>
 
-    <section v-if="hasMetricActivity" class="mrr-metric-grid mrr-metric-grid--four mrr-metric-grid--dense" aria-label="装箱概况">
+    <AppError v-if="summaryError" size="compact" :message="summaryError" @retry="loadSummary" />
+    <section v-else-if="hasMetricActivity" class="mrr-metric-grid mrr-metric-grid--four mrr-metric-grid--dense" aria-label="装箱概况">
       <MrrMetricCard
         v-for="card in metricCards"
         :key="card.label"
@@ -599,6 +617,7 @@ onMounted(refreshAll)
             </template>
           </el-table-column>
           <el-table-column
+            v-if="canEdit"
             label="操作"
             :width="recordActionColumnWidth"
             fixed="right"
@@ -606,7 +625,7 @@ onMounted(refreshAll)
           >
             <template #default="{ row }">
               <MrrTableActions
-                :actions="recordActions"
+                :actions="availableRecordActions"
                 :max-inline="recordMaxInlineActions"
                 @select="handleRecordAction($event, row as ArchiveBoxRecord)"
               />
@@ -664,7 +683,7 @@ onMounted(refreshAll)
           :total="total"
           :page-sizes="[10, 20, 50, 100]"
           layout="total, prev, pager, next, jumper, sizes"
-          @current-change="loadRecords"
+          @current-change="changeRecordPage"
           @size-change="handleRecordSizeChange"
         />
         <el-pagination
@@ -674,7 +693,7 @@ onMounted(refreshAll)
           :total="boxTotal"
           :page-sizes="[10, 20, 50, 100]"
           layout="total, prev, pager, next, jumper, sizes"
-          @current-change="loadBoxes"
+          @current-change="changeBoxPage"
           @size-change="handleBoxSizeChange"
         />
       </template>
@@ -686,9 +705,11 @@ onMounted(refreshAll)
       :title="dialogTitle"
       width="min(620px, calc(100% - 24px))"
       destroy-on-close
-      @closed="resetForm"
+      :close-on-click-modal="!submitting"
+      :close-on-press-escape="!submitting"
+      :show-close="!submitting"
     >
-      <el-form label-position="top" class="mrr-edit-form mrr-edit-form--paired">
+      <el-form :disabled="submitting" label-position="top" class="mrr-edit-form mrr-edit-form--paired">
         <el-form-item label="病案号">
           <el-input v-model="form.bah" clearable placeholder="可与上架号任选其一" />
         </el-form-item>
@@ -728,7 +749,7 @@ onMounted(refreshAll)
         </el-form-item>
       </el-form>
       <template #footer>
-        <el-button @click="dialogVisible = false">
+        <el-button :disabled="submitting" @click="dialogVisible = false">
           取消
         </el-button>
         <el-button type="primary" :loading="submitting" @click="submitForm">

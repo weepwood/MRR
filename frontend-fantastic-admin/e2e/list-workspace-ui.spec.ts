@@ -194,3 +194,31 @@ test('箱号查询失败时可在当前视图重试', async ({ page }) => {
   await expect(page.getByRole('button', { name: 'BOX-DEMO-01', exact: true })).toBeVisible()
   await expect(failed).toBeHidden()
 })
+
+test('装箱删除确认显示目标，取消不写入，确认只删除对应记录', async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 })
+  const writes: string[] = []
+  await page.route('**/api/v1/archive-box-records/92002', async (route) => {
+    if (route.request().method() !== 'DELETE') { await route.fallback(); return }
+    writes.push(new URL(route.request().url()).pathname)
+    await route.fulfill({ json: { code: 200, data: 'ok' } })
+  })
+  await page.goto('/archive-boxes')
+  const row = page.getByRole('row').filter({ has: page.getByRole('cell', { name: record.sjh, exact: true }) })
+  const openDelete = async () => {
+    await expect(row.getByRole('cell', { name: record.sjh, exact: true })).toBeVisible()
+    await row.getByRole('button', { name: '删除装箱记录', exact: true }).click()
+  }
+  await openDelete()
+  const dialog = page.getByRole('dialog', { name: '删除装箱记录' })
+  await expect(dialog).toContainText(record.bah)
+  await expect(dialog).toContainText(record.sjh)
+  await dialog.getByRole('button', { name: '取消', exact: true }).click()
+  await expect(dialog).toBeHidden()
+  expect(writes).toEqual([])
+  await openDelete()
+  await dialog.getByRole('button', { name: '删除', exact: true }).click()
+  await expect.poll(() => writes.length).toBe(1)
+  await expect(dialog).toBeHidden()
+  expect(writes).toEqual([expect.stringMatching(/^(?:\/proxy)?\/api\/v1\/archive-box-records\/92002$/)])
+})

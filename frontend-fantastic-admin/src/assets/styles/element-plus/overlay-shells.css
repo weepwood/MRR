@@ -145,7 +145,8 @@ body .mrr-dialog-shell > .mrr-overlay-footer,
 body .mrr-drawer-shell > .mrr-overlay-footer {
   display: flex;
   flex-shrink: 0;
-  gap: 8px;
+  flex-wrap: wrap;
+  gap: var(--mrr-space-2);
   align-items: center;
   justify-content: flex-end;
   padding: 12px;

@@ -45,6 +45,29 @@ export function mrrChartColor(name: 'primary' | 'neutral' | 'danger' | 'warning'
   return cssVariable(token, fallback)
 }
 
+/** Deferred semantic color for chart options; resolve at every theme render. */
+export function mrrChartColorToken(name: Parameters<typeof mrrChartColor>[0]): string {
+  const index = { primary: 0, teal: 1, violet: 2, warning: 3, danger: 4, neutral: 5 }[name]
+  return `var(${PALETTE_TOKENS[index][0]})`
+}
+
+function resolveSeriesColors(value: unknown, palette: string[]): unknown {
+  if (Array.isArray(value)) {
+    const next = value.map(item => resolveSeriesColors(item, palette))
+    return next.some((item, index) => item !== value[index]) ? next : value
+  }
+  if (!value || typeof value !== 'object' || Object.getPrototypeOf(value) !== Object.prototype) { return value }
+  let result: Record<string, unknown> | undefined
+  for (const [key, item] of Object.entries(value)) {
+    const index = key === 'color' && typeof item === 'string'
+      ? PALETTE_TOKENS.findIndex(([token]) => item === `var(${token})`)
+      : -1
+    const resolved = index >= 0 ? palette[index] : resolveSeriesColors(item, palette)
+    if (resolved !== item) { (result ??= { ...value })[key] = resolved }
+  }
+  return result ?? value
+}
+
 export function getMrrChartThemeTokens(): MrrChartThemeTokens {
   const dark = typeof document !== 'undefined' && document.documentElement.classList.contains('dark')
 
@@ -125,6 +148,7 @@ export function applyMrrChartTheme(option: ECOption, tokens = getMrrChartThemeTo
   return {
     ...option,
     color: option.color ?? tokens.palette,
+    series: resolveSeriesColors(option.series, tokens.palette) as ECOption['series'],
     backgroundColor: 'transparent',
     animation: themeChartAnimationEnabled() ? option.animation : false,
     animationDuration: option.animationDuration ?? 420,

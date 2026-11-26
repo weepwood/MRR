@@ -56,6 +56,7 @@ interface AppConfigPanelRef {
 const departmentThemeRef = ref<DepartmentThemeSettingsRef>()
 const ocrSettingsRef = ref<OcrClassificationSettingsRef>()
 const runtimeSettingsRef = ref<RuntimeSettingsRef>()
+const externalLinksRef = ref<{ linkScopeDescription: string }>()
 const appConfigRef = ref<AppConfigPanelRef>()
 const contentRef = ref<HTMLElement>()
 const layoutRef = ref<HTMLElement>()
@@ -508,7 +509,7 @@ onUnmounted(() => {
           <OcrClassificationSettings v-else-if="activeSection === 'ocr'" ref="ocrSettingsRef" />
           <RuntimeSettings v-else-if="activeSection === 'runtime'" ref="runtimeSettingsRef" />
           <DepartmentThemeSettings v-else-if="activeSection === 'department'" ref="departmentThemeRef" />
-          <ExternalLinksSettings v-else-if="activeSection === 'external-links'" />
+          <ExternalLinksSettings v-else-if="activeSection === 'external-links'" ref="externalLinksRef" />
           <AppConfigPanel v-else ref="appConfigRef" />
         </div>
 
@@ -586,7 +587,7 @@ onUnmounted(() => {
             <span class="status-dot" />
             <div>
               <strong>外链设置自动保存</strong>
-              <small>添加或移除后立即保存，并同步到全站「其他」菜单。</small>
+              <small>{{ externalLinksRef?.linkScopeDescription || '正在读取外链配置' }}</small>
             </div>
           </div>
         </div>
@@ -598,6 +599,29 @@ onUnmounted(() => {
 <style scoped src="./unified-settings.css"></style>
 
 <style scoped>
+.settings-content :deep(.setting-section) {
+  display: grid;
+  gap: var(--mrr-space-5);
+  min-width: 0;
+}
+
+.settings-content :deep(.switch-row) {
+  display: flex;
+  gap: var(--mrr-space-4);
+  align-items: center;
+  justify-content: space-between;
+  min-width: 0;
+  min-height: 64px;
+  padding-block: var(--mrr-space-2);
+  border-bottom: 1px solid var(--mrr-border);
+}
+
+.settings-content :deep(.switch-row:last-child) { border-bottom: 0; }
+.settings-content :deep(.switch-row > div) { min-width: 0; overflow-wrap: anywhere; }
+.settings-content :deep(.switch-row .el-switch) { flex: none; }
+.settings-content :deep(.switch-row strong) { font-size: var(--mrr-font-size-sm); font-weight: var(--mrr-font-weight-label); }
+.settings-content :deep(.switch-row p) { margin: var(--mrr-space-1) 0 0; font-size: var(--mrr-font-size-xs); line-height: 1.6; color: var(--mrr-muted-foreground); }
+
 .settings-content :deep(.control-grid:not(.identity-grid)) {
   grid-template-columns: repeat(auto-fit, minmax(min(100%, 240px), 1fr));
 }

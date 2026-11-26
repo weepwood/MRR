@@ -16,7 +16,7 @@ import {
 } from '@/api/modules/system-status'
 import serverLogo from '@/assets/images/server.svg'
 import MrrChart from '@/components/charts/MrrChart.vue'
-import { mrrChartColor } from '@/config/chart-theme'
+import { mrrChartColorToken } from '@/config/chart-theme'
 import useVisibleInterval from '@/utils/composables/useVisibleInterval'
 
 defineOptions({ name: 'PublicSystemStatusPage' })
@@ -99,9 +99,9 @@ const hourlyAvailabilityChart = computed<ECOption>(() => ({
     showSymbol: true,
     symbol: 'circle',
     symbolSize: 6,
-    lineStyle: { width: 2.5, color: mrrChartColor('primary') },
-    itemStyle: { color: mrrChartColor('primary') },
-    areaStyle: { color: mrrChartColor('primary'), opacity: 0.12 },
+    lineStyle: { width: 2.5, color: mrrChartColorToken('primary') },
+    itemStyle: { color: mrrChartColorToken('primary') },
+    areaStyle: { color: mrrChartColorToken('primary'), opacity: 0.12 },
   }],
 }))
 const statusCopy = computed(() => {

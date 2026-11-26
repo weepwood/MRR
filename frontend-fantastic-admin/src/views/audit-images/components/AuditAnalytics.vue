@@ -8,7 +8,7 @@ import { MrrChartCard, MrrLineChart } from '@/components/charts'
 import MrrSectionCard from '@/components/MrrSectionCard/index.vue'
 import MrrTableActions from '@/components/MrrTableActions/index.vue'
 import { useTableActionLayout } from '@/composables/useTableActionLayout'
-import { mrrChartColor } from '@/config/chart-theme'
+import { mrrChartColorToken } from '@/config/chart-theme'
 
 defineOptions({ name: 'AuditAnalytics' })
 
@@ -51,7 +51,7 @@ const trendCategories = computed(() => props.analytics.trend.map(item => formatD
 const trendSeries = computed<MrrLineSeries[]>(() => [{
   name: '访问次数',
   data: props.analytics.trend.map(item => item.count),
-  color: mrrChartColor('primary'),
+  color: mrrChartColorToken('primary'),
   area: true,
   smooth: true,
 }])

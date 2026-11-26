@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it } from 'vitest'
-import { applyMrrChartTheme } from './chart-theme'
+import { applyMrrChartTheme, getMrrChartThemeTokens, mrrChartColorToken } from './chart-theme'
 
 afterEach(() => {
   delete document.documentElement.dataset.motion
@@ -14,6 +14,16 @@ describe('图表视觉契约', () => {
     const themed = applyMrrChartTheme({ animation: true, series })
     expect(themed.animation).toBe(false)
     expect(themed.series).toBe(series)
+  })
+
+  it('在主题重绘时解析语义色，保留显式颜色及原数据', () => {
+    const option = { series: [{ type: 'line' as const, data: [0, 2], lineStyle: { color: mrrChartColorToken('primary') }, itemStyle: { color: '#112233' } }] }
+    const tokens = getMrrChartThemeTokens()
+    const first = applyMrrChartTheme(option, { ...tokens, palette: ['#123456', ...tokens.palette.slice(1)] })
+    const second = applyMrrChartTheme(option, { ...tokens, palette: ['#654321', ...tokens.palette.slice(1)] })
+    expect(first.series).toMatchObject([{ data: [0, 2], lineStyle: { color: '#123456' }, itemStyle: { color: '#112233' } }])
+    expect(second.series).toMatchObject([{ data: [0, 2], lineStyle: { color: '#654321' } }])
+    expect(option.series[0].lineStyle.color).toBe('var(--color-primary)')
   })
 
   it('坐标与图例读取公共字号，保持调用方明确的轴和数据范围', () => {

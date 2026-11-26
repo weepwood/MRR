@@ -1,9 +1,9 @@
 <script setup lang="ts">
 import type { ResponseMetricTrendPoint } from '@/api/types'
 import type { MrrLineSeries, MrrRequestHeatmapItem } from '@/types/chart'
-import { computed } from 'vue'
+import { computed, ref } from 'vue'
 import { MrrLineChart, MrrRequestHeatmap } from '@/components/charts'
-import { mrrChartColor } from '@/config/chart-theme'
+import { mrrChartColorToken } from '@/config/chart-theme'
 
 defineOptions({ name: 'ResponseTrendChart' })
 
@@ -11,7 +11,8 @@ const props = defineProps<{
   data: ResponseMetricTrendPoint[]
 }>()
 
-const categories = computed(() => props.data.map(item => formatBucket(item.bucket)))
+const visiblePoints = ref(16)
+const categories = computed(() => props.data.map(item => formatDateKey(item.bucket)))
 const requestHeatmap = computed<MrrRequestHeatmapItem[]>(() => props.data.map(item => ({
   date: formatDateKey(item.bucket),
   total: item.requestCount ?? 0,
@@ -23,14 +24,14 @@ const durationSeries = computed<MrrLineSeries[]>(() => [
   {
     name: '客户端耗时',
     data: props.data.map(item => item.avgClientDurationMs ?? 0),
-    color: mrrChartColor('primary'),
+    color: mrrChartColorToken('primary'),
     smooth: false,
     area: true,
   },
   {
     name: '服务端耗时',
     data: props.data.map(item => item.avgServerDurationMs ?? 0),
-    color: mrrChartColor('neutral'),
+    color: mrrChartColorToken('neutral'),
     smooth: false,
     dashed: true,
   },
@@ -61,14 +62,6 @@ function formatDuration(value: number) {
 function formatDateKey(bucket: string) {
   const match = bucket.match(/^(\d{4})-(\d{2})-(\d{2})/)
   return match ? `${match[1]}-${match[2]}-${match[3]}` : bucket.slice(0, 10)
-}
-
-function formatBucket(bucket: string) {
-  const dateMatch = bucket.match(/^(\d{4})-(\d{2})-(\d{2})/)
-  if (dateMatch) {
-    return `${dateMatch[2]}/${dateMatch[3]}`
-  }
-  return bucket.length > 10 ? bucket.slice(-10) : bucket
 }
 </script>
 
@@ -106,14 +99,21 @@ function formatBucket(bucket: string) {
       <div class="section-heading">
         <div>
           <strong id="duration-trend-heading">响应耗时趋势</strong>
-          <span>客户端耗时包含网络与浏览器处理；服务端仅统计后端处理。默认展示最近 16 个记录日，滚轮可调整范围。</span>
+          <span>客户端耗时包含网络与浏览器处理；服务端仅统计后端处理。可选择初始展示的记录日数，滚轮可继续调整范围。</span>
         </div>
+        <el-select v-model="visiblePoints" aria-label="耗时趋势显示范围" class="trend-range mrr-single-select">
+          <el-option label="最近 16 个记录日" :value="16" />
+          <el-option label="最近 90 个记录日" :value="90" />
+          <el-option label="全部记录日" :value="365" />
+        </el-select>
       </div>
       <MrrLineChart
         :categories="categories"
         :series="durationSeries"
         y-axis-name="平均耗时"
         unit="ms"
+        :visible-points="visiblePoints"
+        :min-interval="0"
         :height="252"
       />
     </section>
@@ -221,6 +221,8 @@ function formatBucket(bucket: string) {
   align-items: flex-start;
   justify-content: space-between;
 }
+
+.trend-range { width: 174px; max-width: 100%; }
 
 .section-heading > div {
   display: grid;

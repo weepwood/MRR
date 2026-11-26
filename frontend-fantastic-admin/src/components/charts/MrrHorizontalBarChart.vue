@@ -2,7 +2,7 @@
 import type { ECOption } from '@/plugins/echarts'
 import type { MrrChartCountItem } from '@/types/chart'
 import { computed } from 'vue'
-import { mrrChartColor } from '@/config/chart-theme'
+import { mrrChartColorToken } from '@/config/chart-theme'
 import MrrChart from './MrrChart.vue'
 
 defineOptions({ name: 'MrrHorizontalBarChart' })
@@ -62,7 +62,7 @@ const option = computed<ECOption>(() => ({
       type: 'bar',
       data: props.data.map(item => ({
         value: item.count,
-        itemStyle: { color: item.color ?? props.color ?? mrrChartColor('primary') },
+        itemStyle: { color: item.color ?? props.color ?? mrrChartColorToken('primary') },
       })),
       barWidth: 12,
       showBackground: true,

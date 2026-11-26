@@ -23,8 +23,12 @@ const linkScopeDescription = computed(() => {
   if (settingsStore.uiSettingsSyncState === 'local-only') {
     return '这些链接保存在本机浏览器。当前账号缺少系统管理权限，修改不会同步到全站。'
   }
-  return '这些链接保存在系统数据库，并同步到全站的“其他”菜单。'
+  if (settingsStore.uiSettingsSyncState === 'failed') { return '链接已保存在本机浏览器，但全站同步失败。' }
+  if (settingsStore.uiSettingsSyncState === 'synced') { return '这些链接已同步到全站的“其他”菜单。' }
+  return '链接先保存在本机；全站同步取决于权限和服务器返回结果。'
 })
+
+defineExpose({ linkScopeDescription })
 
 function persistSettings() {
   settingsStore.saveAppSettings()

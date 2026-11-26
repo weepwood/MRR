@@ -7,6 +7,7 @@ const colors = [
   { label: '工作区', variable: '--mrr-workspace-bg' },
   { label: '分隔线', variable: '--mrr-border' },
 ]
+const typography = [{ label: '指标数值', size: 'metric' }, { label: '分区标题', size: 'lg' }, { label: '正文', size: 'sm' }, { label: '辅助说明', size: 'xs' }]
 const radii = ['sm', 'md', 'lg', 'card']
 </script>
 
@@ -24,6 +25,12 @@ const radii = ['sm', 'md', 'lg', 'card']
         <code>{{ radius }}</code>
       </div>
     </div>
+    <div class="token-typography">
+      <div v-for="item in typography" :key="item.size">
+        <span :style="{ fontSize: `var(--mrr-font-size-${item.size})` }">{{ item.label }}</span>
+        <code>--mrr-font-size-{{ item.size }}</code>
+      </div>
+    </div>
     <p class="example-note">
       圆角、主色和字体沿用全站设置。页头与外层布局本身也使用 MrrPageHeader 和 MrrPageShell。
     </p>
@@ -31,9 +38,13 @@ const radii = ['sm', 'md', 'lg', 'card']
 </template>
 
 <style scoped>
+.token-typography { display: grid; gap: var(--mrr-space-2); }
+.token-typography > div { display: flex; flex-wrap: wrap; gap: var(--mrr-space-2); align-items: baseline; justify-content: space-between; padding-bottom: var(--mrr-space-2); border-bottom: 1px solid var(--mrr-border); }
+.token-typography code { font-size: var(--mrr-font-size-xs); color: var(--mrr-muted-foreground); overflow-wrap: anywhere; }
+
 .token-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(145px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 145px), 1fr));
   gap: var(--mrr-space-4);
 }
 

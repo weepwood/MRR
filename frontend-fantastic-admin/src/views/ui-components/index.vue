@@ -2,6 +2,7 @@
 import { computed, ref } from 'vue'
 import { categories, examples } from './catalog'
 import BasicExamples from './components/BasicExamples.vue'
+import BusinessExamples from './components/BusinessExamples.vue'
 import DataExamples from './components/DataExamples.vue'
 import FeedbackExamples from './components/FeedbackExamples.vue'
 import PatternExamples from './components/PatternExamples.vue'
@@ -81,6 +82,7 @@ function resetExamples() {
             <SpecialExamples v-if="example.id === 'special-controls'" />
             <BasicExamples v-else-if="['buttons', 'navigation', 'fields', 'selection'].includes(example.id)" :example="example.id" />
             <DataExamples v-else-if="['metrics', 'table'].includes(example.id)" :example="example.id" />
+            <BusinessExamples v-else-if="['business-patterns', 'charts'].includes(example.id)" :example="example.id" />
             <FeedbackExamples v-else-if="['feedback', 'overlays', 'glass'].includes(example.id)" :example="example.id" />
             <PatternExamples v-else-if="['page-header', 'motion'].includes(example.id)" :example="example.id" />
             <TokenExamples v-else />
@@ -215,13 +217,13 @@ function resetExamples() {
 
 .gallery-example-heading h2 {
   margin: 0;
-  font-size: 18px;
-  font-weight: 700;
+  font-size: var(--mrr-font-size-lg);
+  font-weight: var(--mrr-font-weight-heading);
 }
 
 .gallery-example-heading p {
   margin: var(--mrr-space-2) 0;
-  font-size: 13px;
+  font-size: var(--mrr-font-size-sm);
   line-height: 1.7;
   color: var(--mrr-muted-foreground);
 }
@@ -289,7 +291,7 @@ function resetExamples() {
 
 .gallery-preview :deep(.example-note) {
   margin: 0;
-  font-size: 13px;
+  font-size: var(--mrr-font-size-sm);
   line-height: 1.7;
   color: var(--mrr-muted-foreground);
 }

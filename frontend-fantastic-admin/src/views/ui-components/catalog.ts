@@ -16,9 +16,11 @@ export const examples = [
   { id: 'selection', category: 'form', title: '选择与开关', description: '复选框、开关和滑块使用独立的本页示例状态。', components: ['ElCheckbox', 'ElSwitch', 'ElSlider'] },
   { id: 'metrics', category: 'data', title: '指标卡片', description: '统一语义图标、两行摘要、i 信息提示及文本值；数值均为演示。', components: ['MrrMetricCard'] },
   { id: 'table', category: 'data', title: '筛选与数据面板', description: '组合筛选、结果、状态和行操作，体验本地查询与翻页。', components: ['MrrDataTablePanel', 'MrrSectionCard', 'MrrFilterBar', 'MrrTableActions', 'MrrStatusTag', 'ElTag', 'ElPagination'] },
+  { id: 'business-patterns', category: 'data', title: '业务编辑与批量操作', description: '验证真实编辑表单、只读状态、复选选择及批量反馈；仅合成数据。', components: ['mrr-edit-form', 'MrrDialog', 'ElForm', 'ElCheckbox'] },
+  { id: 'charts', category: 'data', title: '图表与时间范围', description: '使用真实折线和排行组件，验证主题、缩放与空结果。', components: ['MrrLineChart', 'MrrHorizontalBarChart', 'MrrChart'] },
   { id: 'feedback', category: 'feedback', title: '加载、空态与错误', description: '主动切换状态，体验错误重试和空态恢复入口。', components: ['AppLoading', 'AppEmpty', 'AppError', 'ElProgress', 'ElAlert'] },
   { id: 'motion', category: 'feedback', title: '动效与刷新反馈', description: '进行中光圈、数值更新、表格刷新与区块入场；关闭动效后状态仍可读。', components: ['MrrStatusTag live', 'MrrMetricCard', 'MrrDataTablePanel loading / result-key', 'mrr-page-enter'] },
-  { id: 'overlays', category: 'feedback', title: '对话框、抽屉与气泡', description: '检查浮层、关闭行为和键盘操作；确认只更新示例反馈。', components: ['ElDialog', 'ElDrawer', 'ElPopover'] },
+  { id: 'overlays', category: 'feedback', title: '对话框、抽屉与气泡', description: '检查浮层、关闭行为和键盘操作；确认只更新示例反馈。', components: ['MrrDialog', 'MrrDrawer', 'ElDialog', 'ElDrawer', 'ElPopover'] },
   { id: 'glass', category: 'feedback', title: '毛玻璃与背景模糊（演示）', description: 'backdrop-filter 毛玻璃效果仅供设计比较；生产 UI 当前统一使用不透明表面。', components: ['backdrop-filter'] },
   { id: 'tokens', category: 'tokens', title: '颜色、圆角与排版', description: '直接读取当前设计令牌；外观跟随全站设置。', components: ['tokens.css', 'MrrPageShell', 'MrrPageHeader'] },
 ] as const

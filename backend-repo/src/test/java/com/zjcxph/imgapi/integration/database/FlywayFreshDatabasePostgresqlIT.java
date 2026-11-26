@@ -74,14 +74,7 @@ class FlywayFreshDatabasePostgresqlIT extends PostgresqlIntegrationTestSupport {
             var previous = newFlyway(url, "20261123170000");
             assertThat(previous.migrate().success).isTrue();
             try (Connection connection = connection(url); Statement sql = connection.createStatement()) {
-                sql.executeUpdate("INSERT INTO app.mr_archive(bah,sjh) VALUES ('7000011','7000012')");
-                sql.executeUpdate("INSERT INTO app.mr_scan(bah,sjh,filename,pages,uploadflag,folder,migration_status) VALUES ('7000011','7000012','synthetic.png',1,1,'synthetic','migrating')");
-                sql.executeUpdate("INSERT INTO app.mr_patient(bah,name,department) VALUES ('7000011','synthetic','synthetic')");
-                sql.executeUpdate("INSERT INTO app.mrr_data_quality_run(status,triggered_by) VALUES ('RUNNING','synthetic-upgrade'),('RUNNING','synthetic-upgrade'),('SUCCESS','synthetic-upgrade')");
-                sql.executeUpdate("INSERT INTO app.mrr_data_quality_check_result(run_id,check_code,check_name,severity,issue_count) SELECT id,'synthetic','synthetic','WARNING',1 FROM app.mrr_data_quality_run WHERE status='SUCCESS' AND triggered_by='synthetic-upgrade'");
-                sql.executeUpdate("INSERT INTO app.migration_job(status,mode,total_count,processed_count) VALUES ('running','folder',10,3)");
-                sql.executeUpdate("INSERT INTO app.access_log(request_id,username,method,request_uri,access_time,response_status) VALUES ('synthetic-upgrade','synthetic','GET','/synthetic',CURRENT_TIMESTAMP,'200')");
-                sql.executeUpdate("INSERT INTO app.token_revocation(token_hash,expires_at) VALUES (repeat('a',64),CURRENT_TIMESTAMP + interval '1 day')");
+                createLegacyProbeData(sql);
                 var before = upgradeSnapshot(sql, false);
                 var oldChecksums = migrationSnapshot(sql, "20261123170000");
 
@@ -123,7 +116,18 @@ class FlywayFreshDatabasePostgresqlIT extends PostgresqlIntegrationTestSupport {
         }
     }
 
-    private static java.util.Map<String, String> upgradeSnapshot(Statement sql, boolean latest) throws SQLException {
+    static void createLegacyProbeData(Statement sql) throws SQLException {
+        sql.executeUpdate("INSERT INTO app.mr_archive(bah,sjh) VALUES ('7000011','7000012')");
+        sql.executeUpdate("INSERT INTO app.mr_scan(bah,sjh,filename,pages,uploadflag,folder,migration_status) VALUES ('7000011','7000012','synthetic.png',1,1,'synthetic','migrating')");
+        sql.executeUpdate("INSERT INTO app.mr_patient(bah,name,department) VALUES ('7000011','synthetic','synthetic')");
+        sql.executeUpdate("INSERT INTO app.mrr_data_quality_run(status,triggered_by) VALUES ('RUNNING','synthetic-upgrade'),('RUNNING','synthetic-upgrade'),('SUCCESS','synthetic-upgrade')");
+        sql.executeUpdate("INSERT INTO app.mrr_data_quality_check_result(run_id,check_code,check_name,severity,issue_count) SELECT id,'synthetic','synthetic','WARNING',1 FROM app.mrr_data_quality_run WHERE status='SUCCESS' AND triggered_by='synthetic-upgrade'");
+        sql.executeUpdate("INSERT INTO app.migration_job(status,mode,total_count,processed_count) VALUES ('running','folder',10,3)");
+        sql.executeUpdate("INSERT INTO app.access_log(request_id,username,method,request_uri,access_time,response_status) VALUES ('synthetic-upgrade','synthetic','GET','/synthetic',CURRENT_TIMESTAMP,'200')");
+        sql.executeUpdate("INSERT INTO app.token_revocation(token_hash,expires_at) VALUES (repeat('a',64),CURRENT_TIMESTAMP + interval '1 day')");
+    }
+
+    static java.util.Map<String, String> upgradeSnapshot(Statement sql, boolean latest) throws SQLException {
         var snapshot = new java.util.LinkedHashMap<String, String>();
         for (String table : java.util.List.of("mr_archive", "mr_scan", "mr_patient", "mrr_data_quality_run",
                 "mrr_data_quality_check_result", "migration_job", "access_log", "token_revocation")) {
@@ -139,15 +143,15 @@ class FlywayFreshDatabasePostgresqlIT extends PostgresqlIntegrationTestSupport {
         return snapshot;
     }
 
-    private static String migrationSnapshot(Statement sql, String version) throws SQLException {
+    static String migrationSnapshot(Statement sql, String version) throws SQLException {
         return singleString(sql, "SELECT jsonb_agg(jsonb_build_array(installed_rank,version,script,checksum,success) ORDER BY installed_rank)::text FROM app.flyway_schema_history WHERE version <= '" + version + "'");
     }
 
-    private static Flyway newFlyway(String jdbcUrl) {
+    static Flyway newFlyway(String jdbcUrl) {
         return newFlyway(jdbcUrl, null);
     }
 
-    private static Flyway newFlyway(String jdbcUrl, String target) {
+    static Flyway newFlyway(String jdbcUrl, String target) {
         FluentConfiguration configuration = Flyway.configure()
                 .dataSource(jdbcUrl, postgresqlUsername(), postgresqlPassword())
                 .locations("classpath:db/migration", "classpath:db/callback")
@@ -210,21 +214,21 @@ class FlywayFreshDatabasePostgresqlIT extends PostgresqlIntegrationTestSupport {
         }
     }
 
-    private static void createDatabase(String adminUrl, String databaseName) throws SQLException {
+    static void createDatabase(String adminUrl, String databaseName) throws SQLException {
         try (Connection connection = connection(adminUrl);
              Statement statement = connection.createStatement()) {
             statement.execute("CREATE DATABASE " + quoteIdentifier(databaseName));
         }
     }
 
-    private static void dropDatabase(String adminUrl, String databaseName) throws SQLException {
+    static void dropDatabase(String adminUrl, String databaseName) throws SQLException {
         try (Connection connection = connection(adminUrl);
              Statement statement = connection.createStatement()) {
             statement.execute("DROP DATABASE IF EXISTS " + quoteIdentifier(databaseName) + " WITH (FORCE)");
         }
     }
 
-    private static Connection connection(String jdbcUrl) throws SQLException {
+    static Connection connection(String jdbcUrl) throws SQLException {
         return DriverManager.getConnection(jdbcUrl, postgresqlUsername(), postgresqlPassword());
     }
 
@@ -235,7 +239,7 @@ class FlywayFreshDatabasePostgresqlIT extends PostgresqlIntegrationTestSupport {
         }
     }
 
-    private static String databaseName(String jdbcUrl) {
+    static String databaseName(String jdbcUrl) {
         URI uri = postgresUri(jdbcUrl);
         String path = uri.getPath();
         if (path == null || path.length() <= 1) {
@@ -244,12 +248,12 @@ class FlywayFreshDatabasePostgresqlIT extends PostgresqlIntegrationTestSupport {
         return path.substring(1);
     }
 
-    private static String databaseUrl(String jdbcUrl, String databaseName) {
+    static String databaseUrl(String jdbcUrl, String databaseName) {
         URI uri = postgresUri(jdbcUrl);
         return "jdbc:postgresql://" + uri.getRawAuthority() + "/" + databaseName;
     }
 
-    private static URI postgresUri(String jdbcUrl) {
+    static URI postgresUri(String jdbcUrl) {
         if (!jdbcUrl.startsWith("jdbc:postgresql://")) {
             throw new IllegalArgumentException("Unsupported PostgreSQL JDBC URL: " + jdbcUrl);
         }

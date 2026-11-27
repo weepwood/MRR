@@ -74,7 +74,11 @@ final class NasOperationIsolation implements AutoCloseable {
         var nativeStarted = new java.util.concurrent.atomic.AtomicBoolean();
         var slotReleased = new java.util.concurrent.atomic.AtomicBoolean();
         Runnable releaseSlot = () -> {
-            if (slotReleased.compareAndSet(false, true)) slots.release();
+            // The successful caller must not return while another thread has
+            // marked the slot released but has not actually returned the permit.
+            synchronized (slotReleased) {
+                if (slotReleased.compareAndSet(false, true)) slots.release();
+            }
         };
         var result = new CompletableFuture<T>();
         var claimed = new CompletableFuture<Boolean>();

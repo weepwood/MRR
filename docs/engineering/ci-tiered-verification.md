@@ -144,3 +144,12 @@ CI 使用合成数据与隔离实例；Chrome 86 检查是生产资源兼容检�
 补充验收：实际 `playwright --list --project=chromium` 单次清单 521 个唯一 Chromium spec ID，两个分片为 261+260，交集/遗漏/额外均零；预热分别保留。这仅为完整测试清单验证，非521个已执行通过。真实 CI 模式下本地隔离测试生成 JUnit 和 JSON 两种报告且零失败/重试；正常 Mock 与两分片入口均保存这两种报告，以 JSON spec ID、状态、尝试次数对照，JUnit 保持原有消费者兼容。新增门禁测试旧实现实际5失败，新增手动分片契约和报告契约分别先失败后通过；最终 Python 278项中273通过、5既有跳过，四份工作流 actionlint、ESLint 和工程文档通过。旧707a49d3的Pages已通过，未将旧SHA结果当成新提交验收。未提交医疗权限测试保持不变。
 
 优化前最终对照（707a49d3）：GitHub 45929413272 完整 Quality Gate 与 Windows 恢复/候选总门禁成功，45929413251 Pages、治理和监控均成功。Pages build 20.65min（定向Mock18.68min、静态冒烟0.55min），361项通过、1项flaky；完整候选 build 26.65min（Mock19.83min、后端2.95min、前端1.90min、Chromium准备0.23min）。各Job与步骤实际时间来自已完成Job元数据；最终全量日志/总Runner时长仍需独立补取，不将旧SHA验收当成新SHA通过。
+
+
+## 2026-11-27 首轮新版远端结果与 NAS 回归
+
+47063b90 的治理、监控、Pages 通过；45932224231 Pages build 1.87min（旧20.65min，减少18.78min，静态冒烟32s仍保留）。Quality 45932224227 的 scope/development/e2e/docs 通过，release 在草稿阶段延期；integration/build 后端测试1309项1错误（NasArchiveImageSourceTest.consecutiveBodyFailuresTripNodeDespiteSuccessfulOpensAndPreserveHealthyNode），pr-gate 实际拒绝 integration 失败，不能解释为仅有意草稿延期。下载实际 Mock JSON/JUnit：单次业务521项，519首过、2 flaky（login-layout 动画及 users-query-feedback，分别2/3次尝试），预热1通过，无最终失败/跳过。E2E step 29.65min 高于旧19.83min，尚不能宣称整体提速。Docs job 0.58min。Pages去重收益不等于整条流水线等待时间或实际计费收益。
+
+NAS 实际旧源码存在释放标志先于 semaphore.release 的竞争；单隔离器本地10000次未复现，随后旧源码四独立隔离器同条件压力测试实际抛出 CapacityException；仅同步同一次释放操作后共400000次通过，纳入新增回归，NAS/限流/熔断相关24项零失败/跳过。保留原超时、容量、迟到资源回收、权限检查；新源码须Linux复验，不将增量JaCoCo历史数据警告当成完整覆盖率验收。
+
+手动双分片 45936230623 已提交并运行，head 47063b90，PR测试合并提交2b0b48be8a9ae527d3fe32db8fab3f8045475d07，两者Git tree 81d540a1f7f3d758cf94b554dc81dd468350722b 完全相同。保留原单次报告用于同树精确比较；分片尚未完成，不宣称独立Runner加速或稳定性结果。原权限测试逐字节保留。

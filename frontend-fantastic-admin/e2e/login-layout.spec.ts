@@ -440,6 +440,37 @@ test.describe('登录页统一设计', () => {
     await expect(card).toHaveCSS('height', '628px')
   })
 
+  test('原生初始动画被取消后仍能完成真实登录注册切换采样', async ({ page }) => {
+    await page.setViewportSize({ width: 1440, height: 1000 })
+    await page.emulateMedia({ reducedMotion: 'no-preference' })
+    await page.goto('/login')
+    await expect(page.locator('#login-account')).toBeVisible()
+    const shell = page.locator('.login-shell')
+    await shell.evaluate((element) => {
+      // Cancel an actual browser Animation when the helper reads finished.
+      // No changes to product animation or transition geometry.
+      const animation = element.animate([{ opacity: 1 }, { opacity: 1 }], { duration: 60_000 })
+      const getFinished = Object.getOwnPropertyDescriptor(Animation.prototype, 'finished')!.get!
+      Object.defineProperty(animation, 'finished', {
+        configurable: true,
+        get() {
+          const finished = getFinished.call(animation)
+          animation.cancel()
+          return finished
+        },
+      })
+    })
+    const { forward, backward, initial } = await sampleAuthModeSwitch(page)
+    expect(forward.some(frame => frame.enterX < -20 && frame.leaveX > 40)).toBe(true)
+    expect(backward.some(frame => frame.enterX > 20 && frame.leaveX < -40)).toBe(true)
+    for (const frame of [...forward, ...backward]) {
+      expect(frame.height).toBe(initial.height)
+      expect(frame.properties).toEqual(['transform', 'transform'])
+    }
+    await expect(page.locator('.register-form')).toHaveCount(0)
+    await expect(page.locator('#login-account')).toBeVisible()
+  })
+
   test('竖屏登录与注册切换时卡片顶部保持稳定', async ({ page }) => {
     await page.setViewportSize({ width: 390, height: 844 })
     await page.emulateMedia({ reducedMotion: 'no-preference' })

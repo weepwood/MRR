@@ -1,4 +1,5 @@
 import { expect, test } from '@playwright/test'
+import { isolateLocalVisualSettings } from './helpers/local-visual-settings'
 
 test('OSS标签按需执行有限只读检查并记录摘要', async ({ page }) => {
   const requests: string[] = []
@@ -59,6 +60,7 @@ test('切换标签页使在途结果失效，重新进入仍为未执行', async
 })
 
 test('明暗主题和窄屏可阅读，未配置提示可清空', async ({ page }) => {
+  await isolateLocalVisualSettings(page)
   await page.addInitScript(() => {
     const key = 'MRR-ADMIN:app-settings'
     const settings = JSON.parse(localStorage.getItem(key) || '{}')

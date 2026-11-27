@@ -1,4 +1,5 @@
 import { expect, test } from '@playwright/test'
+import { isolateLocalVisualSettings } from './helpers/local-visual-settings'
 
 test('免登录模式下可以查看扫描记录详情', async ({ page }) => {
   await page.route('**/api/v1/scan/cursor/condition?**', async (route) => {
@@ -125,6 +126,7 @@ test('兼容包含查询提交后重置游标并按同一条件翻批', async ({
 
 for (const theme of ['light', 'dark']) {
   test(`${theme} 主题下查询面板在宽窄屏保持可读`, async ({ page }) => {
+    await isolateLocalVisualSettings(page)
     await page.addInitScript((scheme) => {
       localStorage.setItem('MRR-ADMIN:app-settings', JSON.stringify({
         app: { colorScheme: scheme, pageTitleStyle: 'card' },

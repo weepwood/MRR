@@ -3,6 +3,7 @@ import fs from 'node:fs/promises'
 import path from 'node:path'
 import process from 'node:process'
 import { expect, test } from '@playwright/test'
+import { isolateLocalVisualSettings } from './helpers/local-visual-settings'
 
 test.use({ storageState: 'e2e/.auth/anonymous.json' })
 const evidence = process.env.MRR_ACCOUNT_VISUAL_EVIDENCE
@@ -28,6 +29,7 @@ async function measure(form: Locator) {
 for (const palette of ['mrr', 'gr8r'] as const) {
   for (const theme of ['light', 'dark'] as const) {
     test(`账户表单迁移视觉 ${palette}/${theme}`, async ({ page }) => {
+      await isolateLocalVisualSettings(page)
       await page.addInitScript(({ palette, theme }) => localStorage.setItem('MRR-ADMIN:app-settings', JSON.stringify({ app: { colorScheme: theme, themePalette: palette, enableMotion: false } })), { palette, theme })
       await page.route('**/api/v1/public/status/developer-mode', route => route.fulfill({ json: { code: 200, data: { enabled: false, accessMode: 'DISABLED' } } }))
       for (const width of [1440, 390]) {

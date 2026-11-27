@@ -1,4 +1,7 @@
 import { expect, test } from '@playwright/test'
+import { isolateLocalVisualSettings } from './helpers/local-visual-settings'
+
+test.beforeEach(async ({ page }) => { await isolateLocalVisualSettings(page) })
 
 test('缓存迁移页离开后60秒无轮询，返回恢复且保留手动刷新选项', async ({ page }) => {
   await page.addInitScript(() => localStorage.setItem('MRR-ADMIN:app-settings', JSON.stringify({

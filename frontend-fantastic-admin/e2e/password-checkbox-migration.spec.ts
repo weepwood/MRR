@@ -3,6 +3,7 @@ import fs from 'node:fs/promises'
 import path from 'node:path'
 import process from 'node:process'
 import { expect, test } from '@playwright/test'
+import { isolateLocalVisualSettings } from './helpers/local-visual-settings'
 
 const evidence = process.env.MRR_PASSWORD_VISUAL_EVIDENCE
 const capture = process.env.MRR_PASSWORD_VISUAL_CAPTURE === 'true'
@@ -49,6 +50,7 @@ for (const palette of ['mrr', 'gr8r'] as const) {
     test.describe(`${palette}/${theme}`, () => {
       test.use({ storageState: 'e2e/.auth/anonymous.json' })
       test('记住用户名与个人密码表单视觉', async ({ page }) => {
+        await isolateLocalVisualSettings(page)
         await page.addInitScript(({ palette, theme }) => localStorage.setItem('MRR-ADMIN:app-settings', JSON.stringify({ app: { colorScheme: theme, themePalette: palette, enableMotion: false }, menu: { mode: 'single' } })), { palette, theme })
         await page.route('**/api/v1/public/status/developer-mode', route => route.fulfill({ json: { code: 200, data: { enabled: false, accessMode: 'DISABLED' } } }))
         await page.setViewportSize({ width: 1440, height: 1000 })

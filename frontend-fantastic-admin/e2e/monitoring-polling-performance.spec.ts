@@ -1,4 +1,7 @@
 import { expect, test } from '@playwright/test'
+import { isolateLocalVisualSettings } from './helpers/local-visual-settings'
+
+test.beforeEach(async ({ page }) => { await isolateLocalVisualSettings(page) })
 
 test('监控仅在可见的活动路由轮询，返回后尊重手动暂停', async ({ page }) => {
   await page.addInitScript(() => {

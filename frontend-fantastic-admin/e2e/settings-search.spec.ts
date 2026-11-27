@@ -1,4 +1,5 @@
 import { expect, test } from '@playwright/test'
+import { isolateLocalVisualSettings } from './helpers/local-visual-settings'
 
 test.describe('系统设置搜索', () => {
   test('搜索分类和设置文案，选择结果后定位到设置组', async ({ page }) => {
@@ -67,6 +68,7 @@ test.describe('系统设置搜索', () => {
   })
 
   test('窄屏下提示无匹配结果，并打开界面外观的目标标签页', async ({ page }) => {
+    await isolateLocalVisualSettings(page)
     await page.emulateMedia({ reducedMotion: 'reduce' })
     await page.setViewportSize({ width: 375, height: 720 })
     await page.addInitScript(() => {

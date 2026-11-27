@@ -1,5 +1,8 @@
 import type { Page } from '@playwright/test'
 import { expect, test } from '@playwright/test'
+import { isolateLocalVisualSettings } from './helpers/local-visual-settings'
+
+test.beforeEach(async ({ page }) => { await isolateLocalVisualSettings(page) })
 
 async function prepare(page: Page, width: number) {
   await page.setViewportSize({ width, height: 900 })

@@ -142,3 +142,5 @@ CI 使用合成数据与隔离实例；Chrome 86 检查是生产资源兼容检�
 
 
 补充验收：实际 `playwright --list --project=chromium` 单次清单 521 个唯一 Chromium spec ID，两个分片为 261+260，交集/遗漏/额外均零；预热分别保留。这仅为完整测试清单验证，非521个已执行通过。真实 CI 模式下本地隔离测试生成 JUnit 和 JSON 两种报告且零失败/重试；正常 Mock 与两分片入口均保存这两种报告，以 JSON spec ID、状态、尝试次数对照，JUnit 保持原有消费者兼容。新增门禁测试旧实现实际5失败，新增手动分片契约和报告契约分别先失败后通过；最终 Python 278项中273通过、5既有跳过，四份工作流 actionlint、ESLint 和工程文档通过。旧707a49d3的Pages已通过，未将旧SHA结果当成新提交验收。未提交医疗权限测试保持不变。
+
+优化前最终对照（707a49d3）：GitHub 45929413272 完整 Quality Gate 与 Windows 恢复/候选总门禁成功，45929413251 Pages、治理和监控均成功。Pages build 20.65min（定向Mock18.68min、静态冒烟0.55min），361项通过、1项flaky；完整候选 build 26.65min（Mock19.83min、后端2.95min、前端1.90min、Chromium准备0.23min）。各Job与步骤实际时间来自已完成Job元数据；最终全量日志/总Runner时长仍需独立补取，不将旧SHA验收当成新SHA通过。

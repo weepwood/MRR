@@ -3,6 +3,7 @@ name: quality-gate
 on:
   pull_request:
     branches: [main, integration/v1.1, integration/v1.2]
+    types: [opened, synchronize, reopened, ready_for_review, converted_to_draft, edited]
   push:
     branches: [main]
   workflow_dispatch:
@@ -32,6 +33,12 @@ jobs:
       development: ${{ steps.scope.outputs.development }}
       integration_frontend: ${{ steps.scope.outputs.integration_frontend }}
       base: ${{ steps.scope.outputs.base }}
+      e2e: ${{ steps.scope.outputs.e2e }}
+      docs: ${{ steps.scope.outputs.docs }}
+      candidate_deferred: ${{ steps.scope.outputs.candidate_deferred }}
+      candidate_required: ${{ steps.scope.outputs.candidate_required }}
+      mock_full: ${{ steps.scope.outputs.mock_full }}
+      targeted_e2e_specs: ${{ steps.scope.outputs.targeted_e2e_specs }}
     steps:
       - uses: actions/checkout@v7
         with:
@@ -48,11 +55,17 @@ jobs:
         id: scope
         env:
           BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          DRAFT_PR: ${{ github.event.pull_request.draft }}
         shell: bash
         run: |
           set -euo pipefail
           if [ "${GITHUB_EVENT_NAME}" = pull_request ]; then
-            python -m scripts.ci_gate scope --mode pr --base "${BASE_SHA}" --output "${GITHUB_OUTPUT}"
+            case "${DRAFT_PR}" in
+              true) mode=draft ;;
+              false) mode=pr ;;
+              *) echo "::error::Missing pull request draft status"; exit 1 ;;
+            esac
+            python -m scripts.ci_gate scope --mode "${mode}" --base "${BASE_SHA}" --output "${GITHUB_OUTPUT}"
           elif [ "${GITHUB_EVENT_NAME}" = push ]; then
             python -m scripts.ci_gate scope --mode main --runs main-runs.json --output "${GITHUB_OUTPUT}"
           else
@@ -190,8 +203,8 @@ jobs:
     uses: ./.github/workflows/windows-release-package.yml
     with:
       full: false
-      # PRs keep database/build checks but defer browser flows to main/release.
-      live_checks: ${{ github.event_name != 'pull_request' }}
+      # Draft deferral must preserve real integration checks for selected risk paths.
+      live_checks: ${{ github.event_name != 'pull_request' || needs.scope.outputs.candidate_deferred == 'true' }}
       # 只改后端的 PR 不使用嵌入前端的 JAR，跳过未改动前端的重复检查与构建。
       frontend_checks: ${{ github.event_name != 'pull_request' || needs.scope.outputs.integration_frontend == 'true' }}
 
@@ -252,8 +265,91 @@ jobs:
       - name: Build clean development images and verify startup and refusal
         run: python -m scripts.smoke_dev
 
+  e2e:
+    needs: scope
+    if: needs.scope.outputs.e2e == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    defaults:
+      run:
+        working-directory: frontend-fantastic-admin
+    steps:
+      - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@v6
+        with:
+          version: 10.33.0
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: frontend-fantastic-admin/.node-version
+          cache: pnpm
+          cache-dependency-path: frontend-fantastic-admin/pnpm-lock.yaml
+      - run: pnpm install --frozen-lockfile
+      - name: Read Playwright version
+        id: playwright
+        run: echo "version=$(pnpm exec playwright --version | awk '{print $2}')" >> "${GITHUB_OUTPUT}"
+      - uses: actions/cache@v6
+        id: playwright-cache
+        with:
+          path: ~/.cache/ms-playwright
+          key: ${{ runner.os }}-${{ runner.arch }}-playwright-chromium-${{ steps.playwright.outputs.version }}
+      - if: steps.playwright-cache.outputs.cache-hit != 'true'
+        run: pnpm exec playwright install --with-deps chromium
+      - if: steps.playwright-cache.outputs.cache-hit == 'true'
+        run: |
+          pnpm exec playwright install-deps chromium
+          pnpm exec playwright install chromium
+      - name: Mock browser regression (single owner)
+        timeout-minutes: ${{ needs.scope.outputs.mock_full == 'true' && 40 || 20 }}
+        env:
+          MOCK_FULL: ${{ needs.scope.outputs.mock_full }}
+          TARGETED_E2E_SPECS: ${{ needs.scope.outputs.targeted_e2e_specs }}
+        run: |
+          set -euo pipefail
+          case "${MOCK_FULL}" in
+            true) pnpm exec playwright test --project=chromium --workers=2 ;;
+            false) python3 ../scripts/ci_targeted_e2e.py run ;;
+            *) echo "::error::Invalid browser scope"; exit 1 ;;
+          esac
+      - name: Preserve browser results
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: mock-results-${{ github.run_id }}-${{ github.run_attempt }}
+          path: frontend-fantastic-admin/test-results/e2e-junit.xml
+          if-no-files-found: warn
+          retention-days: 3
+      - name: Preserve failed browser diagnostics
+        if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: mock-failure-${{ github.run_id }}-${{ github.run_attempt }}
+          path: frontend-fantastic-admin/test-results
+          if-no-files-found: ignore
+          retention-days: 2
+
+  docs:
+    needs: scope
+    if: needs.scope.outputs.docs == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: vitepress-doc
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: frontend-fantastic-admin/.node-version
+          cache: npm
+          cache-dependency-path: vitepress-doc/package-lock.json
+      - run: npm ci
+      - run: npm test
+      - run: npm run docs:build
+
   pr-gate:
-    needs: [scope, frontend, backend, integration, windows, recovery, release, development]
+    needs: [scope, frontend, backend, integration, windows, recovery, release, development, e2e, docs]
     if: always()
     runs-on: ubuntu-latest
     timeout-minutes: 5
@@ -264,4 +360,23 @@ jobs:
           NEEDS_JSON: ${{ toJSON(needs) }}
         run: |
           printf '%s' "${NEEDS_JSON}" > needs.json
+          python - <<'PY' >> "${GITHUB_STEP_SUMMARY}"
+          import json, os
+          needs = json.load(open('needs.json'))
+          print("### Quality gate selection")
+          outputs = needs['scope']['outputs']
+          print("| Check | Selected | Result |")
+          print("| --- | --- | --- |")
+          for name, job in needs.items():
+              selected = 'true' if name == 'scope' else outputs.get(name, 'missing')
+              print(f"| {name} | {selected} | {job['result']} |")
+          print(f"\nSource: {os.environ.get('GITHUB_SHA', 'missing')}")
+          print(f"\nComparison base: {outputs.get('base') or 'whole tree'}")
+          print(f"\nCandidate required: {outputs.get('candidate_required', 'missing')}")
+          print(f"\nCandidate deferred: {outputs.get('candidate_deferred', 'missing')}")
+          if outputs.get('release') == 'true':
+              print("Mock browser owner: full candidate (no separate Mock job)")
+          elif outputs.get('e2e') == 'true':
+              print("Mock browser owner: quality-gate/e2e; full=" + outputs.get('mock_full', 'missing'))
+          PY
           python -m scripts.ci_gate check needs.json

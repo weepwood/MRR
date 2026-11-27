@@ -6,6 +6,11 @@ from pathlib import Path
 import re
 import subprocess
 
+if __package__:
+    from scripts.frontend_test_scope import classify_paths as frontend_scope
+else:
+    from frontend_test_scope import classify_paths as frontend_scope
+
 ROOT = Path(__file__).resolve().parents[1]
 FRONTEND = "frontend-fantastic-admin/"
 SPEC = re.compile(r"e2e/[A-Za-z0-9_][A-Za-z0-9_-]*\.spec\.ts")
@@ -23,6 +28,52 @@ def select_specs(paths):
     for spec in tuple(specs):
         specs.update(RELATED.get(spec, []))
     return sorted(specs)
+
+
+# Known domain entrypoints. Shared infrastructure or unknown source changes
+# conservatively select the full mock suite rather than silently omitting tests.
+DOMAIN_SPECS = {
+    "src/views/patients/": ("list-workspace-ui", "patient-id-card"),
+    "src/views/archive-boxes/": ("list-workspace-ui",),
+    "src/views/settings/": ("settings-layout", "settings-section-width", "settings-load-failure",
+                            "settings-workspace-polish", "runtime-settings-safety", "appearance-section-layout"),
+    "src/views/statistics/": ("statistics-query-results", "statistics-year-shortcut", "query-page-consistency"),
+    "src/assets/styles/": ("business-visual-audit", "global-visual", "form-control-parity",
+                           "settings-section-width", "table-column-widths", "button-parity"),
+}
+
+
+def select_plan(paths, *, critical=False):
+    paths = list(paths)
+    specs = set(select_specs(paths))
+    full = False
+    for path in paths:
+        if not path.startswith(FRONTEND) or path.lower().endswith('.md'):
+            continue
+        relative = path[len(FRONTEND):]
+        if SPEC.fullmatch(relative):
+            continue
+        if relative.startswith('e2e/'):
+            # A static Pages-only smoke script is a separate artifact check.
+            if relative != 'e2e/smoke-pages-demo.mjs':
+                full = True
+            continue
+        if relative.startswith('e2e-live/'):
+            continue
+        if frontend_scope([path]).e2e_changed:
+            full = True
+            continue
+        for prefix, names in DOMAIN_SPECS.items():
+            if relative.startswith(prefix):
+                specs.update(f'e2e/{name}.spec.ts' for name in names)
+                break
+        else:
+            full = True
+    if critical and not specs:
+        full = True
+    for spec in tuple(specs):
+        specs.update(RELATED.get(spec, []))
+    return full, sorted(specs)
 
 
 def playwright_args(specs):

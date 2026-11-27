@@ -171,15 +171,53 @@ jobs:
           grep -R --fixed-strings "${SOURCE_SHA}" dist >/dev/null
           python ../scripts/embed_frontend_in_jar.py embed --jar "../${BACKEND_JAR}" --dist dist
           python ../scripts/embed_frontend_in_jar.py verify --jar "../${BACKEND_JAR}"
+      - name: Read Playwright version
+        id: playwright
+        working-directory: frontend-fantastic-admin
+        if: inputs.full || inputs.live_checks
+        run: echo "version=$(pnpm exec playwright --version | awk '{print $2}')" >> "${GITHUB_OUTPUT}"
+      - name: Cache matching Chromium binaries
+        id: playwright-cache
+        if: inputs.full || inputs.live_checks
+        uses: actions/cache@v6
+        with:
+          path: ~/.cache/ms-playwright
+          key: ${{ runner.os }}-${{ runner.arch }}-playwright-chromium-${{ steps.playwright.outputs.version }}
       - name: Install Chromium for selected browser checks
         working-directory: frontend-fantastic-admin
         if: inputs.full || inputs.live_checks
-        run: pnpm exec playwright install --with-deps chromium
+        env:
+          BROWSER_CACHE_HIT: ${{ steps.playwright-cache.outputs.cache-hit }}
+        run: |
+          set -euo pipefail
+          if [ "${BROWSER_CACHE_HIT}" = true ]; then
+            pnpm exec playwright install-deps chromium
+            # Check locked browser availability even after a cache hit.
+            pnpm exec playwright install chromium
+          else
+            pnpm exec playwright install --with-deps chromium
+          fi
       - name: Full mock-backed browser tests
         working-directory: frontend-fantastic-admin
         if: inputs.full
         run: |
           pnpm test:e2e
+      - name: Preserve full mock browser results
+        if: always() && inputs.full
+        uses: actions/upload-artifact@v7
+        with:
+          name: candidate-mock-results-${{ github.run_id }}-${{ github.run_attempt }}
+          path: frontend-fantastic-admin/test-results/e2e-junit.xml
+          retention-days: 3
+          if-no-files-found: warn
+      - name: Preserve failed full mock browser diagnostics
+        if: failure() && inputs.full
+        uses: actions/upload-artifact@v7
+        with:
+          name: candidate-mock-failure-${{ github.run_id }}-${{ github.run_attempt }}
+          path: frontend-fantastic-admin/test-results
+          retention-days: 2
+          if-no-files-found: ignore
       - name: Build standalone JAR from the same verified backend
         if: inputs.full
         id: standalone
@@ -213,7 +251,24 @@ jobs:
           npm run docs:build
           grep -R --fixed-strings "v${PRODUCT_VERSION}" .vitepress/dist-user >/dev/null
           grep -R --fixed-strings "v${PRODUCT_VERSION}" .vitepress/dist-internal >/dev/null
+      - name: Cache pinned Windows runtime downloads
+        if: inputs.full
+        id: windows-runtime-cache
+        uses: actions/cache@v6
+        with:
+          path: build/windows-runtime-download
+          key: ${{ runner.os }}-${{ runner.arch }}-windows-runtime-${{ env.NGINX_VERSION }}-${{ env.WINSW_VERSION }}-${{ hashFiles('quality/windows-runtime-sha256.txt') }}
       - name: Download pinned Windows runtime
+        if: inputs.full && steps.windows-runtime-cache.outputs.cache-hit != 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+          DOWNLOAD_DIR=build/windows-runtime-download
+          mkdir -p "${DOWNLOAD_DIR}"
+          curl --fail --location --retry 3 --proto '=https' --tlsv1.2 "https://nginx.org/download/nginx-${NGINX_VERSION}.zip" --output "${DOWNLOAD_DIR}/nginx.zip"
+          curl --fail --location --retry 3 --proto '=https' --tlsv1.2 "https://github.com/winsw/winsw/releases/download/v${WINSW_VERSION}/WinSW-x64.exe" --output "${DOWNLOAD_DIR}/WinSW-x64.exe"
+          curl --fail --location --retry 3 --proto '=https' --tlsv1.2 "https://raw.githubusercontent.com/winsw/winsw/v${WINSW_VERSION}/LICENSE.txt" --output "${DOWNLOAD_DIR}/LICENSE.txt"
+      - name: Verify pinned runtime on every cache hit or download and extract
         if: inputs.full
         shell: bash
         run: |
@@ -221,12 +276,13 @@ jobs:
           RUNTIME_DIR=build/windows-runtime
           DOWNLOAD_DIR=build/windows-runtime-download
           NGINX_DISTRIBUTION="nginx/Windows-${NGINX_VERSION}"
-          mkdir -p "${RUNTIME_DIR}/nginx" "${RUNTIME_DIR}/winsw" "${DOWNLOAD_DIR}"
-          curl --fail --location --retry 3 --proto '=https' --tlsv1.2 "https://nginx.org/download/nginx-${NGINX_VERSION}.zip" --output "${DOWNLOAD_DIR}/nginx.zip"
-          unzip -q "${DOWNLOAD_DIR}/nginx.zip" -d "${DOWNLOAD_DIR}"
-          cp -a "${DOWNLOAD_DIR}/nginx-${NGINX_VERSION}/." "${RUNTIME_DIR}/nginx/"
-          curl --fail --location --retry 3 --proto '=https' --tlsv1.2 "https://github.com/winsw/winsw/releases/download/v${WINSW_VERSION}/WinSW-x64.exe" --output "${RUNTIME_DIR}/winsw/WinSW-x64.exe"
-          curl --fail --location --retry 3 --proto '=https' --tlsv1.2 "https://raw.githubusercontent.com/winsw/winsw/v${WINSW_VERSION}/LICENSE.txt" --output "${RUNTIME_DIR}/winsw/LICENSE.txt"
+          # Verify against committed expected bytes, not a manifest stored in the cache.
+          (cd "${DOWNLOAD_DIR}" && sha256sum --strict -c ../../quality/windows-runtime-sha256.txt)
+          mkdir -p "${RUNTIME_DIR}/nginx" "${RUNTIME_DIR}/winsw" build/windows-runtime-unpacked
+          unzip -q "${DOWNLOAD_DIR}/nginx.zip" -d build/windows-runtime-unpacked
+          cp -a "build/windows-runtime-unpacked/nginx-${NGINX_VERSION}/." "${RUNTIME_DIR}/nginx/"
+          cp "${DOWNLOAD_DIR}/WinSW-x64.exe" "${RUNTIME_DIR}/winsw/WinSW-x64.exe"
+          cp "${DOWNLOAD_DIR}/LICENSE.txt" "${RUNTIME_DIR}/winsw/LICENSE.txt"
           printf '{"nginx":{"distribution":"%s","version":"%s"},"winsw":{"version":"%s"}}\n' "${NGINX_DISTRIBUTION}" "${NGINX_VERSION}" "${WINSW_VERSION}" > "${RUNTIME_DIR}/versions.json"
           (cd "${RUNTIME_DIR}" && find nginx winsw versions.json -type f -print0 | sort -z | xargs -0 sha256sum > SHA256SUMS)
       - name: Assemble offline package

@@ -29,7 +29,6 @@ jobs:
       contents: read
     outputs:
       pages_demo_smoke: ${{ steps.select.outputs.pages_demo_smoke }}
-      targeted_e2e_specs: ${{ steps.targeted.outputs.specs }}
     steps:
       - uses: actions/checkout@v7
         with:
@@ -40,16 +39,10 @@ jobs:
           PR_BASE_SHA: ${{ github.event.pull_request.base.sha }}
           PR_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
         run: python3 -m scripts.ci_gate scope --mode pr --base "${PR_BASE_SHA}" --head "${PR_HEAD_SHA}" --output "${GITHUB_OUTPUT}"
-      - name: Select changed mock browser specs
-        id: targeted
-        env:
-          PR_BASE_SHA: ${{ github.event.pull_request.base.sha }}
-          PR_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
-        run: python3 scripts/ci_targeted_e2e.py select --base "${PR_BASE_SHA}" --head "${PR_HEAD_SHA}" --output "${GITHUB_OUTPUT}"
 
   build:
     needs: scope
-    if: always() && (github.event_name != 'pull_request' || needs.scope.outputs.pages_demo_smoke != 'false')
+    if: always() && (github.event_name != 'pull_request' || (needs.scope.result == 'success' && needs.scope.outputs.pages_demo_smoke != 'false'))
     runs-on: ubuntu-latest
     timeout-minutes: 30
     permissions:
@@ -91,7 +84,7 @@ jobs:
         uses: actions/cache@v6
         with:
           path: ~/.cache/ms-playwright
-          key: ${{ runner.os }}-playwright-chromium-${{ steps.playwright.outputs.version }}
+          key: ${{ runner.os }}-${{ runner.arch }}-playwright-chromium-${{ steps.playwright.outputs.version }}
 
       - name: 安装 Chromium
         if: steps.playwright-cache.outputs.cache-hit != 'true'
@@ -99,27 +92,12 @@ jobs:
 
       - name: 安装 Chromium 系统依赖（浏览器已缓存）
         if: steps.playwright-cache.outputs.cache-hit == 'true'
-        run: pnpm exec playwright install-deps chromium
+        run: |
+          pnpm exec playwright install-deps chromium
+          pnpm exec playwright install chromium
 
       - name: Pages 静态演示冒烟
         run: node e2e/smoke-pages-demo.mjs
-
-      - name: 定向 Mock 浏览器回归
-        if: github.event_name == 'pull_request' && needs.scope.outputs.targeted_e2e_specs != '' && needs.scope.outputs.targeted_e2e_specs != '[]'
-        # Cumulative PRs can select dozens of specs; retain all assertions and retries.
-        timeout-minutes: 20
-        env:
-          TARGETED_E2E_SPECS: ${{ needs.scope.outputs.targeted_e2e_specs }}
-        run: python3 ../scripts/ci_targeted_e2e.py run
-
-      - name: 保留失败的定向浏览器证据
-        if: failure() && github.event_name == 'pull_request'
-        uses: actions/upload-artifact@v7
-        with:
-          name: pages-targeted-e2e-failure-${{ github.run_attempt }}
-          path: frontend-fantastic-admin/test-results
-          if-no-files-found: ignore
-          retention-days: 2
 
       - name: 上传 Pages 构建产物
         if: github.event_name != 'pull_request'

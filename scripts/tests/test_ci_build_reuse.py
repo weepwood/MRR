@@ -24,6 +24,17 @@ class CiBuildReuseTest(unittest.TestCase):
                      "scripts/embed_frontend_in_jar.py", "scripts/release_baseline.py"):
             self.assertTrue(needs_release_build([path]), path)
 
+    def test_mock_regression_owner_and_draft_admission_are_explicit(self):
+        quality = (ROOT / ".github/workflows/quality-gate.yml").read_text(encoding="utf-8")
+        pages = (ROOT / ".github/workflows/deploy-pages-demo.yml").read_text(encoding="utf-8")
+        self.assertIn("ready_for_review", quality)
+        self.assertIn("converted_to_draft", quality)
+        self.assertIn("  e2e:", quality)
+        self.assertIn("  docs:", quality)
+        self.assertIn("candidate_deferred", quality)
+        self.assertNotIn("ci_targeted_e2e.py run", pages)
+        self.assertIn("smoke-pages-demo.mjs", pages)
+
     def test_pr_summary_always_runs_and_checks_selected_jobs(self):
         workflow = (ROOT / ".github/workflows/quality-gate.yml").read_text(encoding="utf-8")
         trigger = workflow.split("permissions:", 1)[0]
@@ -34,10 +45,11 @@ class CiBuildReuseTest(unittest.TestCase):
         release = (ROOT / ".github/workflows/windows-release-package.yml").read_text(encoding="utf-8")
         self.assertNotIn("pull_request:", release.split('permissions:', 1)[0])
 
-    def test_pull_requests_defer_browser_e2e_to_main_and_release_checks(self):
+    def test_pr_mock_regression_and_full_candidate_are_distinct(self):
         quality = (ROOT / ".github/workflows/quality-gate.yml").read_text(encoding="utf-8")
         self.assertNotIn("pnpm test:e2e", quality)
-        self.assertIn("live_checks: ${{ github.event_name != 'pull_request' }}", quality)
+        self.assertIn("live_checks: ${{ github.event_name != 'pull_request' || needs.scope.outputs.candidate_deferred == 'true' }}", quality)
+        self.assertIn("python3 ../scripts/ci_targeted_e2e.py run", quality)
 
         package = (ROOT / ".github/workflows/windows-release-package.yml").read_text(encoding="utf-8")
         mock_e2e = package.split("- name: Full mock-backed browser tests", 1)[1].split("- name:", 1)[0]
@@ -49,7 +61,7 @@ class CiBuildReuseTest(unittest.TestCase):
     def test_pages_demo_pr_job_is_skipped_for_style_only_changes(self):
         workflow = (ROOT / ".github/workflows/deploy-pages-demo.yml").read_text(encoding="utf-8")
         self.assertIn("pages_demo_smoke: ${{ steps.select.outputs.pages_demo_smoke }}", workflow)
-        self.assertIn("if: always() && (github.event_name != 'pull_request' || needs.scope.outputs.pages_demo_smoke != 'false')",
+        self.assertIn("if: always() && (github.event_name != 'pull_request' || (needs.scope.result == 'success' && needs.scope.outputs.pages_demo_smoke != 'false'))",
                       workflow)
         self.assertIn("python3 -m scripts.ci_gate scope --mode pr", workflow)
         scope = workflow.split("  build:", 1)[0]
@@ -117,6 +129,23 @@ class CiBuildReuseTest(unittest.TestCase):
             self.assertNotIn("pull_request:", trigger)
             self.assertNotIn("push:", trigger)
             self.assertIn("workflow_dispatch:", trigger)
+
+    def test_runtime_cache_does_not_replace_digest_validation(self):
+        self.assertTrue(needs_release_build(["quality/windows-runtime-sha256.txt"]))
+        manifest = (ROOT / "quality/windows-runtime-sha256.txt").read_text(encoding="utf-8")
+        self.assertEqual({"nginx.zip", "WinSW-x64.exe", "LICENSE.txt"},
+                         {line.split()[1] for line in manifest.splitlines()})
+        self.assertTrue(all(re.fullmatch(r"[0-9a-f]{64}  [A-Za-z0-9.-]+", line)
+                            for line in manifest.splitlines()))
+        package = (ROOT / ".github/workflows/windows-release-package.yml").read_text(encoding="utf-8")
+        cache = package.split("- name: Cache pinned Windows runtime downloads", 1)[1].split("- name:", 1)[0]
+        self.assertIn("hashFiles('quality/windows-runtime-sha256.txt')", cache)
+        self.assertNotIn("restore-keys", cache)
+        verify = package.split("- name: Verify pinned runtime on every cache hit or download and extract", 1)[1].split("- name:", 1)[0]
+        self.assertIn("if: inputs.full", verify)
+        self.assertNotIn("cache-hit", verify)
+        self.assertLess(verify.index("sha256sum --strict -c ../../quality/windows-runtime-sha256.txt"),
+                        verify.index("unzip -q"))
 
     def test_monitoring_does_not_duplicate_application_compilation(self):
         workflow = (ROOT / ".github/workflows/monitoring-validation.yml").read_text(encoding="utf-8")

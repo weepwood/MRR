@@ -7,7 +7,7 @@ import sys
 import tempfile
 from unittest.mock import patch
 
-from scripts.ci_gate import classify_paths, validate_results, successful_base, main
+from scripts.ci_gate import classify_paths, validate_results, successful_base, require_candidate_admission, main
 
 
 class CiGateTest(unittest.TestCase):
@@ -52,6 +52,115 @@ class CiGateTest(unittest.TestCase):
                 os.chdir(previous)
             self.assertIn('integration=true', output.read_text(encoding='utf-8'))
             self.assertIn('base=' + base, output.read_text(encoding='utf-8'))
+
+    def test_draft_feedback_defers_full_candidate_but_never_grants_merge_admission(self):
+        paths = ['release-baseline.json',
+                 'backend-repo/src/main/java/com/zjcxph/imgapi/interceptors/LogInterceptor.java',
+                 'frontend-fantastic-admin/e2e/list-workspace-ui.spec.ts']
+        draft = classify_paths(paths, mode='draft')
+        self.assertFalse(draft['release'])
+        self.assertTrue(draft['candidate_deferred'])
+        self.assertTrue(draft['candidate_required'])
+        self.assertTrue(draft['integration'])
+        self.assertTrue(draft['postgres'])
+        self.assertTrue(draft['live'])
+        self.assertTrue(draft['e2e'])
+        self.assertTrue(draft['docs'])
+        ready = classify_paths(paths, mode='pr')
+        self.assertTrue(ready['release'])
+        self.assertFalse(ready['candidate_deferred'])
+        self.assertTrue(ready['candidate_required'])
+        self.assertFalse(ready['e2e'])
+        self.assertFalse(ready['docs'])
+
+    def test_deferred_or_missing_candidate_admission_fails_closed(self):
+        for value in ('true', '', None, 'unknown'):
+            with self.subTest(value=value), self.assertRaises(ValueError):
+                require_candidate_admission(value, 'true', False)
+        require_candidate_admission('false', 'false', False)
+        require_candidate_admission('false', 'true', True)
+        with self.assertRaisesRegex(ValueError, 'not selected'):
+            require_candidate_admission('false', 'true', False)
+        with self.assertRaises(ValueError):
+            require_candidate_admission('false', None, False)
+
+    def test_cli_gate_rejects_deferred_candidate_and_missing_browser_result(self):
+        from scripts.ci_gate import JOBS
+        with tempfile.TemporaryDirectory() as directory:
+            file = Path(directory) / 'needs.json'
+            outputs = {job: 'false' for job in JOBS}
+            outputs.update(e2e='true', candidate_deferred='false', candidate_required='false')
+            needs = {job: {'result': 'skipped'} for job in JOBS}
+            needs['e2e']['result'] = 'success'
+            needs['scope'] = {'result': 'success', 'outputs': outputs}
+            def run_gate():
+                file.write_text(json.dumps(needs), encoding='utf-8')
+                with patch.object(sys, 'argv', ['ci_gate', 'check', str(file)]):
+                    main()
+            run_gate()
+            outputs['candidate_deferred'] = 'true'
+            outputs['candidate_required'] = 'true'
+            with self.assertRaisesRegex(ValueError, 'Draft feedback only'):
+                run_gate()
+            outputs['candidate_deferred'] = 'false'
+            with self.assertRaisesRegex(ValueError, 'not selected'):
+                run_gate()
+            outputs['candidate_required'] = 'false'
+            needs.pop('e2e')
+            with self.assertRaisesRegex(ValueError, 'e2e'):
+                run_gate()
+            needs['e2e'] = {'result': 'success'}
+            outputs.pop('candidate_deferred')
+            with self.assertRaisesRegex(ValueError, 'deferral'):
+                run_gate()
+
+    def test_real_cumulative_draft_and_ready_scope_retains_old_release_requirement(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            def git(*args):
+                return subprocess.check_output(['git', '-c', 'commit.gpgsign=false',
+                                                '-c', 'core.hooksPath=' + str(root / 'empty-hooks'),
+                                                *args], cwd=root, text=True).strip()
+            git('init', '-q', '-b', 'main')
+            git('config', 'user.name', 'Synthetic CI')
+            git('config', 'user.email', 'synthetic@example.invalid')
+            (root / 'README.md').write_text('initial')
+            git('add', '.')
+            git('commit', '-qm', 'initial')
+            base = git('rev-parse', 'HEAD')
+            (root / 'release-baseline.json').write_text('{}')
+            git('add', '.')
+            git('commit', '-qm', 'release input')
+            (root / 'README.md').write_text('latest documentation only')
+            git('add', 'README.md')
+            git('commit', '-qm', 'docs only')
+            previous = Path.cwd()
+            try:
+                os.chdir(root)
+                for mode, required, deferred in [('draft', 'false', 'true'), ('pr', 'true', 'false')]:
+                    output = root / (mode + '.txt')
+                    with patch.object(sys, 'argv', ['ci_gate', 'scope', '--mode', mode,
+                                                   '--base', base, '--output', str(output)]):
+                        main()
+                    selected = dict(line.split('=', 1) for line in output.read_text().splitlines())
+                    self.assertEqual(required, selected['release'])
+                    self.assertEqual(deferred, selected['candidate_deferred'])
+                    self.assertEqual('true', selected['candidate_required'])
+                    self.assertEqual(base, selected['base'])
+            finally:
+                os.chdir(previous)
+
+    def test_mock_test_only_change_does_not_rebuild_static_pages(self):
+        scope = classify_paths(['frontend-fantastic-admin/e2e/list-workspace-ui.spec.ts'])
+        self.assertTrue(scope['e2e'])
+        self.assertFalse(scope['pages_demo_smoke'])
+
+    def test_docs_have_independent_build_and_e2e_is_not_duplicated_by_candidate(self):
+        self.assertTrue(classify_paths(['vitepress-doc/internal/runbook.md'])['docs'])
+        self.assertTrue(classify_paths(['frontend-fantastic-admin/e2e/list-workspace-ui.spec.ts'])['e2e'])
+        full = classify_paths(['release-baseline.json', 'frontend-fantastic-admin/e2e/list-workspace-ui.spec.ts'])
+        self.assertTrue(full['release'])
+        self.assertFalse(full['e2e'])
 
     def test_docs_and_version_do_not_build_applications(self):
         for path in ('README.md', 'vitepress-doc/user-guide/index.md', 'VERSION', 'release-notes/1.0.0.md'):
@@ -109,7 +218,7 @@ class CiGateTest(unittest.TestCase):
         frontend_scope = classify_paths(['frontend-fantastic-admin/src/router/guards.ts'])
         self.assertTrue(frontend_scope['frontend'])
         self.assertFalse(frontend_scope['live'])
-        self.assertFalse(frontend_scope['e2e'])
+        self.assertTrue(frontend_scope['e2e'])
 
     def test_existing_identity_entrypoints_require_real_checks(self):
         for path in ('backend-repo/src/main/java/com/zjcxph/imgapi/utils/JwtUtil.java',
@@ -120,7 +229,7 @@ class CiGateTest(unittest.TestCase):
                 self.assertTrue(scope['integration'])
                 self.assertTrue(scope['postgres'])
 
-    def test_frontend_identity_flows_keep_unit_checks_and_defer_browser_integration(self):
+    def test_frontend_identity_flows_keep_unit_and_mock_browser_checks(self):
         for path in ('frontend-fantastic-admin/src/utils/auth-storage.ts',
                      'frontend-fantastic-admin/src/utils/composables/useAuth.ts',
                      'frontend-fantastic-admin/src/utils/permission.ts',
@@ -136,7 +245,7 @@ class CiGateTest(unittest.TestCase):
                 scope = classify_paths([path])
                 self.assertTrue(scope['frontend'])
                 self.assertFalse(scope['integration'])
-                self.assertFalse(scope['e2e'])
+                self.assertTrue(scope['e2e'])
 
     def test_backend_only_identity_pr_does_not_rebuild_unchanged_frontend(self):
         scope = classify_paths(['backend-repo/src/main/java/com/zjcxph/imgapi/controller/UserController.java'])

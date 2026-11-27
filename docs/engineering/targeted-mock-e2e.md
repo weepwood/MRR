@@ -1,4 +1,6 @@
-# 定向 Mock 浏览器回归
+# 定向 Mock 浏览器回归（历史入口）
+
+2026-11-27 起，开发候选将定向及完整 Mock E2E 统一由 Quality Gate 承担，Pages 仅保留静态演示构建与冒烟。现行范围、草稿延期及发布准入见 [分层 CI 与发布验收](ci-tiered-verification.md)；以下保留原 Pages 入口历史证据。
 
 关联当前 #736 / #737 和 #724 验收。P2 补充测试入口，不改 main 保护、quality-gate、发布完整验收或生产权限。Pages PR 已安装 Chromium；复用同一次 runner，仅当 PR 新增/修改顶层 e2e/*.spec.ts 时运行这些 Mock 用例（预热依赖照常）；monitoring-refresh-status 同时带上 monitoring-polling-performance。无 spec 改动仍保持原日常检查，无全量 E2E。工作流使用固定 SHA、NUL 分隔 diff、严格文件名校验、参数数组，无 shell 展开用户路径。手动 frontend-mock 与正式发布全量策略不变。
 

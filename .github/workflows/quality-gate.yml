@@ -315,7 +315,9 @@ jobs:
         uses: actions/upload-artifact@v7
         with:
           name: mock-results-${{ github.run_id }}-${{ github.run_attempt }}
-          path: frontend-fantastic-admin/test-results/e2e-junit.xml
+          path: |
+            frontend-fantastic-admin/test-results/e2e-junit.xml
+            frontend-fantastic-admin/test-results/e2e-results.json
           if-no-files-found: warn
           retention-days: 3
       - name: Preserve failed browser diagnostics
@@ -349,6 +351,7 @@ jobs:
       - run: npm run docs:build
 
   pr-gate:
+    name: ${{ github.event_name == 'workflow_dispatch' && 'manual-integration-gate' || 'pr-gate' }}
     needs: [scope, frontend, backend, integration, windows, recovery, release, development, e2e, docs]
     if: always()
     runs-on: ubuntu-latest

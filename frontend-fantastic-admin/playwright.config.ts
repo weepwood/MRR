@@ -14,6 +14,7 @@ export default defineConfig({
         ['list'],
         ['html', { outputFolder: 'playwright-report', open: 'never' }],
         ['junit', { outputFile: 'test-results/e2e-junit.xml' }],
+        ['json', { outputFile: 'test-results/e2e-results.json' }],
       ]
     : 'list',
   outputDir: 'test-results',

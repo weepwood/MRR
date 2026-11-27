@@ -150,6 +150,12 @@ class CiGateTest(unittest.TestCase):
             finally:
                 os.chdir(previous)
 
+    def test_selector_edit_cannot_omit_full_mock_feedback(self):
+        for path in ("scripts/ci_targeted_e2e.py", "scripts/frontend_test_scope.py"):
+            with self.subTest(path=path):
+                scope = classify_paths([path], mode="draft")
+                self.assertTrue(scope["e2e"])
+
     def test_mock_test_only_change_does_not_rebuild_static_pages(self):
         scope = classify_paths(['frontend-fantastic-admin/e2e/list-workspace-ui.spec.ts'])
         self.assertTrue(scope['e2e'])

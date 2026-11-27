@@ -207,7 +207,9 @@ jobs:
         uses: actions/upload-artifact@v7
         with:
           name: candidate-mock-results-${{ github.run_id }}-${{ github.run_attempt }}
-          path: frontend-fantastic-admin/test-results/e2e-junit.xml
+          path: |
+            frontend-fantastic-admin/test-results/e2e-junit.xml
+            frontend-fantastic-admin/test-results/e2e-results.json
           retention-days: 3
           if-no-files-found: warn
       - name: Preserve failed full mock browser diagnostics

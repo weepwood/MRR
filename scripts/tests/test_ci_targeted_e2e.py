@@ -13,6 +13,18 @@ class TargetedMockE2eTest(unittest.TestCase):
         ]
         self.assertEqual(select_specs(paths), ["e2e/statistics-year-shortcut.spec.ts"])
 
+    def test_selector_changes_require_full_mock_even_with_a_narrow_spec(self):
+        for control in (
+            "scripts/ci_targeted_e2e.py",
+            "scripts/frontend_test_scope.py",
+            ".github/workflows/quality-gate.yml",
+        ):
+            with self.subTest(control=control):
+                self.assertTrue(select_plan([control])[0])
+                full, specs = select_plan([control, "frontend-fantastic-admin/e2e/list-workspace-ui.spec.ts"])
+                self.assertTrue(full)
+                self.assertIn("e2e/list-workspace-ui.spec.ts", specs)
+
     def test_domain_mapping_keeps_existing_specs_and_related_coverage(self):
         full, specs = select_plan([
             'frontend-fantastic-admin/src/views/archive-boxes/index.vue',

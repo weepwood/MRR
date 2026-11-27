@@ -46,7 +46,13 @@ DOMAIN_SPECS = {
 def select_plan(paths, *, critical=False):
     paths = list(paths)
     specs = set(select_specs(paths))
-    full = False
+    # Changes to selection logic must validate the whole suite, even if a
+    # changed spec also supplies a narrow selection.
+    full = any(path in {
+        "scripts/ci_targeted_e2e.py",
+        "scripts/frontend_test_scope.py",
+        ".github/workflows/quality-gate.yml",
+    } for path in paths)
     for path in paths:
         if not path.startswith(FRONTEND) or path.lower().endswith('.md'):
             continue

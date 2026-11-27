@@ -35,7 +35,7 @@ Mock 业务 E2E 只由 Quality Gate 负责，Pages 不再重复执行同一 Vite
 
 ### 草稿反馈与最终准入（2026-11-27）
 
-长期 PR 中的 `release-baseline.json` 或发布工具变更会持续选中完整候选。只对实际 GitHub draft 事件使用 `--mode draft`：仍比较完整累计差异并执行已选中的开发/数据库/真实联调/Mock/文档/Windows 专项，但可延期完整候选的覆盖率及制品链路。此时 `candidate_deferred=true`，必需的 `pr-gate` **有意不通过**，不是可合并绿灯。正常 PR、ready_for_review 及相关同步/编辑事件重新计算整个累计差异；非草稿仍要求原完整候选。缺少/非法 draft 状态或延期输出、必需 job 缺失/失败/取消/意外跳过一律拒绝。草稿也可使用现有 Release dry-run 独立验证完整包，但不以手动运行覆盖必需 PR 状态。未更改远程分支保护、治理、版本号、生产权限或正式 Release。
+长期 PR 中的 `release-baseline.json` 或发布工具变更会持续选中完整候选。只对实际 GitHub draft 事件使用 `--mode draft`：仍比较完整累计差异并执行已选中的开发/数据库/真实联调/Mock/文档/Windows 专项，但可延期完整候选的覆盖率及制品链路。此时 `candidate_deferred=true`，必需的 `pr-gate` **有意不通过**，不是可合并绿灯。正常 PR、ready_for_review 及相关同步/编辑事件重新计算整个累计差异；非草稿仍要求原完整候选。缺少/非法 draft 状态或延期输出、必需 job 缺失/失败/取消/意外跳过一律拒绝。草稿也可使用现有 Release dry-run 独立验证完整包，但手动运行的汇总检查名为 manual-integration-gate，不复用必需 pr-gate 状态。选择器自身变化即使同时存在定向 spec 也回退完整 Mock。未更改远程分支保护、治理、版本号、生产权限或正式 Release。
 
 日常 L1 在本地按风险执行 lint、类型及定向测试；L2 以累计 PR 选中检查为准，草稿延期不是合并批准；L3 走原固定 SHA 的完整候选及正式发布链路。不使用最后一次 commit 或缓存绿灯代替累计风险。
 
@@ -134,3 +134,11 @@ CI 使用合成数据与隔离实例；Chrome 86 检查是生产资源兼容检�
 - 真实服务器同步场景仍保留，不宣称所有 Mock 可变状态已按 Worker 完全隔离。缓存远端命中、优化后完整 CI 与实际计费收益尚待核实。原未提交医疗权限测试保持逐字节一致，其失败不因本次 CI 优化而解除。
 
 回滚：视觉测试隔离提交 `0f0cf85f` 与工作流/范围判定/缓存提交分别可逆；回滚工作流须同时回滚配套脚本、测试及约定，禁止仅移除必需门禁或缓存校验。证据位于本机独立 artifacts 目录，不纳入 Git。
+
+
+### 远端两分片可选实验
+
+现有 `frontend-mock` 手动入口增加 `shard_probe=true`（优先于 cross_browser），仅启动两个独立 Ubuntu Runner 的完整 Chromium 分片，均保持 2 worker、原预热和原 CI 重试；任一失败直接保留，另外一片不被 fail-fast 取消。两片分别保存同 SHA/run/attempt 的 JUnit，与同一合并模拟树的单次完整 Mock 结果对照时必须先核对源码树身份（PR merge SHA 与分支 SHA 可能不同）。比较两个分片用例集合的并集、交集、失败、重试、浏览器阶段墙钟及各 Job 时间之和；缓存冷热与 Runner 排队单独记录。此入口不产生 pr-gate 或发布产物、不影响默认日常及正式发布门禁。一次完整规模实验有额外 Runner 成本，不在每次推送重复执行。
+
+
+补充验收：实际 `playwright --list --project=chromium` 单次清单 521 个唯一 Chromium spec ID，两个分片为 261+260，交集/遗漏/额外均零；预热分别保留。这仅为完整测试清单验证，非521个已执行通过。真实 CI 模式下本地隔离测试生成 JUnit 和 JSON 两种报告且零失败/重试；正常 Mock 与两分片入口均保存这两种报告，以 JSON spec ID、状态、尝试次数对照，JUnit 保持原有消费者兼容。新增门禁测试旧实现实际5失败，新增手动分片契约和报告契约分别先失败后通过；最终 Python 278项中273通过、5既有跳过，四份工作流 actionlint、ESLint 和工程文档通过。旧707a49d3的Pages已通过，未将旧SHA结果当成新提交验收。未提交医疗权限测试保持不变。

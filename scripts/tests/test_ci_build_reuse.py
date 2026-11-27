@@ -35,6 +35,11 @@ class CiBuildReuseTest(unittest.TestCase):
         self.assertNotIn("ci_targeted_e2e.py run", pages)
         self.assertIn("smoke-pages-demo.mjs", pages)
 
+    def test_manual_integration_uses_distinct_check_name(self):
+        workflow = (ROOT / ".github/workflows/quality-gate.yml").read_text(encoding="utf-8")
+        summary = workflow.split("  pr-gate:", 1)[1]
+        self.assertIn("name: ${{ github.event_name == 'workflow_dispatch' && 'manual-integration-gate' || 'pr-gate' }}", summary)
+
     def test_pr_summary_always_runs_and_checks_selected_jobs(self):
         workflow = (ROOT / ".github/workflows/quality-gate.yml").read_text(encoding="utf-8")
         trigger = workflow.split("permissions:", 1)[0]
@@ -146,6 +151,28 @@ class CiBuildReuseTest(unittest.TestCase):
         self.assertNotIn("cache-hit", verify)
         self.assertLess(verify.index("sha256sum --strict -c ../../quality/windows-runtime-sha256.txt"),
                         verify.index("unzip -q"))
+
+    def test_shard_probe_is_opt_in_and_does_not_replace_required_mock_gate(self):
+        workflow = (ROOT / ".github/workflows/frontend-mock.yml").read_text(encoding="utf-8")
+        trigger = workflow.split("permissions:", 1)[0]
+        self.assertIn("workflow_dispatch:", trigger)
+        self.assertNotIn("pull_request:", trigger)
+        self.assertNotIn("push:", trigger)
+        self.assertRegex(trigger, r"shard_probe:\n(?:.*\n)*?\s+default: false")
+        probe = workflow.split("  chromium-shard-probe:", 1)[1]
+        self.assertIn("if: inputs.shard_probe == true", probe)
+        self.assertIn("shard: [1, 2]", probe)
+        self.assertIn("fail-fast: false", probe)
+        self.assertIn('--project=chromium --workers=2 --shard="${SHARD}/2"', probe)
+        self.assertIn("test-results/e2e-junit.xml", probe)
+        self.assertNotIn("continue-on-error", probe)
+
+    def test_mock_reports_preserve_identity_and_retry_evidence(self):
+        config = (ROOT / "frontend-fantastic-admin/playwright.config.ts").read_text(encoding="utf-8")
+        self.assertIn("['json', { outputFile: 'test-results/e2e-results.json' }]", config)
+        for name in ("quality-gate.yml", "windows-release-package.yml", "frontend-mock.yml"):
+            workflow = (ROOT / ".github/workflows" / name).read_text(encoding="utf-8")
+            self.assertIn("frontend-fantastic-admin/test-results/e2e-results.json", workflow)
 
     def test_monitoring_does_not_duplicate_application_compilation(self):
         workflow = (ROOT / ".github/workflows/monitoring-validation.yml").read_text(encoding="utf-8")

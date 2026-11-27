@@ -27,7 +27,10 @@ groups:
   - name: mrr-audit
     rules:
       - alert: MrrAuditDropped
-        expr: mrr_audit_dropped{job="mrr-backend", application="mrr"} > 0
+        expr: |
+          (mrr_audit_dropped{job="mrr-backend", application="mrr"} > 0)
+          or
+          (mrr_audit_submission_rejected_total{job="mrr-backend", application="mrr"} > 0)
         labels:
           severity: critical
         annotations:

@@ -79,3 +79,39 @@ tests:
       - eval_time: 1m15s
         alertname: MrrAuditMetricsMissing
         exp_alerts: []
+
+  - interval: 15s
+    input_series:
+      - series: 'mrr_audit_dropped{application="mrr",job="mrr-backend",instance="rejected"}'
+        values: '0 0 0'
+      - series: 'mrr_audit_submission_rejected_total{application="mrr",job="mrr-backend",instance="rejected"}'
+        values: '0 1 1'
+      - series: 'mrr_audit_dropped{application="mrr",job="mrr-backend",instance="both"}'
+        values: '0 1 1'
+      - series: 'mrr_audit_submission_rejected_total{application="mrr",job="mrr-backend",instance="both"}'
+        values: '0 1 1'
+    alert_rule_test:
+      - eval_time: 0s
+        alertname: MrrAuditDropped
+        exp_alerts: []
+      - eval_time: 15s
+        alertname: MrrAuditDropped
+        exp_alerts:
+          - exp_labels:
+              application: mrr
+              job: mrr-backend
+              instance: rejected
+              severity: critical
+            exp_annotations:
+              summary: MRR 审计记录出现丢弃
+              description: 当前进程报告审计丢弃或拒绝累计值大于零；记录现场证据并核实缺口，重启归零不代表记录恢复。
+              runbook_url: docs/engineering/mrr-data-operations-runbook.md
+          - exp_labels:
+              application: mrr
+              job: mrr-backend
+              instance: both
+              severity: critical
+            exp_annotations:
+              summary: MRR 审计记录出现丢弃
+              description: 当前进程报告审计丢弃或拒绝累计值大于零；记录现场证据并核实缺口，重启归零不代表记录恢复。
+              runbook_url: docs/engineering/mrr-data-operations-runbook.md

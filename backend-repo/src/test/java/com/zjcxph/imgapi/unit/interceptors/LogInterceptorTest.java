@@ -58,6 +58,35 @@ class LogInterceptorTest {
     }
 
     @Test
+    void rejectedAuditSubmissionIsCountedWithoutLosingHttpMetricsOrThreadCleanup() {
+        var request = new MockHttpServletRequest("GET", "/api/v1/scans/42");
+        var response = new MockHttpServletResponse();
+        request.setAttribute(HandlerMapping.BEST_MATCHING_PATTERN_ATTRIBUTE, "/api/v1/scans/{id}");
+        org.mockito.Mockito.doThrow(new org.springframework.core.task.TaskRejectedException("synthetic closed executor"))
+                .when(asyncLogService).saveLogAsync(any(Log.class));
+        interceptor.preHandle(request, response, new Object());
+
+        interceptor.afterCompletion(request, response, new Object(), null);
+
+        assertThat(meterRegistry.get("mrr.audit.submission.rejected").counter().count()).isEqualTo(1);
+        assertThat(meterRegistry.get("http.requests.total").tag("method", "GET").tag("status", "200").counter().count()).isEqualTo(1);
+        assertThat(meterRegistry.get("http.requests.duration").tag("uri", "/api/v1/scans/{id}").timer().count()).isEqualTo(1);
+        assertThat(response.getStatus()).isEqualTo(200);
+        assertThat(MDC.get("requestId")).isNull();
+    }
+
+    @Test
+    void auditSubmissionRejectionCounterIsPresentAndZeroForNormalRequest() {
+        var request = new MockHttpServletRequest("GET", "/api/v1/scans/42");
+        var response = new MockHttpServletResponse();
+        interceptor.preHandle(request, response, new Object());
+        interceptor.afterCompletion(request, response, new Object(), null);
+
+        assertThat(meterRegistry.get("mrr.audit.submission.rejected").counter().count()).isZero();
+        verify(asyncLogService).saveLogAsync(any(Log.class));
+    }
+
+    @Test
     void auditDoesNotAttributeAnonymousRequestToStaleThreadSession() {
         var request = new MockHttpServletRequest("GET", "/api/v1/img/content/42");
         var response = new MockHttpServletResponse();

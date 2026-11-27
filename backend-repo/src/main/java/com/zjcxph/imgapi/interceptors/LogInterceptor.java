@@ -15,7 +15,10 @@ import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.Timer;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.slf4j.MDC;
+import org.springframework.core.task.TaskRejectedException;
 import org.springframework.lang.NonNull;
 import org.springframework.stereotype.Component;
 import org.springframework.web.servlet.AsyncHandlerInterceptor;
@@ -43,6 +46,7 @@ import java.util.stream.Stream;
 
 @Component
 public class LogInterceptor implements AsyncHandlerInterceptor {
+    private static final Logger logger = LoggerFactory.getLogger(LogInterceptor.class);
 
     /** MDC 键名，与 {@code logback-spring.xml} 的 {@code includeMdcKeyName} 一一对应。 */
     public static final String MDC_USER_ID = "userId";
@@ -95,12 +99,16 @@ public class LogInterceptor implements AsyncHandlerInterceptor {
 
     private final AsyncLogService asyncLogService;
     private final MeterRegistry meterRegistry;
+    private final Counter auditSubmissionRejected;
     private final SettingRegistry settingRegistry;
 
     public LogInterceptor(AsyncLogService asyncLogService, MeterRegistry meterRegistry,
                           SettingRegistry settingRegistry) {
         this.asyncLogService = asyncLogService;
         this.meterRegistry = meterRegistry;
+        this.auditSubmissionRejected = Counter.builder("mrr.audit.submission.rejected")
+                .description("HTTP audit records rejected before entering the async service")
+                .register(meterRegistry);
         this.settingRegistry = settingRegistry;
     }
 
@@ -200,7 +208,14 @@ public class LogInterceptor implements AsyncHandlerInterceptor {
             if (log.getAuditTarget() != null && (log.getAuditAction() == null || !log.getAuditAction().startsWith("SETTING_"))) {
                 log.setAuditTarget(com.zjcxph.imgapi.utils.AuditPayloadSanitizer.protectedTarget(log.getAuditTarget()));
             }
-            asyncLogService.saveLogAsync(log);
+            try {
+                asyncLogService.saveLogAsync(log);
+            } catch (TaskRejectedException rejected) {
+                // The HTTP response has already completed; preserve request metrics and report
+                // the rejected submission without logging the record or exception payload.
+                auditSubmissionRejected.increment();
+                logger.error("Audit submission rejected by executor; rejectedTotal={}", auditSubmissionRejected.count());
+            }
 
             Counter.builder("http.requests.total")
                     .tag("method", request.getMethod())

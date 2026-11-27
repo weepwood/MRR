@@ -1,5 +1,6 @@
 import type { Page } from '@playwright/test'
 import { expect, test } from '@playwright/test'
+import { isolateLocalVisualSettings } from './helpers/local-visual-settings'
 
 const patient = { id: 92001, bah: '00004217', name: '合成患者甲', department: '示例科室', bingqu: '示例病区', chuangwei: 'A-08', ruyuan: '2026-01-08', admissiontime: '2026-01-08 08:30:00' }
 const record = { id: 92002, bah: '00004217', sjh: '00000608', boxNo: 'BOX-DEMO-01', expectedBoxNo: 'BOX-DEMO-02', status: 'MISPLACED', remark: '合成记录：核对实际箱号', updatedAt: '2026-01-08T09:15:00' }
@@ -47,6 +48,7 @@ test.beforeEach(async ({ page }) => {
 })
 
 test('患者筛选只作用于患者列表，保留 Enter、重置和病案号', async ({ page }) => {
+  await isolateLocalVisualSettings(page)
   await page.addInitScript(() => localStorage.setItem('MRR-ADMIN:app-settings', JSON.stringify({
     app: { enableMotion: false },
     layout: { enableMobileAdaptation: true },
@@ -138,6 +140,7 @@ test('患者缺失证号查询失败不显示假零，重试恢复', async ({ pa
 })
 
 test('窄屏装箱切换、筛选和表单完整可达', async ({ page }) => {
+  await isolateLocalVisualSettings(page)
   await page.setViewportSize({ width: 390, height: 844 })
   await page.addInitScript(() => localStorage.setItem('MRR-ADMIN:app-settings', JSON.stringify({
     app: { colorScheme: 'dark', enableMotion: false },

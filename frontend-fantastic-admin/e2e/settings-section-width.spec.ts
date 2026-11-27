@@ -1,15 +1,17 @@
 import { expect, test } from '@playwright/test'
 import { isolateLocalVisualSettings } from './helpers/local-visual-settings'
 
+// Each section has its own browser context and default 30s test budget.
+// Keep all four viewport widths and all original layout assertions.
 for (const theme of ['light', 'dark']) {
-  test(`设置分区外框与标题等宽 ${theme}`, async ({ page }) => {
-    await isolateLocalVisualSettings(page)
-    await page.addInitScript(theme => localStorage.setItem('MRR-ADMIN:app-settings', JSON.stringify({
-      app: { colorScheme: theme, pageTitleStyle: 'card', enableMotion: false },
-      menu: { mode: 'single' },
-      layout: { enableMobileAdaptation: true },
-    })), theme)
-    for (const section of ['system', 'login-support', 'documentation', 'external-links', 'archive', 'ocr', 'department', 'security', 'runtime', 'developer', 'appearance']) {
+  for (const section of ['system', 'login-support', 'documentation', 'external-links', 'archive', 'ocr', 'department', 'security', 'runtime', 'developer', 'appearance']) {
+    test(`设置分区外框与标题等宽 ${theme} / ${section}`, async ({ page }) => {
+      await isolateLocalVisualSettings(page)
+      await page.addInitScript(theme => localStorage.setItem('MRR-ADMIN:app-settings', JSON.stringify({
+        app: { colorScheme: theme, pageTitleStyle: 'card', enableMotion: false },
+        menu: { mode: 'single' },
+        layout: { enableMobileAdaptation: true },
+      })), theme)
       await page.setViewportSize({ width: 1920, height: 900 })
       await page.goto(`/settings?section=${section}`)
       const content = page.locator('.settings-content')
@@ -40,6 +42,6 @@ for (const theme of ['light', 'dark']) {
           }
         }
       }
-    }
-  })
+    })
+  }
 }

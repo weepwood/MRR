@@ -79,7 +79,7 @@ public class PatientController {
         if (normalizedKeyword != null && normalizedKeyword.isEmpty()) {
             normalizedKeyword = null;
         }
-        int offset = (page - 1) * size;
+        int offset = PaginationUtils.calculateOffset(page, size);
         List<Patient> patients = searchMapper.findAllPaginated(offset, size, normalizedKeyword);
         int total = searchMapper.countAll(normalizedKeyword);
         return Result.<PageResult<Patient>>success().data(PageResult.of(patients, total, page, size));

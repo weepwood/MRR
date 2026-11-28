@@ -555,7 +555,7 @@ public class MigrationServiceImpl implements MigrationService {
 
     @Override
     public PageResult<MigrationJob> listMigrationJobs(int page, int size) {
-        int offset = (page - 1) * size;
+        int offset = PaginationUtils.calculateOffset(page, size);
         List<MigrationJob> jobs = migrationJobMapper.findAllPaginated(offset, size);
         int total = migrationJobMapper.countAll();
         return PageResult.of(jobs, total, page, size);

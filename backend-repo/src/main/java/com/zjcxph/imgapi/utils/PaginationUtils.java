@@ -18,7 +18,12 @@ public final class PaginationUtils {
      * @return 偏移量
      */
     public static int calculateOffset(int page, int size) {
-        return (page - 1) * size;
+        validatePageParams(page, size);
+        long offset = (page - 1L) * size;
+        if (offset > Integer.MAX_VALUE) {
+            throw new IllegalArgumentException("分页偏移量超过允许范围，请缩小页码");
+        }
+        return (int) offset;
     }
 
     /**

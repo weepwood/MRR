@@ -1,5 +1,6 @@
 package com.zjcxph.imgapi.service;
 
+import com.zjcxph.imgapi.utils.PaginationUtils;
 import ch.qos.logback.classic.Level;
 import ch.qos.logback.classic.spi.ILoggingEvent;
 import ch.qos.logback.classic.spi.IThrowableProxy;
@@ -144,7 +145,7 @@ public class SystemErrorEventService {
                 normalize(module),
                 since,
                 size,
-                (page - 1) * size
+                PaginationUtils.calculateOffset(page, size)
         );
         events.forEach(this::privateRead);
         return events;

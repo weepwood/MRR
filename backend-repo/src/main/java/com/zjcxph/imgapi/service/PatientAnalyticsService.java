@@ -1,5 +1,6 @@
 package com.zjcxph.imgapi.service;
 
+import com.zjcxph.imgapi.utils.PaginationUtils;
 import com.zjcxph.imgapi.dto.resp.PatientAnalyticsSummary;
 import com.zjcxph.imgapi.dto.resp.PatientMultiRecordGroup;
 import com.zjcxph.imgapi.entity.Patient;
@@ -74,7 +75,7 @@ public class PatientAnalyticsService {
     }
 
     public List<Patient> findMissingIdCardRecords(int page, int size) {
-        int offset = (page - 1) * size;
+        int offset = PaginationUtils.calculateOffset(page, size);
         String sql = """
                 select id, idcard, bah, name, ruyuan, admissiontime, department, bingqu, chuangwei
                 from mr_patient
@@ -98,7 +99,7 @@ public class PatientAnalyticsService {
             int size,
             boolean includeSuspected
     ) {
-        int offset = (page - 1) * size;
+        int offset = PaginationUtils.calculateOffset(page, size);
         String sql = multiRecordGroupCte() + """
                 select match_type, confidence, patient_name, idcard, record_count,
                        archive_count, archive_numbers, first_admission_date, last_admission_date

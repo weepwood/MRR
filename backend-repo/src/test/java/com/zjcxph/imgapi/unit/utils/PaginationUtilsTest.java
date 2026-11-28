@@ -54,4 +54,16 @@ class PaginationUtilsTest {
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("每页大小");
     }
+    @ParameterizedTest
+    @CsvSource({"2147483647, 1000", "1073741825, 4", "2147485, 1000"})
+    void overflowIsRejectedBeforeQuery(int page, int size) {
+        assertThatThrownBy(() -> PaginationUtils.calculateOffset(page, size))
+                .isInstanceOf(IllegalArgumentException.class);
+    }
+
+    @Test
+    void largestRepresentableOffsetRemainsValid() {
+        assertThat(PaginationUtils.calculateOffset(2147483647, 1)).isEqualTo(2147483646);
+    }
+
 }

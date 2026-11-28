@@ -1,5 +1,6 @@
 package com.zjcxph.imgapi.service.impl;
 
+import com.zjcxph.imgapi.utils.PaginationUtils;
 import com.zjcxph.imgapi.common.AuthSession;
 import com.zjcxph.imgapi.common.Permissions;
 import com.zjcxph.imgapi.dto.req.AdminCreateUserRequest;
@@ -282,7 +283,7 @@ public class AuthServiceImpl implements AuthService {
     public PageResult<AuthUserProfileDTO> listUsersPaginated(int page, int size, String keyword, String roleCode, String status) {
         int normalizedPage = Math.max(page, 1);
         int normalizedSize = Math.min(Math.max(size, 1), 200);
-        int offset = (normalizedPage - 1) * normalizedSize;
+        int offset = PaginationUtils.calculateOffset(normalizedPage, normalizedSize);
         String normalizedKeyword = trimToNull(keyword);
         String normalizedRoleCode = trimToNull(roleCode);
         String normalizedStatus = normalizeFilterStatus(status);

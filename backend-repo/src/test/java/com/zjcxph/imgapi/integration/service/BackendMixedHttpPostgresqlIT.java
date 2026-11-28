@@ -314,8 +314,9 @@ class BackendMixedHttpPostgresqlIT extends PostgresqlIntegrationTestSupport {
         }
     }
 
-    @Test
-    void delegatedRoleRevocationDeniesInFlightHttpWrite() throws Exception {
+    @org.junit.jupiter.params.ParameterizedTest
+    @org.junit.jupiter.params.provider.ValueSource(strings={"role", "token"})
+    void delegatedRoleRevocationDeniesInFlightHttpWrite(String revoked) throws Exception {
         String role = "SYNTHETIC_HTTP_ROLE_" + java.util.UUID.randomUUID();
         String target = role + "_TARGET";
         String username = "synthetic-http-role-" + java.util.UUID.randomUUID();
@@ -345,6 +346,7 @@ class BackendMixedHttpPostgresqlIT extends PostgresqlIntegrationTestSupport {
         var servlet = Tomcat.addServlet(context, "mvc", new DispatcherServlet(mvc));
         servlet.setLoadOnStartup(1);
         context.addServletMappingDecoded("/", "mvc");
+        String revokedHash = null;
         try {
             jdbc.update("INSERT INTO app.mr_auth_role(code,name,permissions) VALUES (?,?,'role:manage'), (?,?,'role:read')", role, role, target, target);
             long actor = jdbc.queryForObject("INSERT INTO app.mr_auth_user(username,password_hash,role_code,status,must_change_password,password_version) VALUES (?,'synthetic',?,'active',false,1) RETURNING id", Long.class, username, role);
@@ -352,6 +354,9 @@ class BackendMixedHttpPostgresqlIT extends PostgresqlIntegrationTestSupport {
             var session = new AuthSession();
             session.setId(actor); session.setUsername(username); session.setPasswordVersion(1); session.setStatus("active");
             String token = JwtUtil.getToken(session);
+            String otherToken = JwtUtil.getToken(session);
+            revokedHash = TokenBlacklist.tokenHash(JwtUtil.getJti(token));
+            assertThat(JwtUtil.getJti(otherToken)).isNotEqualTo(JwtUtil.getJti(token));
             tomcat.start();
             String base = "http://127.0.0.1:" + connector.getLocalPort() + "/api/v1/auth/roles/" + target;
             var client = HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(3)).build();
@@ -364,7 +369,8 @@ class BackendMixedHttpPostgresqlIT extends PostgresqlIntegrationTestSupport {
             var response = tx.execute(status -> {
                 authRoles.lockAdminRole();
                 int blocker = jdbc.queryForObject("select pg_backend_pid()", Integer.class);
-                jdbc.update("UPDATE app.mr_auth_role SET permissions='role:read' WHERE code=?", role);
+                if ("role".equals(revoked)) jdbc.update("UPDATE app.mr_auth_role SET permissions='role:read' WHERE code=?", role);
+                else blacklist.revoke(JwtUtil.getJti(token), JwtUtil.getExpirationMillis(token));
                 var pending = client.sendAsync(request.apply("denied"), HttpResponse.BodyHandlers.ofString());
                 long deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(5);
                 while (!pending.isDone() && System.nanoTime() < deadline) {
@@ -381,9 +387,17 @@ class BackendMixedHttpPostgresqlIT extends PostgresqlIntegrationTestSupport {
             assertThat(denied.statusCode()).isEqualTo(403);
             assertThat(denied.body()).contains("当前账号没有操作权限");
             assertThat(authRoles.findByCode(target).getDescription()).isEqualTo("permitted");
-            assertThat(client.send(request.apply("denied-again"), HttpResponse.BodyHandlers.ofString()).statusCode()).isEqualTo(403);
+            assertThat(client.send(request.apply("denied-again"), HttpResponse.BodyHandlers.ofString()).statusCode()).isEqualTo("role".equals(revoked)?403:401);
+            if ("token".equals(revoked)) {
+                var other = HttpRequest.newBuilder(URI.create(base)).timeout(Duration.ofSeconds(8))
+                        .header("Authorization","Bearer " + otherToken).header("Content-Type","application/json")
+                        .PUT(HttpRequest.BodyPublishers.ofString("{\"description\":\"other-session\"}")).build();
+                assertOk(client.send(other,HttpResponse.BodyHandlers.ofString()));
+                assertThat(authRoles.findByCode(target).getDescription()).isEqualTo("other-session");
+            }
         } finally {
             try { tomcat.stop(); } finally { tomcat.destroy(); mvc.close(); }
+            if (revokedHash != null) jdbc.update("DELETE FROM app.token_revocation WHERE token_hash=?", revokedHash);
             jdbc.update("DELETE FROM app.mr_auth_user WHERE username=?", username);
             jdbc.update("DELETE FROM app.mr_auth_role WHERE code IN (?,?)", role, target);
         }

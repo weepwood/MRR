@@ -267,7 +267,7 @@ public class UserController {
         }
         String token = authorization.substring(7).trim();
         try {
-            tokenBlacklist.revoke(JwtUtil.getJti(token), JwtUtil.getExpirationMillis(token));
+            tokenBlacklist.revokeForUser(requireCurrentUser().getId(), JwtUtil.getJti(token), JwtUtil.getExpirationMillis(token));
         } catch (Exception e) {
             logger.warn("Unable to revoke current token");
             throw new BusinessException(503, "会话撤销暂时不可用，请稍后重试");

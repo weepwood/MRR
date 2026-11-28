@@ -4,24 +4,36 @@ import com.zjcxph.imgapi.common.AuthSession;
 
 public final class AuthContext {
 
-    private static final ThreadLocal<AuthSession> CURRENT_USER = new ThreadLocal<>();
+    /** Server-only context; never serialize a token hash into AuthSession or logs. */
+    private record Current(AuthSession user, String tokenHash) { }
+    private static final ThreadLocal<Current> CURRENT = new ThreadLocal<>();
 
     private AuthContext() {
     }
 
     public static void setCurrentUser(AuthSession user) {
+        setCurrentUser(user, null);
+    }
+
+    public static void setCurrentUser(AuthSession user, String tokenHash) {
         if (user == null) {
-            CURRENT_USER.remove();
+            clear();
             return;
         }
-        CURRENT_USER.set(user);
+        CURRENT.set(new Current(user, tokenHash));
     }
 
     public static AuthSession getCurrentUser() {
-        return CURRENT_USER.get();
+        Current current = CURRENT.get();
+        return current == null ? null : current.user();
+    }
+
+    public static String getCurrentTokenHash() {
+        Current current = CURRENT.get();
+        return current == null ? null : current.tokenHash();
     }
 
     public static void clear() {
-        CURRENT_USER.remove();
+        CURRENT.remove();
     }
 }

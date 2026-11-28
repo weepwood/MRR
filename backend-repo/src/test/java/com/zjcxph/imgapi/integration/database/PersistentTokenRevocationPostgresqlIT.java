@@ -12,10 +12,13 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import static org.assertj.core.api.Assertions.assertThat;
 
 @MybatisTest
+@org.springframework.context.annotation.Import(TokenBlacklist.class)
 @ImportAutoConfiguration(FlywayAutoConfiguration.class)
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
 class PersistentTokenRevocationPostgresqlIT extends PostgresqlIntegrationTestSupport {
     @Autowired JdbcTemplate jdbc;
+    @Autowired TokenBlacklist blacklist;
+    @Autowired org.springframework.transaction.PlatformTransactionManager manager;
 
     @Test void revokedTokenRemainsRevokedAfterRecreatingTheService() {
         new TokenBlacklist(jdbc).revoke("synthetic-token-id", System.currentTimeMillis() + 60000);
@@ -24,6 +27,40 @@ class PersistentTokenRevocationPostgresqlIT extends PostgresqlIntegrationTestSup
     }
 
     @Autowired com.zjcxph.imgapi.mapper.AuthUserMapper users;
+
+    @Test
+    @org.springframework.transaction.annotation.Transactional(propagation=org.springframework.transaction.annotation.Propagation.NOT_SUPPORTED)
+    void logoutWaitsForFencedWriteAndRevokesOnlyItsOwnToken() throws Exception {
+        String key = java.util.UUID.randomUUID().toString();
+        String jti = "synthetic-logout-" + key;
+        long actor = jdbc.queryForObject("INSERT INTO app.mr_auth_user(username,password_hash,role_code,status,password_version) VALUES (?,'synthetic','READER','active',1) RETURNING id",Long.class,"synthetic-logout-"+key);
+        try (var executor = java.util.concurrent.Executors.newSingleThreadExecutor()) {
+            var future = new java.util.concurrent.atomic.AtomicReference<java.util.concurrent.Future<?>>();
+            new org.springframework.transaction.support.TransactionTemplate(manager).executeWithoutResult(status -> {
+                assertThat(users.lockAuthorizationActor(actor)).isEqualTo(actor);
+                int blocker=jdbc.queryForObject("SELECT pg_backend_pid()",Integer.class);
+                future.set(executor.submit(() -> blacklist.revokeForUser(actor,jti,System.currentTimeMillis()+60000)));
+                long deadline=System.nanoTime()+java.util.concurrent.TimeUnit.SECONDS.toNanos(4);
+                boolean blocked=false;
+                while (System.nanoTime()<deadline && !future.get().isDone()) {
+                    jdbc.execute("SELECT pg_stat_clear_snapshot()");
+                    blocked=Boolean.TRUE.equals(jdbc.queryForObject("SELECT EXISTS(SELECT 1 FROM pg_stat_activity WHERE ?=ANY(pg_blocking_pids(pid)))",Boolean.class,blocker));
+                    if (blocked) break;
+                    try {Thread.sleep(20);} catch(InterruptedException e){Thread.currentThread().interrupt();throw new AssertionError(e);}
+                }
+                assertThat(blocked).as("logout must wait on the actual account lock").isTrue();
+                assertThat(blacklist.isRevoked(jti)).isFalse();
+            });
+            future.get().get(5,java.util.concurrent.TimeUnit.SECONDS);
+            assertThat(blacklist.isRevoked(jti)).isTrue();
+            assertThat(blacklist.isRevoked("other-"+jti)).isFalse();
+            assertThat(users.findSessionById(actor).effectivePasswordVersion()).isEqualTo(1);
+        } finally {
+            jdbc.update("DELETE FROM app.token_revocation WHERE token_hash=?",TokenBlacklist.tokenHash(jti));
+            jdbc.update("DELETE FROM app.mr_auth_user WHERE id=?",actor);
+        }
+    }
+
 
     @Test void credentialWritesRequireCurrentVersionAndActiveState() {
         String username = "synthetic-credential-" + java.util.UUID.randomUUID();

@@ -27,3 +27,10 @@
 - Token：LoginInterceptor已在Bearer/影像Cookie准入使用observeSession一次数据库查询，失败关闭；UserController.logout只撤销当前jti，改密/停用递增凭据版本。管理事务已有角色锁与账号行锁及当前权限/版本复核，但AuthContext未携带可信Token摘要，因此不能保证已准入敏感写观察单Token在途撤销；下一批优先实际复现该路径，不改变普通读准入契约。
 - 审计：access_log是HTTP完成后异步日志，存在容量及故障丢失，保留告警；mr_external_archive_access_log独立外部账本，strict-intent候选仍关闭；mr_image_type_audit已有分类业务审计；medical_audit_event专用于冻结INTENT/OUTCOME实验账本，约束不适用账号变更成功事件。AuthServiceImpl十类账号成功及角色成功仍只afterCommit写SECURITY_AUDIT，日志丢失不能保证事务级持久性。后续应优先低频权限/账号写入的事务内最小事件记录、失败整事务回滚；不把HTTP结果冒充事务结果、不直接改动既有审计历史表或恢复复杂引擎。影像读取的审计故障/容量与外部调阅终态仍须专门核验。
 - 单实例：架构与独占维护文档已明确Windows单机及app.migration.recover-on-startup=false；导出启动恢复会resetToPending处理中任务，必须确保前一实例已停止。此次确认约束，不新增运行时分布式锁/自动接管。现场仍须证明没有并行服务以及存储写入已停，不能仅依据数据库锁推断。后续补齐部署手册与恢复门禁。
+
+## 第二批实际验收：单 Token 在途认证围栏
+
+- RED：真实回环Tomcat/Spring MVC/JWT及PG，扩展原角色撤权竞争至单Token撤销。操作已准入且等待共同角色锁，独立事务撤销当前jti并提交；原实现HTTP 200而非403。原角色撤权对照通过（1失败/1通过）。
+- 可信Token哈希仅进入服务器ThreadLocal，与当前身份一起清理，不进入AuthSession DTO或日志。复用observeSession在管理事务既有角色锁→账号行锁之后复核当前令牌，拒绝已撤销/未知状态；普通读取不加第二次查询。个人/首次改密在密码计算完成后、现有凭据CAS写入前加账号行锁和会话复核。内部直接调用不伪造HTTP Token，保留原凭据CAS。UserController真实注销调用TokenBlacklist.revokeForUser，10s事务内锁定账号行，仅撤销当前jti；不增加密码版本、不注销其他令牌。已经取得同一账号锁并通过复核的操作可以先提交，再完成注销。
+- 首次GREEN 76Java全通过，31PG中30通过，新增注销锁观测1失败：事务内pg_stat_activity快照未刷新。只补测试pg_stat_clear_snapshot，追加PersistentTokenRevocationPostgresqlIT 5/5通过（12.773s）。真实HTTP两个竞争场景通过：Token已撤销的在途写403、新请求401、第二个独立Token仍200；真实Spring事务注销等待同一账号锁、只撤销本Token且密码版本不变。RED/GREEN真实HTTP测试SHA256 caf63444f86fb63683a4b7fd93356669b9e12392926f1cddbaaa2960e772a6bf一致。8份最终源码摘要核验一致。证据mrr-token-inflight-red-20261129.gk7WWP、mrr-token-inflight-green-20261129.7hqpoz、mrr-token-inflight-verify-20261129.UubGeG。
+- 边界：真实HTTP只新增角色写入竞争；管理其他入口共用围栏，个人改密尚无独立在途撤销RED；注销锁验证走真实Spring服务，非HTTP注销端到端。非认证领域的医疗敏感写、OCR其他执行期与事务审计持久化尚未闭合。未变更表/迁移/部署，未恢复冻结审计引擎。

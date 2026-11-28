@@ -115,7 +115,8 @@ public class LoginInterceptor implements AsyncHandlerInterceptor {
             writeUnauthorized(response, "Token 已失效，请重新登录", "REVOKED_TOKEN");
             return false;
         }
-        AuthUserMapper.SessionState currentUser = observeSession(tokenSession.getId(), TokenBlacklist.tokenHash(jti), response);
+        String tokenHash = TokenBlacklist.tokenHash(jti);
+        AuthUserMapper.SessionState currentUser = observeSession(tokenSession.getId(), tokenHash, response);
         if (currentUser == null) return false;
         if (tokenSession.getId() == null || !StringUtils.hasText(tokenSession.getUsername())) {
             writeUnauthorized(response, "Token 用户信息无效", "INVALID_TOKEN_USER");
@@ -138,9 +139,8 @@ public class LoginInterceptor implements AsyncHandlerInterceptor {
 
         AuthSession session = toCurrentSession(currentUser);
         applyDeveloperPermissionBypass(request, response, session);
-        installSession(request, session);
-        imageAccessCookieService.issueIfApplicable(request, response, session,
-                TokenBlacklist.tokenHash(jti), tokenExpiresAtMillis);
+        installSession(request, session, tokenHash);
+        imageAccessCookieService.issueIfApplicable(request, response, session, tokenHash, tokenExpiresAtMillis);
         return true;
     }
 
@@ -173,7 +173,7 @@ public class LoginInterceptor implements AsyncHandlerInterceptor {
             return false;
         }
 
-        installSession(request, toCurrentSession(currentUser));
+        installSession(request, toCurrentSession(currentUser), grant.tokenHash());
         request.setAttribute(ACCESS_MODE_ATTRIBUTE, ImageAccessCookieService.ACCESS_MODE);
         return true;
     }
@@ -273,7 +273,11 @@ public class LoginInterceptor implements AsyncHandlerInterceptor {
     }
 
     private void installSession(HttpServletRequest request, AuthSession session) {
-        AuthContext.setCurrentUser(session);
+        installSession(request, session, null);
+    }
+
+    private void installSession(HttpServletRequest request, AuthSession session, String tokenHash) {
+        AuthContext.setCurrentUser(session, tokenHash);
         request.setAttribute(AuthorizationInterceptor.AUTH_SESSION_ATTRIBUTE, session);
         // 日志身份以服务端解析出的会话为准。客户端可控的 X-User-Id / X-User-Role
         // 请求头不再参与 MDC，避免伪造请求头污染日志身份。

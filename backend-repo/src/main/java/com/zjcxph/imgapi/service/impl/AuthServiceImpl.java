@@ -398,7 +398,9 @@ public class AuthServiceImpl implements AuthService {
             throw new BusinessException("新密码不能与当前密码相同");
         }
 
-        if (authUserMapper.changePassword(userId, PasswordUtil.encode(request.getNewPassword()),
+        String passwordHash = PasswordUtil.encode(request.getNewPassword());
+        requireCurrentCredentialSession(userId);
+        if (authUserMapper.changePassword(userId, passwordHash,
                 user.effectivePasswordVersion(), true) != 1) {
             throw credentialChanged();
         }
@@ -479,7 +481,9 @@ public class AuthServiceImpl implements AuthService {
         if (oldPassword.equals(newPassword)) {
             throw new BusinessException("新密码不能与原密码相同");
         }
-        if (authUserMapper.changePassword(userId, PasswordUtil.encode(newPassword),
+        String passwordHash = PasswordUtil.encode(newPassword);
+        requireCurrentCredentialSession(userId);
+        if (authUserMapper.changePassword(userId, passwordHash,
                 user.effectivePasswordVersion(), false) != 1) {
             throw credentialChanged();
         }
@@ -622,12 +626,35 @@ public class AuthServiceImpl implements AuthService {
         if (session != null && session.getId() != null) {
             authUserMapper.lockAuthorizationActor(session.getId());
         }
-        AuthUser current = session == null || session.getId() == null
-                ? null : authUserMapper.findSessionById(session.getId());
+        AuthUser current = currentAuthorizationActor(session);
         if (current == null || !"active".equalsIgnoreCase(current.getStatus())
                 || current.isPasswordChangeRequired()
                 || current.effectivePasswordVersion() != session.effectivePasswordVersion()
                 || !toSession(current).hasPermission(permission)) {
+            throw new BusinessException(403, "当前账号没有操作权限");
+        }
+    }
+
+    /** HTTP calls re-observe the verified session after taking the existing authorization locks. */
+    private AuthUser currentAuthorizationActor(AuthSession session) {
+        if (session == null || session.getId() == null) return null;
+        String hash = AuthContext.getCurrentTokenHash();
+        if (hash == null) return authUserMapper.findSessionById(session.getId());
+        var current = authUserMapper.observeSession(session.getId(), hash);
+        return current != null && Boolean.FALSE.equals(current.getTokenRevoked()) ? current : null;
+    }
+
+    private void requireCurrentCredentialSession(Long userId) {
+        // Internal callers retain the existing credential CAS contract; HTTP auth supplies the hash.
+        if (AuthContext.getCurrentTokenHash() == null) return;
+        AuthSession session = AuthContext.getCurrentUser();
+        if (session == null || !java.util.Objects.equals(userId, session.getId())) {
+            throw new BusinessException(403, "当前账号没有操作权限");
+        }
+        authUserMapper.lockAuthorizationActor(userId);
+        AuthUser current = currentAuthorizationActor(session);
+        if (current == null || !"active".equalsIgnoreCase(current.getStatus())
+                || current.effectivePasswordVersion() != session.effectivePasswordVersion()) {
             throw new BusinessException(403, "当前账号没有操作权限");
         }
     }
@@ -641,6 +668,9 @@ public class AuthServiceImpl implements AuthService {
             throw new BusinessException(403, "当前账号不是有效管理员");
         }
         authUserMapper.lockAuthorizationActor(administratorId);
+        if (AuthContext.getCurrentTokenHash() != null && currentAuthorizationActor(session) == null) {
+            throw new BusinessException(403, "当前账号没有操作权限");
+        }
         AuthUser administrator = authUserMapper.findById(administratorId);
         if (administrator == null
                 || !"ADMIN".equalsIgnoreCase(administrator.getRoleCode())

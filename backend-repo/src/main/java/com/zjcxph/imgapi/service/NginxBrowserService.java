@@ -5,6 +5,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.zjcxph.imgapi.config.ArchiveImageSourceProperties;
 import com.zjcxph.imgapi.config.ImageProperties;
 import com.zjcxph.imgapi.dto.resp.NginxBrowserPageDTO;
+import com.zjcxph.imgapi.storage.TimedHttpBody;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -102,7 +103,7 @@ public class NginxBrowserService {
 
         HttpResponse<InputStream> response;
         try {
-            response = httpClient.send(request.build(), HttpResponse.BodyHandlers.ofInputStream());
+            response = httpClient.send(request.build(), TimedHttpBody.handler(validDuration(sourceProperties.getNginxReadTimeout(), Duration.ofSeconds(60))));
         } catch (InterruptedException exception) {
             Thread.currentThread().interrupt();
             throw new NginxBrowserException("Nginx 目录读取被中断", exception);
@@ -169,20 +170,30 @@ public class NginxBrowserService {
         try {
             HttpResponse<InputStream> response = httpClient.send(
                     request.build(),
-                    HttpResponse.BodyHandlers.ofInputStream()
+                    TimedHttpBody.handler(validDuration(sourceProperties.getNginxReadTimeout(), Duration.ofSeconds(60)))
             );
-            if (response.statusCode() < 200 || response.statusCode() >= 300) {
-                response.body().close();
-                throw new NginxBrowserException(statusMessage(response.statusCode(), false));
+            InputStream input = response.body();
+            try {
+                if (response.statusCode() < 200 || response.statusCode() >= 300) {
+                    throw new NginxBrowserException(statusMessage(response.statusCode(), false));
+                }
+                return new RemoteFile(
+                        input,
+                        response.headers().firstValue("Content-Type").orElse("application/octet-stream"),
+                        response.headers().firstValueAsLong("Content-Length").orElse(-1L),
+                        fileName(normalizedPath),
+                        response.headers().firstValue("ETag").orElse(null),
+                        response.headers().firstValue("Last-Modified").orElse(null)
+                );
+            } catch (RuntimeException failure) {
+                // The stream has not been handed to the controller yet.
+                try { input.close(); }
+                catch (IOException | RuntimeException closeFailure) { failure.addSuppressed(closeFailure); }
+                if (failure instanceof NumberFormatException) {
+                    throw new NginxBrowserException("Nginx 文件响应元数据无效", failure);
+                }
+                throw failure;
             }
-            return new RemoteFile(
-                    response.body(),
-                    response.headers().firstValue("Content-Type").orElse("application/octet-stream"),
-                    response.headers().firstValueAsLong("Content-Length").orElse(-1L),
-                    fileName(normalizedPath),
-                    response.headers().firstValue("ETag").orElse(null),
-                    response.headers().firstValue("Last-Modified").orElse(null)
-            );
         } catch (InterruptedException exception) {
             Thread.currentThread().interrupt();
             throw new NginxBrowserException("Nginx 文件读取被中断", exception);

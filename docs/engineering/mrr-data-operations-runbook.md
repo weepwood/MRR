@@ -175,7 +175,7 @@ inspect-query-plans.sql 新增显式 compare_exact=1；compare_sjh=1 使用 SJH�
 ## 外部专用账本最小准入契约（本地候选，2026-11-29）
 
 - 外部凭据成功事实与凭据原子提交；上下文/清单/影像/ZIP每次授权访问先写INTENT，失败503；Mapper语句超时3秒（不是整个请求或连接等待的硬时限）。流终态独立best-effort写入，失败记录类型化ERROR，不能让已发送数据回滚。安全注销继续执行，不强制追加成功事件才能撤销。
-- 常规访问最多一条准入及一条结果，额外凭据INTENT实验仍关闭；失败、终止与未配对并非成功。无新缓存/队列，无自动删除。现有内部访问日志丢失、缓冲及拒绝告警继续有效；不得以内部best-effort满足院方强制持久审计要求。院方若要求内部读取/导出下载强制审计，须按负载、保留期限、故障可用性与权限独立验收。
+- 常规访问最多一条准入及一条结果，额外凭据INTENT实验仍关闭；失败、终止与未配对并非成功。无新缓存/队列，无自动删除。现有内部访问日志丢失、缓冲及拒绝告警继续有效；不得以普通内部best-effort满足院方强制持久审计要求。内部特定披露另见下节直接准入账本。
 - 在授权维护窗口用只读聚合核对过去24小时计数、表及索引容量，以及超过1小时的近24小时未配对INTENT；下列仅为排查窗口，不是SLA/告警阈值，不导出用户、病案、路径或正文。真实外部负载、容量增长、备份、ACL、通知和保留期限需现场确认。未知事件不删除、不自动补造结果。
 
 ```sql
@@ -199,3 +199,21 @@ GROUP BY i.action ORDER BY i.action;
 ```
 
 大表扫描可能影响业务；使用只读会话、短statement_timeout和维护窗口，必要时先EXPLAIN，不在生产擅自运行。当前无请求ID索引及现场容量证据，不添加未经验证索引或自动轮询任务。
+
+
+## 内部敏感披露直接准入账本（本地候选，2026-11-29）
+原图、旧代理、签名地址、文件浏览器内容、ZIP/PDF/异步下载、医疗CSV/Excel、直接身份查询及审计导出，按MedicalAuditAdmissionInterceptor固定handler清单，在既有权限之后、来源打开或数据输出前，向app.medical_audit_event独立提交INTENT。失败503，保持no-store。直接路径不启动实验引擎/加密spool，原冻结开关保持关闭。完成观测独立写OUTCOME，HTTP_COMPLETED仅Servlet观测，不是业务成功、全量传输或客户端保存证明。未配对记录不补造、不重放，终态异常类型告警。原图每个请求及Range均独立计数，每次准入最多两行；普通列表及模板仍沿用既有尽力日志，注销/取消不增加强制准入。无请求正文、凭据、明文URI/query或患者数据；没有有效HMAC时目标REDACTED，POST正文不重建。3秒事务超时不是连接等待或整请求SLA。
+以下只读聚合用于授权维护窗口的容量检查；窗口仅排查建议，不是自动告警或保留期限。不输出身份和目标，不运行在未经授权的生产环境。
+
+```sql
+SELECT pg_total_relation_size('app.medical_audit_event') AS ledger_bytes;
+SELECT phase, observation, count(*) FROM app.medical_audit_event
+WHERE observed_at >= now() - interval '24 hours'
+GROUP BY phase, observation ORDER BY phase, observation;
+SELECT count(*) AS unresolved FROM app.medical_audit_event i
+WHERE i.phase='INTENT' AND i.observed_at >= now() - interval '24 hours'
+  AND i.observed_at < now() - interval '1 hour'
+  AND NOT EXISTS (SELECT 1 FROM app.medical_audit_event o
+                  WHERE o.correlation_id=i.correlation_id AND o.phase='OUTCOME');
+```
+发布前必须现场核对图像并发峰值、数据库提交和连接等待、每日增长、表/索引/WAL/备份容量、审计读取权限、保留期限、故障告警及拒绝医疗访问的可用性影响；不可因性能不达标擅自降级、删除或开启实验引擎。旧OSS删除无产品前端调用，受管Key范围校验并不代表可安全删除任何受管对象；对象引用、备份、授权维护与实际ACL仍需批准核验。

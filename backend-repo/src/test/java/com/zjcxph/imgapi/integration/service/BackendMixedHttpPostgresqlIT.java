@@ -241,9 +241,14 @@ class BackendMixedHttpPostgresqlIT extends PostgresqlIntegrationTestSupport {
         var tomcat = new Tomcat(); tomcat.setBaseDir(directory.toString()); tomcat.setPort(0);
         var connector = tomcat.getConnector(); connector.setProperty("address","127.0.0.1");
         var context = tomcat.addContext("",directory.toString());
-        var mvc = new AnnotationConfigWebApplicationContext(); mvc.register(MvcConfig.class);
+        var mvc = new AnnotationConfigWebApplicationContext(); mvc.register(MvcConfig.class,com.zjcxph.imgapi.config.MedicalAuditWebConfig.class);
         mvc.addBeanFactoryPostProcessor(beans -> {
             beans.registerSingleton("loginInterceptor",login);
+            beans.registerSingleton("disclosureLog",new com.zjcxph.imgapi.interceptors.LogInterceptor(
+                    org.mockito.Mockito.mock(com.zjcxph.imgapi.service.AsyncLogService.class),
+                    new SimpleMeterRegistry(),org.mockito.Mockito.mock(com.zjcxph.imgapi.setting.SettingRegistry.class)));
+            beans.registerSingleton("medicalAuditAdmissionInterceptor",new com.zjcxph.imgapi.audit.MedicalAuditAdmissionInterceptor(
+                    beans.getBeanProvider(com.zjcxph.imgapi.audit.MedicalAuditAdmission.class),jdbc,transactionManager));
             beans.registerSingleton("exportController",new com.zjcxph.imgapi.controller.ArchiveExportJobController(
                     service,repository,org.mockito.Mockito.mock(com.zjcxph.imgapi.service.DeploymentReadinessService.class)));
         });
@@ -277,7 +282,18 @@ class BackendMixedHttpPostgresqlIT extends PostgresqlIntegrationTestSupport {
                 assertThat(response.body()).containsExactly(block[0]);
                 assertThat(response.headers().firstValue("X-Archive-SHA256")).contains(digest);
                 assertThat(response.headers().firstValue("Content-Range")).contains("bytes 0-0/"+size);
-                return (System.nanoTime()-start)/1000000;
+                long elapsed=(System.nanoTime()-start)/1000000;
+                String trace=response.headers().firstValue("X-Request-Id").orElseThrow();
+                long deadline=System.nanoTime()+TimeUnit.SECONDS.toNanos(3);
+                List<String> phases;
+                do {
+                    phases=jdbc.queryForList("SELECT phase FROM app.medical_audit_event WHERE request_id=? AND actor_id=? ORDER BY phase",String.class,trace,actor);
+                    if(phases.size()==2)break;
+                    Thread.sleep(10);
+                }while(System.nanoTime()<deadline);
+                assertThat(phases).containsExactly("INTENT","OUTCOME");
+                assertThat(jdbc.queryForObject("SELECT http_status FROM app.medical_audit_event WHERE request_id=? AND phase='OUTCOME'",String.class,trace)).isEqualTo("206");
+                return elapsed;
             };
             range.call(); // warm-up
             for(int i=0;i<3;i++) System.out.println("MRR_EXPORT_HTTP_RANGE_128M_MS "+range.call());
@@ -309,6 +325,7 @@ class BackendMixedHttpPostgresqlIT extends PostgresqlIntegrationTestSupport {
             workers.shutdownNow();
             try {tomcat.stop();} finally {tomcat.destroy();mvc.close();}
             jdbc.update("DELETE FROM app.archive_export_job WHERE id=CAST(? AS UUID)",id);
+            jdbc.update("DELETE FROM app.medical_audit_event WHERE actor_id IN (SELECT id FROM app.mr_auth_user WHERE username=?)",username);
             jdbc.update("DELETE FROM app.mr_auth_user WHERE username=?",username);
             jdbc.update("DELETE FROM app.mr_auth_role WHERE code=?",role);
         }
@@ -508,8 +525,10 @@ class BackendMixedHttpPostgresqlIT extends PostgresqlIntegrationTestSupport {
     @EnableWebMvc
     static class MvcConfig implements WebMvcConfigurer {
         @Autowired LoginInterceptor login;
+        @Autowired(required=false) com.zjcxph.imgapi.interceptors.LogInterceptor disclosureLog;
         @Bean GlobalExceptionHandler errors() { return new GlobalExceptionHandler(); }
         @Override public void addInterceptors(InterceptorRegistry registry) {
+            if(disclosureLog!=null)registry.addInterceptor(disclosureLog);
             registry.addInterceptor(login);
             registry.addInterceptor(new AuthorizationInterceptor());
         }

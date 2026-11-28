@@ -20,10 +20,80 @@ public class MedicalAuditAdmissionInterceptor implements AsyncHandlerInterceptor
             "ScanController","ArchiveRecordController","ArchiveBoxRecordController","ArchiveManifestController","ImageAuditExportController","ArchiveExportController","ArchiveExportJobController",
             "ArchiveExportJobListController","OcrController","OcrBatchController","DataExchangeController",
             "OssController","OssMigrationManagementController");
+    // Narrow mandatory disclosure contract. No general audit engine or spool is started.
+    private static final String DIRECT=MedicalAuditAdmissionInterceptor.class.getName()+".direct";
+    private static final java.util.Map<String,Set<String>> DISCLOSURE=java.util.Map.ofEntries(
+            java.util.Map.entry("ImageContentController",Set.of("getContent")),
+            java.util.Map.entry("ImageController",Set.of("getImage","download","getImageUrl","getOssImage")),
+            java.util.Map.entry("ArchiveExportController",Set.of("downloadZip","downloadPdf","downloadSelectedPdf")),
+            java.util.Map.entry("ArchiveExportJobController",Set.of("download")),
+            java.util.Map.entry("DataExchangeController",Set.of("exportPatients","exportStatistics","exportArchives","exportArchiveBoxes","exportScan")),
+            java.util.Map.entry("PatientController",Set.of("getByIdCard","exportExcel")),
+            java.util.Map.entry("SearchController",Set.of("getBAHByEncryptID","getBAHByEncryptIDLegacy","getArchiveCasesByIdCard","getArchiveCasesByToken","getBAHByiDCard","getBAHByIdCard")),
+            java.util.Map.entry("StatisticsController",Set.of("exportCsv")),
+            java.util.Map.entry("ImageAuditExportController",Set.of("export")),
+            java.util.Map.entry("OssController",Set.of("getOssUrl","getBrowserOssUrl")),
+            java.util.Map.entry("NginxBrowserController",Set.of("openFile")));
+    private static final org.slf4j.Logger logger=org.slf4j.LoggerFactory.getLogger(MedicalAuditAdmissionInterceptor.class);
+    private record Disclosure(String correlation,long actor,String trace,String method,String route,String target){}
     private final ObjectProvider<MedicalAuditAdmission> provider;
-    public MedicalAuditAdmissionInterceptor(ObjectProvider<MedicalAuditAdmission> provider){this.provider=provider;}
+    private final org.springframework.jdbc.core.JdbcTemplate jdbc;
+    private final org.springframework.transaction.support.TransactionTemplate transaction;
+    public MedicalAuditAdmissionInterceptor(ObjectProvider<MedicalAuditAdmission> provider,
+            org.springframework.jdbc.core.JdbcTemplate jdbc,
+            org.springframework.transaction.PlatformTransactionManager manager){
+        this.provider=provider;this.jdbc=jdbc;
+        transaction=new org.springframework.transaction.support.TransactionTemplate(manager);
+        transaction.setPropagationBehavior(org.springframework.transaction.TransactionDefinition.PROPAGATION_REQUIRES_NEW);
+        transaction.setTimeout(3);
+    }
+
+    private boolean isDisclosure(HandlerMethod method) {
+        return DISCLOSURE.getOrDefault(method.getBeanType().getSimpleName(),Set.of()).contains(method.getMethod().getName());
+    }
+
+    private boolean admitDisclosure(HttpServletRequest request,HttpServletResponse response)throws java.io.IOException {
+        // Redispatch of an admitted stream must not create another INTENT.
+        if(request.getAttribute(DIRECT) instanceof Disclosure)return true;
+        try {
+            Object actor=request.getAttribute(AuthorizationInterceptor.AUTH_SESSION_ATTRIBUTE);
+            Object route=request.getAttribute(HandlerMapping.BEST_MATCHING_PATTERN_ATTRIBUTE);
+            Object trace=request.getAttribute("requestId");
+            if(!(actor instanceof AuthSession session)||session.getId()==null||session.getId()<=0
+                    ||!(trace instanceof String id)||id.isBlank()||id.length()>64||route==null)
+                throw new IllegalStateException("Medical audit identity unavailable");
+            String query=java.util.Objects.toString(request.getQueryString(),"");
+            String target=query.length()>16384?"[REDACTED]":
+                    AuditPayloadSanitizer.protectedValue(request.getRequestURI()+"?"+query);
+            var event=new Disclosure(java.util.UUID.randomUUID().toString(),session.getId(),id,request.getMethod(),route.toString(),target);
+            persistDisclosure(event,false,0,false);
+            request.setAttribute(DIRECT,event);
+            return true;
+        } catch(RuntimeException failure) {
+            logger.error("Medical disclosure admission unavailable: errorType={}",failure.getClass().getSimpleName());
+            response.setStatus(503);response.setContentType("application/json;charset=UTF-8");
+            response.setHeader("Cache-Control","private, no-store");
+            response.getWriter().write("{\"code\":503,\"message\":\"医疗审计暂不可用，请稍后重试\"}");
+            return false;
+        }
+    }
+
+    private void persistDisclosure(Disclosure e,boolean outcome,int status,boolean failed) {
+        transaction.executeWithoutResult(tx->{
+            int inserted=jdbc.update("""
+                INSERT INTO app.medical_audit_event(event_id,correlation_id,request_id,phase,actor_id,method,route,target,observed_at,observation,http_status)
+                VALUES (?,?,?,?,?,?,?,?,clock_timestamp(),?,?)
+                """,e.correlation()+(outcome?":O":":I"),e.correlation(),e.trace(),outcome?"OUTCOME":"INTENT",
+                    e.actor(),e.method(),e.route(),e.target(),outcome?(failed?"HTTP_EXCEPTION":"HTTP_COMPLETED"):"ADMITTED",
+                    outcome?Integer.toString(status):null);
+            if(inserted!=1)throw new IllegalStateException("Medical audit write not confirmed");
+        });
+    }
+
 
     @Override public boolean preHandle(HttpServletRequest request,HttpServletResponse response,Object handler)throws Exception{
+        if(handler instanceof HandlerMethod method && isDisclosure(method))
+            return admitDisclosure(request,response);
         MedicalAuditAdmission service=provider.getIfAvailable();
         if(service==null||!(handler instanceof HandlerMethod method)||!MEDICAL.contains(method.getBeanType().getSimpleName())
                 ||method.getMethod().getName().equals("hello"))return true;
@@ -68,6 +138,15 @@ public class MedicalAuditAdmissionInterceptor implements AsyncHandlerInterceptor
         }
     }
     @Override public void afterCompletion(HttpServletRequest request,HttpServletResponse response,Object handler,Exception ex){
+        if(request.getAttribute(DIRECT) instanceof Disclosure event){
+            request.removeAttribute(DIRECT);
+            try { persistDisclosure(event,true,response.getStatus(),ex!=null); }
+            catch(RuntimeException failure) {
+                // An acknowledged INTENT remains durable. No fabricated success or replay.
+                logger.error("Medical disclosure outcome unavailable: errorType={}",failure.getClass().getSimpleName());
+            }
+            return;
+        }
         if(request.getAttribute(ADMISSION) instanceof String correlation){
             request.removeAttribute(ADMISSION);
             var failure=(java.util.concurrent.atomic.AtomicBoolean)request.getAttribute(ASYNC_FAILED);

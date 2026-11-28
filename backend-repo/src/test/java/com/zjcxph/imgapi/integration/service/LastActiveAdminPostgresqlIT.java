@@ -64,6 +64,7 @@ class LastActiveAdminPostgresqlIT extends PostgresqlIntegrationTestSupport {
 
     @AfterEach
     void tearDown() {
+        com.zjcxph.imgapi.utils.AuthContext.clear();
         jdbc.update("delete from app.mr_auth_user where id in (?, ?)", firstId, secondId);
         for (Map<String, Object> row : previousAdmins) {
             jdbc.update("update app.mr_auth_user set status = ? where id = ?", row.get("status"), row.get("id"));
@@ -83,6 +84,7 @@ class LastActiveAdminPostgresqlIT extends PostgresqlIntegrationTestSupport {
     @Test
     void lastActiveAdminHasStableRejectionCode() {
         jdbc.update("update app.mr_auth_user set status = 'disabled' where id = ?", secondId);
+        installActor(firstId);
         assertThatThrownBy(() -> new TransactionTemplate(transactionManager)
                 .execute(status -> service.disableUser(firstId)))
                 .isInstanceOf(BusinessException.class)
@@ -93,6 +95,7 @@ class LastActiveAdminPostgresqlIT extends PostgresqlIntegrationTestSupport {
     @Test
     void editingLastAdminToDisabledIsRejected() {
         jdbc.update("update app.mr_auth_user set status = 'disabled' where id = ?", secondId);
+        installActor(firstId);
         AuthUserUpdateRequest request = new AuthUserUpdateRequest();
         request.setRoleCode("ADMIN");
         request.setStatus("disabled");
@@ -145,7 +148,103 @@ class LastActiveAdminPostgresqlIT extends PostgresqlIntegrationTestSupport {
         assertThat(after.getTemporaryPasswordExpiresAt()).isEqualTo(before.getTemporaryPasswordExpiresAt());
     }
 
+    @Test
+    void revokedActorCannotUpdateUserAfterRoleLock() throws Exception {
+        assertRevokedActorCannotModifyUser(false);
+    }
+
+    @Test
+    void revokedActorCannotDisableUserAfterRoleLock() throws Exception {
+        assertRevokedActorCannotModifyUser(true);
+    }
+
+    private void assertRevokedActorCannotModifyUser(boolean disable) throws Exception {
+        long target = jdbc.queryForObject("""
+                insert into app.mr_auth_user (username, password_hash, role_code, status)
+                values (?, 'synthetic-hash', 'DOCTOR', 'active') returning id
+                """, Long.class, "synthetic-managed-" + UUID.randomUUID());
+        try {
+            var before = userMapper.findById(target);
+            assertRevokedAdministratorCannotExecute(false, disable ? "USER_DISABLED" : "USER_ROLE_OR_STATUS_CHANGED", () -> {
+                if (disable) service.disableUser(target);
+                else {
+                    var request = new AuthUserUpdateRequest();
+                    request.setRoleCode("DOCTOR");
+                    request.setStatus("active");
+                    request.setDisplayName("Synthetic edit");
+                    service.updateUser(target, request);
+                }
+            }, "当前账号没有操作权限");
+            var after = userMapper.findById(target);
+            assertThat(after.getStatus()).isEqualTo(before.getStatus());
+            assertThat(after.getDisplayName()).isEqualTo(before.getDisplayName());
+            assertThat(after.effectivePasswordVersion()).isEqualTo(before.effectivePasswordVersion());
+        } finally {
+            jdbc.update("delete from app.mr_auth_user where id = ?", target);
+        }
+    }
+
+    @Test
+    void demotedActorCannotUpdateRoleAfterRoleLock() throws Exception {
+        var before = roleMapper.findByCode("DOCTOR");
+        try {
+            assertRevokedAdministratorCannotExecute(true, "ROLE_UPDATED", () ->
+                    service.updateRole("DOCTOR", null, "Synthetic edit", null, null), "当前账号没有操作权限");
+            assertThat(roleMapper.findByCode("DOCTOR").getDescription()).isEqualTo(before.getDescription());
+        } finally {
+            jdbc.update("update app.mr_auth_role set description = ? where code = 'DOCTOR'", before.getDescription());
+        }
+    }
+
+    @Test
+    void delegatedManagerRetainsOnlyGrantedPermissions() {
+        String code = "SYNTHETIC_" + UUID.randomUUID();
+        jdbc.update("insert into app.mr_auth_role(code,name,permissions) values (?, 'Synthetic manager', 'user:manage,role:manage')", code);
+        long target = jdbc.queryForObject("""
+                insert into app.mr_auth_user(username,password_hash,role_code,status)
+                values (?, 'synthetic-hash', 'DOCTOR', 'active') returning id
+                """, Long.class, "synthetic-delegated-" + UUID.randomUUID());
+        try {
+            jdbc.update("update app.mr_auth_user set role_code = ? where id = ?", code, firstId);
+            installActor(firstId);
+            var tx = new TransactionTemplate(transactionManager);
+            var request = new AuthUserUpdateRequest();
+            request.setRoleCode("DOCTOR");
+            request.setStatus("active");
+            request.setDisplayName("Synthetic managed");
+            assertThat(tx.execute(status -> service.updateUser(target, request)).getDisplayName()).isEqualTo("Synthetic managed");
+            assertThat(tx.execute(status -> service.updateRole(code, null, "Synthetic description", "user:manage", null)).getDescription()).isEqualTo("Synthetic description");
+            // The same request context retains a stale role:manage snapshot; the database no longer grants it.
+            assertThatThrownBy(() -> tx.execute(status -> service.updateRole(code, null, "Denied", null, null)))
+                    .isInstanceOf(BusinessException.class).hasMessage("当前账号没有操作权限");
+            assertThat(roleMapper.findByCode(code).getDescription()).isEqualTo("Synthetic description");
+            Integer disabled = tx.execute(status -> service.disableUser(target));
+            assertThat(disabled).isEqualTo(1);
+            assertThat(userMapper.findById(target).getStatus()).isEqualTo("disabled");
+        } finally {
+            com.zjcxph.imgapi.utils.AuthContext.clear();
+            jdbc.update("update app.mr_auth_user set role_code = 'ADMIN' where id = ?", firstId);
+            jdbc.update("delete from app.mr_auth_user where id = ?", target);
+            jdbc.update("delete from app.mr_auth_role where code = ?", code);
+        }
+    }
+
+    private void installActor(long id) {
+        var user = userMapper.findById(id);
+        var session = new com.zjcxph.imgapi.common.AuthSession();
+        session.setId(id);
+        session.setRoleCode(user.getRoleCode());
+        session.setPasswordVersion(user.effectivePasswordVersion());
+        session.setPermissions(user.getPermissions());
+        session.setStatus(user.getStatus());
+        com.zjcxph.imgapi.utils.AuthContext.setCurrentUser(session);
+    }
+
     private void assertRevokedAdministratorCannotExecute(boolean demote, String auditEvent, Runnable operation) throws Exception {
+        assertRevokedAdministratorCannotExecute(demote, auditEvent, operation, "当前账号不是有效管理员");
+    }
+
+    private void assertRevokedAdministratorCannotExecute(boolean demote, String auditEvent, Runnable operation, String denial) throws Exception {
         var worker = Executors.newSingleThreadExecutor();
         String runId = "mrr-admin-write-race-" + UUID.randomUUID();
         var logger = (ch.qos.logback.classic.Logger) org.slf4j.LoggerFactory.getLogger("SECURITY_AUDIT");
@@ -153,6 +252,7 @@ class LastActiveAdminPostgresqlIT extends PostgresqlIntegrationTestSupport {
         audit.start();
         logger.addAppender(audit);
         try {
+            installActor(secondId);
             Future<String> outcome = new TransactionTemplate(transactionManager).execute(status -> {
                 if (demote) {
                     var update = new AuthUserUpdateRequest();
@@ -164,6 +264,7 @@ class LastActiveAdminPostgresqlIT extends PostgresqlIntegrationTestSupport {
                 }
                 Future<String> result = worker.submit(() -> {
                     try {
+                        installActor(firstId);
                         return new TransactionTemplate(transactionManager).execute(tx -> {
                             jdbc.queryForObject("select set_config('application_name', ?, true)", String.class, runId);
                             operation.run();
@@ -171,6 +272,8 @@ class LastActiveAdminPostgresqlIT extends PostgresqlIntegrationTestSupport {
                         });
                     } catch (BusinessException failure) {
                         return failure.getMessage();
+                    } finally {
+                        com.zjcxph.imgapi.utils.AuthContext.clear();
                     }
                 });
                 long deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(5);
@@ -191,10 +294,13 @@ class LastActiveAdminPostgresqlIT extends PostgresqlIntegrationTestSupport {
                 assertThat(result.isDone()).isTrue();
                 return result;
             });
-            assertThat(outcome.get(5, TimeUnit.SECONDS)).isEqualTo("当前账号不是有效管理员");
-            assertThat(audit.list).noneMatch(event -> event.getMessage().contains("event=" + auditEvent + " ")
+            assertThat(outcome.get(5, TimeUnit.SECONDS)).isEqualTo(denial);
+            assertThat(audit.list).noneMatch(event -> event.getArgumentArray() != null && event.getArgumentArray().length > 0
+                    && Long.valueOf(firstId).equals(event.getArgumentArray()[0])
+                    && event.getMessage().contains("event=" + auditEvent + " ")
                     && event.getMessage().contains("result=SUCCESS"));
         } finally {
+            com.zjcxph.imgapi.utils.AuthContext.clear();
             worker.shutdownNow();
             logger.detachAppender(audit);
             audit.stop();
@@ -210,6 +316,7 @@ class LastActiveAdminPostgresqlIT extends PostgresqlIntegrationTestSupport {
         var worker = Executors.newSingleThreadExecutor();
         String runId = "mrr-review-race-" + UUID.randomUUID();
         try {
+            installActor(secondId);
             Future<String> review = new TransactionTemplate(transactionManager).execute(status -> {
                 // Hold the same lock as the real account administration path and revoke
                 // the actor without committing until the competing review reaches PG.
@@ -314,6 +421,7 @@ class LastActiveAdminPostgresqlIT extends PostgresqlIntegrationTestSupport {
     private String removeAfterStart(CountDownLatch start, long id, boolean demote, String runId) throws Exception {
         assertThat(start.await(5, TimeUnit.SECONDS)).isTrue();
         try {
+            installActor(id);
             return new TransactionTemplate(transactionManager).execute(status -> {
                 jdbc.queryForObject("select set_config('application_name', ?, true)", String.class, runId + "-" + id);
                 if (demote) {
@@ -329,6 +437,8 @@ class LastActiveAdminPostgresqlIT extends PostgresqlIntegrationTestSupport {
         } catch (BusinessException exception) {
             return exception.getMessage().contains("最后一个有效管理员")
                     ? "LAST_ACTIVE_ADMIN_REQUIRED" : exception.getMessage();
+        } finally {
+            com.zjcxph.imgapi.utils.AuthContext.clear();
         }
     }
 

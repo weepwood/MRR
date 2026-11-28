@@ -75,6 +75,14 @@ class AuthServiceImplTest {
         AuthContext.clear();
     }
 
+    private void installManager(AuthUser actor) {
+        var session = new com.zjcxph.imgapi.common.AuthSession();
+        session.setId(actor.getId());
+        session.setPasswordVersion(actor.effectivePasswordVersion());
+        AuthContext.setCurrentUser(session);
+        when(authUserMapper.findSessionById(actor.getId())).thenReturn(actor);
+    }
+
     @Nested
     @DisplayName("login 方法")
     class LoginTests {
@@ -293,6 +301,7 @@ class AuthServiceImplTest {
         @Test
         @DisplayName("通用用户编辑不能绕过审核直接启用 pending 账号")
         void updateUser_cannotActivatePendingRegistration() {
+            installManager(mockUser);
             AuthUser pending = pendingUser();
             when(authUserMapper.findById(2L)).thenReturn(pending);
             AuthUserUpdateRequest request = new AuthUserUpdateRequest();
@@ -350,6 +359,7 @@ class AuthServiceImplTest {
 
         @Test
         void disableUser_cannotBypassRegistrationReview() {
+            installManager(mockUser);
             AuthUser pending = pendingUser();
             when(authUserMapper.findById(2L)).thenReturn(pending);
             for (String status : java.util.List.of("pending", "rejected")) {
@@ -415,6 +425,7 @@ class AuthServiceImplTest {
         @Test
         @DisplayName("禁用普通用户返回影响行数")
         void disableUser_success() {
+            installManager(mockUser);
             mockUser.setRoleCode("DOCTOR");
             when(authUserMapper.findById(1L)).thenReturn(mockUser);
             when(authUserMapper.updateStatus(1L, "disabled")).thenReturn(1);

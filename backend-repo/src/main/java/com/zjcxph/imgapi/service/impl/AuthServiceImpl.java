@@ -413,8 +413,9 @@ public class AuthServiceImpl implements AuthService {
     @Override
     @Transactional(rollbackFor = Exception.class)
     public AuthUserProfileDTO updateUser(Long id, AuthUserUpdateRequest request) {
-        // 必须先获得同一把数据库锁，再读取目标和活动管理员数量。
+        // 必须先获得同一把数据库锁，再复核操作者、读取目标和活动管理员数量。
         authRoleMapper.lockAdminRole();
+        requireCurrentPermission(Permissions.USER_MANAGE);
         AuthUser user = authUserMapper.findById(id);
         if (user == null) {
             return null;
@@ -448,6 +449,7 @@ public class AuthServiceImpl implements AuthService {
     @Transactional(rollbackFor = Exception.class)
     public int disableUser(Long id) {
         authRoleMapper.lockAdminRole();
+        requireCurrentPermission(Permissions.USER_MANAGE);
         AuthUser user = authUserMapper.findById(id);
         if (user == null) {
             return 0;
@@ -496,6 +498,8 @@ public class AuthServiceImpl implements AuthService {
     @Override
     @Transactional(rollbackFor = Exception.class)
     public AuthRole updateRole(String code, String name, String description, String permissions, Integer sortOrder) {
+        authRoleMapper.lockAdminRole();
+        requireCurrentPermission(Permissions.ROLE_MANAGE);
         AuthRole role = authRoleMapper.findByCode(code);
         if (role == null) {
             throw new IllegalArgumentException("角色不存在: " + code);
@@ -590,6 +594,19 @@ public class AuthServiceImpl implements AuthService {
         profile.setCreatedAt(user.getCreatedAt());
         profile.setUpdatedAt(user.getUpdatedAt());
         return profile;
+    }
+
+    /** 在共同事务锁后读取实际角色权限，不信任请求进入时的权限快照。 */
+    private void requireCurrentPermission(String permission) {
+        AuthSession session = AuthContext.getCurrentUser();
+        AuthUser current = session == null || session.getId() == null
+                ? null : authUserMapper.findSessionById(session.getId());
+        if (current == null || !"active".equalsIgnoreCase(current.getStatus())
+                || current.isPasswordChangeRequired()
+                || current.effectivePasswordVersion() != session.effectivePasswordVersion()
+                || !toSession(current).hasPermission(permission)) {
+            throw new BusinessException(403, "当前账号没有操作权限");
+        }
     }
 
     private AuthUser requireActiveAdministrator(Long administratorId) {

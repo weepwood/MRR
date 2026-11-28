@@ -28,6 +28,11 @@ class RegistrationReopenPostgresqlIT extends PostgresqlIntegrationTestSupport {
     @Autowired AuthUserMapper users;
     @Autowired AuthRoleMapper roles;
 
+    @org.junit.jupiter.api.AfterEach
+    void clearActor() {
+        com.zjcxph.imgapi.utils.AuthContext.clear();
+    }
+
     @Test
     void rejectedRegistrationReopensWithoutGrantingLoginOrChangingCredentials() {
         String suffix = UUID.randomUUID().toString();
@@ -39,6 +44,10 @@ class RegistrationReopenPostgresqlIT extends PostgresqlIntegrationTestSupport {
                 "insert into app.mr_auth_user(username,password_hash,role_code,status,applied_at,reviewed_at,reviewed_by,reject_reason,password_version) values (?, 'synthetic', ?, 'rejected', now(), now(), ?, 'original reason', 7) returning id",
                 Long.class, "reopen-target-" + suffix, role, admin);
         var service = new AuthServiceImpl(users, roles, mock(com.zjcxph.imgapi.security.LoginRateLimiter.class), null);
+        var session = new com.zjcxph.imgapi.common.AuthSession();
+        session.setId(admin);
+        session.setPasswordVersion(users.findById(admin).effectivePasswordVersion());
+        com.zjcxph.imgapi.utils.AuthContext.setCurrentUser(session);
         var before = users.findById(target);
         assertThatThrownBy(() -> service.disableUser(target)).isInstanceOf(BusinessException.class);
         var reopened = service.reopenRegistration(target, admin, "127.0.0.1");

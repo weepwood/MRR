@@ -747,24 +747,7 @@ public class MigrationServiceImpl implements MigrationService {
                 status = failed > 0 ? "completed_with_errors" : "completed";
             }
 
-            migrationJobMapper.complete(
-                    jobId,
-                    status,
-                    finalTotal,
-                    processed,
-                    failed,
-                    calculateRate(processed, finalTotal),
-                    errorMessage,
-                    new Date()
-            );
-            invalidateSummaryCaches();
-            logger.info(
-                    "Migration job {} finished: status={}, processed={}, failed={}",
-                    jobId,
-                    status,
-                    processed,
-                    failed
-            );
+            settleClaimedJob(jobId, status, finalTotal, processed, failed, errorMessage);
         } catch (Exception exception) {
             logger.error("Migration job error: jobId={}, type={}",jobId,exception.getClass().getSimpleName());
             if (!claimed) {
@@ -773,18 +756,38 @@ public class MigrationServiceImpl implements MigrationService {
                 return;
             }
             boolean cancelled = Boolean.TRUE.equals(migrationJobMapper.isCancelRequested(jobId));
-            migrationJobMapper.complete(
-                    jobId,
-                    cancelled ? "cancelled" : "failed",
-                    plannedTotal,
-                    processed,
-                    failed,
-                    calculateRate(processed, plannedTotal),
-                    cancelled
-                            ? "管理员已请求安全取消，任务异常退出后已停止"
-                            : safeErrorMessage(exception),
-                    new Date()
-            );
+            settleClaimedJob(jobId, cancelled ? "cancelled" : "failed", plannedTotal, processed, failed,
+                    cancelled ? "管理员已请求安全取消，任务异常退出后已停止" : safeErrorMessage(exception));
+        }
+    }
+
+    /** A completion request is not a completion fact. Read back the durable terminal row;
+     * never retry a terminal write merely because its acknowledgement was lost. */
+    private void settleClaimedJob(Long jobId, String status, long total, long processed, long failed, String errorMessage) {
+        try {
+            try {
+                if (migrationJobMapper.complete(jobId, status, total, processed, failed,
+                        calculateRate(processed, total), errorMessage, new Date()) != 1) {
+                    logger.warn("Migration terminal update rejected: jobId={}", jobId);
+                    return;
+                }
+            } catch (RuntimeException uncertain) {
+                logger.warn("Migration terminal acknowledgement unknown: jobId={}, type={}", jobId, uncertain.getClass().getSimpleName());
+            }
+            MigrationJob current = migrationJobMapper.findById(jobId);
+            if (current != null && current.getCompletedAt() != null
+                    && (status.equals(current.getStatus()) || ("cancelled".equals(current.getStatus()) && Boolean.TRUE.equals(current.getCancelRequested())))
+                    && Objects.equals(current.getTotalCount(), total)
+                    && Objects.equals(current.getProcessedCount(), processed)
+                    && Objects.equals(current.getFailedCount(), failed)) {
+                logger.info("Migration job {} finished: status={}, processed={}, failed={}",
+                        jobId, current.getStatus(), current.getProcessedCount(), current.getFailedCount());
+            } else {
+                logger.warn("Migration terminal outcome not confirmed: jobId={}", jobId);
+            }
+        } catch (RuntimeException unavailable) {
+            logger.warn("Migration terminal outcome unavailable: jobId={}, type={}", jobId, unavailable.getClass().getSimpleName());
+        } finally {
             invalidateSummaryCaches();
         }
     }

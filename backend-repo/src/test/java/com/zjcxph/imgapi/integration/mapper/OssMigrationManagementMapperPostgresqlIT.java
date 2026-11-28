@@ -140,6 +140,67 @@ class OssMigrationManagementMapperPostgresqlIT extends PostgresqlIntegrationTest
         } finally { jdbcTemplate.update("DELETE FROM app.migration_job WHERE id=?",id); }
     }
 
+    @org.junit.jupiter.params.ParameterizedTest
+    @org.junit.jupiter.params.provider.ValueSource(strings={"cancel", "interrupt", "ack-loss"})
+    @org.springframework.transaction.annotation.Transactional(propagation=org.springframework.transaction.annotation.Propagation.NOT_SUPPORTED)
+    void terminalLogReflectsCommittedDatabaseState(String scenario) {
+        long id=jdbcTemplate.queryForObject("INSERT INTO app.migration_job(status,mode,total_count,max_scan_id) VALUES ('pending','folder',1,100) RETURNING id",Long.class);
+        var logger=(ch.qos.logback.classic.Logger)org.slf4j.LoggerFactory.getLogger(com.zjcxph.imgapi.service.impl.MigrationServiceImpl.class);
+        var audit=new ch.qos.logback.core.read.ListAppender<ch.qos.logback.classic.spi.ILoggingEvent>();
+        audit.start();logger.addAppender(audit);
+        try {
+            var jobs=org.mockito.Mockito.mock(com.zjcxph.imgapi.mapper.MigrationJobMapper.class,org.mockito.AdditionalAnswers.delegatesTo(migrationJobs));
+            var scans=org.mockito.Mockito.mock(ScanMapper.class);
+            var scan=new Scan();scan.setId(1);scan.setOssUrl("synthetic-already-migrated");
+            org.mockito.Mockito.when(scans.findPendingMigrationAfterId(0,100,null,1)).thenReturn(List.of(scan));
+            org.mockito.Mockito.doAnswer(call->{
+                if("cancel".equals(scenario)) assertThat(migrationJobs.requestCancel(id)).isEqualTo(1);
+                if("interrupt".equals(scenario)) jdbcTemplate.update("UPDATE app.migration_job SET status='interrupted',processed_count=0,completed_at=NOW() WHERE id=?",id);
+                int changed=migrationJobs.complete(id,call.getArgument(1),call.getArgument(2),call.getArgument(3),call.getArgument(4),call.getArgument(5),call.getArgument(6),call.getArgument(7));
+                if("ack-loss".equals(scenario)) throw new org.springframework.dao.DataAccessResourceFailureException("synthetic terminal acknowledgement lost");
+                return changed;
+            }).when(jobs).complete(org.mockito.ArgumentMatchers.eq(id),org.mockito.ArgumentMatchers.anyString(),org.mockito.ArgumentMatchers.anyLong(),org.mockito.ArgumentMatchers.anyLong(),org.mockito.ArgumentMatchers.anyLong(),org.mockito.ArgumentMatchers.any(),org.mockito.ArgumentMatchers.nullable(String.class),org.mockito.ArgumentMatchers.any());
+            var service=new com.zjcxph.imgapi.service.impl.MigrationServiceImpl(org.mockito.Mockito.mock(com.zjcxph.imgapi.service.OssService.class),scans,migrationLogs,jobs,org.mockito.Mockito.mock(com.zjcxph.imgapi.service.impl.MigrationSourceResolver.class),Runnable::run,org.mockito.Mockito.mock(org.springframework.cache.CacheManager.class));
+            org.springframework.test.util.ReflectionTestUtils.invokeMethod(service,"runMigrationJob",id);
+            var current=migrationJobs.findById(id);
+            String expected=switch(scenario){case "cancel"->"cancelled";case "interrupt"->"interrupted";default->"completed";};
+            assertThat(current.getStatus()).isEqualTo(expected);
+            var events=audit.list.stream().filter(e->e.getMessage().equals("Migration job {} finished: status={}, processed={}, failed={}")).toList();
+            if("interrupt".equals(scenario)) assertThat(events).isEmpty();
+            else {
+                assertThat(events).hasSize(1);
+                assertThat(events.getFirst().getArgumentArray()).containsExactly(id,expected,current.getProcessedCount(),current.getFailedCount());
+            }
+            org.mockito.Mockito.verify(jobs,org.mockito.Mockito.times(1)).complete(org.mockito.ArgumentMatchers.eq(id),org.mockito.ArgumentMatchers.anyString(),org.mockito.ArgumentMatchers.anyLong(),org.mockito.ArgumentMatchers.anyLong(),org.mockito.ArgumentMatchers.anyLong(),org.mockito.ArgumentMatchers.any(),org.mockito.ArgumentMatchers.nullable(String.class),org.mockito.ArgumentMatchers.any());
+        } finally {logger.detachAppender(audit);audit.stop();jdbcTemplate.update("DELETE FROM app.migration_job WHERE id=?",id);}
+    }
+
+    @org.junit.jupiter.params.ParameterizedTest
+    @org.junit.jupiter.params.provider.ValueSource(booleans={true,false})
+    @org.springframework.transaction.annotation.Transactional(propagation=org.springframework.transaction.annotation.Propagation.NOT_SUPPORTED)
+    void uncertainInitialClaimDoesNotAuthorizeWorker(boolean committed) {
+        long id=jdbcTemplate.queryForObject("INSERT INTO app.migration_job(status,mode,total_count,max_scan_id) VALUES ('pending','folder',1,100) RETURNING id",Long.class);
+        try {
+            var jobs=org.mockito.Mockito.mock(com.zjcxph.imgapi.mapper.MigrationJobMapper.class,org.mockito.AdditionalAnswers.delegatesTo(migrationJobs));
+            var scans=org.mockito.Mockito.mock(ScanMapper.class);
+            var source=org.mockito.Mockito.mock(com.zjcxph.imgapi.service.impl.MigrationSourceResolver.class);
+            var oss=org.mockito.Mockito.mock(com.zjcxph.imgapi.service.OssService.class);
+            org.mockito.Mockito.doAnswer(call->{
+                if(committed) assertThat(migrationJobs.markRunning(id,call.getArgument(1))).isEqualTo(1);
+                throw new org.springframework.dao.DataAccessResourceFailureException("synthetic initial claim acknowledgement unknown");
+            }).when(jobs).markRunning(org.mockito.ArgumentMatchers.eq(id),org.mockito.ArgumentMatchers.any());
+            var service=new com.zjcxph.imgapi.service.impl.MigrationServiceImpl(oss,scans,migrationLogs,jobs,source,Runnable::run,
+                org.mockito.Mockito.mock(org.springframework.cache.CacheManager.class));
+            org.springframework.test.util.ReflectionTestUtils.invokeMethod(service,"runMigrationJob",id);
+            var current=migrationJobs.findById(id);
+            assertThat(current.getStatus()).isEqualTo(committed?"running":"pending");
+            assertThat(current.getProcessedCount()).isZero();
+            assertThat(current.getCompletedAt()).isNull();
+            org.mockito.Mockito.verifyNoInteractions(scans,source,oss);
+            org.mockito.Mockito.verify(jobs,org.mockito.Mockito.never()).complete(org.mockito.ArgumentMatchers.eq(id),org.mockito.ArgumentMatchers.anyString(),org.mockito.ArgumentMatchers.anyLong(),org.mockito.ArgumentMatchers.anyLong(),org.mockito.ArgumentMatchers.anyLong(),org.mockito.ArgumentMatchers.any(),org.mockito.ArgumentMatchers.nullable(String.class),org.mockito.ArgumentMatchers.any());
+        } finally { jdbcTemplate.update("DELETE FROM app.migration_job WHERE id=?",id); }
+    }
+
     @Test
     void lateWorkerCannotRewriteTerminalJob(){
         long id=jdbcTemplate.queryForObject("INSERT INTO app.migration_job(status,mode) VALUES ('running','folder') RETURNING id",Long.class);

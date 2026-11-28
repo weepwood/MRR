@@ -45,4 +45,40 @@ class StatisticsDashboardPostgresqlIT extends PostgresqlIntegrationTestSupport {
         assertThat(dashboard.getData().get("topBAH")).isEqualTo(bounded);
         System.out.printf("MRR_STATISTICS_DASHBOARD rows=%d/%d elapsed_ms=%d/%d%n",full.size(),bounded.size(),fullMs,boundedMs);
     }
+
+    @Autowired org.apache.ibatis.session.SqlSessionFactory sessions;
+
+    @Test void dailySummaryMatchesListAcrossLegacyDateSeparators() {
+        String type = "synthetic-date-" + java.util.UUID.randomUUID();
+        jdbc.update("""
+                insert into app.mr_statistics(bah,pages,date,type) values
+                ('97000001',3,'2098-01-15',?), ('97000002',7,'2098/01/15',?),
+                ('97000003',11,'2098/01/16',?), ('97000004',17,'2098-01-17',?)
+                """,type,type,type,type);
+        var service = new StatisticsServiceImpl(mapper);
+        assertThat(service.getTotalCountByCondition(null,null,null,type,"2098-01-15","2098-01-16")).isEqualTo(3L);
+        var daily = service.getDateStatisticsByCondition("2098-01-15","2098-01-16",type);
+        assertThat(daily).containsExactly(new com.zjcxph.imgapi.dto.resp.DateStatisticsDTO("2098-01-15",2L,10L),
+                new com.zjcxph.imgapi.dto.resp.DateStatisticsDTO("2098-01-16",1L,11L));
+    }
+
+    @Test void paginationSortHasUniqueTieBreakerAndPreservesRows() {
+        String type = "synthetic-order-" + java.util.UUID.randomUUID();
+        jdbc.update("""
+                insert into app.mr_statistics(bah,pages,date,type)
+                select '97000005',10,'2098-01-15',? from generate_series(1,12)
+                """,type);
+        var args = new java.util.HashMap<String,Object>();
+        args.put("offset",0);args.put("limit",4);args.put("type",type);args.put("sortBy","pages");args.put("sortOrder","desc");
+        var sql = sessions.getConfiguration().getMappedStatement(StatisticsMapper.class.getName()+".findWithConditionAndPagination")
+                .getBoundSql(args).getSql().replaceAll("\\s+"," ");
+        assertThat(sql).matches("(?is).*ORDER BY pages DESC , bah ASC, id ASC LIMIT.*");
+        var ids = jdbc.queryForList("select id from app.mr_statistics where type=? order by id",Long.class,type);
+        for(int offset=0;offset<12;offset+=4) {
+            var page = mapper.findWithConditionAndPagination(offset,4,null,null,null,type,null,null,"pages","desc");
+            assertThat(page.stream().map(com.zjcxph.imgapi.entity.Statistics::getId).toList())
+                    .containsExactlyElementsOf(ids.subList(offset,offset+4));
+        }
+    }
+
 }

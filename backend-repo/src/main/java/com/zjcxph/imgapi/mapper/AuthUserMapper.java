@@ -15,6 +15,14 @@ import java.util.List;
 @Mapper
 public interface AuthUserMapper {
 
+    @Insert("INSERT INTO app.mr_security_change_audit(event_type,actor_user_id,target_user_id,target_role_code,permissions_edited) "
+            + "VALUES (#{event},#{actor,jdbcType=BIGINT},#{target,jdbcType=BIGINT},#{role,jdbcType=VARCHAR},#{permissionsEdited,jdbcType=BOOLEAN})")
+    @org.apache.ibatis.annotations.Options(timeout = 3)
+    int insertSecurityChangeAudit(@Param("event") String event, @Param("actor") Long actor,
+                                  @Param("target") Long target, @Param("role") String role,
+                                  @Param("permissionsEdited") Boolean permissionsEdited);
+
+
     String USER_COLUMNS = "u.id as id, u.username as username, u.display_name as displayName, " +
             "u.password_hash as passwordHash, u.role_code as roleCode, r.name as roleName, " +
             "r.permissions as permissionsCsv, u.status as status, " +

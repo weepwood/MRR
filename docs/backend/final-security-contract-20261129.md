@@ -34,3 +34,15 @@
 - 可信Token哈希仅进入服务器ThreadLocal，与当前身份一起清理，不进入AuthSession DTO或日志。复用observeSession在管理事务既有角色锁→账号行锁之后复核当前令牌，拒绝已撤销/未知状态；普通读取不加第二次查询。个人/首次改密在密码计算完成后、现有凭据CAS写入前加账号行锁和会话复核。内部直接调用不伪造HTTP Token，保留原凭据CAS。UserController真实注销调用TokenBlacklist.revokeForUser，10s事务内锁定账号行，仅撤销当前jti；不增加密码版本、不注销其他令牌。已经取得同一账号锁并通过复核的操作可以先提交，再完成注销。
 - 首次GREEN 76Java全通过，31PG中30通过，新增注销锁观测1失败：事务内pg_stat_activity快照未刷新。只补测试pg_stat_clear_snapshot，追加PersistentTokenRevocationPostgresqlIT 5/5通过（12.773s）。真实HTTP两个竞争场景通过：Token已撤销的在途写403、新请求401、第二个独立Token仍200；真实Spring事务注销等待同一账号锁、只撤销本Token且密码版本不变。RED/GREEN真实HTTP测试SHA256 caf63444f86fb63683a4b7fd93356669b9e12392926f1cddbaaa2960e772a6bf一致。8份最终源码摘要核验一致。证据mrr-token-inflight-red-20261129.gk7WWP、mrr-token-inflight-green-20261129.7hqpoz、mrr-token-inflight-verify-20261129.UubGeG。
 - 边界：真实HTTP只新增角色写入竞争；管理其他入口共用围栏，个人改密尚无独立在途撤销RED；注销锁验证走真实Spring服务，非HTTP注销端到端。非认证领域的医疗敏感写、OCR其他执行期与事务审计持久化尚未闭合。未变更表/迁移/部署，未恢复冻结审计引擎。
+
+
+## 第三批实际验收：账号与角色事务审计
+
+- 决策：现有access_log为异步HTTP日志，外部与分类账本各有独立语义，冻结medical_audit_event仅用于INTENT/OUTCOME实验。为避免混用，新增窄表app.mr_security_change_audit及一个既有AuthUserMapper写入方法，不恢复引擎、不引入队列。覆盖原有10种账号变更及ROLE_UPDATED成功事件；内部操作者/目标ID、角色代码、是否修改权限及数据库时钟，匿名注册操作者为空。无用户名、IP、Token、密码、患者数据、备注或完整权限。无新增读取API、无自动删除、无跨账号关联外键；仍需现场明确保留期限、容量、DB权限与备份。不是防数据库管理员篡改账本。
+- 实际RED：先独立创建新表，再执行未接入持久化的旧业务，2项失败（没有同事务记录、模拟数据库CHECK拒绝审计时未抛错）。GREEN：业务事务中插入记录且检查1行，数据库拒绝统一503并传播触发回滚；保留原afterCommit日志。34Java/33真实PG全部通过（39.182s）；追加角色账本字段、回滚及原2项断言3PG全部通过（13.942s）。RED/GREEN两原始测试断言不变，后续角色用例追加。证据 mrr-security-audit-red-20261129.wowBhe、mrr-security-audit-green-20261129.TW6Xgq、mrr-security-audit-role-20261129.HTySPJ。独立数据库均停止。
+- 迁移V20261129001600只增加表/索引/约束，release-baseline上限同步，validate通过；不修改历史迁移，不直接回退旧应用。代表性真实PG验证账号停用、角色更新与失败原子性；其他入口复用持久方法并由相关回归覆盖，不宣称11种均有独立真实PG RED。不是所有医疗访问/拒绝审计的可靠性证明。
+
+## 第四项：单实例部署与恢复边界
+
+- Windows手册新增单实例及独占恢复契约；同一DB、工作队列及导出临时目录只允许一套后端。先维护、等待在途完成、确认旧服务/JAR及工作者实际退出，再恢复。任何状态未知保持维护。迁移恢复默认false，必须另行批准独占窗口，确认所有外部写入停止。明确不新增分布式租约/接管。复用既有导出恢复测试（首批53Java/45PG包含相关回归）；本轮未新增运行时多实例互斥，也未执行医院现场/Windows恢复，不宣称部署门禁通过。
+- 后续需对其他医疗敏感写、OCR全阶段及其他用户任务、内部读/外部访问审计故障策略进行实际源码/验收核查，并重新运行最终候选CI与医院验收。原有PR850候选制品仅对应旧SHA，本专项不能复用其发布证据。当前仅本地提交，无推送、合并、发布、生产操作。

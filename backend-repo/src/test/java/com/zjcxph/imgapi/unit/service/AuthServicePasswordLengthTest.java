@@ -41,6 +41,13 @@ class AuthServicePasswordLengthTest {
 
     @BeforeEach
     void setUp() {
+        org.mockito.Mockito.lenient().when(authUserMapper.insertSecurityChangeAudit(
+                org.mockito.ArgumentMatchers.anyString(),
+                org.mockito.ArgumentMatchers.nullable(Long.class),
+                org.mockito.ArgumentMatchers.nullable(Long.class),
+                org.mockito.ArgumentMatchers.nullable(String.class),
+                org.mockito.ArgumentMatchers.nullable(Boolean.class))).thenReturn(1);
+
         authService = new AuthServiceImpl(authUserMapper, authRoleMapper, rateLimiter, runtimeSettingStore);
     }
 

@@ -190,6 +190,7 @@ public class AuthServiceImpl implements AuthService {
         if (created == null) {
             throw new BusinessException("注册申请保存失败，请稍后重试");
         }
+        persistSecurityChange("USER_REGISTRATION_SUBMITTED", null, created.getId(), null, null);
         auditSuccessAfterCommit(false, "event=USER_REGISTRATION_SUBMITTED targetUserId={} username={} sourceIp={} status=PENDING result=SUCCESS",
                 created.getId(), username, clientIp);
         return new RegistrationResultDTO(
@@ -214,6 +215,7 @@ public class AuthServiceImpl implements AuthService {
         }
 
         AuthUser approved = authUserMapper.findById(userId);
+        persistSecurityChange("USER_REGISTRATION_APPROVED", administratorId, userId, null, null);
         auditSuccessAfterCommit(false, "event=USER_REGISTRATION_APPROVED actorUserId={} targetUserId={} username={} roleCode={} sourceIp={} result=SUCCESS",
                 administratorId, userId, target.getUsername(), roleCode, clientIp);
         return toProfile(approved);
@@ -239,6 +241,7 @@ public class AuthServiceImpl implements AuthService {
         }
 
         AuthUser rejected = authUserMapper.findById(userId);
+        persistSecurityChange("USER_REGISTRATION_REJECTED", administratorId, userId, null, null);
         auditSuccessAfterCommit(true, "event=USER_REGISTRATION_REJECTED actorUserId={} targetUserId={} username={} sourceIp={} reason={} result=SUCCESS",
                 administratorId, userId, target.getUsername(), clientIp, sanitizeAuditText(rejectReason));
         return toProfile(rejected);
@@ -260,6 +263,7 @@ public class AuthServiceImpl implements AuthService {
         if (authUserMapper.reopenRegistration(userId) != 1) {
             throw new BusinessException(409, "注册申请状态已发生变化，请刷新后重试");
         }
+        persistSecurityChange("USER_REGISTRATION_REOPENED", administratorId, userId, null, null);
         auditSuccessAfterCommit(true, "event=USER_REGISTRATION_REOPENED actorUserId={} targetUserId={} username={} sourceIp={} result=SUCCESS",
                 administratorId, userId, target.getUsername(), clientIp);
         return toProfile(authUserMapper.findById(userId));
@@ -322,6 +326,7 @@ public class AuthServiceImpl implements AuthService {
         authUserMapper.insertUser(user);
 
         AuthUser created = authUserMapper.findByUsername(username);
+        persistSecurityChange("USER_CREATED", administratorId, created == null ? null : created.getId(), null, null);
         auditSuccessAfterCommit(false, "event=USER_CREATED actorUserId={} targetUserId={} username={} roleCode={} sourceIp={} tempExpiresAt={} result=SUCCESS",
                 administratorId, created == null ? null : created.getId(), username, roleCode, clientIp, expiresAt);
         return new UserCredentialResultDTO(toProfile(created), temporaryPassword, expiresAt);
@@ -365,6 +370,7 @@ public class AuthServiceImpl implements AuthService {
         }
 
         AuthUser updated = authUserMapper.findById(userId);
+        persistSecurityChange("USER_PASSWORD_RESET", administratorId, userId, null, null);
         auditSuccessAfterCommit(true, "event=USER_PASSWORD_RESET actorUserId={} targetUserId={} username={} sourceIp={} passwordVersion={} tempExpiresAt={} result=SUCCESS",
                 administratorId, userId, target.getUsername(), clientIp,
                 updated == null ? null : updated.effectivePasswordVersion(), expiresAt);
@@ -404,6 +410,7 @@ public class AuthServiceImpl implements AuthService {
                 user.effectivePasswordVersion(), true) != 1) {
             throw credentialChanged();
         }
+        persistSecurityChange("USER_FIRST_PASSWORD_CHANGED", userId, userId, null, null);
         auditSuccessAfterCommit(false, "event=USER_FIRST_PASSWORD_CHANGED actorUserId={} targetUserId={} sourceIp={} result=SUCCESS",
                 userId, userId, clientIp);
     }
@@ -437,6 +444,7 @@ public class AuthServiceImpl implements AuthService {
         if (updated == 0) {
             return null;
         }
+        persistSecurityChange("USER_ROLE_OR_STATUS_CHANGED", AuthContext.getCurrentUser().getId(), id, null, null);
         auditSuccessAfterCommit(false, "event=USER_ROLE_OR_STATUS_CHANGED actorUserId={} targetUserId={} roleCode={} status={} result=SUCCESS",
                 AuthContext.getCurrentUser() == null ? null : AuthContext.getCurrentUser().getId(),
                 id, nextRoleCode, nextStatus);
@@ -460,6 +468,7 @@ public class AuthServiceImpl implements AuthService {
         }
         int updated = authUserMapper.updateStatus(id, "disabled");
         if (updated > 0) {
+            persistSecurityChange("USER_DISABLED", AuthContext.getCurrentUser().getId(), id, null, null);
             auditSuccessAfterCommit(true, "event=USER_DISABLED actorUserId={} targetUserId={} previousStatus={} result=SUCCESS",
                     AuthContext.getCurrentUser() == null ? null : AuthContext.getCurrentUser().getId(),
                     id, user.getStatus());
@@ -487,6 +496,7 @@ public class AuthServiceImpl implements AuthService {
                 user.effectivePasswordVersion(), false) != 1) {
             throw credentialChanged();
         }
+        persistSecurityChange("USER_PASSWORD_CHANGED", userId, userId, null, null);
         auditSuccessAfterCommit(false, "event=USER_PASSWORD_CHANGED actorUserId={} targetUserId={} result=SUCCESS", userId, userId);
     }
 
@@ -515,9 +525,22 @@ public class AuthServiceImpl implements AuthService {
         String roleCode = role.getCode();
         boolean permissionsEdited = permissions != null;
         // A successful security event must refer to the committed role change, not a rolled-back write.
+        persistSecurityChange("ROLE_UPDATED", actorId, null, roleCode, permissionsEdited);
         auditSuccessAfterCommit(false, "event=ROLE_UPDATED actorUserId={} roleCode={} permissionsEdited={} result=SUCCESS",
                 actorId, roleCode, permissionsEdited);
         return role;
+    }
+
+    /** Business success facts belong to the same transaction as the mutation. */
+    private void persistSecurityChange(String event, Long actor, Long target, String role, Boolean permissionsEdited) {
+        try {
+            if (authUserMapper.insertSecurityChangeAudit(event, actor, target, role, permissionsEdited) != 1) {
+                throw new BusinessException(503, "安全审计暂不可用，请稍后重试");
+            }
+        } catch (org.springframework.dao.DataAccessException failure) {
+            // Do not expose SQL, parameter values, or database details to callers.
+            throw new BusinessException(503, "安全审计暂不可用，请稍后重试");
+        }
     }
 
     /** Capture immutable event arguments now; publish success only after the enclosing transaction commits. */

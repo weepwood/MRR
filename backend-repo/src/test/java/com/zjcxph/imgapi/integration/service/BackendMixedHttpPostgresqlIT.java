@@ -235,7 +235,7 @@ class BackendMixedHttpPostgresqlIT extends PostgresqlIntegrationTestSupport {
         files.initialize();
         var repository = new com.zjcxph.imgapi.repository.ArchiveExportJobRepository(jdbc);
         var service = new com.zjcxph.imgapi.service.ArchiveExportJobService(
-                org.mockito.Mockito.mock(com.zjcxph.imgapi.service.ArchiveExportService.class),repository,files,props,Runnable::run);
+                org.mockito.Mockito.mock(com.zjcxph.imgapi.service.ArchiveExportService.class),repository,files,props,Runnable::run, com.zjcxph.imgapi.support.ArchiveExportAccessFixtures.allow());
         var mode = new DeveloperModeService(settings, false, "127.0.0.1,::1", new ImageDeliveryProperties());
         var login = new LoginInterceptor(users, mode, new DeveloperApiAccessService(settings, mode));
         var tomcat = new Tomcat(); tomcat.setBaseDir(directory.toString()); tomcat.setPort(0);

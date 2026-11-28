@@ -57,7 +57,7 @@ class ArchiveExportJobServiceValidationTest {
                 repository,
                 mock(ArchiveExportTempFileManager.class),
                 new ArchiveExportProperties(),
-                (Executor) Runnable::run);
+                (Executor) Runnable::run, com.zjcxph.imgapi.support.ArchiveExportAccessFixtures.allow());
     }
 
     private AuthSession session(List<String> permissions) {

@@ -45,7 +45,7 @@ class ArchiveExportRecoveryTest {
     @BeforeEach
     void setUp() {
         properties.setWorkerQueueCapacity(1);
-        service = new ArchiveExportJobService(exporter, repository, files, properties, executor);
+        service = new ArchiveExportJobService(exporter, repository, files, properties, executor, com.zjcxph.imgapi.support.ArchiveExportAccessFixtures.allow());
         when(repository.resetToPending(anyString())).thenReturn(1);
         when(repository.findRecoveryUpperBound()).thenAnswer(invocation -> rows.stream().filter(this::recoverable)
                 .max(order).map(this::cursor));

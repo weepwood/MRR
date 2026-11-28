@@ -34,7 +34,7 @@ class ArchiveExportJobPreflightTest {
     final AtomicReference<ArchiveExportJob> inserted = new AtomicReference<>();
     final ArchiveExportProperties properties = new ArchiveExportProperties();
     final ArchiveExportJobService service = new ArchiveExportJobService(
-            exporter, repository, files, properties, queue::add);
+            exporter, repository, files, properties, queue::add, com.zjcxph.imgapi.support.ArchiveExportAccessFixtures.allow());
 
     @BeforeEach
     void setup() {
@@ -131,7 +131,7 @@ class ArchiveExportJobPreflightTest {
         properties.setTempDirectory(directory.toString());
         var managedFiles = new ArchiveExportTempFileManager(properties);
         managedFiles.initialize();
-        var workerService = new ArchiveExportJobService(exporter, repository, managedFiles, properties, queue::add);
+        var workerService = new ArchiveExportJobService(exporter, repository, managedFiles, properties, queue::add, com.zjcxph.imgapi.support.ArchiveExportAccessFixtures.allow());
         when(exporter.summarizeArchive("789508", "")).thenReturn(new ArchiveExportSummary(1000, 5000));
         when(exporter.prepareArchive("789508", "")).thenReturn(export());
         when(repository.markProcessing(anyString(), any(), any(), any())).thenReturn(1);

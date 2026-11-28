@@ -41,7 +41,7 @@ class ArchiveExportJobOwnershipTest {
         job.setOutputBytes(10L);
         when(repository.findById(job.getId())).thenReturn(Optional.of(job));
         when(files.requireManagedFile(file.toString())).thenReturn(file);
-        var service = new ArchiveExportJobService(mock(ArchiveExportService.class), repository, files, properties, Runnable::run);
+        var service = new ArchiveExportJobService(mock(ArchiveExportService.class), repository, files, properties, Runnable::run, com.zjcxph.imgapi.support.ArchiveExportAccessFixtures.allow());
         assertThatThrownBy(() -> service.requireDownloadFile(session(1L, "synthetic-user"), job.getId()))
                 .isInstanceOf(BusinessException.class).hasMessageContaining("分批");
         assertThat(Files.size(file)).isEqualTo(11);
@@ -106,7 +106,7 @@ class ArchiveExportJobOwnershipTest {
                 repository,
                 mock(ArchiveExportTempFileManager.class),
                 new ArchiveExportProperties(),
-                (Executor) Runnable::run);
+                (Executor) Runnable::run, com.zjcxph.imgapi.support.ArchiveExportAccessFixtures.allow());
     }
 
     private ArchiveExportJob job(Long ownerId, String username) {

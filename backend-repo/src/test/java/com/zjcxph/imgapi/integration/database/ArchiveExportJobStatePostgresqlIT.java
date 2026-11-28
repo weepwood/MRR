@@ -50,6 +50,9 @@ import static org.mockito.ArgumentMatchers.*;
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
 class ArchiveExportJobStatePostgresqlIT extends PostgresqlIntegrationTestSupport {
     @Autowired JdbcTemplate jdbc;
+    @Autowired com.zjcxph.imgapi.mapper.AuthUserMapper users;
+    @Autowired com.zjcxph.imgapi.mapper.AuthRoleMapper roles;
+    @Autowired org.springframework.transaction.PlatformTransactionManager transactionManager;
     @TempDir Path directory;
 
     @Test
@@ -334,6 +337,96 @@ class ArchiveExportJobStatePostgresqlIT extends PostgresqlIntegrationTestSupport
         }
     }
 
+    @org.junit.jupiter.params.ParameterizedTest
+    @org.junit.jupiter.params.provider.CsvSource({"ZIP,before", "PDF,before", "ZIP,during", "PDF,during", "ZIP,publish", "PDF,publish", "ZIP,allowed", "PDF,allowed", "ZIP,missing", "ZIP,disabled", "PDF,reset", "ZIP,lock", "PDF,database-error"})
+    @Transactional(propagation = Propagation.NOT_SUPPORTED)
+    void workerRequiresCurrentOwnerAuthorization(String format, String stage) throws Exception {
+        var repository = spy(new ArchiveExportJobRepository(jdbc));
+        String id = insert(repository);
+        String role = "EX_" + UUID.randomUUID().toString().replace("-", "").substring(0,16);
+        String username = "synthetic-" + role;
+        jdbc.update("INSERT INTO app.mr_auth_role(code,name,permissions) VALUES (?,?, 'record:manage')",role,role);
+        long owner = jdbc.queryForObject("INSERT INTO app.mr_auth_user(username,display_name,password_hash,role_code,status,must_change_password,password_version) VALUES (?,?, 'synthetic',?,'active',false,1) RETURNING id",Long.class,username,username,role);
+        var exporter = exporter();
+        Runnable revoke = () -> jdbc.update("UPDATE app.mr_auth_role SET permissions='record:read' WHERE code=?",role);
+        var continuedAfterCheckpoint = new java.util.concurrent.atomic.AtomicBoolean();
+        try {
+            jdbc.update("UPDATE app.archive_export_job SET owner_user_id=?, format=? WHERE id=CAST(? AS UUID)", "missing".equals(stage)?null:owner,format,id);
+            if ("before".equals(stage)) revoke.run();
+            if ("disabled".equals(stage)) jdbc.update("UPDATE app.mr_auth_user SET status='disabled' WHERE id=?",owner);
+            if ("reset".equals(stage)) jdbc.update("UPDATE app.mr_auth_user SET must_change_password=true WHERE id=?",owner);
+            org.mockito.stubbing.Answer<Void> write = call -> {
+                call.<OutputStream>getArgument(1).write(1);
+                if ("during".equals(stage)) {
+                    revoke.run();
+                    // Current worker must stop at the first durable checkpoint.
+                    if (call.<ArchiveExportService.ExportProgress>getArgument(2).isCancelled())
+                        throw new com.zjcxph.imgapi.exception.ArchiveExportCancelledException();
+                    continuedAfterCheckpoint.set(true);
+                    call.<OutputStream>getArgument(1).write(2);
+                }
+                if ("publish".equals(stage)) revoke.run();
+                return null;
+            };
+            doAnswer(write).when(exporter).writeBatchZip(any(),any(),any());
+            doAnswer(write).when(exporter).writeBatchPdf(any(),any(),any());
+            var checkedUsers = users;
+            if ("database-error".equals(stage)) {
+                checkedUsers = mock(com.zjcxph.imgapi.mapper.AuthUserMapper.class);
+                when(checkedUsers.findSessionById(owner)).thenThrow(new org.springframework.dao.DataAccessResourceFailureException("synthetic unavailable"));
+            }
+            if ("lock".equals(stage)) {
+                var publicationRoles = mock(com.zjcxph.imgapi.mapper.AuthRoleMapper.class);
+                var publishing = new CountDownLatch(1);
+                var workerPid = new java.util.concurrent.atomic.AtomicInteger();
+                when(publicationRoles.lockAdminRole()).thenAnswer(call -> {
+                    workerPid.set(jdbc.queryForObject("SELECT pg_backend_pid()",Integer.class));
+                    publishing.countDown();
+                    return roles.lockAdminRole();
+                });
+                var workerService = service(repository, exporter, new com.zjcxph.imgapi.service.ArchiveExportExecutionAccess(users,publicationRoles,transactionManager));
+                try (var worker = Executors.newSingleThreadExecutor()) {
+                    var future = new AtomicReference<java.util.concurrent.Future<?>>();
+                    new org.springframework.transaction.support.TransactionTemplate(transactionManager).executeWithoutResult(status -> {
+                        assertThat(roles.lockAdminRole()).isEqualTo("ADMIN");
+                        future.set(worker.submit(() -> ReflectionTestUtils.invokeMethod(workerService,"runJob",id)));
+                        try {
+                            assertThat(publishing.await(3,TimeUnit.SECONDS)).isTrue();
+                            long deadline=System.nanoTime()+TimeUnit.SECONDS.toNanos(3);
+                            boolean blocked=false;
+                            while (System.nanoTime()<deadline) {
+                                blocked=Boolean.TRUE.equals(jdbc.queryForObject("SELECT cardinality(pg_blocking_pids(?)) > 0",Boolean.class,workerPid.get()));
+                                if (blocked) break;
+                                Thread.sleep(20);
+                            }
+                            assertThat(blocked).as("publication waits on actual role lock").isTrue();
+                            revoke.run();
+                        } catch (InterruptedException e) {Thread.currentThread().interrupt();throw new AssertionError(e);}
+                    });
+                    future.get().get(5,TimeUnit.SECONDS);
+                }
+            } else {
+                ReflectionTestUtils.invokeMethod(service(repository,exporter, new com.zjcxph.imgapi.service.ArchiveExportExecutionAccess(checkedUsers,roles,transactionManager)),"runJob",id);
+            }
+            assertThat(continuedAfterCheckpoint.get()).isFalse();
+            var job = repository.findById(id).orElseThrow();
+            if ("allowed".equals(stage)) {
+                assertThat(job.getStatus()).isEqualTo("SUCCESS");
+                assertThat(Path.of(job.getFilePath())).exists();
+            } else {
+                assertThat(job.getStatus()).isEqualTo("FAILED");
+                assertThat(job.getOutputBytes()).isZero();
+                if (job.getFilePath()!=null) assertThat(Path.of(job.getFilePath())).doesNotExist();
+                verify(repository,never()).markSuccess(anyString(),anyLong(),anyString(),any());
+                if (List.of("before","missing","disabled","reset","database-error").contains(stage)) verifyNoInteractions(exporter);
+            }
+        } finally {
+            jdbc.update("DELETE FROM app.archive_export_job WHERE id=CAST(? AS UUID)",id);
+            jdbc.update("DELETE FROM app.mr_auth_user WHERE id=?",owner);
+            jdbc.update("DELETE FROM app.mr_auth_role WHERE code=?",role);
+        }
+    }
+
     private ArchiveExportService exporter() {
         ArchiveExportService exporter = mock(ArchiveExportService.class);
         PathDO item = new PathDO();
@@ -343,11 +436,16 @@ class ArchiveExportJobStatePostgresqlIT extends PostgresqlIntegrationTestSupport
     }
 
     private ArchiveExportJobService service(ArchiveExportJobRepository repository, ArchiveExportService exporter) throws Exception {
+        return service(repository,exporter,com.zjcxph.imgapi.support.ArchiveExportAccessFixtures.allow());
+    }
+
+    private ArchiveExportJobService service(ArchiveExportJobRepository repository, ArchiveExportService exporter,
+            com.zjcxph.imgapi.service.ArchiveExportExecutionAccess access) throws Exception {
         ArchiveExportProperties properties = new ArchiveExportProperties();
         properties.setTempDirectory(directory.toString());
         var files = new ArchiveExportTempFileManager(properties);
         files.initialize();
-        return new ArchiveExportJobService(exporter, repository, files, properties, Runnable::run);
+        return new ArchiveExportJobService(exporter, repository, files, properties, Runnable::run, access);
     }
 
     @Test

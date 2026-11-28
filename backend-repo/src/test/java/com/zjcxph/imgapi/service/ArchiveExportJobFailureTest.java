@@ -60,7 +60,7 @@ class ArchiveExportJobFailureTest {
             catch (java.io.IOException failure) { throw new java.io.IOException("synthetic-private-detail", new RuntimeException(failure)); }
             return null;
         }).when(exporter).writeBatchPdf(any(), any(), any());
-        var service = new ArchiveExportJobService(exporter, repository, files, properties, Runnable::run);
+        var service = new ArchiveExportJobService(exporter, repository, files, properties, Runnable::run, com.zjcxph.imgapi.support.ArchiveExportAccessFixtures.allow());
 
         var logger = (ch.qos.logback.classic.Logger) org.slf4j.LoggerFactory.getLogger(ArchiveExportJobService.class);
         var appender = new ch.qos.logback.core.read.ListAppender<ch.qos.logback.classic.spi.ILoggingEvent>();
@@ -99,7 +99,7 @@ class ArchiveExportJobFailureTest {
         when(repository.findById(job.getId())).thenReturn(Optional.of(job));
         when(repository.markProcessing(eq(job.getId()), any(), any(), any())).thenReturn(1);
         when(repository.updatePlan(eq(job.getId()), anyInt(), anyLong(), any())).thenReturn(1);
-        var service = new ArchiveExportJobService(exporter, repository, files, properties, Runnable::run);
+        var service = new ArchiveExportJobService(exporter, repository, files, properties, Runnable::run, com.zjcxph.imgapi.support.ArchiveExportAccessFixtures.allow());
         ReflectionTestUtils.invokeMethod(service, "runJob", job.getId());
         verify(repository).markFailed(eq(job.getId()), contains("分批"), any());
         verify(files, never()).openOutput(any());
@@ -111,7 +111,7 @@ class ArchiveExportJobFailureTest {
         ArchiveExportService exporter = mock(ArchiveExportService.class);
         ArchiveExportTempFileManager files = mock(ArchiveExportTempFileManager.class);
         ArchiveExportJobService service = new ArchiveExportJobService(
-                exporter, repository, files, new ArchiveExportProperties(), Runnable::run);
+                exporter, repository, files, new ArchiveExportProperties(), Runnable::run, com.zjcxph.imgapi.support.ArchiveExportAccessFixtures.allow());
         ArchiveExportJob job = cancellableJob("PENDING");
         when(repository.findById(job.getId())).thenReturn(Optional.of(job));
         when(repository.requestCancel(job.getId())).thenReturn(1);
@@ -134,7 +134,7 @@ class ArchiveExportJobFailureTest {
         ArchiveExportJobRepository repository = mock(ArchiveExportJobRepository.class);
         ArchiveExportJobService service = new ArchiveExportJobService(
                 mock(ArchiveExportService.class), repository, mock(ArchiveExportTempFileManager.class),
-                new ArchiveExportProperties(), Runnable::run);
+                new ArchiveExportProperties(), Runnable::run, com.zjcxph.imgapi.support.ArchiveExportAccessFixtures.allow());
         ArchiveExportJob job = cancellableJob("PROCESSING");
         when(repository.findById(job.getId())).thenReturn(Optional.of(job));
         when(repository.requestCancel(job.getId())).thenReturn(1);
@@ -185,7 +185,7 @@ class ArchiveExportJobFailureTest {
         ArchiveExportJobRepository repository = mock(ArchiveExportJobRepository.class);
         when(repository.findExpired(any(LocalDateTime.class))).thenReturn(List.of(job));
         ArchiveExportJobService service = new ArchiveExportJobService(
-                mock(ArchiveExportService.class), repository, files, properties, Runnable::run);
+                mock(ArchiveExportService.class), repository, files, properties, Runnable::run, com.zjcxph.imgapi.support.ArchiveExportAccessFixtures.allow());
 
         service.cleanupExpiredFiles();
         verify(repository, never()).markExpired(job.getId());

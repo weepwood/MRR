@@ -170,3 +170,32 @@ inspect-query-plans.sql 新增显式 compare_exact=1；compare_sjh=1 使用 SJH�
 本地接续：a7990828 实际 RED 25 项（1 失败、1 错误、0 跳过），9ffe44a1 修复后实际 GREEN 25 项全通过。每个缓存单独捕获 RuntimeException，继续后续失效，日志仅记录缓存名和异常类型；已成功的迁移不会因此进入 retry_wait，afterCommit 不再传播缓存运行时异常。零行更新不失效、回滚不触发提交失效。失败缓存仍可能保留旧数据，在途旧回填与批量遍历成本未解决；最新专项 CI、PG16 和现场证据待核验。详见 [交接索引](ai-handoff.md)。
 
 旧回填专项（82e03280 RED 6项/2失败，0c8beb34 GREEN 31项，扩展63项全通过）：五类原 Caffeine 缓存增加代际与每次查询视图，选择性失效和 evict/clear 与 put 原子排序，数据库查询不持锁。已在途调用可返回旧快照，但不能再写入缓存；无关已缓存值保持。并发旧填充、覆盖新值、别名及无关项已用真实缓存/确定性 latch 验证。未验证真实批量迁移吞吐、普通事务切面顺序与其他进程写路径；最新 P1 CI/PG16 待核验。
+
+
+## 外部专用账本最小准入契约（本地候选，2026-11-29）
+
+- 外部凭据成功事实与凭据原子提交；上下文/清单/影像/ZIP每次授权访问先写INTENT，失败503；Mapper语句超时3秒（不是整个请求或连接等待的硬时限）。流终态独立best-effort写入，失败记录类型化ERROR，不能让已发送数据回滚。安全注销继续执行，不强制追加成功事件才能撤销。
+- 常规访问最多一条准入及一条结果，额外凭据INTENT实验仍关闭；失败、终止与未配对并非成功。无新缓存/队列，无自动删除。现有内部访问日志丢失、缓冲及拒绝告警继续有效；不得以内部best-effort满足院方强制持久审计要求。院方若要求内部读取/导出下载强制审计，须按负载、保留期限、故障可用性与权限独立验收。
+- 在授权维护窗口用只读聚合核对过去24小时计数、表及索引容量，以及超过1小时的近24小时未配对INTENT；下列仅为排查窗口，不是SLA/告警阈值，不导出用户、病案、路径或正文。真实外部负载、容量增长、备份、ACL、通知和保留期限需现场确认。未知事件不删除、不自动补造结果。
+
+```sql
+SELECT pg_total_relation_size('app.mr_external_archive_access_log') AS ledger_bytes;
+SELECT action,result,count(*)
+FROM app.mr_external_archive_access_log
+WHERE created_at >= now() - interval '24 hours'
+GROUP BY action,result ORDER BY action,result;
+SELECT i.action,count(*) AS unresolved
+FROM app.mr_external_archive_access_log i
+WHERE i.result='INTENT'
+  AND i.created_at >= now() - interval '24 hours'
+  AND i.created_at < now() - interval '1 hour'
+  AND NOT EXISTS (
+    SELECT 1 FROM app.mr_external_archive_access_log o
+    WHERE o.client_id=i.client_id AND o.request_id=i.request_id
+      AND o.action=i.action AND o.result IN ('SUCCESS','FAILED','DENIED')
+      AND o.created_at >= i.created_at
+  )
+GROUP BY i.action ORDER BY i.action;
+```
+
+大表扫描可能影响业务；使用只读会话、短statement_timeout和维护窗口，必要时先EXPLAIN，不在生产擅自运行。当前无请求ID索引及现场容量证据，不添加未经验证索引或自动轮询任务。

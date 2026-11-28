@@ -73,6 +73,10 @@ class ExternalArchiveAccessServiceTest {
         service = new ExternalArchiveAccessService(
                 properties, searchService, scanService, accessMapper, objectMapper
         );
+        var request=new org.springframework.mock.web.MockHttpServletRequest();
+        request.setAttribute("requestId","synthetic-external-audit");
+        org.springframework.web.context.request.RequestContextHolder.setRequestAttributes(new org.springframework.web.context.request.ServletRequestAttributes(request));
+        when(accessMapper.insertAccessLog(any(),any(),any(),any(),any(),any(),any(),any(),any(),any(),any())).thenReturn(1);
         when(accessMapper.insertNonce(anyString(), anyString(), any(LocalDateTime.class))).thenReturn(1);
         when(accessMapper.insertTicket(
                 anyString(), anyString(), anyString(), anyBoolean(), anyString(),
@@ -82,6 +86,11 @@ class ExternalArchiveAccessServiceTest {
                 anyString(), anyString(), anyString(), anyBoolean(), anyString(),
                 any(LocalDateTime.class), anyString()
         )).thenReturn(1);
+    }
+
+    @org.junit.jupiter.api.AfterEach
+    void clearRequestTrace() {
+        org.springframework.web.context.request.RequestContextHolder.resetRequestAttributes();
     }
 
     @Test

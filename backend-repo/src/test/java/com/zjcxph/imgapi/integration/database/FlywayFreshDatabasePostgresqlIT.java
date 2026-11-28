@@ -90,13 +90,20 @@ class FlywayFreshDatabasePostgresqlIT extends PostgresqlIntegrationTestSupport {
                 }
 
                 var latest = newFlyway(url);
-                assertThat(latest.migrate().migrationsExecuted).isEqualTo(staged ? 2 : 11);
+                assertThat(latest.migrate().migrationsExecuted).isEqualTo(staged ? 3 : 12);
                 assertThat(latest.info().pending()).isEmpty();
                 assertThat(upgradeSnapshot(sql, true)).isEqualTo(before);
                 assertThat(migrationSnapshot(sql, preservedVersion)).isEqualTo(preservedChecksums);
                 assertThat(singleString(sql, "SELECT count(*) FROM app.mrr_data_quality_run WHERE triggered_by='synthetic-upgrade' AND NOT task_managed AND deadline_at IS NULL")).isEqualTo("3");
                 assertThat(singleString(sql, "SELECT count(*) FROM app.mr_scan WHERE bah='7000011' AND migration_status='migrating' AND migration_claim_id IS NULL")).isEqualTo("1");
                 assertThat(singleString(sql, "SELECT count(*) FROM app.medical_audit_event")).isEqualTo("0");
+                assertThat(singleString(sql, "SELECT count(*) FROM app.mr_security_change_audit")).isEqualTo("0");
+                sql.executeUpdate("INSERT INTO app.mr_security_change_audit(event_type,actor_user_id,target_user_id) VALUES ('USER_DISABLED',101,102)");
+                org.assertj.core.api.Assertions.assertThatThrownBy(() ->
+                    sql.executeUpdate("INSERT INTO app.mr_security_change_audit(event_type,actor_user_id,target_user_id) VALUES ('USER_DISABLED',NULL,102)"))
+                    .isInstanceOf(SQLException.class)
+                    .satisfies(error -> assertThat(((SQLException) error).getSQLState()).isEqualTo("23514"));
+
                 // Old observations do not consume the new managed slot; the new slot rejects a second active run.
                 sql.executeUpdate("INSERT INTO app.mrr_data_quality_run(status,triggered_by,task_managed,deadline_at) VALUES ('PENDING','synthetic-new',true,CURRENT_TIMESTAMP + interval '1 minute')");
                 org.assertj.core.api.Assertions.assertThatThrownBy(() ->
@@ -108,6 +115,7 @@ class FlywayFreshDatabasePostgresqlIT extends PostgresqlIntegrationTestSupport {
                     .isInstanceOf(SQLException.class)
                     .satisfies(error -> assertThat(((SQLException) error).getSQLState()).isEqualTo("23514"));
                 assertThat(newFlyway(url).migrate().migrationsExecuted).isZero();
+                assertThat(singleString(sql, "SELECT count(*) FROM app.mr_security_change_audit WHERE event_type='USER_DISABLED' AND actor_user_id=101 AND target_user_id=102")).isEqualTo("1");
                 assertThat(upgradeSnapshot(sql, true)).isEqualTo(before);
                 System.out.println("MRR_UPGRADE staged=" + staged + " preserved eight business snapshots and prior migration metadata; active slot and deadline enforced");
             }
@@ -178,6 +186,8 @@ class FlywayFreshDatabasePostgresqlIT extends PostgresqlIntegrationTestSupport {
                     .isEqualTo("app.mr_scan");
             assertThat(singleString(statement, "SELECT to_regclass('app.mr_archive')::text"))
                     .isEqualTo("app.mr_archive");
+            assertThat(singleString(statement, "SELECT to_regclass('app.mr_security_change_audit')::text"))
+                    .isEqualTo("app.mr_security_change_audit");
             assertRuntimeLogJournalDropped(statement);
         }
     }

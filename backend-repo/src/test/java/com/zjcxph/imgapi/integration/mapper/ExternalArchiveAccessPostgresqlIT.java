@@ -66,6 +66,115 @@ class ExternalArchiveAccessPostgresqlIT extends PostgresqlIntegrationTestSupport
         }
     }
 
+    @org.junit.jupiter.params.ParameterizedTest
+    @org.junit.jupiter.params.provider.ValueSource(strings={"context","list","image","download","exchange","logout"})
+    @org.springframework.transaction.annotation.Transactional(propagation=org.springframework.transaction.annotation.Propagation.NOT_SUPPORTED)
+    void unavailableDedicatedAuditDeniesDisclosureButNotRevocation(String action) throws Exception {
+        String token=java.util.UUID.randomUUID().toString();
+        String hash=java.util.HexFormat.of().formatHex(java.security.MessageDigest.getInstance("SHA-256").digest(token.getBytes(java.nio.charset.StandardCharsets.UTF_8)));
+        String client="synthetic-audit-failure";
+        var json=new com.fasterxml.jackson.databind.ObjectMapper();
+        String cases=json.writeValueAsString(java.util.List.of(new com.zjcxph.imgapi.dto.resp.ExternalArchiveCaseDTO("123456","1234",null,null,null)));
+        var search=org.mockito.Mockito.mock(com.zjcxph.imgapi.service.SearchService.class);
+        var scanService=org.mockito.Mockito.mock(com.zjcxph.imgapi.service.ScanService.class);
+        var images=org.mockito.Mockito.mock(com.zjcxph.imgapi.service.ImageContentService.class);
+        var exports=org.mockito.Mockito.mock(com.zjcxph.imgapi.service.ArchiveExportService.class);
+        var access=new com.zjcxph.imgapi.service.ExternalArchiveAccessService(new com.zjcxph.imgapi.config.IntegrationProperties(),search,scanService,mapper,json);
+        var controller=new com.zjcxph.imgapi.controller.ExternalArchiveController(json,access,exports,images);
+        var req=new org.springframework.mock.web.MockHttpServletRequest("GET","/api/v1/external/archive/"+action);
+        req.setAttribute("requestId","synthetic-"+action);
+        req.setCookies(new jakarta.servlet.http.Cookie(com.zjcxph.imgapi.service.ExternalArchiveAccessService.SESSION_COOKIE_NAME,token));
+        org.springframework.web.context.request.RequestContextHolder.setRequestAttributes(new org.springframework.web.context.request.ServletRequestAttributes(req));
+        org.mockito.Mockito.when(scanService.getFreshImageListByCode(org.mockito.ArgumentMatchers.anyString(),org.mockito.ArgumentMatchers.anyString(),org.mockito.ArgumentMatchers.anyString(),org.mockito.ArgumentMatchers.anyString())).thenReturn(java.util.List.of());
+        org.mockito.Mockito.when(images.openExternal(org.mockito.ArgumentMatchers.eq(42),org.mockito.ArgumentMatchers.any())).thenAnswer(call->new com.zjcxph.imgapi.service.ImageContentService.ScopedImage(
+                new com.zjcxph.imgapi.service.ImageContentService.ImageContent(new java.io.ByteArrayInputStream(new byte[]{1,2}),"synthetic.jpg",org.springframework.http.MediaType.IMAGE_JPEG,2L),"123456","1234"));
+        org.mockito.Mockito.when(exports.prepareExternalArchive("123456","1234")).thenReturn(new com.zjcxph.imgapi.service.ArchiveExportService.BatchZipExport(java.util.List.of(new com.zjcxph.imgapi.entity.PathDO())));
+        try {
+            if("exchange".equals(action)) mapper.insertTicket(hash,client,"synthetic-user",true,cases,LocalDateTime.now().plusMinutes(2),"127.0.0.1");
+            else mapper.insertSession(hash,client,"synthetic-user",true,cases,LocalDateTime.now().plusMinutes(2),"127.0.0.1");
+            jdbc.execute("ALTER TABLE app.mr_external_archive_access_log ADD CONSTRAINT ck_test_external_audit_unavailable CHECK(client_id<>'synthetic-audit-failure') NOT VALID");
+            if("logout".equals(action)) {
+                controller.logout(req,new org.springframework.mock.web.MockHttpServletResponse());
+                assertThat(mapper.findSession(hash)).isNull();
+            } else {
+                org.assertj.core.api.Assertions.assertThatThrownBy(()->{
+                    switch(action) {
+                        case "context" -> controller.context(req);
+                        case "list" -> controller.images("123456","1234",req);
+                        case "image" -> controller.image(42,req);
+                        case "download" -> controller.download("123456","1234",req);
+                        case "exchange" -> new org.springframework.transaction.support.TransactionTemplate(transactions).execute(tx->access.consumeTicket(token,"127.0.0.1"));
+                        default -> throw new AssertionError(action);
+                    }
+                }).isInstanceOfSatisfying(com.zjcxph.imgapi.exception.BusinessException.class,e->assertThat(e.getCode()).isEqualTo(503));
+                org.mockito.Mockito.verifyNoInteractions(scanService,images,exports);
+                if("exchange".equals(action)) {
+                    assertThat(jdbc.queryForObject("SELECT used_at IS NULL FROM app.mr_external_archive_ticket WHERE ticket_hash=?",Boolean.class,hash)).isTrue();
+                    assertThat(jdbc.queryForObject("SELECT count(*) FROM app.mr_external_archive_session WHERE client_id=?",Long.class,client)).isZero();
+                }
+            }
+        } finally {
+            org.springframework.web.context.request.RequestContextHolder.resetRequestAttributes();
+            jdbc.execute("ALTER TABLE app.mr_external_archive_access_log DROP CONSTRAINT IF EXISTS ck_test_external_audit_unavailable");
+            jdbc.update("DELETE FROM app.mr_external_archive_access_log WHERE client_id=?",client);
+            jdbc.update("DELETE FROM app.mr_external_archive_session WHERE client_id=?",client);
+            jdbc.update("DELETE FROM app.mr_external_archive_ticket WHERE client_id=?",client);
+        }
+    }
+
+    @org.junit.jupiter.params.ParameterizedTest
+    @org.junit.jupiter.params.provider.ValueSource(strings={"success","broken-stream","terminal-unavailable"})
+    @org.springframework.transaction.annotation.Transactional(propagation=org.springframework.transaction.annotation.Propagation.NOT_SUPPORTED)
+    void externalLocalFileStreamRetainsDurableAdmissionAndOutcome(String outcome,
+            @org.junit.jupiter.api.io.TempDir java.nio.file.Path root) throws Exception {
+        String token=java.util.UUID.randomUUID().toString();
+        String hash=java.util.HexFormat.of().formatHex(java.security.MessageDigest.getInstance("SHA-256").digest(token.getBytes(java.nio.charset.StandardCharsets.UTF_8)));
+        String client="synthetic-stream-"+outcome;
+        String trace="synthetic-stream-"+java.util.UUID.randomUUID();
+        var json=new com.fasterxml.jackson.databind.ObjectMapper();
+        var cases=json.writeValueAsString(java.util.List.of(new com.zjcxph.imgapi.dto.resp.ExternalArchiveCaseDTO("8765433","",null,null,null)));
+        var settings=new com.zjcxph.imgapi.config.ImageProperties();settings.setBasePath(root.toString());
+        var storage=new com.zjcxph.imgapi.storage.LocalImageStorage(settings);
+        var images=new com.zjcxph.imgapi.service.impl.ImageContentServiceImpl(contentMapper,storage);
+        var access=new com.zjcxph.imgapi.service.ExternalArchiveAccessService(new com.zjcxph.imgapi.config.IntegrationProperties(),
+                org.mockito.Mockito.mock(com.zjcxph.imgapi.service.SearchService.class),
+                org.mockito.Mockito.mock(com.zjcxph.imgapi.service.ScanService.class),mapper,json);
+        var controller=new com.zjcxph.imgapi.controller.ExternalArchiveController(json,access,
+                org.mockito.Mockito.mock(com.zjcxph.imgapi.service.ArchiveExportService.class),images);
+        java.nio.file.Files.write(root.resolve("a.jpg"),new byte[]{1,2,3});
+        Integer scan=null;
+        try {
+            mapper.insertSession(hash,client,"synthetic-user",false,cases,LocalDateTime.now().plusMinutes(2),"127.0.0.1");
+            scan=jdbc.queryForObject("INSERT INTO app.mr_scan(bah,filename,folder,uploadflag,source_type,source_ref) VALUES ('8765433','a.jpg','synthetic',1,'LOCAL','a.jpg') RETURNING id",Integer.class);
+            var req=new org.springframework.mock.web.MockHttpServletRequest("GET","/api/v1/external/archive/image/"+scan);
+            req.setAttribute("requestId",trace);
+            req.setCookies(new jakarta.servlet.http.Cookie(com.zjcxph.imgapi.service.ExternalArchiveAccessService.SESSION_COOKIE_NAME,token));
+            req.setAsyncSupported(true);
+            org.springframework.web.context.request.RequestContextHolder.setRequestAttributes(new org.springframework.web.context.request.ServletRequestAttributes(req));
+            var response=controller.image(scan,req);
+            assertThat(jdbc.queryForList("SELECT result FROM app.mr_external_archive_access_log WHERE request_id=? ORDER BY id",String.class,trace)).containsExactly("INTENT");
+            if("terminal-unavailable".equals(outcome))
+                jdbc.execute("ALTER TABLE app.mr_external_archive_access_log ADD CONSTRAINT ck_test_external_terminal_unavailable CHECK(client_id<>'synthetic-stream-terminal-unavailable' OR result='INTENT') NOT VALID");
+            if("broken-stream".equals(outcome)) {
+                org.assertj.core.api.Assertions.assertThatThrownBy(()->response.getBody().writeTo(new java.io.OutputStream(){
+                    @Override public void write(int b)throws java.io.IOException{throw new java.io.IOException("synthetic client disconnect");}
+                })).isInstanceOf(java.io.IOException.class);
+            } else {
+                var bytes=new java.io.ByteArrayOutputStream();response.getBody().writeTo(bytes);
+                assertThat(bytes.toByteArray()).containsExactly((byte)1,(byte)2,(byte)3);
+            }
+            var results=jdbc.queryForList("SELECT result FROM app.mr_external_archive_access_log WHERE request_id=? ORDER BY id",String.class,trace);
+            if("terminal-unavailable".equals(outcome)) assertThat(results).containsExactly("INTENT");
+            else assertThat(results).containsExactly("INTENT","success".equals(outcome)?"SUCCESS":"FAILED");
+        } finally {
+            org.springframework.web.context.request.RequestContextHolder.resetRequestAttributes();
+            jdbc.execute("ALTER TABLE app.mr_external_archive_access_log DROP CONSTRAINT IF EXISTS ck_test_external_terminal_unavailable");
+            jdbc.update("DELETE FROM app.mr_external_archive_access_log WHERE client_id=?",client);
+            jdbc.update("DELETE FROM app.mr_external_archive_session WHERE client_id=?",client);
+            if(scan!=null) jdbc.update("DELETE FROM app.mr_scan WHERE id=?",scan);
+        }
+    }
+
     @Test
     void ticketCannotBeConsumedTwiceEvenInSameMapperSession() {
         mapper.insertTicket("synthetic-ticket", "synthetic", "synthetic-user", false,

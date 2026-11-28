@@ -18,10 +18,7 @@ public class OcrAccess {
 
     /** Request-bound sensitive writes: use the existing management lock order and verified token. */
     public AuthSession requireWrite(Long id, String... permissions) {
-        if (!org.springframework.transaction.support.TransactionSynchronizationManager.isActualTransactionActive())
-            throw new IllegalStateException("医疗写入授权需要事务");
-        if (id == null || roles.lockAdminRole() == null || users.lockAuthorizationActor(id) == null)
-            throw new BusinessException(403, "OCR 授权账号不可用");
+        lockAuthorization(id);
         var session = com.zjcxph.imgapi.utils.AuthContext.getCurrentUser();
         String hash = com.zjcxph.imgapi.utils.AuthContext.getCurrentTokenHash();
         if (hash == null) return require(id, permissions);
@@ -32,6 +29,19 @@ public class OcrAccess {
                 || user.effectivePasswordVersion() != session.effectivePasswordVersion())
             throw new BusinessException(403, "OCR 授权账号不可用");
         return authorize(user, permissions);
+    }
+
+    /** Durable background tasks are authorized by their current owner, not a request JWT. */
+    public AuthSession requireExecutionWrite(Long id, String... permissions) {
+        lockAuthorization(id);
+        return require(id, permissions);
+    }
+
+    private void lockAuthorization(Long id) {
+        if (!org.springframework.transaction.support.TransactionSynchronizationManager.isActualTransactionActive())
+            throw new IllegalStateException("医疗写入授权需要事务");
+        if (id == null || roles.lockAdminRole() == null || users.lockAuthorizationActor(id) == null)
+            throw new BusinessException(403, "OCR 授权账号不可用");
     }
 
     public AuthSession require(Long id, String... permissions) {

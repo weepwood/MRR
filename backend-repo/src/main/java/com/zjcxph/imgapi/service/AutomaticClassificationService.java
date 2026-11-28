@@ -42,9 +42,10 @@ public class AutomaticClassificationService {
             authorize(target.getOwnerUserId());
             try(var prepared=input.prepare(target.getScanId(),()->!jobs.enabled()||!quality.enabled())) {
                 transactions.executeWithoutResult(tx->{
+                    AuthSession actor=access.requireExecutionWrite(target.getOwnerUserId(),"record:read","ocr:run","ocr:batch-run","classification:auto-apply","classification:review");
                     var batch=batches.lock(target.getBatchId());
                     if(Thread.currentThread().isInterrupted()||batch==null||!"RUNNING".equals(batch.getStatus())||!batch.isAutoApply()||!jobs.enabled()||!quality.enabled()||!guard.allowed()) return;
-                    AuthSession actor=authorize(batch.getOwnerUserId());
+                    if(!Objects.equals(batch.getOwnerUserId(),target.getOwnerUserId())) return;
                     var suggestion=classifications.lockSuggestion(id);
                     if(suggestion==null||!"PENDING".equals(suggestion.getReviewStatus())||!"PENDING".equals(suggestion.getAutoStatus())) return;
                     var scan=classifications.lockScan(suggestion.getScanId());var fact=ocr.lockFact(suggestion.getScanId());
@@ -68,7 +69,7 @@ public class AutomaticClassificationService {
                     if(classifications.reviewed(id,"ACCEPTED",suggestion.getSuggestedType(),actor.getUsername())!=1) throw new BusinessException(409,"建议已被处理");
                 });
             }
-        } catch(BusinessException revoked) {batches.status(target.getBatchId(),"PAUSED","AUTH_REVOKED");}
+        } catch(BusinessException revoked) {batches.pauseRunningOnAuthorizationFailure(target.getBatchId());}
         catch(RuntimeException failed) {mapper.status(id,"REVIEW_REQUIRED","AUTO_APPLY_FAILED");}
     }
     public List<Revert> preview(AuthSession session,String batch,long after,int limit) {
@@ -83,13 +84,15 @@ public class AutomaticClassificationService {
         var candidates=mapper.preview(batchId,request.afterAuditId(),request.limit());int changed=0;long after=request.afterAuditId();
         for(var candidate:candidates) {
             boolean applied=Boolean.TRUE.equals(transactions.execute(tx->{
+                AuthSession currentActor=access.requireWrite(actor.getId(),"record:read","ocr:run","ocr:batch-run","classification:review","classification:override");
                 var batch=batches.lock(batchId);
                 if(batch==null||Set.of("RUNNING","CANCEL_REQUESTED").contains(batch.getStatus())) throw new BusinessException(409,"回退前请暂停或取消批次");
-                access.require(actor.getId(),"classification:review","classification:override");
+                if(!currentActor.isAdmin()&&!Objects.equals(currentActor.getId(),batch.getOwnerUserId()))
+                    throw new BusinessException(403,"无权访问此批次");
                 var scan=classifications.lockScan(candidate.scanId());
                 if(scan==null||!candidate.eligible()||scan.getTypeVersion()!=candidate.typeVersion()||scan.getBtype()==null||scan.getBtype()!=candidate.newType()
                         ||scan.getUploadflag()==null||scan.getUploadflag()==0||!mapper.latest(batchId,candidate.auditId(),candidate.scanId())) return false;
-                types.apply(scan,0,"ROLLBACK_AUTO",null,actor,"HUMAN",batchId,null,candidate.auditId());return true;
+                types.apply(scan,0,"ROLLBACK_AUTO",null,currentActor,"HUMAN",batchId,null,candidate.auditId());return true;
             }));
             if(applied) changed++;after=candidate.auditId();
         }

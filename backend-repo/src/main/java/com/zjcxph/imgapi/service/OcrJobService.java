@@ -146,9 +146,9 @@ public class OcrJobService {
     }
     private void saveThenClassify(Job job,String token,Item item,Fact fact) {
         boolean saved=Boolean.TRUE.equals(transactions.execute(tx->{
+            requireJobOwnerWrite(job);
             mapper.lock(job.getId());
             if(!mapper.alive(job.getId(),token)) return false;
-            requireJobOwner(job);
             if(!mapper.belongs(item.getScanId(),job.getArchiveId())) throw new OcrFailure("SOURCE_CHANGED");
             Fact old=mapper.fact(item.getScanId());
             if(old==null || !Objects.equals(old.getResultVersion(),fact.getResultVersion())) {
@@ -160,16 +160,18 @@ public class OcrJobService {
         if(!saved) return;
         try {
             transactions.executeWithoutResult(tx->{
+                boolean authorized=classificationAuthorization(job);
                 if(!lockClassificationStage(job,token)) return;
-                if(!validateClassificationInput(job,token,item,fact)) return;
+                if(!validateClassificationInput(job,token,item,fact,authorized)) return;
                 mapper.complete(job.getId(),item.getScanId(),"LOW_CONFIDENCE".equals(fact.getStatus())?"LOW_CONFIDENCE":"NO_MATCH",fact.getStatus(),fact.getResultVersion(),null);
                 classification.classify(job,item,fact);
                 mapper.release(job.getId(),token);
             });
         } catch(Exception failure) {
             transactions.executeWithoutResult(tx->{
+                boolean authorized=classificationAuthorization(job);
                 if(!lockClassificationStage(job,token)) return;
-                if(!validateClassificationInput(job,token,item,fact)) return;
+                if(!validateClassificationInput(job,token,item,fact,authorized)) return;
                 mapper.complete(job.getId(),item.getScanId(),"NO_MATCH",fact.getStatus(),fact.getResultVersion(),"CLASSIFICATION_FAILED");
                 mapper.release(job.getId(),token);
             });
@@ -189,13 +191,13 @@ public class OcrJobService {
         return mapper.alive(job.getId(),token);
     }
     /** Revalidate the committed OCR fact and durable owner authorization in the classification transaction. */
-    private boolean validateClassificationInput(Job job,String token,Item item,Fact fact) {
-        String failure=null;
-        try {
-            requireJobOwner(job);
-        } catch (BusinessException denied) {
-            failure="AUTH_REVOKED";
-        }
+    private boolean classificationAuthorization(Job job) {
+        try { requireJobOwnerWrite(job); return true; }
+        catch (BusinessException denied) { return false; }
+    }
+
+    private boolean validateClassificationInput(Job job,String token,Item item,Fact fact,boolean authorized) {
+        String failure=authorized?null:"AUTH_REVOKED";
         if (failure==null) {
             Fact current=mapper.factForCurrentArchive(item.getScanId(),job.getArchiveId());
             if (current==null || !Objects.equals(current.getResultVersion(),fact.getResultVersion())
@@ -212,6 +214,10 @@ public class OcrJobService {
     private void requireJobOwner(Job job) {
         if(job.getBatchId()==null) access.require(job.getOwnerUserId(),"record:read","ocr:run");
         else access.require(job.getOwnerUserId(),"record:read","ocr:run","ocr:batch-run");
+    }
+    private void requireJobOwnerWrite(Job job) {
+        if(job.getBatchId()==null) access.requireExecutionWrite(job.getOwnerUserId(),"record:read","ocr:run");
+        else access.requireExecutionWrite(job.getOwnerUserId(),"record:read","ocr:run","ocr:batch-run");
     }
     private int integer(String key,int fallback,int min,int max) {
         try { return Math.max(min,Math.min(max,Integer.parseInt(settings.getSetting(key)))); } catch (Exception e) { return fallback; }

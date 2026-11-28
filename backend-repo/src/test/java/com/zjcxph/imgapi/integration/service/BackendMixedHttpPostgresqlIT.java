@@ -69,6 +69,8 @@ class BackendMixedHttpPostgresqlIT extends PostgresqlIntegrationTestSupport {
     @Autowired JdbcTemplate jdbc;
     @Autowired DataSource dataSource;
     @Autowired AuthUserMapper users;
+    @Autowired com.zjcxph.imgapi.mapper.AuthRoleMapper authRoles;
+    @Autowired org.springframework.transaction.PlatformTransactionManager transactionManager;
     @Autowired ScanMapper scans;
     @Autowired SystemSettingMapper settings;
     @TempDir Path directory;
@@ -218,6 +220,81 @@ class BackendMixedHttpPostgresqlIT extends PostgresqlIntegrationTestSupport {
             jdbc.update("DELETE FROM app.mr_auth_user WHERE username=?", username);
             jdbc.update("DELETE FROM app.mr_auth_role WHERE code=?", role);
             if (token != null) jdbc.update("DELETE FROM app.token_revocation WHERE token_hash=?", TokenBlacklist.tokenHash(JwtUtil.verifyToken(token).jti()));
+        }
+    }
+
+    @Test
+    void delegatedRoleRevocationDeniesInFlightHttpWrite() throws Exception {
+        String role = "SYNTHETIC_HTTP_ROLE_" + java.util.UUID.randomUUID();
+        String target = role + "_TARGET";
+        String username = "synthetic-http-role-" + java.util.UUID.randomUUID();
+        var mode = new DeveloperModeService(settings, false, "127.0.0.1,::1", new ImageDeliveryProperties());
+        var login = new LoginInterceptor(users, mode, new DeveloperApiAccessService(settings, mode));
+        var blacklist = new TokenBlacklist(jdbc);
+        var factory = new org.springframework.transaction.interceptor.TransactionProxyFactoryBean();
+        factory.setTransactionManager(transactionManager);
+        factory.setTarget(new com.zjcxph.imgapi.service.impl.AuthServiceImpl(users, authRoles, org.mockito.Mockito.mock(com.zjcxph.imgapi.security.LoginRateLimiter.class), null));
+        var attributes = new java.util.Properties();
+        attributes.setProperty("updateRole", "PROPAGATION_REQUIRED,-java.lang.Exception");
+        factory.setTransactionAttributes(attributes);
+        factory.afterPropertiesSet();
+        var auth = (com.zjcxph.imgapi.service.AuthService) factory.getObject();
+        var tomcat = new Tomcat();
+        tomcat.setBaseDir(directory.toString());
+        tomcat.setPort(0);
+        var connector = tomcat.getConnector();
+        connector.setProperty("address", "127.0.0.1");
+        var context = tomcat.addContext("", directory.toString());
+        var mvc = new AnnotationConfigWebApplicationContext();
+        mvc.register(MvcConfig.class);
+        mvc.addBeanFactoryPostProcessor(beans -> {
+            beans.registerSingleton("loginInterceptor", login);
+            beans.registerSingleton("userController", new com.zjcxph.imgapi.controller.UserController(auth, blacklist));
+        });
+        var servlet = Tomcat.addServlet(context, "mvc", new DispatcherServlet(mvc));
+        servlet.setLoadOnStartup(1);
+        context.addServletMappingDecoded("/", "mvc");
+        try {
+            jdbc.update("INSERT INTO app.mr_auth_role(code,name,permissions) VALUES (?,?,'role:manage'), (?,?,'role:read')", role, role, target, target);
+            long actor = jdbc.queryForObject("INSERT INTO app.mr_auth_user(username,password_hash,role_code,status,must_change_password,password_version) VALUES (?,'synthetic',?,'active',false,1) RETURNING id", Long.class, username, role);
+            JwtUtil.configure("synthetic-role-http-test-key-not-used-outside-test-0123456789");
+            var session = new AuthSession();
+            session.setId(actor); session.setUsername(username); session.setPasswordVersion(1); session.setStatus("active");
+            String token = JwtUtil.getToken(session);
+            tomcat.start();
+            String base = "http://127.0.0.1:" + connector.getLocalPort() + "/api/v1/auth/roles/" + target;
+            var client = HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(3)).build();
+            java.util.function.Function<String,HttpRequest> request = description -> HttpRequest.newBuilder(URI.create(base))
+                    .timeout(Duration.ofSeconds(8)).header("Authorization", "Bearer " + token).header("Content-Type", "application/json")
+                    .PUT(HttpRequest.BodyPublishers.ofString("{\"description\":\"" + description + "\"}")).build();
+            assertOk(client.send(request.apply("permitted"), HttpResponse.BodyHandlers.ofString()));
+            assertThat(authRoles.findByCode(target).getDescription()).isEqualTo("permitted");
+            var tx = new org.springframework.transaction.support.TransactionTemplate(transactionManager);
+            var response = tx.execute(status -> {
+                authRoles.lockAdminRole();
+                int blocker = jdbc.queryForObject("select pg_backend_pid()", Integer.class);
+                jdbc.update("UPDATE app.mr_auth_role SET permissions='role:read' WHERE code=?", role);
+                var pending = client.sendAsync(request.apply("denied"), HttpResponse.BodyHandlers.ofString());
+                long deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(5);
+                while (!pending.isDone() && System.nanoTime() < deadline) {
+                    jdbc.execute("select pg_stat_clear_snapshot()");
+                    int waiting = jdbc.queryForObject("select count(*) from pg_stat_activity where ? = any(pg_blocking_pids(pid))", Integer.class, blocker);
+                    if (waiting > 0) return pending;
+                    try { Thread.sleep(25); } catch (InterruptedException e) {
+                        Thread.currentThread().interrupt(); throw new RuntimeException(e);
+                    }
+                }
+                throw new AssertionError("HTTP operation did not reach the common lock");
+            });
+            var denied = response.get(5, TimeUnit.SECONDS);
+            assertThat(denied.statusCode()).isEqualTo(403);
+            assertThat(denied.body()).contains("当前账号没有操作权限");
+            assertThat(authRoles.findByCode(target).getDescription()).isEqualTo("permitted");
+            assertThat(client.send(request.apply("denied-again"), HttpResponse.BodyHandlers.ofString()).statusCode()).isEqualTo(403);
+        } finally {
+            try { tomcat.stop(); } finally { tomcat.destroy(); mvc.close(); }
+            jdbc.update("DELETE FROM app.mr_auth_user WHERE username=?", username);
+            jdbc.update("DELETE FROM app.mr_auth_role WHERE code IN (?,?)", role, target);
         }
     }
 

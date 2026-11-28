@@ -29,6 +29,8 @@ public class PrivateJsonLogEncoder extends EncoderBase<ILoggingEvent> {
                     event.getArgumentArray() != null && event.getArgumentArray().length > 0));
             // 模板占位符不展开；所有任意字符串参数均留在原业务边界内。
             row.put("argument_count", event.getArgumentArray() == null ? 0 : event.getArgumentArray().length);
+            // Explicit security-event schema only; never serialize generic log parameters.
+            appendRoleAudit(row, event);
             for (String key : new String[]{"requestId"}) {
                 String value = event.getMDCPropertyMap().get(key);
                 if (value != null && value.matches("[A-Za-z0-9_-]{1,80}")) row.put(key, value);
@@ -38,6 +40,24 @@ public class PrivateJsonLogEncoder extends EncoderBase<ILoggingEvent> {
         } catch (Exception e) {
             return "{\"level\":\"ERROR\",\"message\":\"LOG_ENCODING_FAILED\"}\n".getBytes(StandardCharsets.UTF_8);
         }
+    }
+
+    private static void appendRoleAudit(LinkedHashMap<String, Object> row, ILoggingEvent event) {
+        if (!"SECURITY_AUDIT".equals(event.getLoggerName())
+                || !"event=ROLE_UPDATED actorUserId={} roleCode={} permissionsEdited={} result=SUCCESS".equals(event.getMessage())) {
+            return;
+        }
+        Object[] args = event.getArgumentArray();
+        if (args == null || args.length != 3 || !(args[0] instanceof Long actor) || actor <= 0
+                || !(args[1] instanceof String role) || role.isBlank()
+                || !(args[2] instanceof Boolean permissionsEdited)) {
+            return;
+        }
+        // Domain separation and lossless encoding preserve exact role identity before HMAC.
+        String encodedRole = java.util.Base64.getEncoder().encodeToString(role.getBytes(StandardCharsets.UTF_8));
+        String protectedRole = com.zjcxph.imgapi.utils.AuditPayloadSanitizer.protectedValue("security-role:v1:" + encodedRole);
+        row.put("security_audit", java.util.Map.of("event", "ROLE_UPDATED", "actor_user_id", actor,
+                "role_target", protectedRole, "permissions_edited", permissionsEdited, "result", "SUCCESS"));
     }
 
     public static String safeStack(IThrowableProxy proxy) {

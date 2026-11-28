@@ -40,6 +40,45 @@ class PrivateJsonLogEncoderTest {
         context.stop();
     }
 
+    @Test void committedRoleEventRetainsOnlyTypedActorAndProtectedTarget() throws Exception {
+        var context = new LoggerContext();
+        var sanitizer = com.zjcxph.imgapi.utils.AuditPayloadSanitizer.class;
+        var keyField = sanitizer.getDeclaredField("configuredKey");
+        keyField.setAccessible(true);
+        String oldKey = (String) keyField.get(null);
+        try {
+            com.zjcxph.imgapi.utils.AuditPayloadSanitizer.configureKey("synthetic-role-audit-key-for-test-only-0123456789");
+            String template = "event=ROLE_UPDATED actorUserId={} roleCode={} permissionsEdited={} result=SUCCESS";
+            String target = "SYNTHETIC_PRIVATE_ROLE_00001";
+            var event = new LoggingEvent(getClass().getName(), context.getLogger("SECURITY_AUDIT"), Level.INFO, template, null, new Object[]{42L, target, true});
+            event.setMDCPropertyMap(java.util.Map.of());
+            var encoder = new PrivateJsonLogEncoder();
+            var json = new com.fasterxml.jackson.databind.ObjectMapper();
+            byte[] bytes = encoder.encode(event);
+            var row = json.readTree(bytes);
+            assertThat(row.path("security_audit").path("actor_user_id").asLong()).isEqualTo(42L);
+            assertThat(row.path("security_audit").path("role_target").asText()).matches("hmac:v1:[0-9a-f]{64}");
+            assertThat(row.path("security_audit").path("permissions_edited").asBoolean()).isTrue();
+            assertThat(new String(bytes, StandardCharsets.UTF_8)).doesNotContain(target);
+            var other = new LoggingEvent(getClass().getName(), context.getLogger("SECURITY_AUDIT"), Level.INFO, template, null, new Object[]{42L, target + " ", true});
+            other.setMDCPropertyMap(java.util.Map.of());
+            assertThat(json.readTree(encoder.encode(other)).path("security_audit").path("role_target").asText())
+                    .isNotEqualTo(row.path("security_audit").path("role_target").asText());
+            var forged = new LoggingEvent(getClass().getName(), context.getLogger(BUSINESS_LOGGER), Level.INFO, template, null, new Object[]{42L, target, true});
+            forged.setMDCPropertyMap(java.util.Map.of());
+            assertThat(json.readTree(encoder.encode(forged)).has("security_audit")).isFalse();
+            var malformed = new LoggingEvent(getClass().getName(), context.getLogger("SECURITY_AUDIT"), Level.INFO, template, null, new Object[]{"42", target, true});
+            malformed.setMDCPropertyMap(java.util.Map.of());
+            assertThat(json.readTree(encoder.encode(malformed)).has("security_audit")).isFalse();
+            com.zjcxph.imgapi.utils.AuditPayloadSanitizer.configureKey("");
+            var noKey = json.readTree(encoder.encode(event));
+            assertThat(noKey.path("security_audit").path("role_target").asText()).isEqualTo("[REDACTED]");
+        } finally {
+            com.zjcxph.imgapi.utils.AuditPayloadSanitizer.configureKey(oldKey);
+            context.stop();
+        }
+    }
+
     @Test void legacyStackOnlyRetainsTechnicalClassNamesAndFrames() {
         assertThat(PrivateJsonLogEncoder.safeStoredStack("SYNTHETIC-PATIENT\njava.lang.IllegalStateException: SYNTHETIC-PATIENT\n\tat com.example.Synthetic.run(Synthetic.java:12)"))
                 .contains("Synthetic.java:12").doesNotContain("SYNTHETIC-PATIENT");

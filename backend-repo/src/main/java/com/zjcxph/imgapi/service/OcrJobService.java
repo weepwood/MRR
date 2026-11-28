@@ -159,8 +159,7 @@ public class OcrJobService {
         if(!saved) return;
         try {
             transactions.executeWithoutResult(tx->{
-                mapper.lock(job.getId());
-                if(!mapper.alive(job.getId(),token)) return;
+                if(!lockClassificationStage(job,token)) return;
                 if(!validateClassificationInput(job,token,item,fact)) return;
                 mapper.complete(job.getId(),item.getScanId(),"LOW_CONFIDENCE".equals(fact.getStatus())?"LOW_CONFIDENCE":"NO_MATCH",fact.getStatus(),fact.getResultVersion(),null);
                 classification.classify(job,item,fact);
@@ -168,12 +167,25 @@ public class OcrJobService {
             });
         } catch(Exception failure) {
             transactions.executeWithoutResult(tx->{
-                mapper.lock(job.getId());if(!mapper.alive(job.getId(),token)) return;
+                if(!lockClassificationStage(job,token)) return;
                 if(!validateClassificationInput(job,token,item,fact)) return;
                 mapper.complete(job.getId(),item.getScanId(),"NO_MATCH",fact.getStatus(),fact.getResultVersion(),"CLASSIFICATION_FAILED");
                 mapper.release(job.getId(),token);
             });
         }
+    }
+    /** Under the job row lock, only its current claimant may settle cancellation.
+     * Cancellation is monotonic; even an expired but not replaced claim may settle it,
+     * but no expired claim can publish a classification result. */
+    private boolean lockClassificationStage(Job job,String token) {
+        Job current=mapper.lock(job.getId());
+        if(current==null || !token.equals(current.getLeaseToken())) return false;
+        if(current.isCancelRequested()) {
+            mapper.cancelItems(job.getId());
+            mapper.release(job.getId(),token);
+            return false;
+        }
+        return mapper.alive(job.getId(),token);
     }
     /** Revalidate the committed OCR fact and durable owner authorization in the classification transaction. */
     private boolean validateClassificationInput(Job job,String token,Item item,Fact fact) {

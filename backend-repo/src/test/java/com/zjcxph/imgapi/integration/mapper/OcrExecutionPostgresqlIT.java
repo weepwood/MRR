@@ -90,7 +90,7 @@ class OcrExecutionPostgresqlIT extends PostgresqlIntegrationTestSupport {
     }
 
     @org.junit.jupiter.params.ParameterizedTest
-    @org.junit.jupiter.params.provider.ValueSource(strings={"revoke", "source", "version"})
+    @org.junit.jupiter.params.provider.ValueSource(strings={"revoke", "source", "version", "cancel", "fallback-revoke", "fallback-version", "fallback-cancel"})
     @org.springframework.transaction.annotation.Transactional(propagation=org.springframework.transaction.annotation.Propagation.NOT_SUPPORTED)
     void committedOcrFactDoesNotAuthorizeStaleClassification(String change,
             @org.junit.jupiter.api.io.TempDir java.nio.file.Path temp) throws Exception {
@@ -113,35 +113,52 @@ class OcrExecutionPostgresqlIT extends PostgresqlIntegrationTestSupport {
             org.mockito.Mockito.when(input.prepare(org.mockito.ArgumentMatchers.eq(scan),org.mockito.ArgumentMatchers.any())).thenReturn(new com.zjcxph.imgapi.ocr.OcrInput.Prepared(path,hash));
             org.mockito.Mockito.when(engine.recognize(org.mockito.ArgumentMatchers.eq("synthetic"),org.mockito.ArgumentMatchers.eq(path),org.mockito.ArgumentMatchers.eq(30),org.mockito.ArgumentMatchers.eq(65536),org.mockito.ArgumentMatchers.any()))
                     .thenReturn(new com.zjcxph.imgapi.ocr.OcrProtocol.Result("synthetic",1,1,java.util.List.of(),"synthetic"));
+            boolean fallback=change.startsWith("fallback-");
+            String mutation=fallback?change.substring("fallback-".length()):change;
+            if(fallback) org.mockito.Mockito.doThrow(new com.zjcxph.imgapi.ocr.OcrFailure("CLASSIFICATION_FAILED"))
+                    .when(classification).classify(org.mockito.ArgumentMatchers.any(),org.mockito.ArgumentMatchers.any(),org.mockito.ArgumentMatchers.any());
             var tx=new org.springframework.transaction.support.TransactionTemplate(transactionManager) {
                 private boolean changed;
                 @Override public <T> T execute(org.springframework.transaction.support.TransactionCallback<T> callback) {
-                    T result=super.execute(callback);
-                    if (!changed && Boolean.TRUE.equals(result)) {
+                    T result;
+                    try { result=super.execute(callback); }
+                    catch(com.zjcxph.imgapi.ocr.OcrFailure failure) {
+                        if(fallback && !changed && "CLASSIFICATION_FAILED".equals(failure.code())) mutate();
+                        throw failure;
+                    }
+                    if (!fallback && !changed && Boolean.TRUE.equals(result)) mutate();
+                    return result;
+                }
+                private void mutate() {
                         changed=true;
                         assertThat(mapper.fact(scan)).isNotNull();
                         // Actual independent committed database mutation between the two service transactions.
-                        switch(change) {
+                        switch(mutation) {
                             case "revoke" -> jdbc.update("UPDATE app.mr_auth_user SET status='disabled' WHERE id=?",actor);
                             case "source" -> jdbc.update("UPDATE app.mr_scan SET uploadflag=0 WHERE id=?",scan);
                             case "version" -> jdbc.update("UPDATE app.mr_scan_ocr SET result_version=? WHERE scan_id=?",replacement,scan);
+                            case "cancel" -> mapper.cancel(current.getId());
                             default -> throw new AssertionError(change);
                         }
-                    }
-                    return result;
                 }
             };
             var service=new com.zjcxph.imgapi.service.OcrJobService(mapper,scans,new com.zjcxph.imgapi.ocr.OcrAccess(users),engine,input,settings,tx,classification,guard);
             service.runOne();
-            org.mockito.Mockito.verifyNoInteractions(classification);
+            if(fallback) org.mockito.Mockito.verify(classification).classify(org.mockito.ArgumentMatchers.any(),org.mockito.ArgumentMatchers.any(),org.mockito.ArgumentMatchers.any());
+            else org.mockito.Mockito.verifyNoInteractions(classification);
             var item=mapper.items(current.getId(),0,50).getFirst();
             assertThat(item.getOcrResultVersion()).isNull();
-            assertThat(item.getStatus()).isEqualTo("FAILED");
-            assertThat(item.getFailureCode()).isEqualTo("revoke".equals(change)?"AUTH_REVOKED":"SOURCE_CHANGED");
-            assertThat(mapper.job(current.getId()).getStatus()).isEqualTo("FAILED");
+            if("cancel".equals(mutation)) {
+                assertThat(item.getStatus()).isEqualTo("CANCELLED");
+                assertThat(mapper.job(current.getId()).getStatus()).isEqualTo("CANCELLED");
+            } else {
+                assertThat(item.getStatus()).isEqualTo("FAILED");
+                assertThat(item.getFailureCode()).isEqualTo("revoke".equals(mutation)?"AUTH_REVOKED":"SOURCE_CHANGED");
+                assertThat(mapper.job(current.getId()).getStatus()).isEqualTo("FAILED");
+            }
             assertThat(mapper.job(current.getId()).getLeaseToken()).isNull();
             assertThat(mapper.fact(scan)).isNotNull();
-            if ("version".equals(change)) assertThat(mapper.fact(scan).getResultVersion()).isEqualTo(replacement);
+            if ("version".equals(mutation)) assertThat(mapper.fact(scan).getResultVersion()).isEqualTo(replacement);
         } finally {
             com.zjcxph.imgapi.integration.OcrTestDataCleanup.purge(jdbc,transactionManager,current.getArchiveId(),null);
             jdbc.update("DELETE FROM app.mr_auth_user WHERE id=?",actor);

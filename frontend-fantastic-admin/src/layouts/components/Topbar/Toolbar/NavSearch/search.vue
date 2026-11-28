@@ -1,6 +1,6 @@
 <script setup lang="ts">
+import type { ElInput } from 'element-plus'
 import type { Menu } from '@/types/global'
-import { useFocus } from '@vueuse/core'
 import hotkeys from 'hotkeys-js'
 import { pinyin } from 'pinyin-pro'
 import Breadcrumb from '@/layouts/components/Breadcrumb/index.vue'
@@ -28,8 +28,7 @@ interface listTypes {
 }
 
 const searchInput = ref('')
-const searchInputRef = useTemplateRef('searchInputRef')
-const { focused: searchInputFocused } = useFocus(searchInputRef)
+const searchInputRef = useTemplateRef<InstanceType<typeof ElInput>>('searchInputRef')
 const sourceList = ref<listTypes[]>([])
 const actived = ref(0)
 
@@ -167,8 +166,8 @@ function keyEnter() {
   searchResultItemRef.value?.find(item => Number.parseInt(item.dataset.index!) === actived.value)?.click()
 }
 function handleScroll() {
-  if (searchResultRef.value?.ref?.el?.viewportElement) {
-    const contentDom = searchResultRef.value.ref.el.viewportElement
+  if (searchResultRef.value?.viewport) {
+    const contentDom = searchResultRef.value.viewport
     let scrollTo = 0
     if (resultList.value.length > 0) {
       scrollTo = contentDom.scrollTop
@@ -201,15 +200,17 @@ function pageJump(path: listTypes['path'], link: listTypes['link']) {
 </script>
 
 <template>
-  <MrrDialog v-model="isShow" title="导航搜索" border :footer="settingsStore.mode === 'pc'" :closable="false" overlay-class="mrr-vscode-overlay mrr-vscode-search-overlay" class="mrr-vscode-glass mrr-vscode-search w-full lg-max-w-[40rem]" content-class="flex flex-col p-0 min-h-auto" header-class="p-0" footer-class="p-0" @opened="searchInputFocused = true">
+  <MrrDialog v-model="isShow" title="导航搜索" appearance="custom" :align-center="false" border :footer="settingsStore.mode === 'pc'" :closable="false" overlay-class="mrr-vscode-overlay mrr-vscode-search-overlay" class="mrr-vscode-glass mrr-vscode-search w-full lg-max-w-[40rem]" content-class="flex flex-col p-0 min-h-auto" header-class="p-0" footer-class="p-0" @opened="searchInputRef?.focus()">
     <template #header>
       <div class="h-12 flex flex-shrink-0 items-center">
         <div class="h-full w-20 flex-center flex-shrink-0 pl-4">
           <FaIcon name="i-lucide:search" class="size-5 text-foreground/30" />
         </div>
-        <input ref="searchInputRef" v-model="searchInput" aria-label="搜索页面" placeholder="搜索页面标题、URL 或拼音首字母" class="h-full min-w-0 w-full border-0 rounded-md bg-transparent pl-4 text-base text-foreground focus-outline-none placeholder-foreground/30" @keydown.esc.prevent="isShow = false" @keydown.up.prevent="keyUp" @keydown.down.prevent="keyDown" @keydown.enter.prevent="keyEnter">
+        <el-input ref="searchInputRef" v-model="searchInput" aria-label="搜索页面" placeholder="搜索页面标题、URL 或拼音首字母" class="mrr-nav-search-input h-full min-w-0 w-full" @keydown.esc.prevent="isShow = false" @keydown.up.prevent="keyUp" @keydown.down.prevent="keyDown" @keydown.enter.prevent="keyEnter" />
         <div v-if="settingsStore.mode === 'mobile'" class="h-full w-14 flex-center border-s">
-          <FaIcon name="i-lucide:x" class="size-4" @click="isShow = false" />
+          <el-button text class="mrr-button-square" aria-label="关闭导航搜索" @click="isShow = false">
+            <FaIcon name="i-lucide:x" class="size-4" />
+          </el-button>
         </div>
       </div>
     </template>

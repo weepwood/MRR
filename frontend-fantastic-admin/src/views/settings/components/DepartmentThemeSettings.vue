@@ -17,6 +17,8 @@ import {
   loadArchiveDepartmentThemeHistoryFromLocal,
   loadArchiveDepartmentThemesFromLocal,
   normalizeArchiveDepartmentThemes,
+  normalizeDepartmentName,
+  resolveArchiveDepartmentTheme,
   saveArchiveDepartmentThemesToLocal,
 } from '@/utils/archive-department-theme'
 import { hasKey } from '@/utils/object'
@@ -30,9 +32,14 @@ interface EditableDepartmentTheme extends ArchiveDepartmentTheme {
 const loading = ref(false)
 /** 首次读取（服务器或本地回退）完成前，编辑区不展示「自动配色」空态。 */
 const loaded = ref(false)
+const syncState = ref<'unknown' | 'local' | 'server' | 'save-failed'>('unknown')
 const saving = ref(false)
 const rows = ref<EditableDepartmentTheme[]>([])
 const departments = ref<string[]>([])
+const departmentLoading = ref(true)
+const departmentError = ref(false)
+const showAllPreviews = ref(false)
+const previewLimit = 12
 const historyVisible = ref(false)
 const history = ref<ArchiveDepartmentThemeHistory[]>([])
 const persistedThemes = ref<ArchiveDepartmentTheme[]>([])
@@ -46,6 +53,24 @@ const controlsDisabled = computed(() => !loaded.value || loading.value || saving
 const isDirty = computed(() => loaded.value && JSON.stringify(normalizedRows()) !== JSON.stringify(persistedThemes.value))
 const configuredDepartments = computed(() => new Set(rows.value.map(r => r.department.trim().toLocaleLowerCase('zh-CN'))))
 const availableDepartments = computed(() => departments.value.filter(d => !configuredDepartments.value.has(d.toLocaleLowerCase('zh-CN'))))
+const previewDepartments = computed(() => {
+  const names = [...departments.value, ...normalizedRows().map(row => row.department)]
+  return [...new Map(names.map(name => [name.toLocaleLowerCase('zh-CN'), name])).values()]
+})
+const previewThemes = computed(() => {
+  const configured = normalizedRows()
+  return previewDepartments.value.map(department => ({
+    ...resolveArchiveDepartmentTheme(department, configured),
+    custom: configured.some(row => normalizeDepartmentName(row.department).toLocaleLowerCase('zh-CN') === department.toLocaleLowerCase('zh-CN')),
+  }))
+})
+const visibleThemes = computed(() => showAllPreviews.value ? previewThemes.value : previewThemes.value.slice(0, previewLimit))
+const exampleThemes = ARCHIVE_DEPARTMENT_THEME_PRESETS.map((theme, index) => ({ ...theme, department: `预设色 ${index + 1}` }))
+
+function customizeTheme(theme: ArchiveDepartmentTheme) {
+  if (controlsDisabled.value || configuredDepartments.value.has(theme.department.toLocaleLowerCase('zh-CN'))) { return }
+  rows.value.push(toEditable({ department: theme.department, folderColor: theme.folderColor, stripColor: theme.stripColor }))
+}
 
 function toEditable(theme: ArchiveDepartmentTheme): EditableDepartmentTheme {
   return { ...theme, id: nextId++ }
@@ -80,7 +105,7 @@ function resetToAutomaticThemes() {
   }).catch(() => {})
 }
 
-function previewStyle(row: EditableDepartmentTheme) {
+function previewStyle(row: ArchiveDepartmentTheme) {
   return archiveDepartmentThemeCssVariables(row) as Record<string, string>
 }
 
@@ -133,12 +158,14 @@ function restoreHistory(item: ArchiveDepartmentThemeHistory) {
 async function loadThemes() {
   loading.value = true
   let themes = loadArchiveDepartmentThemesFromLocal()
+  syncState.value = 'local'
   try {
     const response = await getSystemSettings()
     const settings = response.data ?? {}
     if (hasKey(settings, ARCHIVE_DEPARTMENT_THEME_SETTING_KEY)) {
       themes = normalizeArchiveDepartmentThemes(settings[ARCHIVE_DEPARTMENT_THEME_SETTING_KEY])
       saveArchiveDepartmentThemesToLocal(themes)
+      syncState.value = 'server'
     }
   }
   catch {
@@ -154,12 +181,17 @@ async function loadThemes() {
 }
 
 async function loadDepartments() {
+  departmentLoading.value = true
+  departmentError.value = false
   try {
     const res = await getDepartments()
-    departments.value = res.data ?? []
+    departments.value = [...new Set((res.data ?? []).map(name => normalizeDepartmentName(name)))]
   }
   catch {
-    // 后端接口不可用时不影响手动输入
+    departmentError.value = true
+  }
+  finally {
+    departmentLoading.value = false
   }
 }
 
@@ -175,12 +207,15 @@ async function saveThemes() {
   }
   saveArchiveDepartmentThemesToLocal(themes)
   persistedThemes.value = themes
+  syncState.value = 'local'
   try {
     await setSetting(ARCHIVE_DEPARTMENT_THEME_SETTING_KEY, JSON.stringify(themes))
     setRows(themes)
+    syncState.value = 'server'
     ElMessage.success('科室档案袋配色已保存到服务器')
   }
   catch {
+    syncState.value = 'save-failed'
     ElMessage.error('服务端保存失败，配色已保存到当前浏览器')
   }
   finally {
@@ -228,7 +263,7 @@ async function handleImport(event: Event) {
   }
 }
 
-defineExpose({ isDirty, saving, saveThemes })
+defineExpose({ isDirty, saving, saveThemes, loaded, syncState })
 
 onMounted(() => {
   loadThemes()
@@ -237,12 +272,60 @@ onMounted(() => {
 </script>
 
 <template>
-  <el-card v-loading="loading && loaded" shadow="never" class="department-theme-card">
-    <template #header>
-      <div class="department-theme-header">
+  <section v-loading="loading && loaded" class="setting-section department-theme-settings">
+    <div class="setting-group">
+      <div class="group-heading department-preview-heading">
         <div>
-          <strong>科室档案袋配色</strong>
-          <p>同一科室始终使用相同配色，可分别设置档案袋主色与顶部色条颜色。</p>
+          <strong>{{ isDirty ? '待保存配色预览' : '当前配色预览' }}</strong>
+          <p>未单独设置的科室按名称稳定生成颜色；以下预览与档案袋使用同一配色规则。</p>
+        </div>
+        <span v-if="loaded && previewThemes.length" class="preview-count">{{ previewThemes.length }} 个科室</span>
+      </div>
+      <AppLoading v-if="!loaded || departmentLoading" type="stats" :cols="4" />
+      <template v-else>
+        <div v-if="departmentError" class="department-preview-notice" role="status">
+          <span>科室列表读取失败，已配置的科室仍可预览。</span>
+          <el-button link type="primary" @click="loadDepartments">
+            重新读取
+          </el-button>
+        </div>
+        <p v-if="!previewThemes.length" class="department-preview-notice">
+          暂无可用科室名称。以下为系统自动配色使用的预设色板，仅供参考。
+        </p>
+        <div class="department-preview-grid" :class="{ 'is-example': !previewThemes.length }">
+          <article v-for="theme in visibleThemes.length ? visibleThemes : exampleThemes" :key="theme.department" class="department-preview-item" :data-department="theme.department">
+            <div class="archive-theme-preview" :style="previewStyle(theme)">
+              <i />
+              <div class="preview-identity">
+                <FaIcon name="i-lucide:folder" aria-hidden="true" />
+                <span>{{ theme.department }}</span>
+              </div>
+              <div class="preview-meta">
+                <span title="档案袋主色"><b class="folder-color-swatch" />{{ theme.folderColor }}</span>
+                <span title="顶部色条"><b class="strip-color-swatch" />{{ theme.stripColor }}</span>
+              </div>
+            </div>
+            <div v-if="previewThemes.length" class="preview-footer">
+              <span>{{ 'custom' in theme && theme.custom ? '自定义' : '自动配色' }}</span>
+              <el-button v-if="!('custom' in theme && theme.custom)" link type="primary" :disabled="controlsDisabled" :aria-label="`自定义 ${theme.department}`" @click="customizeTheme(theme)">
+                自定义
+              </el-button>
+            </div>
+          </article>
+        </div>
+        <div v-if="previewThemes.length > previewLimit" class="preview-more">
+          <el-button @click="showAllPreviews = !showAllPreviews">
+            {{ showAllPreviews ? '收起部分科室' : `查看全部 ${previewThemes.length} 个科室` }}
+          </el-button>
+        </div>
+      </template>
+    </div>
+
+    <div class="setting-group">
+      <div class="group-heading department-theme-header">
+        <div>
+          <strong>自定义配色</strong>
+          <p>只保存需要单独设置的科室，其他科室继续使用自动配色。</p>
         </div>
         <div class="department-theme-actions">
           <el-button :disabled="controlsDisabled || !hasHistory" @click="historyVisible = true">
@@ -252,77 +335,61 @@ onMounted(() => {
             恢复自动配色
           </el-button>
           <el-button :disabled="controlsDisabled" @click="handleExport">
-            <FaIcon name="i-lucide:download" />
-            导出配色
+            <FaIcon name="i-lucide:download" />导出配色
           </el-button>
           <el-button :disabled="controlsDisabled" @click="triggerImport">
-            <FaIcon name="i-lucide:upload" />
-            导入配色
+            <FaIcon name="i-lucide:upload" />导入配色
+          </el-button>
+          <el-button type="primary" plain :disabled="controlsDisabled" @click="addDepartmentTheme">
+            <FaIcon name="i-lucide:plus" />添加科室配色
           </el-button>
         </div>
       </div>
-    </template>
-    <input ref="importInput" class="import-input" type="file" accept="application/json,.json" @change="handleImport">
+      <input ref="importInput" class="import-input" type="file" accept="application/json,.json" @change="handleImport">
+      <AppLoading v-if="!loaded" type="table" :rows="2" :cols="5" />
+      <div v-else-if="hasRows" class="theme-editor">
+        <div v-for="row in rows" :key="row.id" class="theme-editor-row">
+          <div class="department-name-field">
+            <span class="color-field__label">科室名称</span>
+            <el-select v-model="row.department" filterable allow-create clearable placeholder="选择或输入科室" class="department-theme-select" aria-label="科室名称">
+              <el-option v-for="d in availableDepartments" :key="d" :label="d" :value="d" />
+            </el-select>
+          </div>
 
-    <el-alert
-      type="info"
-      :closable="false"
-      show-icon
-      title="没有单独配置的科室会根据科室名称稳定生成颜色；分页、排序或刷新后颜色不会改变。"
-    />
+          <div class="color-field">
+            <span class="color-field__label">
+              档案袋主色
+            </span>
+            <el-color-picker v-model="row.folderColor" :predefine="colorPresets" aria-label="档案袋主色" />
+            <el-input v-model="row.folderColor" maxlength="7" aria-label="档案袋主色值" />
+          </div>
 
-    <AppLoading v-if="!loaded" type="table" :rows="4" :cols="5" />
-    <div v-else-if="hasRows" class="theme-editor">
-      <div class="theme-editor-head" aria-hidden="true">
-        <span>科室名称</span>
-        <span>档案袋主色</span>
-        <span>顶部色条</span>
-        <span>预览</span>
-        <span>操作</span>
+          <div class="color-field">
+            <span class="color-field__label">
+              顶部色条
+            </span>
+            <el-color-picker v-model="row.stripColor" :predefine="colorPresets" aria-label="顶部色条" />
+            <el-input v-model="row.stripColor" maxlength="7" aria-label="顶部色条色值" />
+          </div>
+
+          <div class="archive-theme-preview" :style="previewStyle(row)">
+            <i />
+            <span>{{ row.department || '科室预览' }}</span>
+          </div>
+
+          <el-button type="danger" link @click="removeDepartmentTheme(row.id)">
+            删除
+          </el-button>
+        </div>
       </div>
 
-      <div v-for="row in rows" :key="row.id" class="theme-editor-row">
-        <el-select v-model="row.department" filterable allow-create clearable placeholder="选择或输入科室" class="department-theme-select">
-          <el-option v-for="d in availableDepartments" :key="d" :label="d" :value="d" />
-        </el-select>
-
-        <div class="color-field">
-          <span class="color-field__label">
-            档案袋主色
-          </span>
-          <el-color-picker v-model="row.folderColor" :predefine="colorPresets" aria-label="档案袋主色" />
-          <el-input v-model="row.folderColor" maxlength="7" aria-label="档案袋主色值" />
-        </div>
-
-        <div class="color-field">
-          <span class="color-field__label">
-            顶部色条
-          </span>
-          <el-color-picker v-model="row.stripColor" :predefine="colorPresets" aria-label="顶部色条" />
-          <el-input v-model="row.stripColor" maxlength="7" aria-label="顶部色条色值" />
-        </div>
-
-        <div class="archive-theme-preview" :style="previewStyle(row)">
-          <i />
-          <span>{{ row.department || '科室预览' }}</span>
-        </div>
-
-        <el-button type="danger" link @click="removeDepartmentTheme(row.id)">
-          删除
-        </el-button>
-      </div>
+      <p v-else class="department-preview-notice">
+        当前没有自定义配色。可从上方预览选择科室，或手动添加。
+      </p>
     </div>
+  </section>
 
-    <AppEmpty v-else icon="i-lucide:palette" description="当前使用按科室名称自动生成的稳定配色" />
-
-    <div class="editor-footer">
-      <el-button plain :disabled="controlsDisabled" @click="addDepartmentTheme">
-        添加科室配色
-      </el-button>
-    </div>
-  </el-card>
-
-  <el-dialog v-model="historyVisible" title="历史配色" width="min(680px, calc(100% - 32px))">
+  <el-dialog v-model="historyVisible" align-center title="历史配色" width="min(680px, calc(100% - 32px))">
     <div v-if="hasHistory" class="theme-history-list">
       <article v-for="item in history" :key="item.savedAt" class="theme-history-item">
         <div class="theme-history-summary">
@@ -351,9 +418,56 @@ onMounted(() => {
 </template>
 
 <style scoped>
-.department-theme-card {
+.setting-group {
+  min-width: 0;
+  padding: var(--settings-group-inset, var(--mrr-space-4));
+  background: var(--mrr-card);
+  border: 1px solid var(--mrr-border);
   border-radius: var(--mrr-radius-card);
 }
+
+.group-heading { margin-bottom: var(--mrr-space-4); }
+
+.department-preview-heading {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--mrr-space-2);
+  align-items: center;
+  justify-content: space-between;
+}
+
+.preview-count,
+.department-preview-notice,
+.preview-footer {
+  font-size: var(--mrr-font-size-xs);
+  color: var(--mrr-muted-foreground);
+}
+
+.department-preview-notice {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--mrr-space-2);
+  align-items: center;
+  margin: 0 0 var(--mrr-space-3);
+  line-height: 1.6;
+}
+
+.department-preview-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 200px), 1fr));
+  gap: var(--mrr-space-3);
+}
+
+.department-preview-item { min-width: 0; }
+.preview-identity { display: flex; gap: var(--mrr-space-2); align-items: center; min-width: 0; }
+.preview-identity :deep(svg) { flex: none; color: var(--folder-accent); }
+.preview-meta { display: flex; flex-wrap: wrap; gap: var(--mrr-space-2); }
+.preview-meta > span { display: flex; gap: 4px; align-items: center; font-size: var(--mrr-font-size-xs); font-weight: 400; color: var(--mrr-muted-foreground); }
+.preview-meta b { flex: none; width: 10px; height: 10px; border-radius: 3px; }
+.folder-color-swatch { background: var(--folder-accent); }
+.strip-color-swatch { background: var(--folder-strip); }
+.preview-footer { display: flex; gap: var(--mrr-space-2); align-items: center; justify-content: space-between; min-height: 28px; padding-inline: var(--mrr-space-1); }
+.preview-more { display: flex; justify-content: center; margin-top: var(--mrr-space-3); }
 
 .department-theme-select {
   width: 100%;
@@ -370,19 +484,6 @@ onMounted(() => {
 .department-theme-header > div:first-child {
   flex: 1 1 260px;
   min-width: 0;
-}
-
-.department-theme-header strong {
-  font-size: var(--mrr-font-size-md);
-  font-weight: 650;
-  color: var(--text-primary);
-}
-
-.department-theme-header p {
-  margin: var(--mrr-space-2) 0 0;
-  font-size: var(--mrr-font-size-xs);
-  line-height: 1.6;
-  color: var(--text-secondary);
 }
 
 .department-theme-actions {
@@ -408,27 +509,21 @@ onMounted(() => {
   margin-top: var(--mrr-space-4);
 }
 
-.theme-editor-head,
 .theme-editor-row {
   display: grid;
-  grid-template-columns: minmax(160px, 1.2fr) minmax(170px, 1fr) minmax(170px, 1fr) minmax(150px, 0.9fr) 56px;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 180px), 1fr));
   gap: 12px;
   align-items: center;
 }
 
-.theme-editor-head {
-  padding: 0 var(--mrr-space-3);
-  font-size: 12px;
-  font-weight: 700;
-  color: var(--text-secondary);
-}
-
 .theme-editor-row {
   padding: 12px;
-  background: var(--surface-alt);
-  border: 1px solid var(--divider);
+  background: var(--mrr-muted);
+  border: 1px solid var(--mrr-border);
   border-radius: var(--mrr-radius-lg);
 }
+
+.department-name-field { display: grid; gap: var(--mrr-space-2); min-width: 0; }
 
 .color-field {
   display: grid;
@@ -438,7 +533,9 @@ onMounted(() => {
 }
 
 .color-field__label {
-  display: none;
+  grid-column: 1 / -1;
+  font-size: var(--mrr-font-size-xs);
+  color: var(--mrr-muted-foreground);
 }
 
 .archive-theme-preview {
@@ -452,9 +549,9 @@ onMounted(() => {
   min-height: 58px;
   padding: var(--mrr-space-3);
   overflow: hidden;
-  color: var(--folder-accent);
-  background: linear-gradient(155deg, var(--folder-tint), var(--surface) 68%);
-  border: 1px solid color-mix(in srgb, var(--folder-accent) 42%, var(--divider));
+  color: var(--mrr-card-foreground);
+  background: var(--mrr-card);
+  border: 1px solid var(--mrr-border);
   border-radius: var(--mrr-radius-lg);
 }
 
@@ -468,25 +565,20 @@ onMounted(() => {
 .archive-theme-preview i {
   position: absolute;
   top: 0;
-  right: 12px;
-  left: 12px;
-  height: 4px;
+  right: 0;
+  left: 0;
+  height: 3px;
   background: var(--folder-strip);
   border-radius: 0 0 999px 999px;
 }
 
-.archive-theme-preview span {
+.archive-theme-preview > span,
+.preview-identity > span {
   overflow: hidden;
   text-overflow: ellipsis;
   font-size: 13px;
   font-weight: 700;
   white-space: nowrap;
-}
-
-.editor-footer {
-  display: flex;
-  justify-content: center;
-  margin-top: var(--mrr-space-4);
 }
 
 .theme-history-list {
@@ -531,27 +623,6 @@ onMounted(() => {
   height: 16px;
   border: 3px solid;
   border-radius: 50%;
-}
-
-@media (max-width: 1560px) {
-  .theme-editor-head {
-    display: none;
-  }
-
-  .theme-editor-row {
-    grid-template-columns: repeat(auto-fit, minmax(min(100%, 220px), 1fr));
-  }
-
-  .color-field__label {
-    display: block;
-    grid-column: 1 / -1;
-    font-size: 12px;
-    color: var(--text-secondary);
-  }
-
-  .archive-theme-preview {
-    grid-column: 1 / -1;
-  }
 }
 
 @media (max-width: 640px) {

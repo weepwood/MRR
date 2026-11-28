@@ -44,21 +44,25 @@ function handleAction() {
   justify-content: center;
 
   /* 空态/错误态常出现在表格面板内部，64px 上下留白会把分页条推出首屏；与骨架屏高度更接近。 */
-  padding: 48px var(--mrr-space-4);
+  min-width: 0;
+  padding: var(--mrr-space-8) var(--mrr-space-4);
   text-align: center;
 }
 
 .app-empty-icon {
-  margin-bottom: 16px;
-  font-size: 48px;
+  margin-bottom: var(--mrr-space-3);
+  font-size: 36px;
   color: var(--el-text-color-placeholder);
   transform-origin: center;
 }
 
 .app-empty-text {
-  margin: 0 0 20px;
-  font-size: 14px;
+  max-width: 100%;
+  margin: 0 0 var(--mrr-space-4);
+  font-size: var(--mrr-font-size-sm);
+  line-height: 1.6;
   color: var(--el-text-color-secondary);
+  overflow-wrap: anywhere;
 }
 
 .app-empty.is-compact {
@@ -67,12 +71,12 @@ function handleAction() {
 
 .app-empty.is-compact .app-empty-icon {
   margin-bottom: var(--mrr-space-2);
-  font-size: 32px;
+  font-size: 26px;
 }
 
 .app-empty.is-compact .app-empty-text {
   margin-bottom: var(--mrr-space-3);
-  font-size: 13px;
+  font-size: var(--mrr-font-size-sm);
 }
 
 .app-empty-text:last-child {

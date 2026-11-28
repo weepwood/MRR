@@ -93,6 +93,7 @@ async function loadDirectory(
     navigation?: 'back' | 'next' | 'previous'
     selectKey?: string
     fallbackDirectoryKey?: string
+    pageHistory?: Array<string | undefined>
   } = {},
 ) {
   if (disposed || suspended) {
@@ -105,7 +106,7 @@ async function loadDirectory(
   const normalizedPrefix = normalizeRequestedPrefix(prefix)
   // Navigation history describes only successfully displayed pages.
   const folders = [...folderHistory.value]
-  const tokens = options.resetPageHistory === false ? [...pageTokenHistory.value] : []
+  const tokens = options.pageHistory ? [...options.pageHistory] : options.resetPageHistory === false ? [...pageTokenHistory.value] : []
   if (options.rememberFolder && currentPrefix.value !== normalizedPrefix) {
     folders.push(currentPrefix.value)
   }
@@ -309,6 +310,15 @@ function previousPage() {
   void loadDirectory(currentPrefix.value, previousToken, { resetPageHistory: false, navigation: 'previous' })
 }
 
+function jumpToPage(target: number) {
+  const current = pageTokenHistory.value.length + 1
+  if (loading.value || !page.value?.configured || !Number.isSafeInteger(target) || target < 1 || target > current + Number(canNextPage.value) || target === current) { return }
+  if (target === current + 1) { nextPage(); return }
+  if (target === current - 1) { previousPage(); return }
+  const token = pageTokenHistory.value[target - 1]
+  void loadDirectory(currentPrefix.value, token, { pageHistory: pageTokenHistory.value.slice(0, target - 1) })
+}
+
 async function requestSignedUrl(entry: OssBrowserEntry, signal?: AbortSignal) {
   const response = await getOssBrowserUrl(entry.key, signal)
   const signedUrl = response.data?.ossUrl
@@ -440,7 +450,9 @@ onMounted(() => {
     :location="entryLocation"
     :breadcrumbs="breadcrumbs"
     :selected="selectedEntry"
-    :page-label="page?.configured ? `第 ${pageTokenHistory.length + 1} 页` : '目录内容'"
+    :page-label="page?.configured ? `本页 ${entries.length} 项` : '目录内容'"
+    :page-number="page?.configured ? pageTokenHistory.length + 1 : undefined"
+    :max-reachable-page="page?.configured ? pageTokenHistory.length + 1 + Number(canNextPage) : undefined"
     :summary="page?.configured ? `${page.loadedDirectories} 个目录 · ${page.loadedFiles} 个文件 · ${formatFileSize(page.loadedBytes)}` : undefined"
     :source-detail="page?.endpoint ? { label: '查看 Endpoint', value: page.endpoint } : undefined"
     :loading="loading"
@@ -460,8 +472,7 @@ onMounted(() => {
     @navigate="navigate"
     @select="selectEntry"
     @open="openEntry"
-    @previous="previousPage"
-    @next="nextPage"
+    @jump="jumpToPage"
   >
     <template #source>
       <strong>Bucket</strong>

@@ -36,6 +36,15 @@ describe('mrr request heatmap month labels', () => {
     wrapper.unmount()
   })
 
+  it('avoids overlapping adjacent month labels for a short first month', () => {
+    vi.useFakeTimers()
+    vi.setSystemTime(new Date(2026, 10, 26, 12))
+    const wrapper = mount(MrrRequestHeatmap, { props: { data: [] } })
+    const columns = wrapper.findAll('.month-labels span').map(label => Number(label.element.style.gridColumnStart))
+    expect(columns.every((column, index) => index === 0 || (column - columns[index - 1]) * 14 >= 36)).toBe(true)
+    wrapper.unmount()
+  })
+
   it('shows the recent day range after the request total in the summary', () => {
     const wrapper = mount(MrrRequestHeatmap, { props: { data: [] } })
     const summary = wrapper.find('.heatmap-summary')

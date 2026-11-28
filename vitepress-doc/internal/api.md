@@ -29,14 +29,14 @@ OpenAPI YAML：/v3/api-docs.yaml
 |----|----------|----------|
 | 认证 | 登录、当前用户、退出 | 登录公开，其余需会话 |
 | 用户与角色 | 用户、状态、角色与权限 | `user:manage`、`role:read` 或管理员 |
-| 扫描记录 | 列表、查询、维护、下载 | `record:read`、`record:manage` |
+| 扫描记录 | 列表、查询、维护、下载 | 查询 record:read；记录维护 record:edit；ZIP record:download；具体接口另有约束 |
 | 患者与搜索 | 病案号、上架号、身份证查询 | `record:read` 或 `search:read` |
 | 统计 | 汇总、趋势、明细 | `statistics:read` |
 | 档案装箱 | 箱号、异常状态和位置维护 | 记录权限 |
-| OSS 迁移 | 任务、进度、校验和日志 | 记录管理权限 |
+| OSS 迁移 | 任务、进度、校验和日志 | 读取 record:read；创建、取消及重试 record:manage |
 | 日志审计 | 访问日志、图片访问审计 | `log:read` |
 | 系统监控 | 数据库、连接池、运行指标 | `system:read` |
-| 数据质量 | 手动执行、批次和问题明细 | `system:read` 或管理员 |
+| 数据质量 | 手动执行、批次和问题明细 | 摘要 system:read；异常样本 system:read + record:read；检查写入 system:manage；工单与人工决策 system:manage + record:manage |
 | 系统设置 | 读取、保存和删除运行时设置 | 读 `system:read`，写与删 `system:manage` |
 | 界面外观设置 | 全局外观与导航外链 | 仅需登录（`GET /api/v1/settings/ui`） |
 | 文档会话 | 签发用户或内部文档 Cookie | 按目标文档校验 |
@@ -112,11 +112,7 @@ search:read
 
 ## 病案查询规则
 
-病案号和上架号统一为八位数字字符串：
-
-```text
-1234 -> 00001234
-```
+病案号与上架号是业务文本标识，只去除首尾空格，不自动补零。例如 `1234` 保持 `1234`，`00001234` 保持 `00001234`。比较键仅用于判断格式差异，不替代原值查询。
 
 - `bah < 10000000`：允许只提供病案号。
 - `bah >= 10000000`：必须同时提供上架号。

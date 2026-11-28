@@ -68,6 +68,46 @@ class ExternalArchiveControllerImageTest {
     }
 
     @Test
+    void externalContextAndInvalidTicketResponsesCarryPrivacyHeaders() throws Exception {
+        var reqGrant=grant();
+        when(externalArchiveAccessService.requireSession("session-token")).thenReturn(reqGrant);
+        var mvc=org.springframework.test.web.servlet.setup.MockMvcBuilders.standaloneSetup(controller)
+                .addFilters(new com.zjcxph.imgapi.filter.ExternalArchivePrivacyFilter())
+                .setControllerAdvice(new com.zjcxph.imgapi.handler.GlobalExceptionHandler()).build();
+        mvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders
+                        .get("/api/v1/external/archive/context")
+                        .cookie(new Cookie(ExternalArchiveAccessService.SESSION_COOKIE_NAME,"session-token")))
+                .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.status().isOk())
+                .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.header().string("Cache-Control","private, no-store"))
+                .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.header().string("Referrer-Policy","no-referrer"));
+        mvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders
+                        .post("/api/v1/integration/archive/tickets"))
+                .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.status().isBadRequest())
+                .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.header().string("Cache-Control","private, no-store"));
+    }
+
+    @Test
+    void oldAuthorizedMetadataCannotOpenDifferentCurrentArchive() throws Exception {
+        var granted = new com.zjcxph.imgapi.dto.resp.ExternalArchiveCaseDTO();
+        granted.setBah("123456"); granted.setSjh("A-001");
+        var grant = new ExternalArchiveGrant("synthetic","synthetic",false,System.currentTimeMillis()+60000,List.of(granted));
+        var actual = scan();
+        actual.setBah("654321"); actual.setSjh("B-002");
+        var mapper = org.mockito.Mockito.mock(com.zjcxph.imgapi.mapper.ImageContentMapper.class);
+        var storage = org.mockito.Mockito.mock(com.zjcxph.imgapi.storage.ImageStorage.class);
+        when(mapper.findActiveById(42)).thenReturn(actual);
+        org.mockito.Mockito.lenient().when(storage.open(org.mockito.ArgumentMatchers.any())).thenReturn(new ByteArrayInputStream(new byte[]{9}));
+        var real = new ExternalArchiveController(objectMapper,externalArchiveAccessService,archiveExportService,
+                new com.zjcxph.imgapi.service.impl.ImageContentServiceImpl(mapper,storage));
+        var req = new MockHttpServletRequest("GET","/api/v1/external/archive/image/42");
+        req.setCookies(new Cookie(ExternalArchiveAccessService.SESSION_COOKIE_NAME,"session-token"));
+        when(externalArchiveAccessService.requireSession("session-token")).thenReturn(grant);
+        assertThatThrownBy(()->real.image(42,req)).isInstanceOfSatisfying(
+                com.zjcxph.imgapi.exception.BusinessException.class,e->assertThat(e.getCode()).isEqualTo(403));
+        org.mockito.Mockito.verifyNoInteractions(storage);
+    }
+
+    @Test
     @DisplayName("授权后直接返回私有禁缓存影像流且不再重定向到底层地址")
     void streamsAuthorizedImageWithoutRedirect() throws Exception {
         ExternalArchiveGrant grant = grant();
@@ -75,12 +115,12 @@ class ExternalArchiveControllerImageTest {
         byte[] payload = new byte[]{1, 3, 5, 7};
         TrackingInputStream input = new TrackingInputStream(payload);
         prepareRequestAndAuthorization(grant, scan);
-        when(imageContentService.open(42)).thenReturn(new ImageContentService.ImageContent(
+        when(imageContentService.openExternal(42, grant)).thenReturn(new ImageContentService.ScopedImage(new ImageContentService.ImageContent(
                 input,
                 "病案首页-01.jpg",
                 MediaType.IMAGE_JPEG,
                 (long) payload.length
-        ));
+        ), "123456", "A-001"));
 
         ResponseEntity<StreamingResponseBody> response = controller.image(42, request);
 
@@ -102,7 +142,7 @@ class ExternalArchiveControllerImageTest {
 
         assertThat(output.toByteArray()).containsExactly(payload);
         assertThat(input.isClosed()).isTrue();
-        verify(imageContentService).open(42);
+        verify(imageContentService).openExternal(42, grant);
         verify(externalArchiveAccessService).recordAudit(
                 grant,
                 "123456",
@@ -124,12 +164,12 @@ class ExternalArchiveControllerImageTest {
         Scan scan = scan();
         FailingInputStream input = new FailingInputStream();
         prepareRequestAndAuthorization(grant, scan);
-        when(imageContentService.open(42)).thenReturn(new ImageContentService.ImageContent(
+        when(imageContentService.openExternal(42, grant)).thenReturn(new ImageContentService.ScopedImage(new ImageContentService.ImageContent(
                 input,
                 "病案首页-01.jpg",
                 MediaType.IMAGE_JPEG,
                 null
-        ));
+        ), "123456", "A-001"));
 
         ResponseEntity<StreamingResponseBody> response = controller.image(42, request);
 
@@ -177,8 +217,8 @@ class ExternalArchiveControllerImageTest {
             }
             @Override public void close() { closed.set(true); }
         };
-        when(imageContentService.open(42)).thenReturn(new ImageContentService.ImageContent(
-                input, "synthetic.jpg", MediaType.IMAGE_JPEG, null, null, java.time.Duration.ofMillis(40)));
+        when(imageContentService.openExternal(42, grant)).thenReturn(new ImageContentService.ScopedImage(new ImageContentService.ImageContent(
+                input, "synthetic.jpg", MediaType.IMAGE_JPEG, null, null, java.time.Duration.ofMillis(40)), "123456", "A-001"));
         var response = controller.image(42, request);
         var out = new ByteArrayOutputStream();
         assertThatThrownBy(() -> response.getBody().writeTo(out))
@@ -211,20 +251,19 @@ class ExternalArchiveControllerImageTest {
         servletRequest.setCookies(new Cookie(ExternalArchiveAccessService.SESSION_COOKIE_NAME, "session-token"));
         servletRequest.setRemoteAddr("10.0.0.8");
         servletRequest.addHeader("User-Agent", "JUnit");
-        servletRequest.addHeader("X-Request-Id", "request-42");
+        servletRequest.setAttribute("requestId", "request-42");
         servletRequest.addHeader("Range", "bytes=-2");
         when(externalArchiveAccessService.requireSession("session-token")).thenReturn(grant);
-        when(externalArchiveAccessService.requireImage(grant, 42)).thenReturn(scan);
         try (var stream = source.open(path)) {
-            when(imageContentService.open(42)).thenReturn(new ImageContentService.ImageContent(
-                    stream, "synthetic.jpg", MediaType.IMAGE_JPEG, 999L));
+            when(imageContentService.openExternal(42, grant)).thenReturn(new ImageContentService.ScopedImage(new ImageContentService.ImageContent(
+                    stream, "synthetic.jpg", MediaType.IMAGE_JPEG, 999L), "123456", "A-001"));
             var response = controller.image(42, servletRequest);
             assertThat(response.getStatusCode().value()).isEqualTo(206);
             assertThat(response.getHeaders().getFirst("Content-Range")).isEqualTo("bytes 4-5/6");
             var out = new ByteArrayOutputStream();
             response.getBody().writeTo(out);
             assertThat(out.toByteArray()).containsExactly((byte) 4, (byte) 5);
-            verify(externalArchiveAccessService).requireImage(grant, 42);
+            verify(imageContentService).openExternal(42, grant);
             verify(externalArchiveAccessService).recordAudit(grant, "123456", "A-001", "IMAGE_VIEW", 42,
                     "10.0.0.8", "JUnit", "request-42", "SUCCESS", null);
         } finally {
@@ -242,12 +281,11 @@ class ExternalArchiveControllerImageTest {
         servletRequest.setCookies(new Cookie(ExternalArchiveAccessService.SESSION_COOKIE_NAME, "session-token"));
         servletRequest.setRemoteAddr("10.0.0.8");
         servletRequest.addHeader("User-Agent", "JUnit");
-        servletRequest.addHeader("X-Request-Id", "request-42");
+        servletRequest.setAttribute("requestId", "request-42");
         when(externalArchiveAccessService.requireSession("session-token")).thenReturn(grant);
-        when(externalArchiveAccessService.requireImage(grant, 42)).thenReturn(scan);
         TrackingInputStream input = new TrackingInputStream(new byte[]{1});
-        when(imageContentService.open(42)).thenReturn(new ImageContentService.ImageContent(
-                input, "image.jpg", MediaType.IMAGE_JPEG, 1L));
+        when(imageContentService.openExternal(42, grant)).thenReturn(new ImageContentService.ScopedImage(new ImageContentService.ImageContent(
+                input, "image.jpg", MediaType.IMAGE_JPEG, 1L), "123456", "A-001"));
         var response = controller.image(42, servletRequest);
         var manager = WebAsyncUtils.getAsyncManager(servletRequest);
         manager.setAsyncWebRequest(WebAsyncUtils.createAsyncWebRequest(servletRequest, new MockHttpServletResponse()));
@@ -276,9 +314,8 @@ class ExternalArchiveControllerImageTest {
         });
         when(request.getRemoteAddr()).thenReturn("10.0.0.8");
         when(request.getHeader("User-Agent")).thenReturn("JUnit");
-        when(request.getHeader("X-Request-Id")).thenReturn("request-42");
+        when(request.getAttribute("requestId")).thenReturn("request-42");
         when(externalArchiveAccessService.requireSession("session-token")).thenReturn(grant);
-        when(externalArchiveAccessService.requireImage(grant, 42)).thenReturn(scan);
     }
 
     private ExternalArchiveGrant grant() {

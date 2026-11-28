@@ -2,8 +2,10 @@
 import type { FormInstance, FormRules } from 'element-plus'
 import type { PatientRecord, PatientUpdatePayload } from '@/api/modules/patients'
 import { ElMessage } from 'element-plus'
-import { reactive, ref, watch } from 'vue'
+import { onScopeDispose, reactive, ref, watch } from 'vue'
 import { updatePatient } from '@/api/modules/patients'
+import { useUserStore } from '@/store/modules/user'
+import useAuth from '@/utils/composables/useAuth'
 
 interface PatientEditForm {
   bah: string
@@ -28,6 +30,17 @@ const emit = defineEmits<{
 
 const formRef = ref<FormInstance>()
 const saving = ref(false)
+const userStore = useUserStore()
+const { auth } = useAuth()
+const allowed = () => userStore.isSessionVerified && auth('record:read') && auth('record:edit')
+let generation = 0
+let editEpoch: number | undefined
+
+function invalidate() {
+  generation++
+  editEpoch = undefined
+  saving.value = false
+}
 const form = reactive<PatientEditForm>({
   bah: '',
   name: '',
@@ -71,63 +84,84 @@ function normalizeOptional(value: string) {
 }
 
 function closeDialog() {
+  invalidate()
   emit('update:modelValue', false)
 }
 
 async function submit() {
-  if (!props.patient?.id) {
+  if (saving.value || !props.modelValue || !allowed() || editEpoch !== userStore.sessionEpoch) { return }
+  const id = props.patient?.id
+  if (!id) {
     ElMessage.error('患者记录缺少 ID，无法保存')
     return
   }
-  const valid = await formRef.value?.validate().catch(() => false)
-  if (!valid) {
-    return
-  }
+  const token = generation
+  const epoch = editEpoch
+  const isCurrent = () => generation === token && userStore.sessionEpoch === epoch
+    && props.modelValue && props.patient?.id === id && allowed()
 
-  const payload: PatientUpdatePayload = {
-    bah: form.bah.trim(),
-    name: normalizeOptional(form.name),
-    idCard: normalizeOptional(form.idCard),
-    ruyuan: normalizeOptional(form.ruyuan),
-    admissiontime: normalizeOptional(form.admissiontime),
-    department: normalizeOptional(form.department),
-    bingqu: normalizeOptional(form.bingqu),
-    chuangwei: normalizeOptional(form.chuangwei),
-  }
-
+  // Lock the entire validation + write sequence, not just the HTTP request.
   saving.value = true
   try {
-    const response = await updatePatient(props.patient.id, payload)
-    if (!response.data) {
-      return
+    const valid = await formRef.value?.validate().catch(() => false)
+    if (!valid || !isCurrent()) { return }
+
+    const payload: PatientUpdatePayload = {
+      bah: form.bah.trim(),
+      name: normalizeOptional(form.name),
+      idCard: normalizeOptional(form.idCard),
+      ruyuan: normalizeOptional(form.ruyuan),
+      admissiontime: normalizeOptional(form.admissiontime),
+      department: normalizeOptional(form.department),
+      bingqu: normalizeOptional(form.bingqu),
+      chuangwei: normalizeOptional(form.chuangwei),
     }
+
+    const response = await updatePatient(id, payload)
+    if (!isCurrent() || !response.data) { return }
     ElMessage.success('患者信息保存成功')
     emit('saved', response.data)
     closeDialog()
   }
+  catch {
+    // The existing API layer reports current request failures. Keep the draft for retry.
+  }
   finally {
-    saving.value = false
+    if (isCurrent()) { saving.value = false }
   }
 }
 
 watch(
   () => [props.modelValue, props.patient] as const,
-  ([visible]) => {
-    if (visible) {
-      fillForm(props.patient)
+  ([visible, patient]) => {
+    invalidate()
+    if (visible && allowed()) {
+      editEpoch = userStore.sessionEpoch
+      fillForm(patient)
     }
+    else { fillForm() }
   },
-  { immediate: true },
+  { immediate: true, flush: 'sync' },
 )
+
+watch([() => userStore.sessionEpoch, allowed], () => {
+  invalidate()
+  fillForm()
+}, { flush: 'sync' })
+
+onScopeDispose(invalidate)
 </script>
 
 <template>
   <el-dialog
+    align-center
     :model-value="modelValue"
     title="编辑患者信息"
     width="min(720px, 92vw)"
     destroy-on-close
     :close-on-click-modal="false"
+    :close-on-press-escape="!saving"
+    :show-close="!saving"
     @close="closeDialog"
   >
     <el-alert
@@ -138,47 +172,52 @@ watch(
       class="edit-alert"
     />
 
-    <el-form ref="formRef" :model="form" :rules="rules" label-width="96px">
-      <div class="form-grid">
-        <el-form-item label="病案号" prop="bah">
-          <el-input v-model="form.bah" clearable autocomplete="off" />
-        </el-form-item>
-        <el-form-item label="姓名" prop="name">
-          <el-input v-model="form.name" clearable autocomplete="off" />
-        </el-form-item>
-        <el-form-item label="身份证号" prop="idCard" class="full-width">
-          <el-input v-model="form.idCard" clearable autocomplete="off" />
-        </el-form-item>
-        <el-form-item label="入院日期" prop="ruyuan">
-          <el-date-picker
-            v-model="form.ruyuan"
-            type="date"
-            value-format="YYYY-MM-DD"
-            placeholder="选择入院日期"
-            clearable
-            class="field-control"
-          />
-        </el-form-item>
-        <el-form-item label="入院时间" prop="admissiontime">
-          <el-date-picker
-            v-model="form.admissiontime"
-            type="datetime"
-            value-format="YYYY-MM-DD HH:mm:ss"
-            placeholder="选择入院时间"
-            clearable
-            class="field-control"
-          />
-        </el-form-item>
-        <el-form-item label="科室" prop="department">
-          <el-input v-model="form.department" clearable autocomplete="off" />
-        </el-form-item>
-        <el-form-item label="病区" prop="bingqu">
-          <el-input v-model="form.bingqu" clearable autocomplete="off" />
-        </el-form-item>
-        <el-form-item label="床位" prop="chuangwei">
-          <el-input v-model="form.chuangwei" clearable autocomplete="off" />
-        </el-form-item>
-      </div>
+    <el-form ref="formRef" :model="form" :rules="rules" :disabled="saving" label-position="top" class="mrr-edit-form mrr-edit-form--paired">
+      <h3 class="mrr-edit-form__section">
+        患者基本信息
+      </h3>
+      <el-form-item label="病案号" prop="bah">
+        <el-input v-model="form.bah" clearable autocomplete="off" />
+      </el-form-item>
+      <el-form-item label="姓名" prop="name">
+        <el-input v-model="form.name" clearable autocomplete="off" />
+      </el-form-item>
+      <el-form-item label="身份证号" prop="idCard" class="mrr-edit-form__full">
+        <el-input v-model="form.idCard" clearable autocomplete="off" />
+      </el-form-item>
+      <h3 class="mrr-edit-form__section">
+        入院信息
+      </h3>
+      <el-form-item label="入院日期" prop="ruyuan">
+        <el-date-picker
+          v-model="form.ruyuan"
+          type="date"
+          value-format="YYYY-MM-DD"
+          placeholder="选择入院日期"
+          clearable
+        />
+      </el-form-item>
+      <el-form-item label="入院时间" prop="admissiontime">
+        <el-date-picker
+          v-model="form.admissiontime"
+          type="datetime"
+          value-format="YYYY-MM-DD HH:mm:ss"
+          placeholder="选择入院时间"
+          clearable
+        />
+      </el-form-item>
+      <h3 class="mrr-edit-form__section">
+        科室与床位
+      </h3>
+      <el-form-item label="科室" prop="department">
+        <el-input v-model="form.department" clearable autocomplete="off" />
+      </el-form-item>
+      <el-form-item label="病区" prop="bingqu">
+        <el-input v-model="form.bingqu" clearable autocomplete="off" />
+      </el-form-item>
+      <el-form-item label="床位" prop="chuangwei">
+        <el-input v-model="form.chuangwei" clearable autocomplete="off" />
+      </el-form-item>
     </el-form>
 
     <template #footer>
@@ -195,29 +234,5 @@ watch(
 <style scoped>
 .edit-alert {
   margin-bottom: var(--mrr-space-4);
-}
-
-.form-grid {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  column-gap: var(--mrr-space-4);
-}
-
-.full-width {
-  grid-column: 1 / -1;
-}
-
-.field-control {
-  width: 100%;
-}
-
-@media (max-width: 640px) {
-  .form-grid {
-    grid-template-columns: 1fr;
-  }
-
-  .full-width {
-    grid-column: auto;
-  }
 }
 </style>

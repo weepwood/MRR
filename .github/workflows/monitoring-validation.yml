@@ -4,6 +4,7 @@ on:
   pull_request:
     branches:
       - main
+      - integration/v1.2
     paths:
       - 'monitoring/**'
       - '.github/workflows/monitoring-validation.yml'
@@ -28,6 +29,13 @@ jobs:
             --entrypoint promtool \
             prom/prometheus:v3.5.0 \
             check config /etc/prometheus/prometheus.yml
+      - name: Test audit alert rules
+        run: |
+          docker run --rm \
+            -v "$PWD/monitoring/prometheus:/etc/prometheus:ro" \
+            --entrypoint promtool \
+            prom/prometheus:v3.5.0 \
+            test rules /etc/prometheus/tests/audit-alerts.test.yml
       - name: Validate Alertmanager configuration
         run: |
           docker run --rm \

@@ -64,6 +64,7 @@ class AccessLogPartitionPostgresqlIT extends PostgresqlIntegrationTestSupport {
                 assertDefaultPartitionIsSplitOut(sql);
                 assertCutoverLockWaitIsBounded(url, sql);
                 long cutoverMaxId = assertCutover(sql);
+                assertPartitionedAuditAcknowledgementRecovery(url, sql);
                 assertPartitionedRowEstimate(url, sql);
                 assertSplitAfterCutoverKeepsLegacyCopy(sql);
                 assertExpiredMonthDroppedOnlyAfterRetirement(sql);
@@ -75,6 +76,47 @@ class AccessLogPartitionPostgresqlIT extends PostgresqlIntegrationTestSupport {
         } finally {
             execute(adminUrl, "DROP DATABASE IF EXISTS \"" + temporaryDatabase + "\" WITH (FORCE)");
         }
+    }
+
+    @Test
+    void cooperatingDurableWritersRemainIdempotentAfterLegacyTableRetirement() throws Exception {
+        String sourceUrl=postgresqlJdbcUrl();
+        String adminUrl=databaseUrl(sourceUrl,databaseName(sourceUrl));
+        String db="mrr_durable_retired_it_"+UUID.randomUUID().toString().replace("-","").substring(0,12);
+        execute(adminUrl,"CREATE DATABASE \""+db+"\"");
+        try {
+            String url=databaseUrl(sourceUrl,db);
+            assertThat(flyway(url,null).migrate().success).isTrue();
+            try(Connection connection=connection(url);Statement sql=connection.createStatement()) {
+                assertThat(json(sql,"SELECT app.access_log_partition_copy_batch(100)::text").get("phase")).isEqualTo("READY");
+                assertThat(json(sql,"SELECT app.access_log_partition_cutover()::text").get("phase")).isEqualTo("CUTOVER");
+                sql.executeUpdate("DROP TABLE app.access_log_legacy");
+                assertThat(regclass(sql,"app.access_log_legacy")).isNull();
+                var ds=new DriverManagerDataSource(url+"?currentSchema=app",postgresqlUsername(),postgresqlPassword());
+                var config=new org.apache.ibatis.session.Configuration();
+                config.addMapper(com.zjcxph.imgapi.mapper.LogMapper.class);
+                var builder=new org.mybatis.spring.SqlSessionFactoryBean();builder.setDataSource(ds);builder.setConfiguration(config);
+                var mapper=new org.mybatis.spring.SqlSessionTemplate(builder.getObject()).getMapper(com.zjcxph.imgapi.mapper.LogMapper.class);
+                var jdbc=new org.springframework.jdbc.core.JdbcTemplate(ds);
+                var manager=new org.springframework.jdbc.datasource.DataSourceTransactionManager(ds);
+                var first=new com.zjcxph.imgapi.audit.DurableAuditDelivery(mapper,jdbc,manager,true);
+                var second=new com.zjcxph.imgapi.audit.DurableAuditDelivery(mapper,jdbc,manager,true);
+                var row=new com.zjcxph.imgapi.entity.Log();row.setRequestId("retired-cooperative");
+                row.setAccessTime(new java.util.Date());row.setUsername("synthetic");
+                row.setRequestUri("/synthetic");row.setMethod("GET");row.setResponseStatus("200");
+                var pool=java.util.concurrent.Executors.newFixedThreadPool(2);
+                var gate=new java.util.concurrent.CountDownLatch(1);
+                try {
+                    var a=pool.submit(()->{gate.await();first.deliver(java.util.List.of(row));return true;});
+                    var b=pool.submit(()->{gate.await();second.deliver(java.util.List.of(row));return true;});
+                    gate.countDown();
+                    assertThat(a.get(15,java.util.concurrent.TimeUnit.SECONDS)).isTrue();
+                    assertThat(b.get(15,java.util.concurrent.TimeUnit.SECONDS)).isTrue();
+                    assertThat(count(sql,"SELECT count(*) FROM app.access_log WHERE request_id='retired-cooperative'")).isEqualTo(1);
+                    System.out.println("MRR_DURABLE_RETIRED real partition cutover and legacy retirement; two cooperating writers exactly once");
+                } finally {pool.shutdownNow();}
+            }
+        } finally {execute(adminUrl,"DROP DATABASE IF EXISTS \""+db+"\" WITH (FORCE)");}
     }
 
     private static void assertInitialState(Statement sql) throws SQLException {
@@ -180,6 +222,43 @@ class AccessLogPartitionPostgresqlIT extends PostgresqlIntegrationTestSupport {
         sql.executeUpdate("DELETE FROM app.access_log WHERE request_id = 'live-1'");
         assertThat(count(sql, "SELECT count(*) FROM app.access_log_legacy WHERE request_id = 'live-1'")).isZero();
         return cutoverMaxId;
+    }
+
+    private static void assertPartitionedAuditAcknowledgementRecovery(String url, Statement sql) throws SQLException {
+        var dataSource=new DriverManagerDataSource(url+"?currentSchema=app",postgresqlUsername(),postgresqlPassword());
+        var config=new org.apache.ibatis.session.Configuration(new org.apache.ibatis.mapping.Environment(
+                "synthetic-partition-recovery",new org.apache.ibatis.transaction.jdbc.JdbcTransactionFactory(),dataSource));
+        config.addMapper(com.zjcxph.imgapi.mapper.LogMapper.class);
+        var factory=new org.apache.ibatis.session.SqlSessionFactoryBuilder().build(config);
+        var row=new com.zjcxph.imgapi.entity.Log();
+        row.setRequestId("partitioned-uncertain-commit");row.setUsername("synthetic");
+        row.setAccessTime(new java.util.Date());row.setRequestUri("/synthetic");row.setMethod("GET");
+        row.setResponseStatus("200");row.setAuditAction("VIEW_IMAGE");row.setAuditTarget("synthetic");
+        var fault=org.mockito.Mockito.mock(com.zjcxph.imgapi.mapper.LogMapper.class);
+        org.mockito.Mockito.when(fault.batchInsert(org.mockito.ArgumentMatchers.anyList())).thenAnswer(call->{
+            try(var session=factory.openSession(true)) {
+                session.getMapper(com.zjcxph.imgapi.mapper.LogMapper.class).batchInsert(call.getArgument(0));
+            }
+            throw new org.springframework.dao.DataAccessResourceFailureException("synthetic lost acknowledgement");
+        });
+        org.mockito.Mockito.when(fault.containsAudit(row)).thenAnswer(call->{
+            try(var session=factory.openSession(true)) {
+                return session.getMapper(com.zjcxph.imgapi.mapper.LogMapper.class).containsAudit(row);
+            }
+        });
+        var service=new com.zjcxph.imgapi.service.impl.AsyncLogServiceImpl(fault);
+        try {
+            service.saveLogAsync(row);service.flushPendingLogs();
+            assertThat(service.pendingCount()).isEqualTo(1);
+            service.flushPendingLogs();
+            assertThat(service.pendingCount()).isZero();
+            org.mockito.Mockito.verify(fault,org.mockito.Mockito.times(1)).batchInsert(org.mockito.ArgumentMatchers.anyList());
+            assertThat(count(sql,"SELECT count(*) FROM app.access_log WHERE request_id='partitioned-uncertain-commit'")).isEqualTo(1);
+            assertThat(count(sql,"SELECT count(*) FROM app.access_log_legacy WHERE request_id='partitioned-uncertain-commit'")).isEqualTo(1);
+            System.out.println("MRR_PARTITION_AUDIT_RECOVERY real cutover partition and legacy mirror both exactly once");
+        } finally {
+            sql.executeUpdate("DELETE FROM app.access_log WHERE request_id='partitioned-uncertain-commit'");
+        }
     }
 
     private static void assertPartitionedRowEstimate(String url, Statement sql) throws SQLException {

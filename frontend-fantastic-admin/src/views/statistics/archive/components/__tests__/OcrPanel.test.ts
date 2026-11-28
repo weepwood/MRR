@@ -26,6 +26,10 @@ function panel() {
         'el-button': { template: '<button><slot /></button>' },
         'ElDrawer': { props: ['modelValue'], template: '<div v-if="modelValue"><slot /></div>' },
         'el-alert': { props: ['title'], template: '<p>{{ title }}</p>' },
+        'el-input': {
+          props: ['modelValue', 'type', 'readonly'],
+          template: `<textarea v-if="type === 'textarea'" :value="modelValue" :readonly="readonly" /><input v-else :value="modelValue" :readonly="readonly" />`,
+        },
         'el-tag': true,
         'el-progress': true,
       },

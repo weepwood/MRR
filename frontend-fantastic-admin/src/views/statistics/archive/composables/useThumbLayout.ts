@@ -2,8 +2,6 @@ import type { Ref } from 'vue'
 import type { ViewMode } from '../types'
 import { nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
 
-const GAP = 6
-const CONTAINER_HORIZONTAL_PADDING = 16
 const SCROLL_LOAD_THRESHOLD = 80
 
 export function useThumbLayout(
@@ -32,7 +30,10 @@ export function useThumbLayout(
       return
     }
 
-    const containerWidth = Math.max(1, container.clientWidth - CONTAINER_HORIZONTAL_PADDING)
+    const style = getComputedStyle(container)
+    const padding = (Number.parseFloat(style.paddingLeft) || 0) + (Number.parseFloat(style.paddingRight) || 0)
+    const gap = Number.parseFloat(style.columnGap) || 0
+    const containerWidth = Math.max(1, container.clientWidth - padding)
     if (viewMode.value === 'list') {
       thumbColumns.value = 1
       thumbItemWidth.value = containerWidth
@@ -41,8 +42,8 @@ export function useThumbLayout(
     }
 
     const targetWidth = Math.min(480, Math.max(160, preferredWidth.value))
-    const idealCols = Math.max(1, Math.floor((containerWidth + GAP) / (targetWidth + GAP)))
-    const actualItemWidth = Math.max(140, Math.floor((containerWidth - (idealCols - 1) * GAP) / idealCols))
+    const idealCols = Math.max(1, Math.floor((containerWidth + gap) / (targetWidth + gap)))
+    const actualItemWidth = Math.max(1, Math.floor((containerWidth - (idealCols - 1) * gap) / idealCols))
     thumbItemWidth.value = actualItemWidth
     thumbColumns.value = idealCols
 

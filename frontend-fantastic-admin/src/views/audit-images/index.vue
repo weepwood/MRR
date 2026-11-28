@@ -5,7 +5,6 @@ import type { ImageAuditAnalytics, LogRecord } from '@/api/types'
 import type { MrrTableAction } from '@/components/MrrTableActions/types'
 import { useMediaQuery } from '@vueuse/core'
 import { ElMessage } from 'element-plus'
-import { Download, RefreshCw as Refresh } from 'lucide-vue-next'
 import { computed, onMounted, onScopeDispose, ref, watch } from 'vue'
 import { exportImageAuditLogs, getImageAuditAnalytics, getLogById, searchImageAuditLogs } from '@/api/modules/logs'
 import AppEmpty from '@/components/AppEmpty/index.vue'
@@ -24,6 +23,7 @@ import { useUserStore } from '@/store/modules/user'
 import { rangePickerPopperOptions } from '@/ui/provider/picker-options'
 import { checkSessionPermission } from '@/utils/permission'
 import { isSessionAccessDenied } from '@/utils/session-access-denied'
+import { tableSequenceColumn } from '@/utils/table-sequence'
 import AuditAnalytics from './components/AuditAnalytics.vue'
 
 defineOptions({ name: 'ImageAuditPage' })
@@ -187,10 +187,18 @@ function auditIdentifiers(row?: LogRecord | null): AuditIdentifiers {
   return { bah: bah || '-', sjh: sjh || '-', idCard: idCard || '-' }
 }
 
+type AdvancedKey = 'clientIp' | 'auditAction' | 'responseStatus'
+const advancedKeys: AdvancedKey[] = ['clientIp', 'auditAction', 'responseStatus']
+function advancedSnapshot(values: Partial<Record<AdvancedKey, unknown>>) {
+  return advancedKeys.map(key => String(values[key] ?? '').trim())
+}
+const appliedAdvanced = ref<string[] | null>(null)
+
 const {
   clearResults,
   list,
   total,
+  loadedRowOffset,
   loading,
   resultVersion,
   pageNum,
@@ -206,7 +214,10 @@ const {
     error.value = ''
     try {
       const { page, size, ...filters } = params
-      return await searchImageAuditLogs({ ...buildAuditParams(filters), page, size }, userStore.token)
+      const apiParams = buildAuditParams(filters)
+      const response = await searchImageAuditLogs({ ...apiParams, page, size }, userStore.token)
+      if (isCurrent()) { appliedAdvanced.value = advancedSnapshot(apiParams) }
+      return response
     }
     catch (err: any) {
       if (isCurrent() && isSessionAccessDenied(err)) {
@@ -214,7 +225,7 @@ const {
         error.value = err?.message || '访问权限不足，请重试'
         return undefined
       }
-      if (isCurrent()) error.value = err?.message || '加载失败'
+      if (isCurrent()) { error.value = err?.message || '加载失败'; appliedAdvanced.value = null }
       return { list: [], total: 0, page: 1, size: 20 }
     }
   },
@@ -222,6 +233,9 @@ const {
   immediate: false,
 })
 
+const advancedCount = computed(() => advancedSnapshot(query).filter(Boolean).length)
+const appliedAdvancedCount = computed(() => appliedAdvanced.value?.filter(Boolean).length)
+const advancedDirty = computed(() => appliedAdvanced.value !== null && JSON.stringify(advancedSnapshot(query)) !== JSON.stringify(appliedAdvanced.value))
 let analyticsGeneration = 0
 let disposed = false
 function clearDetail() {
@@ -234,6 +248,7 @@ function clearDetail() {
   currentLog.value = null
 }
 function resetAuditSession() {
+  appliedAdvanced.value = null
   analyticsGeneration++
   exportGeneration++
   analytics.value = createEmptyAnalytics()
@@ -294,6 +309,12 @@ async function loadData() {
 async function handleSearch() {
   pageNum.value = 1
   await loadData()
+}
+
+function handleFilterEnter(event: Event | KeyboardEvent) {
+  if (!(event instanceof KeyboardEvent) || event.isComposing || event.repeat) { return }
+  event.preventDefault()
+  void handleSearch()
 }
 
 async function resetFilters() {
@@ -388,20 +409,22 @@ onMounted(loadData)
 
 <template>
   <MrrPageShell>
-    <MrrPageHeader size="compact" title="病历访问审计可视化" eyebrow="Medical Record Audit" description="按用户和病历双向追溯访问关系，并导出完整审计证据。">
+    <MrrPageHeader title="病历访问审计可视化" eyebrow="Medical Record Audit" description="按用户和病历双向追溯访问关系，并导出完整审计证据。">
       <template #actions>
-        <el-button :loading="loading || analyticsLoading" @click="() => loadData()"><el-icon><Refresh /></el-icon>刷新</el-button>
+        <el-button :loading="loading || analyticsLoading" @click="() => loadData()"><FaIcon name="i-lucide:refresh-cw" aria-hidden="true" />刷新</el-button>
       </template>
     </MrrPageHeader>
 
     <el-form label-position="top" @submit.prevent>
-      <MrrFilterBar layout="grid">
-        <el-form-item label="关键字" for="audit-keyword"><el-input id="audit-keyword" v-model="query.keyword" clearable placeholder="病案号 / 上架号 / 身份证号 / URI" @keyup.enter="handleSearch" /></el-form-item>
-        <el-form-item label="用户" for="audit-username"><MrrUserSearchSelect id="audit-username" v-model="query.username" placeholder="搜索已存在用户名" @update:model-value="handleSearch" /></el-form-item>
-        <el-form-item label="客户端 IP" for="audit-client-ip"><el-input id="audit-client-ip" v-model="query.clientIp" clearable placeholder="127.0.0.1" @keyup.enter="handleSearch" /></el-form-item>
-        <el-form-item label="访问类型" for="audit-action"><el-select id="audit-action" v-model="query.auditAction" class="mrr-single-select" clearable placeholder="全部访问类型"><el-option v-for="item in actionOptions" :key="item.value" :label="item.label" :value="item.value" /></el-select></el-form-item>
-        <el-form-item label="状态码" for="audit-status"><el-select id="audit-status" v-model="query.responseStatus" class="mrr-single-select" clearable placeholder="全部状态码"><el-option v-for="item in statusOptions" :key="item.label" :label="item.label" :value="item.value" /></el-select></el-form-item>
-        <el-form-item label="访问时间" class="mrr-filter-bar__range"><el-date-picker v-model="query.timeRange" type="datetimerange" :popper-options="rangePickerPopperOptions" range-separator="至" start-placeholder="开始时间" end-placeholder="结束时间" value-format="YYYY-MM-DD HH:mm:ss" format="YYYY-MM-DD HH:mm:ss" /></el-form-item>
+      <MrrFilterBar :focus-ring="false" :advanced-count="advancedCount" :applied-advanced-count="appliedAdvancedCount" :advanced-dirty="advancedDirty">
+        <el-form-item class="mrr-filter-field--keyword" label="关键字" for="audit-keyword"><el-input id="audit-keyword" v-model="query.keyword" clearable placeholder="病案号 / 上架号 / 身份证号 / URI" @keydown.enter="handleFilterEnter" /></el-form-item>
+        <el-form-item label="访问时间" class="mrr-filter-field--datetime"><el-date-picker v-model="query.timeRange" aria-label="访问时间" type="datetimerange" :popper-options="rangePickerPopperOptions" range-separator="至" start-placeholder="开始时间" end-placeholder="结束时间" value-format="YYYY-MM-DD HH:mm:ss" format="YYYY-MM-DD HH:mm:ss" /></el-form-item>
+        <el-form-item class="mrr-filter-field--keyword" label="用户" for="audit-username"><MrrUserSearchSelect id="audit-username" v-model="query.username" placeholder="搜索已存在用户名" @update:model-value="handleSearch" /></el-form-item>
+        <template #advanced>
+          <el-form-item label="客户端 IP" for="audit-client-ip"><el-input id="audit-client-ip" v-model="query.clientIp" clearable placeholder="127.0.0.1" @keydown.enter="handleFilterEnter" /></el-form-item>
+          <el-form-item label="访问类型" for="audit-action"><el-select id="audit-action" v-model="query.auditAction" class="mrr-single-select" clearable placeholder="全部访问类型"><el-option v-for="item in actionOptions" :key="item.value" :label="item.label" :value="item.value" /></el-select></el-form-item>
+          <el-form-item label="状态码" for="audit-status"><el-select id="audit-status" v-model="query.responseStatus" class="mrr-single-select" clearable placeholder="全部状态码"><el-option v-for="item in statusOptions" :key="item.label" :label="item.label" :value="item.value" /></el-select></el-form-item>
+        </template>
         <template #actions><MrrFilterActionButton action="search" :pending="loading || analyticsLoading" :busy="loading" @click="handleSearch">查询</MrrFilterActionButton><MrrFilterActionButton action="reset" :pending="loading || analyticsLoading" :busy="loading" @click="resetFilters">重置</MrrFilterActionButton></template>
       </MrrFilterBar>
     </el-form>
@@ -409,26 +432,27 @@ onMounted(loadData)
     <el-alert v-if="analyticsError" type="error" show-icon :closable="false" :title="`分析数据加载失败：${analyticsError}`" />
     <AuditAnalytics :analytics="analytics" :loading="analyticsLoading" @export-user="value => exportAudit('user', value)" @export-target="value => exportAudit('target', value)" />
 
-    <MrrDataTablePanel title="最近访问明细" description="病案号、上架号和身份证号独立展示" :count="total" :loading="loading" :result-key="resultVersion">
+    <MrrDataTablePanel title="最近访问明细" description="病案号、上架号和身份证号独立展示" :loading="loading" :result-key="resultVersion">
       <!--
         页头原有一个「导出当前明细」，与这里的「导出明细」调用同一个导出（scope=all），两处同名不同字。
         只保留明细卡头这一处：导出的就是这张表的当前筛选结果，按钮应紧挨它的对象。
       -->
       <template #actions>
-        <el-button :loading="exportLoading" @click="exportAudit('all')"><el-icon><Download /></el-icon>导出当前明细</el-button>
+        <el-button :loading="exportLoading" @click="exportAudit('all')"><FaIcon name="i-lucide:download" aria-hidden="true" />导出当前明细</el-button>
       </template>
       <AppLoading v-if="loading && !list.length" type="table" :rows="8" />
       <AppError v-else-if="error" :message="error" @retry="loadListData" />
       <AppEmpty v-else-if="!list.length" description="暂无审计记录" />
       <el-table v-else :data="list" stripe>
-        <el-table-column prop="accessTime" label="访问时间" min-width="180"><template #default="{ row }">{{ formatDateTime(row.accessTime) }}</template></el-table-column>
-        <el-table-column prop="username" label="用户" min-width="120"><template #default="{ row }">{{ row.username || '-' }}</template></el-table-column>
-        <el-table-column label="病案号" min-width="130"><template #default="{ row }">{{ auditIdentifiers(row).bah }}</template></el-table-column>
-        <el-table-column label="上架号" min-width="130"><template #default="{ row }">{{ auditIdentifiers(row).sjh }}</template></el-table-column>
-        <el-table-column label="身份证号" min-width="190" show-overflow-tooltip><template #default="{ row }"><span class="audit-mono">{{ auditIdentifiers(row).idCard }}</span></template></el-table-column>
-        <el-table-column prop="auditDescription" label="访问类型" min-width="170"><template #default="{ row }"><el-tag effect="plain">{{ row.auditDescription || actionLabel(row.auditAction) }}</el-tag></template></el-table-column>
-        <el-table-column prop="clientIp" label="客户端 IP" min-width="140"><template #default="{ row }"><span class="audit-mono">{{ row.clientIp || '-' }}</span></template></el-table-column>
-        <el-table-column prop="responseStatus" label="状态码" width="100"><template #default="{ row }"><el-tag :type="statusTagType(row.responseStatus)">{{ row.responseStatus || '-' }}</el-tag></template></el-table-column>
+        <el-table-column v-bind="tableSequenceColumn(loadedRowOffset, list.length)" />
+        <el-table-column prop="accessTime" label="访问时间" width="176"><template #default="{ row }">{{ formatDateTime(row.accessTime) }}</template></el-table-column>
+        <el-table-column prop="username" label="用户" width="132" show-overflow-tooltip><template #default="{ row }">{{ row.username || '-' }}</template></el-table-column>
+        <el-table-column label="病案号" width="128" show-overflow-tooltip><template #default="{ row }">{{ auditIdentifiers(row).bah }}</template></el-table-column>
+        <el-table-column label="上架号" width="128" show-overflow-tooltip><template #default="{ row }">{{ auditIdentifiers(row).sjh }}</template></el-table-column>
+        <el-table-column label="身份证号" width="190" show-overflow-tooltip><template #default="{ row }"><span class="audit-mono">{{ auditIdentifiers(row).idCard }}</span></template></el-table-column>
+        <el-table-column prop="auditDescription" label="访问类型" min-width="160" class-name="mrr-table-status-column"><template #default="{ row }"><el-tag effect="plain">{{ row.auditDescription || actionLabel(row.auditAction) }}</el-tag></template></el-table-column>
+        <el-table-column prop="clientIp" label="客户端 IP" width="148" show-overflow-tooltip><template #default="{ row }"><span class="audit-mono">{{ row.clientIp || '-' }}</span></template></el-table-column>
+        <el-table-column prop="responseStatus" label="状态码" width="92" class-name="mrr-table-status-column"><template #default="{ row }"><el-tag :type="statusTagType(row.responseStatus)">{{ row.responseStatus || '-' }}</el-tag></template></el-table-column>
         <el-table-column prop="executeTime" label="耗时(ms)" width="105" align="right" />
         <el-table-column label="操作" :width="detailActionColumnWidth" fixed="right" align="center">
           <template #default="{ row }">
@@ -440,13 +464,13 @@ onMounted(loadData)
           </template>
         </el-table-column>
       </el-table>
-      <template #pagination><el-pagination v-model:current-page="pageNum" v-model:page-size="pageSize" :page-sizes="[10, 20, 50, 100]" :total="total" layout="total, sizes, prev, pager, next, jumper" @size-change="handleSizeChange" @current-change="handlePageChange" /></template>
+      <template #pagination><el-pagination v-model:current-page="pageNum" v-model:page-size="pageSize" :page-sizes="[10, 20, 50, 100]" :total="total" layout="total, prev, pager, next, jumper, sizes" @size-change="handleSizeChange" @current-change="handlePageChange" /></template>
     </MrrDataTablePanel>
 
-    <el-dialog v-model="detailVisible" title="审计详情" width="min(820px, 92vw)" class="audit-detail">
+    <el-dialog v-model="detailVisible" align-center title="审计详情" width="min(820px, 92vw)" class="audit-detail">
       <AppLoading v-if="detailLoading" />
       <AppError v-else-if="detailError" :message="detailError" @retry="retryDetail" />
-      <el-descriptions v-else-if="currentLog" :column="isNarrowScreen ? 1 : 2" border>
+      <el-descriptions v-else-if="currentLog" direction="vertical" class="mrr-detail-descriptions" :column="isNarrowScreen ? 1 : 2" border>
         <el-descriptions-item label="Request ID">{{ currentLog.requestId || '-' }}</el-descriptions-item>
         <el-descriptions-item label="用户">{{ currentLog.username || '-' }}</el-descriptions-item>
         <el-descriptions-item label="访问类型">{{ currentLog.auditDescription || actionLabel(currentLog.auditAction) }}</el-descriptions-item>
@@ -455,11 +479,11 @@ onMounted(loadData)
         <el-descriptions-item label="身份证号">{{ auditIdentifiers(currentLog).idCard }}</el-descriptions-item>
         <el-descriptions-item label="客户端 IP">{{ currentLog.clientIp || '-' }}</el-descriptions-item>
         <el-descriptions-item label="状态码">{{ currentLog.responseStatus || '-' }}</el-descriptions-item>
-        <el-descriptions-item label="访问时间" :span="2">{{ formatDateTime(currentLog.accessTime) }}</el-descriptions-item>
-        <el-descriptions-item label="请求 URI" :span="2">{{ currentLog.requestUri || '-' }}</el-descriptions-item>
-        <el-descriptions-item label="接口模板" :span="2">{{ currentLog.endpointTemplate || '-' }}</el-descriptions-item>
-        <el-descriptions-item label="Referer" :span="2">{{ currentLog.referer || '-' }}</el-descriptions-item>
-        <el-descriptions-item label="查询参数" :span="2">{{ currentLog.queryString || '-' }}</el-descriptions-item>
+        <el-descriptions-item label="访问时间" :span="isNarrowScreen ? 1 : 2">{{ formatDateTime(currentLog.accessTime) }}</el-descriptions-item>
+        <el-descriptions-item label="请求 URI" :span="isNarrowScreen ? 1 : 2">{{ currentLog.requestUri || '-' }}</el-descriptions-item>
+        <el-descriptions-item label="接口模板" :span="isNarrowScreen ? 1 : 2">{{ currentLog.endpointTemplate || '-' }}</el-descriptions-item>
+        <el-descriptions-item label="Referer" :span="isNarrowScreen ? 1 : 2">{{ currentLog.referer || '-' }}</el-descriptions-item>
+        <el-descriptions-item label="查询参数" :span="isNarrowScreen ? 1 : 2">{{ currentLog.queryString || '-' }}</el-descriptions-item>
       </el-descriptions>
     </el-dialog>
   </MrrPageShell>

@@ -1,5 +1,5 @@
-import { describe, expect, it } from 'vitest'
-import { buildPdfBlob } from '../client-pdf'
+import { describe, expect, it, vi } from 'vitest'
+import { buildPdfBlob, createPdfFromImageUrls } from '../client-pdf'
 
 function readBlob(blob: Blob): Promise<ArrayBuffer> {
   return new Promise((resolve, reject) => {
@@ -15,6 +15,34 @@ describe('client PDF writer', () => {
     const jpeg = new Blob(['synthetic'])
     Object.defineProperty(jpeg, 'size', { value: 128 * 1024 * 1024 })
     expect(() => buildPdfBlob([{ blob: jpeg, width: 1, height: 1 }])).toThrow('分批')
+  })
+
+  it('does not fetch images after cancellation', async () => {
+    const controller = new AbortController()
+    const fetchMock = vi.fn()
+    vi.stubGlobal('fetch', fetchMock)
+    try {
+      controller.abort()
+      await expect(createPdfFromImageUrls(['/first.jpg'], undefined, controller.signal)).rejects.toMatchObject({ name: 'AbortError' })
+      expect(fetchMock).not.toHaveBeenCalled()
+    }
+    finally { vi.unstubAllGlobals() }
+  })
+
+  it('passes cancellation to fetch and stops before decoding or fetching another image', async () => {
+    const controller = new AbortController()
+    const body = new Blob(['synthetic'])
+    const fetchMock = vi.fn(async () => {
+      controller.abort()
+      return { ok: true, blob: async () => body }
+    })
+    vi.stubGlobal('fetch', fetchMock)
+    try {
+      await expect(createPdfFromImageUrls(['/first.jpg', '/second.jpg'], undefined, controller.signal)).rejects.toMatchObject({ name: 'AbortError' })
+      expect(fetchMock).toHaveBeenCalledTimes(1)
+      expect(fetchMock).toHaveBeenCalledWith(expect.stringContaining('/first.jpg'), expect.objectContaining({ signal: controller.signal }))
+    }
+    finally { vi.unstubAllGlobals() }
   })
 
   it('writes selected images as valid PDF pages', async () => {

@@ -1,4 +1,5 @@
 import { expect, test } from '@playwright/test'
+import { isolateLocalVisualSettings } from './helpers/local-visual-settings'
 
 const overviewUrl = '**/api/v1/operations/overview'
 const snapshotTime = '2026-11-02T01:00:00Z'
@@ -42,7 +43,11 @@ test('shows the first load failure and distinguishes current, maintenance and st
   await expect(dashboard.getByText('总览快照')).toHaveCount(0)
   await refresh.click()
   await expect(dashboard.getByText('当前允许业务写入。')).toBeVisible()
-  await expect(dashboard.getByText('等待 0 · 处理中 0')).toBeVisible()
+  const taskInfo = dashboard.getByRole('button', { name: '查看活跃导出任务说明' })
+  await expect(taskInfo).toBeVisible()
+  await taskInfo.hover()
+  await expect(page.getByText('等待 0 · 处理中 0', { exact: true })).toBeVisible()
+  await page.keyboard.press('Escape')
   await refresh.click()
   await expect(dashboard.getByText('主动维护已开启，业务写入暂停。')).toBeVisible()
   await refresh.click()
@@ -121,6 +126,33 @@ test('维护模式确认保留非空校验，按 Esc 退出确认不发送写请
   await disableDialog.getByRole('button', { name: '确认退出' }).click()
   await expect(page.getByText('主动维护模式未启用')).toBeVisible()
   expect(disables).toBe(1)
+})
+
+test('维护状态读取失败时禁止变更，重新检查后恢复', async ({ page }) => {
+  let reads = 0
+  let writes = 0
+  await page.route(overviewUrl, route => route.fulfill({ json: { code: 200, data: snapshot('READ_WRITE') } }))
+  await page.route('**/api/v1/operations/readiness**', route => route.fulfill({ json: { code: 200, data: snapshot('READ_WRITE').readiness } }))
+  await page.route('**/api/v1/operations/maintenance', async (route) => {
+    reads++
+    if (reads === 1) {
+      await route.fulfill({ status: 503, json: { code: 503, message: '合成测试：维护状态读取失败' } })
+      return
+    }
+    await route.fulfill({ json: { code: 200, data: { enabled: false } } })
+  })
+  await page.route('**/api/v1/operations/maintenance/enable', async (route) => {
+    writes++
+    await route.fulfill({ json: { code: 200, data: { enabled: true } } })
+  })
+  await page.goto('/operations-center?tab=maintenance')
+  await expect(page.getByText('维护状态读取失败，请重新检查')).toBeVisible()
+  await expect(page.getByText('主动维护模式未启用', { exact: true })).toHaveCount(0)
+  await expect(page.getByRole('button', { name: '进入维护模式', exact: true })).toHaveCount(0)
+  await page.getByRole('button', { name: '重新检查', exact: true }).click()
+  await expect(page.getByText('主动维护模式未启用', { exact: true })).toBeVisible()
+  await expect(page.getByRole('button', { name: '进入维护模式', exact: true })).toBeEnabled()
+  expect(writes).toBe(0)
 })
 
 test('shows configured delivery mode and read-only partition status, labels stale on failure', async ({ page }) => {
@@ -239,6 +271,10 @@ test('单张正文校验使用明确ID并区分无基线与完整校验', async 
 })
 
 test('持久运行历史展示相邻采样变化、缺口及七天范围', async ({ page }) => {
+  await isolateLocalVisualSettings(page)
+  await page.addInitScript(() => localStorage.setItem('MRR-ADMIN:app-settings', JSON.stringify({
+    layout: { enableMobileAdaptation: true },
+  })))
   await page.goto('/operations-center')
   await expect(page.getByRole('heading', { name: '运行历史与容量趋势' })).toBeVisible()
   await expect(page.getByRole('img', { name: 'JVM 堆内存历史' })).toBeVisible()
@@ -354,4 +390,29 @@ test('Nginx 按需观察进程并仅展示投影日志，切换类别清除旧�
   await expect(page.getByText('MRR-Gateway 服务：运行中', { exact: true })).toBeVisible()
   await expect(page.getByText('已核对 Nginx 进程的本地 TCP 监听：80', { exact: true })).toBeVisible()
   await expect(page.getByText('不证明两者属于同一启动链', { exact: false })).toBeVisible()
+})
+
+test('运维排查入口连接存储历史、运行历史与专用分析页面', async ({ page }, testInfo) => {
+  await page.setViewportSize({ width: 1440, height: 900 })
+  const data = { ...snapshot('READ_WRITE'), nasRuntime: { inUse: 1, limit: 2, nodes: [{ ordinal: 1, state: 'OPEN', inUse: 1, limit: 1 }] } }
+  await page.route(overviewUrl, route => route.fulfill({ json: { code: 200, data } }))
+  await page.goto('/operations-center')
+  const grid = page.locator('.investigation-grid')
+  await expect(grid).toBeVisible()
+  await grid.screenshot({ path: testInfo.outputPath('investigation.png'), animations: 'disabled' })
+  await grid.getByRole('button', { name: /运行历史/ }).click()
+  await expect(page.getByRole('region', { name: '运行历史排查区' })).toBeFocused()
+  await page.getByRole('button', { name: '查看 NAS 历史事件' }).click()
+  const region = page.getByRole('region', { name: '存储事件排查区' })
+  await expect(region).toBeFocused()
+  await expect(region.getByRole('status')).toContainText('匹配 5 / 已加载 5')
+  await region.getByRole('combobox', { name: '存储历史事件类型' }).focus()
+  await page.keyboard.press('Enter')
+  await page.getByRole('option', { name: '节点恢复' }).click()
+  await expect(region.getByRole('status')).toContainText('匹配 1 / 已加载 5')
+  await region.getByRole('button', { name: '重置存储事件筛选' }).click()
+  await expect(region.getByRole('status')).toContainText('匹配 5 / 已加载 5')
+  await grid.getByRole('button', { name: /接口性能/ }).click()
+  await expect(page).toHaveURL(/response-analysis$/)
+  await expect(page.getByRole('heading', { name: '接口响应分析', exact: true })).toBeVisible()
 })

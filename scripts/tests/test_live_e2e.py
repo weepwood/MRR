@@ -1,3 +1,4 @@
+import os
 import unittest
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from threading import Thread
@@ -5,6 +6,7 @@ from unittest.mock import patch
 
 from scripts.run_live_e2e import (
     DOCUMENTATION_PATHS,
+    NativePostgres,
     assert_documentation_requires_session,
     cleanup_resources,
     docker_command,
@@ -147,3 +149,50 @@ class LiveE2eTest(unittest.TestCase):
         process.poll.return_value = 0
         stop_process(process)
         process.terminate.assert_not_called()
+
+@unittest.skipUnless(os.name == "posix", "POSIX native PostgreSQL mode")
+class NativePostgresTest(unittest.TestCase):
+    def test_non_16_binary_is_rejected(self):
+        from pathlib import Path
+        import tempfile
+        with tempfile.TemporaryDirectory() as directory, patch.object(NativePostgres, "command", return_value="initdb (PostgreSQL) 17.1"):
+            with self.assertRaisesRegex(ValueError, "requires PostgreSQL 16"):
+                NativePostgres(Path(directory), Path(directory), {}, "synthetic")
+
+    def test_owns_new_directory_and_limits_native_commands_to_loopback(self):
+        from pathlib import Path
+        import tempfile
+        from unittest.mock import call
+        with tempfile.TemporaryDirectory() as directory, patch.object(NativePostgres, "command") as command:
+            command.return_value = "initdb (PostgreSQL) 16.16"
+            cluster = NativePostgres(Path(directory), Path(directory), {"PATH": "tools"}, "synthetic")
+            self.assertFalse(cluster.data.exists())
+            self.assertEqual(cluster.directory.stat().st_mode & 0o777, 0o700)
+            def native_command(name, *args, **kwargs):
+                if name == "initdb":
+                    pwfile = Path(args[-1])
+                    self.assertEqual(pwfile.stat().st_mode & 0o777, 0o600)
+                    self.assertEqual(pwfile.read_text(), "synthetic\n")
+                    self.assertIn("--auth-host=scram-sha-256", args)
+                return ""
+            command.side_effect = native_command
+            port = cluster.start()
+            self.assertFalse((cluster.directory / "password").exists())
+            self.assertIn("-h 127.0.0.1", command.call_args_list[2].args[-3])
+            self.assertIn("unix_socket_directories=''", command.call_args_list[2].args[-3])
+            self.assertEqual(command.call_args_list[3], call("createdb", "-h", "127.0.0.1", "-p", str(port), "-U", "postgres", "mrr_e2e", authenticated=True))
+            cluster.psql("-Atc", "SELECT 1")
+            self.assertEqual(command.call_args, call("psql", "-X", "-h", "127.0.0.1", "-p", str(port), "-U", "postgres", "-d", "mrr_e2e", "-v", "ON_ERROR_STOP=1", "-Atc", "SELECT 1", sql=None, authenticated=True))
+            cluster.data.mkdir()
+            (cluster.data / "postmaster.pid").touch()
+            cluster.close()
+            self.assertEqual(command.call_args, call("pg_ctl", "-D", str(cluster.data), "-m", "fast", "-w", "stop"))
+
+    def test_failed_initialization_removes_password_file(self):
+        from pathlib import Path
+        import tempfile
+        with tempfile.TemporaryDirectory() as directory, patch.object(NativePostgres, "command", side_effect=["initdb (PostgreSQL) 16.16", RuntimeError("synthetic failure")]):
+            cluster = NativePostgres(Path(directory), Path(directory), {}, "synthetic")
+            with self.assertRaisesRegex(RuntimeError, "synthetic failure"):
+                cluster.start()
+            self.assertFalse((cluster.directory / "password").exists())

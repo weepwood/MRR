@@ -75,6 +75,11 @@ describe('mrrTableActions', () => {
     expect(wrapper.text()).not.toContain('更多操作')
   })
 
+  it('默认使用统一的紧凑行操作外观，仍允许明确指定旧外观', () => {
+    expect(mountActions().find('.mrr-table-actions--quiet').exists()).toBe(true)
+    expect(mountActions({ appearance: 'default' }).find('.mrr-table-actions--quiet').exists()).toBe(false)
+  })
+
   it('空间足够时低优先级操作也直接显示', () => {
     const wrapper = mountActions({ maxInline: 3 })
     const exposed = wrapper.vm as unknown as {

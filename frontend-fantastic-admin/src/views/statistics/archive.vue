@@ -85,6 +85,11 @@ const archiveSettings = reactive<EffectiveSystemSettings>(createDefaultSystemSet
 const selectedType = ref<number | 'all'>('all')
 const selectedImageIndex = ref(0)
 const viewMode = ref<ViewMode>('thumb')
+let viewModeRevision = 0
+function selectViewMode(mode: ViewMode) {
+  viewModeRevision++
+  viewMode.value = mode
+}
 const previewMode = ref<ArchivePreviewMode>('single')
 const typeDisplayMode = ref<ArchiveTypeDisplayMode>('double-column')
 const archiveLocalPreferences = ref<ArchiveLocalPreferences>(readArchiveLocalPreferences())
@@ -312,9 +317,11 @@ async function confirmCancel(label: string): Promise<boolean> {
   }
 }
 
-function applyArchiveSettings(settings: EffectiveSystemSettings) {
+function applyArchiveSettings(settings: EffectiveSystemSettings, applyDefaultView = true) {
   Object.assign(archiveSettings, settings)
-  viewMode.value = settings.archiveDefaultView
+  if (applyDefaultView) {
+    viewMode.value = settings.archiveDefaultView
+  }
   previewMode.value = archiveDisplaySettings.value.archivePreviewMode
   typeDisplayMode.value = archiveDisplaySettings.value.archiveTypeDisplayMode
 }
@@ -329,14 +336,15 @@ function updateArchiveLocalPreferences(preferences: ArchiveLocalPreferences) {
 function resetArchiveLocalPreferences() {
   clearArchiveLocalPreferences()
   archiveLocalPreferences.value = {}
-  viewMode.value = archiveSettings.archiveDefaultView
+  selectViewMode(archiveSettings.archiveDefaultView)
   previewMode.value = archiveDisplaySettings.value.archivePreviewMode
   typeDisplayMode.value = archiveDisplaySettings.value.archiveTypeDisplayMode
 }
 
 async function loadArchiveSettings() {
+  const revision = viewModeRevision
   const { settings } = await loadEffectiveSystemSettings()
-  applyArchiveSettings(settings)
+  applyArchiveSettings(settings, revision === viewModeRevision)
 }
 
 function handleRuntimeSettingsUpdated(event: Event) {
@@ -850,7 +858,7 @@ onUnmounted(() => {
       :wall-density="archiveDisplaySettings.archiveWallDensity"
       :wall-show-meta="archiveDisplaySettings.archiveWallShowMeta"
       :has-local-preferences="Object.keys(archiveLocalPreferences).length > 0"
-      @update:view-mode="viewMode = $event"
+      @update:view-mode="selectViewMode"
       @update:preview-mode="updateArchiveLocalPreferences({ archivePreviewMode: $event })"
       @update:type-display-mode="updateArchiveLocalPreferences({ archiveTypeDisplayMode: $event })"
       @update:fit-mode="updateArchiveLocalPreferences({ archiveFitMode: $event })"
@@ -929,6 +937,7 @@ onUnmounted(() => {
                 :type="downloadButtonType || undefined"
                 :icon="Download"
                 :loading="downloadButtonLoading"
+                :disabled="loading || idCardLoading"
                 @click="handleDownloadAction"
               >
                 {{ downloadButtonLabel }}
@@ -1097,6 +1106,7 @@ onUnmounted(() => {
               :type="downloadButtonType || undefined"
               :icon="Download"
               :loading="downloadButtonLoading"
+              :disabled="loading || idCardLoading"
               @click="handleDownloadAction"
             >
               {{ downloadButtonLabel }}
@@ -1230,13 +1240,13 @@ onUnmounted(() => {
 .archive-workspace.has-viewer {
   display: grid;
   grid-template-columns: minmax(280px, 320px) var(--archive-thumb-column-width, 218px) minmax(0, 1fr);
-  gap: 12px;
+  gap: var(--mrr-space-3);
   height: 100%;
   min-height: 0;
 }
 
 .archive-workspace.has-viewer.is-list-mode {
-  grid-template-columns: minmax(280px, 320px) var(--archive-thumb-column-width, 218px) minmax(0, 1fr);
+  grid-template-columns: minmax(280px, 320px) minmax(160px, 200px) minmax(0, 1fr);
 }
 
 .archive-workspace.has-viewer.is-wall-layout {
@@ -1509,6 +1519,52 @@ onUnmounted(() => {
 
   .archive-wall-toolbar-controls {
     justify-content: flex-start;
+  }
+}
+
+@media (min-width: 761px) and (max-width: 1100px) {
+  .archive-workspace.has-viewer:not(.is-wall-layout),
+  .archive-workspace.has-viewer.is-list-mode:not(.is-wall-layout) {
+    grid-template-columns: minmax(160px, min(28%, var(--archive-thumb-column-width, 218px))) minmax(0, 1fr);
+  }
+
+  .archive-workspace.has-viewer.is-list-mode:not(.is-wall-layout) {
+    grid-template-columns: minmax(160px, 200px) minmax(0, 1fr);
+  }
+
+  .archive-workspace.has-viewer .archive-sidebar {
+    display: grid;
+    grid-template-columns: minmax(0, 2fr) minmax(0, 3fr);
+    grid-column: 1 / -1;
+    align-items: start;
+  }
+
+  .archive-workspace.has-viewer .archive-sidebar > :deep(*) {
+    grid-column: 1 / -1;
+  }
+
+  .archive-workspace.has-viewer .archive-sidebar > :deep(.patient-card) {
+    grid-column: 1;
+    align-self: stretch;
+  }
+
+  .archive-workspace.has-viewer .archive-sidebar > :deep(.type-bar) {
+    grid-column: 2;
+  }
+
+  .archive-bottom-actions {
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: center;
+    margin-top: 0;
+  }
+
+  .archive-workspace.has-viewer .viewer-layout {
+    height: min(68vh, 640px);
+    min-height: 420px;
+  }
+
+  .archive-workspace.has-viewer .viewer-layout :deep(.thumb-panel) {
+    max-height: none;
   }
 }
 

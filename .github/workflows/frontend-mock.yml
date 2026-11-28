@@ -9,17 +9,21 @@ on:
         description: Run only the optional Firefox and WebKit qualification matrix
         type: boolean
         default: false
+      shard_probe:
+        description: Run only two full Chromium shards for an optional comparison (takes precedence over cross_browser)
+        type: boolean
+        default: false
 
 permissions:
   contents: read
 
 concurrency:
-  group: frontend-mock-${{ github.workflow }}-${{ github.ref }}-${{ inputs.cross_browser }}
+  group: frontend-mock-${{ github.workflow }}-${{ github.ref }}-${{ inputs.cross_browser }}-${{ inputs.shard_probe }}
   cancel-in-progress: true
 
 jobs:
   standalone-frontend:
-    if: inputs.cross_browser != true
+    if: inputs.cross_browser != true && inputs.shard_probe != true
     runs-on: ubuntu-latest
     timeout-minutes: 30
     defaults:
@@ -104,7 +108,7 @@ jobs:
           exit 1
 
   cross-browser:
-    if: inputs.cross_browser == true
+    if: inputs.cross_browser == true && inputs.shard_probe != true
     runs-on: ubuntu-latest
     timeout-minutes: 30
     defaults:
@@ -143,3 +147,64 @@ jobs:
             frontend-fantastic-admin/playwright-cross-browser-report
           retention-days: 1
           if-no-files-found: warn
+
+
+  chromium-shard-probe:
+    if: inputs.shard_probe == true
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2]
+    defaults:
+      run:
+        working-directory: frontend-fantastic-admin
+    steps:
+      - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@v6
+        with:
+          version: 10.33.0
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: frontend-fantastic-admin/.node-version
+          cache: pnpm
+          cache-dependency-path: frontend-fantastic-admin/pnpm-lock.yaml
+      - run: pnpm install --frozen-lockfile
+      - name: Read Playwright version
+        id: playwright
+        run: echo "version=$(pnpm exec playwright --version | awk '{print $2}')" >> "${GITHUB_OUTPUT}"
+      - uses: actions/cache@v6
+        id: playwright-cache
+        with:
+          path: ~/.cache/ms-playwright
+          key: ${{ runner.os }}-${{ runner.arch }}-playwright-chromium-${{ steps.playwright.outputs.version }}
+      - if: steps.playwright-cache.outputs.cache-hit != 'true'
+        run: pnpm exec playwright install --with-deps chromium
+      - if: steps.playwright-cache.outputs.cache-hit == 'true'
+        run: |
+          pnpm exec playwright install-deps chromium
+          pnpm exec playwright install chromium
+      - name: Full Chromium shard
+        timeout-minutes: 40
+        env:
+          SHARD: ${{ matrix.shard }}
+        run: pnpm exec playwright test --project=chromium --workers=2 --shard="${SHARD}/2"
+      - name: Preserve shard test results
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: chromium-shard-${{ matrix.shard }}-${{ github.sha }}-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            frontend-fantastic-admin/test-results/e2e-junit.xml
+            frontend-fantastic-admin/test-results/e2e-results.json
+          if-no-files-found: warn
+          retention-days: 3
+      - name: Preserve failed shard diagnostics
+        if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: chromium-shard-failure-${{ matrix.shard }}-${{ github.run_id }}-${{ github.run_attempt }}
+          path: frontend-fantastic-admin/test-results
+          if-no-files-found: ignore
+          retention-days: 2

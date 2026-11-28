@@ -21,3 +21,28 @@ export const archiveImages = Array.from({ length: 14 }, (_, index) => {
     img_url: pageSvg(ARCHIVE_BAH, page, type.label),
   }
 })
+
+// Separate synthetic stress dossier. Build lazily so ordinary Mock startup stays cheap.
+export const LARGE_ARCHIVE_BAH = '00800999'
+let largeImages: typeof archiveImages | undefined
+export function getLargeArchiveImages() {
+  largeImages ??= Array.from({ length: 600 }, (_, index) => {
+    const page = index + 1
+    const type = usedTypes[index % usedTypes.length]
+    return {
+      ...archiveImages[0],
+      id: 990600000 + page,
+      bah: LARGE_ARCHIVE_BAH,
+      brxh: 'synthetic-large',
+      filename: `synthetic-${page}.jpg`,
+      btype: type.value,
+      pages: page,
+      img_url: pageSvg(LARGE_ARCHIVE_BAH, page, type.label),
+    }
+  })
+  return largeImages
+}
+
+export function findLargeArchiveImage(id: number) {
+  return largeImages?.find(image => image.id === id)
+}

@@ -8,6 +8,8 @@ import AppError from '@/components/AppError/index.vue'
 import MrrSectionCard from '@/components/MrrSectionCard/index.vue'
 import { formatDateTime } from '@/utils/display-format'
 import { hasPermission } from '@/utils/session'
+import { isSessionAccessDenied } from '@/utils/session-access-denied'
+import { tableSequenceColumn } from '@/utils/table-sequence'
 
 const props = defineProps<{ issueId?: number }>()
 const allowed = computed(() => hasPermission('system:manage') && hasPermission('record:manage'))
@@ -46,6 +48,11 @@ function reset() {
   failed.value = false
   more.value = false
 }
+function handleFailure(current: number, error: unknown) {
+  if (current !== generation) { return }
+  if (isSessionAccessDenied(error)) { reset() }
+  failed.value = true
+}
 async function load(append = false) {
   if (!allowed.value || busy.value) { return }
   if (!append) { reset() }
@@ -71,9 +78,7 @@ async function load(append = false) {
       more.value = data.reviews.length === 50
     }
   }
-  catch {
-    if (current === generation) { failed.value = true }
-  }
+  catch (error) { handleFailure(current, error) }
   finally {
     if (current === generation) { busy.value = false }
   }
@@ -89,11 +94,11 @@ async function history(row: QualityReview, append = false) {
   selected.value = row
   try {
     const { data } = await getQualityReviewEvents(row.id, append ? events.value.at(-1)?.revision : 0, controller.signal)
-    if (generation === current && selected.value?.id === row.id && data) { events.value.push(...data) }
+    if (generation !== current || selected.value?.id !== row.id) { return }
+    if (!Array.isArray(data)) { throw new Error('Invalid review history') }
+    events.value.push(...data)
   }
-  catch {
-    if (generation === current) { failed.value = true }
-  }
+  catch (error) { handleFailure(current, error) }
   finally {
     if (generation === current) { busy.value = false }
   }
@@ -115,7 +120,7 @@ async function recheck() {
     }
     observation.value = data
   }
-  catch { if (current === generation) { failed.value = true } }
+  catch (error) { handleFailure(current, error) }
   finally { if (current === generation) { busy.value = false } }
 }
 const canDecide = computed(() => allowed.value && !!context.value?.enabled && !!context.value.latest && !failed.value)
@@ -135,7 +140,7 @@ async function decide(action: ReviewAction) {
     await load()
   }
   catch (error) {
-    if (current === generation && error !== 'cancel' && error !== 'close') { failed.value = true }
+    if (error !== 'cancel' && error !== 'close') { handleFailure(current, error) }
   }
   finally {
     if (current === generation) { busy.value = false }
@@ -176,6 +181,7 @@ onBeforeUnmount(reset)
     </template>
     <template v-if="issueId == null">
       <el-table v-if="rows.length" :data="rows" row-key="id" @row-click="row => history(row)">
+        <el-table-column v-bind="tableSequenceColumn()" />
         <el-table-column prop="id" label="案件" width="90" />
         <el-table-column prop="entityType" label="记录类型" min-width="170" />
         <el-table-column prop="entityId" label="记录 ID" min-width="120" />

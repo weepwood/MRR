@@ -1,0 +1,277 @@
+method	path	handler	declared_access
+DELETE	/api/v1/archive-box-records/{id}	ArchiveBoxRecordController#delete	record:edit
+DELETE	/api/v1/auth/users/{id}	UserController#disableUser	user:manage
+DELETE	/api/v1/oss/{ossKey}	OssController#deleteOssFile	record:manage
+DELETE	/api/v1/scan/{id}	ScanController#deleteById	record:edit
+DELETE	/api/v1/settings/{key}	SystemSettingController#deleteSetting	system:manage
+GET	/api/v1/archive-box-records	ArchiveBoxRecordController#findPage	record:read
+GET	/api/v1/archive-box-records/box/{boxNo}	ArchiveBoxRecordController#findByBoxNo	record:read
+GET	/api/v1/archive-box-records/boxes	ArchiveBoxRecordController#findBoxGroups	record:read
+GET	/api/v1/archive-box-records/record/{code}	ArchiveBoxRecordController#findByRecordCode	record:read
+GET	/api/v1/archive-box-records/summary	ArchiveBoxRecordController#getSummary	record:read
+GET	/api/v1/archive-box-records/{id}	ArchiveBoxRecordController#findById	record:read
+GET	/api/v1/archive-exports/jobs	ArchiveExportJobListController#listActive	record:read
+GET	/api/v1/archive-exports/jobs/{id}	ArchiveExportJobController#get	record:read
+GET	/api/v1/archive-exports/jobs/{id}/download	ArchiveExportJobController#download	record:read
+GET	/api/v1/archive-exports/pdf	ArchiveExportController#downloadPdf	record:pdf:export
+GET	/api/v1/archive-exports/plan/pdf	ArchiveExportController#planPdf	record:pdf:export
+GET	/api/v1/archive-exports/plan/zip	ArchiveExportController#planZip	record:download
+GET	/api/v1/archive-exports/zip	ArchiveExportController#downloadZip	record:download
+GET	/api/v1/archive-records/resolve	ArchiveRecordController#resolve	record:read
+GET	/api/v1/archive-records/{id}	ArchiveRecordController#findById	record:read
+GET	/api/v1/archive-records/{id}/ocr/jobs	OcrController#list	record:read + ocr:read
+GET	/api/v1/archive-records/{id}/scans	ArchiveRecordController#findScans	record:read
+GET	/api/v1/archive-search-history	ArchiveSearchHistoryController#list	record:read
+GET	/api/v1/auth/me	UserController#currentUser	AUTHENTICATED
+GET	/api/v1/auth/roles	UserController#listRoles	role:read
+GET	/api/v1/auth/users	UserController#listUsers	user:manage
+GET	/api/v1/classification/jobs/{id}/suggestions	ClassificationController#suggestions	record:read + classification:read
+GET	/api/v1/classification/rule-sets	ClassificationController#versions	ocr:config
+GET	/api/v1/classification/rule-sets/{version}	ClassificationController#bundle	ocr:config
+GET	/api/v1/data-exchange/archive-boxes/export/csv	DataExchangeController#exportArchiveBoxes	record:read
+GET	/api/v1/data-exchange/archive-boxes/template	DataExchangeController#downloadArchiveBoxTemplate	record:read
+GET	/api/v1/data-exchange/archives/export/csv	DataExchangeController#exportArchives	record:read
+GET	/api/v1/data-exchange/patients/export/csv	DataExchangeController#exportPatients	record:read
+GET	/api/v1/data-exchange/patients/template	DataExchangeController#downloadPatientTemplate	record:read
+GET	/api/v1/data-exchange/scan/export/csv	DataExchangeController#exportScan	record:read
+GET	/api/v1/data-exchange/scan/template	DataExchangeController#downloadScanTemplate	record:read
+GET	/api/v1/data-exchange/statistics/export/csv	DataExchangeController#exportStatistics	statistics:read
+GET	/api/v1/data-exchange/statistics/template	DataExchangeController#downloadStatisticsTemplate	statistics:read
+GET	/api/v1/documentation/access	DocumentationController#checkAccess	PUBLIC_PATH
+GET	/api/v1/external/archive/context	ExternalArchiveController#context	PUBLIC_PATH
+GET	/api/v1/external/archive/download	ExternalArchiveController#download	PUBLIC_PATH
+GET	/api/v1/external/archive/image/{id}	ExternalArchiveController#image	PUBLIC_PATH
+GET	/api/v1/external/archive/images	ExternalArchiveController#images	PUBLIC_PATH
+GET	/api/v1/img/content/{id}	ImageContentController#getContent	record:read
+GET	/api/v1/img/download/{BAH}	ImageController#download	record:download
+GET	/api/v1/img/hello	ImageController#hello	PUBLIC_PATH
+GET	/api/v1/img/image/{BAH}/{BRXH}/{FOLDER}/{FILENAME}	ImageController#getImage	record:read
+GET	/api/v1/img/oss-image/{id}	ImageController#getOssImage	record:read
+GET	/api/v1/img/search	ImageController#searchByCode	record:read
+GET	/api/v1/img/url/{id}	ImageController#getImageUrl	record:read
+GET	/api/v1/img/{bah}	ImageController#getDataByBAH	record:read
+GET	/api/v1/integration/archive/status	ExternalArchiveIntegrationStatusController#status	user:manage
+GET	/api/v1/logs	LogController#getAllLogs	log:read
+GET	/api/v1/logs/audit/images	LogController#searchImageAuditLogs	log:read
+GET	/api/v1/logs/audit/images/analytics	LogController#getImageAuditAnalytics	log:read
+GET	/api/v1/logs/audit/images/export	ImageAuditExportController#export	log:read
+GET	/api/v1/logs/ip/{ip}	LogController#getLogsByClientIp	log:read
+GET	/api/v1/logs/retention/export	LogController#exportRetentionLogs	log:read
+GET	/api/v1/logs/search	LogController#searchLogs	log:read
+GET	/api/v1/logs/uri	LogController#getLogsByRequestUri	log:read
+GET	/api/v1/logs/{id}	LogController#getLogById	log:read
+GET	/api/v1/medical-record-types	MedicalRecordTypeController#list	record:read
+GET	/api/v1/nginx-browser	NginxBrowserController#browse	record:read
+GET	/api/v1/nginx-browser/file	NginxBrowserController#openFile	record:read
+GET	/api/v1/nginx-browser/servers	NginxBrowserController#listServers	record:read
+GET	/api/v1/ocr/batches	OcrBatchController#list	record:read + ocr:run + ocr:batch-run
+GET	/api/v1/ocr/batches/{id}	OcrBatchController#get	record:read + ocr:run + ocr:batch-run
+GET	/api/v1/ocr/batches/{id}/jobs	OcrBatchController#children	record:read + ocr:run + ocr:batch-run
+GET	/api/v1/ocr/batches/{id}/rollback/preview	OcrBatchController#previewRollback	ocr:batch-run + record:read + classification:review + classification:override
+GET	/api/v1/ocr/jobs/{id}	OcrController#get	record:read + ocr:read
+GET	/api/v1/ocr/jobs/{id}/items	OcrController#items	record:read + ocr:read
+GET	/api/v1/operations/access-log-partition/status	AccessLogPartitionController#status	system:read
+GET	/api/v1/operations/archive-manifests	ArchiveManifestController#latest	system:read + record:read
+GET	/api/v1/operations/archive-manifests/compare	ArchiveManifestController#compare	system:read + record:read
+GET	/api/v1/operations/archive-manifests/history	ArchiveManifestController#history	system:read + record:read
+GET	/api/v1/operations/archive-manifests/{version}	ArchiveManifestController#get	system:read + record:read
+GET	/api/v1/operations/archive-manifests/{version}/anomalies	ArchiveManifestController#issues	system:read + record:read
+GET	/api/v1/operations/archive-manifests/{version}/report	ArchiveManifestController#report	system:read + record:read
+GET	/api/v1/operations/diagnostic-report	OperationsDiagnosticsController#diagnosticReport	system:manage
+GET	/api/v1/operations/exports	OperationsDiagnosticsController#exports	system:read + record:read
+GET	/api/v1/operations/history	OperationsHistoryController#history	system:read
+GET	/api/v1/operations/image-source	OperationsDiagnosticsController#diagnoseImageSource	system:manage + record:read
+GET	/api/v1/operations/integrity	OperationsDiagnosticsController#integrity	system:read
+GET	/api/v1/operations/maintenance	OperationsDiagnosticsController#maintenance	system:read
+GET	/api/v1/operations/nginx	NginxConfigurationDiagnosticsController#status	system:read
+GET	/api/v1/operations/nginx/listener-hints	NginxConfigurationDiagnosticsController#listenerHints	system:read
+GET	/api/v1/operations/nginx/logs	NginxRuntimeObservationController#logs	system:read + log:read
+GET	/api/v1/operations/nginx/runtime	NginxRuntimeObservationController#runtime	system:read
+GET	/api/v1/operations/operation-audit	OperationsDiagnosticsController#operationAudit	system:read + log:read
+GET	/api/v1/operations/overview	OperationsDiagnosticsController#overview	system:read
+GET	/api/v1/operations/permission-matrix	OperationsDiagnosticsController#permissionMatrix	system:read + role:read
+GET	/api/v1/operations/read-only	OperationsDiagnosticsController#readOnly	system:read
+GET	/api/v1/operations/readiness	OperationsDiagnosticsController#readiness	system:read
+GET	/api/v1/operations/storage-circuit-history	StorageCircuitHistoryController#history	system:read
+GET	/api/v1/oss/browser	OssController#browseOssFiles	record:manage
+GET	/api/v1/oss/browser/url	OssController#getBrowserOssUrl	record:manage
+GET	/api/v1/oss/migration/jobs	OssController#listMigrationJobs	record:read
+GET	/api/v1/oss/migration/jobs/{id}	OssController#getMigrationJob	record:read
+GET	/api/v1/oss/migration/logs	OssController#getMigrationLogs	record:read
+GET	/api/v1/oss/migration/management/logs	OssMigrationManagementController#getLogs	record:read
+GET	/api/v1/oss/migration/management/pending	OssMigrationManagementController#getPending	record:read
+GET	/api/v1/oss/migration/management/waiting-sjh	OssMigrationManagementController#getWaitingSjh	record:read
+GET	/api/v1/oss/migration/pending	OssController#getPendingMigrations	record:read
+GET	/api/v1/oss/migration/pending-folders	OssController#getPendingFolders	record:read
+GET	/api/v1/oss/migration/readiness	OssController#getMigrationReadiness	record:read
+GET	/api/v1/oss/migration/statistics	OssController#getMigrationStatistics	record:read
+GET	/api/v1/oss/url/{scanId}	OssController#getOssUrl	record:read
+GET	/api/v1/patients	PatientController#listPatients	record:read
+GET	/api/v1/patients/analytics/missing-idcard	PatientController#getMissingIdCardRecords	record:read
+GET	/api/v1/patients/analytics/multi-record-groups	PatientController#getMultiRecordGroups	record:read
+GET	/api/v1/patients/analytics/summary	PatientController#getAnalyticsSummary	record:read
+GET	/api/v1/patients/bah/{bah}	PatientController#getByBah	record:read
+GET	/api/v1/patients/export/excel	PatientController#exportExcel	record:read
+GET	/api/v1/patients/idcard/{idCard}	PatientController#getByIdCard	record:read
+GET	/api/v1/public/config/client-environment	PublicClientEnvironmentController#clientEnvironment	PUBLIC_PATH
+GET	/api/v1/public/config/documentation	PublicDocumentationConfigController#getDocumentationConfig	PUBLIC_PATH
+GET	/api/v1/public/config/login-page	PublicLoginPageConfigController#getLoginPageConfig	PUBLIC_PATH
+GET	/api/v1/public/status/daily	PublicStatusController#daily	PUBLIC_PATH
+GET	/api/v1/public/status/developer-mode	DeveloperModeStatusController#status	PUBLIC_PATH
+GET	/api/v1/public/status/incidents	PublicStatusController#incidents	PUBLIC_PATH
+GET	/api/v1/public/status/minutes	PublicStatusController#minutes	PUBLIC_PATH
+GET	/api/v1/public/status/ping	PublicStatusController#ping	PUBLIC_PATH
+GET	/api/v1/public/status/summary	PublicStatusController#summary	PUBLIC_PATH
+GET	/api/v1/response-metrics/analysis	ResponseMetricController#getAnalysis	system:read
+GET	/api/v1/scan	ScanController#findAll	record:read
+GET	/api/v1/scan/bah/{bah}	ScanController#findByBah	record:read
+GET	/api/v1/scan/brxh/{brxh}	ScanController#findByBrxh	record:read
+GET	/api/v1/scan/cursor	ScanController#findAfterId	record:read
+GET	/api/v1/scan/page	ScanController#findAllWithPagination	record:read
+GET	/api/v1/scan/{id}	ScanController#findById	record:read
+GET	/api/v1/scan/{id}/ocr	OcrController#fact	record:read + ocr:read
+GET	/api/v1/search/archive-cases	SearchController#getArchiveCasesByToken	search:read
+GET	/api/v1/search/getBAHByEncryptID	SearchController#getBAHByEncryptID	search:read
+GET	/api/v1/search/getBAHByEncryptIDLegacy	SearchController#getBAHByEncryptIDLegacy	search:read
+GET	/api/v1/search/getBAHByID/{idCard}	SearchController#getBAHByiDCard	search:read
+GET	/api/v1/search/hello	SearchController#hello	search:read
+GET	/api/v1/search/patient/{bah}	SearchController#getPatientByBah	search:read
+GET	/api/v1/settings	SystemSettingController#getAllSettings	system:read
+GET	/api/v1/settings/schema	SystemSettingController#getSettingsSchema	system:read
+GET	/api/v1/settings/ui	SystemSettingController#getUiSettings	AUTHENTICATED
+GET	/api/v1/settings/{key}	SystemSettingController#getSetting	system:read
+GET	/api/v1/statistics	StatisticsController#getAllStatistics	statistics:read
+GET	/api/v1/statistics/bah-summary	StatisticsController#getBAHStatistics	statistics:read
+GET	/api/v1/statistics/bah/{bah}	StatisticsController#getStatisticsByBah	statistics:read
+GET	/api/v1/statistics/dashboard	StatisticsController#getDashboardData	statistics:read
+GET	/api/v1/statistics/date-summary	StatisticsController#getDateStatistics	statistics:read
+GET	/api/v1/statistics/date-summary/condition	StatisticsController#getDateStatisticsByCondition	statistics:read
+GET	/api/v1/statistics/date/{date}	StatisticsController#getStatisticsByDate	statistics:read
+GET	/api/v1/statistics/departments	StatisticsController#getDepartments	statistics:read
+GET	/api/v1/statistics/export/csv	StatisticsController#exportCsv	statistics:read
+GET	/api/v1/statistics/summary	StatisticsController#getTotalStatistics	statistics:read
+GET	/api/v1/statistics/type-summary	StatisticsController#getTypeStatistics	statistics:read
+GET	/api/v1/system-errors	SystemErrorController#search	system:error:read
+GET	/api/v1/system-errors/modules	SystemErrorController#modules	system:error:read
+GET	/api/v1/system-errors/overview	SystemErrorController#overview	system:error:read
+GET	/api/v1/system-errors/{id}	SystemErrorController#detail	system:error:read
+GET	/api/v1/system/data-quality/case-reviews	QualityCaseReviewController#list	system:manage + record:manage
+GET	/api/v1/system/data-quality/case-reviews/issue/{issueId}	QualityCaseReviewController#context	system:manage + record:manage
+GET	/api/v1/system/data-quality/case-reviews/{id}/events	QualityCaseReviewController#events	system:manage + record:manage
+GET	/api/v1/system/data-quality/case-reviews/{id}/recheck	QualityCaseReviewController#recheck	system:manage + record:manage
+GET	/api/v1/system/data-quality/issues	DataQualityController#issues	system:read + record:read
+GET	/api/v1/system/data-quality/issues/{issueId}	DataQualityController#issue	system:read + record:read
+GET	/api/v1/system/data-quality/issues/{issueId}/repair-preview	DataQualityController#repairPreview	system:read + record:read
+GET	/api/v1/system/data-quality/repair-orders	DataQualityRepairOrderController#list	system:manage + record:manage
+GET	/api/v1/system/data-quality/repair-orders/{id}	DataQualityRepairOrderController#get	system:manage + record:manage
+GET	/api/v1/system/data-quality/repair-orders/{id}/events	DataQualityRepairOrderController#events	system:manage + record:manage
+GET	/api/v1/system/data-quality/runs/{runId}	DataQualityController#runStatus	system:read
+GET	/api/v1/system/data-quality/summary	DataQualityController#summary	system:read
+GET	/api/v1/system/data-relations/archives/search	DataRelationController#search	system:read + record:read
+GET	/api/v1/system/data-relations/archives/{archiveId}	DataRelationController#archiveRelation	system:read + record:read
+GET	/api/v1/system/data-relations/archives/{archiveId}/scans	DataRelationController#activeScans	system:read + record:read
+GET	/api/v1/system/data-relations/overview	DataRelationController#overview	system:read
+GET	/api/v1/system/database/browse/tables	DatabaseBrowseController#tables	system:db:browse
+GET	/api/v1/system/database/browse/tables/{tableKey}	DatabaseBrowseController#schema	system:db:browse
+GET	/api/v1/system/database/browse/tables/{tableKey}/rows	DatabaseBrowseController#rows	system:db:browse
+GET	/api/v1/system/database/overview	DatabaseMonitorController#overview	system:read
+GET	/api/v1/system/database/slow-queries	DatabaseMonitorController#slowQueries	system:read
+GET	/api/v1/system/database/tables	DatabaseMonitorController#tables	system:read
+GET	/api/v1/system/gc	SystemInfoController#getGcStats	system:read
+GET	/api/v1/system/health	SystemInfoController#healthCheck	system:read
+GET	/api/v1/system/info	SystemInfoController#getSystemInfo	system:read
+GET	/api/v1/system/memory	SystemInfoController#getMemoryInfo	system:read
+GET	/api/v1/system/overview	SystemInfoController#getOverview	system:read
+GET	/api/v1/system/properties	SystemInfoController#getSystemProperties	system:read
+GET	/api/v1/system/runtime	SystemInfoController#getRuntimeInfo	system:read
+GET	/api/v1/system/threads	SystemInfoController#getThreadStats	system:read
+POST	/api/v1/archive-box-records	ArchiveBoxRecordController#create	record:edit
+POST	/api/v1/archive-exports/jobs	ArchiveExportJobController#create	AUTHENTICATED
+POST	/api/v1/archive-exports/jobs/{id}/cancel	ArchiveExportJobController#cancel	AUTHENTICATED
+POST	/api/v1/archive-exports/pdf/selection	ArchiveExportController#downloadSelectedPdf	record:pdf:export
+POST	/api/v1/archive-exports/plan/pdf/selection	ArchiveExportController#planSelectedPdf	record:pdf:export
+POST	/api/v1/archive-records/{id}/ocr/jobs	OcrController#create	record:read + ocr:run
+POST	/api/v1/archive-search-history	ArchiveSearchHistoryController#create	record:read
+POST	/api/v1/auth/login	UserController#login	PUBLIC_PATH
+POST	/api/v1/auth/logout	UserController#logout	AUTHENTICATED
+POST	/api/v1/auth/password/edit	UserController#changePassword	AUTHENTICATED
+POST	/api/v1/auth/password/required-change	UserController#changeRequiredPassword	AUTHENTICATED
+POST	/api/v1/auth/register	UserController#register	PUBLIC_PATH
+POST	/api/v1/auth/users	UserController#createUser	user:manage
+POST	/api/v1/auth/users/{id}/password/reset	UserController#resetPassword	user:manage
+POST	/api/v1/auth/users/{id}/registration/approve	UserController#approveRegistration	user:manage
+POST	/api/v1/auth/users/{id}/registration/reject	UserController#rejectRegistration	user:manage
+POST	/api/v1/auth/users/{id}/registration/reopen	UserController#reopenRegistration	user:manage
+POST	/api/v1/classification/rule-sets	ClassificationController#create	ocr:config
+POST	/api/v1/classification/rule-sets/{version}/publish	ClassificationController#publish	ocr:config
+POST	/api/v1/classification/rule-sets/{version}/restore	ClassificationController#restore	ocr:config
+POST	/api/v1/classification/rule-sets/{version}/test	ClassificationController#test	ocr:config + ocr:text-read + record:read
+POST	/api/v1/classification/suggestions/{id}/review	ClassificationController#review	record:read + classification:review
+POST	/api/v1/data-exchange/archive-boxes/import	DataExchangeController#importArchiveBoxes	record:edit
+POST	/api/v1/data-exchange/patients/import	DataExchangeController#importPatients	record:edit
+POST	/api/v1/data-exchange/scan/import	DataExchangeController#importScan	record:edit
+POST	/api/v1/data-exchange/statistics/import	DataExchangeController#importStatistics	record:edit
+POST	/api/v1/documentation/session	DocumentationController#createSession	AUTHENTICATED
+POST	/api/v1/external/archive/logout	ExternalArchiveController#logout	PUBLIC_PATH
+POST	/api/v1/external/archive/session	ExternalArchiveController#exchangeTicket	PUBLIC_PATH
+POST	/api/v1/integration/archive/tickets	ExternalArchiveController#createTicket	PUBLIC_PATH
+POST	/api/v1/logs/retention/cleanup	LogController#cleanupRetentionLogs	system:manage
+POST	/api/v1/ocr/batches	OcrBatchController#create	record:read + ocr:run + ocr:batch-run
+POST	/api/v1/ocr/batches/preview	OcrBatchController#preview	record:read + ocr:run + ocr:batch-run
+POST	/api/v1/ocr/batches/{id}/rollback	OcrBatchController#rollback	ocr:batch-run + record:read + classification:review + classification:override
+POST	/api/v1/ocr/batches/{id}/{action:pause|resume|cancel}	OcrBatchController#action	record:read + ocr:run + ocr:batch-run
+POST	/api/v1/ocr/jobs/{id}/cancel	OcrController#cancel	record:read + ocr:run
+POST	/api/v1/operations/access-log-partition/abort	AccessLogPartitionController#abort	system:manage
+POST	/api/v1/operations/access-log-partition/copy	AccessLogPartitionController#copy	system:manage
+POST	/api/v1/operations/access-log-partition/cutover	AccessLogPartitionController#cutover	system:manage
+POST	/api/v1/operations/access-log-partition/maintain	AccessLogPartitionController#maintain	system:manage
+POST	/api/v1/operations/access-log-partition/rollback	AccessLogPartitionController#rollback	system:manage
+POST	/api/v1/operations/archive-manifests	ArchiveManifestController#start	system:manage + record:read
+POST	/api/v1/operations/archive-manifests/{version}/cancel	ArchiveManifestController#cancel	system:manage + record:read
+POST	/api/v1/operations/archive-manifests/{version}/resume	ArchiveManifestController#resume	system:manage + record:read
+POST	/api/v1/operations/diagnostics/run	OperationsDiagnosticsController#runDiagnostics	system:manage
+POST	/api/v1/operations/image-content/verify	OperationsDiagnosticsController#verifyImageContent	system:manage + record:read
+POST	/api/v1/operations/maintenance/disable	OperationsDiagnosticsController#disableMaintenance	system:manage
+POST	/api/v1/operations/maintenance/enable	OperationsDiagnosticsController#enableMaintenance	system:manage
+POST	/api/v1/operations/nginx/check	NginxConfigurationDiagnosticsController#check	system:read + system:manage
+POST	/api/v1/operations/nginx/version	NginxConfigurationDiagnosticsController#version	system:read + system:manage
+POST	/api/v1/operations/nginx/windows-observation	WindowsGatewayObservationController#observe	system:read + system:manage
+POST	/api/v1/operations/permission-matrix/snapshots	OperationsDiagnosticsController#savePermissionSnapshot	system:manage + role:read
+POST	/api/v1/operations/query-diagnostics	QueryDiagnosticsController#diagnose	system:manage + record:read
+POST	/api/v1/operations/readiness/refresh	OperationsDiagnosticsController#refreshReadiness	system:manage
+POST	/api/v1/oss/migration/jobs	OssController#createMigrationJob	record:manage
+POST	/api/v1/oss/migration/jobs/{id}/cancel	OssController#cancelMigrationJob	record:manage
+POST	/api/v1/oss/migration/retry	OssController#retryFailedScans	record:manage
+POST	/api/v1/oss/upload	OssController#upload	record:manage
+POST	/api/v1/oss/upload/bah/{bah}	OssController#uploadByBah	record:manage
+POST	/api/v1/patients/idcard	PatientController#getByIdCard	record:read
+POST	/api/v1/patients/import	PatientController#importPatients	record:edit
+POST	/api/v1/response-metrics/frontend/batch	ResponseMetricController#saveFrontendMetrics	AUTHENTICATED
+POST	/api/v1/scan	ScanController#create	record:edit
+POST	/api/v1/scan/batch-download	ScanController#batchDownload	record:download
+POST	/api/v1/scan/condition	ScanController#findByCondition	record:read
+POST	/api/v1/scan/cursor/condition	ScanController#findByConditionAfterId	record:read
+POST	/api/v1/scan/page/condition	ScanController#findByConditionWithPagination	record:read
+POST	/api/v1/search/archive-cases	SearchController#getArchiveCasesByIdCard	search:read
+POST	/api/v1/search/getBAHByID	SearchController#getBAHByIdCard	search:read
+POST	/api/v1/system-errors/{id}/status	SystemErrorController#updateStatus	system:error:manage
+POST	/api/v1/system/data-quality/case-reviews/issue/{issueId}	QualityCaseReviewController#decide	system:manage + record:manage
+POST	/api/v1/system/data-quality/repair-orders	DataQualityRepairOrderController#propose	system:manage + record:manage
+POST	/api/v1/system/data-quality/repair-orders/{id}/apply	DataQualityRepairOrderController#apply	system:manage + record:manage
+POST	/api/v1/system/data-quality/repair-orders/{id}/approve	DataQualityRepairOrderController#approve	system:manage + record:manage
+POST	/api/v1/system/data-quality/repair-orders/{id}/cancel	DataQualityRepairOrderController#cancel	system:manage + record:manage
+POST	/api/v1/system/data-quality/repair-orders/{id}/compensate	DataQualityRepairOrderController#compensate	system:manage + record:manage
+POST	/api/v1/system/data-quality/repair-orders/{id}/verify	DataQualityRepairOrderController#verify	system:manage + record:manage
+POST	/api/v1/system/data-quality/run	DataQualityController#run	system:manage
+POST	/api/v1/system/data-quality/runs	DataQualityController#submit	system:manage
+POST	/api/v1/system/data-quality/runs/{runId}/cancel	DataQualityController#cancel	system:manage
+PUT	/api/v1/archive-box-records/{id}	ArchiveBoxRecordController#update	record:edit
+PUT	/api/v1/archive-search-history/{id}/favorite	ArchiveSearchHistoryController#updateFavorite	record:read
+PUT	/api/v1/auth/roles/{code}	UserController#updateRole	role:manage
+PUT	/api/v1/auth/users/{id}	UserController#updateUser	user:manage
+PUT	/api/v1/classification/rule-sets/{version}	ClassificationController#save	ocr:config
+PUT	/api/v1/img/updateImageType/{id}	ImageController#updateImageType	record:edit
+PUT	/api/v1/patients/{id}	PatientEditController#updatePatient	record:edit
+PUT	/api/v1/scan/{id}	ScanController#update	record:edit
+PUT	/api/v1/settings	SystemSettingController#saveSettings	system:manage
+PUT	/api/v1/settings/{key}	SystemSettingController#setSetting	system:manage

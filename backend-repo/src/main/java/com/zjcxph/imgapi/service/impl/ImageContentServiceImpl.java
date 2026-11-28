@@ -51,6 +51,19 @@ public class ImageContentServiceImpl implements ImageContentService {
 
     @Override
     public ImageContent open(Integer scanId) {
+        return openScan(requireActiveScan(scanId));
+    }
+
+    @Override
+    public ScopedImage openExternal(Integer scanId, com.zjcxph.imgapi.security.ExternalArchiveGrant grant) {
+        Scan scan = requireActiveScan(scanId);
+        if (grant == null || !grant.allows(scan.getBah(), scan.getSjh())) {
+            throw new BusinessException(403, "当前外部会话无权访问该影像");
+        }
+        return new ScopedImage(openScan(scan), scan.getBah(), scan.getSjh());
+    }
+
+    private Scan requireActiveScan(Integer scanId) {
         if (scanId == null || scanId <= 0) {
             throw new BusinessException(400, "影像 ID 必须是正整数");
         }
@@ -60,7 +73,7 @@ public class ImageContentServiceImpl implements ImageContentService {
             throw new BusinessException(404, "影像不存在或已删除");
         }
 
-        return openScan(scan);
+        return scan;
     }
 
     @Override

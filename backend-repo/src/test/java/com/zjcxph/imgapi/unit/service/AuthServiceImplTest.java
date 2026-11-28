@@ -75,6 +75,21 @@ class AuthServiceImplTest {
         AuthContext.clear();
     }
 
+    private void installAdministrator(AuthUser actor) {
+        var session = new com.zjcxph.imgapi.common.AuthSession();
+        session.setId(actor.getId());
+        session.setPasswordVersion(actor.effectivePasswordVersion());
+        AuthContext.setCurrentUser(session);
+    }
+
+    private void installManager(AuthUser actor) {
+        var session = new com.zjcxph.imgapi.common.AuthSession();
+        session.setId(actor.getId());
+        session.setPasswordVersion(actor.effectivePasswordVersion());
+        AuthContext.setCurrentUser(session);
+        when(authUserMapper.findSessionById(actor.getId())).thenReturn(actor);
+    }
+
     @Nested
     @DisplayName("login 方法")
     class LoginTests {
@@ -257,6 +272,7 @@ class AuthServiceImplTest {
             AuthUser approved = pendingUser();
             approved.setStatus("active");
             approved.setRoleCode("DOCTOR");
+            installAdministrator(mockUser);
             when(authUserMapper.findById(1L)).thenReturn(mockUser);
             when(authUserMapper.findById(2L)).thenReturn(pending, approved);
             when(authRoleMapper.findByCode("DOCTOR")).thenReturn(role("DOCTOR"));
@@ -277,6 +293,7 @@ class AuthServiceImplTest {
             AuthUser rejected = pendingUser();
             rejected.setStatus("rejected");
             rejected.setRejectReason("身份信息无法核验");
+            installAdministrator(mockUser);
             when(authUserMapper.findById(1L)).thenReturn(mockUser);
             when(authUserMapper.findById(2L)).thenReturn(pending, rejected);
             when(authUserMapper.rejectRegistration(2L, "身份信息无法核验", 1L)).thenReturn(1);
@@ -293,6 +310,7 @@ class AuthServiceImplTest {
         @Test
         @DisplayName("通用用户编辑不能绕过审核直接启用 pending 账号")
         void updateUser_cannotActivatePendingRegistration() {
+            installManager(mockUser);
             AuthUser pending = pendingUser();
             when(authUserMapper.findById(2L)).thenReturn(pending);
             AuthUserUpdateRequest request = new AuthUserUpdateRequest();
@@ -303,6 +321,65 @@ class AuthServiceImplTest {
             assertThatThrownBy(() -> authService.updateUser(2L, request))
                     .isInstanceOf(BusinessException.class)
                     .hasMessageContaining("专用审核");
+        }
+
+        @Test
+        void reopenRegistration_preservesPriorDecisionAndCredentials() {
+            AuthUser rejected = pendingUser();
+            rejected.setStatus("rejected");
+            rejected.setRejectReason("资料不完整");
+            AuthUser reopened = pendingUser();
+            reopened.setRejectReason("资料不完整");
+            installAdministrator(mockUser);
+            when(authUserMapper.findById(1L)).thenReturn(mockUser);
+            when(authUserMapper.findById(2L)).thenReturn(rejected, reopened);
+            when(authUserMapper.reopenRegistration(2L)).thenReturn(1);
+
+            var result = authService.reopenRegistration(2L, 1L, "127.0.0.1");
+
+            assertThat(result.getStatus()).isEqualTo("pending");
+            assertThat(result.getRejectReason()).isEqualTo("资料不完整");
+            assertThat(result.getPasswordVersion()).isEqualTo(1);
+            verify(authUserMapper).reopenRegistration(2L);
+            verify(authUserMapper, org.mockito.Mockito.never()).updateUser(any(AuthUser.class));
+        }
+
+        @Test
+        void reopenRegistration_rejectsNonRejectedAndConcurrentChange() {
+            AuthUser pending = pendingUser();
+            installAdministrator(mockUser);
+            when(authUserMapper.findById(1L)).thenReturn(mockUser);
+            when(authUserMapper.findById(2L)).thenReturn(pending);
+            assertThatThrownBy(() -> authService.reopenRegistration(2L, 1L, null))
+                    .isInstanceOf(BusinessException.class).hasMessageContaining("只有已拒绝");
+            verify(authUserMapper, org.mockito.Mockito.never()).reopenRegistration(2L);
+            pending.setStatus("rejected");
+            when(authUserMapper.reopenRegistration(2L)).thenReturn(0);
+            assertThatThrownBy(() -> authService.reopenRegistration(2L, 1L, null))
+                    .isInstanceOf(BusinessException.class).hasMessageContaining("状态已发生变化");
+        }
+
+        @Test
+        void reopenRegistration_requiresActiveAdministrator() {
+            mockUser.setStatus("disabled");
+            installAdministrator(mockUser);
+            when(authUserMapper.findById(1L)).thenReturn(mockUser);
+            assertThatThrownBy(() -> authService.reopenRegistration(2L, 1L, null))
+                    .isInstanceOf(BusinessException.class).hasMessageContaining("有效管理员");
+            verify(authUserMapper, org.mockito.Mockito.never()).reopenRegistration(2L);
+        }
+
+        @Test
+        void disableUser_cannotBypassRegistrationReview() {
+            installManager(mockUser);
+            AuthUser pending = pendingUser();
+            when(authUserMapper.findById(2L)).thenReturn(pending);
+            for (String status : java.util.List.of("pending", "rejected")) {
+                pending.setStatus(status);
+                assertThatThrownBy(() -> authService.disableUser(2L))
+                        .isInstanceOf(BusinessException.class).hasMessageContaining("不能通过禁用绕过审核");
+            }
+            verify(authUserMapper, org.mockito.Mockito.never()).updateStatus(2L, "disabled");
         }
 
         private RegisterRequest registrationRequest() {
@@ -344,10 +421,13 @@ class AuthServiceImplTest {
     @DisplayName("listUsers 方法")
     class ListUsersTests {
         @Test
-        @DisplayName("返回所有用户 Profile 列表")
+        @DisplayName("分页返回用户 Profile 列表")
         void listUsers_returnsProfiles() {
-            when(authUserMapper.findAll()).thenReturn(List.of(mockUser));
-            var profiles = authService.listUsers();
+            when(authUserMapper.findAllWithPagination(0, 20, null, null, null)).thenReturn(List.of(mockUser));
+            when(authUserMapper.countAll(null, null, null)).thenReturn(1);
+            var page = authService.listUsersPaginated(1, 20, null, null, null);
+            assertThat(page.getTotal()).isEqualTo(1L);
+            var profiles = page.getList();
             assertThat(profiles).hasSize(1);
             assertThat(profiles.getFirst().getUsername()).isEqualTo("admin");
             assertThat(profiles.getFirst().getPermissions()).contains("user:manage");
@@ -360,7 +440,9 @@ class AuthServiceImplTest {
         @Test
         @DisplayName("禁用普通用户返回影响行数")
         void disableUser_success() {
+            installManager(mockUser);
             mockUser.setRoleCode("DOCTOR");
+            installAdministrator(mockUser);
             when(authUserMapper.findById(1L)).thenReturn(mockUser);
             when(authUserMapper.updateStatus(1L, "disabled")).thenReturn(1);
 

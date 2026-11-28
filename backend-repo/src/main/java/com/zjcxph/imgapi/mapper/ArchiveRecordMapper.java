@@ -44,7 +44,10 @@ public interface ArchiveRecordMapper {
             @Param("createWhenSjhPresent") boolean createWhenSjhPresent
     );
 
-    @Select("SELECT * FROM mr_scan WHERE archive_id = #{archiveId} "
-            + "ORDER BY pages NULLS LAST, id")
+    // Current archive view: same active-record predicate as DETAIL_SELECT.
+    // Select business metadata only; storage locations and diagnostics are not response data.
+    @Select("SELECT id, archive_id, brxh, bah, sjh, filename, btype, pages, uploaddate, uploadflag, "
+            + "migration_status, migrated_at, file_size FROM mr_scan WHERE archive_id = #{archiveId} "
+            + "AND uploadflag <> 0 ORDER BY pages NULLS LAST, id")
     List<Scan> findScans(@Param("archiveId") Long archiveId);
 }

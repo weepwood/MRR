@@ -5,6 +5,7 @@ import MrrInfoTip from '@/components/MrrInfoTip/index.vue'
 import MrrPageHeader from '@/components/MrrPageHeader/index.vue'
 import MrrPageShell from '@/components/MrrPageShell/index.vue'
 import { useUserStore } from '@/store/modules/user'
+import { tableSequenceColumn } from '@/utils/table-sequence'
 import ExternalArchiveTicketTester from './components/ExternalArchiveTicketTester.vue'
 import JwtLoginTester from './components/JwtLoginTester.vue'
 import OssDiagnosticsTester from './components/OssDiagnosticsTester.vue'
@@ -49,23 +50,27 @@ function record(event: AuthTestHistoryEvent) {
 
     <section class="mrr-metric-grid" aria-label="认证测试环境概览">
       <MrrMetricCard
+        icon="i-lucide:user-round"
         label="当前账号"
         compact-value
         :value="userStore.profile.displayName || userStore.profile.username || userStore.account || '未登录'"
         :note="userStore.profile.roleName || userStore.profile.roleCode || '无角色信息'"
       />
       <MrrMetricCard
+        icon="i-lucide:shield-check"
         label="当前权限"
         :value="permissionCount"
         note="后端按数据库当前权限实时校验"
       />
       <MrrMetricCard
+        icon="i-lucide:link"
         label="API Base URL"
         compact-value
         :value="apiBaseUrl"
-        note="测试台不允许请求外部域名"
+        note="仅允许本服务地址"
       />
       <MrrMetricCard
+        icon="i-lucide:network"
         label="本页请求"
         :value="history.length"
         note="仅保存在页面内存，刷新后清空"
@@ -99,11 +104,12 @@ function record(event: AuthTestHistoryEvent) {
             </div>
           </template>
           <el-table :data="history" empty-text="尚未发送测试请求">
+            <el-table-column v-bind="tableSequenceColumn()" />
             <el-table-column prop="requestedAt" label="时间" width="100" />
             <el-table-column prop="name" label="场景" width="150" />
             <el-table-column prop="method" label="方法" width="90" />
             <el-table-column prop="path" label="路径" min-width="260" show-overflow-tooltip />
-            <el-table-column label="状态" width="90">
+            <el-table-column label="状态" width="90" class-name="mrr-table-status-column">
               <template #default="{ row }">
                 <el-tag :type="row.status >= 200 && row.status < 300 ? 'success' : 'danger'" effect="plain">
                   {{ row.status }}
@@ -115,7 +121,7 @@ function record(event: AuthTestHistoryEvent) {
                 {{ row.durationMs }} ms
               </template>
             </el-table-column>
-            <el-table-column label="检查结论" width="100">
+            <el-table-column label="检查结论" width="100" class-name="mrr-table-status-column">
               <template #default="{ row }">
                 <el-tag v-if="row.outcome" :type="row.outcome === 'passed' ? 'success' : row.outcome === 'warning' ? 'warning' : 'danger'" effect="plain">
                   {{ row.outcome === 'passed' ? '通过' : row.outcome === 'warning' ? '需关注' : '未通过' }}

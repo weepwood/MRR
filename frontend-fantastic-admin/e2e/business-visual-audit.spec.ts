@@ -2,6 +2,9 @@ import fs from 'node:fs/promises'
 import path from 'node:path'
 import process from 'node:process'
 import { expect, test } from '@playwright/test'
+import { isolateLocalVisualSettings } from './helpers/local-visual-settings'
+
+test.beforeEach(async ({ page }) => { await isolateLocalVisualSettings(page) })
 
 const evidence = process.env.MRR_BUSINESS_VISUAL_EVIDENCE
 const routes = [
@@ -15,12 +18,15 @@ const routes = [
   ['runtime-errors', '运行错误中心'],
   ['data-exchange', '数据导入导出'],
   ['operations-center', '运维诊断中心'],
+  ['statistics', '病案扫描数据统计'],
+  ['data-relations', '数据关系工作台'],
+  ['ocr-batches', '历史未分类影像识别'],
 ] as const
 
 for (const palette of ['mrr', 'gr8r'] as const) {
   for (const theme of ['light', 'dark'] as const) {
     test(`${palette}/${theme} 实际业务页视觉调查`, async ({ page }, testInfo) => {
-      test.setTimeout(180_000)
+      test.setTimeout(240_000)
       await page.addInitScript(({ palette, theme }) => localStorage.setItem('MRR-ADMIN:app-settings', JSON.stringify({ app: { colorScheme: theme, themePalette: palette, pageTitleStyle: 'plain', enableMotion: false }, menu: { mode: 'single' }, layout: { enableMobileAdaptation: true } })), { palette, theme })
       const results: unknown[] = []
       for (const [route, title] of routes) {
@@ -30,7 +36,7 @@ for (const palette of ['mrr', 'gr8r'] as const) {
         await expect.poll(() => page.locator('html').evaluate(el => el.classList.contains('dark'))).toBe(theme === 'dark')
         if (palette === 'gr8r') { await expect(page.locator('html')).toHaveAttribute('data-mrr-palette', 'gr8r') }
         await expect.poll(() => page.locator('.mrr-page-shell').first().evaluate(el => !el.querySelector('.el-loading-mask:not([style*="display: none"]), [aria-busy="true"]'))).toBe(true)
-        for (const width of [1440, 760, 375]) {
+        for (const width of [1440, 1280, 1024, 760, 375]) {
           await page.setViewportSize({ width, height: 900 })
           await expect.poll(() => page.evaluate(() => document.body.dataset.mode)).toBe(width < 1024 ? 'mobile' : 'pc')
           await page.evaluate(() => new Promise<void>(resolve => requestAnimationFrame(() => requestAnimationFrame(() => resolve()))))
@@ -51,7 +57,7 @@ for (const palette of ['mrr', 'gr8r'] as const) {
               titles: list('h1'),
               cards: list('.mrr-section-card, .el-card', 10),
               filters: list('.mrr-filter-bar, .mrr-data-table-panel__filters'),
-              fields: list('.mrr-filter-bar .el-input__wrapper, .mrr-filter-bar .el-select__wrapper, .mrr-filter-bar .el-date-editor, .mrr-filter-bar .el-form-item__label, .mrr-filter-field > label'),
+              fields: list('.mrr-filter-bar .el-input__wrapper, .mrr-filter-bar .el-select__wrapper, .mrr-filter-bar .el-date-editor, .mrr-filter-bar .el-form-item__label, .mrr-filter-field > label, .mrr-filter-field__label'),
               buttons: list('.mrr-filter-bar .el-button, .mrr-page-header .el-button'),
               tables: list('.el-table'),
               tableHeaders: list('.el-table__header th', 6),
@@ -66,6 +72,33 @@ for (const palette of ['mrr', 'gr8r'] as const) {
           for (const field of metrics.fields.filter(item => item.cls.includes('el-select__wrapper'))) {
             expect(field.h, `${route} filter select height`).toBe(palette === 'gr8r' ? 30 : 33)
           }
+          for (const label of metrics.fields.filter(item => item.cls === '' || item.cls.includes('el-form-item__label') || item.cls.includes('mrr-filter-field__label'))) {
+            expect(label.font, `${route} filter label font`).toBe('12px')
+            expect(label.weight, `${route} filter label weight`).toBe('600')
+          }
+          if (route === 'logs' || route === 'audit-images') {
+            const advanced = page.locator('.mrr-filter-bar__advanced')
+            const disclosure = page.locator('.mrr-filter-bar__disclosure')
+            await expect(disclosure).toHaveAttribute('aria-expanded', 'false')
+            await expect(advanced).toBeHidden()
+            await disclosure.click()
+            await expect(advanced).toBeVisible()
+            await expect.poll(() => advanced.evaluate(el => el.scrollWidth <= el.clientWidth + 1)).toBe(true)
+            await disclosure.click()
+          }
+          if (route === 'audit-images') {
+            const summary = page.locator('.mrr-metric-grid--five')
+            await expect(summary.locator('.mrr-metric-card')).toHaveCount(5)
+            const cards = await summary.locator('.mrr-metric-card').evaluateAll(elements => elements.map((el) => {
+              const rect = el.getBoundingClientRect()
+              const label = el.querySelector('.mrr-metric-card__label')!
+              return { x: rect.x, y: Math.round(rect.y), width: rect.width, right: rect.right, labelFits: label.scrollWidth <= label.clientWidth + 1 }
+            }))
+            expect(cards.every(card => card.labelFits)).toBe(true)
+            const groups = new Map<number, number>()
+            for (const card of cards) { groups.set(card.y, (groups.get(card.y) || 0) + 1) }
+            expect([...groups.values()], `${width} audit metric rows`).toEqual(width === 1440 ? [5] : width > 800 ? [3, 2] : width === 760 ? [2, 2, 1] : [1, 1, 1, 1, 1])
+          }
           results.push({ route, width, palette, theme, ...metrics })
           if (evidence) {
             await fs.mkdir(evidence, { recursive: true })
@@ -75,7 +108,7 @@ for (const palette of ['mrr', 'gr8r'] as const) {
         }
       }
       await testInfo.attach('business-visual-metrics', { body: JSON.stringify(results), contentType: 'application/json' })
-      expect(results).toHaveLength(routes.length * 3)
+      expect(results).toHaveLength(routes.length * 5)
     })
   }
 }

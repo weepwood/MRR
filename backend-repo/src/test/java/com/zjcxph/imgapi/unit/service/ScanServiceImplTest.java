@@ -75,14 +75,24 @@ class ScanServiceImplTest {
 
         @Test
         void findByBah() {
-            when(scanMapper.findByBah("00789508", "789508")).thenReturn(List.of(mockScan));
+            when(scanMapper.findByBah("00789508", "789508", 1001)).thenReturn(List.of(mockScan));
             assertThat(scanService.findByBah("00789508")).hasSize(1);
         }
 
         @Test
         void findByBrxh() {
-            when(scanMapper.findByBrxh("605746")).thenReturn(List.of(mockScan));
+            when(scanMapper.findByBrxh("605746", 1001)).thenReturn(List.of(mockScan));
             assertThat(scanService.findByBrxh("605746")).hasSize(1);
+        }
+
+        @Test
+        void oversizedLegacyLookupFailsInsteadOfReturningIncompleteRecords() {
+            when(scanMapper.findByBah("00789508", "789508", 1001)).thenReturn(java.util.Collections.nCopies(1001, mockScan));
+            assertThatThrownBy(() -> scanService.findByBah("00789508"))
+                    .isInstanceOf(com.zjcxph.imgapi.exception.BusinessException.class);
+            when(scanMapper.findByBrxh("605746", 1001)).thenReturn(java.util.Collections.nCopies(1001, mockScan));
+            assertThatThrownBy(() -> scanService.findByBrxh("605746"))
+                    .isInstanceOf(com.zjcxph.imgapi.exception.BusinessException.class);
         }
 
         @Test

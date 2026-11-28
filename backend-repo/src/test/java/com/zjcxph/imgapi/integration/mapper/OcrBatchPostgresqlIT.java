@@ -66,5 +66,38 @@ class OcrBatchPostgresqlIT extends PostgresqlIntegrationTestSupport {
             assertThat(batches.jobs(batchId,"")).isEmpty();
         } finally {jdbc.execute("ALTER TABLE app.mr_smart_classification_job_item DROP CONSTRAINT ck_test_batch_registration");}
     }
+    @Test void dispatchFailureAfterRollbackCannotOverwriteCommittedCancellation() throws Exception {
+        batchId=service.create(actor,new OcrBatchService.Request(first-1,last,10,UUID.randomUUID().toString(),false)).id();
+        var rolledBack=new java.util.concurrent.CountDownLatch(1);
+        var allowCatch=new java.util.concurrent.CountDownLatch(1);
+        var pool=java.util.concurrent.Executors.newSingleThreadExecutor();
+        var blockedAccess=mock(OcrAccess.class);
+        when(blockedAccess.require(anyLong(),any(String[].class))).thenThrow(new com.zjcxph.imgapi.exception.BusinessException(403,"synthetic revoked"));
+        var jobs=mock(OcrJobService.class);when(jobs.enabled()).thenReturn(true);
+        var hooked=new TransactionTemplate(manager) {
+            @Override public <T> T execute(org.springframework.transaction.support.TransactionCallback<T> callback) {
+                try {return super.execute(callback);}
+                catch(com.zjcxph.imgapi.exception.BusinessException failure) {
+                    rolledBack.countDown();
+                    try {if(!allowCatch.await(5,java.util.concurrent.TimeUnit.SECONDS))throw new AssertionError("catch gate timeout");}
+                    catch(InterruptedException e){Thread.currentThread().interrupt();throw new AssertionError(e);}
+                    throw failure;
+                }
+            }
+        };
+        var failing=new OcrBatchService(batches,queue,blockedAccess,jobs,guard,hooked,mock(OcrQualityGate.class));
+        try {
+            var future=pool.submit(failing::dispatch);
+            assertThat(rolledBack.await(5,java.util.concurrent.TimeUnit.SECONDS)).isTrue();
+            service.action(actor,batchId,"cancel");
+            assertThat(batches.batch(batchId).getStatus()).isEqualTo("CANCEL_REQUESTED");
+            allowCatch.countDown();future.get(10,java.util.concurrent.TimeUnit.SECONDS);
+            assertThat(batches.batch(batchId).getStatus()).isEqualTo("CANCEL_REQUESTED");
+            assertThat(batches.jobs(batchId,"")).isEmpty();
+            service.dispatch();
+            assertThat(batches.batch(batchId).getStatus()).isEqualTo("CANCELLED");
+        } finally {allowCatch.countDown();pool.shutdownNow();}
+    }
+
     private void completeChildren() {jdbc.update("UPDATE app.mr_smart_classification_job SET status='SUCCESS',processed_count=planned_count,ocr_success_count=planned_count WHERE batch_id=?",batchId);}
 }

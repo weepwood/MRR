@@ -42,7 +42,7 @@ function selectResult(result: SettingsSearchResult) {
       v-model="query"
       class="settings-search-input"
       aria-label="搜索设置"
-      placeholder="例如水印、缩略图"
+      placeholder="搜索设置…"
       popper-class="settings-search-popper"
       value-key="title"
       :fetch-suggestions="searchSettings"

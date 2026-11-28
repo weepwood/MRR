@@ -13,6 +13,9 @@ import {
   getStatisticsList,
   getStatisticsSummary,
 } from '@/api/modules/statistics'
+import AppEmpty from '@/components/AppEmpty/index.vue'
+import AppError from '@/components/AppError/index.vue'
+import AppLoading from '@/components/AppLoading/index.vue'
 import { MrrChartCard, MrrDualAxisChart } from '@/components/charts'
 import MrrDataTablePanel from '@/components/MrrDataTablePanel/index.vue'
 import MrrFilterActionButton from '@/components/MrrFilterActionButton/index.vue'
@@ -20,6 +23,7 @@ import MrrFilterBar from '@/components/MrrFilterBar/index.vue'
 import MrrPageHeader from '@/components/MrrPageHeader/index.vue'
 import MrrPageShell from '@/components/MrrPageShell/index.vue'
 import { rangePickerPopperOptions } from '@/ui/provider/picker-options'
+import { pageRowOffset, tableSequenceColumn } from '@/utils/table-sequence'
 
 defineOptions({ name: 'StatisticsPage' })
 
@@ -113,7 +117,7 @@ const dateRange = computed(() => {
   }
 })
 
-const trendCategories = computed(() => sortedDateData.value.map(item => formatDateShort(item.date)))
+const trendCategories = computed(() => sortedDateData.value.map(item => formatDate(item.date)))
 const trendBars = computed<MrrBarSeries[]>(() => [{
   name: '扫描页数',
   data: sortedDateData.value.map(item => Number(item.totalPages ?? item.pages ?? 0)),
@@ -157,15 +161,6 @@ function formatDate(dateStr?: string) {
     return '无日期'
   }
   return dateStr.replace(/\//g, '-')
-}
-
-function formatDateShort(dateStr?: string) {
-  if (!dateStr) {
-    return ''
-  }
-  const normalized = dateStr.replace(/\//g, '-')
-  const parts = normalized.split('-')
-  return parts.length >= 3 ? `${parts.at(-2)}/${parts.at(-1)}` : normalized
 }
 
 function formatNumber(value: number, maximumFractionDigits = 0) {
@@ -359,15 +354,16 @@ onMounted(refreshAll)
       />
       <MrrMetricCard
         label="统计时间范围"
+        class="statistics-range-metric"
         icon="i-lucide:chart-no-axes-combined"
         compact-value
-        :value="`${dateRange.start} — ${dateRange.end}`"
+        :value="`${dateRange.start}\n至 ${dateRange.end}`"
       />
     </section>
 
     <MrrChartCard
       title="扫描趋势"
-      description="柱形展示扫描页数，折线展示扫描记录数；默认展示近 90 日，可在图表内滚动鼠标滚轮调整时间范围"
+      description="柱形展示扫描页数，折线展示扫描记录数；默认展示最近 90 个有数据的统计日，可在图表内滚动鼠标滚轮调整时间范围"
       :loading="overviewLoading"
       :empty="!sortedDateData.length"
       empty-description="暂无扫描趋势数据"
@@ -378,13 +374,13 @@ onMounted(refreshAll)
         </el-tag>
       </template>
       <template #summary>
-        <div class="mrr-stat-strip mrr-stat-strip--3" aria-label="扫描趋势摘要">
+        <div class="mrr-stat-strip mrr-stat-strip--3" aria-label="全部已返回统计日摘要">
           <div class="mrr-stat-tile">
-            <span class="mrr-stat-tile__label">区间记录</span>
+            <span class="mrr-stat-tile__label">统计记录</span>
             <strong class="mrr-stat-tile__value">{{ formatNumber(trendRecordTotal) }}</strong>
           </div>
           <div class="mrr-stat-tile">
-            <span class="mrr-stat-tile__label">区间页数</span>
+            <span class="mrr-stat-tile__label">统计页数</span>
             <strong class="mrr-stat-tile__value">{{ formatNumber(trendPageTotal) }}</strong>
           </div>
           <div class="mrr-stat-tile">
@@ -411,7 +407,8 @@ onMounted(refreshAll)
       class="list-card"
       title="病案明细列表"
       icon="i-lucide:file-text"
-      :count="statisticsListData.total ?? 0"
+      :loading="listLoading && statisticsListData.list.length > 0"
+      :result-key="statisticsListData.list"
     >
       <template #actions>
         <el-button
@@ -433,14 +430,20 @@ onMounted(refreshAll)
             v-model="listSearchKeyword"
             placeholder="搜索病案号 / 上架号 / 操作员"
             clearable
-            class="search-keyword"
+            class="search-keyword mrr-filter-field--keyword"
+            aria-label="病案明细关键词"
             @keyup.enter="handleListSearch"
-          />
+          >
+            <template #prefix>
+              <FaIcon name="i-lucide:search" aria-hidden="true" />
+            </template>
+          </el-input>
           <el-select
             v-model="listSearchType"
             placeholder="全部类型"
             clearable
-            class="search-type"
+            class="search-type mrr-single-select"
+            aria-label="病案明细类型"
             @change="handleListSearch"
           >
             <el-option label="全部" value="" />
@@ -453,6 +456,7 @@ onMounted(refreshAll)
           </el-select>
           <el-date-picker
             v-model="listSearchDateRange"
+            aria-label="归档日期范围"
             type="daterange"
             :popper-options="rangePickerPopperOptions"
             :shortcuts="yearShortcuts"
@@ -460,7 +464,7 @@ onMounted(refreshAll)
             start-placeholder="开始日期"
             end-placeholder="结束日期"
             value-format="YYYY-MM-DD"
-            class="search-date"
+            class="search-date mrr-filter-field--range"
             @change="handleDateRangeChange"
           />
           <template #actions>
@@ -474,22 +478,25 @@ onMounted(refreshAll)
         </MrrFilterBar>
       </template>
 
-      <AppError v-if="listError" :message="listError" @retry="loadStatisticsList" />
+      <AppLoading v-if="listLoading && !statisticsListData.list.length" type="table" :rows="8" />
+      <AppError v-else-if="listError" :message="listError" @retry="loadStatisticsList" />
+      <AppEmpty v-else-if="!statisticsListData.list.length" description="暂无病案明细数据" />
+      <!-- Keep the table mounted so sorting survives error/retry. -->
       <el-table
-        v-show="!listError"
-        v-loading="listLoading"
+        v-show="!listError && statisticsListData.list.length > 0"
         :data="statisticsListData.list"
         stripe
         empty-text="暂无病案明细数据"
         @sort-change="handleSortChange"
       >
-        <el-table-column prop="bah" label="病案号" min-width="130" sortable="custom" show-overflow-tooltip />
-        <el-table-column prop="sjh" label="上架号" min-width="130" show-overflow-tooltip />
-        <el-table-column prop="date" label="日期" width="120" sortable="custom" />
-        <el-table-column prop="type" label="类型" width="100" />
-        <el-table-column prop="pages" label="页数" width="80" sortable="custom" />
-        <el-table-column prop="openerNo" label="操作员" width="100" />
-        <el-table-column prop="cid" label="设备 ID（CID）" min-width="120" show-overflow-tooltip />
+        <el-table-column v-bind="tableSequenceColumn(pageRowOffset(statisticsListData.page, statisticsListData.size), statisticsListData.list.length)" />
+        <el-table-column prop="bah" label="病案号" min-width="136" sortable="custom" show-overflow-tooltip />
+        <el-table-column prop="sjh" label="上架号" min-width="136" show-overflow-tooltip />
+        <el-table-column prop="date" label="日期" min-width="132" sortable="custom" show-overflow-tooltip />
+        <el-table-column prop="type" label="类型" min-width="120" show-overflow-tooltip />
+        <el-table-column prop="pages" label="页数" width="88" sortable="custom" />
+        <el-table-column prop="openerNo" label="操作员" min-width="112" show-overflow-tooltip />
+        <el-table-column prop="cid" label="设备 ID（CID）" min-width="150" show-overflow-tooltip />
       </el-table>
 
       <template v-if="!listError" #pagination>
@@ -498,7 +505,7 @@ onMounted(refreshAll)
           v-model:page-size="pageSize"
           :total="statisticsListData.total ?? 0"
           :page-sizes="[20, 50, 100, 200]"
-          layout="total, sizes, prev, pager, next, jumper"
+          layout="total, prev, pager, next, jumper, sizes"
           @current-change="loadStatisticsList"
           @size-change="handleListSizeChange"
         />
@@ -508,35 +515,14 @@ onMounted(refreshAll)
 </template>
 
 <style scoped>
+.statistics-range-metric :deep(.mrr-metric-card__value) {
+  line-height: 1.4;
+  white-space: pre-line;
+}
+
 /*
  * 页面壳层与页头由 MrrPageShell / MrrPageHeader 统一提供；底部留白交给布局工作区。
  * 明细列表使用 MrrDataTablePanel + MrrFilterBar（与用户、记录等列表页同一结构）：
  * 此前自写的灰底搜索条、居中分页与 15px 卡头，与其他列表页的留白、对齐和分页位置都不一致。
  */
-
-/* 字段宽度：关键词与日期可伸展，类型固定宽，与筛选栏 embedded 的拉伸上限配合。 */
-.search-keyword {
-  flex: 1 1 220px;
-  min-width: 180px;
-}
-
-.search-type {
-  flex: 0 1 180px;
-  width: 180px;
-}
-
-.search-date {
-  flex: 1 1 280px;
-  min-width: 240px;
-}
-
-@media (max-width: 760px) {
-  .search-keyword,
-  .search-type,
-  .search-date {
-    flex: 1 1 100%;
-    width: 100%;
-    min-width: 0;
-  }
-}
 </style>

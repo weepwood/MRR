@@ -81,7 +81,7 @@ watch(scrollTop, (val) => {
     background-color var(--mrr-motion-feedback) var(--mrr-ease-out);
 
   &.mask {
-    box-shadow: 0 8px 24px rgb(15 23 42 / 6%);
+    box-shadow: var(--mrr-shell-shadow);
   }
 
   &.topbar-fixed,
@@ -89,12 +89,8 @@ watch(scrollTop, (val) => {
     position: fixed;
   }
 
-  &.topbar-sticky.hide {
+  &.topbar-sticky.hide:not(:focus-within) {
     transform: translateY(-100%);
   }
-}
-
-:global(.dark) .topbar-container.mask {
-  box-shadow: 0 10px 30px rgb(0 0 0 / 24%);
 }
 </style>

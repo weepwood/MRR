@@ -59,7 +59,7 @@
             <when test="sortOrder == 'asc'">ASC</when>
             <otherwise>DESC</otherwise>
         </choose>
-        , bah ASC
+        , bah ASC, id ASC
         LIMIT #{limit} OFFSET #{offset}
     </select>
 
@@ -90,20 +90,20 @@
 
     <!-- 按日期范围和类型统计 -->
     <select id="getDateStatisticsByCondition" resultType="com.zjcxph.imgapi.dto.resp.DateStatisticsDTO">
-        SELECT date, COUNT(*) as recordCount, SUM(pages) as totalPages
+        SELECT REPLACE(date, '/', '-') AS date, COUNT(*) as recordCount, SUM(pages) as totalPages
         FROM mr_statistics
         <where>
             <if test="startDate != null and startDate != ''">
-                AND date &gt;= #{startDate}
+                AND REPLACE(date, '/', '-') &gt;= #{startDate}
             </if>
             <if test="endDate != null and endDate != ''">
-                AND date &lt;= #{endDate}
+                AND REPLACE(date, '/', '-') &lt;= #{endDate}
             </if>
             <if test="type != null and type != ''">
                 AND type = #{type}
             </if>
         </where>
-        GROUP BY date
+        GROUP BY REPLACE(date, '/', '-')
         ORDER BY date
     </select>
 

@@ -1,9 +1,11 @@
 <script setup lang="ts">
 import type { SettingsSection } from '../composables/useUnifiedSettings'
 import type { SettingsSearchResult } from '../settings-search'
+import { until, useElementSize, useMediaQuery } from '@vueuse/core'
 import { computed, nextTick, onUnmounted, ref, useId, watch } from 'vue'
 import { onBeforeRouteLeave } from 'vue-router'
 import AppError from '@/components/AppError/index.vue'
+import AppLoading from '@/components/AppLoading/index.vue'
 import { actionDialog } from '@/ui/components/ActionDialog'
 import { useUnifiedSettings } from '../composables/useUnifiedSettings'
 import AppConfigPanel from './AppConfigPanel.vue'
@@ -25,9 +27,14 @@ interface DepartmentThemeSettingsRef {
   saving: boolean
   isDirty: boolean
   saveThemes: () => Promise<void>
+  syncState: string
+  loaded: boolean
 }
 
 interface OcrClassificationSettingsRef {
+  loaded: boolean
+  loading: boolean
+  loadError: string
   saving: boolean
   isDirty: boolean
   saveSettings: () => Promise<boolean>
@@ -49,8 +56,20 @@ interface AppConfigPanelRef {
 const departmentThemeRef = ref<DepartmentThemeSettingsRef>()
 const ocrSettingsRef = ref<OcrClassificationSettingsRef>()
 const runtimeSettingsRef = ref<RuntimeSettingsRef>()
+const externalLinksRef = ref<{ linkScopeDescription: string }>()
 const appConfigRef = ref<AppConfigPanelRef>()
+const appearanceCommandTarget = ref<HTMLElement>()
 const contentRef = ref<HTMLElement>()
+const layoutRef = ref<HTMLElement>()
+const { width: layoutWidth } = useElementSize(layoutRef)
+const compactFallback = useMediaQuery('(max-width: 980px)')
+const narrowFallback = useMediaQuery('(max-width: 480px)')
+const compactLayout = computed(() => layoutWidth.value > 0 ? layoutWidth.value < 800 : compactFallback.value)
+const narrowLayout = computed(() => layoutWidth.value > 0 ? layoutWidth.value < 480 : narrowFallback.value)
+const panelHeaderRef = ref<HTMLElement>()
+const { width: panelHeaderWidth } = useElementSize(panelHeaderRef)
+const inlineHeader = computed(() => panelHeaderWidth.value >= 820)
+const sectionSwitching = ref(false)
 const sectionHeadingRef = ref<HTMLElement>()
 const sectionHeadingId = useId()
 const savedRecently = ref(false)
@@ -70,6 +89,7 @@ const {
   loaded,
   loadError,
   saving,
+  actionPending,
   settings,
   changedKeys,
   isDirty,
@@ -81,10 +101,33 @@ const {
   discardUnsavedChanges,
 } = useUnifiedSettings()
 
+const navGroups = [
+  { title: '常规', keys: ['system', 'login-support', 'documentation', 'external-links'] },
+  { title: '业务与档案', keys: ['archive', 'ocr', 'department'] },
+  { title: '安全与运行', keys: ['security', 'runtime', 'developer'] },
+  { title: '个性化', keys: ['appearance'] },
+].map(group => ({ title: group.title, items: settingsNavItems.filter(item => group.keys.includes(item.key)) }))
+
+const serverSaveStatus = computed(() => {
+  if (loading.value) { return '正在读取服务器配置' }
+  if (saving.value) { return '正在保存设置' }
+  if (!loaded.value) { return '尚未取得服务器配置' }
+  if (loadError.value) { return isDirty.value ? '读取失败 · 修改尚未保存' : '读取失败 · 保留上次配置' }
+  return isDirty.value ? '有未保存的修改' : '已与服务器同步'
+})
+
+let searchNavigationId = 0
+
 async function openSearchResult(result: SettingsSearchResult) {
+  const navigationId = ++searchNavigationId
   await requestSection(result.section)
   await nextTick()
-  if (activeSection.value !== result.section) { return }
+  // 首次配置读取时表单尚未挂载，不能提前退回页标题并丢失搜索锚点。
+  if (isServerSettingSection.value && !loaded.value && loading.value) {
+    await until(loading).toBe(false, { timeout: 15000 })
+    await nextTick()
+  }
+  if (navigationId !== searchNavigationId || activeSection.value !== result.section) { return }
 
   if (result.section === 'appearance' && result.anchor) {
     appConfigRef.value?.openGroup(result.anchor)
@@ -190,7 +233,7 @@ async function handleDepartmentSave() {
   }
   await panel.saveThemes()
   await nextTick()
-  if (!panel.isDirty) {
+  if (!panel.isDirty && panel.syncState === 'server') {
     showDepartmentSavedFeedback()
   }
 }
@@ -307,14 +350,46 @@ async function confirmLeavingUnsavedChanges(context: 'section' | 'page'): Promis
  * 当前分类由面板自管保存且存在未保存修改时提示，避免每次换分类都弹窗。
  */
 async function requestSection(section: SettingsSection) {
-  if (section === activeSection.value) { return }
-  if (activePanelDirty() && !await confirmLeavingUnsavedChanges('section')) { return }
-  await selectSection(section)
+  if (section === activeSection.value || sectionSwitching.value) { return }
+  sectionSwitching.value = true
+  try {
+    if (activePanelDirty() && !await confirmLeavingUnsavedChanges('section')) { return }
+    await selectSection(section)
+  }
+  finally {
+    sectionSwitching.value = false
+  }
+}
+
+async function navigateSection(section: SettingsSection) {
+  searchNavigationId++
+  const previous = activeSection.value
+  const trigger = document.activeElement
+  await requestSection(section)
+  await nextTick()
+  if (trigger instanceof HTMLButtonElement && trigger.classList.contains('settings-nav-item') && trigger.isConnected) {
+    trigger.focus({ preventScroll: true })
+  }
+  if (previous === activeSection.value || activeSection.value !== section || !layoutRef.value) { return }
+  const top = layoutRef.value.getBoundingClientRect().top
+  const chrome = panelHeaderRef.value ? Number.parseFloat(getComputedStyle(panelHeaderRef.value).scrollMarginTop) || 16 : 16
+  if (top < chrome) { window.scrollTo({ top: window.scrollY + top - chrome, behavior: 'auto' }) }
+}
+
+function handleNavKey(event: KeyboardEvent) {
+  if (!['ArrowDown', 'ArrowUp', 'Home', 'End'].includes(event.key)) { return }
+  const buttons = [...(event.currentTarget as HTMLElement).querySelectorAll<HTMLButtonElement>('.settings-nav-item:not(:disabled)')]
+  const index = buttons.indexOf(document.activeElement as HTMLButtonElement)
+  if (index < 0 || !buttons.length) { return }
+  event.preventDefault()
+  const next = event.key === 'Home' ? 0 : event.key === 'End' ? buttons.length - 1 : (index + (event.key === 'ArrowDown' ? 1 : -1) + buttons.length) % buttons.length
+  buttons[next].focus()
 }
 
 onBeforeRouteLeave(async (to) => {
   // 会话失效后跳登录页时不拦截：此时保存请求大概率会 401，拦下来只会卡住跳转。
   if (to.name === 'login' || to.path.startsWith('/login')) { return true }
+  if (actionPending.value) { return false }
   if (!hasUnsavedChanges.value) { return true }
   return confirmLeavingUnsavedChanges('page')
 })
@@ -348,6 +423,7 @@ watch(() => runtimeSettingsRef.value?.isDirty, (dirty) => {
 })
 
 onUnmounted(() => {
+  searchNavigationId++
   if (saveFeedbackTimer !== undefined) {
     window.clearTimeout(saveFeedbackTimer)
   }
@@ -364,94 +440,178 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <div class="settings-page">
-    <header class="page-header">
-      <div class="header-title">
-        <div>
-          <p class="eyebrow">
-            System Settings
-          </p>
-          <div class="title-line">
-            <h1>系统设置</h1>
-            <el-tag v-if="settings.developerModeEnabled" type="danger" effect="dark" round>
-              开发者模式已启用
-            </el-tag>
-          </div>
-          <p class="subtitle">
-            统一管理系统标识、登录支持、帮助文档、档案浏览、OCR 分类、安全策略与界面外观。
-          </p>
-        </div>
-      </div>
-      <div v-if="isServerSettingSection" class="header-actions">
-        <el-button :disabled="loading || saving" @click="handleReload">
-          <FaIcon name="i-lucide:refresh-cw" class="mrr-icon-interactive" />重新加载
-        </el-button>
-        <el-button :disabled="loading || saving || !loaded" @click="handleReset">
-          <FaIcon name="i-lucide:rotate-cw" class="mrr-icon-interactive" />恢复默认
-        </el-button>
-        <el-button
-          :type="savedRecently ? 'success' : 'primary'"
-          :loading="saving"
-          :disabled="loading || !isDirty"
-          @click="handleServerSave"
-        >
-          <FaIcon
-            :name="savedRecently ? 'i-lucide:check' : 'i-lucide:save'"
-            class="mrr-icon-interactive"
-            :class="{ 'mrr-status-pop': savedRecently }"
-          />
-          {{ savedRecently ? '已保存' : '保存设置' }}
-        </el-button>
-      </div>
-    </header>
+  <MrrPageShell class="settings-page">
+    <MrrPageHeader eyebrow="System Settings" title="系统设置" description="统一管理系统标识、业务配置、访问安全与界面外观。">
+      <template #badge>
+        <el-tag v-if="settings.developerModeEnabled" type="danger" effect="dark" round>
+          开发者模式已启用
+        </el-tag>
+      </template>
+    </MrrPageHeader>
 
-    <div class="settings-layout">
-      <aside class="settings-sidebar" aria-label="设置目录">
+    <div ref="layoutRef" class="settings-layout" :class="{ 'settings-layout--compact': compactLayout, 'settings-layout--narrow': narrowLayout }">
+      <aside class="settings-sidebar mrr-directory-panel" aria-label="设置目录">
         <SettingsSearch @select="openSearchResult" />
-        <nav class="settings-nav" aria-label="设置分类">
-          <button
-            v-for="item in settingsNavItems"
-            :key="item.key"
-            type="button"
-            class="settings-nav-item"
-            :class="{ active: activeSection === item.key, danger: item.key === 'developer' && settings.developerModeEnabled }"
-            :aria-current="activeSection === item.key ? 'true' : undefined"
-            @click="requestSection(item.key)"
-          >
-            <FaIcon :name="item.icon" class="nav-icon" aria-hidden="true" />
-            <strong class="nav-title">{{ item.title }}</strong>
-          </button>
+        <nav class="settings-nav" aria-label="设置分类" @keydown="handleNavKey">
+          <div v-for="group in navGroups" :key="group.title" class="settings-nav-group">
+            <span class="settings-nav-heading">{{ group.title }}</span>
+            <button
+              v-for="item in group.items"
+              :key="item.key"
+              type="button"
+              class="settings-nav-item mrr-navigation-control mrr-nav-leaf mrr-directory-nav-item"
+              :class="{ active: activeSection === item.key, danger: item.key === 'developer' && settings.developerModeEnabled }"
+              :aria-current="activeSection === item.key ? 'true' : undefined"
+              :title="item.title" :disabled="sectionSwitching" @click="navigateSection(item.key)"
+            >
+              <FaIcon :name="item.icon" class="nav-icon mrr-directory-nav-icon" aria-hidden="true" />
+              <strong class="nav-title mrr-directory-nav-label">{{ item.title }}</strong>
+            </button>
+          </div>
         </nav>
 
         <el-select
           :model-value="activeSection"
-          class="settings-category-select"
+          class="settings-category-select mrr-single-select"
           aria-label="设置分类"
-          @change="(value: SettingsSection) => requestSection(value)"
+          :disabled="sectionSwitching" @change="(value: SettingsSection) => navigateSection(value)"
         >
-          <el-option
-            v-for="item in settingsNavItems"
-            :key="item.key"
-            :label="item.title"
-            :value="item.key"
-          />
+          <el-option-group v-for="group in navGroups" :key="group.title" :label="group.title">
+            <el-option v-for="item in group.items" :key="item.key" :label="item.title" :value="item.key" />
+          </el-option-group>
         </el-select>
       </aside>
 
       <div class="settings-panel">
-        <header class="section-header">
-          <div class="section-title">
-            <span class="section-icon" :class="{ danger: activeSection === 'developer' && settings.developerModeEnabled }">
-              <FaIcon :name="activeMeta.icon" aria-hidden="true" />
-            </span>
-            <div>
-              <h2 :id="sectionHeadingId" ref="sectionHeadingRef" tabindex="-1">
-                {{ activeMeta.title }}
-              </h2>
-              <p>{{ activeMeta.description }}</p>
+        <div ref="panelHeaderRef" class="settings-panel-header" :class="{ 'settings-panel-header--inline': inlineHeader }">
+          <header class="section-header">
+            <div class="section-title">
+              <span class="section-icon" :class="{ danger: activeSection === 'developer' && settings.developerModeEnabled }">
+                <FaIcon :name="activeMeta.icon" aria-hidden="true" />
+              </span>
+              <div>
+                <h2 :id="sectionHeadingId" ref="sectionHeadingRef" tabindex="-1">
+                  {{ activeMeta.title }}
+                </h2>
+                <p>{{ activeMeta.description }}</p>
+              </div>
+            </div>
+          </header>
+
+          <div v-if="isServerSettingSection" class="settings-actions settings-actions--server" :class="{ dirty: isDirty }">
+            <div class="section-save-summary" role="status" :class="{ dirty: isDirty, unavailable: loading || saving || !loaded || !!loadError }">
+              <span class="status-dot" />
+              <span>{{ serverSaveStatus }}</span>
+              <small v-if="isDirty">{{ changedKeys.length }} 项字段待保存</small>
+            </div>
+            <div class="settings-command-buttons">
+              <el-button :disabled="loading || saving" @click="handleReload">
+                <FaIcon name="i-lucide:refresh-cw" class="mrr-icon-interactive" />重新加载
+              </el-button>
+              <el-button :disabled="loading || saving || !loaded" @click="handleReset">
+                <FaIcon name="i-lucide:rotate-cw" class="mrr-icon-interactive" />恢复默认
+              </el-button>
+              <el-button
+                :type="savedRecently ? 'success' : 'primary'"
+                :loading="saving"
+                :disabled="loading || saving || !loaded || !isDirty"
+                @click="handleServerSave"
+              >
+                <FaIcon
+                  :name="savedRecently ? 'i-lucide:check' : 'i-lucide:save'"
+                  class="mrr-icon-interactive"
+                  :class="{ 'mrr-status-pop': savedRecently }"
+                />
+                {{ savedRecently ? '已保存' : '保存设置' }}
+              </el-button>
             </div>
           </div>
-        </header>
+          <div v-else-if="activeSection === 'ocr'" class="settings-actions" :class="{ dirty: ocrSettingsRef?.isDirty }">
+            <div class="save-status" role="status" :class="{ dirty: ocrSettingsRef?.isDirty, unavailable: !ocrSettingsRef?.loaded || !!ocrSettingsRef?.loadError }">
+              <span class="status-dot" />
+              <div>
+                <strong>{{ ocrSettingsRef?.loading ? '正在读取 OCR 配置' : !ocrSettingsRef?.loaded ? 'OCR 配置尚未读取' : ocrSettingsRef?.loadError ? 'OCR 配置读取失败 · 保留上次配置' : ocrSettingsRef?.isDirty ? 'OCR 配置修改待保存' : 'OCR 配置已同步' }}</strong>
+                <small>保存后写入系统数据库，并由后端再次校验安全阈值。</small>
+              </div>
+            </div>
+            <el-button
+              :type="ocrSavedRecently ? 'success' : 'primary'"
+              :loading="ocrSettingsRef?.saving"
+              :disabled="!ocrSettingsRef?.isDirty"
+              @click="handleOcrSave"
+            >
+              <FaIcon
+                :name="ocrSavedRecently ? 'i-lucide:check' : 'i-lucide:save'"
+                class="mrr-icon-interactive"
+                :class="{ 'mrr-status-pop': ocrSavedRecently }"
+              />
+              {{ ocrSavedRecently ? '已保存' : '保存 OCR 配置' }}
+            </el-button>
+          </div>
+
+          <div v-else-if="activeSection === 'runtime'" class="settings-actions settings-actions--runtime" :class="{ dirty: runtimeSettingsRef?.isDirty }">
+            <div class="save-status" role="status" :class="{ dirty: runtimeSettingsRef?.isDirty, unavailable: !runtimeSettingsRef?.synced }">
+              <span class="status-dot" />
+              <div>
+                <strong>{{ runtimeSettingsRef?.statusLabel || '运行参数尚未读取' }}</strong>
+                <small>可在线修改的参数保存并核对后生效。</small>
+              </div>
+            </div>
+            <el-button
+              :type="runtimeSavedRecently ? 'success' : 'primary'"
+              :loading="runtimeSettingsRef?.saving"
+              :disabled="!runtimeSettingsRef?.canSave"
+              @click="handleRuntimeSave"
+            >
+              <FaIcon
+                :name="runtimeSavedRecently ? 'i-lucide:check' : 'i-lucide:save'"
+                class="mrr-icon-interactive"
+                :class="{ 'mrr-status-pop': runtimeSavedRecently }"
+              />
+              {{ runtimeSavedRecently ? '已保存' : '保存运行参数' }}
+            </el-button>
+          </div>
+
+          <div v-else-if="activeSection === 'department'" class="settings-actions settings-actions--department" :class="{ dirty: departmentThemeRef?.isDirty }">
+            <div class="save-status" role="status" :class="{ unavailable: departmentThemeRef?.syncState !== 'server' }">
+              <span class="status-dot" />
+              <div>
+                <strong>{{ !departmentThemeRef?.loaded ? '正在读取科室配色' : departmentThemeRef?.isDirty ? '科室配色修改待保存' : departmentThemeRef?.syncState === 'server' ? '科室配色已与服务器同步' : departmentThemeRef?.syncState === 'save-failed' ? '服务器保存失败 · 已保留本地配色' : '当前仅为浏览器本地配色' }}</strong>
+                <small>保存后立即应用到档案袋。</small>
+              </div>
+            </div>
+            <el-button
+              :type="departmentSavedRecently ? 'success' : 'primary'"
+              :loading="departmentThemeRef?.saving"
+              :disabled="!departmentThemeRef?.loaded || (!departmentThemeRef?.isDirty && departmentThemeRef?.syncState !== 'save-failed')"
+              @click="handleDepartmentSave"
+            >
+              <FaIcon
+                :name="departmentSavedRecently ? 'i-lucide:check' : 'i-lucide:save'"
+                class="mrr-icon-interactive"
+                :class="{ 'mrr-status-pop': departmentSavedRecently }"
+              />
+              {{ departmentSavedRecently ? '已保存' : '保存科室配色' }}
+            </el-button>
+          </div>
+
+          <div v-else-if="activeSection === 'external-links'" class="settings-actions">
+            <div class="save-status unavailable">
+              <span class="status-dot" />
+              <div>
+                <strong>外链设置自动保存</strong>
+                <small>{{ externalLinksRef?.linkScopeDescription || '正在读取外链配置' }}</small>
+              </div>
+            </div>
+          </div>
+          <div v-else-if="activeSection === 'appearance'" ref="appearanceCommandTarget" class="settings-actions settings-actions--appearance" />
+          <div v-if="isDirty && !isServerSettingSection" class="settings-pending" role="status">
+            <span>另有 {{ changedKeys.length }} 项系统配置尚未保存</span>
+            <el-button link type="primary" @click="navigateSection('system')">
+              返回系统信息
+            </el-button>
+          </div>
+        </div>
 
         <div
           :key="`${activeSection}-${panelResetToken}`"
@@ -462,14 +622,16 @@ onUnmounted(() => {
           :aria-labelledby="sectionHeadingId"
         >
           <div v-if="isServerSettingSection" v-loading="loading" class="system-panel">
+            <AppLoading v-if="loading && !loaded" type="stats" :cols="4" />
             <!-- 首次读取失败时不展示回退值表单，避免把本地缓存或默认值当作服务器配置保存（DESIGN.md §5.1）。 -->
             <AppError
-              v-if="!loaded && loadError"
+              v-else-if="!loaded && loadError"
               :message="`${loadError}，表单暂不显示，以免把本地缓存或默认值当作服务器配置保存。`"
               retry-text="重新加载"
               @retry="handleReload"
             />
-            <el-form v-else :model="settings" label-position="top">
+            <el-alert v-if="loaded && loadError" type="warning" :closable="false" show-icon title="重新读取失败，当前保留上次读取的配置及本地修改。" />
+            <el-form v-if="loaded" :model="settings" label-position="top" :disabled="loading || saving">
               <SystemInfoSettings v-if="activeSection === 'system'" v-model="settings" />
               <LoginSupportSettings v-else-if="activeSection === 'login-support'" v-model="settings" />
               <DocumentationSettings v-else-if="activeSection === 'documentation'" v-model="settings" />
@@ -481,99 +643,54 @@ onUnmounted(() => {
           <OcrClassificationSettings v-else-if="activeSection === 'ocr'" ref="ocrSettingsRef" />
           <RuntimeSettings v-else-if="activeSection === 'runtime'" ref="runtimeSettingsRef" />
           <DepartmentThemeSettings v-else-if="activeSection === 'department'" ref="departmentThemeRef" />
-          <ExternalLinksSettings v-else-if="activeSection === 'external-links'" />
-          <AppConfigPanel v-else ref="appConfigRef" />
-        </div>
-
-        <div v-if="activeSection === 'ocr'" class="settings-actions" :class="{ dirty: ocrSettingsRef?.isDirty }">
-          <div class="save-status" :class="{ dirty: ocrSettingsRef?.isDirty }">
-            <span class="status-dot" />
-            <div>
-              <strong>{{ ocrSettingsRef?.isDirty ? 'OCR 配置修改待保存' : 'OCR 配置已保存' }}</strong>
-              <small>保存后写入系统数据库，并由后端再次校验安全阈值。</small>
-            </div>
-          </div>
-          <el-button
-            :type="ocrSavedRecently ? 'success' : 'primary'"
-            :loading="ocrSettingsRef?.saving"
-            :disabled="!ocrSettingsRef?.isDirty"
-            @click="handleOcrSave"
-          >
-            <FaIcon
-              :name="ocrSavedRecently ? 'i-lucide:check' : 'i-lucide:save'"
-              class="mrr-icon-interactive"
-              :class="{ 'mrr-status-pop': ocrSavedRecently }"
-            />
-            {{ ocrSavedRecently ? '已保存' : '保存 OCR 配置' }}
-          </el-button>
-        </div>
-
-        <div v-else-if="activeSection === 'runtime'" class="settings-actions" :class="{ dirty: runtimeSettingsRef?.isDirty }">
-          <div class="save-status" :class="{ dirty: runtimeSettingsRef?.isDirty }">
-            <span class="status-dot" />
-            <div>
-              <strong>{{ runtimeSettingsRef?.statusLabel || '运行参数尚未读取' }}</strong>
-              <small>保存后立即生效，不需要重启服务。</small>
-            </div>
-          </div>
-          <el-button
-            :type="runtimeSavedRecently ? 'success' : 'primary'"
-            :loading="runtimeSettingsRef?.saving"
-            :disabled="!runtimeSettingsRef?.canSave"
-            @click="handleRuntimeSave"
-          >
-            <FaIcon
-              :name="runtimeSavedRecently ? 'i-lucide:check' : 'i-lucide:save'"
-              class="mrr-icon-interactive"
-              :class="{ 'mrr-status-pop': runtimeSavedRecently }"
-            />
-            {{ runtimeSavedRecently ? '已保存' : '保存运行参数' }}
-          </el-button>
-        </div>
-
-        <div v-else-if="activeSection === 'department'" class="settings-actions" :class="{ dirty: departmentThemeRef?.isDirty }">
-          <div class="save-status">
-            <span class="status-dot" />
-            <div>
-              <strong>{{ departmentThemeRef?.isDirty ? '科室配色修改待保存' : '科室配色已保存' }}</strong>
-              <small>保存后立即应用到档案袋。</small>
-            </div>
-          </div>
-          <el-button
-            :type="departmentSavedRecently ? 'success' : 'primary'"
-            :loading="departmentThemeRef?.saving"
-            :disabled="!departmentThemeRef?.isDirty"
-            @click="handleDepartmentSave"
-          >
-            <FaIcon
-              :name="departmentSavedRecently ? 'i-lucide:check' : 'i-lucide:save'"
-              class="mrr-icon-interactive"
-              :class="{ 'mrr-status-pop': departmentSavedRecently }"
-            />
-            {{ departmentSavedRecently ? '已保存' : '保存科室配色' }}
-          </el-button>
-        </div>
-
-        <div v-else-if="activeSection === 'external-links'" class="settings-actions">
-          <div class="save-status">
-            <span class="status-dot" />
-            <div>
-              <strong>外链设置自动保存</strong>
-              <small>添加或移除后立即保存，并同步到全站「其他」菜单。</small>
-            </div>
-          </div>
+          <ExternalLinksSettings v-else-if="activeSection === 'external-links'" ref="externalLinksRef" />
+          <AppConfigPanel v-else ref="appConfigRef" :command-target="appearanceCommandTarget" />
         </div>
       </div>
     </div>
-  </div>
+  </MrrPageShell>
 </template>
 
 <style scoped src="./unified-settings.css"></style>
 
 <style scoped>
-.settings-content :deep(.control-grid) {
-  grid-template-columns: repeat(auto-fit, minmax(min(100%, 240px), 1fr));
+.settings-content :deep(.setting-section) {
+  display: grid;
+  gap: var(--mrr-space-4);
+  min-width: 0;
 }
+
+.settings-content :deep(.switch-row) {
+  display: flex;
+  gap: var(--mrr-space-4);
+  align-items: center;
+  justify-content: space-between;
+  min-width: 0;
+  min-height: 64px;
+  padding-block: var(--mrr-space-2);
+  border-bottom: 1px solid var(--mrr-border);
+}
+
+.settings-content :deep(.switch-row:last-child) { border-bottom: 0; }
+.settings-content :deep(.switch-row > div) { min-width: 0; overflow-wrap: anywhere; }
+.settings-content :deep(.switch-row .el-switch) { flex: none; }
+.settings-content :deep(.switch-row strong) { font-size: var(--mrr-font-size-sm); font-weight: var(--mrr-font-weight-label); }
+.settings-content :deep(.switch-row p) { margin: var(--mrr-space-1) 0 0; font-size: var(--mrr-font-size-xs); line-height: 1.6; color: var(--mrr-muted-foreground); }
+
+.settings-content :deep(.setting-group) { padding: var(--settings-group-inset); }
+
+.settings-content :deep(.control-grid:not(.identity-grid)) {
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, max(240px, calc((100% - var(--mrr-space-4)) / 2))), 1fr));
+}
+
+.settings-content :deep(.control-grid .el-form-item) { margin-bottom: 0; }
+
+.settings-layout--narrow .settings-content :deep(.control-grid),
+.settings-layout--narrow .settings-content :deep(.identity-grid) {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.settings-layout--narrow .settings-content :deep(.theme-palette-options) { grid-template-columns: minmax(0, 1fr); }
 
 .settings-content :deep(.control-grid .el-form-item),
 .settings-content :deep(.control-grid .el-form-item__content) {

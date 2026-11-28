@@ -101,3 +101,66 @@ body .mrr-account-menu .el-dropdown-menu__item i,
 body .mrr-context-menu .el-dropdown-menu__item i {
   margin-right: 0;
 }
+
+/* Quiet table menus share the application's popover surface, with a compact
+ * content-sized action list. Teleported poppers are owned here, not by views. */
+body .el-dropdown__popper.mrr-table-action-menu--quiet {
+  box-sizing: border-box;
+  width: max-content;
+  min-width: 0;
+  max-width: calc(100vw - 24px);
+  border: 1px solid var(--mrr-border);
+  border-radius: var(--mrr-radius-md);
+  box-shadow: var(--mrr-shadow-sm);
+}
+
+body .mrr-table-action-menu--quiet .el-dropdown-menu {
+  min-width: 0;
+  padding: var(--mrr-space-1);
+  margin: 0;
+  background: transparent;
+}
+
+body .mrr-table-action-menu--quiet .el-dropdown-menu__item {
+  gap: var(--mrr-space-2);
+  height: auto;
+  min-height: 32px;
+  padding: 6px var(--mrr-space-2);
+  margin: 0;
+  font-size: 13px;
+  font-weight: 400;
+  line-height: 20px;
+  color: var(--mrr-popover-foreground);
+  white-space: normal;
+  border-radius: var(--mrr-radius-sm);
+}
+
+/* Long labels may wrap at the viewport boundary without widening the menu. */
+body .mrr-table-action-menu--quiet .el-dropdown-menu__item > span:not(.mrr-table-actions__menu-loading) {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+body .mrr-table-action-menu--quiet .mrr-table-actions__menu-icon {
+  width: 16px;
+  height: 16px;
+  margin: 0;
+  font-size: 16px;
+}
+
+body .mrr-table-action-menu--quiet .mrr-table-actions__menu-item--danger:not(.is-disabled):hover,
+body .mrr-table-action-menu--quiet .mrr-table-actions__menu-item--danger:not(.is-disabled):focus {
+  background: var(--mrr-tone-danger-soft);
+}
+
+body .mrr-table-action-menu--quiet .el-dropdown-menu__item.is-disabled {
+  color: var(--mrr-muted-foreground) !important;
+  opacity: 0.5;
+}
+
+@media (max-width: 760px) {
+  body .mrr-table-action-menu--quiet .el-dropdown-menu__item {
+    min-height: 36px;
+    padding-block: var(--mrr-space-2);
+  }
+}

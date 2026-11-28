@@ -24,18 +24,6 @@ public class StatisticsServiceImpl implements StatisticsService {
     }
 
     @Override
-    public List<Statistics> findAll() {
-        return statisticsMapper.findAll();
-    }
-
-    @Override
-    public List<Statistics> findAllWithPagination(int page, int size) {
-        PaginationUtils.validatePageParams(page, size);
-        int offset = PaginationUtils.calculateOffset(page, size);
-        return statisticsMapper.findAllWithPagination(offset, size);
-    }
-
-    @Override
     public List<Statistics> findWithConditionAndPagination(
             int page,
             int size,
@@ -92,11 +80,6 @@ public class StatisticsServiceImpl implements StatisticsService {
     }
 
     @Override
-    public Long getTotalCount() {
-        return statisticsMapper.getTotalCount();
-    }
-
-    @Override
     public Long getTotalCountByCondition(String keyword, String bah, String sjh, String type, String startDate, String endDate) {
         return statisticsMapper.getTotalCountByCondition(
                 keyword,
@@ -124,6 +107,11 @@ public class StatisticsServiceImpl implements StatisticsService {
     @Override
     public List<BAHStatisticsDTO> getBAHStatistics() {
         return statisticsMapper.getBAHStatistics();
+    }
+
+    @Override
+    public List<BAHStatisticsDTO> getDashboardBAHStatistics() {
+        return statisticsMapper.getDashboardBAHStatistics();
     }
 
     @Override

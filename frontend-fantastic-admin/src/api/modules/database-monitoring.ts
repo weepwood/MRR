@@ -108,8 +108,8 @@ export function getDataQualitySummary() {
   return getRequest<DataQualitySummary>('/api/v1/system/data-quality/summary')
 }
 
-export function getDataQualityIssues(limit = 100) {
-  return getRequest<DataQualityIssue[]>('/api/v1/system/data-quality/issues', { params: { limit } })
+export function getDataQualityIssues(limit = 100, runId?: number) {
+  return getRequest<DataQualityIssue[]>('/api/v1/system/data-quality/issues', { params: { limit, runId } })
 }
 
 export function runDataQualityChecks() {

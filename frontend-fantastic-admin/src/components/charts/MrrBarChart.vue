@@ -31,10 +31,10 @@ const option = computed<ECOption>(() => ({
     valueFormatter: value => `${Number(value).toLocaleString('zh-CN')}${props.unit ? ` ${props.unit}` : ''}`,
   },
   legend: props.showLegend && props.series.length > 1
-    ? { top: 0, right: 0, data: props.series.map(item => item.name) }
+    ? { top: 0, right: 0, left: 0, type: 'scroll', data: props.series.map(item => item.name) }
     : undefined,
   grid: {
-    top: props.showLegend && props.series.length > 1 ? 42 : 24,
+    top: props.showLegend && props.series.length > 1 ? (props.yAxisName ? 52 : 36) : props.yAxisName ? 32 : 20,
     right: 18,
     bottom: 28,
     left: 18,
@@ -62,7 +62,7 @@ const option = computed<ECOption>(() => ({
     barMaxWidth: 32,
     itemStyle: {
       color: item.color,
-      borderRadius: [6, 6, 2, 2],
+      borderRadius: [3, 3, 0, 0],
     },
     emphasis: { focus: 'series' },
   })),

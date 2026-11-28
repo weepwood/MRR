@@ -212,9 +212,12 @@ class StatisticsControllerTest {
             when(statisticsService.getUniqueBAHCount()).thenReturn(5L);
             when(statisticsService.getDateStatisticsByCondition(anyString(), anyString(), isNull()))
                     .thenReturn(List.of());
-            when(statisticsService.getBAHStatistics()).thenReturn(List.of());
-
+            var expected = List.of(new BAHStatisticsDTO("1", 2L, 30L));
+            when(statisticsService.getDashboardBAHStatistics()).thenReturn(expected);
             Result<Map<String, Object>> r = controller.getDashboardData();
+            verify(statisticsService, never()).getBAHStatistics();
+            verify(statisticsService).getDashboardBAHStatistics();
+            assertThat(r.getData().get("topBAH")).isEqualTo(expected);
 
             assertThat(r.getCode()).isEqualTo(200);
             assertThat(r.getData()).containsKeys("overview", "uniqueBAHCount", "recentTrend", "topBAH");

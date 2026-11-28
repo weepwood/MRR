@@ -1,18 +1,24 @@
 <script setup lang="ts">
 import type { OcrBatch, OcrBatchPreview, OcrBatchRequest, OcrRevert } from '@/api/modules/ocr-batches'
+import type { MrrTableAction } from '@/components/MrrTableActions/types'
 import { useDocumentVisibility, useIntervalFn } from '@vueuse/core'
 import { ElMessage } from 'element-plus'
 import { computed, onMounted, reactive, ref, watch } from 'vue'
 import { actOnOcrBatch, createOcrBatch, listOcrBatches, listOcrBatchJobs, previewOcrBatch, previewOcrRollback, rollbackOcrBatchPage } from '@/api/modules/ocr-batches'
 import AppEmpty from '@/components/AppEmpty/index.vue'
+import AppError from '@/components/AppError/index.vue'
+import AppLoading from '@/components/AppLoading/index.vue'
 import MrrDataTablePanel from '@/components/MrrDataTablePanel/index.vue'
 import MrrPageHeader from '@/components/MrrPageHeader/index.vue'
 import MrrPageShell from '@/components/MrrPageShell/index.vue'
 import MrrSectionCard from '@/components/MrrSectionCard/index.vue'
 import MrrStatusTag from '@/components/MrrStatusTag/index.vue'
+import MrrTableActions from '@/components/MrrTableActions/index.vue'
+import { useTableActionLayout } from '@/composables/useTableActionLayout'
 import { actionDialog } from '@/ui/components/ActionDialog'
 import useAuth from '@/utils/composables/useAuth'
 import { getRequestErrorMessage } from '@/utils/request-error-message'
+import { tableSequenceColumn } from '@/utils/table-sequence'
 import ClassificationReview from '../statistics/archive/components/ClassificationReview.vue'
 
 defineOptions({ name: 'OcrBatchesPage' })
@@ -52,19 +58,19 @@ const rollbackOpen = ref(false)
 const rollbackAfter = ref(0)
 const rollbackRows = ref<OcrRevert[]>([])
 const rollbackMessage = ref('')
-let loading = false
+const loading = ref(false)
 let generation = 0
 
 async function reload() {
-  if (loading || visibility.value === 'hidden') { return }
-  loading = true
+  if (loading.value || visibility.value === 'hidden') { return }
+  loading.value = true
   const version = generation
   try {
     const result = await listOcrBatches(after.value)
     if (version === generation) { batches.value = result.data || []; loadError.value = '' }
   }
   catch { loadError.value = '批次读取失败，请稍后刷新' }
-  finally { loading = false }
+  finally { loading.value = false }
 }
 const polling = useIntervalFn(() => void reload(), 3000, { immediate: false })
 watch([visibility, batches], () => {
@@ -135,6 +141,22 @@ async function children(id: string, next = false) {
     selectedJob.value = childJobs.value[0] || ''
   })
 }
+const { maxInlineActions, actionColumnWidth } = useTableActionLayout(4, 2)
+function batchActions(row: OcrBatch): MrrTableAction[] {
+  return [
+    { key: 'children', label: '查看明细与审核', icon: 'i-lucide:eye', placement: 'inline' },
+    { key: 'pause', label: '暂停', icon: 'i-lucide:pause', visible: row.status === 'RUNNING' },
+    { key: 'resume', label: '续跑', icon: 'i-lucide:play', visible: row.status === 'PAUSED' },
+    { key: 'cancel', label: '取消', icon: 'i-lucide:circle-stop', tone: 'danger', visible: ['RUNNING', 'PAUSED'].includes(row.status) },
+    { key: 'rollback', label: '回退预览', icon: 'i-lucide:rotate-ccw', tone: 'danger', visible: row.autoApply && auth('classification:override'), placement: 'overflow' },
+  ]
+}
+function selectBatchAction(key: string, row: OcrBatch) {
+  if (busy.value || !batchActions(row).some(item => item.key === key && item.visible !== false)) { return }
+  if (key === 'children') { void children(row.id) }
+  else if (key === 'rollback') { void inspectRollback(row.id) }
+  else if (key === 'pause' || key === 'resume' || key === 'cancel') { void action(row.id, key) }
+}
 async function nextPage() { after.value = batches.value[batches.value.length - 1]?.id || ''; generation++; await reload() }
 onMounted(() => void reload())
 async function inspectRollback(id: string) {
@@ -168,7 +190,6 @@ async function skipRollbackPage() {
 <template>
   <MrrPageShell v-loading="busy" class="ocr-batches" width="fluid">
     <MrrPageHeader
-      size="compact"
       eyebrow="OCR BATCH PROCESSING"
       title="历史未分类影像识别"
       description="只处理有效、病案关联已核验且仍未分类的页面。批次有明确上界，每次最多 10,000 页，主要在北京时间 22:00–06:00 运行。"
@@ -181,7 +202,7 @@ async function skipRollbackPage() {
       </template>
     </MrrPageHeader>
 
-    <el-alert v-if="loadError" :title="loadError" type="error" :closable="false" />
+    <el-alert v-if="loadError && batches.length" :title="`${loadError}，当前显示上次读取结果`" type="error" :closable="false" />
     <MrrSectionCard
       title="批次范围"
       description="设置影像 ID 范围和本批次页数上限，再预览符合条件的页面。"
@@ -193,15 +214,18 @@ async function skipRollbackPage() {
         </el-button>
       </template>
 
-      <el-form class="ocr-batches__form" label-position="top">
-        <el-form-item label="起点影像 ID（不包含）">
-          <el-input-number v-model="form.afterId" :min="0" :max="2147483647" />
+      <el-form class="ocr-batches__form mrr-edit-form mrr-edit-form--multi mrr-edit-form--bounded" label-position="top">
+        <el-form-item label="起点影像 ID">
+          <el-input-number v-model="form.afterId" :min="0" :max="2147483647" aria-describedby="ocr-start-hint" />
+          <span id="ocr-start-hint" class="mrr-edit-form__hint">不包含起点 ID</span>
         </el-form-item>
-        <el-form-item label="终点影像 ID（0 为当前最大值）">
-          <el-input-number v-model="form.upperId" :min="0" :max="2147483647" />
+        <el-form-item label="终点影像 ID">
+          <el-input-number v-model="form.upperId" :min="0" :max="2147483647" aria-describedby="ocr-end-hint" />
+          <span id="ocr-end-hint" class="mrr-edit-form__hint">0 为当前最大值</span>
         </el-form-item>
         <el-form-item label="本批次页数上限">
-          <el-input-number v-model="form.maxPages" :min="1" :max="10000" />
+          <el-input-number v-model="form.maxPages" :min="1" :max="10000" aria-describedby="ocr-pages-hint" />
+          <span id="ocr-pages-hint" class="mrr-edit-form__hint">每批最多 10,000 页</span>
         </el-form-item>
       </el-form>
 
@@ -233,7 +257,10 @@ async function skipRollbackPage() {
         </el-button>
       </template>
 
-      <el-table :data="batches">
+      <AppLoading v-if="loading && !batches.length" type="table" :rows="5" />
+      <AppError v-else-if="loadError && !batches.length" :message="loadError" @retry="reload" />
+      <el-table v-else :data="batches" stripe>
+        <el-table-column v-bind="tableSequenceColumn(0, batches.length)" />
         <!-- 成功但为空走共享空态（DESIGN.md §5.1），不用 el-table 默认「暂无数据」 -->
         <template #empty>
           <AppEmpty size="compact" description="暂无批次记录，可在上方创建" />
@@ -243,7 +270,7 @@ async function skipRollbackPage() {
             <span class="ocr-batches__mono">{{ row.id }}</span>
           </template>
         </el-table-column>
-        <el-table-column prop="status" label="状态" min-width="110">
+        <el-table-column prop="status" label="状态" width="124" class-name="mrr-table-status-column">
           <template #default="{ row }">
             <MrrStatusTag :label="statusMeta(row.status).label" :tone="statusMeta(row.status).tone" :title="row.status" />
           </template>
@@ -255,49 +282,28 @@ async function skipRollbackPage() {
           </template>
         </el-table-column>
         <!-- 计数列右对齐：数字按个位对齐，扫读一列时不必逐个比较位数。 -->
-        <el-table-column prop="successCount" label="已识别" min-width="84" align="right" />
-        <el-table-column prop="failedCount" label="失败" min-width="72" align="right">
+        <el-table-column prop="successCount" label="已识别" width="88" align="right" />
+        <el-table-column prop="failedCount" label="失败" width="80" align="right">
           <template #default="{ row }">
             <span :class="{ 'ocr-batches__failed': row.failedCount > 0 }">{{ row.failedCount }}</span>
           </template>
         </el-table-column>
-        <el-table-column prop="autoAppliedCount" label="自动归类" min-width="90" align="right" />
-        <el-table-column prop="reviewRequiredCount" label="待审核建议" min-width="104" align="right" />
-        <el-table-column prop="cursorId" label="续跑起点" min-width="110">
+        <el-table-column prop="autoAppliedCount" label="自动归类" width="96" align="right" />
+        <el-table-column prop="reviewRequiredCount" label="待审核建议" width="112" align="right" />
+        <el-table-column prop="cursorId" label="续跑起点" width="120" show-overflow-tooltip>
           <template #default="{ row }">
             <span class="ocr-batches__mono">{{ row.cursorId }}</span>
           </template>
         </el-table-column>
-        <el-table-column prop="reasonCode" label="等待原因" min-width="130" show-overflow-tooltip>
+        <el-table-column prop="reasonCode" label="等待原因" min-width="150" show-overflow-tooltip>
           <template #default="{ row }">
             <span v-if="row.reasonCode" class="ocr-batches__mono">{{ row.reasonCode }}</span>
             <span v-else class="ocr-batches__unit">—</span>
           </template>
         </el-table-column>
-        <el-table-column label="操作" min-width="300" fixed="right">
+        <el-table-column label="操作" :width="actionColumnWidth" fixed="right" align="center">
           <template #default="{ row }">
-            <!--
-              原来最多 5 个默认按钮挤在 280px 列里，会折成两三行且行高不齐。
-              改为一组小号按钮：流程控制在前（暂停 / 续跑 / 取消），查看与回退在后；
-              取消与回退是不可逆或高影响操作，用危险色文字区分，按钮名称与行为不变。
-            -->
-            <div class="ocr-batches__row-actions">
-              <el-button v-if="row.status === 'RUNNING'" size="small" @click="action(row.id, 'pause')">
-                暂停
-              </el-button>
-              <el-button v-if="row.status === 'PAUSED'" size="small" @click="action(row.id, 'resume')">
-                续跑
-              </el-button>
-              <el-button v-if="['RUNNING', 'PAUSED'].includes(row.status)" size="small" type="danger" plain @click="action(row.id, 'cancel')">
-                取消
-              </el-button>
-              <el-button size="small" @click="children(row.id)">
-                查看明细与审核
-              </el-button>
-              <el-button v-if="row.autoApply && auth('classification:override')" size="small" type="danger" link @click="inspectRollback(row.id)">
-                回退预览
-              </el-button>
-            </div>
+            <MrrTableActions :actions="batchActions(row as OcrBatch)" :max-inline="maxInlineActions" @select="selectBatchAction($event, row as OcrBatch)" />
           </template>
         </el-table-column>
       </el-table>
@@ -320,7 +326,7 @@ async function skipRollbackPage() {
       <ClassificationReview v-if="selectedJob" :job-id="selectedJob" />
     </MrrSectionCard>
 
-    <el-dialog v-model="rollbackOpen" title="自动归类回退预览" width="min(900px, 95vw)">
+    <el-dialog v-model="rollbackOpen" align-center title="自动归类回退预览" width="min(900px, 95vw)">
       <el-alert
         type="warning"
         :closable="false"
@@ -331,6 +337,7 @@ async function skipRollbackPage() {
         {{ rollbackMessage }}
       </p>
       <el-table :data="rollbackRows">
+        <el-table-column v-bind="tableSequenceColumn(0, rollbackRows.length)" />
         <el-table-column prop="scanId" label="影像 ID" /><el-table-column prop="newType" label="自动类型" /><el-table-column label="可回退">
           <template #default="{ row }">
             {{ row.eligible ? '可以恢复为未分类' : '已有后续变化，跳过' }}
@@ -353,21 +360,6 @@ async function skipRollbackPage() {
 <style scoped>
 .ocr-batches {
   min-width: 0;
-}
-
-.ocr-batches__form {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(min(100%, 220px), 1fr));
-  gap: var(--mrr-space-3) var(--mrr-space-4);
-}
-
-.ocr-batches__form :deep(.el-form-item) {
-  min-width: 0;
-  margin: 0;
-}
-
-.ocr-batches__form :deep(.el-input-number) {
-  width: 100%;
 }
 
 .ocr-batches__auto-apply {
@@ -409,17 +401,6 @@ async function skipRollbackPage() {
   padding-top: var(--mrr-space-3);
   margin-top: var(--mrr-space-1);
   border-top: 1px solid var(--mrr-border);
-}
-
-.ocr-batches__row-actions {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--mrr-space-1) var(--mrr-space-2);
-  align-items: center;
-}
-
-.ocr-batches__row-actions :deep(.el-button + .el-button) {
-  margin-left: 0;
 }
 
 .ocr-batches__mono {

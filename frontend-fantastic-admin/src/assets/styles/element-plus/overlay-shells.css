@@ -1,4 +1,14 @@
-/* Preserve the migrated shell layout while Element Plus owns focus and lifecycle. */
+/* Element Plus owns focus, positioning and lifecycle. Shared business chrome
+ * is defined once for both native dialogs and the existing MrrDialog wrapper. */
+body .el-dialog {
+  overflow: hidden;
+  color: var(--mrr-card-foreground);
+  background: var(--mrr-card);
+  border: 1px solid var(--mrr-border);
+  border-radius: var(--mrr-radius-dialog);
+  box-shadow: var(--mrr-shadow-dialog);
+}
+
 body .el-overlay.mrr-dialog-mask {
   background-color: rgb(0 0 0 / 50%);
 }
@@ -135,7 +145,8 @@ body .mrr-dialog-shell > .mrr-overlay-footer,
 body .mrr-drawer-shell > .mrr-overlay-footer {
   display: flex;
   flex-shrink: 0;
-  gap: 8px;
+  flex-wrap: wrap;
+  gap: var(--mrr-space-2);
   align-items: center;
   justify-content: flex-end;
   padding: 12px;
@@ -191,4 +202,181 @@ body .mrr-drawer-shell .el-drawer__close-btn {
     flex-direction: column-reverse;
     align-items: stretch;
   }
+}
+
+/* Standard business surface, whether the consumer uses ElDialog directly
+ * or MrrDialog. Preserve explicit widths and special-purpose custom shells. */
+body .el-dialog:not(.mrr-dialog-shell),
+body .el-dialog.mrr-dialog-shell.mrr-dialog-shell--business {
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  max-width: calc(100vw - 24px);
+  min-height: 0;
+  max-height: calc(100vh - 24px);
+  padding: 0;
+  color: var(--mrr-card-foreground);
+  background: var(--mrr-card);
+  border-radius: var(--mrr-radius-dialog);
+}
+
+body .el-dialog.mrr-dialog-shell.mrr-dialog-shell--business {
+  width: min(var(--el-dialog-width, 540px), calc(100vw - 24px));
+}
+
+body .el-dialog.is-align-center:not(.mrr-dialog-shell),
+body .el-dialog.mrr-dialog-shell.mrr-dialog-shell--business.is-align-center {
+  margin: auto;
+}
+
+body .el-dialog:not(.mrr-dialog-shell) > .el-dialog__header,
+body .mrr-dialog-shell--business > .mrr-dialog-header:not(.mrr-dialog-header-hidden) {
+  box-sizing: border-box;
+  display: flex;
+  flex: 0 0 auto;
+  flex-direction: column;
+  justify-content: center;
+  min-height: 56px;
+  padding: var(--mrr-space-4) var(--mrr-space-5);
+  margin: 0;
+  border-bottom: 1px solid var(--mrr-border);
+}
+
+body .el-dialog:not(.mrr-dialog-shell) .el-dialog__title,
+body .mrr-dialog-shell--business .mrr-overlay-title {
+  padding-right: var(--mrr-space-6);
+  font-size: var(--mrr-font-size-lg);
+  font-weight: 650;
+  line-height: 1.4;
+  color: var(--mrr-card-foreground);
+  letter-spacing: normal;
+}
+
+body .el-dialog:not(.mrr-dialog-shell) > .el-dialog__body,
+body .mrr-dialog-shell--business > .mrr-dialog-body {
+  flex: 1 1 auto;
+  min-width: 0;
+  min-height: 0;
+  padding: var(--mrr-space-5);
+  overflow: auto;
+  overscroll-behavior: contain;
+  color: inherit;
+}
+
+body .el-dialog:not(.mrr-dialog-shell) > .el-dialog__footer,
+body .mrr-dialog-shell--business > .mrr-overlay-footer {
+  display: flex;
+  flex: 0 0 auto;
+  flex-wrap: wrap;
+  gap: var(--mrr-space-2);
+  align-items: center;
+  justify-content: flex-end;
+  padding: var(--mrr-space-3) var(--mrr-space-5);
+  background: var(--mrr-card);
+  border-top: 1px solid var(--mrr-border);
+}
+
+body .el-dialog:not(.mrr-dialog-shell) > .el-dialog__footer > .el-button + .el-button,
+body .mrr-dialog-shell--business > .mrr-overlay-footer > .el-button + .el-button {
+  margin-inline-start: 0;
+}
+
+body .el-dialog:not(.mrr-dialog-shell) .el-dialog__headerbtn,
+body .mrr-dialog-shell--business .el-dialog__headerbtn {
+  top: 14px;
+  right: var(--mrr-space-4);
+  width: 28px;
+  height: 28px;
+  color: var(--mrr-muted-foreground);
+  border-radius: var(--mrr-radius-sm);
+}
+
+body .el-dialog:not(.mrr-dialog-shell) .el-dialog__headerbtn:hover,
+body .mrr-dialog-shell--business .el-dialog__headerbtn:hover {
+  background: var(--mrr-muted);
+}
+
+body .el-dialog:not(.mrr-dialog-shell) .el-dialog__headerbtn:focus-visible,
+body .mrr-dialog-shell--business .el-dialog__headerbtn:focus-visible {
+  outline: 2px solid var(--mrr-ring);
+  outline-offset: -2px;
+}
+
+/* Diagnostic reports own their internal scroll area, not a second scrollbar. */
+body .el-dialog.query-diagnostics > .el-dialog__body {
+  display: flex;
+  overflow: hidden;
+}
+
+@media (max-width: 639px) {
+  body .el-dialog:not(.mrr-dialog-shell) > .el-dialog__header,
+  body .el-dialog:not(.mrr-dialog-shell) > .el-dialog__body,
+  body .el-dialog:not(.mrr-dialog-shell) > .el-dialog__footer,
+  body .mrr-dialog-shell--business > .mrr-dialog-header:not(.mrr-dialog-header-hidden),
+  body .mrr-dialog-shell--business > .mrr-dialog-body,
+  body .mrr-dialog-shell--business > .mrr-overlay-footer {
+    padding-inline: var(--mrr-space-4);
+  }
+
+  body .mrr-dialog-shell--business > .mrr-overlay-footer {
+    flex-flow: row wrap;
+    align-items: center;
+  }
+}
+
+body .mrr-dialog-shell--business > .mrr-dialog-header:not(.mrr-overlay-border-bottom),
+body .mrr-dialog-shell--business > .mrr-overlay-footer:not(.mrr-overlay-border-top) {
+  border: 0;
+}
+
+/* Read-only detail hierarchy: labels above values, no dense matrix of borders.
+ * Only the explicit detail role uses this; edit forms and specialist viewers are untouched. */
+body .el-descriptions.mrr-detail-descriptions .el-descriptions__table {
+  width: 100%;
+  table-layout: fixed;
+}
+
+body .el-descriptions.mrr-detail-descriptions .el-descriptions__label.el-descriptions__cell {
+  padding: var(--mrr-space-3) var(--mrr-space-3) var(--mrr-space-1);
+  font-size: var(--mrr-font-size-xs);
+  font-weight: var(--mrr-font-weight-label);
+  color: var(--mrr-muted-foreground);
+  background: transparent;
+  border: 0;
+}
+
+body .el-descriptions.mrr-detail-descriptions .el-descriptions__content.el-descriptions__cell {
+  padding: 0 var(--mrr-space-3) var(--mrr-space-3);
+  font-size: var(--mrr-font-size-sm);
+  line-height: 1.6;
+  vertical-align: top;
+  color: var(--mrr-card-foreground);
+  overflow-wrap: anywhere;
+  border: 0;
+  border-bottom: 1px solid var(--mrr-border);
+}
+
+body .el-descriptions.mrr-detail-descriptions .el-descriptions__content pre {
+  max-width: 100%;
+  overflow-wrap: anywhere;
+  white-space: pre-wrap;
+}
+
+/* Dense read-only monitoring fields, not editor controls or full detail dialogs. */
+body .el-descriptions.mrr-detail-descriptions--compact .el-descriptions__label.el-descriptions__cell {
+  padding: var(--mrr-space-2) var(--mrr-space-2) var(--mrr-space-1);
+}
+
+body .el-descriptions.mrr-detail-descriptions--compact .el-descriptions__content.el-descriptions__cell {
+  padding: 0 var(--mrr-space-2) var(--mrr-space-2);
+}
+
+/* Drawer positioning remains native; do not animate width/layout on rapid state changes. */
+body .el-drawer.mrr-drawer-shell:not(.is-dragging) {
+  transition: transform var(--mrr-motion-overlay) var(--mrr-ease-out);
+}
+
+body .mrr-dialog-mask.el-drawer-fade-enter-active,
+body .mrr-dialog-mask.el-drawer-fade-leave-active {
+  transition: background-color var(--mrr-motion-overlay) var(--mrr-ease-out);
 }

@@ -1,5 +1,10 @@
 import type { Locator, Page } from '@playwright/test'
 import { expect, test } from '@playwright/test'
+import { isolateLocalVisualSettings } from './helpers/local-visual-settings'
+
+test.beforeEach(async ({ page }) => {
+  await isolateLocalVisualSettings(page)
+})
 
 async function tabTo(page: Page, target: Locator) {
   await expect(target).toBeVisible()

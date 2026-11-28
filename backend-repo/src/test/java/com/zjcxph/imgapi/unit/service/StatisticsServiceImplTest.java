@@ -47,23 +47,9 @@ class StatisticsServiceImplTest {
     class QueryTests {
 
         @Test
-        @DisplayName("findAll — 返回全部统计")
-        void findAll() {
-            when(statisticsMapper.findAll()).thenReturn(List.of(mockStat));
-            assertThat(statisticsService.findAll()).hasSize(1);
-        }
-
-        @Test
-        @DisplayName("findAllWithPagination — 分页查询")
-        void findAllWithPagination() {
-            when(statisticsMapper.findAllWithPagination(0, 10)).thenReturn(List.of(mockStat));
-            assertThat(statisticsService.findAllWithPagination(1, 10)).hasSize(1);
-        }
-
-        @Test
-        @DisplayName("findAllWithPagination — 非法参数抛异常")
-        void findAllWithPagination_invalidPage() {
-            assertThatThrownBy(() -> statisticsService.findAllWithPagination(0, 10))
+        @DisplayName("条件分页拒绝非法页码")
+        void invalidPage() {
+            assertThatThrownBy(() -> statisticsService.findWithConditionAndPagination(0, 10, null, null, null, null, null, null, "date", "desc"))
                     .isInstanceOf(IllegalArgumentException.class);
         }
 
@@ -85,13 +71,6 @@ class StatisticsServiceImplTest {
     @Nested
     @DisplayName("聚合统计")
     class AggregationTests {
-
-        @Test
-        @DisplayName("getTotalCount — 返回总数")
-        void getTotalCount() {
-            when(statisticsMapper.getTotalCount()).thenReturn(100L);
-            assertThat(statisticsService.getTotalCount()).isEqualTo(100L);
-        }
 
         @Test
         @DisplayName("getUniqueBAHCount — 返回唯一BAH数")

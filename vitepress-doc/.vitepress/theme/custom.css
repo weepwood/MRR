@@ -47,13 +47,12 @@
   --vp-custom-block-tip-bg: rgba(10, 124, 66, 0.06);
 }
 
-/* 文档标题字重稍淡：使用鸿蒙 Medium（500），比 VitePress 默认 600 更轻，
- * 命中已下载的 harmonyos-sans-sc-medium.woff2，避免浏览器合成假粗体。 */
+/* 文档标题与正文建立清晰层级。 */
 .vp-doc h1,
 .vp-doc h2,
 .vp-doc h3,
 .vp-doc h4 {
-  font-weight: 500;
+  font-weight: 700;
 }
 
 .dark {
@@ -160,23 +159,6 @@
   font-size: 1rem;
 }
 
-.vp-doc h2 {
-  border-top: none;
-  padding-top: 0;
-  margin-top: 2.5rem;
-  font-size: 1.5rem;
-  letter-spacing: -0.02em;
-}
-.vp-doc h3 {
-  margin-top: 1.5rem;
-  font-size: 1.15rem;
-}
-
-.vp-doc table {
-  width: 100%;
-  margin: 1rem 0;
-  font-size: 0.9rem;
-}
 .vp-doc th {
   background: var(--vp-c-bg-soft);
   font-weight: 600;
@@ -261,4 +243,122 @@
   .doc-nav-grid { grid-template-columns: 1fr; }
   .screenshot-grid { grid-template-columns: 1fr; }
   .tech-stack { grid-template-columns: 1fr; }
+}
+
+/* 阅读排版：共享 VitePress 主题，保留原有导航与检索。 */
+.VPDoc.has-aside .content-container {
+  max-width: 780px;
+}
+
+.vp-doc {
+  font-size: 16px;
+  line-height: 1.85;
+  overflow-wrap: break-word;
+}
+
+.vp-doc h1 {
+  font-size: 2.05rem;
+  line-height: 1.35;
+  letter-spacing: -0.025em;
+  font-weight: 700;
+  margin-bottom: 18px;
+}
+
+.vp-doc h2 {
+  border-top: none;
+  padding-top: 0;
+  letter-spacing: -0.02em;
+  font-size: 1.48rem;
+  line-height: 1.45;
+  margin-top: 42px;
+  margin-bottom: 16px;
+}
+
+.vp-doc h3 {
+  font-size: 1.12rem;
+  line-height: 1.55;
+  margin-top: 25px;
+  margin-bottom: 10px;
+}
+
+.vp-doc p,
+.vp-doc li {
+  line-height: 1.85;
+}
+
+.vp-doc p {
+  margin: 14px 0;
+}
+
+.vp-doc li + li {
+  margin-top: 5px;
+}
+
+.vp-doc table {
+  width: 100%;
+  font-size: 14px;
+  line-height: 1.65;
+  margin: 18px 0 24px;
+}
+
+.vp-doc td,
+.vp-doc th {
+  padding: 10px 13px;
+  vertical-align: top;
+}
+
+.vp-doc .custom-block {
+  line-height: 1.75;
+  padding: 14px 18px;
+  margin: 22px 0;
+  border-radius: 9px;
+}
+
+.vp-doc .custom-block p {
+  line-height: 1.75;
+  margin: 8px 0;
+}
+
+/* Markdown figures are native links, so the original SVG can be opened
+ * with a keyboard as well as a pointer. No extra preview runtime needed. */
+.vp-doc p > a > img[alt],
+.vp-doc p > img[alt] {
+  display: block;
+  max-width: 100%;
+  height: auto;
+  margin: 24px auto 8px;
+  border-radius: 10px;
+}
+
+.vp-doc p > a > img[alt] {
+  cursor: zoom-in;
+}
+
+.vp-doc .doc-figure > a {
+  display: block;
+  border-radius: 10px;
+}
+
+.vp-doc p > a:focus-visible {
+  outline: 2px solid var(--vp-c-brand-1);
+  outline-offset: 4px;
+}
+
+.vp-doc p > em:only-child {
+  display: block;
+  color: var(--vp-c-text-2);
+  font-size: 13px;
+  line-height: 1.6;
+  font-style: normal;
+  text-align: center;
+  margin-top: -6px;
+  margin-bottom: 24px;
+}
+
+@media (max-width: 767px) {
+  .vp-doc { font-size: 15px; }
+  .vp-doc h1 { font-size: 1.75rem; }
+  .vp-doc h2 { font-size: 1.32rem; margin-top: 32px; }
+  .vp-doc table { font-size: 13px; }
+  .vp-doc td, .vp-doc th { padding: 8px 10px; }
 }

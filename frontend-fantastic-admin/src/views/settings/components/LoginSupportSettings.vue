@@ -113,8 +113,6 @@ const publicSupportReady = computed(() => Boolean(settings.value.systemAdminPhon
 </template>
 
 <style scoped>
-.setting-section { display: grid; gap: var(--mrr-space-5); }
-
 .setting-group,
 .login-preview { padding: var(--mrr-space-5); background: var(--mrr-card); border: 1px solid var(--mrr-border); border-radius: var(--mrr-radius-card); }
 .group-heading { margin-bottom: var(--mrr-space-4); }
@@ -122,10 +120,6 @@ const publicSupportReady = computed(() => Boolean(settings.value.systemAdminPhon
 .control-grid,
 .feature-editor { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--mrr-space-4); }
 .switch-list { display: grid; margin-bottom: var(--mrr-space-5); border-top: 1px solid var(--mrr-border); border-bottom: 1px solid var(--mrr-border); }
-.switch-row { display: flex; gap: var(--mrr-space-4); align-items: center; justify-content: space-between; min-height: 76px; border-bottom: 1px solid var(--mrr-border); }
-.switch-row:last-child { border-bottom: 0; }
-.switch-row strong { font-size: var(--mrr-font-size-sm); font-weight: 600; }
-.switch-row p { margin: 3px 0 0; font-size: var(--mrr-font-size-xs); line-height: 1.6; color: var(--mrr-muted-foreground); }
 .advanced-copy { padding: var(--mrr-space-4); margin-top: var(--mrr-space-4); background: var(--mrr-muted); border: 1px solid var(--mrr-border); border-radius: var(--mrr-radius-lg); }
 .advanced-heading { display: flex; align-items: center; justify-content: space-between; margin-bottom: var(--mrr-space-4); }
 .advanced-heading span { font-size: var(--mrr-font-size-xs); line-height: 1.6; color: var(--mrr-muted-foreground); }

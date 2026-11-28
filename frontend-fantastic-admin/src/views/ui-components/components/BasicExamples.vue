@@ -1,7 +1,8 @@
 <script setup lang="ts">
 import type { ExampleId } from '../catalog'
 import { computed, ref, useId } from 'vue'
-import { handleSegmentedTabKey } from '@/utils/segmented-tabs'
+import MrrSegmentedTabs from '@/components/MrrSegmentedTabs/index.vue'
+import LocalThemePreview from './LocalThemePreview.vue'
 
 defineProps<{ example: ExampleId }>()
 
@@ -17,11 +18,17 @@ const note = ref('这里是可编辑的示例说明。')
 const nativeNote = ref('这里是可编辑的示例说明。')
 const source = ref('local')
 const nativeSource = ref('local')
+const version = ref<number>()
 const date = ref('2026-11-12')
 const count = ref(3)
 const checked = ref<boolean | 'indeterminate'>(true)
 const enabled = ref(true)
 const slider = ref(40)
+const matrixSwitch = ref(false)
+const matrixCheck = ref(false)
+const matrixOn = ref(true)
+const matrixMixed = ref(false)
+const matrixIndeterminate = ref(true)
 const options = [{ label: '本地示例', value: 'local' }, { label: '归档示例', value: 'archive' }]
 </script>
 
@@ -115,10 +122,11 @@ const options = [{ label: '本地示例', value: 'local' }, { label: '归档示�
     <p class="example-note" role="status">
       已触发 {{ clicks }} 次示例操作
     </p>
+    <LocalThemePreview />
   </div>
 
   <div v-else-if="example === 'navigation'" class="example-stack">
-    <el-tabs v-model="activeTab" class="mrr-segmented-tabs" @keydown="handleSegmentedTabKey">
+    <MrrSegmentedTabs v-model="activeTab" label="页签示例">
       <el-tab-pane :name="`${id}-preview`" label="组件预览" lazy>
         <p class="example-note">
           正在展示页签的预览内容，可以使用方向键切换页签。
@@ -129,7 +137,7 @@ const options = [{ label: '本地示例', value: 'local' }, { label: '归档示�
           页签内容随选择切换；提示可以通过悬停或键盘聚焦查看。
         </p>
       </el-tab-pane>
-    </el-tabs>
+    </MrrSegmentedTabs>
     <div class="example-row">
       <MrrTooltip content="这是组件说明提示，支持键盘聚焦。">
         <el-button class="mrr-button-flow" :auto-insert-space="false">
@@ -159,6 +167,13 @@ const options = [{ label: '本地示例', value: 'local' }, { label: '归档示�
       <label :for="`${id}-native-source`">原生来源</label>
       <el-select :id="`${id}-native-source`" v-model="nativeSource" class="example-full-width">
         <el-option v-for="option in options" :key="option.value" :label="option.label" :value="option.value" />
+      </el-select>
+    </div>
+    <div class="example-field">
+      <label :for="`${id}-version`">版本比较基准</label>
+      <el-select :id="`${id}-version`" v-model="version" class="example-full-width mrr-single-select" placeholder="选择基准版本">
+        <el-option :value="1" label="#1 · 合成历史版本" />
+        <el-option :value="2" label="#2 · 合成历史版本" />
       </el-select>
     </div>
     <div class="example-field">
@@ -228,8 +243,51 @@ const options = [{ label: '本地示例', value: 'local' }, { label: '归档示�
       <span :id="`${id}-slider-label`">示例进度 {{ slider }}%</span>
       <el-slider v-model="slider" :aria-label="`示例进度 ${slider}%`" :step="5" class="example-slider mrr-compact-slider" />
     </div>
+    <div class="selection-matrix" aria-label="选择控件状态矩阵">
+      <div class="selection-matrix__cell">
+        <span>交互 · 初始关闭</span>
+        <el-switch v-model="matrixSwitch" aria-label="矩阵开关" />
+        <el-checkbox v-model="matrixCheck" aria-label="矩阵复选框" />
+      </div>
+      <div class="selection-matrix__cell">
+        <span>交互 · 初始半选 / 开启</span>
+        <el-switch v-model="matrixOn" aria-label="矩阵开启开关" />
+        <el-checkbox v-model="matrixMixed" :indeterminate="matrixIndeterminate" aria-label="矩阵半选复选框" @change="matrixIndeterminate = false" />
+      </div>
+      <div class="selection-matrix__cell">
+        <span>禁用且选中</span>
+        <el-switch :model-value="true" disabled aria-label="矩阵禁用开关" />
+        <el-checkbox :model-value="true" disabled aria-label="矩阵禁用复选框" />
+      </div>
+    </div>
     <p class="example-note" role="status">
       复选框{{ checked ? '已选中' : '未选中' }}，开关{{ enabled ? '已启用' : '已关闭' }}。
     </p>
   </div>
 </template>
+
+<style scoped>
+.selection-matrix {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 120px), 1fr));
+  gap: var(--mrr-space-2);
+}
+
+.selection-matrix__cell {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--mrr-space-2);
+  align-items: center;
+  min-width: 0;
+  padding: var(--mrr-space-3);
+  background: var(--mrr-section-heading-bg);
+  border: 1px solid var(--mrr-border);
+  border-radius: var(--mrr-radius-md);
+}
+
+.selection-matrix__cell > span {
+  flex: 0 0 100%;
+  font-size: var(--mrr-font-size-xs);
+  color: var(--mrr-muted-foreground);
+}
+</style>

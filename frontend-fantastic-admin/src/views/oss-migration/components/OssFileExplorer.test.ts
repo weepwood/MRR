@@ -5,9 +5,10 @@ import { h, KeepAlive, nextTick, ref } from 'vue'
 import { browseOssObjects, getOssBrowserUrl } from '@/api/modules/oss'
 import OssFileExplorer from './OssFileExplorer.vue'
 
+vi.mock('element-plus/es/components/pagination/style/css', () => ({}))
 vi.mock('@/api/modules/oss', () => ({ browseOssObjects: vi.fn(), getOssBrowserUrl: vi.fn() }))
 const { error, warning } = vi.hoisted(() => ({ error: vi.fn(), warning: vi.fn() }))
-vi.mock('element-plus', () => ({ ElMessage: { error, warning } }))
+vi.mock('element-plus', async importOriginal => ({ ...await importOriginal<typeof import('element-plus')>(), ElMessage: { error, warning } }))
 
 const root = 'medical-records/'
 function directory(prefix = root, token: string | null = 'next') {

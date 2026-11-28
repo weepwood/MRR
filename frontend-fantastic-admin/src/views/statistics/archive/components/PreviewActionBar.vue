@@ -103,10 +103,10 @@ watch(() => props.image, () => {
   width: min(180px, calc(100vw - 32px));
   min-width: 0;
   padding: 8px;
-  background: hsl(var(--card) / 92%);
-  border: 1px solid var(--divider);
+  background: var(--mrr-popover);
+  border: 1px solid var(--mrr-border);
   border-radius: var(--mrr-radius-md);
-  box-shadow: 0 4px 12px rgb(0 0 0 / 6%);
+  box-shadow: var(--mrr-shadow-md);
 }
 
 .preview-controls,
@@ -135,7 +135,11 @@ watch(() => props.image, () => {
 
 .page-navigation {
   flex: none;
-  gap: 2px;
+  gap: var(--mrr-space-1);
+}
+
+.page-navigation :deep(.el-button) {
+  margin: 0;
 }
 
 .preview-type-select {

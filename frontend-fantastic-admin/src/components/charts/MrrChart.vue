@@ -48,7 +48,7 @@ function setChartRef(element: unknown) {
       :aria-label="ariaLabel"
       role="img"
     />
-    <div v-if="empty" class="mrr-chart__empty">
+    <div v-if="empty && !loading" class="mrr-chart__empty">
       <i class="i-lucide:chart-no-axes-column-increasing" aria-hidden="true" />
       <span>{{ emptyDescription }}</span>
     </div>
@@ -59,6 +59,7 @@ function setChartRef(element: unknown) {
 .mrr-chart {
   position: relative;
   width: 100%;
+  min-width: 0;
   min-height: 160px;
 }
 
@@ -71,11 +72,11 @@ function setChartRef(element: unknown) {
   position: absolute;
   inset: 0;
   display: grid;
-  gap: 8px;
+  gap: var(--mrr-space-2);
   place-content: center;
   justify-items: center;
-  color: var(--el-text-color-placeholder);
-  background: var(--el-bg-color);
+  color: var(--mrr-muted-foreground);
+  background: var(--mrr-card);
 }
 
 .mrr-chart__empty i {
@@ -83,6 +84,6 @@ function setChartRef(element: unknown) {
 }
 
 .mrr-chart__empty span {
-  font-size: 13px;
+  font-size: var(--mrr-font-size-sm);
 }
 </style>

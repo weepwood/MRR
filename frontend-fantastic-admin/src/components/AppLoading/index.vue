@@ -59,6 +59,7 @@ withDefaults(defineProps<{
   --skeleton-shimmer: linear-gradient(90deg, var(--skeleton-base) 25%, var(--skeleton-highlight) 50%, var(--skeleton-base) 75%);
 
   width: 100%;
+  min-width: 0;
 }
 
 .skeleton-cell,
@@ -106,6 +107,7 @@ withDefaults(defineProps<{
 
 .skeleton-cell {
   flex: 1 1 0;
+  min-width: 0;
   height: 12px;
 }
 
@@ -125,7 +127,7 @@ withDefaults(defineProps<{
 
 .skeleton-cards {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 240px), 1fr));
   gap: var(--mrr-space-4);
 }
 
@@ -152,7 +154,7 @@ withDefaults(defineProps<{
 
 .skeleton-stats {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 180px), 1fr));
   gap: var(--mrr-space-4);
 }
 

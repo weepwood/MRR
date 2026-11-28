@@ -72,16 +72,15 @@ function onSelection(value: number | 'all') {
       </button>
     </div>
     <div class="type-tabs" :class="{ 'type-tabs--single-column': displayMode === 'single-column' }">
-      <div class="type-tab-entry">
-        <button type="button" class="type-tab" :class="{ active: selectedType === 'all' }" :aria-pressed="selectedType === 'all'" @click="onSelect('all')">
-          <el-checkbox
-            :model-value="props.allSelected"
-            :indeterminate="props.allIndeterminate"
-            :disabled="props.totalCount === 0"
-            aria-label="选择全部病案"
-            @click.stop
-            @change="onSelection('all')"
-          />
+      <div class="type-tab-entry" :class="{ active: selectedType === 'all' }">
+        <el-checkbox
+          :model-value="props.allSelected"
+          :indeterminate="props.allIndeterminate"
+          :disabled="props.totalCount === 0"
+          aria-label="选择全部病案"
+          @change="onSelection('all')"
+        />
+        <button type="button" class="type-tab" :aria-pressed="selectedType === 'all'" @click="onSelect('all')">
           <span class="type-tab-label">全部</span>
           <span class="type-count">{{ props.totalCount }}</span>
         </button>
@@ -90,23 +89,23 @@ function onSelection(value: number | 'all') {
         v-for="item in visibleTypeStats"
         :key="item.value"
         class="type-tab-entry"
+        :class="{ active: selectedType === item.value, disabled: item.count === 0 }"
       >
+        <el-checkbox
+          :model-value="props.isTypeSelected(item.value)"
+          :indeterminate="props.isTypeIndeterminate(item.value)"
+          :disabled="item.count === 0"
+          :aria-label="`选择${item.label}病案`"
+          @change="onSelection(item.value)"
+        />
         <button
           type="button"
           class="type-tab"
-          :class="{ active: selectedType === item.value, disabled: item.count === 0 }"
           :aria-pressed="selectedType === item.value"
           :disabled="item.count === 0"
+          :title="item.label"
           @click="onSelect(item.value)"
         >
-          <el-checkbox
-            :model-value="props.isTypeSelected(item.value)"
-            :indeterminate="props.isTypeIndeterminate(item.value)"
-            :disabled="item.count === 0"
-            :aria-label="`选择${item.label}病案`"
-            @click.stop
-            @change="onSelection(item.value)"
-          />
           <span class="type-tab-label">{{ item.label }}</span>
           <span v-if="item.count" class="type-count">{{ item.count }}</span>
         </button>
@@ -172,79 +171,89 @@ function onSelection(value: number | 'all') {
   grid-template-columns: 1fr;
 }
 
-.type-tab {
-  display: inline-flex;
-  flex: 1;
-  gap: 4px;
+.type-tab-entry {
+  display: flex;
+  gap: var(--mrr-space-1);
   align-items: center;
-  justify-content: space-between;
-  width: 100%;
   min-width: 0;
-  height: var(--mrr-control-height);
-  padding: 0 8px;
-  font-size: 13px;
-  color: var(--text-secondary);
-  white-space: nowrap;
-  cursor: pointer;
+  padding: 0 var(--mrr-space-2);
+  color: var(--mrr-muted-foreground);
   background: transparent;
   border: 1px solid transparent;
   border-radius: var(--mrr-radius-sm);
-  transition: color var(--mrr-motion-feedback) var(--mrr-ease-out), background-color var(--mrr-motion-feedback) var(--mrr-ease-out), border-color var(--mrr-motion-feedback) var(--mrr-ease-out), box-shadow var(--mrr-motion-feedback) var(--mrr-ease-out);
+  transition: color var(--mrr-motion-feedback) var(--mrr-ease-out), background-color var(--mrr-motion-feedback) var(--mrr-ease-out), border-color var(--mrr-motion-feedback) var(--mrr-ease-out);
 }
 
-.type-tab-entry {
+.type-tab {
+  display: inline-flex;
+  flex: 1;
+  gap: var(--mrr-space-1);
+  align-items: center;
+  justify-content: space-between;
   min-width: 0;
+  min-height: calc(var(--mrr-control-height) - 2px);
+  padding: 0;
+  font-size: var(--mrr-font-size-sm);
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+  background: transparent;
+  border: 0;
+  border-radius: var(--mrr-radius-sm);
 }
 
 .type-tab-label {
-  margin-right: auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
-.type-tab :deep(.el-checkbox__inner) {
+.type-tab-entry :deep(.el-checkbox__inner) {
   border-radius: var(--mrr-control-radius);
 }
 
-.type-tab :deep(.el-checkbox) {
+.type-tab-entry :deep(.el-checkbox) {
+  flex: none;
   height: auto;
+  margin: 0;
 }
 
-.type-tab.active {
-  font-weight: 600;
+.type-tab-entry.active {
+  font-weight: var(--mrr-font-weight-label);
   color: var(--color-primary);
   background: var(--mrr-navigation-active);
   border-color: var(--mrr-navigation-active-border);
-  box-shadow: 0 2px 8px color-mix(in srgb, var(--color-primary) 14%, transparent);
-
-  /*
-   * 选中只靠颜色、描边与字重的过渡表达，不再播放 0.96→1.02→1 的弹跳：
-   * DESIGN.md 约定「状态确认动效不使用超过最终尺寸的弹跳」，且 keyframes 会在
-   * 每次重新挂载（切换病案、刷新分类计数）时对当前选中项重播一次，读起来像又被点了一下。
-   */
 }
 
 .type-tab:focus-visible {
-  outline: 2px solid var(--color-primary);
-  outline-offset: 2px;
+  outline: 2px solid var(--mrr-ring);
+  outline-offset: 1px;
 }
 
-.type-tab:hover:not(.disabled):not(.active) {
+.type-tab-entry:hover:not(.disabled):not(.active) {
   background: var(--mrr-navigation-hover);
 }
 
-.type-tab.disabled {
-  cursor: not-allowed;
+.type-tab-entry.disabled {
   opacity: 0.4;
+}
+
+.type-tab:disabled {
+  cursor: not-allowed;
 }
 
 .type-count {
   display: inline-flex;
+  flex: none;
   align-items: center;
   justify-content: center;
   min-width: 18px;
   height: 18px;
   padding: 0 5px;
-  font-size: 11px;
-  font-weight: 600;
+  font-size: var(--mrr-font-size-xs);
+  font-weight: var(--mrr-font-weight-label);
+  font-variant-numeric: tabular-nums;
   color: var(--text-tertiary);
   background: var(--surface-alt);
   border-radius: var(--mrr-radius-pill);

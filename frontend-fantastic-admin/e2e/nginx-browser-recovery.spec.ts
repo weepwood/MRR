@@ -1,5 +1,6 @@
 import type { Route } from '@playwright/test'
 import { expect, test } from '@playwright/test'
+import { isolateLocalVisualSettings } from './helpers/local-visual-settings'
 
 const server = { key: 'default', name: '默认节点', configured: true }
 
@@ -88,6 +89,7 @@ test('翻页失败保留当前页，较慢的旧目录不能覆盖新目录', as
 })
 
 test('窄屏使用键盘打开目录，关闭预览会取消旧文件请求', async ({ page }) => {
+  await isolateLocalVisualSettings(page)
   await page.setViewportSize({ width: 390, height: 844 })
   await page.addInitScript(() => {
     localStorage.setItem('MRR-ADMIN:app-settings', JSON.stringify({ layout: { enableMobileAdaptation: true } }))

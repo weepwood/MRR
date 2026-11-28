@@ -1,4 +1,9 @@
 import { expect, test } from '@playwright/test'
+import { isolateLocalVisualSettings } from './helpers/local-visual-settings'
+
+test.beforeEach(async ({ page }) => {
+  await isolateLocalVisualSettings(page)
+})
 
 for (const theme of ['light', 'dark']) {
   test(`${theme} 数据表分页失败保持上次结果、重试与窄屏筛选`, async ({ page }) => {
@@ -16,18 +21,22 @@ for (const theme of ['light', 'dark']) {
     })
     await page.goto('/database-browse')
     await page.getByRole('button', { name: '浏览影像记录（合成）' }).click()
-    await expect(page.getByText('第 1 页 · 本页 50 行', { exact: false })).toBeVisible()
+    await expect(page.getByRole('spinbutton', { name: '页', exact: true })).toHaveValue('1')
+    await expect(page.locator('.mrr-cursor-pagination__summary')).toContainText('本页 50 行')
     await page.getByRole('button', { name: '下一页', exact: true }).click()
     await expect(page.getByText('保留上次成功结果', { exact: false })).toBeVisible()
-    await expect(page.getByText('第 1 页 · 本页 50 行', { exact: false })).toBeVisible()
+    await expect(page.getByRole('spinbutton', { name: '页', exact: true })).toHaveValue('1')
+    await expect(page.locator('.mrr-cursor-pagination__summary')).toContainText('本页 50 行')
     await page.screenshot({ path: test.info().outputPath(`${theme}-browse-error.png`) })
     await page.getByRole('button', { name: '重试请求' }).click()
-    await expect(page.getByText('第 2 页 · 本页 14 行', { exact: false })).toBeVisible()
+    await expect(page.getByRole('spinbutton', { name: '页', exact: true })).toHaveValue('2')
+    await expect(page.locator('.mrr-cursor-pagination__summary')).toContainText('本页 14 行')
     await page.setViewportSize({ width: 390, height: 844 })
     const field = page.getByRole('textbox', { name: '病案号', exact: true })
     await field.fill('26070000')
     await field.press('Enter')
-    await expect(page.getByText('第 1 页 · 本页 2 行', { exact: false })).toBeVisible()
+    await expect(page.getByRole('spinbutton', { name: '页', exact: true })).toHaveValue('1')
+    await expect(page.locator('.mrr-cursor-pagination__summary')).toContainText('本页 2 行')
     await expect.poll(() => page.locator('.filters').evaluate(el => el.scrollWidth <= el.clientWidth + 1)).toBe(true)
     await page.screenshot({ path: test.info().outputPath(`${theme}-browse-loaded-mobile.png`) })
   })

@@ -10,6 +10,7 @@ export default defineFakeRoute([
   { url: '/api/v1/auth/users/:id/password/reset', method: 'POST', response: disabled },
   { url: '/api/v1/auth/users/:id/registration/approve', method: 'POST', response: disabled },
   { url: '/api/v1/auth/users/:id/registration/reject', method: 'POST', response: disabled },
+  { url: '/api/v1/auth/users/:id/registration/reopen', method: 'POST', response: disabled },
   { url: '/api/v1/patients/:id', method: 'PUT', response: disabled },
   { url: '/api/v1/patients/import', method: 'POST', response: disabled },
   { url: '/api/v1/data-exchange/:dataset/import', method: 'POST', response: disabled },

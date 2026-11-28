@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import type { MrrRequestHeatmapItem } from '@/types/chart'
+import { useElementSize } from '@vueuse/core'
 import { computed, onBeforeUnmount, ref } from 'vue'
 
 defineOptions({ name: 'MrrRequestHeatmap' })
@@ -9,11 +10,13 @@ const props = withDefaults(defineProps<{
   days?: number
   cellSize?: number
   cellGap?: number
+  fitWidth?: boolean
   emptyDescription?: string
 }>(), {
   days: 365,
   cellSize: 11,
   cellGap: 3,
+  fitWidth: false,
   emptyDescription: '近一年暂无请求数据',
 })
 
@@ -95,11 +98,16 @@ const calendarDays = computed<HeatmapDay[]>(() => {
 })
 
 const weekCount = computed(() => Math.ceil(calendarDays.value.length / 7))
+const scrollRegion = ref<HTMLElement>()
+const { width: availableWidth } = useElementSize(scrollRegion)
+const fittedCellSize = computed(() => props.fitWidth && availableWidth.value > 0
+  ? Math.max(props.cellSize, Math.min(18, Math.floor((availableWidth.value - 40 - Math.max(0, weekCount.value - 1) * props.cellGap) / weekCount.value)))
+  : props.cellSize)
 const gridWidth = computed(() => (
-  weekCount.value * props.cellSize + Math.max(0, weekCount.value - 1) * props.cellGap
+  weekCount.value * fittedCellSize.value + Math.max(0, weekCount.value - 1) * props.cellGap
 ))
 const chartStyle = computed(() => ({
-  '--heatmap-cell-size': `${props.cellSize}px`,
+  '--heatmap-cell-size': `${fittedCellSize.value}px`,
   '--heatmap-cell-gap': `${props.cellGap}px`,
   '--heatmap-grid-width': `${gridWidth.value}px`,
   '--heatmap-week-count': weekCount.value,
@@ -125,7 +133,7 @@ const monthLabels = computed<MonthLabel[]>(() => {
     })
   })
 
-  if (labels.length > 1 && labels[0].weekIndex === labels[1].weekIndex) {
+  if (labels.length > 1 && (labels[1].weekIndex - labels[0].weekIndex) * (props.cellSize + props.cellGap) < 36) {
     labels.shift()
   }
 
@@ -306,7 +314,7 @@ onBeforeUnmount(hideTooltip)
     </header>
 
     <div class="heatmap-viewport" @pointerleave="hideTooltip">
-      <div class="heatmap-scroll" @scroll.passive="hideTooltip" @wheel.passive="hideTooltip">
+      <div ref="scrollRegion" class="heatmap-scroll" @scroll.passive="hideTooltip" @wheel.passive="hideTooltip">
         <div class="heatmap-content">
           <div class="month-labels" aria-hidden="true">
             <span
@@ -422,7 +430,7 @@ onBeforeUnmount(hideTooltip)
 .heatmap-legend span {
   padding: 0 var(--mrr-space-1);
   font-size: var(--mrr-font-size-xs);
-  color: var(--el-text-color-placeholder);
+  color: var(--mrr-muted-foreground);
 }
 
 .heatmap-legend i {
@@ -453,7 +461,7 @@ onBeforeUnmount(hideTooltip)
   column-gap: var(--heatmap-cell-gap);
   width: var(--heatmap-grid-width);
   height: 20px;
-  margin-left: 34px;
+  margin-left: calc(28px + var(--mrr-space-2));
   font-size: var(--mrr-font-size-xs);
   color: var(--el-text-color-secondary);
 }
@@ -479,7 +487,7 @@ onBeforeUnmount(hideTooltip)
   /* 只在一、三、五行出现，相邻标签之间隔一行，12px 字形不会互相挤压。 */
   font-size: var(--mrr-font-size-xs);
   line-height: var(--heatmap-cell-size);
-  color: var(--el-text-color-placeholder);
+  color: var(--mrr-muted-foreground);
   text-align: right;
 }
 
@@ -512,6 +520,11 @@ onBeforeUnmount(hideTooltip)
   border-color: var(--el-text-color-primary);
   filter: saturate(1.08);
   transform: var(--mrr-motion-decor, scale(1.18));
+}
+
+.heatmap-cell:focus-visible {
+  outline: 2px solid var(--mrr-ring);
+  outline-offset: 1px;
 }
 
 .heatmap-cell.is-outside {

@@ -33,7 +33,7 @@ html:root {
 /* ===== Buttons ===== */
 .el-button {
   display: inline-flex;
-  gap: 6px;
+  gap: var(--mrr-button-icon-gap);
   align-items: center;
   justify-content: center;
   height: var(--mrr-control-height);
@@ -59,7 +59,7 @@ html:root {
 
 .el-button > span {
   display: inline-flex;
-  gap: 6px;
+  gap: var(--mrr-button-icon-gap);
   align-items: center;
   justify-content: center;
 }
@@ -68,9 +68,9 @@ html:root {
 .el-button [class^="i-"],
 .el-button [class*=" i-"] {
   flex: none;
-  width: 16px;
-  height: 16px;
-  font-size: 16px;
+  width: var(--mrr-control-icon-size);
+  height: var(--mrr-control-icon-size);
+  font-size: var(--mrr-control-icon-size);
 }
 
 .el-button.el-button--small {
@@ -289,6 +289,32 @@ body .el-button--info.is-plain:not(.is-disabled):hover {
   outline-color: var(--mrr-destructive);
   border-color: color-mix(in srgb, var(--mrr-destructive) 55%, transparent);
   box-shadow: var(--mrr-danger-focus-ring);
+}
+
+/* Chrome 86: retain semantic foreground/background contrast and borders when
+ * color-mix() is not available. Keep disabled rules below this block. */
+@supports not (color: color-mix(in srgb, #000 50%, #fff)) {
+  .el-button--danger:not(.is-link):not(.is-text):not(.is-plain):not(.is-disabled):hover {
+    background: var(--mrr-tone-danger-soft);
+  }
+
+  body .el-button--primary.is-plain {
+    border-color: var(--mrr-tone-primary-border);
+  }
+
+  body .el-button--primary.is-plain:not(.is-disabled):hover {
+    background: var(--mrr-tone-primary-soft);
+    border-color: var(--mrr-primary);
+  }
+
+  body .el-button--danger.is-plain {
+    border-color: var(--mrr-tone-danger-border);
+  }
+
+  body .el-button--danger.is-plain:not(.is-disabled):hover,
+  .el-button--danger:focus-visible {
+    border-color: var(--mrr-destructive);
+  }
 }
 
 /* 禁用态原先只是把主色降到 50% 透明度：浅蓝填充 + 白字仍然读作「可点击的主按钮」，

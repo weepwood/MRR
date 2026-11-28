@@ -48,7 +48,7 @@ const isLive = computed(() => props.live ?? (!props.tone && RUNNING_STATUSES.inc
 <template>
   <span class="mrr-status-tag" :class="[`mrr-status-tag--${statusMeta.tone}`, { 'mrr-status-tag--live': isLive }]">
     <span class="mrr-status-tag__dot" aria-hidden="true" />
-    <span>{{ statusMeta.label }}</span>
+    <span class="mrr-status-tag__label">{{ statusMeta.label }}</span>
   </span>
 </template>
 
@@ -81,6 +81,7 @@ const isLive = computed(() => props.live ?? (!props.tone && RUNNING_STATUSES.inc
 
 .mrr-status-tag__dot {
   position: relative;
+  flex: 0 0 6px;
   width: 6px;
   height: 6px;
   background: currentcolor;
@@ -98,25 +99,25 @@ const isLive = computed(() => props.live ?? (!props.tone && RUNNING_STATUSES.inc
 }
 
 .mrr-status-tag--success {
-  --mrr-status-color: var(--mrr-tone-success);
+  --mrr-status-color: var(--mrr-tone-success-ink);
   --mrr-status-soft: var(--mrr-tone-success-soft);
   --mrr-status-border: var(--mrr-tone-success-border);
 }
 
 .mrr-status-tag--info {
-  --mrr-status-color: var(--mrr-tone-info);
+  --mrr-status-color: var(--mrr-tone-info-ink);
   --mrr-status-soft: var(--mrr-tone-info-soft);
   --mrr-status-border: var(--mrr-tone-info-border);
 }
 
 .mrr-status-tag--warning {
-  --mrr-status-color: var(--mrr-tone-warning);
+  --mrr-status-color: var(--mrr-tone-warning-ink);
   --mrr-status-soft: var(--mrr-tone-warning-soft);
   --mrr-status-border: var(--mrr-tone-warning-border);
 }
 
 .mrr-status-tag--danger {
-  --mrr-status-color: var(--mrr-destructive);
+  --mrr-status-color: var(--mrr-tone-danger-ink);
   --mrr-status-soft: var(--mrr-tone-danger-soft);
   --mrr-status-border: var(--mrr-tone-danger-border);
 }

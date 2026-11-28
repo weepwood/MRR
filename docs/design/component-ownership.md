@@ -287,3 +287,37 @@ FaIcon、FaKbd、FaPinInput、FaScrollArea、FaSmartFixedBlock、FaPasswordStren
 | `views/users/index.vue` | FaIcon × 3 | el-alert × 5, el-button × 16, el-checkbox × 1, el-dialog × 6, el-form × 4, el-form-item × 11, el-input × 5, el-input-number × 2, el-option × 6, el-pagination × 1, el-select × 6, el-table × 1, el-table-column × 8, el-tag × 1 |
 
 2026-11-26：#844 经 GitHub 合并接口成功 squash 至 2dff0e4b，验收 head f6934742 与合并 tree 一致；提示分支重放至新基线。此前 OPEN 为历史状态。
+
+## 本地残余控件与 CSS 审查（2026-11-26）
+
+详见[本地控件归属审计](local-ui-ownership-audit.md)：以 0161abbd 为基线的 71 处原生按钮、475 处外部 Element Plus 引用逐项分类；三处普通业务按钮、Manifest 两个选择器、OCR 文本域和两个输入字段改用统一底层，保留内容按钮及文件输入。共享图标令牌、设置滑块和行内命令样式，以及授权浏览查询反馈采用明确归属。不将所有 475 处引用视为冲突，不将剩余专用 FA 视为重复基础控件。实际验收边界见工程交接。
+
+## 视觉令牌及图表归属最终补充（2026-11-26）
+
+表面及交替行归 data-display.css 和 tokens.css；状态与指标语义前景归 tones.css，各组件仅消费 ink 令牌；图表色值解析、坐标与提示归 chart-theme.ts，图表实例与同配置交互保留归 useMrrChart.ts。仅业务字段换行和批量选中反馈保留页面级样式。不要新增重复的 Element Plus 暗色覆盖、逐页硬编码颜色或全局重置表格。
+
+## 普通业务筛选归属补充（2026-11-26）
+
+MrrFilterBar 统一拥有字段流式/网格布局、容器响应式、语义宽度、动作分组与高级区域结构；MrrFilterActionButton 统一查询/重置反馈，MrrDataTablePanel 继续拥有表格及分页。页面拥有字段值、权限、请求、已应用快照和业务操作；不复制普通筛选尺寸/间距。动态数据库筛选保留带标签网格，专用影像身份查询/侧栏及即时筛选保留专业布局。
+
+## 分段页签（2026-11-26）
+MrrSegmentedTabs拥有原生Element Plus封装、可访问tablist名称和首尾键导航；form-controls.css拥有共用轨道、活动底板、尺寸和动效。业务页面仅提供选项与内容，AppConfigPanel负责窄容器图标化，不复制活动底板。theme-palette.ts拥有暖色输入边界、悬停和聚焦相关令牌。
+
+## 目录导航（2026-11-26）
+base.css 的 mrr-nav-leaf 负责所有叶子选中色条及动效，按语义ARIA选中状态驱动；mrr-directory-nav-item/icon/label/count 负责本地平级目录的公共视觉样式。Menu/item.vue保留路由行为，SubSidebar保留树层级及展开几何；设置与展厅仅负责各自数据、筛选及交互，不复制色条或选中描边。
+
+目录外层容器由 base.css 的 mrr-directory-panel 统一管理背景、描边、圆角与内边距；页面仅管理目录位置、响应式排列和滚动。
+
+集中UI精修：分区标题表面由tokens.css/theme-palette.ts与MrrSectionCard消费，数字、选择、日期、开关、滚动条分别由现有Element Plus桥接与base.css负责；展厅仅负责局部预览与示例状态，不另建主题机制；统计明细仅消费嵌入筛选器的既有令牌和自身档案网格。
+
+专业构图深化：表单定宽与帮助文字归公共forms-geometry-viewer.css，监控窄屏摘要显式变体归metric-card.css，图表通用轴/图例归chart-theme.ts；局部暖色预览复用正式palette与warm-flat.css的明确作用域，不持久化、不影响浮层。影像墙比例由ArchiveWall负责，抽屉过渡由overlay-shells.css负责。
+
+V1.2 第三轮：外壳阴影及分隔归公共tokens；权限角色排版和运维问题行归业务页面，影像阅读表面归PreviewPanel/ThumbStrip/PreviewActionBar；热力图与排行各自管理数据图形几何，经典局部预览读取正式主题配置并仅映射自身控件色彩，不写入全站。
+
+重点视觉收口：热力图尺寸适配归 MrrRequestHeatmap 显式 fit-width 选项，调用方仅开启；图表失活任务清理归 useMrrChart，运行错误技术分区归业务详情，局部日期/多行输入归展厅，不另建主题或日期选择组件。
+
+影像阅读精修：查看器原生按钮与焦点归 PreviewViewerToolbar，共享浮层与窄屏位置归 forms-geometry-viewer.css，分类工具条归 PreviewActionBar，列表复选框/失败键/节点引用归 ThumbStrip；排行标签取图表语义色，加载组合示例归 BusinessExamples。
+
+生产候选：影像标准阅读断点归archive.vue，缩略图实际容器几何归useThumbLayout，滚动定位归ThumbStrip，患者字段排版归PatientCard；双轴组合演示复用MrrDualAxisChart，独立生产Mock环境隔离归Vite构建配置与专用Playwright配置。
+
+阅读密度收口：中宽屏信息区排版归 archive.vue；分类选中外表面与独立勾选/筛选归 TypeFilterBar，强制色通用回退归 base.css；缩略图元数据归 ThumbStrip；图表加载/空态优先级归 MrrChart，展厅数据引用稳定化归 BusinessExamples。性能采集归 e2e/ui-v12-lifecycle.spec.ts，仅在生产Mock专用配置显式启用堆快照。

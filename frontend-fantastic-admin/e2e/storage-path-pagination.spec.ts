@@ -42,6 +42,20 @@ async function storageRepro(page: Page, oss: boolean) {
   expect(reads.slice(before)).toEqual([1, 2])
   await page.getByRole('button', { name: '上一页', exact: true }).click()
   await expect(page.locator('.file-pane').getByText('sample-001.bin', { exact: true })).toBeVisible()
+  const jump = page.locator('.mrr-cursor-pagination .el-pagination__jump input')
+  await expect(jump).toBeEnabled()
+  const beforeJump = reads.length
+  await jump.fill('999')
+  await jump.press('Enter')
+  await expect(page.locator('.mrr-pagination-range-error')).toBeVisible()
+  expect(reads).toHaveLength(beforeJump)
+  await jump.fill('2')
+  await jump.press('Enter')
+  await expect(page.locator('.file-pane').getByText(name, { exact: true })).toBeVisible()
+  await expect(jump).toBeEnabled()
+  await jump.fill('1')
+  await jump.press('Enter')
+  await expect(page.locator('.file-pane').getByText('sample-001.bin', { exact: true })).toBeVisible()
 }
 
 for (const kind of ['OSS', 'Nginx']) {

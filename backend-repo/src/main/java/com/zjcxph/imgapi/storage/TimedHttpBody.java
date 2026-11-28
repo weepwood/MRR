@@ -16,7 +16,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 /** One outstanding JDK HTTP body demand; wait for bytes without occupying an extra I/O worker. */
-final class TimedHttpBody extends InputStream implements HttpResponse.BodySubscriber<InputStream> {
+public final class TimedHttpBody extends InputStream implements HttpResponse.BodySubscriber<InputStream> {
     private record Event(List<ByteBuffer> bytes, Throwable failure, boolean end) {}
     private static final Event END = new Event(List.of(), null, true);
     private final CompletableFuture<InputStream> body = new CompletableFuture<>();
@@ -36,7 +36,7 @@ final class TimedHttpBody extends InputStream implements HttpResponse.BodySubscr
                 ? Duration.ofHours(1).toNanos() : safe.toNanos();
     }
 
-    static HttpResponse.BodyHandler<InputStream> handler(Duration timeout) {
+    public static HttpResponse.BodyHandler<InputStream> handler(Duration timeout) {
         return info -> new TimedHttpBody(timeout);
     }
 

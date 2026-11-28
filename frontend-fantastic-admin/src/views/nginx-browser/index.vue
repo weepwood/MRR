@@ -260,13 +260,14 @@ function goUp() {
   navigate(path.slice(0, path.lastIndexOf('/') + 1))
 }
 
-function turnPage(direction: -1 | 1) {
+function jumpToPage(target: number) {
   const current = page.value
-  if (!current || loading.value || (direction === 1 ? !canNextPage.value : !current.offset)) {
+  if (!current || loading.value || !Number.isSafeInteger(target) || target < 1 || target > Math.max(1, Math.ceil(current.totalEntries / current.limit))) {
     return
   }
-  const { server, path, offset, limit } = current
-  void loadDirectory({ server, path, offset: Math.max(0, offset + direction * limit) }, history.value)
+  const offset = (target - 1) * current.limit
+  if (offset === current.offset) { return }
+  void loadDirectory({ server: current.server, path: current.path, offset }, history.value)
 }
 
 function selectEntry(entry?: NginxBrowserEntry) {
@@ -418,8 +419,6 @@ onBeforeUnmount(cancelRequests)
 <template>
   <MrrPageShell>
     <MrrPageHeader
-      size="compact"
-      class="page-header"
       title="Nginx 文件浏览"
       description="浏览已配置图片节点中的目录与文件。"
     >
@@ -437,7 +436,9 @@ onBeforeUnmount(cancelRequests)
       :location="entryLocation"
       :breadcrumbs="breadcrumbs"
       :selected="selectedEntry"
-      :page-label="page ? `第 ${Math.floor(page.offset / page.limit) + 1} 页 · 共 ${page.totalEntries} 项` : '目录内容'"
+      :page-label="page ? `共 ${page.totalEntries} 项` : '目录内容'"
+      :page-number="page ? Math.floor(page.offset / page.limit) + 1 : undefined"
+      :max-reachable-page="page ? Math.max(1, Math.ceil(page.totalEntries / page.limit)) : undefined"
       :summary="page ? `${page.loadedDirectories} 个目录 · ${page.loadedFiles} 个文件 · ${formatFileSize(page.loadedBytes)}` : undefined"
       :source-detail="page?.baseUrl ? { label: '查看节点根地址', value: page.baseUrl } : undefined"
       :loading="loading"
@@ -457,8 +458,7 @@ onBeforeUnmount(cancelRequests)
       @navigate="navigate"
       @select="selectEntry"
       @open="openEntry"
-      @previous="turnPage(-1)"
-      @next="turnPage(1)"
+      @jump="jumpToPage"
     >
       <template #source>
         <strong>图片节点</strong>

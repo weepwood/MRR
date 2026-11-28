@@ -85,6 +85,27 @@ class ExternalArchiveAccessServiceTest {
     }
 
     @Test
+    void externalListUsesExactRequestedCaseAndDoesNotSerializeInternalPathFields() {
+        var a=new com.zjcxph.imgapi.dto.resp.ExternalArchiveCaseDTO("123456","A",null,null,null);
+        var b=new com.zjcxph.imgapi.dto.resp.ExternalArchiveCaseDTO("654321","B",null,null,null);
+        var grant=new com.zjcxph.imgapi.security.ExternalArchiveGrant(CLIENT_ID,"synthetic",false,
+                System.currentTimeMillis()+60000,List.of(a,b));
+        var allowed=scan(1,"123456","A");
+        allowed.setFilename("synthetic.jpg");allowed.setFolder("private-folder");
+        allowed.setBrxh("private-person");allowed.setOpenerNo("private-operator");
+        when(scanService.getFreshImageListByCode(anyString(),anyString(),anyString(),anyString()))
+                .thenReturn(List.of(allowed,scan(2,"654321","B")));
+        assertThat(service.loadImages(grant,"123456","A")).singleElement().satisfies(dto->{
+            assertThat(dto.getId()).isEqualTo(1);
+            assertThat(dto.getImg_url()).endsWith("/1");
+            assertThat(dto.getFolder()).isNull();
+            assertThat(dto.getBrxh()).isNull();
+            assertThat(dto.getOpenerNo()).isNull();
+            assertThat(dto.getOssUrl()).isNull();
+        });
+    }
+
+    @Test
     void resolvesMixedSelectorsAsUnionAndConsumesTicketOnlyOnce() throws Exception {
         when(searchService.getArchiveCasesByID("330000000000000000")).thenReturn(List.of(
                 new IdCardArchiveSearchResponse.ArchiveCase(
@@ -92,7 +113,7 @@ class ExternalArchiveAccessServiceTest {
                         "内科", null, null
                 )
         ));
-        when(scanService.getImageListByCode(anyString(), anyString(), anyString(), anyString()))
+        when(scanService.getFreshImageListByCode(anyString(), anyString(), anyString(), anyString()))
                 .thenAnswer(invocation -> {
                     String bah = invocation.getArgument(0);
                     String sjh = invocation.getArgument(2);
@@ -141,11 +162,22 @@ class ExternalArchiveAccessServiceTest {
         ExternalArchiveStoredGrant storedSession = storedGrant(session.grant().cases());
         storedSession.setExpiresAt(LocalDateTime.now().plusMinutes(30));
         when(accessMapper.findSession(anyString())).thenReturn(storedSession);
+        when(accessMapper.touchSession(anyString())).thenReturn(1);
 
         assertThat(service.requireSession(session.token()).externalUserId()).isEqualTo("HIS-USER-10086");
         assertThatThrownBy(() -> service.consumeTicket(ticket.token(), "127.0.0.1"))
                 .isInstanceOf(BusinessException.class)
                 .hasMessageContaining("无效");
+    }
+
+    @Test
+    void rejectsSessionRevokedBetweenReadAndTouch() throws Exception {
+        var stored = storedGrant(List.of());
+        stored.setExpiresAt(LocalDateTime.now().plusMinutes(30));
+        when(accessMapper.findSession(anyString())).thenReturn(stored);
+        when(accessMapper.touchSession(anyString())).thenReturn(0);
+        assertThatThrownBy(() -> service.requireSession("synthetic-session"))
+                .isInstanceOf(BusinessException.class).hasMessageContaining("过期或已退出");
     }
 
     @Test
@@ -175,7 +207,7 @@ class ExternalArchiveAccessServiceTest {
 
     @Test
     void rejectsReplayedNonce() throws Exception {
-        when(scanService.getImageListByCode(anyString(), anyString(), anyString(), anyString()))
+        when(scanService.getFreshImageListByCode(anyString(), anyString(), anyString(), anyString()))
                 .thenReturn(List.of(scan(1, "1", "10")));
         when(accessMapper.insertNonce(anyString(), anyString(), any(LocalDateTime.class)))
                 .thenReturn(1, 0);

@@ -131,7 +131,7 @@ class DiagnosticEndpointPermissionsTest {
     }
 
     @Test void anonymousRequestGets401WithoutExistenceEvidence() throws Exception {
-        var login = new LoginInterceptor(mock(TokenBlacklist.class), mock(AuthUserMapper.class), mock(DeveloperModeService.class), mock(DeveloperApiAccessService.class));
+        var login = new LoginInterceptor(mock(AuthUserMapper.class), mock(DeveloperModeService.class), mock(DeveloperApiAccessService.class));
         var response = new MockHttpServletResponse();
         assertThat(login.preHandle(new MockHttpServletRequest("POST","/api/v1/operations/query-diagnostics"), response, new Object())).isFalse();
         assertThat(response.getStatus()).isEqualTo(401);
@@ -296,6 +296,37 @@ class DiagnosticEndpointPermissionsTest {
         controller.context(7,response);
         verify(service).context(7);
         assertThat(response.getHeader("Cache-Control")).isEqualTo("private, no-store");
+    }
+
+    @Test
+    void patientBearingRelationSearchAndDetailRequireBothReadPermissions() throws Exception {
+        var service = mock(DataRelationService.class);
+        var controller = new com.zjcxph.imgapi.controller.DataRelationController(service);
+        var auth = new AuthorizationInterceptor();
+        var handlers = List.of(
+                new HandlerMethod(controller, controller.getClass().getMethod("search", String.class, String.class, int.class)),
+                new HandlerMethod(controller, controller.getClass().getMethod("archiveRelation", long.class)));
+        var paths = List.of("/api/v1/system/data-relations/archives/search", "/api/v1/system/data-relations/archives/7");
+        for (int i = 0; i < handlers.size(); i++) {
+            var handler = handlers.get(i);
+            var path = paths.get(i);
+            var anonymous = new MockHttpServletResponse();
+            assertThat(auth.preHandle(new MockHttpServletRequest("GET", path), anonymous, handler)).isFalse();
+            assertThat(anonymous.getStatus()).isEqualTo(401);
+            for (var permissions : List.of(List.<String>of(), List.of("system:read"), List.of("record:read"), List.of("system:manage"))) {
+                var denied = new MockHttpServletResponse();
+                assertThat(auth.preHandle(request("GET", path, permissions), denied, handler)).isFalse();
+                assertThat(denied.getStatus()).isEqualTo(403);
+            }
+            assertThat(auth.preHandle(request("GET", path, List.of("system:read", "record:read")),
+                    new MockHttpServletResponse(), handler)).isTrue();
+            assertThat(auth.preHandle(request("GET", path, List.of("system:manage", "record:manage")),
+                    new MockHttpServletResponse(), handler)).isTrue();
+        }
+        var overview = new HandlerMethod(controller, controller.getClass().getMethod("overview"));
+        assertThat(auth.preHandle(request("GET", "/api/v1/system/data-relations/overview", List.of("system:read")),
+                new MockHttpServletResponse(), overview)).isTrue();
+        verifyNoInteractions(service);
     }
 
     @Test

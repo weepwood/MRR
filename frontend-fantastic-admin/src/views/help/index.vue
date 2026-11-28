@@ -104,22 +104,15 @@ onMounted(async () => {
 </script>
 
 <template>
-  <div class="help-center">
-    <header class="help-header">
-      <div>
-        <p class="help-kicker">
-          MRR DOCUMENTATION
-        </p>
-        <h1>帮助与文档</h1>
-        <p class="help-description">
-          用户手册、开发文档和运维指南由系统设置提供访问地址，实时 API 文档由当前后端服务提供。
-        </p>
-      </div>
-      <div class="help-status">
-        <span class="status-dot" />
-        可配置文档入口
-      </div>
-    </header>
+  <MrrPageShell class="help-center">
+    <MrrPageHeader eyebrow="MRR DOCUMENTATION" title="帮助与文档" description="用户手册、开发文档和运维指南由系统设置提供访问地址，实时 API 文档由当前后端服务提供。">
+      <template #actions>
+        <div class="help-status">
+          <span class="status-dot" />
+          可配置文档入口
+        </div>
+      </template>
+    </MrrPageHeader>
 
     <!-- 入口地址来自系统设置；加载完成前不展示可能被覆盖的默认链接。 -->
     <AppLoading v-if="loading" type="card" :cols="3" />
@@ -157,22 +150,10 @@ onMounted(async () => {
         </div>
       </el-card>
     </section>
-  </div>
+  </MrrPageShell>
 </template>
 
 <style scoped>
-/*
- * 页头（.help-header / .help-kicker / h1 / .help-description）的外观全部由 page-header.css 提供，
- * 权重 (0,3,1) 高于这里的 scoped 规则；原先这里的 2xl 圆角、38px 标题、内边距等声明从未生效，已删除。
- */
-.help-center {
-  display: flex;
-  flex-direction: column;
-  gap: var(--mrr-page-gap);
-  width: min(1280px, 100%);
-  margin: 0 auto;
-}
-
 .help-status {
   display: inline-flex;
   flex: none;

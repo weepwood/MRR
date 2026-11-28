@@ -20,7 +20,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
-import org.springframework.web.servlet.HandlerInterceptor;
+import org.springframework.web.servlet.AsyncHandlerInterceptor;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -28,7 +28,7 @@ import java.util.List;
 import java.util.Map;
 
 @Component
-public class LoginInterceptor implements HandlerInterceptor {
+public class LoginInterceptor implements AsyncHandlerInterceptor {
 
     public static final String DEVELOPER_MODE_ATTRIBUTE = "MRR_DEVELOPER_MODE";
     public static final String DEVELOPER_MODE_REASON_ATTRIBUTE = "MRR_DEVELOPER_MODE_REASON";
@@ -42,27 +42,23 @@ public class LoginInterceptor implements HandlerInterceptor {
             Permissions.SEARCH_READ
     );
 
-    private final TokenBlacklist tokenBlacklist;
     private final AuthUserMapper authUserMapper;
     private final DeveloperModeService developerModeService;
     private final DeveloperApiAccessService developerApiAccessService;
     private final ImageAccessCookieService imageAccessCookieService;
 
-    public LoginInterceptor(TokenBlacklist tokenBlacklist,
-                            AuthUserMapper authUserMapper,
+    public LoginInterceptor(AuthUserMapper authUserMapper,
                             DeveloperModeService developerModeService,
                             DeveloperApiAccessService developerApiAccessService) {
-        this(tokenBlacklist, authUserMapper, developerModeService, developerApiAccessService,
+        this(authUserMapper, developerModeService, developerApiAccessService,
                 ImageAccessCookieService.disabled());
     }
 
     @Autowired
-    public LoginInterceptor(TokenBlacklist tokenBlacklist,
-                            AuthUserMapper authUserMapper,
+    public LoginInterceptor(AuthUserMapper authUserMapper,
                             DeveloperModeService developerModeService,
                             DeveloperApiAccessService developerApiAccessService,
                             ImageAccessCookieService imageAccessCookieService) {
-        this.tokenBlacklist = tokenBlacklist;
         this.authUserMapper = authUserMapper;
         this.developerModeService = developerModeService;
         this.developerApiAccessService = developerApiAccessService;
@@ -73,6 +69,7 @@ public class LoginInterceptor implements HandlerInterceptor {
 
     @Override
     public boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler) throws Exception {
+        AuthContext.clear();
         if ("OPTIONS".equalsIgnoreCase(request.getMethod()) || isPublicAuthenticationRequest(request)) {
             return true;
         }
@@ -114,32 +111,18 @@ public class LoginInterceptor implements HandlerInterceptor {
             return false;
         }
 
-        try {
-            if (tokenBlacklist.isRevoked(jti)) {
-                writeUnauthorized(response, "Token 已失效，请重新登录", "REVOKED_TOKEN");
-                return false;
-            }
-        } catch (Exception exception) {
-            logger.error("Token revocation store unavailable", exception);
-            writeServiceUnavailable(response, "认证状态服务暂时不可用，请稍后重试");
+        if (!StringUtils.hasText(jti)) {
+            writeUnauthorized(response, "Token 已失效，请重新登录", "REVOKED_TOKEN");
             return false;
         }
-
+        AuthUserMapper.SessionState currentUser = observeSession(tokenSession.getId(), TokenBlacklist.tokenHash(jti), response);
+        if (currentUser == null) return false;
         if (tokenSession.getId() == null || !StringUtils.hasText(tokenSession.getUsername())) {
             writeUnauthorized(response, "Token 用户信息无效", "INVALID_TOKEN_USER");
             return false;
         }
 
-        AuthUser currentUser;
-        try {
-            currentUser = authUserMapper.findById(tokenSession.getId());
-        } catch (Exception exception) {
-            logger.error("Authentication user store unavailable: userId={}", tokenSession.getId(), exception);
-            writeServiceUnavailable(response, "认证用户服务暂时不可用，请稍后重试");
-            return false;
-        }
-
-        if (currentUser == null || !StringUtils.hasText(currentUser.getUsername())
+        if (currentUser.getId() == null || !StringUtils.hasText(currentUser.getUsername())
                 || !currentUser.getUsername().equals(tokenSession.getUsername())) {
             writeUnauthorized(response, "账号不存在或 Token 已失效", "MISSING_TOKEN_USER");
             return false;
@@ -174,27 +157,10 @@ public class LoginInterceptor implements HandlerInterceptor {
             return false;
         }
 
-        try {
-            if (tokenBlacklist.isRevokedHash(grant.tokenHash())) {
-                writeUnauthorized(response, "Token 已失效，请重新登录", "REVOKED_TOKEN");
-                return false;
-            }
-        } catch (Exception exception) {
-            logger.error("Token revocation store unavailable", exception);
-            writeServiceUnavailable(response, "认证状态服务暂时不可用，请稍后重试");
-            return false;
-        }
+        AuthUserMapper.SessionState currentUser = observeSession(grant.userId(), grant.tokenHash(), response);
+        if (currentUser == null) return false;
 
-        AuthUser currentUser;
-        try {
-            currentUser = authUserMapper.findById(grant.userId());
-        } catch (Exception exception) {
-            logger.error("Authentication user store unavailable: userId={}", grant.userId(), exception);
-            writeServiceUnavailable(response, "认证用户服务暂时不可用，请稍后重试");
-            return false;
-        }
-
-        if (currentUser == null || !StringUtils.hasText(currentUser.getUsername())) {
+        if (currentUser.getId() == null || !StringUtils.hasText(currentUser.getUsername())) {
             writeUnauthorized(response, "账号不存在或 Token 已失效", "MISSING_TOKEN_USER");
             return false;
         }
@@ -210,6 +176,35 @@ public class LoginInterceptor implements HandlerInterceptor {
         installSession(request, toCurrentSession(currentUser));
         request.setAttribute(ACCESS_MODE_ATTRIBUTE, ImageAccessCookieService.ACCESS_MODE);
         return true;
+    }
+
+    private AuthUserMapper.SessionState observeSession(Long userId, String tokenHash,
+                                                        HttpServletResponse response) throws Exception {
+        if (tokenHash == null || !tokenHash.matches("[0-9a-f]{64}")) {
+            writeUnauthorized(response, "Token 已失效，请重新登录", "REVOKED_TOKEN");
+            return null;
+        }
+        AuthUserMapper.SessionState state;
+        try {
+            state = authUserMapper.observeSession(userId, tokenHash);
+            if (state == null || state.getTokenRevoked() == null) {
+                throw new IllegalStateException("Authentication snapshot missing");
+            }
+        } catch (Exception exception) {
+            logger.error("Authentication state store unavailable", exception);
+            writeServiceUnavailable(response, "认证状态服务暂时不可用，请稍后重试");
+            return null;
+        }
+        if (state.getTokenRevoked()) {
+            writeUnauthorized(response, "Token 已失效，请重新登录", "REVOKED_TOKEN");
+            return null;
+        }
+        return state;
+    }
+
+    @Override
+    public void afterConcurrentHandlingStarted(HttpServletRequest request, HttpServletResponse response, Object handler) {
+        AuthContext.clear();
     }
 
     @Override

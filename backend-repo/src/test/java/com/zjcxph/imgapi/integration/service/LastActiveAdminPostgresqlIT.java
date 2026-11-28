@@ -1,6 +1,8 @@
 package com.zjcxph.imgapi.integration.service;
 
 import com.zjcxph.imgapi.dto.req.AuthUserUpdateRequest;
+import com.zjcxph.imgapi.dto.req.RegistrationApprovalRequest;
+import com.zjcxph.imgapi.dto.req.RegistrationRejectionRequest;
 import com.zjcxph.imgapi.exception.BusinessException;
 import com.zjcxph.imgapi.integration.PostgresqlIntegrationTestSupport;
 import com.zjcxph.imgapi.mapper.AuthRoleMapper;
@@ -62,10 +64,31 @@ class LastActiveAdminPostgresqlIT extends PostgresqlIntegrationTestSupport {
 
     @AfterEach
     void tearDown() {
+        com.zjcxph.imgapi.utils.AuthContext.clear();
         jdbc.update("delete from app.mr_auth_user where id in (?, ?)", firstId, secondId);
         for (Map<String, Object> row : previousAdmins) {
             jdbc.update("update app.mr_auth_user set status = ? where id = ?", row.get("status"), row.get("id"));
         }
+    }
+
+    @Test
+    void paginatedAccountProjectionDoesNotLoadCredentialHash() {
+        var original = userMapper.findById(firstId);
+        assertThat(original.getPasswordHash()).isNotBlank();
+        var rows = userMapper.findAllWithPagination(0, 20, original.getUsername(), null, null);
+        assertThat(rows).hasSize(1);
+        var row = rows.getFirst();
+        assertThat(row.getPasswordHash()).isNull();
+        assertThat(row.getId()).isEqualTo(original.getId());
+        assertThat(row.getUsername()).isEqualTo(original.getUsername());
+        assertThat(row.getRoleCode()).isEqualTo(original.getRoleCode());
+        assertThat(row.getPermissionsCsv()).isEqualTo(original.getPermissionsCsv());
+        var page = service.listUsersPaginated(1,20,original.getUsername(),null,null);
+        assertThat(page.getTotal()).isEqualTo(1L);
+        assertThat(page.getList()).hasSize(1);
+        assertThat(page.getList().getFirst().getId()).isEqualTo(firstId);
+        assertThat(page.getList().getFirst().getPasswordVersion()).isEqualTo(original.effectivePasswordVersion());
+        assertThat(userMapper.findById(firstId).getPasswordHash()).isEqualTo(original.getPasswordHash());
     }
 
     @Test
@@ -81,6 +104,7 @@ class LastActiveAdminPostgresqlIT extends PostgresqlIntegrationTestSupport {
     @Test
     void lastActiveAdminHasStableRejectionCode() {
         jdbc.update("update app.mr_auth_user set status = 'disabled' where id = ?", secondId);
+        installActor(firstId);
         assertThatThrownBy(() -> new TransactionTemplate(transactionManager)
                 .execute(status -> service.disableUser(firstId)))
                 .isInstanceOf(BusinessException.class)
@@ -91,6 +115,7 @@ class LastActiveAdminPostgresqlIT extends PostgresqlIntegrationTestSupport {
     @Test
     void editingLastAdminToDisabledIsRejected() {
         jdbc.update("update app.mr_auth_user set status = 'disabled' where id = ?", secondId);
+        installActor(firstId);
         AuthUserUpdateRequest request = new AuthUserUpdateRequest();
         request.setRoleCode("ADMIN");
         request.setStatus("disabled");
@@ -100,6 +125,462 @@ class LastActiveAdminPostgresqlIT extends PostgresqlIntegrationTestSupport {
                 .isInstanceOf(BusinessException.class)
                 .hasFieldOrPropertyWithValue("reasonCode", "LAST_ACTIVE_ADMIN_REQUIRED");
         assertThat(userMapper.countActiveAdmins()).isEqualTo(1);
+    }
+
+    @Test
+    void revokedAdministratorCannotApproveRegistrationAfterRoleLock() throws Exception {
+        assertRevokedAdministratorCannotReview(true);
+    }
+
+    @Test
+    void revokedAdministratorCannotRejectRegistrationAfterRoleLock() throws Exception {
+        assertRevokedAdministratorCannotReview(false);
+    }
+
+    @Test
+    void revokedAdministratorCannotCreateUserAfterRoleLock() throws Exception {
+        String username = "synthetic-new-" + UUID.randomUUID().toString().substring(0, 20);
+        var request = new com.zjcxph.imgapi.dto.req.AdminCreateUserRequest();
+        request.setUsername(username);
+        request.setRoleCode("DOCTOR");
+        try {
+            assertRevokedAdministratorCannotExecute(false, "USER_CREATED",
+                    () -> service.createUser(request, firstId, null));
+            assertThat(userMapper.findByUsername(username)).isNull();
+        } finally {
+            jdbc.update("delete from app.mr_auth_user where username = ?", username);
+        }
+    }
+
+    @Test
+    void demotedAdministratorCannotResetPasswordAfterRoleLock() throws Exception {
+        String syntheticPassword = "SyntheticAdminReview123";
+        jdbc.update("update app.mr_auth_user set password_hash = ? where id = ?",
+                com.zjcxph.imgapi.utils.PasswordUtil.encode(syntheticPassword), firstId);
+        var before = userMapper.findById(secondId);
+        var request = new com.zjcxph.imgapi.dto.req.AdminResetPasswordRequest();
+        request.setAdministratorPassword(syntheticPassword);
+        assertRevokedAdministratorCannotExecute(true, "USER_PASSWORD_RESET",
+                () -> service.resetPassword(secondId, request, firstId, null));
+        var after = userMapper.findById(secondId);
+        assertThat(after.getPasswordHash()).isEqualTo(before.getPasswordHash());
+        assertThat(after.effectivePasswordVersion()).isEqualTo(before.effectivePasswordVersion());
+        assertThat(after.getTemporaryPasswordExpiresAt()).isEqualTo(before.getTemporaryPasswordExpiresAt());
+    }
+
+    @Test
+    void revokedActorCannotUpdateUserAfterRoleLock() throws Exception {
+        assertRevokedActorCannotModifyUser(false);
+    }
+
+    @Test
+    void revokedActorCannotDisableUserAfterRoleLock() throws Exception {
+        assertRevokedActorCannotModifyUser(true);
+    }
+
+    private void assertRevokedActorCannotModifyUser(boolean disable) throws Exception {
+        long target = jdbc.queryForObject("""
+                insert into app.mr_auth_user (username, password_hash, role_code, status)
+                values (?, 'synthetic-hash', 'DOCTOR', 'active') returning id
+                """, Long.class, "synthetic-managed-" + UUID.randomUUID());
+        try {
+            var before = userMapper.findById(target);
+            assertRevokedAdministratorCannotExecute(false, disable ? "USER_DISABLED" : "USER_ROLE_OR_STATUS_CHANGED", () -> {
+                if (disable) service.disableUser(target);
+                else {
+                    var request = new AuthUserUpdateRequest();
+                    request.setRoleCode("DOCTOR");
+                    request.setStatus("active");
+                    request.setDisplayName("Synthetic edit");
+                    service.updateUser(target, request);
+                }
+            }, "当前账号没有操作权限");
+            var after = userMapper.findById(target);
+            assertThat(after.getStatus()).isEqualTo(before.getStatus());
+            assertThat(after.getDisplayName()).isEqualTo(before.getDisplayName());
+            assertThat(after.effectivePasswordVersion()).isEqualTo(before.effectivePasswordVersion());
+        } finally {
+            jdbc.update("delete from app.mr_auth_user where id = ?", target);
+        }
+    }
+
+    @Test
+    void demotedActorCannotUpdateRoleAfterRoleLock() throws Exception {
+        var before = roleMapper.findByCode("DOCTOR");
+        try {
+            assertRevokedAdministratorCannotExecute(true, "ROLE_UPDATED", () ->
+                    service.updateRole("DOCTOR", null, "Synthetic edit", null, null), "当前账号没有操作权限");
+            assertThat(roleMapper.findByCode("DOCTOR").getDescription()).isEqualTo(before.getDescription());
+        } finally {
+            jdbc.update("update app.mr_auth_role set description = ? where code = 'DOCTOR'", before.getDescription());
+        }
+    }
+
+    @Test
+    void delegatedManagerRetainsOnlyGrantedPermissions() {
+        String code = "SYNTHETIC_" + UUID.randomUUID();
+        jdbc.update("insert into app.mr_auth_role(code,name,permissions) values (?, 'Synthetic manager', 'user:manage,role:manage')", code);
+        long target = jdbc.queryForObject("""
+                insert into app.mr_auth_user(username,password_hash,role_code,status)
+                values (?, 'synthetic-hash', 'DOCTOR', 'active') returning id
+                """, Long.class, "synthetic-delegated-" + UUID.randomUUID());
+        try {
+            jdbc.update("update app.mr_auth_user set role_code = ? where id = ?", code, firstId);
+            installActor(firstId);
+            var tx = new TransactionTemplate(transactionManager);
+            var request = new AuthUserUpdateRequest();
+            request.setRoleCode("DOCTOR");
+            request.setStatus("active");
+            request.setDisplayName("Synthetic managed");
+            assertThat(tx.execute(status -> service.updateUser(target, request)).getDisplayName()).isEqualTo("Synthetic managed");
+            assertThat(tx.execute(status -> service.updateRole(code, null, "Synthetic description", "user:manage", null)).getDescription()).isEqualTo("Synthetic description");
+            // The same request context retains a stale role:manage snapshot; the database no longer grants it.
+            assertThatThrownBy(() -> tx.execute(status -> service.updateRole(code, null, "Denied", null, null)))
+                    .isInstanceOf(BusinessException.class).hasMessage("当前账号没有操作权限");
+            assertThat(roleMapper.findByCode(code).getDescription()).isEqualTo("Synthetic description");
+            Integer disabled = tx.execute(status -> service.disableUser(target));
+            assertThat(disabled).isEqualTo(1);
+            assertThat(userMapper.findById(target).getStatus()).isEqualTo("disabled");
+        } finally {
+            com.zjcxph.imgapi.utils.AuthContext.clear();
+            jdbc.update("update app.mr_auth_user set role_code = 'ADMIN' where id = ?", firstId);
+            jdbc.update("delete from app.mr_auth_user where id = ?", target);
+            jdbc.update("delete from app.mr_auth_role where code = ?", code);
+        }
+    }
+
+    @Test
+    void revokedDelegatedRoleCannotWriteAfterConcurrentPermissionChange() throws Exception {
+        String code = "SYNTHETIC_" + UUID.randomUUID();
+        jdbc.update("insert into app.mr_auth_role(code,name,permissions) values (?, 'Synthetic manager', 'role:manage')", code);
+        jdbc.update("update app.mr_auth_user set role_code = ? where id = ?", code, firstId);
+        var workers = Executors.newSingleThreadExecutor();
+        String runId = "mrr-role-race-" + UUID.randomUUID();
+        var tx = new TransactionTemplate(transactionManager);
+        try {
+            installActor(secondId);
+            Future<String> result = tx.execute(status -> {
+                service.updateRole(code, null, null, "role:read", null);
+                Future<String> task = workers.submit(() -> {
+                    installActor(firstId);
+                    try {
+                        return tx.execute(worker -> {
+                            jdbc.queryForObject("select set_config('application_name', ?, true)", String.class, runId);
+                            service.updateRole(code, null, "Denied modification", null, null);
+                            return "SUCCESS";
+                        });
+                    } catch (BusinessException denied) {
+                        return denied.getMessage();
+                    } finally {
+                        com.zjcxph.imgapi.utils.AuthContext.clear();
+                    }
+                });
+                long deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(5);
+                while (!task.isDone() && System.nanoTime() < deadline) {
+                    jdbc.execute("select pg_stat_clear_snapshot()");
+                    int waiting = jdbc.queryForObject("select count(*) from pg_stat_activity where application_name = ? and wait_event_type = 'Lock'", Integer.class, runId);
+                    if (waiting == 1) return task;
+                    try { Thread.sleep(25); } catch (InterruptedException e) {
+                        Thread.currentThread().interrupt(); throw new RuntimeException(e);
+                    }
+                }
+                throw new AssertionError("Competing delegated operation did not reach the common lock");
+            });
+            assertThat(result.get(5, TimeUnit.SECONDS)).isEqualTo("当前账号没有操作权限");
+            assertThat(roleMapper.findByCode(code).getDescription()).isNull();
+            assertThat(roleMapper.findByCode(code).getPermissions()).isEqualTo("role:read");
+            assertThat(userMapper.findById(firstId).getRoleCode()).isEqualTo(code);
+        } finally {
+            workers.shutdownNow();
+            com.zjcxph.imgapi.utils.AuthContext.clear();
+            assertThat(workers.awaitTermination(5, TimeUnit.SECONDS)).isTrue();
+            jdbc.update("update app.mr_auth_user set role_code = 'ADMIN' where id = ?", firstId);
+            jdbc.update("delete from app.mr_auth_role where code = ?", code);
+        }
+    }
+
+    @Test
+    void roleChangeSecurityAuditIdentifiesActorAndOnlyReportsCommittedSuccess() {
+        String code = "SYNTHETIC_" + UUID.randomUUID();
+        jdbc.update("insert into app.mr_auth_role(code,name,permissions) values (?, 'Synthetic role', 'role:read')", code);
+        var logger = (ch.qos.logback.classic.Logger) org.slf4j.LoggerFactory.getLogger("SECURITY_AUDIT");
+        var audit = new ch.qos.logback.core.read.ListAppender<ch.qos.logback.classic.spi.ILoggingEvent>();
+        audit.start();
+        logger.addAppender(audit);
+        try {
+            installActor(secondId);
+            var tx = new TransactionTemplate(transactionManager);
+            tx.executeWithoutResult(status -> {
+                service.updateRole(code, null, "Rolled back", "user:manage", null);
+                assertThat(audit.list).noneMatch(event -> event.getMessage().contains("event=ROLE_UPDATED"));
+                status.setRollbackOnly();
+            });
+            assertThat(roleMapper.findByCode(code).getPermissions()).isEqualTo("role:read");
+            assertThat(audit.list).noneMatch(event -> event.getMessage().contains("event=ROLE_UPDATED"));
+            tx.executeWithoutResult(status -> {
+                service.updateRole(code, null, "Committed", "role:manage", null);
+                assertThat(audit.list).noneMatch(event -> event.getMessage().contains("event=ROLE_UPDATED"));
+            });
+            assertThat(roleMapper.findByCode(code).getPermissions()).isEqualTo("role:manage");
+            var events = audit.list.stream().filter(event -> event.getMessage().contains("event=ROLE_UPDATED")).toList();
+            assertThat(events).hasSize(1);
+            assertThat(events.getFirst().getArgumentArray()).contains(Long.valueOf(secondId), code);
+            assertThat(events.getFirst().getMessage()).contains("actorUserId=", "result=SUCCESS");
+        } finally {
+            logger.detachAppender(audit);
+            audit.stop();
+            com.zjcxph.imgapi.utils.AuthContext.clear();
+            jdbc.update("delete from app.mr_auth_role where code = ?", code);
+        }
+    }
+
+    @Test
+    void accountDisableAuditOnlyReportsCommittedSuccess() {
+        assertAccountMutationAuditCommitBoundary(true);
+    }
+
+    @Test
+    void accountUpdateAuditOnlyReportsCommittedSuccess() {
+        assertAccountMutationAuditCommitBoundary(false);
+    }
+
+    private void assertAccountMutationAuditCommitBoundary(boolean disable) {
+        var logger = (ch.qos.logback.classic.Logger) org.slf4j.LoggerFactory.getLogger("SECURITY_AUDIT");
+        var audit = new ch.qos.logback.core.read.ListAppender<ch.qos.logback.classic.spi.ILoggingEvent>();
+        audit.start();
+        logger.addAppender(audit);
+        String event = disable ? "USER_DISABLED" : "USER_ROLE_OR_STATUS_CHANGED";
+        var before = userMapper.findById(firstId);
+        try {
+            installActor(secondId);
+            var tx = new TransactionTemplate(transactionManager);
+            Runnable mutation = () -> {
+                if (disable) service.disableUser(firstId);
+                else {
+                    var request = new AuthUserUpdateRequest();
+                    request.setRoleCode("DOCTOR");
+                    request.setStatus("active");
+                    service.updateUser(firstId, request);
+                }
+            };
+            tx.executeWithoutResult(status -> { mutation.run(); status.setRollbackOnly(); });
+            var rolledBack = userMapper.findById(firstId);
+            assertThat(rolledBack.getRoleCode()).isEqualTo(before.getRoleCode());
+            assertThat(rolledBack.getStatus()).isEqualTo(before.getStatus());
+            assertThat(rolledBack.effectivePasswordVersion()).isEqualTo(before.effectivePasswordVersion());
+            assertThat(audit.list).noneMatch(e -> e.getMessage().startsWith("event=" + event + " "));
+            tx.executeWithoutResult(status -> {
+                mutation.run();
+                assertThat(audit.list).noneMatch(e -> e.getMessage().startsWith("event=" + event + " "));
+            });
+            var committed = userMapper.findById(firstId);
+            if (disable) assertThat(committed.getStatus()).isEqualTo("disabled");
+            else assertThat(committed.getRoleCode()).isEqualTo("DOCTOR");
+            var events = audit.list.stream().filter(e -> e.getMessage().startsWith("event=" + event + " ")).toList();
+            assertThat(events).hasSize(1);
+            assertThat(events.getFirst().getArgumentArray()).containsExactly(disable
+                    ? new Object[]{secondId, firstId, before.getStatus()}
+                    : new Object[]{secondId, firstId, "DOCTOR", "active"});
+        } finally {
+            logger.detachAppender(audit);
+            audit.stop();
+            com.zjcxph.imgapi.utils.AuthContext.clear();
+        }
+    }
+
+    @org.junit.jupiter.params.ParameterizedTest
+    @org.junit.jupiter.params.provider.ValueSource(booleans = {true, false})
+    void staleAdministratorCredentialCannotCreateAfterRoleLock(boolean resetRequired) throws Exception {
+        String username = "synthetic-credential-create-" + UUID.randomUUID();
+        var request = new com.zjcxph.imgapi.dto.req.AdminCreateUserRequest();
+        request.setUsername(username);
+        request.setRoleCode("DOCTOR");
+        var before = userMapper.findById(firstId);
+        try {
+            assertRevokedAdministratorCannotExecute("USER_CREATED", () -> {
+                roleMapper.lockAdminRole();
+                if (resetRequired) {
+                    assertThat(userMapper.resetPassword(firstId, "synthetic-reset-hash", java.time.LocalDateTime.now().plusHours(1), secondId, before.effectivePasswordVersion())).isEqualTo(1);
+                } else {
+                    assertThat(userMapper.changePassword(firstId, "synthetic-new-hash", before.effectivePasswordVersion(), false)).isEqualTo(1);
+                }
+            }, () -> service.createUser(request, firstId, null), "当前账号不是有效管理员");
+            assertThat(userMapper.findByUsername(username)).isNull();
+            var after = userMapper.findById(firstId);
+            assertThat(after.getStatus()).isEqualTo("active");
+            assertThat(after.getRoleCode()).isEqualTo("ADMIN");
+            assertThat(after.effectivePasswordVersion()).isEqualTo(before.effectivePasswordVersion()+1);
+            assertThat(after.isPasswordChangeRequired()).isEqualTo(resetRequired);
+        } finally {
+            jdbc.update("delete from app.mr_auth_user where username = ?", username);
+        }
+    }
+
+    @Test
+    void ordinaryCredentialWriteWithoutRoleLockStillFencesAdministratorRequest() throws Exception {
+        String username = "synthetic-actor-fence-" + UUID.randomUUID();
+        var request = new com.zjcxph.imgapi.dto.req.AdminCreateUserRequest();
+        request.setUsername(username);
+        request.setRoleCode("DOCTOR");
+        var before = userMapper.findById(firstId);
+        try {
+            // Personal password changes use the account row rather than the global role lock.
+            assertRevokedAdministratorCannotExecute("USER_CREATED", () ->
+                    assertThat(userMapper.changePassword(firstId, "synthetic-rotated-hash", before.effectivePasswordVersion(), false)).isEqualTo(1),
+                    () -> service.createUser(request, firstId, null), "当前账号不是有效管理员");
+            assertThat(userMapper.findByUsername(username)).isNull();
+            assertThat(userMapper.findById(firstId).effectivePasswordVersion()).isEqualTo(before.effectivePasswordVersion() + 1);
+        } finally {
+            jdbc.update("delete from app.mr_auth_user where username = ?", username);
+        }
+    }
+
+    private void installActor(long id) {
+        var user = userMapper.findById(id);
+        var session = new com.zjcxph.imgapi.common.AuthSession();
+        session.setId(id);
+        session.setRoleCode(user.getRoleCode());
+        session.setPasswordVersion(user.effectivePasswordVersion());
+        session.setPermissions(user.getPermissions());
+        session.setStatus(user.getStatus());
+        com.zjcxph.imgapi.utils.AuthContext.setCurrentUser(session);
+    }
+
+    private void assertRevokedAdministratorCannotExecute(boolean demote, String auditEvent, Runnable operation) throws Exception {
+        assertRevokedAdministratorCannotExecute(demote, auditEvent, operation, "当前账号不是有效管理员");
+    }
+
+    private void assertRevokedAdministratorCannotExecute(boolean demote, String auditEvent, Runnable operation, String denial) throws Exception {
+        assertRevokedAdministratorCannotExecute(auditEvent, () -> {
+            if (demote) {
+                var update = new AuthUserUpdateRequest();
+                update.setRoleCode("DOCTOR");
+                update.setStatus("active");
+                service.updateUser(firstId, update);
+            } else service.disableUser(firstId);
+        }, operation, denial);
+    }
+
+    private void assertRevokedAdministratorCannotExecute(String auditEvent, Runnable revoke, Runnable operation, String denial) throws Exception {
+        var worker = Executors.newSingleThreadExecutor();
+        String runId = "mrr-admin-write-race-" + UUID.randomUUID();
+        var logger = (ch.qos.logback.classic.Logger) org.slf4j.LoggerFactory.getLogger("SECURITY_AUDIT");
+        var audit = new ch.qos.logback.core.read.ListAppender<ch.qos.logback.classic.spi.ILoggingEvent>();
+        audit.start();
+        logger.addAppender(audit);
+        try {
+            installActor(secondId);
+            Future<String> outcome = new TransactionTemplate(transactionManager).execute(status -> {
+                revoke.run();
+                Future<String> result = worker.submit(() -> {
+                    try {
+                        installActor(firstId);
+                        return new TransactionTemplate(transactionManager).execute(tx -> {
+                            jdbc.queryForObject("select set_config('application_name', ?, true)", String.class, runId);
+                            operation.run();
+                            return "SUCCESS";
+                        });
+                    } catch (BusinessException failure) {
+                        return failure.getMessage();
+                    } finally {
+                        com.zjcxph.imgapi.utils.AuthContext.clear();
+                    }
+                });
+                long deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(5);
+                while (!result.isDone() && System.nanoTime() < deadline) {
+                    jdbc.execute("select pg_stat_clear_snapshot()");
+                    int waiting = jdbc.queryForObject("""
+                            select count(*) from pg_stat_activity
+                            where application_name = ? and wait_event_type = 'Lock'
+                            """, Integer.class, runId);
+                    if (waiting == 1) return result;
+                    try {
+                        Thread.sleep(25);
+                    } catch (InterruptedException e) {
+                        Thread.currentThread().interrupt();
+                        throw new RuntimeException(e);
+                    }
+                }
+                assertThat(result.isDone()).isTrue();
+                return result;
+            });
+            assertThat(outcome.get(5, TimeUnit.SECONDS)).isEqualTo(denial);
+            assertThat(audit.list).noneMatch(event -> event.getArgumentArray() != null && event.getArgumentArray().length > 0
+                    && Long.valueOf(firstId).equals(event.getArgumentArray()[0])
+                    && event.getMessage().contains("event=" + auditEvent + " ")
+                    && event.getMessage().contains("result=SUCCESS"));
+        } finally {
+            com.zjcxph.imgapi.utils.AuthContext.clear();
+            worker.shutdownNow();
+            logger.detachAppender(audit);
+            audit.stop();
+            assertThat(worker.awaitTermination(5, TimeUnit.SECONDS)).isTrue();
+        }
+    }
+
+    private void assertRevokedAdministratorCannotReview(boolean approve) throws Exception {
+        long target = jdbc.queryForObject("""
+                insert into app.mr_auth_user (username, password_hash, role_code, status)
+                values (?, 'synthetic-hash', 'DOCTOR', 'pending') returning id
+                """, Long.class, "synthetic-review-" + UUID.randomUUID());
+        var worker = Executors.newSingleThreadExecutor();
+        String runId = "mrr-review-race-" + UUID.randomUUID();
+        try {
+            installActor(secondId);
+            Future<String> review = new TransactionTemplate(transactionManager).execute(status -> {
+                // Hold the same lock as the real account administration path and revoke
+                // the actor without committing until the competing review reaches PG.
+                service.disableUser(firstId);
+                Future<String> result = worker.submit(() -> {
+                    try {
+                        installActor(firstId);
+                        return new TransactionTemplate(transactionManager).execute(tx -> {
+                            jdbc.queryForObject("select set_config('application_name', ?, true)", String.class, runId);
+                            if (approve) {
+                                RegistrationApprovalRequest request = new RegistrationApprovalRequest();
+                                request.setRoleCode("DOCTOR");
+                                service.approveRegistration(target, request, firstId, null);
+                            } else {
+                                RegistrationRejectionRequest request = new RegistrationRejectionRequest();
+                                request.setRejectReason("synthetic review");
+                                service.rejectRegistration(target, request, firstId, null);
+                            }
+                            return "SUCCESS";
+                        });
+                    } catch (BusinessException failure) {
+                        return failure.getMessage();
+                    } finally {
+                        com.zjcxph.imgapi.utils.AuthContext.clear();
+                    }
+                });
+                long deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(5);
+                while (!result.isDone() && System.nanoTime() < deadline) {
+                    // Refresh the transaction-local activity snapshot before observing the worker.
+                    jdbc.execute("select pg_stat_clear_snapshot()");
+                    int waiting = jdbc.queryForObject("""
+                            select count(*) from pg_stat_activity
+                            where application_name = ? and wait_event_type = 'Lock'
+                            """, Integer.class, runId);
+                    if (waiting == 1) return result;
+                    try {
+                        Thread.sleep(25);
+                    } catch (InterruptedException e) {
+                        Thread.currentThread().interrupt();
+                        throw new RuntimeException(e);
+                    }
+                }
+                // Old implementation can commit while the revocation is uncommitted.
+                // A timeout without an observed lock is an invalid experiment.
+                assertThat(result.isDone()).isTrue();
+                return result;
+            });
+            assertThat(review.get(5, TimeUnit.SECONDS)).isEqualTo("当前账号不是有效管理员");
+            assertThat(userMapper.findById(target).getStatus()).isEqualTo("pending");
+        } finally {
+            worker.shutdownNow();
+            assertThat(worker.awaitTermination(5, TimeUnit.SECONDS)).isTrue();
+            jdbc.update("delete from app.mr_auth_user where id = ?", target);
+        }
     }
 
     private void assertConcurrentRemovalKeepsOne(boolean demote) throws Exception {
@@ -153,6 +634,7 @@ class LastActiveAdminPostgresqlIT extends PostgresqlIntegrationTestSupport {
     private String removeAfterStart(CountDownLatch start, long id, boolean demote, String runId) throws Exception {
         assertThat(start.await(5, TimeUnit.SECONDS)).isTrue();
         try {
+            installActor(id);
             return new TransactionTemplate(transactionManager).execute(status -> {
                 jdbc.queryForObject("select set_config('application_name', ?, true)", String.class, runId + "-" + id);
                 if (demote) {
@@ -168,6 +650,8 @@ class LastActiveAdminPostgresqlIT extends PostgresqlIntegrationTestSupport {
         } catch (BusinessException exception) {
             return exception.getMessage().contains("最后一个有效管理员")
                     ? "LAST_ACTIVE_ADMIN_REQUIRED" : exception.getMessage();
+        } finally {
+            com.zjcxph.imgapi.utils.AuthContext.clear();
         }
     }
 

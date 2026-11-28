@@ -81,7 +81,7 @@ public class OcrJobService {
         var image=scans.findById(scan);
         if (image==null || image.getArchiveId()==null || !mapper.belongs(scan,image.getArchiveId()))
             throw new BusinessException(404,"没有有效关联影像");
-        Fact fact=mapper.fact(scan);
+        Fact fact=mapper.factForCurrentArchive(scan,image.getArchiveId());
         return fact==null?new FactView(scan,image.getArchiveId(),"PENDING",null,null,null,null,null,null):fact.view(full);
     }
     /** Claims one page, keeping database transactions out of file IO and inference. */
@@ -104,7 +104,7 @@ public class OcrJobService {
             if (!config.fingerprint().equals(engine.fingerprint(config.profile()))) throw new OcrFailure("MODEL_INVALID");
             final String jobId=job.getId();
             try (var prepared=input.prepare(item.getScanId(),()->!enabled()||!mapper.alive(jobId,token))) {
-                Fact fact=mapper.fact(item.getScanId());
+                Fact fact=mapper.factForCurrentArchive(item.getScanId(),job.getArchiveId());
                 if (fact==null || !prepared.hash().equals(fact.getContentHash()) || !config.fingerprint().equals(fact.getModelChecksum())
                         || !"rgb-exif-v1".equals(fact.getPreprocessingVersion())
                         || !java.util.Set.of("SUCCEEDED","LOW_CONFIDENCE").contains(fact.getStatus())) {
@@ -159,19 +159,54 @@ public class OcrJobService {
         if(!saved) return;
         try {
             transactions.executeWithoutResult(tx->{
-                mapper.lock(job.getId());
-                if(!mapper.alive(job.getId(),token)) return;
+                if(!lockClassificationStage(job,token)) return;
+                if(!validateClassificationInput(job,token,item,fact)) return;
                 mapper.complete(job.getId(),item.getScanId(),"LOW_CONFIDENCE".equals(fact.getStatus())?"LOW_CONFIDENCE":"NO_MATCH",fact.getStatus(),fact.getResultVersion(),null);
                 classification.classify(job,item,fact);
                 mapper.release(job.getId(),token);
             });
         } catch(Exception failure) {
             transactions.executeWithoutResult(tx->{
-                mapper.lock(job.getId());if(!mapper.alive(job.getId(),token)) return;
+                if(!lockClassificationStage(job,token)) return;
+                if(!validateClassificationInput(job,token,item,fact)) return;
                 mapper.complete(job.getId(),item.getScanId(),"NO_MATCH",fact.getStatus(),fact.getResultVersion(),"CLASSIFICATION_FAILED");
                 mapper.release(job.getId(),token);
             });
         }
+    }
+    /** Under the job row lock, only its current claimant may settle cancellation.
+     * Cancellation is monotonic; even an expired but not replaced claim may settle it,
+     * but no expired claim can publish a classification result. */
+    private boolean lockClassificationStage(Job job,String token) {
+        Job current=mapper.lock(job.getId());
+        if(current==null || !token.equals(current.getLeaseToken())) return false;
+        if(current.isCancelRequested()) {
+            mapper.cancelItems(job.getId());
+            mapper.release(job.getId(),token);
+            return false;
+        }
+        return mapper.alive(job.getId(),token);
+    }
+    /** Revalidate the committed OCR fact and durable owner authorization in the classification transaction. */
+    private boolean validateClassificationInput(Job job,String token,Item item,Fact fact) {
+        String failure=null;
+        try {
+            access.require(job.getOwnerUserId(),"record:read","ocr:run");
+        } catch (BusinessException denied) {
+            failure="AUTH_REVOKED";
+        }
+        if (failure==null) {
+            Fact current=mapper.factForCurrentArchive(item.getScanId(),job.getArchiveId());
+            if (current==null || !Objects.equals(current.getResultVersion(),fact.getResultVersion())
+                    || !Objects.equals(current.getContentHash(),fact.getContentHash())
+                    || !Objects.equals(current.getStatus(),fact.getStatus())) {
+                failure="SOURCE_CHANGED";
+            }
+        }
+        if (failure==null) return true;
+        mapper.complete(job.getId(),item.getScanId(),"FAILED","FAILED",null,failure);
+        mapper.release(job.getId(),token);
+        return false;
     }
     private int integer(String key,int fallback,int min,int max) {
         try { return Math.max(min,Math.min(max,Integer.parseInt(settings.getSetting(key)))); } catch (Exception e) { return fallback; }

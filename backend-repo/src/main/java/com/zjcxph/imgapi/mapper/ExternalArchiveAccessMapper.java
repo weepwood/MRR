@@ -5,6 +5,7 @@ import org.apache.ibatis.annotations.Delete;
 import org.apache.ibatis.annotations.Insert;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
+import org.apache.ibatis.annotations.Options;
 import org.apache.ibatis.annotations.Select;
 import org.apache.ibatis.annotations.Update;
 
@@ -50,7 +51,7 @@ public interface ExternalArchiveAccessMapper {
             @Param("createdIp") String createdIp
     );
 
-    @Select("""
+    @Select(value = """
             WITH consumed AS (
                 UPDATE mr_external_archive_ticket
                 SET used_at = NOW()
@@ -65,7 +66,8 @@ public interface ExternalArchiveAccessMapper {
                    grant_json::TEXT AS grantJson,
                    expires_at AS expiresAt
             FROM consumed
-            """)
+            """, affectData = true)
+    @Options(flushCache = Options.FlushCachePolicy.TRUE, useCache = false)
     ExternalArchiveStoredGrant consumeTicket(@Param("ticketHash") String ticketHash);
 
     @Insert("""

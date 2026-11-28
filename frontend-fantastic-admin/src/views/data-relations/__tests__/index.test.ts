@@ -18,7 +18,10 @@ vi.mock('@/api/modules/data-relations', () => apiMocks)
 vi.mock('@/api/modules/classification', () => ({ getReviewImage: vi.fn() }))
 vi.mock('@/api/modules/repair-orders', () => ({ listRepairOrders: vi.fn(), getRepairEvents: vi.fn(), proposeRepairOrder: vi.fn(), actOnRepairOrder: vi.fn() }))
 vi.mock('@/api/modules/archive-manifest', () => ({ getLatestManifest: vi.fn(), getManifestHistory: vi.fn(), getManifestVersion: vi.fn(), getManifestIssues: vi.fn(), startManifest: vi.fn(), cancelManifest: vi.fn() }))
-vi.mock('@/store/modules/user', () => ({ useUserStore: () => ({ token: 'synthetic-session' }) }))
+const sessionMock = vi.hoisted(() => ({ roleCode: 'ADMIN', permissions: ['system:read', 'record:read'] }))
+vi.mock('@/store/modules/user', () => ({
+  useUserStore: () => ({ token: 'synthetic-session', isSessionVerified: true, profile: { roleCode: sessionMock.roleCode }, permissions: sessionMock.permissions }),
+}))
 vi.mock('element-plus', () => ({
   ElMessageBox: { confirm: vi.fn() },
   ElMessage: {
@@ -147,6 +150,8 @@ function mountPage(archiveOnly = false) {
 
 describe('dataRelationWorkbenchPage', () => {
   beforeEach(() => {
+    sessionMock.roleCode = 'ADMIN'
+    sessionMock.permissions = ['system:read', 'record:read']
     Object.values(apiMocks).forEach(mock => mock.mockReset())
     apiMocks.getDataRelationOverview.mockResolvedValue({ code: 200, data: overview })
     apiMocks.getDataQualitySummary.mockResolvedValue({
@@ -189,13 +194,25 @@ describe('dataRelationWorkbenchPage', () => {
     wrapper.unmount()
   })
 
+  it('系统读取角色保留规则摘要但不请求或显示医疗样本', async () => {
+    sessionMock.roleCode = 'READER'
+    sessionMock.permissions = ['system:read']
+    const wrapper = mountPage()
+    await flushPromises()
+    expect(apiMocks.getDataQualitySummary).toHaveBeenCalledTimes(1)
+    expect(apiMocks.getDataQualityIssues).not.toHaveBeenCalled()
+    expect(wrapper.text()).toContain('查看异常样本需要病案读取权限')
+    expect(wrapper.text()).not.toContain('00789508')
+    wrapper.unmount()
+  })
+
   it('loads overview and latest quality results without starting a new check', async () => {
     const wrapper = mountPage()
     await flushPromises()
 
     expect(apiMocks.getDataRelationOverview).toHaveBeenCalledTimes(1)
     expect(apiMocks.getDataQualitySummary).toHaveBeenCalledTimes(1)
-    expect(apiMocks.getDataQualityIssues).toHaveBeenCalledWith(300)
+    expect(apiMocks.getDataQualityIssues).toHaveBeenCalledWith(300, 7)
     expect(apiMocks.runDataQualityChecks).not.toHaveBeenCalled()
     expect(wrapper.text()).toContain('数据关系工作台')
     expect(wrapper.text()).toContain('查找病案')
@@ -204,7 +221,7 @@ describe('dataRelationWorkbenchPage', () => {
     expect(wrapper.text()).toContain('98.75%')
     expect(wrapper.text()).toContain('200,000')
     expect(wrapper.text()).toContain('扫描记录')
-    expect(wrapper.find('.relation-card .mrr-status-tag--warning').text()).toBe('WARNING')
+    expect(wrapper.find('.relation-card .mrr-status-tag--warning').text()).toBe('警告')
     expect(wrapper.text()).toContain('患者记录')
     expect(wrapper.text()).toContain('扫描记录主档关联缺失（估算）')
   })

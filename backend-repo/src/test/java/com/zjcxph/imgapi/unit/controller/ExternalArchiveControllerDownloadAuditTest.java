@@ -110,8 +110,8 @@ class ExternalArchiveControllerDownloadAuditTest {
         });
         when(request.getRemoteAddr()).thenReturn("10.0.0.8");
         when(request.getHeader("User-Agent")).thenReturn("JUnit");
-        when(request.getHeader("X-Request-Id")).thenReturn("request-42");
+        when(request.getAttribute("requestId")).thenReturn("request-42");
         when(externalAccess.requireSession("synthetic-session")).thenReturn(grant);
-        when(exports.prepareArchive("123456", "1234")).thenReturn(prepared);
+        when(exports.prepareExternalArchive("123456", "1234")).thenReturn(prepared);
     }
 }

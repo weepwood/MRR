@@ -1,3 +1,7 @@
+<script setup>
+import figure1 from './assets/candidate-delivery.svg?url'
+</script>
+
 # 发布流程与版本基线
 
 MRR 的发布必须能够回答五个问题：运行的是什么产品版本、对应哪个 Git Commit、何时构建、兼容哪些数据库迁移、是否允许直接回滚应用。
@@ -256,3 +260,20 @@ npm run docs:build
 6. 登录、权限、病案查询、影像访问、审计、系统设置和状态页冒烟测试。
 
 同一次发布中，上述位置必须指向同一产品版本和同一 Git Commit。
+
+## 候选制品与现场验收
+
+<p class="doc-figure"><a :href="figure1" target="_blank" rel="noopener noreferrer" aria-label="候选版本交付门禁（在新标签页查看原图）"><img :src="figure1" alt="候选版本交付门禁" loading="lazy"></a></p>
+
+*图：固定提交、制品、现场演练及发布授权 · 流程示意，点击查看原图。*
+
+| 验收层 | 必须留存的证据 |
+| --- | --- |
+| 源码 | 精确 Git SHA、干净制品输入、必要安全缺陷关闭 |
+| CI | 与候选 SHA 对应的执行结论，分别记录通过、失败、跳过 |
+| 制品 | 外层 SHA-256、包内文件清单和构建身份 |
+| 数据 | 隔离恢复、升级、关键记录抽样以及恢复时间 |
+| 现场 | Windows 服务、ACL、实际存储、Chrome 86 和审计通知 |
+| 授权 | 明确允许发布及兼容回滚的依据 |
+
+历史候选的构建、测试与校验证据不自动继承为新 SHA 的完整验收；只对未受影响的证据注明适用范围。开发分支推送不是正式发布。缺少现场条件时如实保留阻塞，不创建正式 Tag 或 Release。

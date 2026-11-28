@@ -24,10 +24,10 @@ PostgreSQL 16 + 本地/NAS/Nginx/OSS 影像来源
 
 按顺序读取：
 
-1. 当前 Issue、PR 描述和验收标准；
+1. 当前产品任务、Issue/PR（如适用）和验收标准；
 2. `ARCHITECTURE.md`；
 3. `docs/engineering/ai-assisted-development-governance.md`；
-4. 本文件及 [AI 开发交接索引](docs/engineering/ai-handoff.md)；
+4. [统一任务池](ROADMAP.md) 及 [当前交接索引](docs/engineering/ai-handoff.md)；
 5. 与修改模块相关的工程文档：
    - `backend-repo/ENGINEERING_GUIDE.md`；
    - `frontend-fantastic-admin/ENGINEERING.md`；
@@ -53,24 +53,13 @@ MRR/
 └── .github/                   # Issue、PR、Actions、Dependabot、CODEOWNERS
 ```
 
-## V1.2 当前 UI 开发优先级
+## 当前研发阶段（2026-11-26）
 
-- #836已合并dbd81c50；字段令牌、双族文本域和只读/错误归属已集中实施，68项样式守护、49项业务浏览器回归通过，待远端门禁。
-- #838已合并3c93d1f0；登录/注册控件归一按[归属清单](docs/design/component-ownership.md)24组实际视觉基线，保留表单合同、原布局、冻结分支。
-- #839已合并968bc901；复选框唯一实现及个人修改密码迁移见[归属清单](docs/design/component-ownership.md)，按P1认证风险验收，保持原视觉、表单与注销合同。
-- #848首次远端生产构建成功但Chrome86源码选择器门禁失败；b4a4e8bc修复等价显式选择器并本地生产校验通过，远端复验中。样式治理在独立分支按原级联拆分，不在#848未合并时混入新批。详见归属清单。
-- #847已合并9c9022a1（1073/1073、Pages7/7、tree一致）；残余基础控件及无调用链清理本地37/37浏览器、92/92单测，删除49旧文件及无调用依赖，见[归属清单](docs/design/component-ownership.md)。
-- #846已合并adc06302（1072/1072、Pages5/5、tree一致）；账户及标签页右键菜单本地统一，10对截图、78/78样式、26/26联合、3/3复验，见[归属清单](docs/design/component-ownership.md)。
-- #844已合并2dff0e4b，#845已合并3cff46b1（tree一致）。Dialog/Drawer统一专项本地24组几何0px、最终21/21，详见[归属清单](docs/design/component-ownership.md)。
-- #844已合并2dff0e4b、#845已合并3cff46b1；此前合并异常已解决，保留原验收记录于归属清单。
-- #843已合并fc2a56f7；基础按钮/组/输入/文本域本地全量归一，见[归属清单](docs/design/component-ownership.md)，以最终联合及远端门禁为准。
-- #842已合并bec3cd9a；全局9处按钮归一，按[归属清单](docs/design/component-ownership.md)保护工具栏和展开/收起状态，保持冻结分支。
-- #841已合并2e9db6ef，标签页32组视觉、40/40联合与6/6最终专项通过，重放新基线；保留原视觉门禁，详见[归属清单](docs/design/component-ownership.md)。
-- #840已合并ef5e5e35；滑块/选择器按唯一实现归一、共享紧凑规格、保留实际视觉，详见[归属清单](docs/design/component-ownership.md)。
-- 用户追加迁移视觉保护：替换组件不得顺带改版，按实际调用方同环境前后截图/几何/计算样式比较，优先保留页面既有宽高、间距和状态，记录残余差异；详见唯一控件归属清单。
-- 用户进一步明确同类控件只保留一种实现：Element Plus 为基础控件唯一目标，不新增同类Fa引用；按[唯一控件归属清单](docs/design/component-ownership.md)集中迁移、验收和清理，非同类专用/业务组合组件保留。
-- 用户于2026-11-25调整方向：全站UI与公共组件规范优先，已有工作台PR独立收口，不继续扩大病案专属功能。执行[全站UI规范与组件治理路线](docs/design/v1.2-ui-system-roadmap.md)，视觉事实仍以现有前端 DESIGN.md、令牌与实际组件为准。
-- 按相关组件族集中开发、优先复用成熟实现与既有展厅，按风险分级验收；保持生产 main 与 V1.1 冻结，合成数据独立预览。
+- 架构简化与产品收口。当前任务以 [统一任务池](ROADMAP.md) 为准；[已知风险与实验冻结](docs/backend/governance-stage-freeze-batch13.md)、[版本门禁](docs/engineering/v1.2-release-preparation.md) 继续有效。
+- 继续独立 worktree、本地开发与用户 Mock 预览（9037）。测试使用其他隔离端口和合成数据；不推送、不合并、不发布，保护 main、远端草稿 #850 及其他工作区。
+- 优先实际医疗业务、安全和维护成本；不扩张自定义审计引擎、通用任务平台或跨主机架构。保留原权限、审计、数据与 UI 契约。
+- 技能按任务读取 .agents/skills；优先 Element Plus、VueUse、ECharts 和既有 Mrr 组件；Reka 仅用于专用交互。参照 [复用索引](docs/references/opensource-reuse.md)、[研发阶段规则](docs/product/AI-DEVELOPMENT.md)。
+- 历史批次、专题及候选记录由 [交接索引](docs/engineering/ai-handoff.md) 导航；原 AGENTS 阶段叙述可在 Git 0c520e7d 查阅，不逐轮复制到本文件。
 
 ## 4. 风险等级
 
@@ -163,12 +152,12 @@ MRR/
 
 ### 5.7 跨工具开发交接
 
-- 每轮开始先读交接索引及关联任务文档，再以 GitHub Issue、PR、实际分支 SHA 和最新 CI 核对状态；不得仅依赖聊天记忆。
-- 每个独立任务在仓库内维护可接续的进度记录：目标与非目标、已完成/待办、Issue/PR/分支/提交、实际验证及未执行项、阻塞、关键决策、下一步及回滚入口。
+- 2026-11-26 维护者调整 MRR V1.2 工作方式：本地开发与用户实际页面检查优先。保留当前独立 worktree，默认仅本地修改、测试及中文提交；只有维护者明确要求整理/合并 PR 时才推送后续变更、整理候选并按最新门禁合并。现有 #850 保持草稿，不自动合并或部署。用户预览使用独立 Mock（127.0.0.1:9037），禁止连接真实医院数据；自动测试使用其他独立端口，不抢占用户预览。具体状态见交接记录。
+
+- 每轮开始先读当前产品任务、相关交接和实际分支 SHA。仅当任务涉及远端集成或发布时核对最新 GitHub PR/CI；不得仅依赖聊天记忆。
+- 每个独立任务在统一任务池更新状态，并按需维护一份证据记录：目标与非目标、已完成/待办、Issue/PR/分支/提交、实际验证及未执行项、阻塞、关键决策、下一步及回滚入口。
 - 在阶段交付、暂停、切换工具或上下文前更新记录；代码变更随任务 PR 更新对应实施文档，合并状态以实时 GitHub 为准，避免把待合并写成已完成。仅交接变更可独立 P3 PR。
-- V1.1 集成已收口：#818合并92896f7c，最终199/199、原完整候选0360e80c及制品独立核验通过；正式main仍为 `24152bee`，不发布。
-- V1.2 独立专业工作台：#832已合并f54770c2，独立[预览站](https://weepwood.github.io/MRR-preview/v1.2/#/archive-workbench)已发布该提交；#833多面板及工具栏见[专业工作台](docs/engineering/v1.2-professional-workbench.md)。不修改已收口V1.1或main。
-- V1.1 当前专题入口：[候选与跨浏览器验收](docs/engineering/v1.1-candidate-qualification.md)、[运行错误中心](docs/engineering/v1.1-runtime-error-experience.md)、[依赖安全阶段收口](docs/engineering/v1.1-dependency-security.md)、[会话生命周期与审计隔离](docs/engineering/v1.1-session-lifecycle.md)、[双主题与入口体验](docs/engineering/v1.1-visual-quality.md)、[工程收口与Issue审计](docs/engineering/v1.1-engineering-closure.md)、[演示系统完整性专项](docs/engineering/v1.1-demo-completeness.md)、[影像查看器与OCR安全交互](docs/engineering/v1.1-archive-viewer-ocr.md)、[病案工作台布局及影像导航](docs/engineering/v1.1-archive-workbench-layout.md)、[Windows网关状态与TCP监听观察](docs/engineering/v1.1-windows-gateway-observation.md)、[Nginx运行观察与脱敏日志](docs/engineering/v1.1-nginx-runtime-observation.md)、[逐记录只读复验与集中集成](docs/engineering/v1.1-quality-case-recheck.md)、[异常人工决策与历史](docs/engineering/v1.1-quality-case-review.md)、[正常装箱关联修复](docs/engineering/v1.1-box-repair.md)、[导出版本与断点校验](docs/engineering/v1.1-export-representation.md)、[持久存储熔断事件](docs/engineering/v1.1-storage-circuit-history.md)、[病案工作台影像分页与内嵌OCR](docs/engineering/v1.1-workbench-scan-pagination.md)、[Manifest任务恢复及公开演示配置](docs/engineering/v1.1-manifest-recovery.md)、[工单异常重开与完整性报告](docs/engineering/v1.1-repair-manifest-report.md)、[运维历史及Nginx受控检查](docs/engineering/v1.1-operations-history.md)、[独立病案工作台与集中可靠性增量](docs/engineering/v1.1-workbench-entry.md)、[工作台、成员快照及工程欠账](docs/engineering/v1.1-workbench-snapshot.md)，最终 PR、SHA 和验收以实际 GitHub 状态为准。
+- V1.1/V1.2 历史集成、预览、专题和已验候选见交接索引及历史记录；不将旧 SHA 的证据作为当前验收。
 - AGENTS.md 保持稳定的规则和入口，不堆积逐轮日志。长篇历史归档到关联 Issue 或专题文档；交接索引保留当前任务及指向。
 - 不记录真实患者数据、令牌、密钥、生产配置或其他敏感信息；不擅自提交用户未保存的改动。若不能写入仓库，如实报告并保留可复制交接内容。
 
@@ -337,7 +326,3 @@ python scripts/release_baseline.py validate
 - 变更会删除、覆盖或批量修改医疗数据但没有恢复方案。
 
 此时应记录阻塞事实、最小复现和可选方案，创建或更新 Issue，而不是生成一个看似可运行的临时实现。
-
-2026-11-26：#844 经 GitHub 合并接口成功 squash 至 2dff0e4b，验收 head f6934742 与合并 tree 一致；提示分支重放至新基线。此前 OPEN 为历史状态。
-
-2026-11-26：#848最终head ca25d1f8修复Linux抽屉边界（按实际遮罩边缘，1px门禁不变），全部远端门禁通过并squash合并c50653f1，tree一致。业务视觉调查10路由×四主题×三宽度120截图，报告[实际业务视觉审查](docs/design/business-page-visual-audit.md)。样式治理与筛选高度修复集中交付；13个实际单选实例，120组复验、156项高度精确通过、联合21/21；预览run45659383575尚未确认上线。

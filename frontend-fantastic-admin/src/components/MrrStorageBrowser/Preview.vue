@@ -15,7 +15,7 @@ const title = computed(() => props.name ? `预览 · ${props.name}` : '图片预
 </script>
 
 <template>
-  <el-dialog v-model="visible" :title="title" width="min(920px, 92vw)" destroy-on-close>
+  <el-dialog v-model="visible" align-center :title="title" width="min(920px, 92vw)" destroy-on-close>
     <div v-loading="loading" class="preview-content" :aria-busy="loading">
       <el-image
         v-if="url"

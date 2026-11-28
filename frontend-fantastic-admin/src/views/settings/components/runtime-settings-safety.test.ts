@@ -37,7 +37,7 @@ function deferred<T>() {
   const promise = new Promise<T>((yes, no) => { resolve = yes; reject = no })
   return { promise, resolve, reject }
 }
-const global = { directives: { loading: () => {} }, stubs: Object.fromEntries(['el-alert', 'el-button', 'el-tag', 'el-form', 'el-form-item', 'el-switch', 'el-input-number', 'el-select', 'el-option', 'el-input', 'FaIcon'].map(name => [name, true])) }
+const global = { directives: { loading: () => {} }, stubs: Object.fromEntries(['el-alert', 'el-button', 'el-segmented', 'el-tag', 'el-form', 'el-form-item', 'el-switch', 'el-input-number', 'el-select', 'el-option', 'el-input', 'FaIcon'].map(name => [name, true])) }
 const wrappers: { unmount: () => void }[] = []
 async function setup() {
   const wrapper = shallowMount(RuntimeSettings, { global })
@@ -55,6 +55,17 @@ beforeEach(() => {
 afterEach(() => wrappers.splice(0).forEach(wrapper => wrapper.unmount()))
 
 describe('运行参数提交安全', () => {
+  it('批量填入默认值不修改需重启的只读参数', async () => {
+    const payload = schema()
+    payload.data!.items[0].effect = 'RESTART_REQUIRED'
+    payload.data!.items[1].defaultValue = '200'
+    vi.mocked(api.getSettingsSchema).mockResolvedValueOnce(payload)
+    const { vm } = await setup()
+    vm.fillWithConfigDefaults()
+    expect(vm.numberValues.loginMaxAttempts).toBe(7)
+    expect(vm.numberValues.accessLogCleanupBatchSize).toBe(200)
+    expect(api.saveSystemSettings).not.toHaveBeenCalled()
+  })
   it('固定确认快照，确认期间的其他编辑不进入本次payload', async () => {
     const { vm } = await setup()
     vm.numberValues.loginMaxAttempts = 10

@@ -17,7 +17,7 @@ const props = defineProps<ScrollAreaRootProps & {
   onWheel?: (event: WheelEvent) => void
 }>()
 
-const delegatedProps = reactiveOmit(props, 'class')
+const delegatedProps = reactiveOmit(props, 'class', 'scrollbar', 'onScroll', 'onWheel')
 
 const viewportRef = useTemplateRef('viewportRef')
 

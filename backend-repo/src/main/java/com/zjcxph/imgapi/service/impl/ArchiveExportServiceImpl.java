@@ -118,6 +118,22 @@ public class ArchiveExportServiceImpl implements ArchiveExportService {
     }
 
     @Override
+    public BatchZipExport prepareExternalArchive(String bah, String sjh) {
+        String expected = com.zjcxph.imgapi.security.ExternalArchiveGrant.keyOf(bah, sjh);
+        List<Scan> fresh = scanService.getFreshImageListByCode(
+                MedicalRecordCodeUtils.normalizeOrEmpty(bah), MedicalRecordCodeUtils.toSearchTerm(bah),
+                MedicalRecordCodeUtils.normalizeOrEmpty(sjh), MedicalRecordCodeUtils.toSearchTerm(sjh));
+        List<Scan> scans = new ArrayList<>();
+        if (fresh != null) for (Scan scan : fresh) {
+            if (scan != null && expected.equals(com.zjcxph.imgapi.security.ExternalArchiveGrant.keyOf(scan.getBah(), scan.getSjh()))) {
+                scans.add(scan);
+            }
+        }
+        scans.sort(ARCHIVE_PAGE_ORDER);
+        return toExport(scans);
+    }
+
+    @Override
     public void writeBatchZip(BatchZipExport export,
                               OutputStream outputStream,
                               ExportProgress progress) throws IOException {
@@ -148,7 +164,7 @@ public class ArchiveExportServiceImpl implements ArchiveExportService {
                 } catch (ArchiveExportCancelledException exception) {
                     throw exception;
                 } catch (IOException exception) {
-                    logger.error("ZIP 导出影像失败: entry={}", entryName, exception);
+                    logger.error("ZIP 导出影像失败: scanId={}, errorType={}", item.getScanId(), exception.getClass().getSimpleName());
                     throw exportReadFailure("无法读取导出影像: " + entryName, exception);
                 }
                 completed++;
@@ -218,7 +234,7 @@ public class ArchiveExportServiceImpl implements ArchiveExportService {
         } catch (IOException exception) {
             throw exception;
         } catch (RuntimeException exception) {
-            logger.error("病案 PDF 生成失败", exception);
+            logger.error("病案 PDF 生成失败: errorType={}", exception.getClass().getSimpleName());
             throw new IOException("病案 PDF 生成失败", exception);
         }
     }

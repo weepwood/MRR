@@ -7,10 +7,12 @@ const props = withDefaults(defineProps<{
   actions: MrrTableAction[]
   maxInline?: number
   moreLabel?: string
+  appearance?: 'quiet' | 'default'
   permissionChecker?: (permission: string | string[]) => boolean
 }>(), {
   maxInline: 2,
   moreLabel: '更多操作',
+  appearance: 'quiet',
 })
 
 const emit = defineEmits<{
@@ -64,13 +66,15 @@ defineExpose({ availableActions, inlineActions, overflowActions })
 </script>
 
 <template>
-  <div v-if="availableActions.length" class="mrr-table-actions" @click.stop>
+  <div v-if="availableActions.length" class="mrr-table-actions" :class="{ 'mrr-table-actions--quiet': props.appearance === 'quiet' }" @click.stop>
     <el-tooltip
       v-for="action in inlineActions"
       :key="action.key"
       :content="actionTooltip(action)"
       placement="top"
       :show-after="250"
+      :trigger-keys="[]"
+      trigger="hover"
     >
       <span class="mrr-table-actions__button-wrap">
         <el-button
@@ -94,6 +98,8 @@ defineExpose({ availableActions, inlineActions, overflowActions })
       trigger="click"
       placement="bottom-end"
       :teleported="true"
+      :popper-class="props.appearance === 'quiet' ? 'mrr-table-action-menu--quiet' : undefined"
+      :show-arrow="props.appearance !== 'quiet'"
       :disabled="panelLoading"
       :hide-on-click="true"
       @command="handleOverflowCommand"
@@ -259,5 +265,20 @@ defineExpose({ availableActions, inlineActions, overflowActions })
   .mrr-table-actions__button--danger {
     background: var(--mrr-tone-danger-soft);
   }
+}
+
+/* Quiet rows: same footprint and icon weight; destructive/approval colors remain semantic. */
+.mrr-table-actions--quiet .mrr-table-actions__button {
+  background: transparent;
+  border-radius: var(--mrr-radius-sm);
+}
+
+.mrr-table-actions--quiet .mrr-table-actions__button--primary {
+  color: var(--mrr-muted-foreground);
+}
+
+.mrr-table-actions--quiet .mrr-table-actions__button:not(.is-disabled):hover,
+.mrr-table-actions--quiet .mrr-table-actions__button:not(.is-disabled):focus-visible {
+  background: var(--mrr-muted);
 }
 </style>

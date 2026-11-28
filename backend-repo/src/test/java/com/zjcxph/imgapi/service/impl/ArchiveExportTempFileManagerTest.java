@@ -96,6 +96,30 @@ class ArchiveExportTempFileManagerTest {
         assertThat(manager.deleteManagedFile(file.toString())).isTrue();
     }
 
+    @Test
+    void digestCoversMultipleBuffersAndDoesNotMoveDownloadPosition() throws Exception {
+        byte[] original = new byte[128 * 1024 + 13];
+        new java.util.Random(42).nextBytes(original);
+        String digest = org.apache.commons.codec.digest.DigestUtils.sha256Hex(original);
+        var manager = new ArchiveExportTempFileManager(properties(original.length, original.length));
+        manager.initialize();
+        Path file = Files.write(tempDir.resolve("synthetic.zip"), original).toRealPath();
+        try (var lease = manager.openDownload(file.toString(), 1L)) {
+            lease.seek(65539);
+            assertThat(lease.matchesSha256(digest)).isTrue();
+            byte[] read = new byte[8];
+            assertThat(lease.read(read, 0, read.length)).isEqualTo(read.length);
+            assertThat(read).isEqualTo(java.util.Arrays.copyOfRange(original, 65539, 65547));
+            assertThat(lease.matchesSha256("invalid")).isFalse();
+            original[original.length - 1] ^= 1;
+            Files.write(file, original);
+            assertThat(lease.matchesSha256(digest)).isFalse();
+        }
+        try (var lease = manager.openDownload(file.toString(), 1L)) {
+            assertThat(lease.matchesSha256(org.apache.commons.codec.digest.DigestUtils.sha256Hex(original))).isTrue();
+        }
+    }
+
     private ArchiveExportProperties properties(long maxTotalBytes, long maxFileBytes) {
         ArchiveExportProperties properties = new ArchiveExportProperties();
         properties.setTempDirectory(tempDir.toString());

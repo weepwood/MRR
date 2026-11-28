@@ -10,17 +10,20 @@ const themeCode = themeCss.replace(/\/\*[\s\S]*?\*\//g, '')
 const globalsCss = fs.readFileSync(path.join(styleDir, '../globals.css'), 'utf8')
 
 describe('暖色扁平风格的设计层契约', () => {
-  it('整份规则都挂在 data-mrr-palette="gr8r" 下，退出调色板即刻失效', () => {
-    // 主题层一旦有「裸选择器」，切回 MRR 经典后仍会残留部分外观，用户无法回到原样。
-    const selectors = themeCode
-      .split('\n')
-      .map(line => line.trim())
-      .filter(line => line.endsWith('{'))
-      .filter(line => !line.startsWith('@'))
-
-    expect(selectors.length).toBeGreaterThan(10)
-    for (const selector of selectors) {
-      expect(selector, `未被调色板限定的选择器：${selector}`).toMatch(/^html\[data-mrr-palette="gr8r"\]/)
+  it('暖色规则仅限全站调色板或显式局部预览，局部规则与全站共享声明', () => {
+    const blocks = [...themeCode.matchAll(/([^{}]+)\{([^{}]*)\}/g)]
+    expect(blocks.length).toBeGreaterThan(10)
+    for (const [, header] of blocks) {
+      const selectors = header.split(',').map(selector => selector.trim())
+      for (const selector of selectors) {
+        if (selector.startsWith('.mrr-local-warm-preview')) {
+          expect(selector).toMatch(/^\.mrr-local-warm-preview(?: \.el-button[^,]*)?$/)
+          expect(selectors).toContain(selector.replace('.mrr-local-warm-preview', 'html[data-mrr-palette="gr8r"]'))
+        }
+        else {
+          expect(selector, `未被调色板限定的选择器：${selector}`).toMatch(/^html\[data-mrr-palette="gr8r"\]/)
+        }
+      }
     }
   })
 

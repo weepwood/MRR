@@ -23,39 +23,26 @@
   box-shadow: var(--mrr-focus-ring);
 }
 
-.el-switch__core {
-  background: var(--mrr-input);
+body .el-switch .el-switch__core {
+  background: var(--mrr-switch-track);
   border-color: transparent;
   box-shadow: none;
+  transition: background-color var(--mrr-motion-feedback) var(--mrr-ease-out);
 }
 
-.el-switch.is-checked .el-switch__core {
+body .el-switch.is-checked .el-switch__core {
   background: var(--mrr-primary);
 }
 
-/* ===== Dialogs, forms and tabs ===== */
-body .el-dialog {
-  overflow: hidden;
-  color: var(--mrr-card-foreground);
-  background: var(--mrr-card);
-  border: 1px solid var(--mrr-border);
-  border-radius: var(--mrr-radius-dialog);
-  box-shadow: var(--mrr-shadow-dialog);
+body .el-switch .el-switch__action {
+  transition: left var(--mrr-motion-move) var(--mrr-ease-out);
 }
 
-.el-dialog__header {
-  padding: 20px 24px 16px;
-  margin-right: 0;
-  border-bottom: 1px solid var(--mrr-border);
+body .el-switch.is-checked .el-switch__action {
+  background-color: var(--mrr-primary-foreground);
 }
 
-/* 17px 不在字号阶梯上；对话框标题与分区标题同档，正文 13–14px 之上只高一级。 */
-.el-dialog__title {
-  font-size: var(--mrr-font-size-lg);
-  font-weight: 650;
-  color: var(--mrr-card-foreground);
-  letter-spacing: -0.01em;
-}
+/* ===== Forms and tabs (dialog geometry owned by overlay-shells.css) ===== */
 
 /*
  * ===== 表面圆角 =====
@@ -99,16 +86,6 @@ body .el-table__inner-wrapper,
 body .el-descriptions__body,
 body .el-descriptions__table {
   border-radius: inherit;
-}
-
-.el-dialog__body {
-  padding: 20px 24px;
-}
-
-.el-dialog__footer {
-  padding: 16px 24px;
-  background: color-mix(in srgb, var(--mrr-muted) 42%, var(--mrr-card));
-  border-top: 1px solid var(--mrr-border);
 }
 
 .el-form-item__label {
@@ -194,10 +171,6 @@ body .el-descriptions__table {
 
   body .el-button--danger.is-plain:not(.is-disabled):hover {
     border-color: var(--mrr-destructive);
-  }
-
-  .el-dialog__footer {
-    background: var(--mrr-card);
   }
 
   .el-button--danger:focus-visible {
@@ -398,29 +371,42 @@ body .el-image-viewer__img {
  * 操作控件（缩放条、左右翻页、关闭、页码）Element 默认是「深灰底 + 白图标」。
  * 这套配色只在纯黑遮罩上成立，一到浅色主题就像贴了块深色补丁 —— 与页面里
  * 所有浮层（工具条、下拉、对话框）的语言都不一致。
- * 改成跟随主题的浮层卡片：亮色主题是白色玻璃 + 深色图标，暗色主题自动反转为
- * 深色玻璃 + 浅色图标。遮罩仍保持半透明黑 —— 看图要压暗背景才有对比，与控件无关。
- * 透明度走 `hsl(var(--card) / 92%)`（而非 color-mix），基线 Chrome 86 可直接解析。
+ * 改成跟随主题的不透明浮层卡片：亮底深字、暗底浅字。遮罩仍保持半透明黑，
+ * 控件使用统一 popover 令牌，避免背景影像改变可读性。
  */
 body .el-image-viewer__actions,
 body .el-image-viewer__prev,
 body .el-image-viewer__next,
 body .el-image-viewer__close {
   color: var(--text-primary);
-  background-color: hsl(var(--card) / 92%);
+  background-color: var(--mrr-popover);
   border: 1px solid var(--divider);
   box-shadow: var(--mrr-shadow-md);
   opacity: 1;
 }
 
 body .el-image-viewer__actions__inner {
+  gap: var(--mrr-space-2);
   color: inherit;
+}
+
+@media (max-width: 720px) {
+  body .el-image-viewer__actions {
+    bottom: 112px;
+    width: max-content;
+    max-width: calc(100vw - 16px);
+  }
+
+  body .el-image-viewer__actions__inner {
+    gap: var(--mrr-space-1);
+    padding-inline: var(--mrr-space-2);
+  }
 }
 
 body .el-image-viewer__prev:hover,
 body .el-image-viewer__next:hover,
 body .el-image-viewer__close:hover {
-  background-color: hsl(var(--card));
+  background-color: var(--mrr-control-bg-hover);
   border-color: var(--mrr-primary);
 }
 
@@ -446,4 +432,108 @@ body .el-image-viewer__actions__divider {
   body .el-image-viewer__mask {
     background: rgb(0 0 0 / 78%);
   }
+}
+
+/* Business edit forms only. Keep native Element Plus form contracts; do not
+ * apply edit spacing to filter bars, login or settings switches. */
+body .el-form.mrr-edit-form {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--mrr-space-4);
+  align-items: start;
+  min-width: 0;
+}
+
+body .el-form.mrr-edit-form--paired {
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, max(190px, calc((100% - var(--mrr-space-4)) / 2))), 1fr));
+}
+
+body .el-form.mrr-edit-form > .el-form-item {
+  min-width: 0;
+  margin-bottom: 0;
+}
+
+body .el-form.mrr-edit-form > .mrr-edit-form__full,
+body .el-form.mrr-edit-form > .mrr-edit-form__section {
+  grid-column: 1 / -1;
+}
+
+body .el-form.mrr-edit-form .el-form-item__label {
+  height: auto;
+  padding: 0;
+  margin-bottom: var(--mrr-space-2);
+  font-size: var(--mrr-font-size-sm);
+  font-weight: var(--mrr-font-weight-label);
+  line-height: var(--mrr-line-height-label);
+  white-space: normal;
+}
+
+body .el-form.mrr-edit-form .el-form-item__content {
+  gap: var(--mrr-space-1);
+  min-width: 0;
+}
+
+body .el-form.mrr-edit-form .el-form-item__error {
+  position: static;
+  flex: 0 0 100%;
+  padding-top: 0;
+  overflow-wrap: anywhere;
+}
+
+body .el-form.mrr-edit-form .el-input,
+body .el-form.mrr-edit-form .el-select,
+body .el-form.mrr-edit-form .el-date-editor {
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+}
+
+body .el-form.mrr-edit-form .el-input-number {
+  max-width: 100%;
+}
+
+body .el-form.mrr-edit-form .el-input-number .el-input {
+  width: 100%;
+}
+
+.mrr-edit-form__section {
+  padding-top: var(--mrr-space-3);
+  margin: 0;
+  font-size: var(--mrr-font-size-md);
+  font-weight: var(--mrr-font-weight-heading);
+  line-height: var(--mrr-line-height-label);
+  color: var(--mrr-card-foreground);
+  border-top: 1px solid var(--mrr-shell-divider);
+}
+
+.mrr-edit-form__section:first-child {
+  padding-top: 0;
+  border-top: 0;
+}
+
+.mrr-edit-form__unit {
+  flex: none;
+  font-size: var(--mrr-font-size-xs);
+  color: var(--mrr-muted-foreground);
+}
+
+body .el-form.mrr-edit-form--multi {
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 220px), 1fr));
+}
+
+/* Short numeric fields must not expand with the full page width. */
+body .el-form.mrr-edit-form--bounded {
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 220px), 260px));
+}
+
+body .el-form.mrr-edit-form--bounded .el-input-number {
+  width: 100%;
+}
+
+.mrr-edit-form__hint {
+  flex: 0 0 100%;
+  font-size: var(--mrr-font-size-xs);
+  line-height: 1.5;
+  color: var(--mrr-muted-foreground);
+  overflow-wrap: anywhere;
 }

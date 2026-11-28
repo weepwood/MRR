@@ -43,6 +43,10 @@ const isItemActive = computed(() => {
   return isActived.value && (!props.subMenu || rootMenu.isMenuPopup)
 })
 
+// inert is not available in every supported browser; remove closed descendants
+// from sequential focus independently of native inert support.
+const branchTabIndex = computed(() => rootMenu.isMenuPopup || props.uniqueKey.slice(0, -1).every(key => rootMenu.openedMenus.includes(key)) ? 0 : -1)
+
 const useLeadingExpandIndicator = computed(() => {
   return props.subMenu
     && rootMenu.props.leadingExpandIndicator
@@ -86,8 +90,9 @@ defineExpose({
             }),
           }" :class="cn('group mrr-navigation-control menu-item-container relative h-full w-full flex cursor-pointer items-center justify-between gap-1 rounded-md px-3 py-2 transition-colors', {
             'active': isItemActive,
+            'mrr-nav-leaf': !subMenu,
             'px-2.5': rootMenu.isMenuPopup && level === 0,
-          })" :aria-current="!subMenu && isItemActive ? 'page' : undefined" :aria-label="subMenu || (rootMenu.isMenuPopup && level === 0 && !rootMenu.props.showCollapseName) ? title : undefined" :title="title" @click="handleClick($event, navigate)"
+          })" :tabindex="branchTabIndex" :aria-current="!subMenu && isItemActive ? 'page' : undefined" :aria-label="subMenu || (rootMenu.isMenuPopup && level === 0 && !rootMenu.props.showCollapseName) ? title : undefined" :title="title" @click="handleClick($event, navigate)"
         >
           <span
             :class="cn('relative z-10 text-start inline-flex flex-1 items-center justify-center gap-[10px] pl-[calc(var(--indent-level)*16px)]', {
@@ -155,8 +160,7 @@ defineExpose({
 .menu-item-container-icon {
   flex: 0 0 auto;
   color: currentcolor;
-  transform-origin: center;
-  transition: color var(--mrr-motion-feedback) var(--mrr-ease-out), transform var(--mrr-motion-feedback) var(--mrr-ease-out);
+  transition: color var(--mrr-motion-feedback) var(--mrr-ease-out);
 }
 
 .menu-error-badge {
@@ -172,17 +176,8 @@ defineExpose({
   border-radius: 9px;
 }
 
-.menu-item-container:hover .menu-item-container-icon {
-  transform: var(--mrr-motion-decor, scale(1.04));
-}
-
-.menu-item-container.active .menu-item-container-icon,
-.menu-item.active .menu-item-container-icon {
-  transform: var(--mrr-motion-decor, scale(1.06));
-}
-
-.menu-item-container:active .menu-item-container-icon {
-  transform: var(--mrr-motion-decor, scale(0.92));
+a.menu-item-container:not(.active):active {
+  background: var(--mrr-navigation-active);
 }
 
 .menu-leading-control {
@@ -217,8 +212,7 @@ defineExpose({
 .menu-item-container:hover .menu-leading-control-icon {
   opacity: 0;
 
-  /* 只有缩放是装饰；-3px 位移是箭头与图标的重合对位，必须保留。 */
-  transform: scale(0.82) translateX(-3px) !important;
+  /* 一级目录保持图标与展开箭头原位淡入淡出，不再缩放。 */
 }
 
 /*
@@ -238,10 +232,6 @@ defineExpose({
   .menu-leading-control-icon,
   .menu-leading-control-arrow {
     transition: none;
-  }
-
-  .menu-item-container:hover .menu-leading-control-icon {
-    transform: scale(0.82) !important;
   }
 
   .menu-leading-control-arrow {

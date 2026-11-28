@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import type { InputInstance } from 'element-plus'
-/* eslint-disable antfu/if-newline, curly */
 import type {
   ArchiveRelationDetail,
   ArchiveSearchResult,
@@ -12,9 +11,10 @@ import type {
   RelationCoverage,
   RepairPreview,
 } from '@/api/modules/data-relations'
+/* eslint-disable antfu/if-newline, curly */
 import type { MrrTableAction } from '@/components/MrrTableActions/types'
 import { ElMessage } from 'element-plus'
-import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
+import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import {
   getArchiveRelationDetail,
   getDataQualityIssues,
@@ -28,6 +28,7 @@ import AppEmpty from '@/components/AppEmpty/index.vue'
 import AppError from '@/components/AppError/index.vue'
 import AppLoading from '@/components/AppLoading/index.vue'
 import MrrFilterActionButton from '@/components/MrrFilterActionButton/index.vue'
+import MrrFilterBar from '@/components/MrrFilterBar/index.vue'
 import MrrResizeHandle from '@/components/MrrResizeHandle/index.vue'
 import MrrSectionCard from '@/components/MrrSectionCard/index.vue'
 import MrrStatusTag from '@/components/MrrStatusTag/index.vue'
@@ -35,6 +36,8 @@ import MrrTableActions from '@/components/MrrTableActions/index.vue'
 import { useTableActionLayout } from '@/composables/useTableActionLayout'
 import { formatDateTime } from '@/utils/display-format'
 import { hasPermission } from '@/utils/session'
+import { isSessionAccessDenied } from '@/utils/session-access-denied'
+import { tableSequenceColumn } from '@/utils/table-sequence'
 import ArchiveManifestCard from './ArchiveManifestCard.vue'
 import ArchiveScanInspector from './components/ArchiveScanInspector.vue'
 import QualityCaseReview from './components/QualityCaseReview.vue'
@@ -44,6 +47,7 @@ defineOptions({ name: 'DataRelationWorkbenchPage' })
 
 const props = withDefaults(defineProps<{ archiveOnly?: boolean }>(), { archiveOnly: false })
 
+const canReadQualitySamples = computed(() => hasPermission('record:read') && hasPermission('system:read'))
 const canRepair = computed(() => hasPermission('system:manage') && hasPermission('record:manage'))
 const overviewLoading = ref(false)
 const searchLoading = ref(false)
@@ -54,6 +58,11 @@ const activeTab = ref(props.archiveOnly ? 'archive' : 'overview')
 const overview = ref<DataRelationOverview | null>(null)
 const qualitySummary = ref<DataQualitySummary | null>(null)
 const issues = ref<DataQualityIssue[]>([])
+const qualityLoading = ref(false)
+const qualityFailed = ref(false)
+const qualityLoaded = ref(false)
+const sampleRegion = ref<HTMLElement>()
+
 const railWidth = ref(260)
 const railDivider = ref<InstanceType<typeof MrrResizeHandle>>()
 
@@ -81,6 +90,13 @@ let sessionVersion = 0
 const relationDetail = ref<ArchiveRelationDetail | null>(null)
 const issueSeverity = ref('ALL')
 const issueKeyword = ref('')
+const issueRule = ref('')
+const issueFiltersActive = computed(() => issueSeverity.value !== 'ALL' || !!issueRule.value || !!issueKeyword.value.trim())
+function resetIssueFilters() {
+  issueSeverity.value = 'ALL'
+  issueRule.value = ''
+  issueKeyword.value = ''
+}
 const repairPreview = ref<RepairPreview | null>(null)
 const previewVisible = ref(false)
 const previewError = ref(false)
@@ -129,7 +145,10 @@ function resetPage() {
   overview.value = null
   qualitySummary.value = null
   issues.value = []
-  issueKeyword.value = ''
+  qualityLoading.value = false
+  qualityFailed.value = false
+  qualityLoaded.value = false
+  resetIssueFilters()
   overviewLoading.value = false
   checking.value = false
   activeTab.value = props.archiveOnly ? 'archive' : 'overview'
@@ -140,6 +159,18 @@ function resetPage() {
   issueSeverity.value = 'ALL'
 }
 watch(() => useUserStore().token, resetPage, { flush: 'sync' })
+watch(canReadQualitySamples, (allowed) => {
+  if (!allowed) {
+    ++qualityVersion
+    qualityLoading.value = false
+    qualityLoaded.value = false
+    issues.value = []
+    resetIssueFilters()
+    invalidatePreview()
+    previewVisible.value = false
+  }
+  if (!props.archiveOnly) void loadQualityData().catch(() => {})
+}, { flush: 'sync' })
 watch(() => props.archiveOnly, () => {
   resetPage()
   if (!props.archiveOnly) void loadDashboard()
@@ -173,12 +204,32 @@ const {
   actionColumnWidth: issueActionColumnWidth,
 } = useTableActionLayout(issueActions.length, 2)
 
+const { maxInlineActions: archiveMaxInlineActions, actionColumnWidth: archiveActionColumnWidth } = useTableActionLayout(1, 1)
+function archiveActions(row: ArchiveSearchResult): MrrTableAction[] {
+  return [{ key: 'detail', label: `查看病案主档 ${row.id} 的关系`, icon: 'i-lucide:eye', tone: 'primary', placement: 'inline' }]
+}
+
 const latestRun = computed(() => qualitySummary.value?.latestRun ?? overview.value?.latestQualityRun ?? null)
-const checks = computed<QualityCheck[]>(() => qualitySummary.value?.checks ?? overview.value?.relationChecks ?? [])
+const checks = computed<QualityCheck[]>(() => qualitySummary.value?.checks ?? [])
+const issueRules = computed(() => [...new Map([...checks.value.map(check => [checkCode(check), checkName(check)] as const), ...issues.value.map(issue => [issueCode(issue), issueName(issue)] as const)])].filter(([code]) => !!code).map(([code, name]) => ({ code, name })))
+watch(issueRules, (rules) => {
+  if (issueRule.value && !rules.some(rule => rule.code === issueRule.value)) issueRule.value = ''
+})
+function sampleCountForRule(code: string) {
+  return issues.value.filter(issue => issueCode(issue) === code).length
+}
+async function inspectRule(check: QualityCheck) {
+  resetIssueFilters()
+  issueRule.value = checkCode(check)
+  await nextTick()
+  sampleRegion.value?.focus({ preventScroll: true })
+  sampleRegion.value?.scrollIntoView({ block: 'start' })
+}
 const filteredIssues = computed(() => {
   const keyword = issueKeyword.value.trim().toLowerCase()
   return issues.value.filter((issue) => {
     if (issueSeverity.value !== 'ALL' && issue.severity !== issueSeverity.value) return false
+    if (issueRule.value && issueCode(issue) !== issueRule.value) return false
     if (!keyword) return true
     return [
       issue.checkCode,
@@ -245,6 +296,10 @@ function relationTagType(status: RelationCoverage['status']) {
   return 'danger'
 }
 
+function relationStatusLabel(status: RelationCoverage['status']) {
+  return { HEALTHY: '正常', WARNING: '警告', CRITICAL: '严重', LEGACY: '遗留关联', UNKNOWN: '未知' }[status] ?? status
+}
+
 function comparisonTagType(status: ComparisonStatus) {
   if (status === 'EXACT') return 'success'
   if (status === 'FORMAT_ONLY' || status === 'NO_CANONICAL') return 'warning'
@@ -276,13 +331,50 @@ async function loadOverview() {
 
 async function loadQualityData() {
   const current = ++qualityVersion
-  const [summaryResponse, issueResponse] = await Promise.all([
-    getDataQualitySummary(),
-    getDataQualityIssues(300),
-  ])
-  if (current !== qualityVersion) return
-  qualitySummary.value = summaryResponse.data ?? null
-  issues.value = issueResponse.data ?? []
+  qualityLoading.value = true
+  qualityFailed.value = false
+  try {
+    // Pin sample reads to the summary's run; on summary failure still check
+    // sample access so a transport failure cannot mask an authorization denial.
+    const summaryRequest = getDataQualitySummary()
+    const sampleRequest = canReadQualitySamples.value
+      ? summaryRequest.then(
+          response => response.data?.latestRun === null ? { data: [] as DataQualityIssue[] } : getDataQualityIssues(300, response.data?.latestRun?.id),
+          () => getDataQualityIssues(300),
+        )
+      : Promise.resolve({ data: [] as DataQualityIssue[] })
+    const [summaryResult, issueResult] = await Promise.allSettled([summaryRequest, sampleRequest])
+    if (current !== qualityVersion) return
+    const failures = [summaryResult, issueResult].filter(result => result.status === 'rejected')
+    const failure = failures.find(result => isSessionAccessDenied(result.reason)) ?? failures[0]
+    if (failure) throw failure.reason
+    if (summaryResult.status !== 'fulfilled' || issueResult.status !== 'fulfilled') throw new Error('Invalid quality response')
+    const summaryResponse = summaryResult.value
+    const issueResponse = issueResult.value
+    if (!summaryResponse.data || !Array.isArray(issueResponse.data)) throw new Error('Invalid quality response')
+    qualitySummary.value = summaryResponse.data
+    issues.value = canReadQualitySamples.value ? issueResponse.data : []
+    qualityLoaded.value = canReadQualitySamples.value
+  }
+  catch (error) {
+    if (current === qualityVersion) {
+      qualityFailed.value = true
+      if (isSessionAccessDenied(error)) {
+        qualityLoaded.value = false
+        qualitySummary.value = null
+        issues.value = []
+        resetIssueFilters()
+      }
+    }
+    throw error
+  }
+  finally {
+    if (current === qualityVersion) qualityLoading.value = false
+  }
+}
+
+function retryQualityData() {
+  void loadQualityData().catch(() => {})
 }
 
 async function loadDashboard() {
@@ -376,6 +468,9 @@ async function runChecks() {
     await Promise.all([loadOverview(), loadQualityData()])
     if (current === sessionVersion) activeTab.value = 'quality'
   }
+  catch {
+    if (current === sessionVersion) ElMessage.error('检查或结果读取失败，请核对实际状态')
+  }
   finally {
     if (current === sessionVersion) checking.value = false
   }
@@ -437,7 +532,6 @@ onMounted(() => {
   <MrrPageShell class="relation-workbench">
     <MrrPageHeader
       :title="archiveOnly ? '病案工作台' : '数据关系工作台'"
-      :size="archiveOnly ? 'compact' : 'default'"
       :eyebrow="archiveOnly ? 'Medical Records' : 'Data Governance'"
       :description="archiveOnly ? '按病案号、上架号或主档 ID 查找病案，集中核对患者、扫描影像、文件完整性及关联异常。' : '以 mr_archive 为中心查看统计、患者、扫描、装箱和迁移数据，发现缺失关联与字段冲突。关联检查、影像完整性观察与修复预览集中查看。'"
     >
@@ -459,22 +553,26 @@ onMounted(() => {
 
     <section v-if="!archiveOnly" class="mrr-metric-grid mrr-metric-grid--four" aria-label="数据关系健康总览">
       <MrrMetricCard
+        icon="i-lucide:heart-pulse"
         label="关系健康度"
         :value="formatPercent(overview?.healthScore)"
         note="基于可用统计估算；未知项不计入"
       />
       <MrrMetricCard
+        icon="i-lucide:folders"
         label="病案主档（估算）"
         :value="formatNumber(overview?.archiveCount)"
         note="PostgreSQL统计快照，非实时COUNT"
       />
       <MrrMetricCard
+        icon="i-lucide:circle-x"
         label="严重异常"
         tone="danger"
         :value="formatNumber(latestRun?.criticalCount ?? latestRun?.critical_count)"
         note="最近一次质量检查结果"
       />
       <MrrMetricCard
+        icon="i-lucide:triangle-alert"
         label="警告异常"
         tone="warning"
         :value="formatNumber(latestRun?.warningCount ?? latestRun?.warning_count)"
@@ -486,7 +584,7 @@ onMounted(() => {
       <el-tab-pane v-if="!archiveOnly" label="关系总览" name="overview">
         <AppLoading v-if="overviewLoading && !overview" type="card" :cols="3" />
         <div v-else v-loading="overviewLoading" class="overview-stack">
-          <section class="relation-grid">
+          <section class="relation-grid" aria-label="各数据表关联覆盖率">
             <el-card
               v-for="relation in overview?.relations ?? []"
               :key="relation.tableName"
@@ -498,7 +596,7 @@ onMounted(() => {
                   <strong>{{ relation.label }}</strong>
                   <code>{{ relation.tableName }}</code>
                 </div>
-                <MrrStatusTag :label="relation.status" :tone="relationTagType(relation.status)" />
+                <MrrStatusTag :label="relationStatusLabel(relation.status)" :title="relation.status" :tone="relationTagType(relation.status)" />
               </div>
               <p>{{ relation.relation }}</p>
               <div class="coverage-row">
@@ -522,15 +620,18 @@ onMounted(() => {
                 </div>
                 <div>
                   <dt>缺失</dt>
-                  <dd>{{ formatNumber(relation.missingCount) }}</dd>
+                  <dd :class="{ 'relation-count--missing': Number(relation.missingCount) > 0 }">
+                    {{ formatNumber(relation.missingCount) }}
+                  </dd>
                 </div>
               </dl>
-              <small>来源：{{ relation.source }} · 统计时间：{{ formatDateTime(relation.analyzedAt) }}</small>
+              <small class="relation-card__provenance">来源：{{ relation.source }} · 统计时间：{{ formatDateTime(relation.analyzedAt) }}</small>
             </el-card>
           </section>
 
           <MrrSectionCard class="section-card" title="关联检查结果" description="最近一次运行中与 archive_id、孤立数据和编号冲突相关的检查">
             <el-table :data="overview?.relationChecks ?? []" stripe empty-text="尚无关联检查结果">
+              <el-table-column v-bind="tableSequenceColumn()" />
               <el-table-column label="检查项" min-width="260">
                 <template #default="{ row }">
                   <strong>{{ checkName(row as QualityCheck) }}</strong>
@@ -539,7 +640,7 @@ onMounted(() => {
                   </div>
                 </template>
               </el-table-column>
-              <el-table-column label="级别" width="100">
+              <el-table-column label="级别" width="100" class-name="mrr-table-status-column">
                 <template #default="{ row }">
                   <MrrStatusTag :label="row.severity" :tone="row.severity === 'CRITICAL' ? 'danger' : 'warning'" />
                 </template>
@@ -571,7 +672,7 @@ onMounted(() => {
       <el-tab-pane label="病案工作台" name="archive">
         <div class="archive-stack" :class="{ 'archive-stack--workspace': archiveOnly }" :style="archiveOnly ? { '--archive-rail-width': `${railWidth}px` } : undefined">
           <div :id="archiveOnly ? 'archive-search-pane' : undefined" class="archive-search-rail" :class="{ 'archive-search-rail--legacy': !archiveOnly }" role="region" aria-label="病案检索及候选">
-            <MrrSectionCard :body-padding="archiveOnly ? 'compact' : 'normal'" title="查找病案" :description="archiveOnly ? undefined : '选择编号类型，查询病案主档及其跨表关系。'">
+            <MrrSectionCard :body-padding="archiveOnly ? 'compact' : 'normal'" title="查找病案" description="选择编号类型，查询病案主档及其跨表关系。">
               <div class="search-row">
                 <div class="search-field search-field--type">
                   <label for="relation-search-type">查询类型</label>
@@ -613,25 +714,24 @@ onMounted(() => {
           <MrrResizeHandle v-if="archiveOnly" ref="railDivider" v-model="railWidth" class="archive-rail-divider" :min="220" :max="360" :default-width="260" label="调整检索栏宽度" controls="archive-search-pane" />
 
           <MrrSectionCard v-if="!archiveOnly && searchResults.length" class="section-card" title="病案主档候选" description="精确匹配优先；仅前导零差异标记为格式差异（FORMAT_ONLY）">
-            <el-table :data="searchResults" highlight-current-row @row-click="openArchive">
+            <el-table :data="searchResults" row-key="id" :current-row-key="selectedArchive?.id" highlight-current-row @row-click="openArchive">
+              <el-table-column v-bind="tableSequenceColumn()" />
               <el-table-column prop="id" label="主档 ID" width="120" />
               <el-table-column prop="bah" label="病案号（BAH）" min-width="150" />
               <el-table-column prop="sjh" label="上架号（SJH）" min-width="150" />
               <el-table-column prop="patientName" label="患者" width="120" />
               <el-table-column prop="department" label="科室" min-width="140" />
               <el-table-column prop="scanCount" label="扫描数" width="100" />
-              <el-table-column label="匹配方式" min-width="180">
+              <el-table-column label="匹配方式" min-width="180" class-name="mrr-table-status-column">
                 <template #default="{ row }">
                   <el-tag :type="row.matchType === 'EXACT' ? 'success' : 'warning'">
                     {{ row.matchType === 'EXACT' ? '精确匹配（EXACT）' : row.matchType === 'FORMAT_ONLY' ? '格式差异（FORMAT_ONLY）' : row.matchType }}
                   </el-tag>
                 </template>
               </el-table-column>
-              <el-table-column label="操作" width="110" fixed="right">
+              <el-table-column label="操作" :width="archiveActionColumnWidth" fixed="right" align="center">
                 <template #default="{ row }">
-                  <el-button text type="primary" :aria-label="`查看病案主档 ${row.id} 的关系`" @click.stop="openArchive(row as ArchiveSearchResult)">
-                    查看关系
-                  </el-button>
+                  <MrrTableActions :actions="archiveActions(row as ArchiveSearchResult)" :max-inline="archiveMaxInlineActions" @select="openArchive(row as ArchiveSearchResult)" />
                 </template>
               </el-table-column>
             </el-table>
@@ -729,11 +829,12 @@ onMounted(() => {
 
               <MrrSectionCard data-archive-section="comparison" tabindex="-1" class="section-card" title="跨表字段对比" description="区分完全一致、仅前导零差异、字段缺失和真实冲突">
                 <el-table :data="relationDetail.comparisons" stripe>
+                  <el-table-column v-bind="tableSequenceColumn()" />
                   <el-table-column prop="field" label="字段" width="120" />
                   <el-table-column prop="canonicalValue" label="mr_archive" min-width="150" />
                   <el-table-column prop="source" label="来源表" min-width="180" />
                   <el-table-column prop="sourceValue" label="来源值" min-width="150" />
-                  <el-table-column label="判断" width="140">
+                  <el-table-column label="判断" width="140" class-name="mrr-table-status-column">
                     <template #default="{ row }">
                       <MrrStatusTag :label="comparisonLabel(row.status) || row.status" :tone="comparisonTagType(row.status)" />
                     </template>
@@ -744,6 +845,7 @@ onMounted(() => {
               <el-tabs data-archive-section="records" tabindex="-1" class="detail-tabs" type="border-card">
                 <el-tab-pane :label="`统计记录 (${relationDetail.statistics.length})`">
                   <el-table :data="relationDetail.statistics" max-height="420">
+                    <el-table-column v-bind="tableSequenceColumn()" />
                     <el-table-column prop="id" label="ID" width="90" />
                     <el-table-column prop="relationMode" label="关联方式" width="130" />
                     <el-table-column prop="bah" label="BAH" width="120" />
@@ -755,6 +857,7 @@ onMounted(() => {
                 </el-tab-pane>
                 <el-tab-pane :label="`患者记录 (${relationDetail.patients.length})`">
                   <el-table :data="relationDetail.patients" max-height="420">
+                    <el-table-column v-bind="tableSequenceColumn()" />
                     <el-table-column prop="id" label="ID" width="90" />
                     <el-table-column prop="relationMode" label="关联方式" width="130" />
                     <el-table-column prop="bah" label="BAH" width="120" />
@@ -767,6 +870,7 @@ onMounted(() => {
                 </el-tab-pane>
                 <el-tab-pane :label="`装箱记录 (${relationDetail.boxes.length})`">
                   <el-table :data="relationDetail.boxes" max-height="420">
+                    <el-table-column v-bind="tableSequenceColumn()" />
                     <el-table-column prop="id" label="ID" width="90" />
                     <el-table-column prop="relationMode" label="关联方式" width="130" />
                     <el-table-column prop="boxNo" label="实际箱号" min-width="130" />
@@ -777,6 +881,7 @@ onMounted(() => {
                 </el-tab-pane>
                 <el-tab-pane :label="`扫描样本 (${relationDetail.scanSamples.length})`">
                   <el-table :data="relationDetail.scanSamples" max-height="420">
+                    <el-table-column v-bind="tableSequenceColumn()" />
                     <el-table-column prop="id" label="ID" width="100" />
                     <el-table-column prop="pages" label="页码" width="90" />
                     <el-table-column prop="filename" label="文件名" min-width="180" show-overflow-tooltip />
@@ -815,11 +920,14 @@ onMounted(() => {
       </el-tab-pane>
       <el-tab-pane v-if="!archiveOnly" label="检查与异常" name="quality">
         <div class="quality-stack">
+          <AppError v-if="qualityFailed && !qualityLoaded" message="异常样本读取失败，不能判断当前是否存在异常" @retry="retryQualityData" />
+          <el-alert v-else-if="qualityFailed" title="异常样本刷新失败，以下为上次成功读取的结果" type="warning" :closable="false" />
           <MrrSectionCard class="section-card" title="检查规则结果" description="关联、编号、文件元数据、重复扫描和迁移一致性">
             <template #actions>
               <MrrStatusTag v-if="qualitySummary?.running" label="检查运行中" tone="warning" />
             </template>
-            <el-table :data="checks" stripe empty-text="尚未执行数据质量检查">
+            <el-table :data="checks" stripe :empty-text="qualitySummary ? '尚未执行数据质量检查' : '规则结果尚未取得'">
+              <el-table-column v-bind="tableSequenceColumn()" />
               <el-table-column label="规则" min-width="280">
                 <template #default="{ row }">
                   <strong>{{ checkName(row as QualityCheck) }}</strong>
@@ -828,7 +936,7 @@ onMounted(() => {
                   </div>
                 </template>
               </el-table-column>
-              <el-table-column label="严重程度" width="120">
+              <el-table-column label="严重程度" width="120" class-name="mrr-table-status-column">
                 <template #default="{ row }">
                   <MrrStatusTag :label="row.severity" :tone="row.severity === 'CRITICAL' ? 'danger' : 'warning'" />
                 </template>
@@ -843,6 +951,14 @@ onMounted(() => {
                   {{ formatNumber(row.sampledCount ?? row.sampled_count) }}
                 </template>
               </el-table-column>
+              <el-table-column label="已加载样本" width="130">
+                <template #default="{ row }">
+                  <el-button v-if="qualityLoaded" link type="primary" :aria-label="`查看规则 ${checkName(row as QualityCheck)} 的样本`" @click="inspectRule(row as QualityCheck)">
+                    {{ sampleCountForRule(checkCode(row as QualityCheck)) }} · 查看
+                  </el-button>
+                  <span v-else>—</span>
+                </template>
+              </el-table-column>
               <el-table-column label="检查时间" min-width="180">
                 <template #default="{ row }">
                   {{ formatDateTime(row.checkedAt ?? row.checked_at) }}
@@ -851,55 +967,77 @@ onMounted(() => {
             </el-table>
           </MrrSectionCard>
 
-          <MrrSectionCard class="section-card" title="异常样本" description="当前显示最近一次检查保存的有界样本，不直接返回全量异常">
-            <template #actions>
-              <div class="issue-filters">
-                <el-select v-model="issueSeverity" aria-label="异常级别筛选" class="severity-select">
-                  <el-option label="全部级别" value="ALL" />
-                  <el-option label="严重" value="CRITICAL" />
-                  <el-option label="警告" value="WARNING" />
-                </el-select>
-                <el-input v-model="issueKeyword" aria-label="异常关键字筛选" clearable placeholder="筛选规则、表、BAH 或 SJH" />
+          <el-alert v-if="!canReadQualitySamples" title="查看异常样本需要病案读取权限" type="info" :closable="false" />
+          <section v-else ref="sampleRegion" class="quality-samples-region" tabindex="-1" aria-label="异常样本检查区">
+            <MrrSectionCard v-loading="qualityLoading" class="section-card" title="异常样本" description="当前显示最近一次检查保存的有界样本，不直接返回全量异常">
+              <template #actions>
+                <el-button :loading="qualityLoading" @click="retryQualityData">
+                  刷新样本
+                </el-button>
+              </template>
+              <MrrFilterBar embedded :focus-ring="false">
+                <div class="mrr-filter-field">
+                  <el-select v-model="issueSeverity" aria-label="异常级别筛选">
+                    <el-option label="全部级别" value="ALL" />
+                    <el-option label="严重" value="CRITICAL" />
+                    <el-option label="警告" value="WARNING" />
+                  </el-select>
+                </div>
+                <div class="mrr-filter-field mrr-filter-field--code">
+                  <el-select v-model="issueRule" aria-label="异常规则筛选" class="issue-rule-select" clearable placeholder="全部规则">
+                    <el-option v-for="rule in issueRules" :key="rule.code" :label="rule.name || rule.code" :value="rule.code" />
+                  </el-select>
+                </div>
+                <div class="mrr-filter-field mrr-filter-field--keyword">
+                  <el-input v-model="issueKeyword" aria-label="异常关键字筛选" clearable placeholder="筛选规则、表、BAH 或 SJH" />
+                </div>
+                <template #actions>
+                  <MrrFilterActionButton action="reset" feedback="request" :disabled="!issueFiltersActive" aria-label="重置异常样本筛选" @click="resetIssueFilters" />
+                </template>
+              </MrrFilterBar>
+              <div class="issue-sample-count" role="status">
+                {{ qualityLoaded ? `匹配 ${filteredIssues.length} / 已加载 ${issues.length} 个样本` : '尚未取得样本' }}
               </div>
-            </template>
-            <el-table :data="filteredIssues" stripe empty-text="当前没有异常样本">
-              <el-table-column label="级别" width="95">
-                <template #default="{ row }">
-                  <MrrStatusTag :label="row.severity === 'CRITICAL' ? '严重' : '警告'" :tone="row.severity === 'CRITICAL' ? 'danger' : 'warning'" />
-                </template>
-              </el-table-column>
-              <el-table-column label="规则" min-width="250">
-                <template #default="{ row }">
-                  <strong>{{ issueName(row as DataQualityIssue) }}</strong>
-                  <div class="muted-code">
-                    {{ issueCode(row as DataQualityIssue) }}
-                  </div>
-                </template>
-              </el-table-column>
-              <el-table-column label="记录" min-width="180">
-                <template #default="{ row }">
-                  {{ issueEntityType(row as DataQualityIssue) }} #{{ issueEntityId(row as DataQualityIssue) }}
-                </template>
-              </el-table-column>
-              <el-table-column prop="bah" label="BAH" width="120" />
-              <el-table-column prop="sjh" label="SJH" width="120" />
-              <el-table-column prop="detail" label="说明" min-width="300" show-overflow-tooltip />
-              <el-table-column
-                label="操作"
-                :width="issueActionColumnWidth"
-                fixed="right"
-                align="center"
-              >
-                <template #default="{ row }">
-                  <MrrTableActions
-                    :actions="issueActions"
-                    :max-inline="issueMaxInlineActions"
-                    @select="handleIssueAction($event, row as DataQualityIssue)"
-                  />
-                </template>
-              </el-table-column>
-            </el-table>
-          </MrrSectionCard>
+              <el-table :data="filteredIssues" stripe :empty-text="!qualityLoaded ? '样本尚未取得' : issues.length && issueFiltersActive ? '没有符合筛选条件的样本' : '当前没有异常样本'">
+                <el-table-column v-bind="tableSequenceColumn()" />
+                <el-table-column label="级别" width="95" class-name="mrr-table-status-column">
+                  <template #default="{ row }">
+                    <MrrStatusTag :label="row.severity === 'CRITICAL' ? '严重' : '警告'" :tone="row.severity === 'CRITICAL' ? 'danger' : 'warning'" />
+                  </template>
+                </el-table-column>
+                <el-table-column label="规则" min-width="250">
+                  <template #default="{ row }">
+                    <strong>{{ issueName(row as DataQualityIssue) }}</strong>
+                    <div class="muted-code">
+                      {{ issueCode(row as DataQualityIssue) }}
+                    </div>
+                  </template>
+                </el-table-column>
+                <el-table-column label="记录" min-width="180">
+                  <template #default="{ row }">
+                    {{ issueEntityType(row as DataQualityIssue) }} #{{ issueEntityId(row as DataQualityIssue) }}
+                  </template>
+                </el-table-column>
+                <el-table-column prop="bah" label="BAH" width="120" />
+                <el-table-column prop="sjh" label="SJH" width="120" />
+                <el-table-column prop="detail" label="说明" min-width="300" show-overflow-tooltip />
+                <el-table-column
+                  label="操作"
+                  :width="issueActionColumnWidth"
+                  fixed="right"
+                  align="center"
+                >
+                  <template #default="{ row }">
+                    <MrrTableActions
+                      :actions="issueActions"
+                      :max-inline="issueMaxInlineActions"
+                      @select="handleIssueAction($event, row as DataQualityIssue)"
+                    />
+                  </template>
+                </el-table-column>
+              </el-table>
+            </MrrSectionCard>
+          </section>
         </div>
       </el-tab-pane>
     </el-tabs>
@@ -938,6 +1076,7 @@ onMounted(() => {
 
           <h4>候选病案主档</h4>
           <el-table :data="repairPreview.candidateArchives" empty-text="没有候选病案主档">
+            <el-table-column v-bind="tableSequenceColumn()" />
             <el-table-column prop="id" label="archive_id" width="110" />
             <el-table-column prop="bah" label="BAH" />
             <el-table-column prop="sjh" label="SJH" />
@@ -957,7 +1096,6 @@ onMounted(() => {
   min-width: 0;
 }
 
-.issue-filters,
 .search-row,
 .archive-header,
 .relation-card__header,
@@ -1020,7 +1158,7 @@ p {
   gap: var(--mrr-space-3);
   justify-items: center;
   min-width: 0;
-  padding: var(--mrr-space-6) var(--mrr-space-3);
+  padding: var(--mrr-space-5) var(--mrr-space-3);
   text-align: center;
 }
 
@@ -1030,7 +1168,7 @@ p {
   width: 48px;
   height: 48px;
   font-size: 24px;
-  color: var(--mrr-primary);
+  color: var(--mrr-tone-primary-ink);
   background: var(--mrr-tone-primary-soft);
   border: 1px solid var(--mrr-tone-primary-border);
   border-radius: var(--mrr-radius-lg);
@@ -1111,19 +1249,25 @@ p {
   text-align: left;
   overflow-wrap: anywhere;
   cursor: pointer;
-  background: var(--el-fill-color-blank);
-  border: 1px solid var(--el-border-color-light);
-  border-radius: var(--el-border-radius-base);
+  background: var(--mrr-card);
+  border: 1px solid var(--mrr-border);
+  border-radius: var(--mrr-radius-md);
+  transition: background-color var(--mrr-motion-feedback) var(--mrr-ease-out), border-color var(--mrr-motion-feedback) var(--mrr-ease-out);
+}
+
+.archive-candidate[aria-pressed="false"]:hover {
+  background: var(--mrr-control-bg-hover);
+  border-color: var(--mrr-border-strong);
 }
 
 .archive-candidate[aria-pressed="true"] {
-  background: var(--el-color-primary-light-9);
-  border-color: var(--el-color-primary);
+  background: var(--mrr-tone-primary-soft);
+  border-color: var(--mrr-primary);
 }
 
 .archive-candidate:focus-visible,
 [data-archive-section]:focus-visible {
-  outline: 2px solid var(--el-color-primary);
+  outline: 2px solid var(--mrr-ring);
   outline-offset: -2px;
 }
 
@@ -1176,7 +1320,7 @@ p {
 }
 
 .relation-grid {
-  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 240px), 1fr));
 }
 
 .relation-card {
@@ -1184,9 +1328,17 @@ p {
   border-radius: var(--mrr-radius-card);
 }
 
+.relation-card__header {
+  flex-wrap: wrap;
+  align-items: flex-start;
+}
+
 .relation-card__header > div {
   display: grid;
+  flex: 1 1 auto;
   gap: var(--mrr-space-1);
+  min-width: 0;
+  overflow-wrap: anywhere;
 }
 
 .relation-card code,
@@ -1196,22 +1348,38 @@ p {
 }
 
 .relation-card p {
-  min-height: 42px;
-  margin: var(--mrr-space-4) 0;
+  margin: var(--mrr-space-2) 0;
+  font-size: var(--mrr-font-size-sm);
+  line-height: 1.5;
   color: var(--el-text-color-secondary);
+  overflow-wrap: anywhere;
 }
 
 .coverage-row strong {
-  font-size: 24px;
+  font-size: var(--mrr-font-size-metric);
   font-variant-numeric: tabular-nums;
   letter-spacing: -0.02em;
 }
 
 .relation-card dl {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(96px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 96px), 1fr));
   gap: var(--mrr-space-3);
-  margin: var(--mrr-space-4) 0;
+  padding: var(--mrr-space-2) 0;
+  margin: var(--mrr-space-2) 0;
+  border-top: 1px solid var(--mrr-border);
+  border-bottom: 1px solid var(--mrr-border);
+}
+
+.relation-count--missing {
+  color: var(--mrr-tone-warning-ink);
+}
+
+.relation-card__provenance {
+  display: block;
+  font-size: var(--mrr-font-size-xs);
+  line-height: 1.5;
+  overflow-wrap: anywhere;
 }
 
 .relation-card dl div {
@@ -1266,10 +1434,6 @@ p {
   width: 100%;
 }
 
-.severity-select {
-  width: 180px;
-}
-
 .archive-detail-status {
   margin: 0;
   color: var(--mrr-muted-foreground);
@@ -1285,6 +1449,10 @@ p {
   font-size: var(--mrr-font-size-xs);
   color: var(--el-text-color-secondary);
 }
+
+.archive-header > div { min-width: 0; overflow-wrap: anywhere; }
+
+.archive-header { flex-wrap: wrap; }
 
 .archive-header h3 {
   margin: var(--mrr-space-1) 0;
@@ -1306,18 +1474,6 @@ p {
   border-radius: var(--mrr-radius-card);
 }
 
-.issue-filters {
-  flex: 1 1 360px;
-  flex-wrap: wrap;
-  min-width: 0;
-  max-width: 100%;
-}
-
-.issue-filters .el-input {
-  flex: 1 1 230px;
-  min-width: 0;
-}
-
 .preview-content pre {
   padding: var(--mrr-space-3);
   overflow: auto;
@@ -1337,8 +1493,24 @@ p {
   }
 }
 
+.quality-samples-region {
+  min-width: 0;
+  scroll-margin-top: 12px;
+}
+
+.quality-samples-region:focus-visible {
+  outline: 2px solid var(--mrr-ring);
+  outline-offset: 2px;
+}
+
+.issue-sample-count {
+  padding-block: var(--mrr-space-2);
+  font-size: var(--mrr-font-size-xs);
+  font-variant-numeric: tabular-nums;
+  color: var(--mrr-muted-foreground);
+}
+
 @media (max-width: 760px) {
-  .issue-filters,
   .search-row {
     flex-direction: column;
     align-items: stretch;
@@ -1349,23 +1521,12 @@ p {
     flex: 0 1 auto;
   }
 
-  .issue-filters {
-    flex-wrap: wrap;
-    width: 100%;
-  }
-
-  .issue-filters,
-  .issue-filters .el-input {
-    flex: 0 1 auto;
-  }
-
   .relation-grid,
   .relation-count-grid {
     grid-template-columns: 1fr;
   }
 
-  .search-type,
-  .severity-select {
+  .search-type {
     width: 100%;
   }
 }

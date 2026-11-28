@@ -53,6 +53,19 @@ class ArchiveExportJobStatePostgresqlIT extends PostgresqlIntegrationTestSupport
     @TempDir Path directory;
 
     @Test
+    void legacyOwnerCannotLeakThroughIdempotencyOrListLookup() {
+        var repository = new ArchiveExportJobRepository(jdbc);
+        String id = insert(repository);
+        jdbc.update("UPDATE app.archive_export_job SET owner_user_id=NULL,idempotency_key='synthetic-legacy-key' WHERE id=CAST(? AS UUID)",id);
+        assertThat(repository.findByIdempotency(42L,"synthetic-export-user","synthetic-legacy-key")).isEmpty();
+        assertThat(repository.findActiveByOwner(42L,"synthetic-export-user","ZIP",20)).isEmpty();
+        jdbc.update("UPDATE app.archive_export_job SET owner_user_id=42 WHERE id=CAST(? AS UUID)",id);
+        assertThat(repository.findByIdempotency(42L,"renamed-user","synthetic-legacy-key")).get().extracting(ArchiveExportJob::getId).isEqualTo(id);
+        assertThat(repository.findActiveByOwner(42L,"renamed-user","ZIP",20)).extracting(ArchiveExportJob::getId).containsExactly(id);
+        assertThat(repository.findActiveByOwner(43L,"synthetic-export-user","ZIP",20)).isEmpty();
+    }
+
+    @Test
     void cancellationAtEndOfWritingCannotPublishASuccessfulFile() throws Exception {
         ArchiveExportJobRepository repository = new ArchiveExportJobRepository(jdbc);
         String id = insert(repository);
@@ -67,6 +80,82 @@ class ArchiveExportJobStatePostgresqlIT extends PostgresqlIntegrationTestSupport
 
         assertThat(repository.findById(id).orElseThrow().getStatus()).isEqualTo("CANCELLED");
         assertThat(directory.resolve(id + ".zip")).doesNotExist();
+    }
+
+    @org.junit.jupiter.params.ParameterizedTest
+    @org.junit.jupiter.params.provider.ValueSource(strings={"ZIP", "PDF"})
+    @Transactional(propagation = Propagation.NOT_SUPPORTED)
+    void committedCancellationIsObservedDuringWritingWithoutLocalSignal(String format) throws Exception {
+        var repository = spy(new ArchiveExportJobRepository(jdbc));
+        String id = insert(repository);
+        jdbc.update("UPDATE app.archive_export_job SET format=? WHERE id=CAST(? AS UUID)", format, id);
+        var exporter = exporter();
+        var observed = new java.util.concurrent.atomic.AtomicBoolean();
+        org.mockito.stubbing.Answer<Void> write = invocation -> {
+            var progress = invocation.<ArchiveExportService.ExportProgress>getArgument(2);
+            invocation.<OutputStream>getArgument(1).write(1);
+            // A separate repository writes the durable flag; no in-process worker signal is delivered.
+            assertThat(new ArchiveExportJobRepository(jdbc).requestCancel(id)).isEqualTo(1);
+            observed.set(progress.isCancelled());
+            if (observed.get()) throw new com.zjcxph.imgapi.exception.ArchiveExportCancelledException();
+            invocation.<OutputStream>getArgument(1).write(2);
+            return null;
+        };
+        doAnswer(write).when(exporter).writeBatchZip(any(),any(),any());
+        doAnswer(write).when(exporter).writeBatchPdf(any(),any(),any());
+        try {
+            ReflectionTestUtils.invokeMethod(service(repository, exporter), "runJob", id);
+            assertThat(observed.get()).as("durable cancellation observed before more output").isTrue();
+            var job=repository.findById(id).orElseThrow();
+            assertThat(job.getStatus()).isEqualTo("CANCELLED");
+            assertThat(job.getOutputBytes()).isZero();
+            assertThat(Path.of(job.getFilePath())).doesNotExist();
+            verify(repository,never()).markSuccess(anyString(),anyLong(),anyString(),any());
+        } finally {
+            jdbc.update("DELETE FROM app.archive_export_job WHERE id=CAST(? AS UUID)",id);
+        }
+    }
+
+    @org.junit.jupiter.params.ParameterizedTest
+    @org.junit.jupiter.params.provider.ValueSource(strings={"stale-cancel", "lost-claim", "pending-cancel"})
+    @Transactional(propagation = Propagation.NOT_SUPPORTED)
+    void unclaimedCancellationCannotSettleActiveWorker(String scenario) throws Exception {
+        var repository = spy(new ArchiveExportJobRepository(jdbc));
+        String id = insert(repository);
+        var exporter = exporter();
+        try {
+            var independent = new ArchiveExportJobRepository(jdbc);
+            Runnable claim = () -> {
+                assertThat(independent.markProcessing(id,"synthetic.zip",null,LocalDateTime.now().plusHours(1))).isEqualTo(1);
+                independent.updateProgress(id,1);
+            };
+            var service = service(repository,exporter);
+            var session = new com.zjcxph.imgapi.common.AuthSession();
+            session.setId(1L); session.setUsername("synthetic-export-user");
+            session.setPermissions(List.of("record:read","record:download"));
+            if ("lost-claim".equals(scenario)) {
+                doAnswer(call -> { claim.run(); assertThat(independent.requestCancel(id)).isEqualTo(1); return 0; })
+                        .when(repository).markProcessing(eq(id),any(),any(),any());
+                ReflectionTestUtils.invokeMethod(service,"runJob",id);
+            } else {
+                if ("stale-cancel".equals(scenario)) doAnswer(call -> { claim.run(); return independent.requestCancel(id); })
+                        .when(repository).requestCancel(id);
+                service.cancel(session,id);
+            }
+            var current = independent.findById(id).orElseThrow();
+            assertThat(current.getCancelRequested()).isTrue();
+            if ("pending-cancel".equals(scenario)) {
+                assertThat(current.getStatus()).isEqualTo("CANCELLED");
+                assertThat(current.getCompletedAt()).isNotNull();
+            } else {
+                assertThat(current.getStatus()).isEqualTo("PROCESSING");
+                assertThat(current.getProcessedCount()).isEqualTo(1);
+                assertThat(current.getCompletedAt()).isNull();
+                assertThat(independent.markCancelled(id,LocalDateTime.now())).isEqualTo(1);
+                assertThat(independent.findById(id).orElseThrow().getStatus()).isEqualTo("CANCELLED");
+            }
+            verifyNoInteractions(exporter);
+        } finally { jdbc.update("DELETE FROM app.archive_export_job WHERE id=CAST(? AS UUID)",id); }
     }
 
     @Test
@@ -167,6 +256,82 @@ class ArchiveExportJobStatePostgresqlIT extends PostgresqlIntegrationTestSupport
 
         assertThat(repository.findById(id).orElseThrow().getStatus()).isEqualTo("SUCCESS");
         assertThat(directory.resolve(id + ".zip")).exists();
+    }
+
+    @Test
+    void changedOutputLengthIsRejectedWithoutLeakingDownloadQuotaOrRewritingSuccess() throws Exception {
+        var repository = new ArchiveExportJobRepository(jdbc);
+        String id = insert(repository);
+        var exporter = exporter();
+        byte[] original = {1, 2, 3, 4};
+        doAnswer(invocation -> {
+            invocation.<OutputStream>getArgument(1).write(original);
+            return null;
+        }).when(exporter).writeBatchZip(any(), any(), any());
+        var service = service(repository, exporter);
+        ReflectionTestUtils.invokeMethod(service, "runJob", id);
+        var completed = repository.findById(id).orElseThrow();
+        assertThat(completed.getStatus()).isEqualTo("SUCCESS");
+        assertThat(completed.getOutputBytes()).isEqualTo(4L);
+        var session = new com.zjcxph.imgapi.common.AuthSession();
+        session.setId(1L);
+        session.setUsername("synthetic-export-user");
+        session.setPermissions(List.of("record:read", "record:download"));
+        Path output = Path.of(completed.getFilePath());
+        try (var lease = service.openDownload(session, id)) {
+            assertThat(lease.length()).isEqualTo(4L);
+        }
+        Files.write(output, new byte[]{1, 2});
+        for (int attempt = 0; attempt < 3; attempt++) {
+            assertThatThrownBy(() -> {
+                try (var ignored = service.openDownload(session, id)) { }
+            }).isInstanceOf(com.zjcxph.imgapi.exception.BusinessException.class)
+              .satisfies(error -> assertThat(((com.zjcxph.imgapi.exception.BusinessException) error).getCode()).isEqualTo(409));
+        }
+        assertThat(Files.readAllBytes(output)).containsExactly((byte)1, (byte)2);
+        var unchanged = repository.findById(id).orElseThrow();
+        assertThat(unchanged.getStatus()).isEqualTo("SUCCESS");
+        assertThat(unchanged.getSha256()).isEqualTo(completed.getSha256());
+        assertThat(unchanged.getOutputBytes()).isEqualTo(4L);
+        Files.write(output, original);
+        try (var lease = service.openDownload(session, id)) {
+            assertThat(lease.length()).isEqualTo(4L);
+        }
+    }
+
+    @org.junit.jupiter.params.ParameterizedTest
+    @org.junit.jupiter.params.provider.ValueSource(strings={"same-length", "missing-digest"})
+    void downloadRequiresVerifiedContentAndReleasesRejectedLease(String scenario) throws Exception {
+        var repository = new ArchiveExportJobRepository(jdbc);
+        String id = insert(repository);
+        var exporter = exporter();
+        byte[] original = {1, 2, 3, 4};
+        doAnswer(call -> { call.<OutputStream>getArgument(1).write(original); return null; })
+                .when(exporter).writeBatchZip(any(), any(), any());
+        var service = service(repository, exporter);
+        ReflectionTestUtils.invokeMethod(service, "runJob", id);
+        var job = repository.findById(id).orElseThrow();
+        assertThat(job.getStatus()).isEqualTo("SUCCESS");
+        var session = new com.zjcxph.imgapi.common.AuthSession();
+        session.setId(1L); session.setUsername("synthetic-export-user");
+        session.setPermissions(List.of("record:read", "record:download"));
+        Path output = Path.of(job.getFilePath());
+        if ("same-length".equals(scenario)) Files.write(output, new byte[]{4, 3, 2, 1});
+        else jdbc.update("UPDATE app.archive_export_job SET sha256=NULL WHERE id=CAST(? AS UUID)", id);
+        for (int attempt=0; attempt<3; attempt++) {
+            assertThatThrownBy(() -> { try (var ignored = service.openDownload(session,id)) { } })
+                    .isInstanceOf(com.zjcxph.imgapi.exception.BusinessException.class)
+                    .satisfies(error -> assertThat(((com.zjcxph.imgapi.exception.BusinessException)error).getCode()).isEqualTo(409));
+        }
+        assertThat(repository.findById(id).orElseThrow().getStatus()).isEqualTo("SUCCESS");
+        assertThat(Files.size(output)).isEqualTo(4L);
+        Files.write(output, original);
+        jdbc.update("UPDATE app.archive_export_job SET sha256=? WHERE id=CAST(? AS UUID)",job.getSha256(),id);
+        try (var lease = service.openDownload(session,id)) {
+            byte[] actual = new byte[4];
+            assertThat(lease.read(actual,0,4)).isEqualTo(4);
+            assertThat(actual).isEqualTo(original);
+        }
     }
 
     private ArchiveExportService exporter() {

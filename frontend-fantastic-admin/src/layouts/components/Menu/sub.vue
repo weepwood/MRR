@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import type { SubMenuProps } from './types'
-import { cn } from '@/utils'
+import { useResizeObserver } from '@vueuse/core'
 import Item from './item.vue'
 import { rootMenuInjectionKey } from './types'
 
@@ -25,90 +25,50 @@ const branch = computed(() => props.uniqueKey.map(key => encodeURIComponent(key)
 
 const opened = computed(() => rootMenu.openedMenus.includes(props.uniqueKey.at(-1)!))
 
-const transitionEvent = computed(() => {
-  if (rootMenu.isMenuPopup) {
-    return {
-      enter(el: HTMLElement) {
-        if (el.offsetHeight > window.innerHeight) {
-          el.style.height = `${window.innerHeight}px`
-        }
-      },
-      afterEnter: () => {},
-      beforeLeave: (el: HTMLElement) => {
-        el.style.maxHeight = `${el.offsetHeight}px`
-        el.style.overflow = 'hidden'
-      },
-      leave: (el: HTMLElement) => {
-        el.style.maxHeight = '0'
-      },
-      afterLeave(el: HTMLElement) {
-        el.style.maxHeight = ''
-        el.style.overflow = ''
-      },
-    }
-  }
-  if (CSS.supports('height', 'calc-size(auto, size)')) {
-    return {}
-  }
-  return {
-    enter(el: HTMLElement) {
-      requestAnimationFrame(() => {
-        if (!el.isConnected || !opened.value) {
-          return
-        }
-        const height = el.offsetHeight
-        el.style.maxHeight = '0'
-        void el.offsetHeight
-        el.style.maxHeight = `${height}px`
-        el.style.overflow = 'hidden'
-      })
-    },
-    afterEnter(el: HTMLElement) {
-      el.style.maxHeight = ''
-      el.style.overflow = ''
-    },
-    enterCancelled(el: HTMLElement) {
-      el.style.maxHeight = ''
-      el.style.overflow = ''
-    },
-    beforeLeave(el: HTMLElement) {
-      el.style.maxHeight = `${el.offsetHeight}px`
-      el.style.overflow = 'hidden'
-    },
-    leave(el: HTMLElement) {
-      el.style.maxHeight = '0'
-    },
-    afterLeave(el: HTMLElement) {
-      el.style.maxHeight = ''
-      el.style.overflow = ''
-    },
-    leaveCancelled(el: HTMLElement) {
-      el.style.maxHeight = ''
-      el.style.overflow = ''
-    },
-  }
+// Keep inline branches mounted so reversing a CSS height transition starts
+// at its current rendered height, including on browsers without calc-size().
+const inlineBranchRef = ref<HTMLElement>()
+const inlineContentRef = ref<HTMLElement>()
+const inlineHeight = ref<number>()
+useResizeObserver(inlineContentRef, () => {
+  inlineHeight.value = inlineContentRef.value?.getBoundingClientRect().height
 })
+const inlineStyle = computed(() => ({
+  height: opened.value ? inlineHeight.value === undefined ? 'auto' : `${inlineHeight.value}px` : '0px',
+}))
+watch(opened, (value) => {
+  if (!value && !rootMenu.isMenuPopup && inlineBranchRef.value?.contains(document.activeElement)) {
+    itemRef.value?.ref?.querySelector('button')?.focus({ preventScroll: true })
+  }
+}, { flush: 'sync' })
 
-const transitionClass = computed(() => {
-  if (rootMenu.isMenuPopup) {
-    return {
-      enterActiveClass: 'ease-mrr-out duration-mrr-move',
-      enterFromClass: 'opacity-0 scale-98 translate-y-1',
-      enterToClass: 'opacity-100 scale-100 translate-y-0',
-      leaveActiveClass: 'ease-mrr-in duration-mrr-feedback',
-      leaveFromClass: 'opacity-100 scale-100 translate-y-0',
-      leaveToClass: 'opacity-0 scale-98 translate-y-1',
+const transitionEvent = {
+  enter(el: HTMLElement) {
+    if (el.offsetHeight > window.innerHeight) {
+      el.style.height = `${window.innerHeight}px`
     }
-  }
-  return {
-    enterActiveClass: 'ease-mrr-out duration-mrr-move',
-    enterFromClass: cn('opacity-0 translate-y-1', CSS.supports('height', 'calc-size(auto, size)') && 'h-0'),
-    enterToClass: 'opacity-100 translate-y-0',
-    leaveActiveClass: 'ease-mrr-in duration-mrr-feedback',
-    leaveFromClass: 'opacity-100 translate-y-0',
-    leaveToClass: cn('opacity-0 translate-y-1', CSS.supports('height', 'calc-size(auto, size)') && 'h-0'),
-  }
-})
+  },
+  beforeLeave(el: HTMLElement) {
+    el.style.maxHeight = `${el.offsetHeight}px`
+    el.style.overflow = 'hidden'
+  },
+  leave(el: HTMLElement) {
+    el.style.maxHeight = '0'
+  },
+  afterLeave(el: HTMLElement) {
+    el.style.maxHeight = ''
+    el.style.overflow = ''
+  },
+}
+
+const transitionClass = {
+  enterActiveClass: 'ease-mrr-out duration-mrr-move',
+  enterFromClass: 'opacity-0 scale-98 translate-y-1',
+  enterToClass: 'opacity-100 scale-100 translate-y-0',
+  leaveActiveClass: 'ease-mrr-in duration-mrr-feedback',
+  leaveFromClass: 'opacity-100 scale-100 translate-y-0',
+  leaveToClass: 'opacity-0 scale-98 translate-y-1',
+}
 
 const hasChildren = computed(() => props.menu.children?.some(item => item.meta?.menu !== false) ?? false)
 
@@ -235,15 +195,13 @@ onBeforeUnmount(() => clearTimeout(hoverTimer))
 <template>
   <Item
     ref="itemRef" :unique-key="uniqueKey" :item="menu" :level="level" :sub-menu="hasChildren" :expand="opened"
-    :popup-id="opened && hasChildren ? popupId : undefined" :data-menu-branch="rootMenu.isMenuPopup ? branch : undefined"
+    :popup-id="hasChildren && (!rootMenu.isMenuPopup || opened) ? popupId : undefined" :data-menu-branch="rootMenu.isMenuPopup ? branch : undefined"
     @click="handleClick" @mouseenter="handleMouseenter" @mouseleave="handleMouseleave" @keydown.esc="handleEscape"
   />
-  <Teleport v-if="hasChildren" to="body" :disabled="!rootMenu.isMenuPopup">
+  <Teleport v-if="hasChildren && rootMenu.isMenuPopup" to="body">
     <Transition v-bind="transitionClass" v-on="transitionEvent">
       <FaScrollArea
-        v-if="opened" :id="popupId" ref="subMenuRef" :data-menu-branch="rootMenu.isMenuPopup ? branch : undefined" :scrollbar="false" :mask="rootMenu.isMenuPopup" :class="cn('sub-menu static h-[calc-size(auto,size)] rounded-lg', {
-          'saas-popup-menu fixed z-3000 w-[220px] p-1 overscroll-contain': rootMenu.isMenuPopup,
-        })" @mouseenter="handleMouseenter" @mouseleave="handleMouseleave" @focusout="handleFocusout" @keydown.esc="handleEscape"
+        v-if="opened" :id="popupId" ref="subMenuRef" :data-menu-branch="rootMenu.isMenuPopup ? branch : undefined" :scrollbar="false" :mask="rootMenu.isMenuPopup" class="sub-menu saas-popup-menu fixed z-3000 h-[calc-size(auto,size)] w-[220px] overscroll-contain rounded-lg p-1" @mouseenter="handleMouseenter" @mouseleave="handleMouseleave" @focusout="handleFocusout" @keydown.esc="handleEscape"
       >
         <template v-for="item in menu.children" :key="item.path ?? rootMenu.getUseId(item)">
           <SubMenu v-if="item.meta?.menu !== false" :unique-key="[...uniqueKey, item.path ?? rootMenu.getUseId(item)]" :menu="item" :level="level + 1" />
@@ -251,9 +209,50 @@ onBeforeUnmount(() => clearTimeout(hoverTimer))
       </FaScrollArea>
     </Transition>
   </Teleport>
+  <div
+    v-else-if="hasChildren" :id="popupId" ref="inlineBranchRef" class="sub-menu menu-inline-branch"
+    :class="{ 'is-open': opened }" :style="inlineStyle" :aria-hidden="!opened" :inert="!opened"
+  >
+    <div ref="inlineContentRef" class="menu-inline-content">
+      <template v-for="item in menu.children" :key="item.path ?? rootMenu.getUseId(item)">
+        <SubMenu v-if="item.meta?.menu !== false" :unique-key="[...uniqueKey, item.path ?? rootMenu.getUseId(item)]" :menu="item" :level="level + 1" />
+      </template>
+    </div>
+  </div>
 </template>
 
 <style scoped>
+.menu-inline-branch {
+  position: relative;
+  visibility: hidden;
+  flex: none;
+  min-height: 0;
+  overflow: hidden;
+  transition: height var(--mrr-motion-overlay) var(--mrr-ease-out), visibility 0s linear var(--mrr-motion-overlay);
+}
+
+.menu-inline-branch.is-open {
+  visibility: visible;
+  transition-delay: 0s;
+}
+
+.menu-inline-content {
+  display: flow-root;
+  min-width: 0;
+}
+
+.menu-inline-branch:not(.is-open) {
+  pointer-events: none;
+}
+
+:global(:root[data-motion="off"]) .menu-inline-branch {
+  transition: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .menu-inline-branch { transition-delay: 0s; }
+}
+
 .saas-popup-menu {
   max-width: 100vw;
   color: var(--mrr-popover-foreground);

@@ -21,6 +21,21 @@ import static org.mockito.Mockito.verifyNoInteractions;
 class DeploymentReadinessServiceTest {
 
     @Test
+    void databaseExceptionTextIsNotExposedInReadiness() {
+        JdbcTemplate jdbc = mock(JdbcTemplate.class);
+        org.mockito.Mockito.when(jdbc.queryForObject("SELECT 1", Integer.class))
+                .thenThrow(new org.springframework.dao.DataAccessResourceFailureException("SYNTHETIC private patient and jdbc location"));
+        var service = new DeploymentReadinessService(jdbc, mock(Flyway.class), new ImageProperties(),
+                new ArchiveExportProperties(), mock(ImageUrlService.class), mock(OssService.class),
+                mock(SystemSettingService.class), 0L, 48L, 1L, 1000000L);
+        try {
+            var result = (Map<?, ?>) org.springframework.test.util.ReflectionTestUtils.invokeMethod(service, "checkDatabase");
+            org.assertj.core.api.Assertions.assertThat(result.toString()).doesNotContain("SYNTHETIC private");
+            org.assertj.core.api.Assertions.assertThat(result.get("passed")).isEqualTo(false);
+        } finally { service.shutdown(); }
+    }
+
+    @Test
     void readingSnapshotDoesNotPerformDatabaseOrNetworkChecks() {
         JdbcTemplate jdbcTemplate = mock(JdbcTemplate.class);
         Flyway flyway = mock(Flyway.class);

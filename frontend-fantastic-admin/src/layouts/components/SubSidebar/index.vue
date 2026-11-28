@@ -121,7 +121,7 @@ watch(() => menuStore.actived, (val, oldVal) => {
   .sidebar-logo {
     min-height: var(--g-sidebar-logo-height);
     background: transparent;
-    border-bottom: 1px solid var(--mrr-navigation-border);
+    border-bottom: 1px solid var(--mrr-shell-divider);
 
     &.side-mode-logo,
     &.single {
@@ -130,18 +130,41 @@ watch(() => menuStore.actived, (val, oldVal) => {
   }
 
   .menu {
-    width: 100%;
-    padding: 4px 8px 16px;
+    --mrr-menu-guide-offset: 19px;
+    --mrr-menu-guide-gap: 12px;
+    --mrr-menu-item-inset-end: 12px;
+    --mrr-menu-item-padding-x: 10px;
+    --mrr-menu-item-padding-start: 14px;
+    --mrr-menu-icon-gap: 10px;
+    --mrr-menu-item-gutter: 4px;
+    --mrr-menu-branch-inset: calc(var(--mrr-menu-guide-offset) + 1px + var(--mrr-menu-guide-gap) - var(--mrr-menu-item-gutter));
 
-    :deep(.sub-menu) {
-      background-image: linear-gradient(var(--mrr-navigation-border), var(--mrr-navigation-border));
-      background-repeat: no-repeat;
-      background-position: 19px 4px;
-      background-size: 1px calc(100% - 8px);
+    width: 100%;
+    padding: 4px calc(var(--mrr-menu-item-inset-end) - var(--mrr-menu-item-gutter)) 16px;
+
+    /* A quiet persistent hierarchy guide, separate from the active leaf rail.
+     * Parent hover only strengthens it; geometry never changes. */
+    :deep(.menu-inline-branch::before) {
+      position: absolute;
+      inset-block: 4px;
+      inset-inline-start: var(--mrr-menu-guide-offset);
+      z-index: 1;
+      width: 1px;
+      pointer-events: none;
+      content: "";
+      background: var(--mrr-navigation-border);
+      opacity: 0.8;
+      transition: opacity var(--mrr-motion-feedback) var(--mrr-ease-out);
+    }
+
+    @media (hover: hover) {
+      :deep(.menu-item:hover + .menu-inline-branch.is-open::before) {
+        opacity: 1;
+      }
     }
 
     :deep(.menu-item) {
-      padding: 2px 4px;
+      padding: 2px var(--mrr-menu-item-gutter);
 
       .menu-item-container {
         min-height: 34px;
@@ -174,13 +197,14 @@ watch(() => menuStore.actived, (val, oldVal) => {
     }
 
     :deep(.sub-menu .menu-item-container) {
-      width: calc(100% - var(--mrr-space-4));
-      padding-inline-start: 8px !important;
-      margin-inline-start: var(--mrr-space-4);
+      width: calc(100% - var(--mrr-menu-branch-inset));
+      padding-inline: var(--mrr-menu-item-padding-start) var(--mrr-menu-item-padding-x) !important;
+      margin-inline-start: var(--mrr-menu-branch-inset);
     }
 
-    /* 收进背景边界，同时抵消一层内容缩进，保留子项图标和文字的位置。 */
+    /* 背景边界独立于图标缩进，深层子项保留额外层级。 */
     :deep(.sub-menu .menu-item-container > span) {
+      gap: var(--mrr-menu-icon-gap);
       padding-inline-start: calc((var(--indent-level) - 1) * 16px);
     }
   }
@@ -210,15 +234,13 @@ watch(() => menuStore.actived, (val, oldVal) => {
       margin-top: var(--mrr-space-2);
     }
 
-    & > :deep(.sub-menu) {
-      padding-inline-start: 2px;
-      margin: 1px 0 var(--mrr-space-2);
+    & > :deep(.menu-inline-branch) {
+      margin: 0 0 var(--mrr-space-2);
     }
 
     /* 子项比分组标题弱一档：常规态用次级文本色，靠左缩进读出层级。 */
     :deep(.sub-menu .menu-item-container) {
       min-height: 30px;
-      padding-inline-start: 12px !important;
       font-weight: 500;
       color: var(--text-secondary) !important;
       background: transparent;
@@ -230,13 +252,12 @@ watch(() => menuStore.actived, (val, oldVal) => {
       font-size: 15px !important;
       opacity: 0.75;
       transition:
-        color var(--mrr-motion-move) var(--mrr-ease-out),
-        opacity var(--mrr-motion-move) var(--mrr-ease-out),
-        transform var(--mrr-motion-move) var(--mrr-ease-out);
+        color var(--mrr-motion-feedback) var(--mrr-ease-out),
+        opacity var(--mrr-motion-feedback) var(--mrr-ease-out);
     }
 
     :deep(.sub-menu .menu-item-container:hover .menu-item-container-icon) {
-      transform: var(--mrr-motion-decor, translateX(1px) scale(1.08));
+      opacity: 1;
     }
 
     :deep(.menu-item-container:hover) {
@@ -255,6 +276,16 @@ watch(() => menuStore.actived, (val, oldVal) => {
     :deep(.sub-menu .menu-item.active .menu-item-container-icon) {
       opacity: 1;
     }
+  }
+
+  /* The theme surface handles hover; the accent rail alone marks the active leaf.
+   * Keep the transparent border for stable geometry and reserve keyboard focus. */
+  .menu :deep(.menu-item.active a.menu-item-container[aria-current="page"]) {
+    border-color: transparent;
+  }
+
+  .menu :deep(a.menu-item-container:not(.active):active) {
+    background: var(--mrr-navigation-active);
   }
 
   .collapse-area {

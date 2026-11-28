@@ -1,6 +1,9 @@
 <script setup lang="ts">
 import zhCN from 'element-plus/es/locale/lang/zh-cn'
 
+// All native paginators share the same localized page-size label.
+const locale = { ...zhCN, el: { ...zhCN.el, pagination: { ...zhCN.el.pagination, pagesize: ' 条/页' } } }
+
 const settingsStore = useSettingsStore()
 let darkThemePromise: Promise<unknown> | undefined
 
@@ -32,7 +35,7 @@ watch(() => settingsStore.currentColorScheme, (val) => {
 </script>
 
 <template>
-  <ElConfigProvider :locale="zhCN as any" :button="{ autoInsertSpace: true }">
+  <ElConfigProvider :locale="locale as any" :button="{ autoInsertSpace: true }">
     <slot />
   </ElConfigProvider>
 </template>

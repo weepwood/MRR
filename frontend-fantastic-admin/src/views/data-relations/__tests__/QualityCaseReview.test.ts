@@ -88,6 +88,85 @@ describe('异常人工决策', () => {
     expect(w.text()).toContain('决策读取或保存失败')
     w.unmount()
   })
+  it('历史响应缺失时显示失败而不是空白，重新选择案件可恢复', async () => {
+    api.listQualityReviews.mockResolvedValue({ data: { enabled: false, reviews: [old] } })
+    api.getQualityReviewEvents.mockResolvedValueOnce({ data: null }).mockResolvedValueOnce({
+      data: [{ revision: 1, issueId: '10', runId: '1', status: 'CONFIRMED', reason: 'CONFIRMED_EVIDENCE', actorId: '11', occurredAt: '2026-11-01T00:00:00Z' }],
+    })
+    const w = panel()
+    try {
+      await flushPromises()
+      await button(w, '案件 1').trigger('click')
+      await flushPromises()
+      expect(w.text()).toContain('决策读取或保存失败')
+      await button(w, '案件 1').trigger('click')
+      await flushPromises()
+      expect(w.text()).not.toContain('决策读取或保存失败')
+      expect(w.text()).toContain('样本 #10 · 操作者 #11')
+    }
+    finally { w.unmount() }
+  })
+  it('当前历史追加普通失败保留证据，服务端拒绝访问后清空案件和历史', async () => {
+    const recent = { ...old, revision: 2 }
+    api.listQualityReviews.mockResolvedValue({ data: { enabled: false, reviews: [recent] } })
+    api.getQualityReviewEvents.mockResolvedValueOnce({ data: [{ revision: 2, issueId: '10', runId: '1', status: 'CONFIRMED', reason: 'CONFIRMED_EVIDENCE', actorId: '11', occurredAt: '2026-11-01T00:00:00Z' }] })
+      .mockRejectedValueOnce(new Error('synthetic network failure'))
+      .mockRejectedValueOnce({ code: 403 })
+    const w = panel()
+    try {
+      await flushPromises()
+      await button(w, '案件 1').trigger('click')
+      await flushPromises()
+      await button(w, '更多决策记录').trigger('click')
+      await flushPromises()
+      expect(w.text()).toContain('样本 #10 · 操作者 #11')
+      expect(w.text()).toContain('决策读取或保存失败')
+      await button(w, '更多决策记录').trigger('click')
+      await flushPromises()
+      expect(w.text()).not.toContain('样本 #10')
+      expect(w.text()).not.toContain('案件 #1')
+      expect(button(w, '案件 1')).toBeUndefined()
+      expect(w.text()).toContain('决策读取或保存失败')
+      expect(w.text()).not.toContain('暂无人工决策历史')
+    }
+    finally { w.unmount() }
+  })
+  it.each(['复验', '写入'])('当前%s被拒绝后清空决策上下文', async (action) => {
+    api.getQualityReview.mockResolvedValue({ data: ctx() })
+    const w = panel(20)
+    try {
+      await flushPromises()
+      if (action === '复验') {
+        api.recheckQualityReview.mockRejectedValueOnce({ response: { status: 403 } })
+        await button(w, '逐记录只读复验').trigger('click')
+      }
+      else {
+        api.decideQualityReview.mockRejectedValueOnce({ code: 403 })
+        await button(w, '确认异常').trigger('click')
+      }
+      await flushPromises()
+      expect(w.text()).not.toContain('案件 #1')
+      expect(button(w, '确认异常')).toBeUndefined()
+      expect(button(w, '逐记录只读复验')).toBeUndefined()
+      expect(w.text()).toContain('决策读取或保存失败')
+    }
+    finally { w.unmount() }
+  })
+  it('旧案件迟到的访问拒绝不能清除当前已授权数据', async () => {
+    let reject!: (error: unknown) => void
+    api.getQualityReview.mockImplementationOnce(() => new Promise((_resolve, fail) => { reject = fail }))
+    const w = panel(20)
+    try {
+      api.getQualityReview.mockResolvedValueOnce({ data: ctx({ ...old, id: '2', issueId: '21' }, true) })
+      await w.setProps({ issueId: 21 })
+      await flushPromises()
+      reject({ code: 403 })
+      await flushPromises()
+      expect(w.text()).toContain('案件 #2')
+      expect(w.text()).not.toContain('决策读取或保存失败')
+    }
+    finally { w.unmount() }
+  })
   it('案件历史列表可打开审计，样本清理后仍独立展示', async () => {
     api.listQualityReviews.mockResolvedValue({ data: { enabled: false, reviews: [old] } })
     api.getQualityReviewEvents.mockResolvedValue({ data: [{ revision: 1, issueId: '10', runId: '1', status: 'CONFIRMED', reason: 'CONFIRMED_EVIDENCE', actorId: '11', occurredAt: '2026-11-01T00:00:00Z' }] })

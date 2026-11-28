@@ -24,7 +24,9 @@ test('查看历史页不清除活动任务，历史失败可重试', async ({ pa
   await expect(history).toContainText('任务历史读取失败，当前仍显示上次成功读取的第 1 页')
   await expect(page.locator('.current-job-card')).toContainText('当前任务 #99')
   await history.getByRole('button', { name: '刷新任务' }).click()
-  await expect(history.locator('.el-table__body .el-table__row td').first()).toHaveText('2')
+  const row = history.locator('.el-table__body .el-table__row').first()
+  await expect(row.locator('td.mrr-table-sequence')).toHaveText('11')
+  await expect(row.getByRole('cell', { name: '2', exact: true })).toBeVisible()
   await expect(history).not.toContainText('任务历史读取失败')
   await expect(page.locator('.current-job-card')).toContainText('当前任务 #99')
 })
@@ -45,4 +47,26 @@ test('详情失败不冒充完整信息，可重新加载', async ({ page }) => 
   await drawer.getByRole('button', { name: '重新加载详情' }).click()
   await expect(drawer).toContainText('100 / 123')
   await expect(drawer).not.toContainText('任务详情暂不可用')
+})
+
+test('活动任务轮询拒绝错误任务身份，刷新后恢复原任务', async ({ page }) => {
+  let reads = 0
+  let invalid = true
+  await page.route(/\/api\/v1\/oss\/migration\/jobs\/99$/, async (route) => {
+    reads++
+    const data = invalid ? { ...active, id: 100, status: 'completed' } : { ...active, processedCount: 5, rate: 50 }
+    await route.fulfill({ json: { code: 200, data } })
+  })
+  await page.goto('/oss-migration')
+  const card = page.locator('.current-job-card')
+  await expect(card).toContainText('当前任务 #99')
+  await expect.poll(() => reads).toBeGreaterThan(0)
+  await expect(card).toContainText('当前任务 #99')
+  await expect(card).not.toContainText('当前任务 #100')
+  invalid = false
+  const before = reads
+  await page.getByRole('button', { name: '刷新全部', exact: true }).click()
+  await expect.poll(() => reads).toBeGreaterThan(before)
+  await expect(card).toContainText('已处理 5')
+  await expect(card).toContainText('当前任务 #99')
 })

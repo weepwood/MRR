@@ -1,4 +1,5 @@
 import { expect, test } from '@playwright/test'
+import { isolateLocalVisualSettings } from './helpers/local-visual-settings'
 
 test('免登录模式下可以查看扫描记录详情', async ({ page }) => {
   await page.route('**/api/v1/scan/cursor/condition?**', async (route) => {
@@ -41,6 +42,19 @@ test('免登录模式下可以查看扫描记录详情', async ({ page }) => {
   const detail = page.getByRole('dialog', { name: '记录详情' })
   await expect(detail).toContainText('synthetic-record.pdf', { timeout: 20_000 })
   await expect(detail.locator('.mrr-status-tag--success')).toHaveText('已验证')
+  for (const width of [1440, 375]) {
+    await page.setViewportSize({ width, height: 812 })
+    await expect.poll(() => detail.locator('.el-dialog').evaluate((el) => {
+      const r = el.getBoundingClientRect()
+      // The fixed overlay uses the scrollbar-adjusted layout viewport.
+      const overlay = el.closest('.el-overlay-dialog')!.getBoundingClientRect()
+      return Math.abs(overlay.left) <= 1 && Math.abs(overlay.top) <= 1
+        && Math.abs(overlay.right - document.documentElement.getBoundingClientRect().right) <= 1
+        && Math.abs(overlay.bottom - innerHeight) <= 1
+        && Math.abs(r.left + r.width / 2 - (overlay.left + overlay.width / 2)) <= 1
+        && Math.abs(r.top + r.height / 2 - (overlay.top + overlay.height / 2)) <= 1
+    })).toBe(true)
+  }
 })
 
 test('迁移状态保留已知文案、未知值和缺失值', async ({ page }) => {
@@ -72,7 +86,7 @@ test('编辑筛选不会把旧游标用于新条件，提交查询后从头读�
   await page.getByLabel('病案号', { exact: true }).fill('000456')
   await expect(page.getByText('筛选条件已修改', { exact: false })).toBeVisible()
   await expect(page.locator('.records-query-context')).toContainText('已提交条件：全部记录')
-  await page.getByRole('button', { name: '下一批', exact: true }).click()
+  await page.getByRole('button', { name: '下一页', exact: true }).click()
   await expect.poll(() => requests.length).toBe(2)
   expect(requests[1]).toEqual({ afterId: '100', bah: undefined })
   await page.getByRole('button', { name: '查询', exact: true }).click()
@@ -92,19 +106,27 @@ test('兼容包含查询提交后重置游标并按同一条件翻批', async ({
   await page.goto('/records')
   await expect(page.getByRole('cell', { name: '001234', exact: true })).toBeVisible()
   expect(requests[0].legacy).toBe('false')
-  await page.getByRole('checkbox', { name: '兼容包含查询' }).check()
+  const compatibility = page.getByRole('checkbox', { name: '兼容包含查询', exact: true })
+  await compatibility.focus()
+  await compatibility.press('Space')
+  await expect(compatibility).toBeChecked()
+  await page.getByText('兼容包含查询', { exact: true }).click()
+  await expect(compatibility).not.toBeChecked()
+  await page.getByText('兼容包含查询', { exact: true }).click()
+  await expect(compatibility).toBeChecked()
   await page.getByLabel('病案号', { exact: true }).fill('00123')
   await page.getByRole('button', { name: '查询', exact: true }).click()
   await expect.poll(() => requests.length).toBe(2)
   expect(requests[1]).toEqual({ afterId: '0', legacy: 'true', bah: '00123' })
   await expect(page.locator('.records-query-context')).toContainText('兼容包含')
-  await page.getByRole('button', { name: '下一批', exact: true }).click()
+  await page.getByRole('button', { name: '下一页', exact: true }).click()
   await expect.poll(() => requests.length).toBe(3)
   expect(requests[2]).toEqual({ afterId: '100', legacy: 'true', bah: '00123' })
 })
 
 for (const theme of ['light', 'dark']) {
   test(`${theme} 主题下查询面板在宽窄屏保持可读`, async ({ page }) => {
+    await isolateLocalVisualSettings(page)
     await page.addInitScript((scheme) => {
       localStorage.setItem('MRR-ADMIN:app-settings', JSON.stringify({
         app: { colorScheme: scheme, pageTitleStyle: 'card' },

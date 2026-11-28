@@ -30,6 +30,25 @@ class OssMigrationManagementControllerTest {
     @InjectMocks
     private OssMigrationManagementController controller;
 
+    @Test void responseProjectionKeepsOnlyClosedDiagnosticCodesAndDoesNotMutateSource(){
+        Scan record=new Scan();record.setId(17);record.setBah("7654387");record.setSourceRef("synthetic private");
+        record.setMigrationErrorCode("SYNTHETIC_PRIVATE_CODE");
+        var view=com.zjcxph.imgapi.utils.MigrationLogPrivacy.migrationRecord(record);
+        assertThat(view.getId()).isEqualTo(17);
+        assertThat(view.getSourceRef()).isNull();
+        assertThat(view.getMigrationErrorCode()).isNull();
+        assertThat(record.getSourceRef()).isEqualTo("synthetic private");
+        record.setMigrationErrorCode("SOURCE_OR_OSS_TIMEOUT");
+        assertThat(com.zjcxph.imgapi.utils.MigrationLogPrivacy.migrationRecord(record).getMigrationErrorCode()).isEqualTo("SOURCE_OR_OSS_TIMEOUT");
+        ImageMigrationLog log=new ImageMigrationLog();
+        log.setErrorMessage("迁移失败：SOURCE_OR_OSS_TIMEOUT");
+        com.zjcxph.imgapi.utils.MigrationLogPrivacy.sanitize(log);
+        assertThat(log.getErrorMessage()).isEqualTo("迁移诊断：SOURCE_OR_OSS_TIMEOUT");
+        log.setErrorMessage("synthetic free text");
+        com.zjcxph.imgapi.utils.MigrationLogPrivacy.sanitize(log);
+        assertThat(log.getErrorMessage()).doesNotContain("synthetic");
+    }
+
     @Test
     @DisplayName("等待上架号查询支持目录和病案号筛选")
     void returnsWaitingSjhRecordsWithFilters() {

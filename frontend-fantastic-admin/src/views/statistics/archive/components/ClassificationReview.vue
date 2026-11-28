@@ -6,6 +6,7 @@ import { getClassificationSuggestions, getOcrItems, getRecordTypes, reviewClassi
 import { updateImageType } from '@/api/modules/image'
 import MrrScanContentDialog from '@/components/MrrScanContentDialog/index.vue'
 import useAuth from '@/utils/composables/useAuth'
+import { tableSequenceColumn } from '@/utils/table-sequence'
 
 const props = defineProps<{ jobId: string }>()
 const { auth } = useAuth()
@@ -85,6 +86,7 @@ watch(() => props.jobId, () => { clear(); void load(true) })
     <h3>分类建议与待处理页面</h3>
     <el-alert v-if="loadError" :title="loadError" type="error" :closable="false" />
     <el-table :data="suggestions">
+      <el-table-column v-bind="tableSequenceColumn()" />
       <el-table-column prop="scanId" label="影像 ID" />
       <el-table-column label="建议">
         <template #default="{ row }">
@@ -124,6 +126,7 @@ watch(() => props.jobId, () => { clear(); void load(true) })
       </el-table-column>
     </el-table>
     <el-table :data="unresolved">
+      <el-table-column v-bind="tableSequenceColumn()" />
       <el-table-column prop="scanId" label="需人工处理的影像 ID" />
       <el-table-column prop="status" label="原因" />
       <el-table-column label="原图">

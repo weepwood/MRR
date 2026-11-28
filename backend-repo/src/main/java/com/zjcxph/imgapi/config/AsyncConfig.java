@@ -6,6 +6,7 @@ import org.springframework.scheduling.annotation.EnableAsync;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
 
 import java.util.concurrent.Executor;
+import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.ThreadPoolExecutor;
 
 /**
@@ -31,7 +32,13 @@ public class AsyncConfig {
         executor.setMaxPoolSize(5);
         executor.setQueueCapacity(500);
         executor.setThreadNamePrefix("log-async-");
-        executor.setRejectedExecutionHandler(new ThreadPoolExecutor.CallerRunsPolicy());
+        executor.setRejectedExecutionHandler((task, pool) -> {
+            if (pool.isShutdown()) {
+                throw new RejectedExecutionException("Audit executor is shutting down");
+            }
+            // Preserve backpressure while the pool is running; never silently discard on shutdown.
+            task.run();
+        });
         executor.setWaitForTasksToCompleteOnShutdown(true);
         // 停机预算：Web 优雅停机 30s + 本池 15s + 通用池 15s，须小于 WinSW stoptimeout，
         // 否则服务包装器会在日志缓冲区落库前强制结束进程。

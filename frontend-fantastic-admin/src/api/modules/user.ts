@@ -67,6 +67,11 @@ export default {
     data,
   ),
 
+  reopenRegistration: (id: string | number) => postRequest<AuthUser>(
+    `/api/v1/auth/users/${id}/registration/reopen`,
+    {},
+  ),
+
   resetUserPassword: (id: string | number, data: AdminResetPasswordPayload) => postRequest<UserCredentialResult>(
     `/api/v1/auth/users/${id}/password/reset`,
     data,

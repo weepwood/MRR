@@ -49,6 +49,16 @@ class AuthServiceCredentialLifecycleTest {
         service = new AuthServiceImpl(authUserMapper, authRoleMapper, loginRateLimiter, runtimeSettingStore);
     }
 
+    @org.junit.jupiter.api.AfterEach
+    void clearActor() { com.zjcxph.imgapi.utils.AuthContext.clear(); }
+
+    private void installAdministrator(AuthUser actor) {
+        var session = new com.zjcxph.imgapi.common.AuthSession();
+        session.setId(actor.getId());
+        session.setPasswordVersion(actor.effectivePasswordVersion());
+        com.zjcxph.imgapi.utils.AuthContext.setCurrentUser(session);
+    }
+
     @Test
     void shouldCreateUserWithOneTimeTemporaryPassword() {
         AdminCreateUserRequest request = createRequest("active");
@@ -56,6 +66,7 @@ class AuthServiceCredentialLifecycleTest {
         AuthUser administrator = createdUser(1L, "admin", "ADMIN", false, 1);
         AuthRole role = new AuthRole();
         role.setCode("DOCTOR");
+        installAdministrator(administrator);
         when(authUserMapper.findById(1L)).thenReturn(administrator);
         when(authRoleMapper.findByCode("DOCTOR")).thenReturn(role);
         when(authUserMapper.findByUsername("doctor.test"))
@@ -81,6 +92,7 @@ class AuthServiceCredentialLifecycleTest {
         AuthUser administrator = createdUser(1L, "admin", "ADMIN", false, 1);
         AuthRole role = new AuthRole();
         role.setCode("DOCTOR");
+        installAdministrator(administrator);
         when(authUserMapper.findById(1L)).thenReturn(administrator);
         when(authRoleMapper.findByCode("DOCTOR")).thenReturn(role);
         when(authUserMapper.findByUsername("doctor.test")).thenReturn(null);
@@ -99,8 +111,10 @@ class AuthServiceCredentialLifecycleTest {
         AuthUser target = createdUser(2L, "doctor", "DOCTOR", false, 4);
         AuthUser updated = createdUser(2L, "doctor", "DOCTOR", true, 5);
 
+        installAdministrator(administrator);
         when(authUserMapper.findById(1L)).thenReturn(administrator);
         when(authUserMapper.findById(2L)).thenReturn(target, updated);
+        when(authUserMapper.resetPassword(eq(2L), any(String.class), any(LocalDateTime.class), eq(1L), eq(4))).thenReturn(1);
 
         AdminResetPasswordRequest request = new AdminResetPasswordRequest();
         request.setAdministratorPassword("AdministratorPassword123");
@@ -110,7 +124,7 @@ class AuthServiceCredentialLifecycleTest {
 
         assertThat(result.getTemporaryPassword()).hasSize(16);
         assertThat(result.getUser().getPasswordVersion()).isEqualTo(5);
-        verify(authUserMapper).resetPassword(eq(2L), any(String.class), any(LocalDateTime.class), eq(1L));
+        verify(authUserMapper).resetPassword(eq(2L), any(String.class), any(LocalDateTime.class), eq(1L), eq(4));
     }
 
     @Test
@@ -128,6 +142,49 @@ class AuthServiceCredentialLifecycleTest {
         assertThatThrownBy(() -> service.changeRequiredPassword(2L, request, "127.0.0.1"))
                 .isInstanceOf(BusinessException.class)
                 .hasMessageContaining("临时密码已过期");
+    }
+
+    @Test
+    void refusesCredentialUpdateWhenVerifiedSnapshotIsNoLongerCurrent() {
+        AuthUser user = createdUser(2L, "synthetic", "DOCTOR", false, 4);
+        user.setPasswordHash(PasswordUtil.encode("SyntheticPrevious123"));
+        when(authUserMapper.findById(2L)).thenReturn(user);
+        // A zero-row write models a concurrently changed credential or disabled account.
+        assertThatThrownBy(() -> service.changePassword(2L, "SyntheticPrevious123", "SyntheticNext123"))
+                .isInstanceOf(BusinessException.class)
+                .satisfies(error -> assertThat(((BusinessException) error).getCode()).isEqualTo(409));
+    }
+
+    @Test
+    void refusesFirstCredentialUpdateWhenVerifiedSnapshotIsNoLongerCurrent() {
+        AuthUser user = createdUser(2L, "synthetic", "DOCTOR", true, 4);
+        user.setPasswordHash(PasswordUtil.encode("SyntheticPrevious123"));
+        user.setTemporaryPasswordExpiresAt(LocalDateTime.now().plusHours(1));
+        when(authUserMapper.findById(2L)).thenReturn(user);
+        var request = new RequiredPasswordChangeRequest();
+        request.setCurrentPassword("SyntheticPrevious123");
+        request.setNewPassword("SyntheticNext123");
+        request.setConfirmPassword("SyntheticNext123");
+        assertThatThrownBy(() -> service.changeRequiredPassword(2L, request, "127.0.0.1"))
+                .isInstanceOf(BusinessException.class)
+                .satisfies(error -> assertThat(((BusinessException) error).getCode()).isEqualTo(409));
+    }
+
+    @Test
+    void resetConflictDoesNotReturnNewCredential() {
+        var admin = createdUser(1L, "synthetic-admin", "ADMIN", false, 3);
+        admin.setPasswordHash(PasswordUtil.encode("SyntheticAdmin123"));
+        var target = createdUser(2L, "synthetic", "DOCTOR", false, 4);
+        installAdministrator(admin);
+        when(authUserMapper.findById(1L)).thenReturn(admin);
+        when(authUserMapper.findById(2L)).thenReturn(target);
+        var request = new AdminResetPasswordRequest();
+        request.setAdministratorPassword("SyntheticAdmin123");
+        request.setTemporaryPasswordValidHours(24);
+        assertThatThrownBy(() -> service.resetPassword(2L, request, 1L, "127.0.0.1"))
+                .isInstanceOf(BusinessException.class)
+                .satisfies(error -> assertThat(((BusinessException) error).getCode()).isEqualTo(409));
+        verify(authUserMapper).findById(2L);
     }
 
     private AdminCreateUserRequest createRequest(String status) {

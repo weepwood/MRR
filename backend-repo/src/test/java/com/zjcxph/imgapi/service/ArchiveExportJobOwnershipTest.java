@@ -75,13 +75,29 @@ class ArchiveExportJobOwnershipTest {
     }
 
     @Test
-    void legacyTaskWithoutUserIdTemporarilyFallsBackToUsername() {
+    void legacyTaskWithoutUserIdDoesNotTrustReusedUsername() {
         ArchiveExportJobRepository repository = mock(ArchiveExportJobRepository.class);
         ArchiveExportJob job = job(null, "legacy-user");
         when(repository.findById("job-1")).thenReturn(Optional.of(job));
         ArchiveExportJobService service = service(repository);
 
-        assertThat(service.requireOwned(session(9L, "legacy-user"), "job-1")).isSameAs(job);
+        assertThatThrownBy(() -> service.requireOwned(session(9L, "legacy-user"), "job-1"))
+                .isInstanceOf(BusinessException.class).hasMessageContaining("无权访问");
+        var admin = session(10L, "synthetic-admin");
+        admin.setRoleCode("ADMIN");
+        assertThat(service.requireOwned(admin, "job-1")).isSameAs(job);
+    }
+
+    @Test
+    void historicalFailureResponseDoesNotExposeOriginalException() {
+        var old=job(7L,"synthetic-user");
+        old.setErrorMessage("SYNTHETIC private patient and filesystem path");
+        assertThat(com.zjcxph.imgapi.dto.resp.ArchiveExportJobResponse.from(old).errorMessage())
+                .isEqualTo("病案导出失败，请使用任务编号联系管理员");
+        assertThat(old.getErrorMessage()).startsWith("SYNTHETIC");
+        old.setErrorMessage(com.zjcxph.imgapi.utils.ExportSizeLimitOutputStream.LIMIT_MESSAGE);
+        assertThat(com.zjcxph.imgapi.dto.resp.ArchiveExportJobResponse.from(old).errorMessage())
+                .isEqualTo(com.zjcxph.imgapi.utils.ExportSizeLimitOutputStream.LIMIT_MESSAGE);
     }
 
     private ArchiveExportJobService service(ArchiveExportJobRepository repository) {

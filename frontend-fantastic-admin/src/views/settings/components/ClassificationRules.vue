@@ -4,6 +4,7 @@ import { computed, onMounted, ref } from 'vue'
 import { createClassificationDraft, getClassificationBundle, getClassificationVersions, getRecordTypes, publishClassificationDraft, restoreClassificationVersion, saveClassificationDraft, testClassificationVersion } from '@/api/modules/classification'
 import AppLoading from '@/components/AppLoading/index.vue'
 import useAuth from '@/utils/composables/useAuth'
+import { tableSequenceColumn } from '@/utils/table-sequence'
 
 const { auth } = useAuth()
 const versions = ref<ClassificationVersion[]>([])
@@ -95,6 +96,7 @@ onMounted(() => {
       </div>
       <el-input v-model="bundle.name" :disabled="!editable" maxlength="128" aria-label="规则集名称" />
       <el-table :data="bundle.rules" max-height="420">
+        <el-table-column v-bind="tableSequenceColumn()" />
         <el-table-column label="分类" min-width="170">
           <template #default="{ row }">
             <el-select v-model="row.targetType" :disabled="!editable">
@@ -150,6 +152,7 @@ onMounted(() => {
       </el-button>
       <h4>识别词库</h4>
       <el-table :data="bundle.lexicon" max-height="300">
+        <el-table-column v-bind="tableSequenceColumn()" />
         <el-table-column label="标准词">
           <template #default="{ row }">
             <el-input v-model="row.term" :disabled="!editable" maxlength="256" />

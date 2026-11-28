@@ -72,10 +72,15 @@ public class NginxBrowserController {
     @GetMapping("/file")
     public ResponseEntity<StreamingResponseBody> openFile(
             @RequestParam(defaultValue = "default") String server,
-            @RequestParam String path
+            @RequestParam String path,
+            jakarta.servlet.http.HttpServletRequest request
     ) {
+        InputStream pending = null;
+        boolean handedOff = false;
         try {
             NginxBrowserService.RemoteFile remoteFile = nginxBrowserService.openFile(server, path);
+            InputStream upstream = remoteFile.inputStream();
+            pending = upstream;
             HttpHeaders headers = new HttpHeaders();
             headers.setContentType(parseMediaType(remoteFile.contentType()));
             headers.setContentDisposition(ContentDisposition.inline()
@@ -92,11 +97,13 @@ public class NginxBrowserController {
             }
 
             StreamingResponseBody body = output -> {
-                try (InputStream input = remoteFile.inputStream()) {
-                    input.transferTo(output);
+                try (upstream) {
+                    upstream.transferTo(output);
                 }
             };
-            return new ResponseEntity<>(body, headers, HttpStatus.OK);
+            // PendingImageStream owns abandonment (including registration failure) from here.
+            handedOff = true;
+            return new ResponseEntity<>(PendingImageStream.wrap(request, upstream, body, () -> {}), headers, HttpStatus.OK);
         } catch (IllegalArgumentException exception) {
             return error(HttpStatus.BAD_REQUEST, exception.getMessage());
         } catch (IllegalStateException exception) {
@@ -107,6 +114,13 @@ public class NginxBrowserController {
         } catch (Exception exception) {
             logger.error("代理读取 Nginx 文件失败：server={}, path={}", server, path, exception);
             return error(HttpStatus.INTERNAL_SERVER_ERROR, "读取 Nginx 文件失败");
+        } finally {
+            if (!handedOff && pending != null) {
+                try { pending.close(); }
+                catch (Exception failure) {
+                    logger.warn("Nginx pending stream close failed: errorType={}", failure.getClass().getSimpleName());
+                }
+            }
         }
     }
 

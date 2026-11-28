@@ -32,6 +32,10 @@ public interface ScanService {
             String sjhSearchCode
     );
 
+    /** Security-sensitive consumers must not authorize from a stale lookup cache. */
+    List<Scan> getFreshImageListByCode(String normalizedBah, String bahSearchCode,
+                                      String normalizedSjh, String sjhSearchCode);
+
     List<PathDO> getImagePathList(List<String> ids);
 
     List<Scan> findActiveByIds(List<Integer> ids);

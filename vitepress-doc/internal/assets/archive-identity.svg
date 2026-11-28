@@ -1,0 +1,37 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 340" role="img" aria-labelledby="title desc">
+<title id="title">病案主档与关联原则</title>
+<desc id="desc">示意为核对顺序，不表示全部表之间存在外键；业务编号：BAH / SJH 原值，高位 BAH 配 SJH；稳定主档：mr_archive.id，非空 SJH 唯一；业务关联：统计、扫描、装箱，通过 archive_id；遗留匹配：患者按 BAH 核对，候选冲突需复核；比较键仅供比对，不能自动修改原始编号或把遗留匹配当作外键。</desc>
+<rect width="960" height="340" rx="18" fill="#f1f5f9"/>
+<g font-family="HarmonyOS Sans SC, Noto Sans CJK SC, PingFang SC, Microsoft YaHei, sans-serif">
+<text x="32" y="44" font-size="26" font-weight="700" fill="#020817">病案主档与关联原则</text>
+<text x="32" y="72" font-size="15" fill="#526175">示意为核对顺序，不表示全部表之间存在外键</text>
+<rect x="32.0" y="101" width="206.0" height="163" rx="12" fill="#ffffff" stroke="#e2e8f0"/>
+<rect x="44.0" y="114" width="34" height="27" rx="7" fill="#2563eb"/>
+<text x="61.0" y="133" font-size="14" font-weight="700" text-anchor="middle" fill="#fff">01</text>
+<text x="46.0" y="164" font-size="20" font-weight="700" fill="#020817">业务编号</text>
+<text x="46.0" y="190" font-size="14" fill="#42536a">BAH / SJH 原值</text>
+<text x="46.0" y="212" font-size="14" fill="#42536a">高位 BAH 配 SJH</text>
+<path d="M242.0 182 h16 m-6 -6 6 6 -6 6" stroke="#8194a8" stroke-width="1.7" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+<rect x="262.0" y="101" width="206.0" height="163" rx="12" fill="#ffffff" stroke="#e2e8f0"/>
+<rect x="274.0" y="114" width="34" height="27" rx="7" fill="#367c68"/>
+<text x="291.0" y="133" font-size="14" font-weight="700" text-anchor="middle" fill="#fff">02</text>
+<text x="276.0" y="164" font-size="20" font-weight="700" fill="#020817">稳定主档</text>
+<text x="276.0" y="190" font-size="14" fill="#42536a">mr_archive.id</text>
+<text x="276.0" y="212" font-size="14" fill="#42536a">非空 SJH 唯一</text>
+<path d="M472.0 182 h16 m-6 -6 6 6 -6 6" stroke="#8194a8" stroke-width="1.7" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+<rect x="492.0" y="101" width="206.0" height="163" rx="12" fill="#ffffff" stroke="#e2e8f0"/>
+<rect x="504.0" y="114" width="34" height="27" rx="7" fill="#5b648d"/>
+<text x="521.0" y="133" font-size="14" font-weight="700" text-anchor="middle" fill="#fff">03</text>
+<text x="506.0" y="164" font-size="20" font-weight="700" fill="#020817">业务关联</text>
+<text x="506.0" y="190" font-size="14" fill="#42536a">统计、扫描、装箱</text>
+<text x="506.0" y="212" font-size="14" fill="#42536a">通过 archive_id</text>
+<path d="M702.0 182 h16 m-6 -6 6 6 -6 6" stroke="#8194a8" stroke-width="1.7" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+<rect x="722.0" y="101" width="206.0" height="163" rx="12" fill="#ffffff" stroke="#e2e8f0"/>
+<rect x="734.0" y="114" width="34" height="27" rx="7" fill="#987444"/>
+<text x="751.0" y="133" font-size="14" font-weight="700" text-anchor="middle" fill="#fff">04</text>
+<text x="736.0" y="164" font-size="20" font-weight="700" fill="#020817">遗留匹配</text>
+<text x="736.0" y="190" font-size="14" fill="#42536a">患者按 BAH 核对</text>
+<text x="736.0" y="212" font-size="14" fill="#42536a">候选冲突需复核</text>
+<rect x="32" y="282" width="896" height="38" rx="8" fill="#e2e8f0"/>
+<text x="48" y="306" font-size="14" fill="#34465a">比较键仅供比对，不能自动修改原始编号或把遗留匹配当作外键。</text>
+</g></svg>

@@ -2,7 +2,7 @@
 import type { ECOption } from '@/plugins/echarts'
 import type { MrrChartCountItem } from '@/types/chart'
 import { computed } from 'vue'
-import { mrrChartColor } from '@/config/chart-theme'
+import { mrrChartColorToken } from '@/config/chart-theme'
 import MrrChart from './MrrChart.vue'
 
 defineOptions({ name: 'MrrHorizontalBarChart' })
@@ -26,6 +26,8 @@ const labels = computed(() => props.data.map((item, index) => (
   props.showRank ? `${index + 1}. ${item.label}` : item.label
 )))
 
+const labelGutter = computed(() => props.data.reduce((gutter, item) => Math.max(gutter, Number(item.count).toLocaleString('zh-CN').length * 8 + 16), 28))
+
 const option = computed<ECOption>(() => ({
   tooltip: {
     trigger: 'axis',
@@ -34,7 +36,7 @@ const option = computed<ECOption>(() => ({
   },
   grid: {
     top: 8,
-    right: 28,
+    right: labelGutter.value,
     bottom: 8,
     left: 8,
     containLabel: true,
@@ -62,7 +64,7 @@ const option = computed<ECOption>(() => ({
       type: 'bar',
       data: props.data.map(item => ({
         value: item.count,
-        itemStyle: { color: item.color ?? props.color ?? mrrChartColor('primary') },
+        itemStyle: { color: item.color ?? props.color ?? mrrChartColorToken('primary') },
       })),
       barWidth: 12,
       showBackground: true,
@@ -77,7 +79,8 @@ const option = computed<ECOption>(() => ({
         show: true,
         position: 'right',
         formatter: params => Number(params.value).toLocaleString('zh-CN'),
-        fontSize: 11,
+        fontSize: 12,
+        color: mrrChartColorToken('neutral'),
       },
     },
   ],

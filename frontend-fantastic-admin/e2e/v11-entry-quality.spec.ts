@@ -1,4 +1,9 @@
 import { expect, test } from '@playwright/test'
+import { isolateLocalVisualSettings } from './helpers/local-visual-settings'
+
+test.beforeEach(async ({ page }) => {
+  await isolateLocalVisualSettings(page)
+})
 
 for (const theme of ['light', 'dark']) {
   test.describe(theme, () => {
@@ -56,7 +61,8 @@ for (const theme of ['light', 'dark']) {
       await card.focus()
       await expect(card).toBeFocused()
       await card.press('Enter')
-      await expect(page.getByText('第 1 页 · 本页 50 行', { exact: false })).toBeVisible()
+      await expect(page.getByRole('spinbutton', { name: '页', exact: true })).toHaveValue('1')
+      await expect(page.locator('.mrr-cursor-pagination__summary')).toContainText('本页 50 行')
       await expect(directory).toHaveCount(0)
       await expect(page.getByRole('combobox', { name: '数据表' })).toBeVisible()
     })

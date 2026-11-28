@@ -1,5 +1,12 @@
 import type { Page } from '@playwright/test'
 import { expect, test } from '@playwright/test'
+import { useBaseUserFixture } from './helpers/base-user-fixture'
+import { isolateLocalVisualSettings } from './helpers/local-visual-settings'
+
+test.beforeEach(async ({ page }) => {
+  await useBaseUserFixture(page)
+  await isolateLocalVisualSettings(page)
+})
 
 async function openUsers(page: Page, colorScheme: 'light' | 'dark' = 'light', radius = 0.75) {
   await page.addInitScript(({ colorScheme, radius }) => {
@@ -29,14 +36,20 @@ test('共享页头、分区卡和指标卡跟随同一圆角设置', async ({ pa
   }
 })
 
-test('静态指标保持稳定，说明文字完整换行', async ({ page }) => {
+test('静态指标保持稳定，必要说明完整换行', async ({ page }) => {
   await page.setViewportSize({ width: 1366, height: 768 })
   await openUsers(page)
   const card = page.locator('.mrr-metric-card').first()
   await card.hover()
   await expect(card).toHaveCSS('transform', 'none')
-  await expect(page.locator('.mrr-metric-card__note').first()).toHaveCSS('white-space', 'normal')
-  await expectContained(page, '.mrr-metric-card__note')
+  await expect(page.locator('.mrr-metric-card__note')).toHaveCount(0)
+  await page.goto('/data-relations')
+  await expect(page.locator('.mrr-metric-card__note')).toHaveCount(0)
+  const info = page.getByRole('button', { name: '查看关系健康度说明' })
+  await info.hover()
+  await expect(page.getByText('基于可用统计估算；未知项不计入', { exact: true })).toBeVisible()
+  await page.keyboard.press('Escape')
+  await expect(page.getByText('基于可用统计估算；未知项不计入', { exact: true })).not.toBeVisible()
 })
 
 test('主操作按钮通过键盘聚焦时显示统一焦点环', async ({ page }) => {
@@ -63,29 +76,41 @@ for (const theme of ['light', 'dark'] as const) {
     ]) {
       await page.setViewportSize(viewport)
       await expect.poll(() => page.evaluate(() => document.body.dataset.mode)).toBe(viewport.width < 1024 ? 'mobile' : 'pc')
-      await expectContained(page, '.mrr-page-header, .mrr-filter-bar, .mrr-section-card__header, .mrr-data-table-panel__pagination')
+      await expectContained(page, '.mrr-page-header, .mrr-filter-bar, .mrr-data-table-panel__pagination')
       await expect.poll(() => page.locator('.users-table-panel').evaluate((panel) => {
         const filters = panel.querySelector('.users-filter-bar')!.getBoundingClientRect()
-        const table = panel.querySelector('.mrr-data-table-panel__content > .el-table')!.getBoundingClientRect()
-        return { left: Math.round(table.left - filters.left), right: Math.round(filters.right - table.right) }
-      })).toEqual({ left: 0, right: 0 })
+        const cellLeft = panel.querySelector('.el-table')!.getBoundingClientRect().left
+        const footer = panel.querySelector('.el-pagination__total')!.getBoundingClientRect()
+        return { left: Math.round(cellLeft - filters.left), footer: Math.round(footer.left - filters.left) }
+      })).toEqual({ left: 0, footer: 0 })
       const contentWidth = await page.evaluate(() => document.documentElement.scrollWidth)
       expect(contentWidth).toBeLessThanOrEqual(viewport.width)
       await expect(page.getByRole('button', { name: '查询', exact: true })).toBeVisible()
-      await expect(page.locator('.el-pagination__jump')).toBeVisible()
+      await expect(page.locator('.el-pagination__jump')).toHaveCount(0)
+      await expect(page.locator('.el-pagination__total')).toContainText('3')
     }
   })
 }
 
-test('长分区标题与操作区在中等宽度仍可完整呈现', async ({ page }) => {
+test('其他带标题分区在中等宽度仍可完整呈现', async ({ page }) => {
   await page.setViewportSize({ width: 1024, height: 900 })
   await openUsers(page)
-  // 只扩展显示文案来检验共享容器，不改变业务数据或权限。
-  await page.locator('.mrr-section-card h2').evaluate((element) => {
-    element.textContent = 'LongSectionTitle'.repeat(12)
-  })
+  await page.goto('/records')
+  const heading = page.locator('.mrr-section-card h2').first()
+  await expect(heading).toBeVisible()
+  await heading.evaluate((el) => { el.textContent = 'LongSectionTitle'.repeat(12) })
   await expectContained(page, '.mrr-section-card__header, .mrr-section-card__heading')
-  await expect(page.locator('.mrr-data-table-panel__count')).toBeVisible()
+})
+
+test('无标题用户列表保持区域名称与完整筛选焦点留白', async ({ page }) => {
+  await page.setViewportSize({ width: 1024, height: 900 })
+  await openUsers(page)
+  const panel = page.getByRole('region', { name: '用户列表', exact: true })
+  await expect(panel.locator('.el-card__header')).toHaveCount(0)
+  await expect(panel.locator('.mrr-data-table-panel__count')).toHaveCount(0)
+  await expect(panel.getByRole('button', { name: '创建用户', exact: true })).toBeVisible()
+  await expect(panel.locator('.el-pagination__total')).toBeVisible()
+  await expectContained(page, '.users-toolbar, .mrr-filter-bar')
 })
 
 test('窄屏大量分页的前后翻页按钮与页码保持同一导航区', async ({ page }) => {
@@ -99,6 +124,7 @@ test('窄屏大量分页的前后翻页按钮与页码保持同一导航区', as
   await openUsers(page)
   const footer = page.locator('.mrr-data-table-panel__pagination')
   await expect(footer.locator('.el-pagination__total')).toContainText('1000')
+  await expect(footer.locator('.el-pagination__jump')).toBeVisible()
   const [previous, pager, next] = await Promise.all([
     footer.locator('.btn-prev').boundingBox(),
     footer.locator('.el-pager').boundingBox(),
@@ -116,5 +142,81 @@ test('窄屏大量分页的前后翻页按钮与页码保持同一导航区', as
   await footer.locator('.btn-next').click()
   await nextBatch
   await expect(footer.locator('.el-pager .is-active')).toHaveText('2')
+  for (const width of [375, 1440]) {
+    await page.setViewportSize({ width, height: 812 })
+    const jump = footer.locator('.el-pagination__jump')
+    const editor = jump.locator('input')
+    const wrapper = jump.locator('.el-input__wrapper')
+    await expect.poll(() => footer.locator('.el-pager').evaluate(el => Number.parseFloat(getComputedStyle(el).columnGap))).toBe(4)
+    await expect(wrapper).toHaveCSS('box-shadow', 'none')
+    await expect(wrapper).toHaveCSS('background-color', 'rgba(0, 0, 0, 0)')
+    await expect.poll(() => jump.evaluate((el) => {
+      const rect = el.getBoundingClientRect()
+      const pager = el.parentElement!.querySelector('.el-pager')!.getBoundingClientRect()
+      return rect.top < pager.bottom && rect.bottom > pager.top
+    })).toBe(true)
+    await editor.click()
+    await expect(editor).toBeFocused()
+    await expect.poll(() => wrapper.evaluate(el => getComputedStyle(el).boxShadow)).not.toBe('none')
+    const target = width === 375 ? '3' : '4'
+    await editor.fill(target)
+    await editor.press('Enter')
+    await expect(footer.locator('.el-pager .is-active')).toHaveText(target)
+    await footer.locator('.el-pagination__total').click()
+    await expect(editor).not.toBeFocused()
+    await expect(wrapper).toHaveCSS('box-shadow', 'none')
+    await expectContained(page, '.mrr-data-table-panel__pagination, .el-pager')
+  }
+  await page.unrouteAll({ behavior: 'wait' })
+})
+
+test('分页数字间距在两页至数千页及宽窄屏下保持稳定', async ({ page }) => {
+  test.setTimeout(90_000)
+  let total = 28
+  await page.route('**/api/v1/auth/users?**', async (route) => {
+    const response = await route.fetch()
+    const body = await response.json()
+    body.data.total = total
+    await route.fulfill({ response, json: body })
+  })
+  await page.setViewportSize({ width: 1440, height: 900 })
+  await openUsers(page)
+  const footer = page.locator('.mrr-data-table-panel__pagination')
+  const pager = footer.locator('.el-pager')
+  const jump = footer.locator('.el-pagination__jump input')
+  for (const count of [28, 1000, 10000, 100000]) {
+    total = count
+    await page.reload()
+    await expect(footer.locator('.el-pagination__total')).toContainText(String(count))
+    const last = Math.ceil(count / 20)
+    for (const width of [1440, 768, 375, 320]) {
+      await page.setViewportSize({ width, height: 812 })
+      for (const target of [...new Set([1, Math.ceil(last / 2), last])]) {
+        await jump.fill(String(target))
+        await jump.press('Enter')
+        await expect(pager.locator('.is-active')).toHaveText(String(target))
+        await footer.locator('.el-pagination__total').click()
+        await expect.poll(() => pager.evaluate((el) => {
+          const cells = Array.from(el.children).map(child => child.getBoundingClientRect())
+          return cells.every((cell, i) => {
+            const previous = cells[i - 1]
+            return !previous || Math.abs(cell.y - previous.y) > 1 || cell.x - previous.right >= 3.9
+          })
+        })).toBe(true)
+        await expect.poll(() => pager.locator('li.number').count()).toBeLessThanOrEqual(width <= 760 ? 5 : 7)
+        await expect.poll(() => pager.locator('li.more').count()).toBeLessThanOrEqual(2)
+        await expect.poll(() => pager.locator('li').count()).toBeLessThanOrEqual(width <= 760 ? 7 : 9)
+        await expect(pager.locator('li').first()).toHaveCSS('font-variant-numeric', 'tabular-nums')
+        await expect.poll(() => footer.evaluate((el) => {
+          const container = el.getBoundingClientRect()
+          return Array.from(el.querySelectorAll('.el-pager li, .btn-prev, .btn-next, .el-pagination__jump')).every((child) => {
+            const rect = child.getBoundingClientRect()
+            return rect.left >= container.left - 1 && rect.right <= container.right + 1
+          })
+        })).toBe(true)
+        await expectContained(page, '.mrr-data-table-panel__pagination, .el-pager')
+      }
+    }
+  }
   await page.unrouteAll({ behavior: 'wait' })
 })

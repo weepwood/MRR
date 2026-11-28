@@ -229,12 +229,25 @@ body .el-select .el-select__wrapper.is-focused .el-select__caret {
   box-shadow: 0 0 0 1px var(--color-warning) inset, var(--mrr-warning-focus-ring);
 }
 
-.el-input-number {
+body .el-input-number {
   overflow: hidden;
-  box-shadow: 0 0 0 1px var(--mrr-control-border) inset, var(--mrr-shadow-xs);
+  box-shadow: 0 0 0 1px var(--mrr-control-border) inset, var(--mrr-field-shadow);
 }
 
-.el-input-number .el-input__wrapper {
+body .el-input-number:not(.is-disabled):hover {
+  box-shadow: 0 0 0 1px var(--mrr-control-border-hover) inset, var(--mrr-field-shadow);
+}
+
+body .el-input-number:not(.is-disabled):focus-within {
+  outline: 2px solid var(--mrr-ring);
+  outline-offset: 1px;
+}
+
+body .el-form-item.is-error .el-input-number {
+  box-shadow: 0 0 0 1px var(--mrr-destructive) inset;
+}
+
+body .el-input-number .el-input__wrapper {
   background: transparent;
   box-shadow: none;
 }
@@ -242,12 +255,12 @@ body .el-select .el-select__wrapper.is-focused .el-select__caret {
 .el-input-number__decrease,
 .el-input-number__increase {
   color: var(--mrr-muted-foreground);
-  background: var(--mrr-muted);
+  background: var(--mrr-control-bg-hover);
   border-color: var(--mrr-border);
 }
 
-.el-input-number__decrease:hover,
-.el-input-number__increase:hover {
+.el-input-number__decrease:not(.is-disabled):hover,
+.el-input-number__increase:not(.is-disabled):hover {
   color: var(--mrr-foreground);
   background: var(--mrr-accent);
 }

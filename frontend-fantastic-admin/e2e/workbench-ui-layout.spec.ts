@@ -1,4 +1,9 @@
 import { expect, test } from '@playwright/test'
+import { isolateLocalVisualSettings } from './helpers/local-visual-settings'
+
+test.beforeEach(async ({ page }) => {
+  await isolateLocalVisualSettings(page)
+})
 
 test.beforeEach(async ({ page }) => {
   await page.addInitScript(() => {
@@ -11,16 +16,21 @@ test.beforeEach(async ({ page }) => {
   await expect(page.getByRole('heading', { name: '数据关系工作台' })).toBeVisible()
 })
 
-test('无图标指标在移动视口使用整行正文', async ({ page }) => {
+test('指标卡在移动视口保留图标与完整正文', async ({ page }) => {
   await page.setViewportSize({ width: 375, height: 812 })
   await expect.poll(() => page.evaluate(() => document.body.dataset.mode)).toBe('mobile')
-  const card = page.locator('.mrr-metric-card--no-icon').first()
+  const card = page.locator('.mrr-metric-card').first()
   await expect(card).toBeVisible()
+  // 移动 mode 属性先于侧栏过渡结束，等待实际工作区几何达到可读宽度。
+  await expect.poll(() => card.locator('.mrr-metric-card__body').evaluate(el => el.getBoundingClientRect().width)).toBeGreaterThan(160)
   const widths = await card.evaluate(element => ({
     card: element.getBoundingClientRect().width,
+    icon: element.querySelector('.mrr-metric-card__icon')!.getBoundingClientRect().width,
     body: element.querySelector('.mrr-metric-card__body')!.getBoundingClientRect().width,
   }))
-  expect(widths.body).toBeGreaterThan(widths.card - 40)
+  expect(widths.icon).toBe(48)
+  expect(widths.body).toBeGreaterThan(160)
+  await expect.poll(() => card.evaluate(el => el.scrollWidth <= el.clientWidth + 1)).toBe(true)
 })
 
 test('工作台字段有可访问名称，窄屏筛选与表格不撑开页面', async ({ page }) => {
@@ -66,7 +76,7 @@ for (const theme of ['light', 'dark']) {
             : url.includes('/issues')
               ? [issue]
               : url.includes('/summary')
-                ? { running: false, enabled: true, latestRun: null, checks: [] }
+                ? { running: false, enabled: true, latestRun: { id: 91001, status: 'SUCCESS', total_issues: 1, critical_count: 1, warning_count: 0 }, checks: [] }
                 : { relations: [], relationChecks: [], notes: [] }
       await route.fulfill({ json: { code: 200, data } })
     })
@@ -106,9 +116,14 @@ test('候选病案可通过键盘操作查看关系，并显示匹配方式', as
   await expect(page.getByText('格式差异（FORMAT_ONLY）', { exact: true })).toBeVisible()
   const action = page.getByRole('button', { name: '查看病案主档 91002 的关系' })
   await action.focus()
-  await page.keyboard.press('Enter')
+  await expect(action).toBeFocused()
+  await action.press('Enter')
   await expect(page.getByText('病案主档 #91002', { exact: true })).toBeVisible()
   await expect(page.locator('.archive-header')).toContainText('病案号（BAH）：123')
+  await expect(page.getByRole('row').filter({ has: page.getByRole('cell', { name: '91002', exact: true }) })).toHaveClass(/current-row/)
+  await page.setViewportSize({ width: 375, height: 812 })
+  await page.getByRole('row').filter({ has: page.getByRole('cell', { name: '91002', exact: true }) }).getByRole('button', { name: '更多操作' }).click()
+  await expect(page.getByRole('menuitem', { name: '查看病案主档 91002 的关系' })).toBeVisible()
 })
 
 test('只读修复预览失败可重试且保留当前异常身份', async ({ page }) => {

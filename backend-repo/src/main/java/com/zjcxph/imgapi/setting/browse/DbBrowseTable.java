@@ -105,6 +105,9 @@ public record DbBrowseTable(
             if (!byName.get(sortColumn).returned()) {
                 throw new IllegalArgumentException("排序列必须可见: " + sortColumn + "（表 " + key + "）");
             }
+            if (byName.get(sortColumn).mask() != MaskStrategy.NONE) {
+                throw new IllegalArgumentException("排序列不能脱敏: " + sortColumn + "（表 " + key + "）");
+            }
         }
 
         boolean hasReturnedColumn = columns.stream().anyMatch(DbBrowseColumn::returned);

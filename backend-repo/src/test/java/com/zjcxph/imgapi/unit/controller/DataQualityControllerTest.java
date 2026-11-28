@@ -26,6 +26,94 @@ class DataQualityControllerTest {
     private DataQualityController controller;
 
     @Test
+    void patientBearingPreviewRequiresBothPermissions() throws Exception {
+        var authorization = new com.zjcxph.imgapi.interceptors.AuthorizationInterceptor();
+        var handler = new org.springframework.web.method.HandlerMethod(controller,
+                DataQualityController.class.getMethod("repairPreview", long.class));
+        String path = "/api/v1/system/data-quality/issues/9/repair-preview";
+        var anonymous = new org.springframework.mock.web.MockHttpServletResponse();
+        assertThat(authorization.preHandle(new org.springframework.mock.web.MockHttpServletRequest("GET", path),
+                anonymous, handler)).isFalse();
+        assertThat(anonymous.getStatus()).isEqualTo(401);
+        for (var permissions : List.of(List.<String>of(), List.of("system:read"),
+                List.of("record:read"), List.of("system:manage"))) {
+            var request = new org.springframework.mock.web.MockHttpServletRequest("GET", path);
+            var session = new com.zjcxph.imgapi.common.AuthSession();
+            session.setPermissions(permissions);
+            request.setAttribute(com.zjcxph.imgapi.interceptors.AuthorizationInterceptor.AUTH_SESSION_ATTRIBUTE, session);
+            var response = new org.springframework.mock.web.MockHttpServletResponse();
+            assertThat(authorization.preHandle(request, response, handler)).isFalse();
+            assertThat(response.getStatus()).isEqualTo(403);
+        }
+        var request = new org.springframework.mock.web.MockHttpServletRequest("GET", path);
+        var session = new com.zjcxph.imgapi.common.AuthSession();
+        session.setPermissions(List.of("system:read", "record:read"));
+        request.setAttribute(com.zjcxph.imgapi.interceptors.AuthorizationInterceptor.AUTH_SESSION_ATTRIBUTE, session);
+        assertThat(authorization.preHandle(request, new org.springframework.mock.web.MockHttpServletResponse(), handler)).isTrue();
+        session.setPermissions(List.of("system:manage", "record:manage"));
+        assertThat(authorization.preHandle(request, new org.springframework.mock.web.MockHttpServletResponse(), handler)).isTrue();
+        org.mockito.Mockito.verifyNoInteractions(dataQualityService);
+    }
+
+    @Test
+    void rawQualitySamplesAndDetailRequireRecordRead() throws Exception {
+        var auth = new com.zjcxph.imgapi.interceptors.AuthorizationInterceptor();
+        var handlers = List.of(
+                new org.springframework.web.method.HandlerMethod(controller, DataQualityController.class.getMethod("issues", int.class, Long.class)),
+                new org.springframework.web.method.HandlerMethod(controller, DataQualityController.class.getMethod("issue", long.class)));
+        for (var handler : handlers) {
+            for (var permissions : List.of(List.of("system:read"), List.of("record:read"), List.of("system:manage"))) {
+                var request = new org.springframework.mock.web.MockHttpServletRequest("GET", "/api/v1/system/data-quality/issues");
+                var session = new com.zjcxph.imgapi.common.AuthSession();
+                session.setPermissions(permissions);
+                request.setAttribute(com.zjcxph.imgapi.interceptors.AuthorizationInterceptor.AUTH_SESSION_ATTRIBUTE, session);
+                var response = new org.springframework.mock.web.MockHttpServletResponse();
+                assertThat(auth.preHandle(request, response, handler)).isFalse();
+                assertThat(response.getStatus()).isEqualTo(403);
+                session.setPermissions(List.of("system:read", "record:read"));
+                assertThat(auth.preHandle(request, new org.springframework.mock.web.MockHttpServletResponse(), handler)).isTrue();
+            }
+        }
+        org.mockito.Mockito.verifyNoInteractions(dataQualityService);
+    }
+
+    @Test
+    void managedRunMutationsRequireManageAndUseAuthenticatedActor() throws Exception {
+        var authorization = new com.zjcxph.imgapi.interceptors.AuthorizationInterceptor();
+        var session = new com.zjcxph.imgapi.common.AuthSession();
+        session.setId(17L);
+        session.setPermissions(List.of("system:read"));
+        for (var handler : List.of(
+                new org.springframework.web.method.HandlerMethod(controller, DataQualityController.class.getMethod("submit")),
+                new org.springframework.web.method.HandlerMethod(controller, DataQualityController.class.getMethod("cancel", long.class)))) {
+            var request = new org.springframework.mock.web.MockHttpServletRequest("POST", "/api/v1/system/data-quality/runs");
+            request.setAttribute(com.zjcxph.imgapi.interceptors.AuthorizationInterceptor.AUTH_SESSION_ATTRIBUTE, session);
+            var response = new org.springframework.mock.web.MockHttpServletResponse();
+            session.setPermissions(List.of("system:read"));
+            assertThat(authorization.preHandle(request, response, handler)).isFalse();
+            assertThat(response.getStatus()).isEqualTo(403);
+            session.setPermissions(List.of("system:manage"));
+            assertThat(authorization.preHandle(request, new org.springframework.mock.web.MockHttpServletResponse(), handler)).isTrue();
+        }
+        org.assertj.core.api.Assertions.assertThatThrownBy(controller::submit)
+                .isInstanceOf(com.zjcxph.imgapi.exception.BusinessException.class);
+        var summary = Map.<String, Object>of("latestRun", Map.of("id", 9L, "status", "PENDING"));
+        when(dataQualityService.submitRun("manual", 17L)).thenReturn(summary);
+        when(dataQualityService.cancelRun(9L, 17L)).thenReturn(summary);
+        when(dataQualityService.getRun(9L)).thenReturn(summary);
+        try {
+            com.zjcxph.imgapi.utils.AuthContext.setCurrentUser(session);
+            assertThat(controller.submit().getData()).isEqualTo(summary);
+            assertThat(controller.cancel(9L).getData()).isEqualTo(summary);
+            assertThat(controller.runStatus(9L).getData()).isEqualTo(summary);
+        } finally {
+            com.zjcxph.imgapi.utils.AuthContext.clear();
+        }
+        verify(dataQualityService).submitRun("manual", 17L);
+        verify(dataQualityService).cancelRun(9L, 17L);
+    }
+
+    @Test
     void summaryReturnsServicePayload() {
         Map<String, Object> summary = Map.of("running", false, "enabled", true);
         when(dataQualityService.getSummary()).thenReturn(summary);
@@ -43,7 +131,7 @@ class DataQualityControllerTest {
         List<Map<String, Object>> issues = List.of(Map.of("check_code", "SCAN_CODE_BLANK"));
         when(dataQualityService.getIssues(25)).thenReturn(issues);
 
-        Result<List<Map<String, Object>>> result = controller.issues(25);
+        Result<List<Map<String, Object>>> result = controller.issues(25, null);
 
         assertThat(result.getCode()).isEqualTo(200);
         assertThat(result.getMessage()).isEqualTo("获取数据质量异常成功");

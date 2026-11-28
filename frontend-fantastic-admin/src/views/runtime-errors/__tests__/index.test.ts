@@ -61,7 +61,7 @@ const stubs = {
   'AppEmpty': { props: ['description'], template: '<p class="empty">{{ description }}</p>' },
   'AppError': { props: ['message'], template: '<div class="query-error">{{ message }}</div>' },
   'AppLoading': { props: ['type'], template: '<div class="loading" />' },
-  'MrrMetricCard': { props: ['label', 'value'], template: '<p class="metric">{{ label }} {{ value }}</p>' },
+  'MrrMetricCard': { props: ['label', 'value', 'actionLabel'], emits: ['activate'], template: '<div><p class="metric">{{ label }} {{ value }}</p><button v-if="actionLabel" :title="actionLabel" @click="$emit(\'activate\')" /></div>' },
   'MrrFilterActionButton': { props: ['action'], template: '<button :data-action="action"><slot /></button>' },
   'MrrDataTablePanel': { template: '<section><slot name="filters" /><slot /></section>' },
   'MrrFilterBar': { template: '<div><slot /><slot name="actions" /></div>' },

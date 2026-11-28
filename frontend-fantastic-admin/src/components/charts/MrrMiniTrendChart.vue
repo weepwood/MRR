@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import type { ECOption } from '@/plugins/echarts'
 import { computed } from 'vue'
-import { mrrChartColor } from '@/config/chart-theme'
+import { mrrChartColorToken } from '@/config/chart-theme'
 import MrrChart from './MrrChart.vue'
 
 defineOptions({ name: 'MrrMiniTrendChart' })
@@ -37,11 +37,11 @@ const option = computed<ECOption>(() => ({
       silent: true,
       lineStyle: {
         width: 2,
-        color: props.color ?? mrrChartColor('primary'),
+        color: props.color ?? mrrChartColorToken('primary'),
       },
       areaStyle: {
         opacity: 0.1,
-        color: props.color ?? mrrChartColor('primary'),
+        color: props.color ?? mrrChartColorToken('primary'),
       },
     },
   ],

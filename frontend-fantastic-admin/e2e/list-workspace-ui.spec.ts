@@ -1,5 +1,6 @@
 import type { Page } from '@playwright/test'
 import { expect, test } from '@playwright/test'
+import { isolateLocalVisualSettings } from './helpers/local-visual-settings'
 
 const patient = { id: 92001, bah: '00004217', name: '合成患者甲', department: '示例科室', bingqu: '示例病区', chuangwei: 'A-08', ruyuan: '2026-01-08', admissiontime: '2026-01-08 08:30:00' }
 const record = { id: 92002, bah: '00004217', sjh: '00000608', boxNo: 'BOX-DEMO-01', expectedBoxNo: 'BOX-DEMO-02', status: 'MISPLACED', remark: '合成记录：核对实际箱号', updatedAt: '2026-01-08T09:15:00' }
@@ -47,6 +48,7 @@ test.beforeEach(async ({ page }) => {
 })
 
 test('患者筛选只作用于患者列表，保留 Enter、重置和病案号', async ({ page }) => {
+  await isolateLocalVisualSettings(page)
   await page.addInitScript(() => localStorage.setItem('MRR-ADMIN:app-settings', JSON.stringify({
     app: { enableMotion: false },
     layout: { enableMobileAdaptation: true },
@@ -54,7 +56,8 @@ test('患者筛选只作用于患者列表，保留 Enter、重置和病案号',
   await page.goto('/patients')
   await expect(page.getByRole('heading', { name: '患者管理', level: 1 })).toBeVisible()
   const filter = page.getByRole('textbox', { name: '关键词', exact: true })
-  await page.locator('label').filter({ hasText: /^关键词$/ }).click()
+  // DESIGN.md: ordinary keyword fields use an accessible name and placeholder, not an inline label.
+  await filter.click()
   await expect(filter).toBeFocused()
   await expect(page.getByRole('link', { name: '00004217', exact: true })).toHaveAttribute('href', /bah=00004217/)
   await filter.fill('NO-MATCH')
@@ -95,7 +98,49 @@ test('患者汇总失败时，列表可见且指标不显示假零', async ({ pa
   await expect(page.getByRole('cell', { name: '00004217', exact: true })).toBeVisible()
 })
 
+test('患者编辑保存期间锁定表单，成功后正常关闭', async ({ page }) => {
+  let release!: () => void
+  const gate = new Promise<void>((resolve) => { release = resolve })
+  const writes: unknown[] = []
+  await page.route('**/api/v1/patients/92001', async (route) => {
+    if (route.request().method() !== 'PUT') { await route.fallback(); return }
+    writes.push(route.request().postDataJSON())
+    await gate
+    await route.fulfill({ json: { code: 200, data: { ...patient, name: '合成更新患者' } } })
+  })
+  try {
+    await page.goto('/patients')
+    await page.getByRole('button', { name: '编辑患者', exact: true }).click()
+    const dialog = page.getByRole('dialog', { name: '编辑患者信息' })
+    await expect(dialog).toBeVisible()
+    await dialog.getByRole('textbox', { name: '姓名', exact: true }).fill('合成更新患者')
+    await dialog.getByRole('button', { name: '保存修改' }).click()
+    await expect.poll(() => writes.length).toBe(1)
+    await expect(dialog.getByRole('button', { name: '取消', exact: true })).toBeDisabled()
+    await expect(dialog.getByRole('textbox', { name: '姓名', exact: true })).toBeDisabled()
+    release()
+    await expect(dialog).toBeHidden()
+    expect(writes).toEqual([expect.objectContaining({ bah: patient.bah, name: '合成更新患者' })])
+  }
+  finally { release() }
+})
+
+test('患者缺失证号查询失败不显示假零，重试恢复', async ({ page }) => {
+  await page.route('**/api/v1/patients/analytics/missing-idcard?**', route => route.fulfill({
+    status: 500,
+    json: { code: 500, message: '合成测试：缺失证号查询失败' },
+  }), { times: 1 })
+  await page.goto('/patients')
+  await page.getByRole('tab', { name: /身份证为空病案/ }).click()
+  const panel = page.getByRole('tabpanel', { name: /身份证为空病案/ })
+  await expect(panel.getByRole('alert')).toBeVisible()
+  await panel.getByRole('button', { name: '重试' }).click()
+  await expect(panel.getByRole('cell', { name: patient.bah, exact: true })).toBeVisible()
+  await expect(panel.getByRole('alert')).toHaveCount(0)
+})
+
 test('窄屏装箱切换、筛选和表单完整可达', async ({ page }) => {
+  await isolateLocalVisualSettings(page)
   await page.setViewportSize({ width: 390, height: 844 })
   await page.addInitScript(() => localStorage.setItem('MRR-ADMIN:app-settings', JSON.stringify({
     app: { colorScheme: 'dark', enableMotion: false },
@@ -108,8 +153,8 @@ test('窄屏装箱切换、筛选和表单完整可达', async ({ page }) => {
   await expect(metrics.locator('.mrr-metric-card')).toHaveCount(4)
   const cards = await metrics.locator('.mrr-metric-card').evaluateAll(elements => elements.map(el => el.getBoundingClientRect().top))
   expect(cards).toHaveLength(4)
-  expect(cards[0]).toBe(cards[1])
-  expect(cards[2]).toBe(cards[3])
+  // The current shared metric grid intentionally becomes a single column below 600px.
+  expect(cards.every((top, index) => index === 0 || top > cards[index - 1])).toBe(true)
   await expect(page.getByText('存放在其他箱子', { exact: true }).filter({ visible: true })).toBeVisible()
   await page.getByText('箱号视图', { exact: true }).click()
   await expect(page.getByRole('heading', { name: '箱号列表', level: 2 })).toBeVisible()
@@ -151,4 +196,32 @@ test('箱号查询失败时可在当前视图重试', async ({ page }) => {
   await failed.getByRole('button', { name: '重试' }).click()
   await expect(page.getByRole('button', { name: 'BOX-DEMO-01', exact: true })).toBeVisible()
   await expect(failed).toBeHidden()
+})
+
+test('装箱删除确认显示目标，取消不写入，确认只删除对应记录', async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 })
+  const writes: string[] = []
+  await page.route('**/api/v1/archive-box-records/92002', async (route) => {
+    if (route.request().method() !== 'DELETE') { await route.fallback(); return }
+    writes.push(new URL(route.request().url()).pathname)
+    await route.fulfill({ json: { code: 200, data: 'ok' } })
+  })
+  await page.goto('/archive-boxes')
+  const row = page.getByRole('row').filter({ has: page.getByRole('cell', { name: record.sjh, exact: true }) })
+  const openDelete = async () => {
+    await expect(row.getByRole('cell', { name: record.sjh, exact: true })).toBeVisible()
+    await row.getByRole('button', { name: '删除装箱记录', exact: true }).click()
+  }
+  await openDelete()
+  const dialog = page.getByRole('dialog', { name: '删除装箱记录' })
+  await expect(dialog).toContainText(record.bah)
+  await expect(dialog).toContainText(record.sjh)
+  await dialog.getByRole('button', { name: '取消', exact: true }).click()
+  await expect(dialog).toBeHidden()
+  expect(writes).toEqual([])
+  await openDelete()
+  await dialog.getByRole('button', { name: '删除', exact: true }).click()
+  await expect.poll(() => writes.length).toBe(1)
+  await expect(dialog).toBeHidden()
+  expect(writes).toEqual([expect.stringMatching(/^(?:\/proxy)?\/api\/v1\/archive-box-records\/92002$/)])
 })

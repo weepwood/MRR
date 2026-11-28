@@ -285,7 +285,6 @@ function today() {
 <template>
   <MrrPageShell class="data-exchange-page">
     <MrrPageHeader
-      size="compact"
       eyebrow="Data Exchange"
       title="数据导入导出"
       description="患者、统计、病案主档、档案装箱和扫描记录统一在此导入导出。系统只开放预定义数据集，不接受任意表名、SQL 或服务器路径。"
@@ -308,14 +307,17 @@ function today() {
 
     <div v-show="activeTab === 'patients'" class="tab-content">
       <MrrSectionCard title="患者数据条件导出" description="导出字段与患者导入模板保持一致，可在本页面重新校验和导入。">
-        <div class="filter-grid filter-grid--patient">
-          <el-input v-model="patientFilters.keyword" clearable aria-label="病案号 / 姓名 / 身份证号 / 科室" placeholder="病案号 / 姓名 / 身份证号 / 科室" />
-          <div class="filter-actions">
+        <MrrFilterBar embedded :focus-ring="false">
+          <el-input v-model="patientFilters.keyword" class="mrr-filter-field--keyword" clearable aria-label="病案号 / 姓名 / 身份证号 / 科室" placeholder="病案号 / 姓名 / 身份证号 / 科室" />
+          <template #actions>
             <MrrFilterActionButton action="reset" @click="resetPatientFilters">
               重置
             </MrrFilterActionButton>
+          </template>
+          <template #business>
             <el-button
               type="primary"
+              plain
               :icon="Download"
               :loading="exporting.patients"
               :disabled="!canReadRecords"
@@ -323,8 +325,8 @@ function today() {
             >
               导出 CSV
             </el-button>
-          </div>
-        </div>
+          </template>
+        </MrrFilterBar>
       </MrrSectionCard>
 
       <DatasetImportPanel
@@ -346,13 +348,22 @@ function today() {
 
     <div v-show="activeTab === 'statistics'" class="tab-content">
       <MrrSectionCard title="统计数据条件导出" description="按病案号、上架号、档案类型、日期和综合关键字筛选。">
-        <div class="filter-grid">
-          <el-input v-model="statisticsFilters.bah" clearable aria-label="病案号" placeholder="病案号" />
-          <el-input v-model="statisticsFilters.sjh" clearable aria-label="上架号" placeholder="上架号" />
+        <MrrFilterBar embedded :focus-ring="false">
+          <el-input v-model="statisticsFilters.bah" class="mrr-filter-field--code" clearable aria-label="病案号">
+            <template #prefix>
+              <span class="mrr-filter-prefix" aria-hidden="true">病案号</span>
+            </template>
+          </el-input>
+          <el-input v-model="statisticsFilters.sjh" class="mrr-filter-field--code" clearable aria-label="上架号">
+            <template #prefix>
+              <span class="mrr-filter-prefix" aria-hidden="true">上架号</span>
+            </template>
+          </el-input>
           <el-input v-model="statisticsFilters.type" clearable aria-label="档案类型" placeholder="档案类型" />
-          <el-input v-model="statisticsFilters.keyword" clearable aria-label="患者、科室、设备或负责人" placeholder="患者、科室、设备或负责人" />
+          <el-input v-model="statisticsFilters.keyword" class="mrr-filter-field--keyword" clearable aria-label="患者、科室、设备或负责人" placeholder="患者、科室、设备或负责人" />
           <el-date-picker
-            v-model="statisticsDateRange"
+            v-model="statisticsDateRange" class="mrr-filter-field--range"
+            aria-label="日期范围"
             type="daterange"
             :popper-options="rangePickerPopperOptions"
             value-format="YYYY-MM-DD"
@@ -360,12 +371,15 @@ function today() {
             start-placeholder="开始日期"
             end-placeholder="结束日期"
           />
-          <div class="filter-actions">
+          <template #actions>
             <MrrFilterActionButton action="reset" @click="resetStatisticsFilters">
               重置
             </MrrFilterActionButton>
+          </template>
+          <template #business>
             <el-button
               type="primary"
+              plain
               :icon="Download"
               :loading="exporting.statistics"
               :disabled="!canReadStatistics"
@@ -373,8 +387,8 @@ function today() {
             >
               导出 CSV
             </el-button>
-          </div>
-        </div>
+          </template>
+        </MrrFilterBar>
       </MrrSectionCard>
 
       <DatasetImportPanel
@@ -394,14 +408,27 @@ function today() {
             病案主档只允许导出。mr_archive 是由统计数据和稳定关联规则维护的主数据。禁止直接导入，以免绕过触发器、破坏 archive_id 关联或制造重复上架号。
           </MrrInfoTip>
         </template>
-        <div class="filter-grid">
-          <el-input v-model="archiveFilters.bah" clearable aria-label="病案号" placeholder="病案号" />
-          <el-input v-model="archiveFilters.sjh" clearable aria-label="上架号" placeholder="上架号" />
-          <el-input v-model="archiveFilters.patientId" clearable aria-label="患者 ID" placeholder="患者 ID" />
+        <MrrFilterBar embedded :focus-ring="false">
+          <el-input v-model="archiveFilters.bah" class="mrr-filter-field--code" clearable aria-label="病案号">
+            <template #prefix>
+              <span class="mrr-filter-prefix" aria-hidden="true">病案号</span>
+            </template>
+          </el-input>
+          <el-input v-model="archiveFilters.sjh" class="mrr-filter-field--code" clearable aria-label="上架号">
+            <template #prefix>
+              <span class="mrr-filter-prefix" aria-hidden="true">上架号</span>
+            </template>
+          </el-input>
+          <el-input v-model="archiveFilters.patientId" class="mrr-filter-field--code" clearable aria-label="患者 ID">
+            <template #prefix>
+              <span class="mrr-filter-prefix" aria-hidden="true">患者 ID</span>
+            </template>
+          </el-input>
           <el-input v-model="archiveFilters.type" clearable aria-label="档案类型" placeholder="档案类型" />
-          <el-input v-model="archiveFilters.keyword" clearable aria-label="患者姓名 / 科室 / 设备 / 操作人" placeholder="患者姓名 / 科室 / 设备 / 操作人" />
+          <el-input v-model="archiveFilters.keyword" class="mrr-filter-field--keyword" clearable aria-label="患者姓名 / 科室 / 设备 / 操作人" placeholder="患者姓名 / 科室 / 设备 / 操作人" />
           <el-date-picker
-            v-model="archiveDateRange"
+            v-model="archiveDateRange" class="mrr-filter-field--range"
+            aria-label="日期范围"
             type="daterange"
             :popper-options="rangePickerPopperOptions"
             value-format="YYYY-MM-DD"
@@ -409,12 +436,15 @@ function today() {
             start-placeholder="开始日期"
             end-placeholder="结束日期"
           />
-          <div class="filter-actions">
+          <template #actions>
             <MrrFilterActionButton action="reset" @click="resetArchiveFilters">
               重置
             </MrrFilterActionButton>
+          </template>
+          <template #business>
             <el-button
               type="primary"
+              plain
               :icon="Download"
               :loading="exporting.archives"
               :disabled="!canReadRecords"
@@ -422,8 +452,8 @@ function today() {
             >
               导出 CSV
             </el-button>
-          </div>
-        </div>
+          </template>
+        </MrrFilterBar>
       </MrrSectionCard>
 
       <MrrSectionCard title="病案主档导出字段" description="导出文件包含以下字段，仅用于核对，不作为导入模板。">
@@ -437,24 +467,39 @@ function today() {
 
     <div v-show="activeTab === 'archive-boxes'" class="tab-content">
       <MrrSectionCard title="档案装箱条件导出" description="按病案号、上架号、箱号、状态或备注筛选装箱记录。">
-        <div class="filter-grid">
-          <el-input v-model="archiveBoxFilters.bah" clearable aria-label="病案号" placeholder="病案号" />
-          <el-input v-model="archiveBoxFilters.sjh" clearable aria-label="上架号" placeholder="上架号" />
-          <el-input v-model="archiveBoxFilters.boxNo" clearable aria-label="箱号" placeholder="箱号" />
-          <el-select v-model="archiveBoxFilters.status" clearable aria-label="全部状态" placeholder="全部状态">
+        <MrrFilterBar embedded :focus-ring="false">
+          <el-input v-model="archiveBoxFilters.bah" class="mrr-filter-field--code" clearable aria-label="病案号">
+            <template #prefix>
+              <span class="mrr-filter-prefix" aria-hidden="true">病案号</span>
+            </template>
+          </el-input>
+          <el-input v-model="archiveBoxFilters.sjh" class="mrr-filter-field--code" clearable aria-label="上架号">
+            <template #prefix>
+              <span class="mrr-filter-prefix" aria-hidden="true">上架号</span>
+            </template>
+          </el-input>
+          <el-input v-model="archiveBoxFilters.boxNo" class="mrr-filter-field--code" clearable aria-label="箱号">
+            <template #prefix>
+              <span class="mrr-filter-prefix" aria-hidden="true">箱号</span>
+            </template>
+          </el-input>
+          <el-select v-model="archiveBoxFilters.status" class="mrr-single-select" clearable aria-label="全部状态" placeholder="全部状态">
             <el-option label="正常" value="NORMAL" />
             <el-option label="缺失" value="MISSING" />
             <el-option label="位置不一致" value="MISPLACED" />
             <el-option label="冲突" value="CONFLICT" />
             <el-option label="其他" value="OTHER" />
           </el-select>
-          <el-input v-model="archiveBoxFilters.keyword" clearable aria-label="综合关键字" placeholder="综合关键字" />
-          <div class="filter-actions">
+          <el-input v-model="archiveBoxFilters.keyword" class="mrr-filter-field--keyword" clearable aria-label="综合关键字" placeholder="综合关键字" />
+          <template #actions>
             <MrrFilterActionButton action="reset" @click="resetArchiveBoxFilters">
               重置
             </MrrFilterActionButton>
+          </template>
+          <template #business>
             <el-button
               type="primary"
+              plain
               :icon="Download"
               :loading="exporting['archive-boxes']"
               :disabled="!canReadRecords"
@@ -462,8 +507,8 @@ function today() {
             >
               导出 CSV
             </el-button>
-          </div>
-        </div>
+          </template>
+        </MrrFilterBar>
       </MrrSectionCard>
 
       <DatasetImportPanel
@@ -483,20 +528,35 @@ function today() {
             浏览器只处理小批量扫描记录。单次最多 100,000 行。三千万级全量迁移仍应使用分卷 CSV、后端流式 COPY、任务暂停恢复、失败重试和主键游标导出，不应通过浏览器上传。
           </MrrInfoTip>
         </template>
-        <div class="filter-grid filter-grid--scan">
+        <MrrFilterBar embedded :focus-ring="false">
           <el-input-number v-model="scanFilters.afterId" :min="0" controls-position="right" aria-label="起始 ID（不含）" placeholder="起始 ID（不含）" />
-          <el-input v-model="scanFilters.bah" clearable aria-label="病案号" placeholder="病案号" />
-          <el-input v-model="scanFilters.sjh" clearable aria-label="上架号" placeholder="上架号" />
-          <el-input v-model="scanFilters.brxh" clearable aria-label="病人序号" placeholder="病人序号" />
+          <el-input v-model="scanFilters.bah" class="mrr-filter-field--code" clearable aria-label="病案号">
+            <template #prefix>
+              <span class="mrr-filter-prefix" aria-hidden="true">病案号</span>
+            </template>
+          </el-input>
+          <el-input v-model="scanFilters.sjh" class="mrr-filter-field--code" clearable aria-label="上架号">
+            <template #prefix>
+              <span class="mrr-filter-prefix" aria-hidden="true">上架号</span>
+            </template>
+          </el-input>
+          <el-input v-model="scanFilters.brxh" class="mrr-filter-field--code" clearable aria-label="病人序号">
+            <template #prefix>
+              <span class="mrr-filter-prefix" aria-hidden="true">病人序号</span>
+            </template>
+          </el-input>
           <el-input v-model="scanFilters.folder" clearable aria-label="目录" placeholder="目录" />
           <el-input v-model="scanFilters.filename" clearable aria-label="文件名" placeholder="文件名" />
           <el-input-number v-model="scanFilters.btype" :min="0" :max="15" controls-position="right" aria-label="图片类型" placeholder="图片类型" />
-          <div class="filter-actions">
+          <template #actions>
             <MrrFilterActionButton action="reset" @click="resetScanFilters">
               重置
             </MrrFilterActionButton>
+          </template>
+          <template #business>
             <el-button
               type="primary"
+              plain
               :icon="Download"
               :loading="exporting.scan"
               :disabled="!canReadRecords"
@@ -504,8 +564,8 @@ function today() {
             >
               导出 CSV
             </el-button>
-          </div>
-        </div>
+          </template>
+        </MrrFilterBar>
       </MrrSectionCard>
 
       <DatasetImportPanel
@@ -581,58 +641,6 @@ function today() {
 
   .dataset-switch :deep(.el-segmented__item) {
     padding: 0 var(--mrr-space-1);
-  }
-}
-
-.filter-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-  gap: var(--mrr-space-3);
-  align-items: center;
-}
-
-.filter-grid :deep(.el-date-editor),
-.filter-grid :deep(.el-input-number) {
-  width: 100%;
-}
-
-.filter-grid--patient {
-  grid-template-columns: minmax(0, 1fr) auto;
-}
-
-.filter-grid--scan {
-  grid-template-columns: repeat(4, minmax(190px, 1fr));
-}
-
-.filter-actions {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--mrr-space-2);
-  justify-content: flex-end;
-}
-
-.filter-actions :deep(.el-button + .el-button) {
-  margin-left: 0;
-}
-
-@media (max-width: 1100px) {
-  .filter-grid--patient {
-    grid-template-columns: minmax(0, 1fr) auto;
-  }
-
-  .filter-grid--scan {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-  }
-}
-
-@media (max-width: 760px) {
-  .filter-grid,
-  .filter-grid--patient {
-    grid-template-columns: 1fr;
-  }
-
-  .filter-grid--scan {
-    grid-template-columns: 1fr;
   }
 }
 </style>

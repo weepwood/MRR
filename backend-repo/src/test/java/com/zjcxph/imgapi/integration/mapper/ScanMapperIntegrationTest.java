@@ -28,6 +28,7 @@ class ScanMapperIntegrationTest {
 
     @Autowired
     private ScanMapper scanMapper;
+    @Autowired private org.springframework.jdbc.core.JdbcTemplate jdbc;
 
     private Scan sampleScan() {
         Scan s = new Scan();
@@ -70,7 +71,7 @@ class ScanMapperIntegrationTest {
     @Test
     @DisplayName("findByBah — 按病案号查询")
     void findByBah() {
-        List<Scan> results = scanMapper.findByBah("00789508");
+        List<Scan> results = scanMapper.findByBah("00789508", "789508", 1001);
         assertThat(results).hasSize(1);
         assertThat(results.get(0).getFilename()).isEqualTo("test.jpg");
     }
@@ -78,7 +79,7 @@ class ScanMapperIntegrationTest {
     @Test
     @DisplayName("findByBrxh — 按住院号查询")
     void findByBrxh() {
-        List<Scan> results = scanMapper.findByBrxh("605746");
+        List<Scan> results = scanMapper.findByBrxh("605746", 1001);
         assertThat(results).hasSize(1);
     }
 
@@ -102,7 +103,9 @@ class ScanMapperIntegrationTest {
     @Test
     @DisplayName("updateOssInfo — 更新 OSS 信息")
     void updateOssInfo() {
-        int affected = scanMapper.updateOssInfo(1, "https://oss/test.jpg", 1024L, "md5hash", "migrated");
+        Scan snapshot=scanMapper.findById(1);
+        jdbc.update("UPDATE mr_scan SET migration_status='migrating',migration_attempts=1,migration_claim_id='test-claim' WHERE id=1");
+        int affected = scanMapper.completeClaimedMigration(snapshot,1,"test-claim","https://oss/test.jpg",1024L,"md5hash");
         assertThat(affected).isEqualTo(1);
         Scan updated = scanMapper.findById(1);
         assertThat(updated).isNotNull();

@@ -1,6 +1,6 @@
 import type { EffectiveSystemSettings } from '@/utils/system-settings'
 import { ElMessage } from 'element-plus'
-import { computed, onMounted, ref, watch } from 'vue'
+import { computed, onMounted, onScopeDispose, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { saveSystemSettings } from '@/api/modules/settings'
 import { actionDialog } from '@/ui/components/ActionDialog'
@@ -69,6 +69,10 @@ export function useUnifiedSettings() {
   const activeSection = ref<SettingsSection>('system')
   const loading = ref(false)
   const saving = ref(false)
+  const confirmingOtherAction = ref(false)
+  const actionPending = computed(() => saving.value || confirmingOtherAction.value)
+  let disposed = false
+  onScopeDispose(() => { disposed = true })
   /**
    * 是否已从服务器读到可保存的基线。读取成功前表单里只有默认值（或上一次成功读取的值），
    * 既不算修改，也不能保存：保存会提交全部字段，回退值会整批覆盖服务器设置。
@@ -121,6 +125,7 @@ export function useUnifiedSettings() {
    * 否则被放弃的值会留在表单里，并可能在下一次保存时写进系统数据库。
    */
   function discardUnsavedChanges() {
+    if (disposed || saving.value || loading.value || confirmingOtherAction.value) { return }
     settings.value = parseSystemSettings({ ...savedSnapshot.value })
   }
 
@@ -128,6 +133,7 @@ export function useUnifiedSettings() {
     loading.value = true
     try {
       const result = await loadEffectiveSystemSettings()
+      if (disposed) { return false }
       if (!result.serverReachable) {
         // 回退值只供只读页面降级使用。已有服务器基线时保留当前表单与基线；首次失败由页面显示错误与重试。
         loadError.value = '系统设置读取失败'
@@ -227,21 +233,32 @@ export function useUnifiedSettings() {
   }
 
   async function handleSave(options: { confirmChanges?: boolean } = {}): Promise<boolean> {
-    // 页头按钮靠 loading 自禁用，但「离开前保存」与页头保存可以同时进入，需要显式互斥。
-    if (saving.value) { return false }
+    if (disposed || saving.value || loading.value || confirmingOtherAction.value) { return false }
     if (!loaded.value) {
       ElMessage.warning('系统设置尚未从服务器读取成功，请重新加载后再保存')
       return false
     }
     if (!validateSettings()) { return false }
-    if (options.confirmChanges !== false && isDirty.value && !await confirmSaveChanges()) { return false }
-    if (!await confirmDeveloperModeEnable()) { return false }
-    saving.value = true
+
+    // Reserve the operation and its exact payload before either confirmation.
+    const payload = { ...currentSnapshot.value }
     const developerChangeRequested = developerModeChanged.value
-    // 提交内容固定在请求发出前，保存结果只认这份快照。
-    const payload = serializeSystemSettings(settings.value)
+    const unchanged = () => Object.keys(payload).every(key => currentSnapshot.value[key] === payload[key])
+    saving.value = true
     try {
+      if (options.confirmChanges !== false && isDirty.value && !await confirmSaveChanges()) { return false }
+      if (disposed || !unchanged()) {
+        if (!disposed) { ElMessage.warning('确认期间设置已变化，请重新确认后保存') }
+        return false
+      }
+      if (!await confirmDeveloperModeEnable()) { return false }
+      if (disposed || !unchanged()) {
+        if (!disposed) { ElMessage.warning('确认期间设置已变化，请重新确认后保存') }
+        return false
+      }
+
       await saveSystemSettings(payload)
+      if (disposed) { return false }
       const savedSettings = parseSystemSettings({ ...payload })
       writeLocalSystemSettings(savedSettings)
       window.dispatchEvent(new CustomEvent('mrr:login-page-settings-updated', {
@@ -257,7 +274,8 @@ export function useUnifiedSettings() {
       return true
     }
     catch (error: any) {
-      if (developerChangeRequested) { settings.value.developerModeEnabled = savedDeveloperModeEnabled.value }
+      if (disposed) { return false }
+      if (developerChangeRequested && unchanged()) { settings.value.developerModeEnabled = savedDeveloperModeEnabled.value }
       ElMessage.error(error?.response?.data?.message || error?.message || '服务端保存失败，设置未生效')
       return false
     }
@@ -267,36 +285,45 @@ export function useUnifiedSettings() {
   }
 
   async function handleReset() {
-    if (!loaded.value) { return }
+    if (disposed || !loaded.value || saving.value || loading.value || confirmingOtherAction.value) { return }
+    confirmingOtherAction.value = true
     try {
       await actionDialog.confirm('恢复默认会覆盖当前页面中的设置修改，恢复后仍需点击“保存”才会生效。确定继续吗？', '恢复默认设置', {
         type: 'warning',
         confirmButtonText: '确认恢复',
         cancelButtonText: '取消',
       })
+      if (disposed) { return }
+      settings.value = createDefaultSystemSettings()
+      ElMessage.info('已恢复默认值，保存后生效')
     }
     catch {
-      return
+      // Cancellation leaves the draft unchanged.
     }
-
-    settings.value = createDefaultSystemSettings()
-    ElMessage.info('已恢复默认值，保存后生效')
+    finally {
+      confirmingOtherAction.value = false
+    }
   }
 
   async function handleReload() {
-    if (isDirty.value) {
-      try {
-        await actionDialog.confirm('重新加载会丢弃当前未保存修改，是否继续？', '重新加载设置', {
-          type: 'warning',
-          confirmButtonText: '继续加载',
-          cancelButtonText: '取消',
-        })
+    if (disposed || saving.value || loading.value || confirmingOtherAction.value) { return }
+    confirmingOtherAction.value = true
+    try {
+      if (isDirty.value) {
+        try {
+          await actionDialog.confirm('重新加载会丢弃当前未保存修改，是否继续？', '重新加载设置', {
+            type: 'warning',
+            confirmButtonText: '继续加载',
+            cancelButtonText: '取消',
+          })
+        }
+        catch { return }
       }
-      catch {
-        return
-      }
+      if (!disposed) { await loadSettings(true) }
     }
-    await loadSettings(true)
+    finally {
+      confirmingOtherAction.value = false
+    }
   }
 
   async function selectSection(section: SettingsSection) {
@@ -321,6 +348,7 @@ export function useUnifiedSettings() {
     loaded,
     loadError,
     saving,
+    actionPending,
     settings,
     changedKeys,
     changedItems,

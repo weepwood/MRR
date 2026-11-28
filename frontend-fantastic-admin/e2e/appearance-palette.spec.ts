@@ -1,4 +1,7 @@
 import { expect, test } from '@playwright/test'
+import { isolateLocalVisualSettings } from './helpers/local-visual-settings'
+
+test.beforeEach(async ({ page }) => { await isolateLocalVisualSettings(page) })
 
 async function readVariable(page: import('@playwright/test').Page, name: string) {
   return page.evaluate(key => getComputedStyle(document.documentElement).getPropertyValue(key).trim().toLowerCase(), name)

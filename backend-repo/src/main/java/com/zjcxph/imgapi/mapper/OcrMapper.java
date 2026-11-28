@@ -101,6 +101,17 @@ public interface OcrMapper {
         WHERE j.id=#{id} AND j.lease_token=#{token}
         """) void release(@Param("id") String id, @Param("token") String token);
     @Select("SELECT * FROM app.mr_scan_ocr WHERE scan_id=#{scan}") Fact fact(Integer scan);
+    /** One snapshot: the current OCR fact must belong to the currently authorized archive. */
+    @Options(useCache=false,flushCache=Options.FlushCachePolicy.TRUE)
+    @Select("""
+        SELECT f.* FROM app.mr_scan_ocr f
+        JOIN app.mr_scan s ON s.id=f.scan_id AND s.archive_id=f.archive_id
+        JOIN app.mr_archive a ON a.id=s.archive_id
+        WHERE f.scan_id=#{scan} AND f.archive_id=#{archive} AND s.uploadflag<>0
+          AND a.bah IS NOT DISTINCT FROM NULLIF(BTRIM(s.bah),'')
+          AND a.sjh IS NOT DISTINCT FROM NULLIF(BTRIM(s.sjh),'')
+        """)
+    Fact factForCurrentArchive(@Param("scan") Integer scan,@Param("archive") Long archive);
     @Select("SELECT * FROM app.mr_scan_ocr WHERE scan_id=#{scan} FOR UPDATE") Fact lockFact(Integer scan);
     @Update("UPDATE app.mr_scan_ocr SET status='STALE',updated_at=NOW() WHERE scan_id=#{scan} AND content_hash=#{hash}")
     void stale(@Param("scan") Integer scan,@Param("hash") String hash);

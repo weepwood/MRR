@@ -37,6 +37,74 @@ class LogInterceptorTest {
     }
 
     @Test
+    void asyncHandoffPreservesOriginalTraceAndClearsThreadContext() throws Exception {
+        var request = new MockHttpServletRequest("GET", "/api/v1/img/content/42");
+        var response = new MockHttpServletResponse();
+        request.setAttribute(HandlerMapping.BEST_MATCHING_PATTERN_ATTRIBUTE, "/api/v1/img/content/{id}");
+        interceptor.preHandle(request, response, new Object());
+        String original = response.getHeader("X-Request-Id");
+        request.setAttribute("startTime", 123L);
+        assertThat(interceptor).isInstanceOf(org.springframework.web.servlet.AsyncHandlerInterceptor.class);
+        ((org.springframework.web.servlet.AsyncHandlerInterceptor)(Object) interceptor)
+                .afterConcurrentHandlingStarted(request, response, new Object());
+        assertThat(MDC.get("requestId")).isNull();
+        request.setDispatcherType(jakarta.servlet.DispatcherType.ASYNC);
+        interceptor.preHandle(request, response, new Object());
+        assertThat(response.getHeader("X-Request-Id")).isEqualTo(original);
+        assertThat(request.getAttribute("startTime")).isEqualTo(123L);
+        interceptor.afterCompletion(request, response, new Object(), null);
+        verify(asyncLogService).saveLogAsync(any(Log.class));
+        assertThat(MDC.get("requestId")).isNull();
+    }
+
+    @Test
+    void rejectedAuditSubmissionIsCountedWithoutLosingHttpMetricsOrThreadCleanup() {
+        var request = new MockHttpServletRequest("GET", "/api/v1/scans/42");
+        var response = new MockHttpServletResponse();
+        request.setAttribute(HandlerMapping.BEST_MATCHING_PATTERN_ATTRIBUTE, "/api/v1/scans/{id}");
+        org.mockito.Mockito.doThrow(new org.springframework.core.task.TaskRejectedException("synthetic closed executor"))
+                .when(asyncLogService).saveLogAsync(any(Log.class));
+        interceptor.preHandle(request, response, new Object());
+
+        interceptor.afterCompletion(request, response, new Object(), null);
+
+        assertThat(meterRegistry.get("mrr.audit.submission.rejected").counter().count()).isEqualTo(1);
+        assertThat(meterRegistry.get("http.requests.total").tag("method", "GET").tag("status", "200").counter().count()).isEqualTo(1);
+        assertThat(meterRegistry.get("http.requests.duration").tag("uri", "/api/v1/scans/{id}").timer().count()).isEqualTo(1);
+        assertThat(response.getStatus()).isEqualTo(200);
+        assertThat(MDC.get("requestId")).isNull();
+    }
+
+    @Test
+    void auditSubmissionRejectionCounterIsPresentAndZeroForNormalRequest() {
+        var request = new MockHttpServletRequest("GET", "/api/v1/scans/42");
+        var response = new MockHttpServletResponse();
+        interceptor.preHandle(request, response, new Object());
+        interceptor.afterCompletion(request, response, new Object(), null);
+
+        assertThat(meterRegistry.get("mrr.audit.submission.rejected").counter().count()).isZero();
+        verify(asyncLogService).saveLogAsync(any(Log.class));
+    }
+
+    @Test
+    void auditDoesNotAttributeAnonymousRequestToStaleThreadSession() {
+        var request = new MockHttpServletRequest("GET", "/api/v1/img/content/42");
+        var response = new MockHttpServletResponse();
+        var stale = new AuthSession();
+        stale.setUsername("synthetic-stale");
+        try {
+            com.zjcxph.imgapi.utils.AuthContext.setCurrentUser(stale);
+            interceptor.preHandle(request, response, new Object());
+            interceptor.afterCompletion(request, response, new Object(), null);
+            var captor = org.mockito.ArgumentCaptor.forClass(Log.class);
+            verify(asyncLogService).saveLogAsync(captor.capture());
+            assertThat(captor.getValue().getUsername()).isNull();
+        } finally {
+            com.zjcxph.imgapi.utils.AuthContext.clear();
+        }
+    }
+
+    @Test
     void exposesRequestIdEndpointTemplateAndServerTiming() throws Exception {
         MockHttpServletRequest request = new MockHttpServletRequest("GET", "/api/v1/scans/42");
         MockHttpServletResponse response = new MockHttpServletResponse();

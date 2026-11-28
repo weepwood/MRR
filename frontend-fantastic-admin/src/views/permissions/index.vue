@@ -210,7 +210,6 @@ onMounted(loadPermissions)
 <template>
   <MrrPageShell class="permissions-page">
     <MrrPageHeader
-      size="compact"
       eyebrow="Permission Management"
       title="权限管理"
       description="按业务范围分配查看、编辑、输出和系统管理权限。修改保存后，用户重新登录生效。"
@@ -422,13 +421,17 @@ onMounted(loadPermissions)
 
 .permission-section__count { font-size: var(--mrr-font-size-xs); font-variant-numeric: tabular-nums; color: var(--text-secondary); }
 
-.roles-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 360px), 1fr)); gap: var(--mrr-space-4); align-items: start; }
+.roles-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--mrr-space-4); align-items: start; }
 
 .role-card { align-self: start; border-radius: var(--mrr-radius-card); }
 
 .role-card :deep(.el-card__body) { display: grid; gap: var(--mrr-space-3); align-content: start; }
 
-.role-card.admin { border-color: hsl(var(--primary) / 30%); }
+.role-card.admin { grid-column: 1 / -1; border-color: var(--mrr-tone-primary-border); }
+
+.role-card.admin .permission-groups { grid-template-columns: repeat(auto-fit, minmax(min(100%, 220px), 1fr)); }
+
+.permission-groups section { align-content: start; min-width: 0; }
 
 .role-edit-form { display: grid; gap: var(--mrr-space-4); }
 
@@ -441,7 +444,7 @@ onMounted(loadPermissions)
 .permission-count,
 .category-label,
 .empty-text,
-.matrix-permission span { font-size: var(--mrr-font-size-xs); color: var(--text-tertiary); }
+.matrix-permission span { font-size: var(--mrr-font-size-xs); color: var(--mrr-muted-foreground); }
 
 .permission-count { display: inline-flex; padding: 2px 8px; line-height: 1.4; background: var(--surface-alt); border-radius: var(--mrr-radius-pill); }
 

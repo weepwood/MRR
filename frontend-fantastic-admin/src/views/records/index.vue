@@ -2,12 +2,13 @@
 import type { ScanRecord } from '@/api/types'
 import type { MetricTone } from '@/components/MrrMetricCard/types'
 import type { MrrTableAction } from '@/components/MrrTableActions/types'
-import { Download } from 'lucide-vue-next'
+import { useMediaQuery } from '@vueuse/core'
 import { computed, onBeforeUnmount, onMounted, reactive, ref } from 'vue'
 import { batchDownloadRecords, getScanCursor } from '@/api/modules/records'
 import AppEmpty from '@/components/AppEmpty/index.vue'
 import AppError from '@/components/AppError/index.vue'
 import AppLoading from '@/components/AppLoading/index.vue'
+import MrrCursorPagination from '@/components/MrrCursorPagination/index.vue'
 import MrrDataTablePanel from '@/components/MrrDataTablePanel/index.vue'
 import MrrFilterActionButton from '@/components/MrrFilterActionButton/index.vue'
 import MrrFilterBar from '@/components/MrrFilterBar/index.vue'
@@ -17,15 +18,12 @@ import MrrStatusTag from '@/components/MrrStatusTag/index.vue'
 import MrrTableActions from '@/components/MrrTableActions/index.vue'
 import { useTableActionLayout } from '@/composables/useTableActionLayout'
 import { getMedicalRecordTypeLabel, MEDICAL_RECORD_TYPES } from '@/constants/medical-record-types'
+import { migrationStatusTag } from '@/constants/migration-status'
 import { notify } from '@/utils/notification'
+import { tableSequenceColumn } from '@/utils/table-sequence'
 
 defineOptions({ name: 'RecordsPage' })
-
-const migrationStatusMap: Record<string, { label: string, tone: 'neutral' | 'success' }> = {
-  not_migrated: { label: '未迁移', tone: 'neutral' },
-  migrated: { label: '已迁移', tone: 'success' },
-  verified: { label: '已验证', tone: 'success' },
-}
+const isNarrowScreen = useMediaQuery('(max-width: 760px)')
 
 // 业务状态（非 CRUD 通用部分）
 const downloading = ref(false)
@@ -76,6 +74,8 @@ const appliedSummary = computed(() => {
   return fields.filter(([, value]) => value).map(([label, value]) => `${label}：${value}`).join('；') || '全部记录'
 })
 const cursors = ref<number[]>([0])
+const cursorRowOffsets = ref<number[]>([0])
+const loadedRowOffset = computed(() => cursorRowOffsets.value[pageNum.value - 1] ?? 0)
 const nextCursor = ref<number | undefined>()
 const hasMore = ref(false)
 let version = 0
@@ -100,6 +100,8 @@ async function loadData() {
     selectedRows.value = []
     hasMore.value = res.data.hasMore
     nextCursor.value = res.data.nextCursorId
+    cursors.value = cursors.value.slice(0, pageNum.value)
+    cursorRowOffsets.value = cursorRowOffsets.value.slice(0, pageNum.value)
   }
   catch (exception) {
     if (current === version) { error.value = exception instanceof Error ? exception.message : '记录读取失败'; list.value = []; hasMore.value = false }
@@ -111,16 +113,23 @@ async function loadData() {
 function reloadFirstBatch() {
   pageNum.value = 1
   cursors.value = [0]
+  cursorRowOffsets.value = [0]
   hasMore.value = false
   void loadData()
 }
 function handleSearch() { appliedQuery.value = { ...query }; reloadFirstBatch() }
 function resetFilters() { Object.assign(query, { bah: '', brxh: '', sjh: '', openerNo: '', btype: '', legacyContains: false }); handleSearch() }
-function nextPage() {
-  if (loading.value || !hasMore.value || nextCursor.value == null) { return } cursors.value[pageNum.value] = nextCursor.value; pageNum.value++; void loadData()
-}
-function previousPage() {
-  if (loading.value || pageNum.value <= 1) { return } pageNum.value--; void loadData()
+const maxReachablePage = computed(() => pageNum.value + (hasMore.value && nextCursor.value != null ? 1 : 0))
+function jumpToPage(target: number) {
+  if (loading.value || !Number.isSafeInteger(target) || target < 1 || target > maxReachablePage.value || target === pageNum.value) { return }
+  if (target === pageNum.value + 1) {
+    if (!hasMore.value || nextCursor.value == null) { return }
+    cursors.value[pageNum.value] = nextCursor.value
+    cursorRowOffsets.value[pageNum.value] = loadedRowOffset.value + list.value.length
+  }
+  if (cursors.value[target - 1] === undefined) { return }
+  pageNum.value = target
+  void loadData()
 }
 onMounted(loadData)
 onBeforeUnmount(() => { version++ })
@@ -129,7 +138,7 @@ const summaryCards = computed(() => [
   {
     label: '当前批记录数',
     value: list.value.length,
-    note: '当前筛选结果中已加载的数据条数',
+    icon: 'i-lucide:files',
     tone: 'blue' as MetricTone,
   },
   {
@@ -137,13 +146,13 @@ const summaryCards = computed(() => [
     // 读取方式说明保留在筛选栏下方提示文案中。
     label: '已选记录',
     value: selectedRows.value.length,
-    note: '可用于批量打包下载',
+    icon: 'i-lucide:list-checks',
     tone: 'violet' as MetricTone,
   },
   {
     label: '当前批次',
     value: pageNum.value,
-    note: `每批 ${pageSize.value} 条`,
+    icon: 'i-lucide:layers',
     tone: 'amber' as MetricTone,
   },
 ])
@@ -197,7 +206,6 @@ function typeLabel(value: unknown) {
 <template>
   <MrrPageShell class="records-page">
     <MrrPageHeader
-      size="compact"
       title="记录管理"
       eyebrow="Scan Records"
       description="默认按完整编号检索，也可选择兼容包含查询；结果分批加载，不做同步总数统计。"
@@ -210,38 +218,47 @@ function typeLabel(value: unknown) {
 
     <MrrDataTablePanel title="扫描记录" description="按条件查询，结果按批次读取。">
       <template #filters>
-        <MrrFilterBar embedded labelled class="records-filter-bar">
-          <div class="mrr-filter-field records-filter__field">
-            <label for="records-bah">病案号</label>
-            <el-input id="records-bah" v-model="query.bah" clearable aria-label="病案号" placeholder="病案号" @keyup.enter="handleSearch" />
+        <MrrFilterBar embedded :focus-ring="false" class="records-filter-bar">
+          <div class="mrr-filter-field records-filter__field mrr-filter-field--code">
+            <el-input id="records-bah" v-model="query.bah" clearable aria-label="病案号" @keyup.enter="handleSearch">
+              <template #prefix>
+                <label for="records-bah" class="mrr-filter-prefix">病案号</label>
+              </template>
+            </el-input>
+          </div>
+          <div class="mrr-filter-field records-filter__field mrr-filter-field--code">
+            <el-input id="records-brxh" v-model="query.brxh" clearable aria-label="病人序号" @keyup.enter="handleSearch">
+              <template #prefix>
+                <label for="records-brxh" class="mrr-filter-prefix">病人序号</label>
+              </template>
+            </el-input>
+          </div>
+          <div class="mrr-filter-field records-filter__field mrr-filter-field--code">
+            <el-input id="records-sjh" v-model="query.sjh" clearable aria-label="上架号" @keyup.enter="handleSearch">
+              <template #prefix>
+                <label for="records-sjh" class="mrr-filter-prefix">上架号</label>
+              </template>
+            </el-input>
+          </div>
+          <div class="mrr-filter-field records-filter__field mrr-filter-field--code">
+            <el-input id="records-opener" v-model="query.openerNo" clearable aria-label="扫描人员" @keyup.enter="handleSearch">
+              <template #prefix>
+                <label for="records-opener" class="mrr-filter-prefix">扫描人员</label>
+              </template>
+            </el-input>
           </div>
           <div class="mrr-filter-field records-filter__field">
-            <label for="records-brxh">病人序号</label>
-            <el-input id="records-brxh" v-model="query.brxh" clearable aria-label="病人序号" placeholder="病人序号" @keyup.enter="handleSearch" />
-          </div>
-          <div class="mrr-filter-field records-filter__field">
-            <label for="records-sjh">上架号</label>
-            <el-input id="records-sjh" v-model="query.sjh" clearable aria-label="上架号" placeholder="上架号" @keyup.enter="handleSearch" />
-          </div>
-          <div class="mrr-filter-field records-filter__field">
-            <label for="records-opener">扫描人员</label>
-            <el-input id="records-opener" v-model="query.openerNo" clearable aria-label="扫描人员" placeholder="扫描人员工号" @keyup.enter="handleSearch" />
-          </div>
-          <div class="mrr-filter-field records-filter__field">
-            <label for="records-btype">类型</label>
             <el-select id="records-btype" v-model="query.btype" class="mrr-single-select" clearable aria-label="类型" placeholder="全部类型">
               <el-option v-for="item in typeOptions" :key="item.value" :label="item.label" :value="item.value" />
             </el-select>
           </div>
-          <div class="mrr-filter-field records-filter__field">
-            <label for="records-legacy-contains">匹配方式</label>
-            <label class="records-legacy-option">
-              <input id="records-legacy-contains" v-model="query.legacyContains" type="checkbox" aria-label="兼容包含查询">
-              兼容包含
-            </label>
+          <div class="mrr-filter-field records-filter__field mrr-filter-field--option">
+            <el-checkbox id="records-legacy-contains" v-model="query.legacyContains" class="records-legacy-option">
+              兼容包含查询
+            </el-checkbox>
           </div>
           <template #actions>
-            <MrrFilterActionButton type="primary" action="search" :pending="loading" :busy="loading" @click="handleSearch">
+            <MrrFilterActionButton action="search" :pending="loading" :busy="loading" @click="handleSearch">
               查询
             </MrrFilterActionButton>
             <MrrFilterActionButton action="reset" :pending="loading" :busy="loading" @click="resetFilters">
@@ -264,9 +281,9 @@ function typeLabel(value: unknown) {
           原来放在页头，与勾选框隔着指标卡和筛选栏，用户不容易把两者联系起来。
         -->
         <div class="records-batch-actions">
-          <span v-if="selectedRows.length" class="records-batch-actions__count">已选 {{ selectedRows.length }} 条</span>
-          <el-button type="primary" :loading="downloading" @click="handleBatchDownload">
-            <el-icon><Download /></el-icon>
+          <span class="records-batch-actions__count" role="status">已选 {{ selectedRows.length }} 条</span>
+          <el-button type="primary" :loading="downloading" :disabled="loading || !selectedRows.length" @click="handleBatchDownload">
+            <FaIcon name="i-lucide:download" aria-hidden="true" />
             批量下载
           </el-button>
         </div>
@@ -283,29 +300,27 @@ function typeLabel(value: unknown) {
         class="records-table"
         @selection-change="handleSelectionChange"
       >
-        <!-- 列宽全部走 min-width，由 el-table 按容器宽度分配：
-             原来 6 个固定 width 列 + 5 个 min-width 列合计 1294px，
-             而 1600 视口下容器只有 1244px，导致右侧「操作」列被挤出可视区，
-             必须横向滚动才能点到。全部改为 min-width 后总宽自适应，不再溢出。 -->
         <el-table-column type="selection" width="48" />
-        <el-table-column prop="bah" label="病案号" min-width="130" />
-        <el-table-column prop="brxh" label="病人序号" min-width="110" />
-        <el-table-column prop="sjh" label="上架号" min-width="110" />
-        <el-table-column prop="filename" label="文件名" min-width="200" show-overflow-tooltip />
-        <el-table-column prop="btype" label="类型" min-width="120">
+        <el-table-column v-bind="tableSequenceColumn(loadedRowOffset, list.length)" />
+        <!-- 短字段使用稳定宽度，文件名及目录弹性分配余量，窄屏保留原生横向滚动。 -->
+        <el-table-column prop="bah" label="病案号" width="128" show-overflow-tooltip />
+        <el-table-column prop="brxh" label="病人序号" width="112" show-overflow-tooltip />
+        <el-table-column prop="sjh" label="上架号" width="120" show-overflow-tooltip />
+        <el-table-column prop="filename" label="文件名" min-width="240" show-overflow-tooltip />
+        <el-table-column prop="btype" label="类型" width="136" show-overflow-tooltip>
           <template #default="{ row }">
             {{ typeLabel(row.btype) }}
           </template>
         </el-table-column>
-        <el-table-column prop="pages" label="页数" min-width="72" />
-        <el-table-column prop="openerNo" label="扫描人员" min-width="110" />
-        <el-table-column prop="folder" label="目录" min-width="130" show-overflow-tooltip />
-        <el-table-column prop="migrationStatus" label="迁移状态" min-width="96">
+        <el-table-column prop="pages" label="页数" width="80" show-overflow-tooltip />
+        <el-table-column prop="openerNo" label="扫描人员" width="112" show-overflow-tooltip />
+        <el-table-column prop="folder" label="目录" min-width="140" show-overflow-tooltip />
+        <el-table-column prop="migrationStatus" label="迁移状态" min-width="132" class-name="mrr-table-status-column">
           <template #default="{ row }">
             <MrrStatusTag
               v-if="row.migrationStatus"
-              :label="migrationStatusMap[row.migrationStatus]?.label || row.migrationStatus"
-              :tone="migrationStatusMap[row.migrationStatus]?.tone || 'neutral'"
+              :title="row.migrationStatus"
+              v-bind="migrationStatusTag(row.migrationStatus)"
             />
             <span v-else class="text-muted">-</span>
           </template>
@@ -327,25 +342,26 @@ function typeLabel(value: unknown) {
       </el-table>
 
       <template #pagination>
-        <div class="pager">
-          <el-select v-model="pageSize" aria-label="每批条数" class="records-page-size-select" @change="reloadFirstBatch">
-            <el-option v-for="size in [10, 20, 50, 100]" :key="size" :value="size" :label="`${size}条/批`" />
-          </el-select>
-          <div class="pager__navigation">
-            <el-button :disabled="pageNum <= 1 || loading" @click="previousPage">
-              上一批
-            </el-button>
-            <span class="pager__current">第 {{ pageNum }} 批</span>
-            <el-button :disabled="!hasMore || loading" @click="nextPage">
-              下一批
-            </el-button>
-          </div>
-        </div>
+        <MrrCursorPagination
+          :page="pageNum"
+          :max-reachable-page="maxReachablePage"
+          :page-size="pageSize"
+          :page-sizes="[10, 20, 50, 100]"
+          :loading="loading"
+          :can-previous="pageNum > 1"
+          :can-next="hasMore"
+          @jump="jumpToPage"
+          @size-change="size => { pageSize = size; reloadFirstBatch() }"
+        >
+          <template #summary>
+            <span v-if="!loading && !error">本页 {{ list.length }} 条</span>
+          </template>
+        </MrrCursorPagination>
       </template>
     </MrrDataTablePanel>
 
-    <el-dialog v-model="detailVisible" title="记录详情" width="720px" :close-on-click-modal="false">
-      <el-descriptions v-if="currentRecord" :column="2" border>
+    <el-dialog v-model="detailVisible" align-center title="记录详情" width="720px" :close-on-click-modal="false">
+      <el-descriptions v-if="currentRecord" direction="vertical" class="mrr-detail-descriptions" :column="isNarrowScreen ? 1 : 2" border>
         <el-descriptions-item label="病案号">
           {{ currentRecord.bah || '-' }}
         </el-descriptions-item>
@@ -354,9 +370,6 @@ function typeLabel(value: unknown) {
         </el-descriptions-item>
         <el-descriptions-item label="上架号">
           {{ currentRecord.sjh || '-' }}
-        </el-descriptions-item>
-        <el-descriptions-item label="文件名">
-          {{ currentRecord.filename || '-' }}
         </el-descriptions-item>
         <el-descriptions-item label="类型">
           {{ typeLabel(currentRecord.btype) }}
@@ -370,21 +383,24 @@ function typeLabel(value: unknown) {
         <el-descriptions-item label="上传标记">
           {{ currentRecord.uploadFlag || '-' }}
         </el-descriptions-item>
-        <el-descriptions-item label="目录" :span="2">
-          {{ currentRecord.folder || '-' }}
-        </el-descriptions-item>
         <el-descriptions-item label="迁移状态">
           <MrrStatusTag
             v-if="currentRecord.migrationStatus"
-            :label="migrationStatusMap[currentRecord.migrationStatus]?.label || currentRecord.migrationStatus"
-            :tone="migrationStatusMap[currentRecord.migrationStatus]?.tone || 'neutral'"
+            :title="currentRecord.migrationStatus"
+            v-bind="migrationStatusTag(currentRecord.migrationStatus)"
           />
           <span v-else>-</span>
         </el-descriptions-item>
         <el-descriptions-item label="文件大小">
           {{ currentRecord.fileSize ? `${(currentRecord.fileSize / 1024).toFixed(1)} KB` : '-' }}
         </el-descriptions-item>
-        <el-descriptions-item label="MD5" :span="2">
+        <el-descriptions-item label="文件名" :span="isNarrowScreen ? 1 : 2">
+          {{ currentRecord.filename || '-' }}
+        </el-descriptions-item>
+        <el-descriptions-item label="目录" :span="isNarrowScreen ? 1 : 2">
+          {{ currentRecord.folder || '-' }}
+        </el-descriptions-item>
+        <el-descriptions-item label="MD5" :span="isNarrowScreen ? 1 : 2">
           {{ currentRecord.checksumMd5 || '-' }}
         </el-descriptions-item>
       </el-descriptions>
@@ -393,25 +409,10 @@ function typeLabel(value: unknown) {
 </template>
 
 <style scoped>
-.pager {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--mrr-space-2);
-  align-items: center;
-  justify-content: flex-end;
-  width: 100%;
-}
-
-/* 标签排版与操作区底边对齐由 MrrFilterBar 的 labelled 模式统一提供，这里只保留列宽。 */
-.records-filter__field {
-  flex: 1 1 150px;
-}
-
 .records-legacy-option {
-  display: flex;
-  gap: 6px;
-  align-items: center;
-  min-height: 32px;
+  height: var(--mrr-input-height);
+  min-height: var(--mrr-input-height);
+  margin-right: 0;
   white-space: nowrap;
 }
 
@@ -433,6 +434,7 @@ function typeLabel(value: unknown) {
 .records-batch-actions {
   display: flex;
   flex: 0 0 auto;
+  flex-wrap: wrap;
   gap: var(--mrr-space-3);
   align-items: center;
 }
@@ -441,13 +443,6 @@ function typeLabel(value: unknown) {
   font-size: var(--mrr-font-size-sm);
   font-variant-numeric: tabular-nums;
   color: var(--mrr-muted-foreground);
-}
-
-.pager__current {
-  min-width: 4.5em;
-  font-variant-numeric: tabular-nums;
-  color: var(--mrr-muted-foreground);
-  text-align: center;
 }
 
 .records-query-context strong {
@@ -461,27 +456,10 @@ function typeLabel(value: unknown) {
 }
 
 @media (max-width: 760px) {
-  .records-filter__field {
-    flex: 1 1 100%;
-    width: 100%;
-  }
-
   .records-batch-actions {
     justify-content: space-between;
     width: 100%;
   }
-}
-
-.records-page-size-select {
-  width: 120px;
-}
-
-.pager__navigation {
-  display: flex;
-  flex: 0 0 auto;
-  gap: var(--mrr-space-2);
-  align-items: center;
-  white-space: nowrap;
 }
 
 .text-muted {

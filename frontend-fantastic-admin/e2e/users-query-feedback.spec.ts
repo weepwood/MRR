@@ -1,14 +1,14 @@
 import type { Page } from '@playwright/test'
 import { expect, test } from '@playwright/test'
+import { isolateLocalVisualSettings } from './helpers/local-visual-settings'
+
+test.beforeEach(async ({ page }) => { await isolateLocalVisualSettings(page) })
 
 test.use({ actionTimeout: 10_000 })
 
-/*
- * 旧实现的两个人为负担（已删除）：
- * 1. 每次查询弹「查询成功：已加载 N 条…」toast（读操作成功通知）；
- * 2. 320ms「最低加载时长」——按钮忙态被人为补足到 ≥320ms。
- */
-const QUERY_BUSY_FLOOR_MS = 310
+// Keep the original regression boundary: the old 320ms minimum must not
+// be reachable before the query has finished, regardless of Runner speed.
+const QUERY_VIRTUAL_MS = 100
 const TOAST_POLL_WINDOW_MS = 1500
 
 async function openUsers(page: Page) {
@@ -26,54 +26,60 @@ test('查询属读操作：反馈只走表格通道，不弹成功通知、不�
   await openUsers(page)
   const queryButton = page.getByRole('button', { name: '查询', exact: true })
 
-  // 先用一轮查询热身（命中 mock 模块编译与首次响应抖动），不参与断言
-  const warmupResponse = page.waitForResponse(response =>
-    response.request().method() === 'GET' && new URL(response.url()).pathname.endsWith('/auth/users'))
-  await queryButton.click()
-  await warmupResponse
-  await expect(queryButton).not.toHaveAttribute('aria-busy', 'true')
-  await page.waitForTimeout(4000) // 让热身轮可能弹出的旧 toast 完全离场，不污染下一轮断言
+  await expect(queryButton).toBeVisible()
+  await expect(queryButton).toHaveAttribute('aria-busy', 'false')
+  await expect(queryButton).toHaveAttribute('aria-disabled', 'false')
+  await page.clock.install()
+  await page.clock.pauseAt(new Date(await page.evaluate(() => Date.now()) + 1000))
 
-  /*
-   * 第 2 轮验证两件事。忙态周期用页面内 MutationObserver 记录 aria-busy
-   * 翻转边沿（performance.now），测量不含 Playwright 协议往返——协议往返
-   * 在 CI 慢环境下可 >100ms，会污染 <310ms 这类紧上界断言。
-   */
-  await queryButton.evaluate((button) => {
-    const record = window as { __mrrQueryBusyEdges?: number[] }
-    record.__mrrQueryBusyEdges = []
+  // Hold the actual Mock response until the in-flight state has been observed.
+  // Virtual time advances only on our command; protocol and network latency
+  // cannot accidentally consume the old minimum-duration timer.
+  let requestSeen = false
+  let releaseResponse!: () => void
+  const responseGate = new Promise<void>((resolve) => { releaseResponse = resolve })
+  await page.route(/\/api\/v1\/auth\/users(?:\?.*)?$/, async (route) => {
+    expect(route.request().method()).toBe('GET')
+    requestSeen = true
+    await responseGate
+    await route.continue()
+  })
+  await page.evaluate(() => {
+    const record = window as { __mrrQuerySuccessToast?: boolean }
+    const seen = () => [...document.querySelectorAll('.el-message')]
+      .some(element => element.textContent?.includes('查询成功'))
+    record.__mrrQuerySuccessToast = seen()
     new MutationObserver(() => {
-      record.__mrrQueryBusyEdges!.push(performance.now())
-    }).observe(button, { attributeFilter: ['aria-busy'], attributes: true })
+      if (seen()) {
+        record.__mrrQuerySuccessToast = true
+      }
+    }).observe(document.body, { subtree: true, childList: true, characterData: true })
   })
 
-  const cycleStartedAt = Date.now()
-  await queryButton.click()
-  // 期望经历 false→true→false 两次翻转；5s 兜底避免死循环
-  await page.waitForFunction(() => ((window as { __mrrQueryBusyEdges?: number[] }).__mrrQueryBusyEdges ?? []).length >= 2, undefined, { timeout: 10_000 })
-
-  // 1) 读操作不弹「查询成功」通知：旧实现加载完成即弹、存活 3.2s，
-  //    从点击起 1.5s 轮询必然捕获（忙态已翻转回 false 说明加载已完成）。
-  //    这是回归检测窗口而非正确性窗口：慢响应下窗口可能静默通过，但方向上
-  //    GREEN（不出现）不受响应时长影响。断言按文案收窄——未来查询链路出现
-  //    合法的非成功类全局提示（如 warning）不误伤本用例。
-  //    结果到达由 MrrDataTablePanel 顶边进度条与行淡入反馈，无需冗余 toast。
-  const successToast = page.locator('.el-message', { hasText: '查询成功' })
-  let toastSeen = false
-  while (Date.now() - cycleStartedAt < TOAST_POLL_WINDOW_MS) {
-    if (await successToast.count() > 0) {
-      toastSeen = true
-      break
-    }
-    await page.waitForTimeout(20)
+  const startedAt = await page.evaluate(() => Date.now())
+  const usersResponse = page.waitForResponse(response =>
+    response.request().method() === 'GET' && new URL(response.url()).pathname.endsWith('/auth/users'))
+  const rolesResponse = page.waitForResponse(response =>
+    response.request().method() === 'GET' && new URL(response.url()).pathname.endsWith('/auth/roles'))
+  try {
+    // Dispatch the actual button handler without waiting for a frozen rAF
+    // actionability check. Visibility/availability were asserted above.
+    await queryButton.dispatchEvent('click')
+    await expect.poll(() => requestSeen).toBe(true)
+    await expect(queryButton).toHaveAttribute('aria-busy', 'true')
+    await page.clock.runFor(QUERY_VIRTUAL_MS)
+    await expect(queryButton).toHaveAttribute('aria-busy', 'true')
   }
-  expect(toastSeen, '「查询成功」读操作通知不应出现').toBe(false)
-
-  // 2) 不人为放慢：旧实现 320ms 下限使忙态必然 ≥320ms；删除后忙态只反映
-  //    真实在途时间（页面内测量：两次属性翻转的时间差）。
-  const busyCycleMs = await page.evaluate(() => {
-    const edges = (window as { __mrrQueryBusyEdges?: number[] }).__mrrQueryBusyEdges ?? []
-    return edges.length >= 2 ? edges[1]! - edges[0]! : Number.NaN
-  })
-  expect(busyCycleMs, `查询按钮忙态周期 ${busyCycleMs}ms 应低于 ${QUERY_BUSY_FLOOR_MS}ms（旧实现有 320ms 人为下限）`).toBeLessThan(QUERY_BUSY_FLOOR_MS)
+  finally {
+    releaseResponse()
+  }
+  const responses = await Promise.all([usersResponse, rolesResponse])
+  expect(responses.every(response => response.ok())).toBe(true)
+  // A request-owned spinner must clear without any more time passing.
+  // The old minimum would remain busy at 100ms, regardless of host latency.
+  await expect(queryButton).toHaveAttribute('aria-busy', 'false', { timeout: 5000 })
+  expect(await page.evaluate(() => Date.now()) - startedAt).toBe(QUERY_VIRTUAL_MS)
+  await expect(page.locator('.user-identity').first()).toBeVisible()
+  await page.clock.runFor(TOAST_POLL_WINDOW_MS)
+  expect(await page.evaluate(() => (window as { __mrrQuerySuccessToast?: boolean }).__mrrQuerySuccessToast), '「查询成功」读操作通知不应出现').toBe(false)
 })

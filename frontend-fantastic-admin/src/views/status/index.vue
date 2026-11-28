@@ -16,7 +16,7 @@ import {
 } from '@/api/modules/system-status'
 import serverLogo from '@/assets/images/server.svg'
 import MrrChart from '@/components/charts/MrrChart.vue'
-import { mrrChartColor } from '@/config/chart-theme'
+import { mrrChartColorToken } from '@/config/chart-theme'
 import useVisibleInterval from '@/utils/composables/useVisibleInterval'
 
 defineOptions({ name: 'PublicSystemStatusPage' })
@@ -99,9 +99,9 @@ const hourlyAvailabilityChart = computed<ECOption>(() => ({
     showSymbol: true,
     symbol: 'circle',
     symbolSize: 6,
-    lineStyle: { width: 2.5, color: mrrChartColor('primary') },
-    itemStyle: { color: mrrChartColor('primary') },
-    areaStyle: { color: mrrChartColor('primary'), opacity: 0.12 },
+    lineStyle: { width: 2.5, color: mrrChartColorToken('primary') },
+    itemStyle: { color: mrrChartColorToken('primary') },
+    areaStyle: { color: mrrChartColorToken('primary'), opacity: 0.12 },
   }],
 }))
 const statusCopy = computed(() => {
@@ -273,13 +273,15 @@ useVisibleInterval(refreshCurrentStatus, 60_000)
             <small>Medical Record Repository</small>
           </span>
         </a>
-        <button class="refresh-button" type="button" :disabled="refreshing" @click="refreshCurrentStatus">
+        <el-button class="refresh-button mrr-button-flow" :auto-insert-space="false" :disabled="refreshing" :aria-busy="refreshing" @click="refreshCurrentStatus">
           <i class="i-lucide:refresh-cw" :class="{ spinning: refreshing }" aria-hidden="true" />
           刷新状态
-        </button>
+        </el-button>
       </header>
 
-      <p v-if="demoStatus" class="inline-warning">演示数据：以下状态为合成记录，不代表实际服务健康状况。</p>
+      <p v-if="demoStatus" class="inline-warning">
+        演示数据：以下状态为合成记录，不代表实际服务健康状况。
+      </p>
 
       <section v-if="loading" class="state-panel loading-panel" aria-busy="true">
         <span class="loading-dot" />
@@ -427,9 +429,9 @@ useVisibleInterval(refreshCurrentStatus, 60_000)
               <h2>{{ selectedDate ? `${selectedDate} 异常运行区间` : '异常运行区间' }}</h2>
               <p>{{ selectedDate ? '仅展示与所选日期有时间重叠的异常区间。' : '仅展示系统自动检测或根据心跳中断推断出的异常时间段。' }}</p>
             </div>
-            <button v-if="selectedDate" type="button" class="clear-date-filter" @click="clearDateFilter">
+            <el-button v-if="selectedDate" type="primary" plain :auto-insert-space="false" class="clear-date-filter" @click="clearDateFilter">
               查看全部
-            </button>
+            </el-button>
           </div>
 
           <div v-if="filteredIncidents.length" class="incident-list">
@@ -535,23 +537,14 @@ useVisibleInterval(refreshCurrentStatus, 60_000)
   color: var(--mrr-muted-foreground);
 }
 
-.refresh-button {
-  display: inline-flex;
-  gap: var(--mrr-space-2);
-  align-items: center;
-  height: var(--mrr-control-height);
+.refresh-button.el-button {
   padding: 0 var(--mrr-space-3);
-  font: inherit;
-  font-size: var(--mrr-font-size-sm);
-  color: var(--el-text-color-primary);
-  cursor: pointer;
   background: var(--mrr-card);
-  border: 1px solid var(--mrr-border);
   border-radius: var(--mrr-radius-lg);
   box-shadow: var(--mrr-shadow-xs);
 }
 
-.refresh-button:disabled {
+.refresh-button.el-button.is-disabled {
   cursor: wait;
   opacity: 0.65;
 }
@@ -897,16 +890,10 @@ useVisibleInterval(refreshCurrentStatus, 60_000)
   margin-top: 8px;
 }
 
-.clear-date-filter {
+.clear-date-filter.el-button {
   flex: none;
-  height: var(--mrr-control-height);
-  padding: 0 var(--mrr-space-3);
-  font: inherit;
-  font-size: 12px;
-  color: var(--color-primary);
-  cursor: pointer;
-  background: var(--mrr-tone-primary-soft);
-  border: 1px solid var(--mrr-tone-primary-border);
+  padding-inline: var(--mrr-space-3);
+  font-size: var(--mrr-font-size-xs);
   border-radius: var(--mrr-radius-sm);
 }
 

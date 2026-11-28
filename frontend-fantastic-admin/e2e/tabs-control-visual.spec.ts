@@ -3,6 +3,9 @@ import fs from 'node:fs/promises'
 import path from 'node:path'
 import process from 'node:process'
 import { expect, test } from '@playwright/test'
+import { isolateLocalVisualSettings } from './helpers/local-visual-settings'
+
+test.beforeEach(async ({ page }) => { await isolateLocalVisualSettings(page) })
 
 const evidence = process.env.MRR_TABS_EVIDENCE
 const capture = process.env.MRR_TABS_CAPTURE === 'true'

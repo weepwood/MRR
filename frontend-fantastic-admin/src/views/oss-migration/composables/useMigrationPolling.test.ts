@@ -56,6 +56,21 @@ describe('migration polling lifecycle', () => {
     context.scope.stop()
   })
 
+  it.each([null, { id: 2, status: 'completed' }, { status: 'running' }])('rejects invalid job payload %j and permits explicit recovery', async (data) => {
+    const context = setup()
+    vi.mocked(getMigrationJob).mockResolvedValueOnce({ data } as any)
+    context.polling.startPolling()
+    await vi.advanceTimersByTimeAsync(6_000)
+    expect(context.job.value).toEqual({ id: 1, status: 'running' })
+    expect(context.refresh).not.toHaveBeenCalled()
+    expect(getMigrationJob).toHaveBeenCalledTimes(1)
+    vi.mocked(getMigrationJob).mockResolvedValue({ data: { id: 1, status: 'completed' } } as any)
+    context.polling.startPolling()
+    await vi.advanceTimersByTimeAsync(2_000)
+    expect(context.job.value).toEqual({ id: 1, status: 'completed' })
+    expect(context.refresh).toHaveBeenCalledTimes(1)
+  })
+
   it('stops at a terminal status and refreshes once', async () => {
     const context = setup()
     vi.mocked(getMigrationJob).mockResolvedValue({ data: { id: 1, status: 'completed' } } as any)

@@ -4,8 +4,6 @@ import com.zjcxph.imgapi.entity.ImageMigrationLog;
 import com.zjcxph.imgapi.entity.Scan;
 import com.zjcxph.imgapi.mapper.OssMigrationManagementMapper;
 import com.zjcxph.imgapi.utils.PaginationUtils;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -16,14 +14,15 @@ import java.util.List;
 @Service
 public class OssMigrationManagementService {
 
-    private static final Logger logger = LoggerFactory.getLogger(OssMigrationManagementService.class);
-
     private final OssMigrationManagementMapper mapper;
-    private final OssService ossService;
+    private final MigrationService migrationService;
+    private final com.zjcxph.imgapi.config.ImageDeliveryProperties deliveryProperties;
 
-    public OssMigrationManagementService(OssMigrationManagementMapper mapper, OssService ossService) {
+    public OssMigrationManagementService(OssMigrationManagementMapper mapper, MigrationService migrationService,
+                                         com.zjcxph.imgapi.config.ImageDeliveryProperties deliveryProperties) {
         this.mapper = mapper;
-        this.ossService = ossService;
+        this.migrationService = migrationService;
+        this.deliveryProperties=deliveryProperties;
     }
 
     public List<Scan> getPending(String folder, String bah, String sjh, int limit) {
@@ -47,17 +46,10 @@ public class OssMigrationManagementService {
     }
 
     private void enrichWithPresignedUrl(ImageMigrationLog log) {
-        if (log == null
-                || !"success".equals(log.getMigrationStatus())
-                || log.getOssUrl() == null
-                || log.getOssUrl().isBlank()) {
-            return;
-        }
-        try {
-            log.setOssUrl(ossService.generatePresignedUrl(log.getOssUrl()));
-        } catch (Exception exception) {
-            logger.warn("Failed to generate OSS migration log URL: logId={}", log.getId(), exception);
-        }
+        if(log==null)return;
+        com.zjcxph.imgapi.utils.MigrationLogPrivacy.sanitize(log);
+        if(deliveryProperties.isGateway())log.setOssUrl(null);
+        else migrationService.enrichWithPresignedUrl(log);
     }
 
     private String trimToNull(String value) {

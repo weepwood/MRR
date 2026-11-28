@@ -43,12 +43,13 @@ withDefaults(defineProps<{
 }
 
 .mrr-chart-card__body {
+  min-width: 0;
   min-height: 120px;
 }
 
 .mrr-chart-card__empty {
   display: grid;
-  gap: 8px;
+  gap: var(--mrr-space-2);
   place-content: center;
   justify-items: center;
   min-height: 220px;
@@ -60,6 +61,6 @@ withDefaults(defineProps<{
 }
 
 .mrr-chart-card__empty span {
-  font-size: 13px;
+  font-size: var(--mrr-font-size-sm);
 }
 </style>

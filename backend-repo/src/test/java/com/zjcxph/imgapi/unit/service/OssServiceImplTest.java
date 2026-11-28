@@ -196,6 +196,19 @@ class OssServiceImplTest {
         assertThat(captor.getValue().contentLength()).isEqualTo(3);
     }
 
+    @Test void conditionalCollisionNeverFallsBackToOverwrite()throws Exception{
+        Path file=tempDir.resolve("collision.jpg");Files.write(file,new byte[]{1,2,3});
+        String md5="0123456789abcdef0123456789abcdef";
+        when(ossProperties.isConditionalCreate()).thenReturn(true);
+        when(s3Client.putObject(any(PutObjectRequest.class),any(RequestBody.class))).thenThrow(
+            software.amazon.awssdk.services.s3.model.S3Exception.builder().statusCode(412).build());
+        when(s3Client.headObject(any(HeadObjectRequest.class)))
+            .thenReturn(HeadObjectResponse.builder().metadata(Map.of("source-md5","different")).build());
+        assertThatThrownBy(()->ossService.uploadFile(file.toString(),"medical-records/test.jpg",md5))
+            .isInstanceOf(IllegalStateException.class);
+        verify(s3Client,org.mockito.Mockito.times(1)).putObject(any(PutObjectRequest.class),any(RequestBody.class));
+    }
+
     @Test
     @DisplayName("参数错误不把本地路径或对象键写进异常消息")
     void invalidArgumentsDoNotExposePaths() {
@@ -216,6 +229,7 @@ class OssServiceImplTest {
         AtomicReference<String> putPath = new AtomicReference<>();
         AtomicReference<String> contentMd5 = new AtomicReference<>();
         AtomicReference<String> crc32 = new AtomicReference<>();
+        AtomicReference<String> ifNoneMatch = new AtomicReference<>();
         HttpServer server = HttpServer.create(new InetSocketAddress("127.0.0.1", 0), 0);
         server.createContext("/", exchange -> {
             if ("HEAD".equals(exchange.getRequestMethod())) {
@@ -224,6 +238,7 @@ class OssServiceImplTest {
                 putPath.set(exchange.getRequestURI().getPath());
                 contentMd5.set(exchange.getRequestHeaders().getFirst("Content-MD5"));
                 crc32.set(exchange.getRequestHeaders().getFirst("x-amz-checksum-crc32"));
+                ifNoneMatch.set(exchange.getRequestHeaders().getFirst("If-None-Match"));
                 exchange.getRequestBody().readAllBytes();
                 exchange.getResponseHeaders().add("ETag", "\"etag-test\"");
                 exchange.sendResponseHeaders(200, -1);
@@ -241,6 +256,7 @@ class OssServiceImplTest {
             when(ossProperties.getRegion()).thenReturn("us-east-1");
             when(ossProperties.isPathStyleAccess()).thenReturn(true);
             when(ossProperties.getUrlExpireSeconds()).thenReturn(3600);
+            when(ossProperties.isConditionalCreate()).thenReturn(true);
             realService.init();
 
             assertThat(realService.doesObjectExist("medical-records/missing.jpg")).isFalse();
@@ -254,9 +270,99 @@ class OssServiceImplTest {
             assertThat(putPath.get()).isEqualTo("/test-bucket/medical-records/wire-test.jpg");
             assertThat(contentMd5.get()).isNotBlank();
             assertThat(crc32.get()).isNull();
+            assertThat(ifNoneMatch.get()).isEqualTo("*");
         } finally {
             realService.destroy();
             server.stop(0);
+        }
+    }
+
+    @Test void actualConditionalServerPreservesWinnerAndChecksBytesNotOnlyMetadata()throws Exception{
+        var content=new AtomicReference<byte[]>();
+        var md5Metadata=new AtomicReference<String>();
+        var successes=new java.util.concurrent.atomic.AtomicInteger();
+        var conflicts=new java.util.concurrent.atomic.AtomicInteger();
+        var gets=new java.util.concurrent.atomic.AtomicInteger();
+        HttpServer server=HttpServer.create(new InetSocketAddress("127.0.0.1",0),0);
+        var serverThreads=java.util.concurrent.Executors.newFixedThreadPool(4);
+        server.setExecutor(serverThreads);
+        server.createContext("/",exchange->{
+            try{
+                switch(exchange.getRequestMethod()){
+                    case "PUT" -> {
+                        byte[] body=exchange.getRequestBody().readAllBytes();
+                        // The real SDK may use AWS streaming SigV4 framing on HTTP.
+                        String encoding=exchange.getRequestHeaders().getFirst("Content-Encoding");
+                        if(encoding!=null&&encoding.contains("aws-chunked"))body=decodeAwsChunks(body);
+                        String expected=exchange.getRequestHeaders().getFirst("Content-MD5");
+                        String actual=java.util.Base64.getEncoder().encodeToString(org.apache.commons.codec.digest.DigestUtils.md5(body));
+                        if(!actual.equals(expected)){exchange.sendResponseHeaders(400,-1);break;}
+                        if(!"*".equals(exchange.getRequestHeaders().getFirst("If-None-Match"))){exchange.sendResponseHeaders(400,-1);break;}
+                        synchronized(content){
+                            if(content.get()!=null){conflicts.incrementAndGet();exchange.sendResponseHeaders(412,-1);}
+                            else{
+                                md5Metadata.set(exchange.getRequestHeaders().getFirst("x-amz-meta-source-md5"));
+                                content.set(body);successes.incrementAndGet();exchange.getResponseHeaders().add("ETag","\"synthetic\"");
+                                exchange.sendResponseHeaders(200,-1);
+                            }
+                        }
+                    }
+                    case "HEAD" -> {
+                        exchange.getResponseHeaders().add("x-amz-meta-source-md5",md5Metadata.get());
+                        exchange.getResponseHeaders().add("Content-Length",Integer.toString(content.get().length));
+                        exchange.sendResponseHeaders(200,-1);
+                    }
+                    case "GET" -> {
+                        gets.incrementAndGet();byte[] value=content.get();exchange.sendResponseHeaders(200,value.length);
+                        exchange.getResponseBody().write(value);
+                    }
+                    default -> exchange.sendResponseHeaders(405,-1);
+                }
+            }finally{exchange.close();}
+        });
+        server.start();
+        OssProperties config=new OssProperties();config.setBucket("test-bucket");config.setEndpoint("http://127.0.0.1:"+server.getAddress().getPort());
+        config.setAccessKeyId("synthetic-access");config.setAccessKeySecret("synthetic-secret");config.setRegion("us-east-1");
+        config.setPathStyleAccess(true);config.setConditionalCreate(true);
+        var client=new OssServiceImpl(config);
+        var pool=java.util.concurrent.Executors.newFixedThreadPool(2);
+        try{
+            client.init();
+            Path a=tempDir.resolve("first.jpg"),b=tempDir.resolve("second.jpg");
+            Files.writeString(a,"synthetic first");Files.writeString(b,"synthetic second");
+            String key="medical-records/synthetic-race.jpg";
+            var barrier=new java.util.concurrent.CyclicBarrier(2);
+            var futures=java.util.List.of(a,b).stream().map(path->pool.submit(()->{
+                barrier.await();try{client.uploadFile(path.toString(),key,client.calculateMd5(path.toString()));return true;}
+                catch(IllegalStateException conflict){return false;}
+            })).toList();
+            assertThat(futures.get(0).get(15,java.util.concurrent.TimeUnit.SECONDS)^futures.get(1).get(15,java.util.concurrent.TimeUnit.SECONDS)).isTrue();
+            assertThat(successes.get()).isEqualTo(1);assertThat(conflicts.get()).isEqualTo(1);
+            byte[] winner=content.get().clone();
+            Path same=tempDir.resolve("same.jpg");Files.write(same,winner);
+            String hash=client.calculateMd5(same.toString());
+            assertThat(client.uploadFile(same.toString(),key,hash)).isEqualTo(key);
+            assertThat(content.get()).isEqualTo(winner);
+            assertThat(gets.get()).isGreaterThanOrEqualTo(1);
+            // A lying source-md5 header must not establish byte identity.
+            content.set("synthetic corrupted".getBytes(StandardCharsets.UTF_8));
+            assertThat(client.verifyUploadIntegrity(key,hash)).isFalse();
+            assertThat(successes.get()).isEqualTo(1);
+            System.out.println("MRR_CONDITIONAL_WIRE one concurrent PUT winner, one 412, matching replay, metadata mismatch bytes rejected");
+        }finally{pool.shutdownNow();client.destroy();server.stop(0);serverThreads.shutdownNow();}
+    }
+
+    private static byte[] decodeAwsChunks(byte[] bytes)throws java.io.IOException{
+        var input=new java.io.ByteArrayInputStream(bytes);var output=new java.io.ByteArrayOutputStream();
+        while(true){
+            var line=new java.io.ByteArrayOutputStream();
+            int ch;while((ch=input.read())>=0&&ch!='\n')line.write(ch);
+            if(ch<0)throw new java.io.IOException("Truncated chunk");
+            int length=Integer.parseInt(line.toString(StandardCharsets.US_ASCII).trim().split(";",2)[0],16);
+            if(length==0)return output.toByteArray();
+            byte[] data=input.readNBytes(length);
+            if(data.length!=length||input.read()!='\r'||input.read()!='\n')throw new java.io.IOException("Invalid chunk");
+            output.write(data);
         }
     }
 

@@ -123,4 +123,34 @@ describe('internal archive ZIP download', () => {
     expect(externalDownload).not.toHaveBeenCalled()
     expect(message.warning).toHaveBeenCalledWith('外部系统未授予批量下载权限')
   })
+  it('does not start a browser download for a late response after external session loss', async () => {
+    setArchiveAccessMode('external-ticket')
+    const session = ref<ExternalArchiveSession | null>({
+      clientId: 'synthetic-client',
+      externalUserId: 'synthetic-user',
+      allowDownload: true,
+      expiresIn: 60,
+      cases: [{ bah: '123' }],
+    })
+    const scope = effectScope()
+    scopes.push(scope)
+    const value = scope.run(() => useArchiveImages({ externalSession: session }))!
+    value.searchBah.value = '123'
+    value.images.value = [{ id: 1, bah: '123' }]
+    let resolve!: (value: { data: Blob }) => void
+    externalDownload.mockReturnValueOnce(new Promise((yes) => { resolve = yes }))
+    const create = vi.fn(() => 'blob:synthetic')
+    vi.stubGlobal('URL', class extends URL { static createObjectURL = create; static revokeObjectURL = vi.fn() })
+    try {
+      const task = value.handleDownload()
+      expect(externalDownload).toHaveBeenCalledTimes(1)
+      session.value = null
+      resolve({ data: new Blob(['synthetic'], { type: 'application/zip' }) })
+      await task
+      expect(create).not.toHaveBeenCalled()
+      expect(message.success).not.toHaveBeenCalled()
+      expect(value.downloading.value).toBe(false)
+    }
+    finally { vi.unstubAllGlobals() }
+  })
 })

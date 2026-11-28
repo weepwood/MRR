@@ -70,7 +70,9 @@ public class OssController {
         try {
             List<OssUploadResult> results = new ArrayList<>();
             for (Integer scanId : request.getScanIds()) {
-                results.add(migrationService.uploadSingleScan(scanId));
+                OssUploadResult result=migrationService.uploadSingleScan(scanId);
+                if(deliveryProperties.isGateway())result.setOssUrl(null);
+                results.add(result);
             }
             return Result.success(uploadSummary(results)).message("上传完成");
         } catch (IllegalArgumentException | IllegalStateException e) {
@@ -90,6 +92,7 @@ public class OssController {
         }
         try {
             List<OssUploadResult> results = migrationService.uploadByBah(bah.trim());
+            if(deliveryProperties.isGateway())results.forEach(result->result.setOssUrl(null));
             Map<String, Object> response = uploadSummary(results);
             response.put("bah", bah.trim());
             return Result.success(response).message("上传完成");
@@ -124,6 +127,7 @@ public class OssController {
 
     @Operation(summary = "浏览 OSS 迁移文件目录")
     @GetMapping("/browser")
+    @RequirePermissions({"record:manage"})
     public Result<OssBrowserPageDTO> browseOssFiles(
             @RequestParam(required = false) String prefix,
             @RequestParam(required = false) String continuationToken,
@@ -131,16 +135,18 @@ public class OssController {
         try {
             return Result.success(ossService.browseObjects(prefix, continuationToken, maxKeys));
         } catch (IllegalArgumentException | IllegalStateException e) {
-            return Result.fail(e.getMessage());
+            return Result.fail("OSS 浏览参数或服务状态无效");
         } catch (Exception e) {
-            logger.error("浏览 OSS 文件失败：prefix={}", prefix, e);
+            logger.warn("浏览 OSS 文件失败：type={}",e.getClass().getSimpleName());
             return Result.fail("读取 OSS 目录失败");
         }
     }
 
     @Operation(summary = "获取 OSS 浏览器文件签名 URL")
     @GetMapping("/browser/url")
+    @RequirePermissions({"record:manage"})
     public Result<Map<String, Object>> getBrowserOssUrl(@RequestParam String key) {
+        if(deliveryProperties.isGateway())return Result.fail(409,"网关模式不允许按对象 Key 签发地址");
         try {
             String signedUrl = ossService.generateBrowserPresignedUrl(key);
             Map<String, Object> response = new HashMap<>();
@@ -148,9 +154,9 @@ public class OssController {
             response.put("ossUrl", signedUrl);
             return Result.success(response);
         } catch (IllegalArgumentException | IllegalStateException e) {
-            return Result.fail(e.getMessage());
+            return Result.fail("OSS 浏览参数或服务状态无效");
         } catch (Exception e) {
-            logger.error("获取 OSS 浏览文件 URL 失败：key={}", key, e);
+            logger.warn("获取 OSS 浏览文件 URL 失败：type={}",e.getClass().getSimpleName());
             return Result.fail("获取 OSS 文件地址失败");
         }
     }
@@ -165,7 +171,9 @@ public class OssController {
     @GetMapping("/migration/readiness")
     public Result<MigrationReadinessDTO> getMigrationReadiness(
             @RequestParam(defaultValue = "100") int sampleSize) {
-        return Result.success(migrationService.getReadiness(sampleSize));
+        var readiness=migrationService.getReadiness(sampleSize);
+        com.zjcxph.imgapi.utils.MigrationLogPrivacy.sanitizeJob(readiness.getActiveJob());
+        return Result.success(readiness);
     }
 
     @Operation(summary = "获取待迁移记录列表")
@@ -176,7 +184,7 @@ public class OssController {
         int safeLimit = Math.max(1, Math.min(limit, MAX_PENDING_LIMIT));
         List<Scan> pending = migrationService.getPendingMigrations(safeLimit, folder);
         Map<String, Object> response = new HashMap<>();
-        response.put("list", pending);
+        response.put("list", pending.stream().map(com.zjcxph.imgapi.utils.MigrationLogPrivacy::migrationRecord).toList());
         response.put("total", pending.size());
         response.put("limit", safeLimit);
         return Result.success(response);
@@ -198,7 +206,9 @@ public class OssController {
         List<ImageMigrationLog> logs = migrationService.getMigrationLogs(status, page, size);
         long total = migrationService.countMigrationLogs(status);
         for (ImageMigrationLog log : logs) {
-            migrationService.enrichWithPresignedUrl(log);
+            com.zjcxph.imgapi.utils.MigrationLogPrivacy.sanitize(log);
+            if(deliveryProperties.isGateway()) log.setOssUrl(null);
+            else migrationService.enrichWithPresignedUrl(log);
         }
         return Result.success(PageResult.of(logs, total, page, size));
     }
@@ -229,6 +239,7 @@ public class OssController {
             if (job == null) {
                 return Result.fail("当前范围没有可迁移文件");
             }
+            com.zjcxph.imgapi.utils.MigrationLogPrivacy.sanitizeJob(job);
             if (Boolean.TRUE.equals(job.getReused())) {
                 return Result.<MigrationJob>success("已有迁移任务正在运行，已返回现有任务").data(job);
             }
@@ -248,6 +259,7 @@ public class OssController {
         if (job == null) {
             return Result.fail("任务不存在");
         }
+        com.zjcxph.imgapi.utils.MigrationLogPrivacy.sanitizeJob(job);
         return Result.<MigrationJob>success("已提交安全取消请求").data(job);
     }
 
@@ -271,6 +283,7 @@ public class OssController {
         if (job == null) {
             return Result.fail("任务不存在");
         }
+        com.zjcxph.imgapi.utils.MigrationLogPrivacy.sanitizeJob(job);
         return Result.success(job);
     }
 
@@ -280,7 +293,9 @@ public class OssController {
             @RequestParam(defaultValue = "1") int page,
             @RequestParam(defaultValue = "20") int size) {
         PaginationUtils.validatePageParams(page, size);
-        return Result.success(migrationService.listMigrationJobs(page, size));
+        var result=migrationService.listMigrationJobs(page,size);
+        result.getList().forEach(com.zjcxph.imgapi.utils.MigrationLogPrivacy::sanitizeJob);
+        return Result.success(result);
     }
 
     private Map<String, Object> uploadSummary(List<OssUploadResult> results) {

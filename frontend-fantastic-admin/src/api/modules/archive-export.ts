@@ -87,7 +87,7 @@ export function listActiveArchiveExportJobs(format: 'ZIP' | 'PDF', limit = 5) {
 }
 
 export function getArchiveExportJob(id: string) {
-  return getRequest<ArchiveExportJob>(`/api/v1/archive-exports/jobs/${encodeURIComponent(id)}`)
+  return getRequest<ArchiveExportJob>(`/api/v1/archive-exports/jobs/${encodeURIComponent(id)}`, { retry: true, maxRetryCount: 2, skipGlobalError: true })
 }
 
 export function cancelArchiveExportJob(id: string) {

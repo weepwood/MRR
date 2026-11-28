@@ -58,16 +58,24 @@ public class DataRelationRepository {
         return jdbcTemplate.queryForObject("SELECT CASE WHEN c.reltuples<0 THEN NULL ELSE c.reltuples::bigint END FROM pg_class c JOIN pg_namespace n ON n.oid=c.relnamespace WHERE n.nspname='app' AND c.relname=?",Long.class,tableName);
     }
 
+    // Older runs may have stored exception messages rather than safe error classes.
+    public static final String SAFE_QUALITY_RUN_ERROR = """
+            CASE WHEN error_message IS NULL THEN NULL
+                 WHEN error_message = 'RUN_DEADLINE_EXPIRED'
+                      OR error_message ~ '^[A-Za-z][A-Za-z0-9_]{0,96}(Exception|Error)$'
+                 THEN error_message ELSE 'HISTORICAL_ERROR_REDACTED' END
+            """;
+
     public Map<String, Object> latestQualityRun() {
         List<Map<String, Object>> rows = jdbcTemplate.queryForList("""
                 SELECT id, status, triggered_by AS "triggeredBy", check_count AS "checkCount",
                        total_issues AS "totalIssues", critical_count AS "criticalCount",
                        warning_count AS "warningCount", started_at AS "startedAt",
-                       completed_at AS "completedAt", error_message AS "errorMessage"
+                       completed_at AS "completedAt", %s AS "errorMessage"
                 FROM app.mrr_data_quality_run
                 ORDER BY id DESC
                 LIMIT 1
-                """);
+                """.formatted(SAFE_QUALITY_RUN_ERROR));
         return rows.isEmpty() ? null : rows.getFirst();
     }
 

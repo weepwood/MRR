@@ -41,9 +41,9 @@ public interface AuthService {
                                            Long administratorId,
                                            String clientIp);
 
-    AuthSession currentUser();
+    AuthUserProfileDTO reopenRegistration(Long userId, Long administratorId, String clientIp);
 
-    List<AuthUserProfileDTO> listUsers();
+    AuthSession currentUser();
 
     PageResult<AuthUserProfileDTO> listUsersPaginated(int page, int size, String keyword, String roleCode, String status);
 

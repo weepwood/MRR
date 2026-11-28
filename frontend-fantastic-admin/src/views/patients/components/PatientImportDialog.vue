@@ -134,6 +134,7 @@ function downloadTemplate() {
 <template>
   <el-dialog
     v-model="dialogVisible"
+    align-center
     title="导入患者数据"
     width="min(920px, 92vw)"
     destroy-on-close

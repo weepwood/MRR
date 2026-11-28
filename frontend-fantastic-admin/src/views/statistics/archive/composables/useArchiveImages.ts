@@ -4,7 +4,7 @@ import type { ExternalArchiveCase, ExternalArchiveSession } from '@/api/modules/
 import type { IdCardArchiveCase, IdCardArchiveSearchResponse } from '@/api/modules/search'
 import type { ApiResult, BAHImageData } from '@/api/types'
 import { ElMessage } from 'element-plus'
-import { ref, shallowRef, watch } from 'vue'
+import { onScopeDispose, ref, shallowRef, watch } from 'vue'
 import {
   downloadExternalArchive,
   externalArchiveSession,
@@ -75,6 +75,7 @@ export function useArchiveImages(options: UseArchiveImagesOptions = {}) {
   const lookupReason = ref('')
   const submittedImageQuery = shallowRef<{ bah: string, sjh: string } | null>(null)
   let queryVersion = 0
+  let disposed = false
   const searchBah = ref('')
   const searchSjh = ref('')
   const searchUserId = ref('')
@@ -162,6 +163,8 @@ export function useArchiveImages(options: UseArchiveImagesOptions = {}) {
 
   function resetImageLookup(reason = '') {
     queryVersion++
+    savingType.value = false
+    if (isExternalTicketMode()) { downloading.value = false }
     loading.value = false
     patientLoading.value = false
     idCardLoading.value = false
@@ -172,6 +175,7 @@ export function useArchiveImages(options: UseArchiveImagesOptions = {}) {
   }
 
   async function loadImages(forceRefresh = false, archiveCase?: IdCardArchiveCase): Promise<void> {
+    if (disposed) { return }
     const version = resetImageLookup()
     const historySession = captureArchiveSearchHistorySession()
     const lookup = resolveArchiveLookup(searchBah.value, searchSjh.value)
@@ -306,7 +310,7 @@ export function useArchiveImages(options: UseArchiveImagesOptions = {}) {
   }
 
   async function loadArchiveCasesByIdCard(idCard: string): Promise<IdCardArchiveSearchResponse | null | undefined> {
-    if (isExternalTicketMode()) {
+    if (disposed || isExternalTicketMode()) {
       return null
     }
     const version = resetImageLookup()
@@ -334,6 +338,7 @@ export function useArchiveImages(options: UseArchiveImagesOptions = {}) {
   }
 
   async function loadArchiveCasesByToken(token: string): Promise<IdCardArchiveSearchResponse | null | undefined> {
+    if (disposed) { return null }
     const externalSession = currentExternalSession()
     if (isExternalTicketMode()) {
       if (!externalSession || token !== EXTERNAL_CASE_TOKEN) {
@@ -394,6 +399,7 @@ export function useArchiveImages(options: UseArchiveImagesOptions = {}) {
   }
 
   async function handleDownload(): Promise<void> {
+    if (disposed || downloading.value || loading.value || idCardLoading.value) { return }
     const externalSession = currentExternalSession()
     const firstImage = images.value[0]
     const bah = normalizeMedicalRecordCode(searchBah.value || firstImage?.bah || '')
@@ -412,9 +418,12 @@ export function useArchiveImages(options: UseArchiveImagesOptions = {}) {
         ElMessage.warning('当前档案没有可下载的影像')
         return
       }
+      const version = queryVersion
+      const current = () => !disposed && version === queryVersion && currentExternalSession() === externalSession && isExternalTicketMode()
       downloading.value = true
       try {
         const response = await downloadExternalArchive(bah, sjh || undefined)
+        if (!current()) { return }
         const archiveBlob = response.data
         if (!(archiveBlob instanceof Blob) || archiveBlob.size <= 0) {
           throw new Error('服务器返回的 ZIP 文件为空')
@@ -423,10 +432,10 @@ export function useArchiveImages(options: UseArchiveImagesOptions = {}) {
         ElMessage.success('外部档案袋已开始下载')
       }
       catch (err: unknown) {
-        ElMessage.error((err as { message?: string })?.message || '档案下载失败')
+        if (current()) { ElMessage.error((err as { message?: string })?.message || '档案下载失败') }
       }
       finally {
-        downloading.value = false
+        if (current()) { downloading.value = false }
       }
       return
     }
@@ -464,32 +473,42 @@ export function useArchiveImages(options: UseArchiveImagesOptions = {}) {
       ElMessage.warning('当前影像缺少记录 ID，无法修改类型')
       return
     }
-    const previousType = img.btype
-    const index = images.value.findIndex(item => item.id === img.id)
-    if (index < 0) {
-      return
-    }
+    if (disposed || savingType.value || loading.value || idCardLoading.value) { return }
+    const id = img.id
+    const index = images.value.findIndex(item => item.id === id)
+    if (index < 0 || images.value[index] !== img) { return }
+    const previousType = images.value[index].btype
+    const version = queryVersion
+    const current = () => !disposed && version === queryVersion
     const next = images.value.slice()
     next[index] = { ...next[index], btype: nextType }
     images.value = next
 
     savingType.value = true
     try {
-      await asResult<unknown>(updateImageType(img.id, { btype: nextType }))
-      ElMessage.success('影像类型已更新')
+      await asResult<unknown>(updateImageType(id, { btype: nextType }))
+      if (current()) { ElMessage.success('影像类型已更新') }
     }
     catch (err: unknown) {
-      const rollback = images.value.slice()
-      rollback[index] = { ...rollback[index], btype: previousType }
-      images.value = rollback
+      if (!current()) { return }
+      const currentIndex = images.value.findIndex(item => item.id === id)
+      if (currentIndex >= 0 && images.value[currentIndex].btype === nextType) {
+        const rollback = images.value.slice()
+        rollback[currentIndex] = { ...rollback[currentIndex], btype: previousType }
+        images.value = rollback
+      }
       ElMessage.error((err as { message?: string })?.message || '类型更新失败')
     }
     finally {
-      savingType.value = false
+      if (current()) { savingType.value = false }
     }
   }
 
-  watch(sessionSource, (session) => {
+  watch(sessionSource, (session, previous) => {
+    if (session !== previous && (session || previous || isExternalTicketMode())) {
+      resetImageLookup()
+      clearExternalViewState()
+    }
     if (session) {
       syncExternalArchiveCases(session)
       return
@@ -497,7 +516,14 @@ export function useArchiveImages(options: UseArchiveImagesOptions = {}) {
     if (isExternalTicketMode()) {
       clearExternalViewState('外部影像会话已失效，请重新发起访问')
     }
-  }, { immediate: true })
+  }, { immediate: true, flush: 'sync' })
+
+  onScopeDispose(() => {
+    disposed = true
+    resetImageLookup()
+    clearExternalViewState()
+    downloading.value = false
+  })
 
   return {
     images,

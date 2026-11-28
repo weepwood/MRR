@@ -24,6 +24,7 @@ const STATE_TRANSFORMS = new Set([
   'transform: scale(0.9) rotate(180deg);', // 按下反馈 + 已切换状态共用一个 transform
   'transform: translateY(0);', // 悬停提示归位
   'transform: scaleX(1);', // 选中/悬停下划线长度，属强调而非位移
+  'transform: translateY(-50%) scaleY(1);', // 叶子选中色条居中且完整显示，属于真实选中状态
   'transform: translate(-2px, -2px) rotate(-2deg);', // 选中态的叠层错位
   'transform: translate(2px, -1px) rotate(1.2deg);', // 同上
 ])

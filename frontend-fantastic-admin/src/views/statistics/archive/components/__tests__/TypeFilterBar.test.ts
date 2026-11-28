@@ -105,7 +105,9 @@ describe('type filter bar', () => {
     await wrapper.findAll('.type-tab').at(1).trigger('click') // 01-病案首页
     expect(wrapper.emitted('selectType')?.[0]).toEqual([1])
 
-    await wrapper.findAll('.type-tab input[type="checkbox"]').at(1).setValue(true)
+    expect(wrapper.findAll('button.type-tab input')).toHaveLength(0)
+    await wrapper.findAll('.type-tab-entry input[type="checkbox"]').at(1).setValue(true)
     expect(wrapper.emitted('toggleTypeSelection')?.[0]).toEqual([1])
+    expect(wrapper.emitted('selectType')).toHaveLength(1)
   })
 })

@@ -3,6 +3,7 @@ import { ElMessage } from 'element-plus'
 import { computed, onMounted, reactive, ref } from 'vue'
 import { getSystemSettings, saveSystemSettings } from '@/api/modules/settings'
 import AppError from '@/components/AppError/index.vue'
+import AppLoading from '@/components/AppLoading/index.vue'
 import ClassificationRules from './ClassificationRules.vue'
 
 interface OcrSettingsModel {
@@ -159,7 +160,7 @@ function resetSettings() {
   Object.assign(settings, defaults)
 }
 
-defineExpose({ saving, isDirty, saveSettings, loadSettings, resetSettings })
+defineExpose({ saving, isDirty, saveSettings, loadSettings, resetSettings, loaded, loading, loadError })
 
 onMounted(loadSettings)
 </script>
@@ -167,8 +168,9 @@ onMounted(loadSettings)
 <template>
   <section v-loading="loading" class="setting-section">
     <!-- 首次读取失败时不展示默认值表单，避免误以为是服务器配置（DESIGN.md §5.1）。 -->
-    <AppError v-if="!loaded && loadError" :message="`${loadError}，表单未显示以免把默认值当作当前配置。`" retry-text="重新加载" @retry="loadSettings" />
-    <template v-else>
+    <AppLoading v-if="loading && !loaded" type="stats" :cols="3" />
+    <AppError v-else-if="!loaded && loadError" :message="`${loadError}，表单未显示以免把默认值当作当前配置。`" retry-text="重新加载" @retry="loadSettings" />
+    <template v-else-if="loaded">
       <el-alert
         type="warning"
         :closable="false"

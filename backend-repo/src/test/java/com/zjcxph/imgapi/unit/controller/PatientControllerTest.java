@@ -71,6 +71,13 @@ class PatientControllerTest {
     }
 
     @Test
+    void overflowPageNeverReachesPatientQuery() {
+        assertThatThrownBy(() -> patientController.listPatients(1073741825, 4, null))
+                .isInstanceOf(IllegalArgumentException.class);
+        org.mockito.Mockito.verifyNoInteractions(searchMapper);
+    }
+
+    @Test
     @DisplayName("GET /api/v1/patients — 关键词搜索")
     void listPatients_withKeyword() {
         when(searchMapper.findAllPaginated(anyInt(), anyInt(), any())).thenReturn(List.of());

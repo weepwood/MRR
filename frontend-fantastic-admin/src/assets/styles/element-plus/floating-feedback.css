@@ -39,6 +39,14 @@ body .el-popover.el-popper.mrr-light-popover {
   box-shadow: var(--mrr-shadow-md), 0 0 0 1px var(--mrr-border);
 }
 
+/* Select 的受控 visible 与 v-show 在快速开合、视口重排时可能失步。
+ * 关闭是交互边界，不应等待缩放过渡；仅移除 Select 浮层的入退场过渡，
+ * 保留选项悬停、焦点、其他浮层动效以及 Element Plus 自身生命周期。 */
+.el-select__popper.el-zoom-in-top-enter-active,
+.el-select__popper.el-zoom-in-top-leave-active {
+  transition: none !important;
+}
+
 .el-popper.is-light .el-popper__arrow::before {
   background: var(--mrr-popover);
   border-color: var(--mrr-border);
@@ -140,7 +148,31 @@ body .el-dropdown__popper .el-dropdown-menu__item:not(.is-disabled):hover {
 }
 
 body .el-select-dropdown .el-select-dropdown__item.is-selected {
-  font-weight: 500;
-  color: var(--mrr-primary);
+  font-weight: 600;
+  color: var(--mrr-tone-primary-ink);
+  background: var(--mrr-tone-primary-soft);
+}
+
+body .el-select-dropdown .el-select-dropdown__item.is-selected.is-hovering {
+  outline: 1px solid var(--mrr-border-strong);
+  outline-offset: -1px;
+}
+
+body .el-date-table td.available:not(.current):not(.disabled) .el-date-table-cell__text {
+  border-radius: var(--mrr-radius-sm);
+}
+
+body .el-date-table td.available:not(.current):not(.disabled):hover .el-date-table-cell__text {
   background: var(--mrr-accent);
+}
+
+body .el-date-table td.current:not(.disabled) .el-date-table-cell__text,
+body .el-date-table td.start-date .el-date-table-cell__text,
+body .el-date-table td.end-date .el-date-table-cell__text {
+  color: var(--mrr-primary-foreground);
+  background: var(--mrr-primary);
+}
+
+body .el-date-table td.in-range .el-date-table-cell {
+  background: var(--mrr-tone-primary-soft);
 }

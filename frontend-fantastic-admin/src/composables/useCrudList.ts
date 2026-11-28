@@ -1,6 +1,7 @@
 import type { Ref } from 'vue'
 import type { ApiResult, PaginatedResult } from '@/api/types'
 import { getCurrentScope, onMounted, onScopeDispose, reactive, ref, watch } from 'vue'
+import { pageRowOffset } from '@/utils/table-sequence'
 
 /**
  * CRUD 列表通用 composable。
@@ -47,6 +48,7 @@ type CrudFetchResult<T> = ApiResult<PaginatedResult<T>> | PaginatedResult<T> | u
 export function useCrudList<T, Q extends Record<string, any>>(opts: CrudListOptions<T, Q>) {
   const list = ref<T[]>([]) as Ref<T[]>
   const total = ref(0)
+  const loadedRowOffset = ref(0)
   const pageNum = ref(1)
   const pageSize = ref(opts.defaultPageSize ?? 20)
   const loading = ref(false)
@@ -71,6 +73,7 @@ export function useCrudList<T, Q extends Record<string, any>>(opts: CrudListOpti
     generation++
     list.value = []
     total.value = 0
+    loadedRowOffset.value = 0
     loading.value = false
     pageNum.value = 1
     pageSize.value = opts.defaultPageSize ?? 20
@@ -102,6 +105,7 @@ export function useCrudList<T, Q extends Record<string, any>>(opts: CrudListOpti
       if (res === undefined) { return }
       const pageData = ('data' in res ? res.data : res) as PaginatedResult<T> | undefined
       list.value = pageData?.list ?? []
+      loadedRowOffset.value = pageRowOffset(pageData?.page ?? params.page, pageData?.size ?? params.size)
       total.value = pageData?.total ?? 0
       if (!silent) { resultVersion.value += 1 }
     }
@@ -147,6 +151,7 @@ export function useCrudList<T, Q extends Record<string, any>>(opts: CrudListOpti
     clearResults,
     list,
     total,
+    loadedRowOffset,
     pageNum,
     pageSize,
     loading,

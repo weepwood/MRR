@@ -26,6 +26,14 @@ function mountMenu(accordion: boolean, initialMenu = menu, collapse = false) {
   })
 }
 
+// Inline branches remain mounted for reversible height transitions. Assert
+// accessible visibility, not DOM absence, and independently verify tab order.
+function expectLeaf(wrapper: ReturnType<typeof mountMenu>, title: string, visible: boolean) {
+  const leaf = wrapper.get(`[title="${title}"]`)
+  expect(leaf.element.closest('.menu-inline-branch[aria-hidden="true"]') === null).toBe(visible)
+  expect(leaf.attributes('tabindex')).toBe(visible ? '0' : '-1')
+}
+
 describe('侧栏无路径目录', () => {
   beforeEach(() => {
     setActivePinia(createPinia())
@@ -39,15 +47,15 @@ describe('侧栏无路径目录', () => {
     const wrapper = mountMenu(false, [])
     await wrapper.setProps({ menu })
     const group = (title: string) => wrapper.get(`.menu-item-container[title="${title}"]`)
-    expect(wrapper.find('[title="用户管理"]').exists()).toBe(true)
-    expect(wrapper.find('[title="记录管理"]').exists()).toBe(false)
+    expectLeaf(wrapper, '用户管理', true)
+    expectLeaf(wrapper, '记录管理', false)
     await group('业务').trigger('click')
-    expect(wrapper.find('[title="用户管理"]').exists()).toBe(true)
-    expect(wrapper.find('[title="记录管理"]').exists()).toBe(true)
-    expect(wrapper.find('[title="数据关系"]').exists()).toBe(false)
+    expectLeaf(wrapper, '用户管理', true)
+    expectLeaf(wrapper, '记录管理', true)
+    expectLeaf(wrapper, '数据关系', false)
     await group('系统').trigger('click')
-    expect(wrapper.find('[title="用户管理"]').exists()).toBe(false)
-    expect(wrapper.find('[title="记录管理"]').exists()).toBe(true)
+    expectLeaf(wrapper, '用户管理', false)
+    expectLeaf(wrapper, '记录管理', true)
     wrapper.unmount()
   })
 
@@ -60,10 +68,10 @@ describe('侧栏无路径目录', () => {
       ] },
       { meta: { title: '系统' }, children: [{ path: '/users', meta: { title: '用户管理' } }] },
     ] })
-    expect(wrapper.find('[title="用户管理"]').exists()).toBe(true)
+    expectLeaf(wrapper, '用户管理', true)
     await wrapper.setProps({ value: '/two' })
-    expect(wrapper.find('[title="页面二"]').exists()).toBe(true)
-    expect(wrapper.find('[title="页面一"]').exists()).toBe(false)
+    expectLeaf(wrapper, '页面二', true)
+    expectLeaf(wrapper, '页面一', false)
     wrapper.unmount()
   })
 
@@ -72,9 +80,9 @@ describe('侧栏无路径目录', () => {
       const wrapper = mountMenu(true, delayed ? [] : menu)
       if (delayed) { await wrapper.setProps({ menu }) }
       await wrapper.get('.menu-item-container[title="业务"]').trigger('click')
-      expect(wrapper.find('[title="用户管理"]').exists()).toBe(false)
-      expect(wrapper.find('[title="记录管理"]').exists()).toBe(true)
-      expect(wrapper.find('[title="数据关系"]').exists()).toBe(false)
+      expectLeaf(wrapper, '用户管理', false)
+      expectLeaf(wrapper, '记录管理', true)
+      expectLeaf(wrapper, '数据关系', false)
       wrapper.unmount()
     }
   })

@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import type { GalleryImage, ViewMode } from '../types'
+import { useVirtualList } from '@vueuse/core'
 import { isMotionEnabled } from '@/utils/motion-preference'
 import { useThumbLayout } from '../composables/useThumbLayout'
 import { getTypeLabel } from '../constants'
@@ -37,7 +38,46 @@ const { thumbItemWidth, pageSize, visibleCount, resetVisible } = useThumbLayout(
   preloadCount,
 )
 
-const displayed = computed(() => props.images.slice(0, visibleCount.value))
+// Reuse VueUse's fixed-row virtualizer only for large list-mode dossiers.
+const VIRTUAL_THRESHOLD = 100
+const VIRTUAL_ROW_HEIGHT = 48
+const isVirtual = computed(() => viewMode.value === 'list' && props.images.length >= VIRTUAL_THRESHOLD)
+const virtualSource = computed(() => isVirtual.value ? props.images : [])
+const virtual = useVirtualList(virtualSource, { itemHeight: VIRTUAL_ROW_HEIGHT, overscan: 6 })
+const displayed = computed(() => isVirtual.value
+  ? virtual.list.value
+  : props.images.slice(0, visibleCount.value).map((data, index) => ({ data, index })))
+const virtualStyle = computed(() => isVirtual.value ? virtual.wrapperProps.value.style : undefined)
+const jumpNumber = ref<number | undefined>(props.selectedIndex + 1)
+const jumpValid = computed(() => Number.isInteger(jumpNumber.value) && jumpNumber.value! >= 1 && jumpNumber.value! <= props.images.length)
+watch(() => props.selectedIndex, (index) => { jumpNumber.value = index + 1 })
+watch(() => props.images.length, () => { jumpNumber.value = props.selectedIndex + 1 })
+
+function jumpToImage() {
+  if (jumpValid.value) {
+    selectItem(jumpNumber.value! - 1)
+  }
+}
+
+watch([thumbsContainer, isVirtual], ([container, enabled]) => {
+  virtual.containerProps.ref.value = enabled ? container : null
+  if (container) {
+    container.scrollTop = 0
+  }
+  nextTick(() => {
+    if (enabled) {
+      virtual.containerProps.onScroll()
+    }
+    if (props.images.length) {
+      scrollToIndex(props.selectedIndex, false)
+    }
+  })
+}, { flush: 'post' })
+watch(() => props.images, (images) => {
+  const keys = new Set(images.map(imageKey))
+  failedImageKeys.value = new Set([...failedImageKeys.value].filter(key => keys.has(key)))
+  thumbRefs.value.length = Math.min(images.length, isVirtual.value ? images.length : visibleCount.value)
+})
 
 function selectItem(index: number) {
   emit('select', index)
@@ -49,7 +89,9 @@ function onCardFocus(index: number) {
   if (isFocusSelectSuppressed()) {
     return
   }
-  selectItem(index)
+  if (index !== props.selectedIndex) {
+    selectItem(index)
+  }
 }
 
 function toggleItem(img: GalleryImage, event: Event) {
@@ -99,6 +141,27 @@ function onToggleKeydown(img: GalleryImage, event: KeyboardEvent) {
 }
 
 function scrollToIndex(index: number, smooth = true) {
+  if (index < 0 || index >= props.images.length) {
+    return
+  }
+  if (isVirtual.value) {
+    const container = thumbsContainer.value
+    if (!container) {
+      return
+    }
+    const top = index * VIRTUAL_ROW_HEIGHT
+    if (top < container.scrollTop || top + VIRTUAL_ROW_HEIGHT > container.scrollTop + container.clientHeight) {
+      const hadRowFocus = !!(document.activeElement instanceof HTMLElement && container.contains(document.activeElement) && document.activeElement.closest('.thumb-item'))
+      const centeredIndex = Math.max(0, index - Math.floor(container.clientHeight / VIRTUAL_ROW_HEIGHT / 2))
+      virtual.scrollTo(centeredIndex)
+      nextTick(() => {
+        if (hadRowFocus && document.activeElement === document.body && props.selectedIndex === index) {
+          thumbRefs.value[index]?.focus({ preventScroll: true })
+        }
+      })
+    }
+    return
+  }
   if (index >= visibleCount.value) {
     visibleCount.value = Math.max(visibleCount.value, index + pageSize.value)
   }
@@ -108,7 +171,7 @@ function scrollToIndex(index: number, smooth = true) {
     if (!container || !target) {
       return
     }
-    const top = target.offsetTop - (container.clientHeight - target.clientHeight) / 2
+    const top = container.scrollTop + target.getBoundingClientRect().top - container.getBoundingClientRect().top - container.clientTop - (container.clientHeight - target.clientHeight) / 2
     const scrollTop = Math.max(0, top)
     if (smooth && isMotionEnabled() && 'scrollBehavior' in document.documentElement.style) {
       container.scrollTo({ top: scrollTop, behavior: 'smooth' })
@@ -124,63 +187,75 @@ defineExpose({ resetVisible, scrollToIndex })
 
 <template>
   <section class="thumb-panel" :class="viewMode">
-    <div ref="thumbsContainer" class="thumb-strip" :class="viewMode">
-      <div
-        v-for="(img, index) in displayed"
-        :key="img.id || img.filename || index"
-        :ref="(el: any) => { thumbRefs[index] = el }"
-        class="thumb-item"
-        :class="{ active: index === props.selectedIndex, checked: props.isSelected(img) }"
-        :style="viewMode === 'thumb' ? { width: `${thumbItemWidth}px` } : {}"
-        role="button"
-        :aria-current="index === props.selectedIndex ? 'true' : undefined"
-        :aria-label="`第 ${index + 1} 张影像，${getTypeLabel(img.btype)}`"
-        tabindex="0"
-        @focus="onCardFocus(index)"
-        @click="selectItem(index)"
-        @dblclick="toggleItem(img, $event)"
-      >
+    <div v-if="props.images.length" class="thumb-navigation">
+      <span class="thumb-position" aria-live="polite">{{ props.selectedIndex + 1 }} / {{ props.images.length }} 张</span>
+      <form class="thumb-jump" @submit.prevent="jumpToImage">
+        <el-input-number v-model="jumpNumber" :controls="false" :precision="0" :min="1" :max="props.images.length" aria-label="前往影像序号" size="small" />
+        <el-button native-type="submit" size="small" :disabled="!jumpValid">
+          前往
+        </el-button>
+      </form>
+    </div>
+    <div ref="thumbsContainer" class="thumb-strip" :class="[viewMode, { 'is-virtual': isVirtual }]" @scroll.passive="isVirtual && virtual.containerProps.onScroll()">
+      <div class="thumb-items" :class="{ 'thumb-items--virtual': isVirtual }" :style="virtualStyle">
         <div
-          v-if="viewMode === 'thumb' && isImageFailed(img, index)"
-          class="thumb-image-placeholder"
-          role="img"
-          :aria-label="`第 ${index + 1} 张影像加载失败`"
+          v-for="{ data: img, index } in displayed"
+          :key="img.id || img.filename || index"
+          :ref="(el: any) => { thumbRefs[index] = el }"
+          class="thumb-item"
+          :class="{ active: index === props.selectedIndex, checked: props.isSelected(img) }"
+          :style="viewMode === 'thumb' ? { width: `${thumbItemWidth}px` } : {}"
+          role="button"
+          :aria-current="index === props.selectedIndex ? 'true' : undefined"
+          :aria-label="`第 ${index + 1} 张影像，${getTypeLabel(img.btype)}`"
+          tabindex="0"
+          @focus="onCardFocus(index)"
+          @click="selectItem(index)"
+          @dblclick="toggleItem(img, $event)"
         >
-          <svg viewBox="0 0 24 24" aria-hidden="true">
-            <path d="M4 5.5A1.5 1.5 0 0 1 5.5 4h13A1.5 1.5 0 0 1 20 5.5v9.88l-3.03-3.03a1 1 0 0 0-1.41 0l-1.2 1.2-3.34-3.34a1 1 0 0 0-1.41 0L4 15.82V5.5Zm0 13.14 6.32-6.32 3.34 3.34a1 1 0 0 0 1.41 0l1.2-1.2L20 18.2v.3a1.5 1.5 0 0 1-1.5 1.5h-13A1.5 1.5 0 0 1 4 18.5v.14ZM15.5 9A1.5 1.5 0 1 0 15.5 6a1.5 1.5 0 0 0 0 3Z" fill="currentColor" />
-          </svg>
-          <span>加载失败</span>
-        </div>
-        <img
-          v-else-if="viewMode === 'thumb'"
-          :key="img.imageUrl"
-          :src="img.imageUrl"
-          :alt="`第 ${index + 1} 张影像缩略图`"
-          loading="lazy"
-          @load="onImgLoad"
-          @error="onImageError(img, index)"
-        >
-        <div class="thumb-meta" @click="onMetaClick(img, $event)">
-          <!-- 勾选框放在页码前面：影像左上角不再压一块角标，meta 行就是「勾选 + 页码 + 类型」 -->
-          <span
-            class="thumb-check"
-            :class="{ checked: props.isSelected(img) }"
-            role="checkbox"
-            :aria-checked="props.isSelected(img)"
-            tabindex="0"
-            @click="toggleItem(img, $event)"
-            @keydown="onToggleKeydown(img, $event)"
+          <div
+            v-if="viewMode === 'thumb' && isImageFailed(img, index)"
+            class="thumb-image-placeholder"
+            role="img"
+            :aria-label="`第 ${index + 1} 张影像加载失败`"
           >
-            <svg v-if="props.isSelected(img)" viewBox="0 0 16 16" width="10" height="10"><path d="M13.485 4.485a1 1 0 0 1 0 1.415l-6.5 6.5a1 1 0 0 1-1.414 0l-3-3a1 1 0 1 1 1.414-1.414L6.278 10.586l5.793-5.793a1 1 0 0 1 1.414 0z" fill="currentColor" /></svg>
-          </span>
-          <span class="thumb-page">P{{ img.pages ?? '-' }}</span>
-          <small>{{ getTypeLabel(img.btype) }}</small>
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M4 5.5A1.5 1.5 0 0 1 5.5 4h13A1.5 1.5 0 0 1 20 5.5v9.88l-3.03-3.03a1 1 0 0 0-1.41 0l-1.2 1.2-3.34-3.34a1 1 0 0 0-1.41 0L4 15.82V5.5Zm0 13.14 6.32-6.32 3.34 3.34a1 1 0 0 0 1.41 0l1.2-1.2L20 18.2v.3a1.5 1.5 0 0 1-1.5 1.5h-13A1.5 1.5 0 0 1 4 18.5v.14ZM15.5 9A1.5 1.5 0 1 0 15.5 6a1.5 1.5 0 0 0 0 3Z" fill="currentColor" />
+            </svg>
+            <span>加载失败</span>
+          </div>
+          <img
+            v-else-if="viewMode === 'thumb'"
+            :key="img.imageUrl"
+            :src="img.imageUrl"
+            :alt="`第 ${index + 1} 张影像缩略图`"
+            loading="lazy"
+            @load="onImgLoad"
+            @error="onImageError(img, index)"
+          >
+          <div class="thumb-meta" @click="onMetaClick(img, $event)">
+            <!-- 勾选框放在页码前面：影像左上角不再压一块角标，meta 行就是「勾选 + 页码 + 类型」 -->
+            <span
+              class="thumb-check"
+              :class="{ checked: props.isSelected(img) }"
+              role="checkbox"
+              :aria-checked="props.isSelected(img)"
+              :aria-label="`勾选第 ${index + 1} 张影像`"
+              tabindex="0"
+              @click="toggleItem(img, $event)"
+              @keydown="onToggleKeydown(img, $event)"
+            >
+              <svg v-if="props.isSelected(img)" viewBox="0 0 16 16" width="10" height="10"><path d="M13.485 4.485a1 1 0 0 1 0 1.415l-6.5 6.5a1 1 0 0 1-1.414 0l-3-3a1 1 0 1 1 1.414-1.414L6.278 10.586l5.793-5.793a1 1 0 0 1 1.414 0z" fill="currentColor" /></svg>
+            </span>
+            <span class="thumb-page">P{{ img.pages ?? '-' }}</span>
+            <small>{{ getTypeLabel(img.btype) }}</small>
+          </div>
         </div>
       </div>
       <div v-if="!props.images.length" class="empty-list">
         暂无影像
       </div>
-      <div v-else-if="visibleCount < props.images.length" class="load-hint">
+      <div v-else-if="!isVirtual && visibleCount < props.images.length" class="load-hint">
         滚动加载更多（{{ visibleCount }}/{{ props.images.length }}）
       </div>
     </div>
@@ -194,6 +269,52 @@ defineExpose({ resetVisible, scrollToIndex })
   flex-direction: column;
   min-width: 0;
   min-height: 0;
+}
+
+.thumb-navigation {
+  display: flex;
+  flex: none;
+  flex-wrap: wrap;
+  gap: var(--mrr-space-1);
+  align-items: center;
+  justify-content: space-between;
+  min-width: 0;
+  padding: 0 0 var(--mrr-space-2);
+}
+
+.thumb-position {
+  font-size: var(--mrr-font-size-xs);
+  font-variant-numeric: tabular-nums;
+  color: var(--mrr-muted-foreground);
+}
+
+.thumb-jump {
+  display: flex;
+  gap: var(--mrr-space-1);
+  align-items: center;
+}
+
+.thumb-jump :deep(.el-input-number) {
+  width: 64px;
+}
+
+.thumb-items {
+  display: contents;
+}
+
+.thumb-items--virtual {
+  display: block;
+  flex: none;
+}
+
+.thumb-strip.is-virtual {
+  padding-block: 0;
+}
+
+.thumb-strip.is-virtual .thumb-item {
+  height: 44px;
+  min-height: 44px;
+  margin-bottom: 4px;
 }
 
 .thumb-strip {
@@ -223,7 +344,7 @@ defineExpose({ resetVisible, scrollToIndex })
   align-items: center;
   width: 100% !important;
   min-height: 42px;
-  padding: 8px var(--mrr-space-3);
+  padding: var(--mrr-space-2) var(--mrr-space-3);
 }
 
 .thumb-item {
@@ -243,15 +364,13 @@ defineExpose({ resetVisible, scrollToIndex })
   transition: border-color var(--mrr-motion-feedback) var(--mrr-ease-out), box-shadow var(--mrr-motion-feedback) var(--mrr-ease-out);
 }
 
-/* 键盘焦点不再单独画圈：@focus → selectItem 让预览跟随焦点，active 圈即唯一指示；
- * 这里压掉浏览器 UA 的默认焦点圈（卡片基类没设 outline:none，必须显式关掉）。
- * 勾选框是独立控件，保留自己的焦点外圈。 */
 .thumb-item:focus-visible {
-  outline: none;
+  outline: 2px solid var(--mrr-ring);
+  outline-offset: 1px;
 }
 
 .thumb-check:focus-visible {
-  outline: 2px solid var(--color-primary);
+  outline: 2px solid var(--mrr-ring);
   outline-offset: 2px;
 }
 
@@ -360,11 +479,9 @@ defineExpose({ resetVisible, scrollToIndex })
   aspect-ratio: 3 / 4;
   padding: var(--mrr-space-3);
   font-size: 11px;
-  color: var(--text-tertiary);
+  color: var(--mrr-muted-foreground);
   text-align: center;
-  background:
-    linear-gradient(135deg, hsl(var(--primary) / 4%), transparent 60%),
-    var(--surface-alt);
+  background: var(--surface-alt);
   border: 1px dashed var(--divider);
 }
 
@@ -413,8 +530,9 @@ defineExpose({ resetVisible, scrollToIndex })
 /* 悬浮条压在影像上，文字固定用浅色，不随主题反转（遮罩本身恒为深色）。 */
 .thumb-page {
   flex: none;
-  font-size: 12px;
-  font-weight: 800;
+  font-size: var(--mrr-font-size-xs);
+  font-weight: var(--mrr-font-weight-heading);
+  font-variant-numeric: tabular-nums;
   color: rgb(255 255 255 / 92%);
 }
 
@@ -436,9 +554,20 @@ defineExpose({ resetVisible, scrollToIndex })
  */
 .thumb-strip.list .thumb-meta {
   position: static;
+  max-width: 100%;
   padding: 0;
   background: none;
   border-radius: 0;
+}
+
+.thumb-strip.list .thumb-check:not(.checked) {
+  background: var(--mrr-control-bg);
+  border-color: var(--mrr-control-border);
+}
+
+.thumb-strip.list .thumb-check:not(.checked):hover {
+  background: var(--mrr-control-bg-hover);
+  border-color: var(--mrr-control-border-hover);
 }
 
 .thumb-strip.list .thumb-page {

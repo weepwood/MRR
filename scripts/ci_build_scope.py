@@ -5,6 +5,7 @@ import argparse
 
 EXACT = {
     "release-baseline.json",
+    "quality/windows-runtime-sha256.txt",
     ".github/workflows/quality-gate.yml",
     ".github/workflows/release-on-version-bump.yml",
     ".github/workflows/release-validation.yml",

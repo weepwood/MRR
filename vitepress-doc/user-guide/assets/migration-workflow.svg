@@ -1,0 +1,37 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 340" role="img" aria-labelledby="title desc">
+<title id="title">OSS 迁移操作闭环</title>
+<desc id="desc">先小批试迁移，再根据证据扩大范围；前置检查：确认原图可读，核对目标和配置；试迁移：限定目录与数量，观察任务进度；抽样验证：核对源与目标，实际打开图片；批次收口：确认失败及取消，保留源文件；任务状态未知时先刷新核对；成功计数不等于全部文件内容均已校验。</desc>
+<rect width="960" height="340" rx="18" fill="#f1f5f9"/>
+<g font-family="HarmonyOS Sans SC, Noto Sans CJK SC, PingFang SC, Microsoft YaHei, sans-serif">
+<text x="32" y="44" font-size="26" font-weight="700" fill="#020817">OSS 迁移操作闭环</text>
+<text x="32" y="72" font-size="15" fill="#526175">先小批试迁移，再根据证据扩大范围</text>
+<rect x="32.0" y="101" width="206.0" height="163" rx="12" fill="#ffffff" stroke="#e2e8f0"/>
+<rect x="44.0" y="114" width="34" height="27" rx="7" fill="#2563eb"/>
+<text x="61.0" y="133" font-size="14" font-weight="700" text-anchor="middle" fill="#fff">01</text>
+<text x="46.0" y="164" font-size="20" font-weight="700" fill="#020817">前置检查</text>
+<text x="46.0" y="190" font-size="14" fill="#42536a">确认原图可读</text>
+<text x="46.0" y="212" font-size="14" fill="#42536a">核对目标和配置</text>
+<path d="M242.0 182 h16 m-6 -6 6 6 -6 6" stroke="#8194a8" stroke-width="1.7" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+<rect x="262.0" y="101" width="206.0" height="163" rx="12" fill="#ffffff" stroke="#e2e8f0"/>
+<rect x="274.0" y="114" width="34" height="27" rx="7" fill="#367c68"/>
+<text x="291.0" y="133" font-size="14" font-weight="700" text-anchor="middle" fill="#fff">02</text>
+<text x="276.0" y="164" font-size="20" font-weight="700" fill="#020817">试迁移</text>
+<text x="276.0" y="190" font-size="14" fill="#42536a">限定目录与数量</text>
+<text x="276.0" y="212" font-size="14" fill="#42536a">观察任务进度</text>
+<path d="M472.0 182 h16 m-6 -6 6 6 -6 6" stroke="#8194a8" stroke-width="1.7" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+<rect x="492.0" y="101" width="206.0" height="163" rx="12" fill="#ffffff" stroke="#e2e8f0"/>
+<rect x="504.0" y="114" width="34" height="27" rx="7" fill="#5b648d"/>
+<text x="521.0" y="133" font-size="14" font-weight="700" text-anchor="middle" fill="#fff">03</text>
+<text x="506.0" y="164" font-size="20" font-weight="700" fill="#020817">抽样验证</text>
+<text x="506.0" y="190" font-size="14" fill="#42536a">核对源与目标</text>
+<text x="506.0" y="212" font-size="14" fill="#42536a">实际打开图片</text>
+<path d="M702.0 182 h16 m-6 -6 6 6 -6 6" stroke="#8194a8" stroke-width="1.7" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+<rect x="722.0" y="101" width="206.0" height="163" rx="12" fill="#ffffff" stroke="#e2e8f0"/>
+<rect x="734.0" y="114" width="34" height="27" rx="7" fill="#987444"/>
+<text x="751.0" y="133" font-size="14" font-weight="700" text-anchor="middle" fill="#fff">04</text>
+<text x="736.0" y="164" font-size="20" font-weight="700" fill="#020817">批次收口</text>
+<text x="736.0" y="190" font-size="14" fill="#42536a">确认失败及取消</text>
+<text x="736.0" y="212" font-size="14" fill="#42536a">保留源文件</text>
+<rect x="32" y="282" width="896" height="38" rx="8" fill="#e2e8f0"/>
+<text x="48" y="306" font-size="14" fill="#34465a">任务状态未知时先刷新核对；成功计数不等于全部文件内容均已校验。</text>
+</g></svg>

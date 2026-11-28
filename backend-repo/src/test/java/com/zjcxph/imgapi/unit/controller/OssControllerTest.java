@@ -47,6 +47,26 @@ class OssControllerTest {
     @InjectMocks
     private OssController controller;
 
+    @Test void gatewayArbitraryKeySigningIsDeniedBeforeStorageCall(){
+        deliveryProperties.setMode(ImageDeliveryProperties.Mode.GATEWAY);
+        assertThat(controller.getBrowserOssUrl("SYNTHETIC_PRIVATE_KEY").getCode()).isEqualTo(409);
+        org.mockito.Mockito.verifyNoInteractions(ossService);
+    }
+    @Test
+    void gatewayMigrationLogsNeverReturnHistoricalObjectKeyOrIssueSignature() {
+        deliveryProperties.setMode(ImageDeliveryProperties.Mode.GATEWAY);
+        var row=new com.zjcxph.imgapi.entity.ImageMigrationLog();
+        row.setScanId(1);row.setMigrationStatus("success");row.setOssUrl("SYNTHETIC_HISTORICAL_OBJECT_KEY");
+        row.setLocalPath("SYNTHETIC_PRIVATE_PATH");row.setErrorMessage("SYNTHETIC_PRIVATE_ERROR");
+        when(migrationService.getMigrationLogs("success",1,20)).thenReturn(List.of(row));
+        when(migrationService.countMigrationLogs("success")).thenReturn(1L);
+        var result=controller.getMigrationLogs("success",1,20).getData().getList().getFirst();
+        assertThat(result.getOssUrl()).isNull();
+        assertThat(result.getLocalPath()).isEqualTo("[SOURCE OMITTED]");
+        assertThat(result.getErrorMessage()).doesNotContain("SYNTHETIC_PRIVATE");
+        verify(migrationService,org.mockito.Mockito.never()).enrichWithPresignedUrl(org.mockito.ArgumentMatchers.any());
+    }
+
     @Test
     void gatewayModeDoesNotIssueLegacyScanSignedUrl() {
         deliveryProperties.setMode(ImageDeliveryProperties.Mode.GATEWAY);

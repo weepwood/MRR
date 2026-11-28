@@ -14,6 +14,8 @@ const props = withDefaults(defineProps<{
   yAxisName?: string
   unit?: string
   showLegend?: boolean
+  visiblePoints?: number
+  minInterval?: number
   emptyDescription?: string
 }>(), {
   loading: false,
@@ -21,6 +23,8 @@ const props = withDefaults(defineProps<{
   yAxisName: '',
   unit: '',
   showLegend: true,
+  visiblePoints: 16,
+  minInterval: 1,
   emptyDescription: '暂无趋势数据',
 })
 
@@ -44,11 +48,13 @@ const option = computed<ECOption>(() => ({
     ? {
         top: 0,
         right: 0,
+        left: 0,
+        type: 'scroll',
         data: props.series.map(item => item.name),
       }
     : undefined,
   grid: {
-    top: props.showLegend && props.series.length > 1 ? 42 : 24,
+    top: props.showLegend && props.series.length > 1 ? (props.yAxisName ? 52 : 36) : props.yAxisName ? 32 : 20,
     right: 20,
     bottom: 28,
     left: 18,
@@ -61,6 +67,7 @@ const option = computed<ECOption>(() => ({
     axisLabel: {
       hideOverlap: true,
       margin: 12,
+      formatter: value => /^\d{4}-\d{2}-\d{2}$/.test(value) ? value.slice(5).replace('-', '/') : value,
     },
     splitLine: { show: false },
   },
@@ -68,10 +75,10 @@ const option = computed<ECOption>(() => ({
     type: 'value',
     name: props.yAxisName,
     nameGap: 16,
-    minInterval: 1,
+    minInterval: props.minInterval,
   },
-  dataZoom: props.categories.length > 16
-    ? [{ type: 'inside', startValue: Math.max(0, props.categories.length - 16), endValue: props.categories.length - 1 }]
+  dataZoom: props.categories.length > props.visiblePoints
+    ? [{ type: 'inside', startValue: Math.max(0, props.categories.length - props.visiblePoints), endValue: props.categories.length - 1 }]
     : undefined,
   series: props.series.map(item => ({
     name: item.name,

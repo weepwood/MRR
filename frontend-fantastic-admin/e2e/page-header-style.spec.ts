@@ -1,4 +1,7 @@
 import { expect, test } from '@playwright/test'
+import { isolateLocalVisualSettings } from './helpers/local-visual-settings'
+
+test.beforeEach(async ({ page }) => { await isolateLocalVisualSettings(page) })
 
 test.describe('页面标题统一风格', () => {
   test('风格一字号对齐装箱管理并覆盖设置、帮助和用户页面', async ({ page }) => {
@@ -21,7 +24,7 @@ test.describe('页面标题统一风格', () => {
     const archiveTitle = page.getByRole('heading', { name: '档案装箱管理' })
     await expect(archiveTitle).toBeVisible({ timeout: 20_000 })
     const archiveTitleSize = await archiveTitle.evaluate(node => window.getComputedStyle(node).fontSize)
-    expect(archiveTitleSize).toBe('26px')
+    expect(archiveTitleSize).toBe('22px')
 
     await page.goto('/records', { waitUntil: 'domcontentloaded' })
     const recordsTitle = page.getByRole('heading', { name: '记录管理' })
@@ -29,7 +32,7 @@ test.describe('页面标题统一风格', () => {
     expect(await recordsTitle.evaluate(node => window.getComputedStyle(node).fontSize)).toBe(archiveTitleSize)
 
     await page.goto('/settings', { waitUntil: 'domcontentloaded' })
-    const settingsHeader = page.locator('.settings-page > .page-header')
+    const settingsHeader = page.locator('.settings-page > .mrr-page-header')
     const settingsTitle = page.getByRole('heading', { name: '系统设置' })
     await expect(settingsHeader).toBeVisible({ timeout: 20_000 })
     await expect(settingsTitle).toBeVisible()
@@ -38,11 +41,11 @@ test.describe('页面标题统一风格', () => {
     expect(await settingsHeader.locator('.header-icon').count()).toBe(0)
     // 英文标题此前由 ::before 伪元素硬编码注入，不可翻译、无法被读屏获取；
     // 现为真实 DOM 文本，因此断言从「伪元素内容」改为「真实可见文本」。
-    await expect(settingsHeader.locator('.eyebrow')).toHaveText('System Settings')
+    await expect(settingsHeader.locator('.mrr-page-header__eyebrow')).toHaveText('System Settings')
     expect(await settingsHeader.evaluate(node => window.getComputedStyle(node).backgroundImage)).toBe('none')
 
     await page.goto('/help', { waitUntil: 'domcontentloaded' })
-    const helpHeader = page.locator('.help-center > .help-header')
+    const helpHeader = page.locator('.help-center > .mrr-page-header')
     const helpTitle = page.getByRole('heading', { name: '帮助与文档' })
     await expect(helpHeader).toBeVisible({ timeout: 20_000 })
     await expect(page.getByText('MRR DOCUMENTATION', { exact: true })).toBeVisible()
@@ -62,7 +65,7 @@ test.describe('页面标题统一风格', () => {
     // 改为显式类选择器后必须与装箱管理页保持一致。
     for (const path of ['/operations-center', '/nginx-browser']) {
       await page.goto(path, { waitUntil: 'domcontentloaded' })
-      const title = page.locator('.page-header h1, .page-header h2').first()
+      const title = page.locator('.mrr-page-header h1').first()
       await expect(title).toBeVisible({ timeout: 20_000 })
       expect(await title.evaluate(node => window.getComputedStyle(node).fontSize)).toBe(archiveTitleSize)
     }
@@ -76,10 +79,10 @@ test.describe('页面标题统一风格', () => {
     })
 
     for (const target of [
-      { path: '/settings', selector: '.settings-page > .page-header' },
-      { path: '/help', selector: '.help-center > .help-header' },
-      { path: '/operations-center', selector: '.page-header' },
-      { path: '/nginx-browser', selector: '.page-header' },
+      { path: '/settings', selector: '.settings-page > .mrr-page-header' },
+      { path: '/help', selector: '.help-center > .mrr-page-header' },
+      { path: '/operations-center', selector: '.mrr-page-header' },
+      { path: '/nginx-browser', selector: '.mrr-page-header' },
     ]) {
       await page.goto(target.path, { waitUntil: 'domcontentloaded' })
       await expect(page.locator('html')).toHaveAttribute('data-page-title-style', 'card')
@@ -97,4 +100,90 @@ test.describe('页面标题统一风格', () => {
       expect(style.boxShadow).toBe('none')
     }
   })
+})
+
+const businessRoutes = [
+  '/',
+  '/users',
+  '/permissions',
+  '/settings',
+  '/help',
+  '/records',
+  '/patients',
+  '/ocr-batches',
+  '/statistics',
+  '/statistics-detail',
+  '/archive-boxes',
+  '/oss-migration',
+  '/oss-browser',
+  '/data-exchange',
+  '/data-relations',
+  '/archive-workbench',
+  '/operations-center',
+  '/database-browse',
+  '/logs',
+  '/runtime-errors',
+  '/audit-images',
+  '/monitoring',
+  '/response-analysis',
+  '/auth-test',
+  '/nginx-browser',
+  '/ui-components',
+]
+
+test('所有后台页头采用相同尺寸和左右边界', async ({ page }, testInfo) => {
+  test.setTimeout(240_000)
+  await page.setViewportSize({ width: 2400, height: 1000 })
+  await page.addInitScript(() => localStorage.setItem('MRR-ADMIN:app-settings', JSON.stringify({
+    app: { pageTitleStyle: 'card', colorScheme: 'light', enableMotion: false },
+    menu: { mode: 'single' },
+    layout: { enableMobileAdaptation: true },
+  })))
+  const measure = async () => {
+    const header = page.locator('.mrr-page-header').first()
+    await expect(header).toBeVisible()
+    await expect(header.locator('h1')).toBeVisible()
+    return header.evaluate((el) => {
+      const css = getComputedStyle(el)
+      const rect = el.getBoundingClientRect()
+      const title = el.querySelector('h1')!
+      const description = el.querySelector('.mrr-page-header__description')!
+      return {
+        x: rect.x,
+        width: rect.width,
+        height: rect.height,
+        titleSize: getComputedStyle(title).fontSize,
+        descriptionSize: getComputedStyle(description).fontSize,
+        paddingTop: css.paddingTop,
+        paddingBottom: css.paddingBottom,
+        paddingLeft: css.paddingLeft,
+        paddingRight: css.paddingRight,
+        radius: css.borderRadius,
+        shellWidth: el.closest('.mrr-page-shell')?.getBoundingClientRect().width ?? 0,
+        overflow: el.scrollWidth > el.clientWidth + 1,
+      }
+    })
+  }
+  await page.goto('/users')
+  const baseline = await measure()
+  expect(baseline.titleSize).toBe('22px')
+  expect(baseline.descriptionSize).toBe('13px')
+  expect(baseline.paddingTop).toBe('16px')
+  for (const path of businessRoutes) {
+    await page.goto(path)
+    await expect(page.locator('html')).toHaveAttribute('data-page-title-style', 'card')
+    const actual = await measure()
+    expect(actual.titleSize, path).toBe(baseline.titleSize)
+    expect(actual.descriptionSize, path).toBe(baseline.descriptionSize)
+    expect(actual.paddingTop, path).toBe(baseline.paddingTop)
+    expect(actual.paddingBottom, path).toBe(baseline.paddingBottom)
+    expect(actual.paddingLeft, path).toBe(baseline.paddingLeft)
+    expect(actual.paddingRight, path).toBe(baseline.paddingRight)
+    expect(actual.radius, path).toBe(baseline.radius)
+    expect(Math.abs(actual.width - actual.shellWidth), path).toBeLessThanOrEqual(1)
+    expect(Math.abs(actual.width - baseline.width), path).toBeLessThanOrEqual(1)
+    expect(Math.abs(actual.x - baseline.x), path).toBeLessThanOrEqual(1)
+    expect(actual.overflow, path).toBe(false)
+    await testInfo.attach(`header-geometry-${path.replace(/\//g, '_')}`, { body: JSON.stringify(actual), contentType: 'application/json' })
+  }
 })

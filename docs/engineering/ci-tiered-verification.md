@@ -10,10 +10,11 @@ main 仅要求两个 GitHub Actions App（15368）绑定状态：`governance`、
 
 | 改动 | PR 检查 |
 | --- | --- |
-| 普通 Markdown、VERSION、发布说明 | 治理与静态不变量；不构建应用 |
-| 普通前端页面、样式、公共 UI | 类型、变更 lint、前端全量单测；不采集覆盖率 |
+| 普通 Markdown、发布说明 | 治理与静态不变量；不构建应用 |
+| VitePress 文档或 VERSION | 文档测试与内外站构建，版本不变量；不构建应用（其他累计风险除外） |
+| 普通前端页面、样式、公共 UI | 类型、变更 lint、前端全量单测及映射 Mock 回归；未知共享输入回退完整 Mock，不采集覆盖率 |
 | 前端根配置、依赖或构建工具 | 上述检查 + 生产构建与 Chrome 86 兼容检查 |
-| 登录、认证客户端、路由、导入关键页面或浏览器用例 | 类型、变更 lint、前端全量单测；浏览器 E2E 延后到 main 集成与发布候选验收 |
+| 登录、认证客户端、路由、导入关键页面或浏览器用例 | 类型、变更 lint、前端全量单测；关键源码/共享测试输入完整 Mock，独立 spec 变化定向 Mock |
 | 普通后端 Controller/DTO/工具 | 编译与全量单测 |
 | Mapper、资源、数据库、配置、Service、身份权限/审计/票据/导入导出 | PostgreSQL 16 集成测试；真实浏览器链路延后到 main 集成与发布候选验收 |
 | Windows 部署资产 | PS5.1 解析与 manager 自检 |
@@ -22,15 +23,27 @@ main 仅要求两个 GitHub Actions App（15368）绑定状态：`governance`、
 
 PR 的 frontend job 并行执行类型检查与全量单测，任一失败即失败；backend job 关闭 JaCoCo 插桩，覆盖率回退仅由完整发布验收阻断。
 
-PR 上的集成 job 只在前端确有改动时执行前端检查与构建（`integration_frontend`）；仅后端身份/导入类改动不再重复构建未改动的前端。main 集成与完整发布验收始终构建并嵌入前端。
+普通 PR 上的集成 job 只在前端确有改动时执行前端检查与构建（`integration_frontend`）；仅后端身份/导入类改动不再重复构建未改动的前端。若草稿延期了累计变更要求的完整候选，已选中的高风险真实集成仍执行真实 JAR 联调并嵌入前端。main 集成与完整发布验收始终构建并嵌入前端。
 
-Pages 演示工作流在 PR 上按改动范围选择：仅明确列入展示层白名单的帮助/组件演示页面、通用视觉组件、全局样式与 Markdown 不再额外构建演示站；业务页面、未知前端源码、前端关键流程、浏览器用例、构建配置、Mock 数据、`VERSION`、`release-baseline.json` 或 Pages workflow 变化继续执行演示冒烟。范围输出缺失或非法时继续运行冒烟；范围 job 自身失败仍会使 workflow 失败。main push 与手动调度仍按原触发条件构建、冒烟和部署。此优化不改变 PR 的前端全量单测、类型或 lint 门禁。
+Pages 演示工作流在 PR 上按改动范围选择：仅明确列入展示层白名单的帮助/组件演示页面、通用视觉组件、全局样式与 Markdown 不再额外构建演示站；业务页面、未知前端源码、前端关键流程、构建配置、Mock 数据、静态演示冒烟脚本、`VERSION`、`release-baseline.json` 或 Pages workflow 变化继续执行演示冒烟。单独 Mock/live spec 或测试 fixture 变更不再触发静态演示构建，除非累计变更中另有静态构建输入。范围输出缺失或非法时继续运行冒烟；范围 job 自身失败仍会使 workflow 失败。main push 与手动调度仍按原触发条件构建、冒烟和部署。此优化不改变 PR 的前端全量单测、类型或 lint 门禁。
 
 Service 保守进入 PostgreSQL 范围，因为仅凭路径无法证明没有事务或 SQL 影响。风险选择不读取作者的 P3 标签来减少检查。未运行的测试不能作为成功证据。
 
 复用 `frontend_test_scope.py`、`backend_test_scope.py`；`ci_gate.py` 统一编排两者和 Windows/真实链路范围。git diff 关闭重命名折叠，删除、重命名前后的路径均参与分类。`pr-gate` 使用 always() 检查每个实际选中的 job，失败、取消、输出缺失或意外跳过均拒绝。整个必需 workflow 不使用顶层 paths 过滤。
 
-普通 PR 不运行完整 Mock Playwright 或真实浏览器 E2E。关键前端流程仍执行类型检查、变更 lint 和前端全量单测；后端高风险路径保留 PostgreSQL 集成测试。main 对选中的应用集成执行真实 JWT/PostgreSQL/JAR 浏览器联调；普通前端展示层的重复集成延后到手动或发布验收。完整发布候选执行全量 Mock E2E、真实联调与 Windows 恢复验收。
+Mock 业务 E2E 只由 Quality Gate 负责，Pages 不再重复执行同一 Vite Mock suite。已明确映射的患者、装箱、设置、统计和样式变化选择相关 spec；新增/修改的 spec 保留，并保留既有相关用例扩展。关键源码、共享 fixture、Mock API、测试配置或未映射的应用输入回退完整 Mock。删除/重命名导致选中路径缺失时回退完整 Mock。完整候选已经拥有全量 Mock 和文档构建时，独立 e2e/docs job 不再重复。定向保留20分钟步骤预算，原断言、重试、预热不变。后端高风险路径保留 PostgreSQL 集成测试；main 真实 JWT/PostgreSQL/JAR 浏览器联调与完整发布不变。
+
+### 草稿反馈与最终准入（2026-11-27）
+
+长期 PR 中的 `release-baseline.json` 或发布工具变更会持续选中完整候选。只对实际 GitHub draft 事件使用 `--mode draft`：仍比较完整累计差异并执行已选中的开发/数据库/真实联调/Mock/文档/Windows 专项，但可延期完整候选的覆盖率及制品链路。此时 `candidate_deferred=true`，必需的 `pr-gate` **有意不通过**，不是可合并绿灯。正常 PR、ready_for_review 及相关同步/编辑事件重新计算整个累计差异；非草稿仍要求原完整候选。缺少/非法 draft 状态或延期输出、必需 job 缺失/失败/取消/意外跳过一律拒绝。草稿也可使用现有 Release dry-run 独立验证完整包，但手动运行的汇总检查名为 manual-integration-gate，不复用必需 pr-gate 状态。选择器自身变化即使同时存在定向 spec 也回退完整 Mock。未更改远程分支保护、治理、版本号、生产权限或正式 Release。
+
+日常 L1 在本地按风险执行 lint、类型及定向测试；L2 以累计 PR 选中检查为准，草稿延期不是合并批准；L3 走原固定 SHA 的完整候选及正式发布链路。不使用最后一次 commit 或缓存绿灯代替累计风险。
+
+### 缓存、诊断与回滚
+
+Chromium 缓存键统一为 OS/架构/Playwright 版本，缓存命中仍安装系统依赖并确认锁定浏览器可用。固定 Windows 运行时仅缓存原始下载文件，键含版本与仓库预期摘要；命中和新下载都先核验 `quality/windows-runtime-sha256.txt` 再解压。新摘要基于官方 HTTPS 再下载并与历史已验收包逐文件比对，不冒充上游签名认证。任何摘要不一致立即失败，更新版本必须独立审查新来源及摘要。候选 JAR、ZIP、身份清单和测试绿灯不进入跨提交缓存。
+
+Quality Gate 汇总实际选择、结果、比较基线、源码 SHA 和延期状态；Mock JUnit 与失败 trace 按 run/attempt 保留。回滚使用本批独立 Git revert，恢复原工作流和选择器（无需修改分支保护或数据库）。
 
 P3 PR 可省略 AI 参与报告，正文保留变更、关联原因、风险、验证与回滚。P0/P1 必须关联 Issue/提案并记录符合 AGENTS.md 5.5 的证据化审查；隐私和历史迁移硬门禁不减。
 
@@ -109,3 +122,46 @@ python -m scripts.ci_protection --restore "$env:TEMP\MRR-ci-protection-before-45
 目标普通 PR 2–5 分钟，文档约 1 分钟；以迁移后 20 个 PR 的中位数/P95确认，不能把目标当作已测结果。
 
 CI 使用合成数据与隔离实例；Chrome 86 检查是生产资源兼容检查，浏览器使用当前 Chromium。它不替代 #350 的医院 Windows/Nginx、Chrome 86 真机、真实 NAS/OSS 和生产数据规模验收。
+
+## 2026-11-27 本地实施与测量记录
+
+关联 #450 / 当前累计 PR #850。风险 P1；未修改生产业务、医疗授权、数据库迁移及正式发布工作流。完整差异判定保留，不使用最后一次提交推断验收范围。当前宽范围草稿仍需要全量 Mock、真实 JAR 集成、PostgreSQL 与文档验收；完整候选被延期时，必需的 PR gate 明确失败，Ready for review 后重新要求完整候选。候选要求与延期状态均须有效输出，必要候选未选择时拒绝通过。
+
+- 历史成功运行 45887753572：候选构建 30.7 分钟、完整 Mock 22.3 分钟，Quality Gate 各 job 墙钟合计 35.0 分钟；Pages 45887753527 合计 14.92 分钟，其中重复定向回归 13.2 分钟。合计 49.92 job-min 是墙钟代理量，不是实际计费分钟；不同操作系统、并发和排队不可直接相加为用户等待时间。
+- 本地：Python 273 项，268 通过、5 既有跳过；三份工作流 actionlint 通过；视觉共享写入回归先红后绿，定向 43 项及扩大 84 项通过，包含预热且零重试。静态 Pages 构建与浏览器冒烟、231/231 Mock 静态路由覆盖、文档测试及双站构建通过。
+- 固定 Nginx 1.31.8 / WinSW 2.12.0 原始下载物摘要，官方 HTTPS 下载与历史验收包 34 个文件比对一致，篡改单字节校验拒绝；这不是上游签名认证。浏览器缓存按 OS/架构/Playwright 版本隔离，命中仍检查系统依赖和安装可用性。不缓存候选制品、验证成功状态及凭据。
+- 两分片对照：同一 Mac、独立源码副本/端口/Vite 缓存，共享只读安装依赖。43 个 Chromium 业务用例单次 60.31s（另含一次预热），双分片 22+21 个业务用例，墙钟 52.41s、进程时间合计 102.72s，精确覆盖且无重复/跳过/失败/重试。首次复制工作区 pnpm 交互式依赖检查阻塞，随后使用相同已安装入口完成。墙钟约下降 13%，进程时间代理量约上升 70%；不是独立 Linux Runner 实测或账单。暂不默认启用分片，完整规模远端测量尚待实施。
+- 真实服务器同步场景仍保留，不宣称所有 Mock 可变状态已按 Worker 完全隔离。缓存远端命中、优化后完整 CI 与实际计费收益尚待核实。原未提交医疗权限测试保持逐字节一致，其失败不因本次 CI 优化而解除。
+
+回滚：视觉测试隔离提交 `0f0cf85f` 与工作流/范围判定/缓存提交分别可逆；回滚工作流须同时回滚配套脚本、测试及约定，禁止仅移除必需门禁或缓存校验。证据位于本机独立 artifacts 目录，不纳入 Git。
+
+
+### 远端两分片可选实验
+
+现有 `frontend-mock` 手动入口增加 `shard_probe=true`（优先于 cross_browser），仅启动两个独立 Ubuntu Runner 的完整 Chromium 分片，均保持 2 worker、原预热和原 CI 重试；任一失败直接保留，另外一片不被 fail-fast 取消。两片分别保存同 SHA/run/attempt 的 JUnit，与同一合并模拟树的单次完整 Mock 结果对照时必须先核对源码树身份（PR merge SHA 与分支 SHA 可能不同）。比较两个分片用例集合的并集、交集、失败、重试、浏览器阶段墙钟及各 Job 时间之和；缓存冷热与 Runner 排队单独记录。此入口不产生 pr-gate 或发布产物、不影响默认日常及正式发布门禁。一次完整规模实验有额外 Runner 成本，不在每次推送重复执行。
+
+
+补充验收：实际 `playwright --list --project=chromium` 单次清单 521 个唯一 Chromium spec ID，两个分片为 261+260，交集/遗漏/额外均零；预热分别保留。这仅为完整测试清单验证，非521个已执行通过。真实 CI 模式下本地隔离测试生成 JUnit 和 JSON 两种报告且零失败/重试；正常 Mock 与两分片入口均保存这两种报告，以 JSON spec ID、状态、尝试次数对照，JUnit 保持原有消费者兼容。新增门禁测试旧实现实际5失败，新增手动分片契约和报告契约分别先失败后通过；最终 Python 278项中273通过、5既有跳过，四份工作流 actionlint、ESLint 和工程文档通过。旧707a49d3的Pages已通过，未将旧SHA结果当成新提交验收。未提交医疗权限测试保持不变。
+
+优化前最终对照（707a49d3）：GitHub 45929413272 完整 Quality Gate 与 Windows 恢复/候选总门禁成功，45929413251 Pages、治理和监控均成功。Pages build 20.65min（定向Mock18.68min、静态冒烟0.55min），361项通过、1项flaky；完整候选 build 26.65min（Mock19.83min、后端2.95min、前端1.90min、Chromium准备0.23min）。各Job与步骤实际时间来自已完成Job元数据；最终全量日志/总Runner时长仍需独立补取，不将旧SHA验收当成新SHA通过。
+
+
+## 2026-11-27 首轮新版远端结果与 NAS 回归
+
+47063b90 的治理、监控、Pages 通过；45932224231 Pages build 1.87min（旧20.65min，减少18.78min，静态冒烟32s仍保留）。Quality 45932224227 的 scope/development/e2e/docs 通过，release 在草稿阶段延期；integration/build 后端测试1309项1错误（NasArchiveImageSourceTest.consecutiveBodyFailuresTripNodeDespiteSuccessfulOpensAndPreserveHealthyNode），pr-gate 实际拒绝 integration 失败，不能解释为仅有意草稿延期。下载实际 Mock JSON/JUnit：单次业务521项，519首过、2 flaky（login-layout 动画及 users-query-feedback，分别2/3次尝试），预热1通过，无最终失败/跳过。E2E step 29.65min 高于旧19.83min，尚不能宣称整体提速。Docs job 0.58min。Pages去重收益不等于整条流水线等待时间或实际计费收益。
+
+NAS 实际旧源码存在释放标志先于 semaphore.release 的竞争；单隔离器本地10000次未复现，随后旧源码四独立隔离器同条件压力测试实际抛出 CapacityException；仅同步同一次释放操作后共400000次通过，纳入新增回归，NAS/限流/熔断相关24项零失败/跳过。保留原超时、容量、迟到资源回收、权限检查；新源码须Linux复验，不将增量JaCoCo历史数据警告当成完整覆盖率验收。
+
+手动双分片 45936230623 已提交并运行，head 47063b90，PR测试合并提交2b0b48be8a9ae527d3fe32db8fab3f8045475d07，两者Git tree 81d540a1f7f3d758cf94b554dc81dd468350722b 完全相同。保留原单次报告用于同树精确比较；分片尚未完成，不宣称独立Runner加速或稳定性结果。原权限测试逐字节保留。
+
+
+### 浏览器不稳定用例收口
+
+8b718c95 的远端 Quality Gate 45936420235 integration/build 已成功，独立文档、开发、范围通过，完整 E2E 尚在执行。47063b90 单次 JSON 两项 flaky 的实际证据：login-layout 的 Animation.finished 抛 AbortError；users-query-feedback 的真实忙态362.1/385ms超过310ms。仅改测试：动画助手只接受已取消且 idle 的原生 AbortError，其他异常继续抛出，真实正反向变换、尺寸和最终 DOM 仍断言；增加实际浏览器初始动画取消回归。用户查询改为冻结时钟、延迟真实 Mock 响应、100ms 时仍在途，用户/角色响应完成后无需推进时间即解除忙态，并观察成功 toast。隔离副本恢复旧助手与320ms minimum反馈，两个原行为分别真实失败；同副本恢复修正后各重复3次，6/6通过。实际工作树3份浏览器文件29/29（含预热、51.0s、零重试），ESLint通过。生产源码未修改，反向实验未触及实际预览工作树。单次完整报告 case duration 合计3468.88s（含尝试与预热，不是Job墙钟），预热43.50s；高耗时文件 business-visual-audit 233.5s、page-header-style 127.8s、table-column-widths 100.4s，后续应以具体证据分析，不删断言。远端双分片2成功，260个业务ID全部匹配单次基线且无重试/跳过，另1项预热；浏览器阶段11.40min、Job12.30min，分片1尚未完成。不据此推断完整双分片收益。保持草稿和正式发布准入，原未提交医疗权限测试保持逐字节一致。
+
+
+### 独立 Linux Runner 双分片最终对照（2026-11-27）
+
+固定47063b90与其PR合并树81d540a1f7f3d758cf94b554dc81dd468350722b。原单次Job 140287352560（45932224227），双分片Job 140299963076 / 140299962717（45936230623）均实际完成并成功。下载原始JSON与JUnit，按Chromium spec ID核对：单次521业务用例519首过+2 flaky；双片261+260，521首过、零失败/跳过/重试，交集、遗漏和额外均为0，各片另含一次预热。单Job 1826s，浏览器步骤1779s；分片1 Job916s/浏览器861s，分片2 Job738s/浏览器684s，同一时刻03:47:50Z开始，04:03:06Z全部结束，墙钟916s（-49.8%），累计Job1654s（-9.4%），累计浏览器1545s。Job墙钟代理量不是GitHub实际计费分钟。初次报告比较脚本误用了docs Job元数据，纠正为e2e Job后完成精确集合与耗时核对；原报告未修改。先保留手动分片入口，不以单次样本改变默认正式门禁；同一Mac小样本曾增加累计进程消耗，旧版完整Mock另有19.83min记录，负载、冷热缓存和Runner差异尚未消除。后续如需默认启用，应以同树、同配置、真实独立Runner重复对照及报告完整性门禁为依据，而非仅比较通过数。
+
+8b718c95的integration/build 140300644726实际通过，Job 7.32min，后端3.33min、前端2.72min、Chromium安装0.18min、真实候选JAR登录/导入/查询/拒绝验证0.35min。工作流仍在运行时gh拒绝提供完整日志，因此未宣称具体Java测试数量或实际缓存命中。最新本地稳定性修复3a96fee2已完成29项定向验收；为避免取消仍在执行的8b718c95完整E2E，暂缓集中推送。完整候选Windows缓存验证应待最新SHA冻结后使用既有Release dry_run=true（不改草稿、不打Tag、不发布），不在旧SHA重复执行。医疗权限测试与阻塞保持原状。

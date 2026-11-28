@@ -33,7 +33,7 @@ const outputType = computed(() => {
 </script>
 
 <template>
-  <i :class="cn('relative size-[1em] flex-inline items-center justify-center fill-current leading-[1em]', props.class)">
+  <i :class="cn('mrr-icon relative size-[1em] flex-inline items-center justify-center fill-current leading-[1em]', props.class)">
     <i v-if="outputType === 'unocss'" class="size-inherit shrink-0" :class="name" />
     <Icon v-else-if="outputType === 'iconify'" :icon="name" class="shrink-0 size-inherit!" />
     <svg v-else-if="outputType === 'svg'" class="size-inherit shrink-0" aria-hidden="true">

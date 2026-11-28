@@ -28,7 +28,10 @@ public enum MaskStrategy {
     PHONE,
 
     /** 只保留文件名，去掉目录部分。 */
-    PATH;
+    PATH,
+
+    /** Protect historical audit targets before returning them; no raw value filtering. */
+    AUDIT_TARGET;
 
     private static final String MASK = "*";
 
@@ -57,6 +60,7 @@ public enum MaskStrategy {
                     : allMask(raw.length() - 4) + raw.substring(raw.length() - 4);
             case PHONE -> raw.length() >= 7 ? keepHeadAndTail(raw, 3, 4) : allMask(raw.length());
             case PATH -> fileName(raw);
+            case AUDIT_TARGET -> com.zjcxph.imgapi.utils.AuditPayloadSanitizer.protectedTarget(raw);
         };
     }
 

@@ -1,3 +1,7 @@
+<script setup>
+import figure1 from './assets/archive-identity.svg?url'
+</script>
+
 # 数据库
 
 ## 运行基线
@@ -36,6 +40,10 @@ flowchart LR
 - 历史导入仍可提供 `bah/sjh`，由解析函数和触发器建立或刷新关联。
 
 不要把上架号直接改成主键：历史数据存在空值，且业务编号可能调整；稳定主键与业务编号职责不同。
+
+<p class="doc-figure"><a :href="figure1" target="_blank" rel="noopener noreferrer" aria-label="病案主档与关联原则（在新标签页查看原图）"><img :src="figure1" alt="病案主档与关联原则" loading="lazy"></a></p>
+
+*图 1：原始编号、稳定主档与业务记录 · 流程示意，点击查看原图。*
 
 ## 核心业务表
 
@@ -212,3 +220,7 @@ V20260717010000__rename_mr_patient_binqu_to_bingqu.sql
 - Nginx、应用、文档和监控配置备份。
 
 恢复演练必须验证数据库记录、`archive_id` 关联和实际图片文件仍能对应，不能只确认 PostgreSQL 进程可以启动。
+
+## 主档关系核对图
+
+排查时先以稳定主档 ID 确定目标，再核对原始 BAH/SJH 与各表关联。遗留患者匹配只能作为候选证据。对大表使用有界、可解释的查询，区分估算与精确统计；未经现场评估不得为验证目的执行无界聚合或阻塞式索引构建。迁移前保留数据库备份与迁移记录，恢复必须在隔离实例中校验。

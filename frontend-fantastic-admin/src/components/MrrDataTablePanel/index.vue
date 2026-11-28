@@ -6,11 +6,12 @@ import { mrrDataTablePanelLoadingKey } from './context'
 defineOptions({ name: 'MrrDataTablePanel' })
 
 const props = defineProps<{
-  title: string
+  title?: string
   description?: string
   icon?: string
   count?: number
   countLabel?: string
+  appearance?: 'quiet' | 'default'
   /**
    * 已有结果上的再次查询（刷新、翻页、改条件）。保留表格，200ms 后在表格上方显示进度条并把结果变暗。
    * 首次加载请继续在默认插槽里放 AppLoading 骨架；两者可以同时为真。
@@ -27,6 +28,7 @@ provide(mrrDataTablePanelLoadingKey, computed(() => Boolean(props.loading)))
 
 const slots = useSlots()
 const hasActions = computed(() => props.count !== undefined || Boolean(slots.actions))
+const headerless = computed(() => !props.title && !props.description && !props.icon && !hasActions.value)
 const countText = computed(() => Number(props.count ?? 0).toLocaleString('zh-CN'))
 
 function blockClickWhileLoading(event: Event) {
@@ -53,6 +55,7 @@ watch(() => props.resultKey, (next, previous) => {
 
 <template>
   <MrrSectionCard
+    :class="{ 'mrr-data-table-panel--quiet': props.appearance === 'quiet', 'mrr-data-table-panel--headerless': headerless }"
     :title="props.title"
     :description="props.description"
     :icon="props.icon"
@@ -110,6 +113,10 @@ watch(() => props.resultKey, (next, previous) => {
 
 /* 所有分区共用 --mrr-card-inset，卡头标题、筛选字段、表格外沿、分页落在同一条竖线上。 */
 .mrr-data-table-panel__filters {
+  /* Inherited contract avoids cross-component scoped selector/cascade differences. */
+  --mrr-embedded-filter-bottom-space: 0px;
+  --mrr-embedded-filter-divider-width: 0px;
+
   padding: var(--mrr-space-4) var(--mrr-card-inset) 0;
 }
 
@@ -119,8 +126,14 @@ watch(() => props.resultKey, (next, previous) => {
   gap: var(--mrr-space-3);
   align-items: center;
   justify-content: space-between;
+  min-width: 0;
   padding: var(--mrr-space-3) var(--mrr-card-inset);
   border-bottom: 1px solid var(--mrr-shell-divider);
+}
+
+.mrr-data-table-panel__toolbar > :deep(*) {
+  min-width: 0;
+  max-width: 100%;
 }
 
 .mrr-data-table-panel__content {
@@ -198,10 +211,6 @@ watch(() => props.resultKey, (next, previous) => {
   border-top: 1px solid var(--mrr-shell-divider);
 }
 
-.mrr-data-table-panel__pagination :deep(.el-pagination) {
-  justify-content: flex-end;
-}
-
 .mrr-data-table-panel__content :deep(.el-table) {
   --el-table-border-color: var(--mrr-border);
 
@@ -227,6 +236,107 @@ watch(() => props.resultKey, (next, previous) => {
   .mrr-data-table-panel__pagination {
     justify-content: flex-start;
     padding-inline: var(--mrr-card-inset-compact);
+  }
+}
+
+/* Quiet: a single surface with aligned content, not a card inside a card.
+ * Opt-in until visual and business acceptance; shared interaction stays intact. */
+.mrr-data-table-panel--quiet :deep(.el-card__header) {
+  padding-block: var(--mrr-space-3);
+  background: var(--mrr-card);
+  border-bottom: 0;
+}
+
+.mrr-data-table-panel--quiet .mrr-data-table-panel__filters {
+  --mrr-embedded-filter-bottom-space: var(--mrr-space-3);
+
+  padding-top: 0;
+}
+
+/* A titleless panel has no header to provide clearance for the first row's
+ * external focus ring. Keep the rounded clipping boundary, reserve actual space. */
+.mrr-data-table-panel--quiet.mrr-data-table-panel--headerless .mrr-data-table-panel__filters {
+  padding-top: var(--mrr-space-4);
+}
+
+@media (max-width: 760px) {
+  .mrr-data-table-panel--quiet.mrr-data-table-panel--headerless .mrr-data-table-panel__filters {
+    padding-top: var(--mrr-space-3);
+  }
+}
+
+.mrr-data-table-panel--quiet .mrr-data-table-panel__content {
+  padding-block: 0;
+  padding-inline: 0;
+}
+
+.mrr-data-table-panel--quiet .mrr-data-table-panel__content :deep(.el-table) {
+  --el-table-header-bg-color: var(--mrr-card);
+  --el-table-border-color: var(--mrr-shell-divider);
+
+  border-radius: 0;
+}
+
+.mrr-data-table-panel--quiet .mrr-data-table-panel__content :deep(.el-table th.el-table__cell) {
+  height: 36px;
+  background: var(--mrr-card);
+  border-top: 1px solid var(--mrr-shell-divider);
+}
+
+.mrr-data-table-panel--quiet .mrr-data-table-panel__content :deep(.el-table td.el-table__cell) {
+  height: 52px;
+}
+
+/* A row owns one opaque surface, including sticky operation cells. Element
+ * Plus otherwise paints ordinary cells from transparent and fixed cells from
+ * an inherited opaque background, with independent 250ms transitions.
+ * Keep the sticky mask opaque and switch the row surface in the same frame. */
+.mrr-data-table-panel__content :deep(.el-table__body tr) {
+  --mrr-table-row-surface: var(--el-table-tr-bg-color);
+}
+
+.mrr-data-table-panel__content :deep(.el-table--striped .el-table__body tr.el-table__row--striped) {
+  --mrr-table-row-surface: var(--el-fill-color-lighter);
+}
+
+.mrr-data-table-panel__content :deep(.el-table--enable-row-hover .el-table__body tr:hover),
+.mrr-data-table-panel__content :deep(.el-table .el-table__body tr.hover-row) {
+  --mrr-table-row-surface: var(--el-table-row-hover-bg-color);
+}
+
+.mrr-data-table-panel__content :deep(.el-table .el-table__body tr.current-row) {
+  --mrr-table-row-surface: var(--el-table-current-row-bg-color);
+}
+
+.mrr-data-table-panel__content :deep(.el-table .el-table__body tr > td.el-table__cell) {
+  background-color: var(--mrr-table-row-surface);
+  transition: none;
+}
+
+.mrr-data-table-panel--quiet .mrr-data-table-panel__content :deep(.el-table tr > .el-table__cell:first-child:not(.is-center) > .cell) {
+  padding-left: var(--mrr-card-inset);
+}
+
+.mrr-data-table-panel--quiet .mrr-data-table-panel__content :deep(.el-table__inner-wrapper::before) {
+  display: none;
+}
+
+.mrr-data-table-panel--quiet .mrr-data-table-panel__content :deep(.el-table__body tr:last-child > td.el-table__cell) {
+  border-bottom: 0;
+}
+
+.mrr-data-table-panel--quiet .mrr-data-table-panel__progress {
+  top: 0;
+  z-index: 4;
+}
+
+.mrr-data-table-panel--quiet .mrr-data-table-panel__pagination {
+  background: var(--mrr-card);
+}
+
+@media (max-width: 760px) {
+  .mrr-data-table-panel--quiet .mrr-data-table-panel__content :deep(.el-table tr > .el-table__cell:first-child:not(.is-center) > .cell) {
+    padding-left: var(--mrr-card-inset-compact);
   }
 }
 

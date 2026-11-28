@@ -14,6 +14,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -82,41 +84,27 @@ public class SystemSettingServiceImpl implements SystemSettingService {
                 .peek(s -> s.setUpdatedBy(operator))
                 .toList();
         systemSettingMapper.upsertAll(entities);
-        refreshRuntimeSettings(settings);
+        invalidateDeveloperSettingsAfterCommit(settings.keySet());
         logger.info("系统设置已批量保存: {} 项, 操作者: {}", entities.size(), operator);
     }
 
     @Override
+    @Transactional
     public void setSetting(String key, String value, String updatedBy) {
         validateRuntimeSettings(Map.of(key, value == null ? "" : value));
         String operator = resolveOperator(updatedBy);
         SystemSetting setting = new SystemSetting(key, value, null);
         setting.setUpdatedBy(operator);
         systemSettingMapper.upsert(setting);
-        if (DeveloperModeService.SETTING_KEY.equals(key)) {
-            developerModeService.refreshFromValue(value);
-            if (!developerModeService.isEnabled()) {
-                developerApiAccessService.disableImmediately();
-            }
-        } else if (DeveloperModeService.ALLOWED_SOURCES_SETTING_KEY.equals(key)) {
-            developerModeService.refreshAllowedSourcesFromValue(value);
-        } else if (DeveloperApiAccessService.SETTING_KEY.equals(key)) {
-            developerApiAccessService.refreshFromValue(value);
-        }
+        invalidateDeveloperSettingsAfterCommit(java.util.Set.of(key));
         logger.info("系统设置已更新: {} = ..., 操作者: {}", key, operator);
     }
 
     @Override
+    @Transactional
     public void deleteSetting(String key) {
         systemSettingMapper.deleteByKey(key);
-        if (DeveloperModeService.SETTING_KEY.equals(key)) {
-            developerModeService.disableImmediately();
-            developerApiAccessService.disableImmediately();
-        } else if (DeveloperModeService.ALLOWED_SOURCES_SETTING_KEY.equals(key)) {
-            developerModeService.refreshAllowedSourcesFromValue("");
-        } else if (DeveloperApiAccessService.SETTING_KEY.equals(key)) {
-            developerApiAccessService.disableImmediately();
-        }
+        invalidateDeveloperSettingsAfterCommit(java.util.Set.of(key));
         logger.info("系统设置已删除: {}", key);
     }
 
@@ -260,20 +248,30 @@ public class SystemSettingServiceImpl implements SystemSettingService {
         return value == null ? "" : value.trim();
     }
 
-    private void refreshRuntimeSettings(Map<String, String> settings) {
-        if (settings.containsKey(DeveloperModeService.SETTING_KEY)) {
-            developerModeService.refreshFromValue(settings.get(DeveloperModeService.SETTING_KEY));
-            if (!developerModeService.isEnabled()) {
-                developerApiAccessService.disableImmediately();
-            }
+    /**
+     * Never publish uncommitted values or replay an older transaction's values into the cache.
+     * Both runtime readers reload from the committed database on their next use.
+     */
+    private void invalidateDeveloperSettingsAfterCommit(java.util.Set<String> keys) {
+        if (!keys.contains(DeveloperModeService.SETTING_KEY)
+                && !keys.contains(DeveloperModeService.ALLOWED_SOURCES_SETTING_KEY)
+                && !keys.contains(DeveloperApiAccessService.SETTING_KEY)) {
+            return;
         }
-        if (settings.containsKey(DeveloperModeService.ALLOWED_SOURCES_SETTING_KEY)) {
-            developerModeService.refreshAllowedSourcesFromValue(
-                    settings.get(DeveloperModeService.ALLOWED_SOURCES_SETTING_KEY));
-        }
-        if (settings.containsKey(DeveloperApiAccessService.SETTING_KEY)) {
-            developerApiAccessService.refreshFromValue(
-                    settings.get(DeveloperApiAccessService.SETTING_KEY));
+        Runnable invalidate = () -> {
+            developerModeService.invalidate();
+            developerApiAccessService.invalidate();
+        };
+        if (TransactionSynchronizationManager.isSynchronizationActive()
+                && TransactionSynchronizationManager.isActualTransactionActive()) {
+            TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+                @Override
+                public void afterCommit() {
+                    invalidate.run();
+                }
+            });
+        } else {
+            invalidate.run();
         }
     }
 

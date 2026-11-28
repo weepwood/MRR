@@ -1,12 +1,12 @@
 /* MRR 业务指标卡片：现代 SaaS 仪表盘风格 */
 .mrr-metric-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, var(--mrr-metric-min-width)), 1fr));
   gap: var(--mrr-space-4);
 }
 
 .mrr-metric-grid--compact {
-  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, var(--mrr-metric-min-width)), 1fr));
   gap: var(--mrr-space-3);
 }
 
@@ -24,7 +24,7 @@
 
 /* 7 张左右的指标组用更宽的最小列宽，得到 4+3 的均衡排布。 */
 .mrr-metric-grid--wide {
-  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, var(--mrr-metric-wide-min-width)), 1fr));
 }
 
 /* 4 张指标组固定四列：用于设置、摘要这类需要与上方表格列宽对齐的页面，
@@ -33,7 +33,7 @@
   grid-template-columns: repeat(4, minmax(0, 1fr));
 }
 
-@media (max-width: 1100px) {
+@media (max-width: 1280px) {
   .mrr-metric-grid--four {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
@@ -41,6 +41,7 @@
 
 .mrr-metric-card {
   --mrr-metric-accent: var(--mrr-tone-primary);
+  --mrr-metric-ink: var(--mrr-tone-primary-ink);
 
   position: relative;
   height: 100%;
@@ -66,27 +67,21 @@
 
 .mrr-metric-card .el-card__body {
   position: relative;
-  z-index: 1;
   display: grid;
-  grid-template-columns: 44px minmax(0, 1fr);
+  grid-template-columns: 48px minmax(0, 1fr);
   gap: var(--mrr-space-4);
   align-items: center;
   min-height: calc(var(--mrr-summary-min-height) - 2px);
-  padding: var(--mrr-space-4) var(--mrr-card-inset);
+  padding: var(--mrr-space-3) var(--mrr-card-inset);
 }
 
 .mrr-metric-card__icon {
   display: grid;
   place-items: center;
-
-  /*
-   * 图标块 52 → 44px、字形 26 → 22px：原尺寸与 26px 主值同高，图标与数字抢第一眼；
-   * 收小后视线先落在数值上，图标只做类别提示。圆角同步降一档，与 44px 尺寸成比例。
-   */
-  width: 44px;
-  height: 44px;
-  font-size: 22px;
-  color: var(--mrr-metric-accent);
+  width: 48px;
+  height: 48px;
+  font-size: 28px;
+  color: var(--mrr-metric-ink);
 
   /* 与 tones.css 的 -soft（10%）/ -border（22%，混入 --mrr-border）同一配方，页头、分区卡、指标卡三处图标块不再各用一套比例。 */
   background: color-mix(in srgb, var(--mrr-metric-accent) 10%, var(--mrr-card));
@@ -102,53 +97,66 @@
   min-width: 0;
 }
 
-/* 无图标时文案区占满整行，不再保留 52px 空列。 */
-.mrr-metric-card--no-icon .el-card__body {
-  grid-template-columns: minmax(0, 1fr);
+/* Notes are independent tooltip triggers, not a third text row.
+ * Overlay actions remain separate native controls; info stays above the overlay. */
+.mrr-metric-card__heading {
+  display: flex;
+  gap: var(--mrr-space-1);
+  align-items: center;
+  min-width: 0;
+  min-height: 24px;
+  margin-bottom: var(--mrr-space-1);
 }
 
-/* 值下方的附加内容（进度条、状态标签等），与 note 保持一致的节奏。 */
-.mrr-metric-card__extra {
-  margin-top: var(--mrr-space-3);
+.mrr-metric-card__info {
+  position: relative;
+  z-index: 3;
+  flex: none;
+  margin-inline-start: auto;
+}
+
+.mrr-metric-card__action-mark {
+  flex: none;
+  margin-inline-start: auto;
+  font-size: 16px;
+  color: var(--mrr-muted-foreground);
+}
+
+.mrr-metric-card__info + .mrr-metric-card__action-mark {
+  margin-inline-start: 0;
+}
+
+.mrr-metric-card--interactive:hover {
+  border-color: var(--mrr-border-strong);
+  box-shadow: var(--mrr-shadow-sm);
 }
 
 .mrr-metric-card__label {
   display: block;
-  margin: 0 0 4px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  font-size: 12px;
+  min-width: 0;
+  margin: 0;
+  font-size: var(--mrr-font-size-xs);
   font-weight: 550;
   line-height: 1.35;
   color: var(--mrr-muted-foreground);
-  white-space: nowrap;
-}
-
-/* 口径徽标：区分「本页计数」与「系统总数」，避免扫读时看错口径。
- * 徽标文字用 muted-foreground，在 surface-alt 上明暗主题均 ≥4.5:1；弱化档 --text-tertiary 会低于基线。 */
-.mrr-metric-card__scope {
-  display: inline-flex;
-  align-items: center;
-  padding: 1px 6px;
-  margin-left: var(--mrr-space-2);
-  font-size: var(--mrr-font-size-xs);
-  font-weight: 500;
-  color: var(--mrr-muted-foreground);
-  background: var(--surface-alt);
-  border-radius: var(--mrr-radius-pill);
+  overflow-wrap: anywhere;
+  white-space: normal;
 }
 
 .mrr-metric-card__value-row {
   display: flex;
   flex-wrap: wrap;
-  gap: 5px;
+  gap: var(--mrr-space-1);
   align-items: baseline;
+  min-width: 0;
 }
 
 .mrr-metric-card__value {
   display: block;
+  min-width: 0;
+  max-width: 100%;
   margin: 0;
-  font-size: 26px;
+  font-size: var(--mrr-font-size-metric);
   font-weight: 680;
   font-variant-numeric: tabular-nums;
   line-height: 1.16;
@@ -163,14 +171,14 @@
 }
 
 .mrr-metric-card__value--compact {
-  font-size: 14px;
+  font-size: var(--mrr-font-size-md);
   font-weight: 550;
   line-height: 1.5;
   letter-spacing: 0;
 }
 
 .mrr-metric-card__suffix {
-  font-size: 12px;
+  font-size: var(--mrr-font-size-xs);
   font-weight: 550;
   color: var(--mrr-muted-foreground);
 }
@@ -178,53 +186,51 @@
 /* 值语义色：只改变数字本身的颜色，不改变整张卡片的表面与边框，
  * 避免同一业务含义在不同页面出现「整卡变色」与「仅数字变色」两种做法。 */
 .mrr-metric-card__value--success {
-  color: var(--mrr-tone-success);
+  color: var(--mrr-tone-success-ink);
 }
 
 .mrr-metric-card__value--warning {
-  color: var(--mrr-tone-warning);
+  color: var(--mrr-tone-warning-ink);
 }
 
 .mrr-metric-card__value--danger {
-  color: var(--mrr-tone-danger);
-}
-
-.mrr-metric-card__note {
-  margin: 6px 0 0;
-  font-size: 12px;
-  line-height: 1.45;
-  color: var(--mrr-muted-foreground);
-  overflow-wrap: anywhere;
-  white-space: normal;
+  color: var(--mrr-tone-danger-ink);
 }
 
 .mrr-metric-card--rose {
   --mrr-metric-accent: var(--mrr-tone-rose);
+  --mrr-metric-ink: var(--mrr-tone-rose-ink);
 }
 
 .mrr-metric-card--green {
   --mrr-metric-accent: var(--mrr-tone-success);
+  --mrr-metric-ink: var(--mrr-tone-success-ink);
 }
 
 .mrr-metric-card--amber,
 .mrr-metric-card--warning {
   --mrr-metric-accent: var(--mrr-tone-warning);
+  --mrr-metric-ink: var(--mrr-tone-warning-ink);
 }
 
 .mrr-metric-card--violet {
   --mrr-metric-accent: var(--mrr-tone-violet);
+  --mrr-metric-ink: var(--mrr-tone-violet-ink);
 }
 
 .mrr-metric-card--teal {
   --mrr-metric-accent: var(--mrr-tone-teal);
+  --mrr-metric-ink: var(--mrr-tone-teal-ink);
 }
 
 .mrr-metric-card--slate {
   --mrr-metric-accent: var(--mrr-tone-neutral);
+  --mrr-metric-ink: var(--mrr-tone-neutral-ink);
 }
 
 .mrr-metric-card--danger {
   --mrr-metric-accent: var(--mrr-tone-danger);
+  --mrr-metric-ink: var(--mrr-tone-danger-ink);
 }
 
 @media (max-width: 600px) {
@@ -238,41 +244,56 @@
   .mrr-metric-card .el-card__body {
     padding: var(--mrr-space-3) var(--mrr-card-inset-compact);
   }
-
-  .mrr-metric-card:not(.mrr-metric-card--no-icon) .el-card__body {
-    grid-template-columns: 40px minmax(0, 1fr);
-  }
-
-  .mrr-metric-card__icon {
-    width: 40px;
-    height: 40px;
-    font-size: 20px;
-    border-radius: var(--mrr-radius-lg);
-  }
 }
 
-/* 查询工作区用紧凑摘要保留窄屏结果空间。该变体搭配无图标指标卡。 */
+/* Compact grids differ only in column spacing, never in metric typography or icon size. */
 .mrr-metric-grid--dense {
-  --mrr-summary-min-height: 84px;
-
   gap: var(--mrr-space-3);
 }
 
-.mrr-metric-grid--dense .mrr-metric-card .el-card__body {
-  padding: var(--mrr-space-3) var(--mrr-card-inset-compact);
+/* Five-item analytical summaries: avoid a 4+1 orphan without changing other grids.
+ * Use a 6-track grid for a balanced 3+2 layout at intermediate widths. */
+.mrr-metric-grid--five {
+  grid-template-columns: repeat(5, minmax(0, 1fr));
 }
 
-.mrr-metric-grid--dense .mrr-metric-card__label {
+.mrr-metric-grid--five .mrr-metric-card__label {
+  overflow-wrap: anywhere;
   white-space: normal;
 }
 
-.mrr-metric-grid--dense .mrr-metric-card__value {
-  font-size: 22px;
+@media (max-width: 1399px) {
+  .mrr-metric-grid--five {
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+  }
+
+  .mrr-metric-grid--five > * {
+    grid-column: span 2;
+  }
+
+  .mrr-metric-grid--five > :nth-last-child(-n + 2) {
+    grid-column: span 3;
+  }
+}
+
+@media (max-width: 800px) {
+  .mrr-metric-grid--five {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .mrr-metric-grid--five > *,
+  .mrr-metric-grid--five > :nth-last-child(-n + 2) {
+    grid-column: span 1;
+  }
+
+  .mrr-metric-grid--five > :last-child {
+    grid-column: 1 / -1;
+  }
 }
 
 @media (max-width: 600px) {
-  .mrr-metric-grid--dense {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+  .mrr-metric-grid--five {
+    grid-template-columns: minmax(0, 1fr);
   }
 }
 
@@ -292,5 +313,38 @@
   .mrr-metric-card__icon {
     background: var(--mrr-muted);
     border: 1px solid var(--mrr-border);
+  }
+}
+
+@media (max-width: 600px) {
+  .mrr-metric-grid--mobile-compact {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .mrr-metric-grid--mobile-compact > :last-child:nth-child(odd) {
+    grid-column: 1 / -1;
+  }
+
+  .mrr-metric-grid--mobile-compact .mrr-metric-card .el-card__body {
+    grid-template-columns: minmax(0, 1fr);
+    gap: var(--mrr-space-2);
+    align-content: start;
+  }
+
+  .mrr-metric-grid--mobile-compact .mrr-metric-card__icon {
+    width: 32px;
+    height: 32px;
+    font-size: 20px;
+  }
+
+  .mrr-metric-grid--mobile-compact .mrr-metric-card__value {
+    font-size: var(--mrr-font-size-title-compact);
+    letter-spacing: normal;
+  }
+}
+
+@media (max-width: 320px) {
+  .mrr-metric-grid--mobile-compact {
+    grid-template-columns: minmax(0, 1fr);
   }
 }

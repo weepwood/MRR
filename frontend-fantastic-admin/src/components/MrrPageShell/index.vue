@@ -29,6 +29,7 @@ type PageWidth = 'fluid' | 'standard' | 'narrow'
   display: grid;
   grid-template-columns: minmax(0, 1fr);
   gap: var(--mrr-page-gap);
+  align-content: start;
   width: 100%;
   min-width: 0;
   margin: 0 auto;
@@ -81,7 +82,7 @@ type PageWidth = 'fluid' | 'standard' | 'narrow'
 }
 
 .mrr-page-shell > :nth-child(n + 4) {
-  animation-delay: calc(var(--mrr-motion-stagger) * 3);
+  animation-delay: calc(var(--mrr-motion-stagger) * 2);
 }
 
 /* 嵌套壳层（监控聚合页）只由外层播放一次，避免同一区块淡入两遍。 */

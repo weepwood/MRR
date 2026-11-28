@@ -62,7 +62,20 @@ class ArchiveExportJobFailureTest {
         }).when(exporter).writeBatchPdf(any(), any(), any());
         var service = new ArchiveExportJobService(exporter, repository, files, properties, Runnable::run);
 
-        ReflectionTestUtils.invokeMethod(service, "runJob", job.getId());
+        var logger = (ch.qos.logback.classic.Logger) org.slf4j.LoggerFactory.getLogger(ArchiveExportJobService.class);
+        var appender = new ch.qos.logback.core.read.ListAppender<ch.qos.logback.classic.spi.ILoggingEvent>();
+        appender.start();
+        logger.addAppender(appender);
+        try {
+            ReflectionTestUtils.invokeMethod(service, "runJob", job.getId());
+            assertThat(appender.list).isNotEmpty().allSatisfy(event -> {
+                assertThat(event.getFormattedMessage()).doesNotContain("synthetic-private-detail");
+                assertThat(event.getThrowableProxy()).isNull();
+            });
+        } finally {
+            logger.detachAppender(appender);
+            appender.stop();
+        }
 
         verify(repository).markFailed(eq(job.getId()), contains("分批"), any());
         verify(repository, never()).markSuccess(anyString(), anyLong(), anyString(), any());

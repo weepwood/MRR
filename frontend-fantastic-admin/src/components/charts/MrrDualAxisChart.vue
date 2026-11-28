@@ -44,10 +44,12 @@ const option = computed<ECOption>(() => ({
   legend: {
     top: 0,
     right: 0,
+    left: 0,
+    type: 'scroll',
     data: [...props.bars, ...props.lines].map(item => item.name),
   },
   grid: {
-    top: 48,
+    top: 52,
     right: 28,
     bottom: 28,
     left: 24,
@@ -56,7 +58,7 @@ const option = computed<ECOption>(() => ({
   xAxis: {
     type: 'category',
     data: props.categories,
-    axisLabel: { hideOverlap: true, margin: 12 },
+    axisLabel: { hideOverlap: true, margin: 12, formatter: value => /^\d{4}-\d{2}-\d{2}$/.test(value) ? value.slice(5).replace('-', '/') : value },
     splitLine: { show: false },
   },
   yAxis: [
@@ -71,6 +73,7 @@ const option = computed<ECOption>(() => ({
     {
       type: 'value',
       name: props.rightAxisName,
+      minInterval: 1,
       splitLine: { show: false },
       axisLabel: {
         formatter: (value: string | number) => `${Number(value).toLocaleString('zh-CN')}${props.rightUnit ? ` ${props.rightUnit}` : ''}`,
@@ -92,6 +95,7 @@ const option = computed<ECOption>(() => ({
       name: item.name,
       type: 'bar' as const,
       yAxisIndex: 0,
+      tooltip: { valueFormatter: (value: unknown) => `${Number(value).toLocaleString('zh-CN')}${props.leftUnit ? ` ${props.leftUnit}` : ''}` },
       data: item.data,
       stack: item.stack,
       // 90 根逐日柱子时，30px 上限几乎填满类目宽度，柱与柱粘成一整块；
@@ -109,6 +113,7 @@ const option = computed<ECOption>(() => ({
       name: item.name,
       type: 'line' as const,
       yAxisIndex: 1,
+      tooltip: { valueFormatter: (value: unknown) => `${Number(value).toLocaleString('zh-CN')}${props.rightUnit ? ` ${props.rightUnit}` : ''}` },
       data: item.data,
       smooth: item.smooth ?? true,
       showSymbol: item.symbol ?? props.categories.length <= 12,

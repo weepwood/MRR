@@ -276,82 +276,83 @@ body .el-button.mrr-button-secondary.is-text.is-disabled:focus {
   color: var(--mrr-muted-foreground);
 }
 
-/* Segmented appearance for existing settings and gallery tabs. The single
- * Element Plus implementation retains its tab/panel and keyboard semantics. */
+/* Native Element Plus tab bar is the shared moving selection surface.
+ * Zero horizontal tab padding gives its native measurement the entire segment.
+ * Labels carry their own spacing; focus and ARIA remain native. */
 .mrr-segmented-tabs.el-tabs {
-  --mrr-segmented-tab-shadow: 0 1px 2px 0 rgb(0 0 0 / 5%);
-
   flex-direction: column;
   min-width: 0;
+  max-width: 100%;
 }
 
-.mrr-segmented-tabs > .el-tabs__header {
-  margin: 0;
-}
+.mrr-segmented-tabs > .el-tabs__header { margin: 0; }
 
-.mrr-segmented-tabs > .el-tabs__header .el-tabs__nav-wrap {
-  margin: 0;
-  overflow: visible;
-}
-
-.mrr-segmented-tabs > .el-tabs__header .el-tabs__nav-wrap::after,
-.mrr-segmented-tabs > .el-tabs__header .el-tabs__active-bar {
-  display: none;
-}
-
+.mrr-segmented-tabs > .el-tabs__header .el-tabs__nav-wrap,
 .mrr-segmented-tabs > .el-tabs__header .el-tabs__nav-scroll {
+  margin: 0;
   overflow: visible;
 }
+
+.mrr-segmented-tabs > .el-tabs__header .el-tabs__nav-wrap::after { display: none; }
 
 .mrr-segmented-tabs > .el-tabs__header .el-tabs__nav {
+  position: relative;
   float: none;
   box-sizing: border-box;
   display: flex;
   align-items: center;
-  justify-content: center;
   width: 100%;
+  min-width: 0;
   padding: 4px;
-  font-size: 14px;
-  font-weight: 400;
-  color: hsl(var(--muted-foreground));
-  background: hsl(var(--muted));
-  border-radius: 10px;
+  background: var(--mrr-segmented-track);
+  border-radius: var(--mrr-control-radius);
   transform: none !important;
 }
 
-/* Segments fit the declared width (or wrap in the category grid); the
- * underline-tab scroll translation otherwise shifts the 240px theme group. */
-.mrr-segmented-tabs > .el-tabs__header .el-tabs__nav-wrap.is-scrollable {
-  padding-inline: 0;
-}
+.mrr-segmented-tabs > .el-tabs__header .el-tabs__nav-wrap.is-scrollable { padding-inline: 0; }
 
 .mrr-segmented-tabs > .el-tabs__header .el-tabs__nav-prev,
-.mrr-segmented-tabs > .el-tabs__header .el-tabs__nav-next {
-  display: none;
+.mrr-segmented-tabs > .el-tabs__header .el-tabs__nav-next { display: none; }
+
+.mrr-segmented-tabs > .el-tabs__header .el-tabs__active-bar {
+  position: absolute;
+  top: 4px;
+  bottom: auto;
+  left: 0;
+  z-index: 0;
+  height: calc(100% - 8px);
+  pointer-events: none;
+  background: var(--mrr-segmented-selection);
+  border-radius: var(--mrr-radius-sm);
+  box-shadow: inset 0 0 0 1px var(--mrr-border), var(--mrr-shadow-xs);
+  transition: transform var(--mrr-motion-move) var(--mrr-ease-out), width var(--mrr-motion-move) var(--mrr-ease-out);
 }
 
-.mrr-segmented-tabs > .el-tabs__header .el-tabs__item {
-  width: 100%;
-  height: 32px;
-  padding: 6px 12px;
-  font-size: 14px;
+.mrr-segmented-tabs > .el-tabs__header .el-tabs__item,
+.mrr-segmented-tabs > .el-tabs__header .el-tabs__item:nth-child(2),
+.mrr-segmented-tabs > .el-tabs__header .el-tabs__item:last-child {
+  position: relative;
+  z-index: 1;
+  flex: 1 1 0;
+  width: auto;
+  min-width: 0;
+  height: var(--mrr-control-height);
+  padding: 0;
+  font-size: var(--mrr-font-size-sm);
   font-weight: 500;
-  line-height: 20px;
-  color: hsl(var(--muted-foreground));
+  line-height: 1.3;
+  color: var(--mrr-muted-foreground);
+  white-space: nowrap;
   background: transparent;
-  border-radius: 8px;
-}
-
-/* EP's first/last tab padding reset is for underline navigation, not segments. */
-.mrr-segmented-tabs:not(.appearance-tabs) > .el-tabs__header .el-tabs__item:nth-child(2),
-.mrr-segmented-tabs:not(.appearance-tabs) > .el-tabs__header .el-tabs__item:last-child {
-  padding-inline: 12px;
+  border-radius: var(--mrr-radius-sm);
+  transition: color var(--mrr-motion-feedback) var(--mrr-ease-out);
 }
 
 .mrr-segmented-tabs > .el-tabs__header .el-tabs__item.is-active {
-  color: hsl(var(--foreground));
-  background: hsl(var(--background));
-  box-shadow: var(--mrr-segmented-tab-shadow);
+  font-weight: 600;
+  color: var(--mrr-card-foreground);
+  background: transparent;
+  box-shadow: none;
 }
 
 .mrr-segmented-tabs > .el-tabs__header .el-tabs__item:focus-visible {
@@ -359,17 +360,9 @@ body .el-button.mrr-button-secondary.is-text.is-disabled:focus {
   outline-offset: -2px;
 }
 
-.mrr-segmented-tabs > .el-tabs__content {
-  padding-top: 8px;
-  overflow: visible;
-}
+.mrr-segmented-tabs > .el-tabs__content { padding-top: 8px; overflow: visible; }
 
-.mrr-segmented-label {
-  display: flex;
-  gap: 4px;
-  align-items: center;
-  justify-content: center;
-}
+.mrr-segmented-label { display: flex; gap: 4px; align-items: center; justify-content: center; min-width: 0; }
 
 /* Shared navigation buttons: Element Plus owns the native button and
  * activation; these variants retain the original shell geometry. */
@@ -436,4 +429,62 @@ body .el-button.mrr-button-secondary.is-text.is-disabled:focus {
 .el-button.mrr-migrated-toolbar.account-trigger.is-text[data-avatar-only="true"] {
   width: var(--mrr-control-height);
   padding: 4px;
+}
+
+/* Inline actions inside content: use the same ElButton implementation without
+ * imposing toolbar height on a table cell or a sentence. */
+body .el-button.mrr-inline-action.is-link {
+  height: auto;
+  min-height: 0;
+  padding: 0;
+  font: inherit;
+  font-weight: var(--mrr-inline-action-weight, inherit);
+  line-height: inherit;
+  white-space: normal;
+  border: 0;
+  box-shadow: none;
+}
+
+/* Shared settings field geometry; values keep their local unit widths. */
+.mrr-settings-slider-control {
+  display: grid;
+  grid-template-columns: minmax(120px, 1fr) auto;
+  gap: var(--mrr-space-3);
+  align-items: center;
+  width: 100%;
+  min-width: 0;
+}
+
+.mrr-settings-slider-control .el-slider {
+  width: 100%;
+  min-width: 120px;
+}
+
+@media (max-width: 680px) {
+  .mrr-settings-slider-control {
+    grid-template-columns: minmax(100px, 1fr) auto;
+  }
+}
+
+/* Compact actions inside a compound field, not standalone toolbar buttons. */
+body .el-button.mrr-embedded-icon-action.is-text {
+  flex: none;
+  width: var(--mrr-embedded-action-size, 24px);
+  height: var(--mrr-embedded-action-size, 24px);
+  min-height: 0;
+  padding: 0;
+  margin: 0;
+  border-radius: var(--mrr-radius-sm);
+}
+
+body .el-button.mrr-embedded-icon-action .mrr-icon {
+  width: var(--mrr-embedded-action-icon-size, var(--mrr-control-icon-size));
+  height: var(--mrr-embedded-action-icon-size, var(--mrr-control-icon-size));
+  font-size: var(--mrr-embedded-action-icon-size, var(--mrr-control-icon-size));
+}
+
+body .el-button.mrr-embedded-icon-action .mrr-icon > i {
+  width: inherit;
+  height: inherit;
+  font-size: inherit;
 }

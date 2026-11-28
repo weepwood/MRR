@@ -31,7 +31,7 @@ function toggleRecordNumber() {
 <template>
   <section v-if="props.patient || loading" v-loading="loading" class="patient-card">
     <div class="patient-card-body">
-      <div v-for="field in fields" :key="field.key" class="patient-field">
+      <div v-for="field in fields" :key="field.key" class="patient-field" :class="{ 'patient-field--time': field.key === 'admission-time' }">
         <button
           v-if="field.switchable"
           type="button"
@@ -83,10 +83,8 @@ function toggleRecordNumber() {
 
 .field-label {
   font-size: var(--mrr-font-size-xs);
-  font-weight: 700;
-  color: var(--text-tertiary);
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
+  font-weight: var(--mrr-font-weight-label);
+  color: var(--mrr-muted-foreground);
 }
 
 .field-label--switchable {
@@ -107,7 +105,7 @@ function toggleRecordNumber() {
 }
 
 .field-label--switchable:focus-visible {
-  outline: 2px solid var(--el-color-primary-light-5);
+  outline: 2px solid var(--mrr-ring);
   outline-offset: 2px;
 }
 
@@ -131,9 +129,14 @@ function toggleRecordNumber() {
 .field-value {
   overflow: hidden;
   text-overflow: ellipsis;
-  font-size: 14px;
-  font-weight: 600;
+  font-size: var(--mrr-font-size-md);
+  font-weight: var(--mrr-font-weight-heading);
   color: var(--text-primary);
-  white-space: nowrap;
+  overflow-wrap: anywhere;
+  white-space: normal;
+}
+
+.patient-field--time .field-value {
+  font-variant-numeric: tabular-nums;
 }
 </style>

@@ -1,7 +1,7 @@
 import type { MaybeRefOrGetter } from 'vue'
 import type { EChartsType, ECOption } from '@/plugins/echarts'
 import type { UseMrrChartOptions } from '@/types/chart'
-import { useDebounceFn, useResizeObserver } from '@vueuse/core'
+import { useDebounceFn, useMediaQuery, useResizeObserver } from '@vueuse/core'
 import {
   nextTick,
   onActivated,
@@ -15,6 +15,28 @@ import {
 import { applyMrrChartTheme, mrrChartColor } from '@/config/chart-theme'
 import { echarts } from '@/plugins/echarts'
 
+/** Preserve interaction only for theme-only redraws; a new query/range still uses its own options. */
+export function preserveChartView(option: ECOption, current: ECOption): ECOption {
+  const array = (value: unknown) => Array.isArray(value) ? value : value ? [value] : []
+  const zooms = array(current.dataZoom)
+  const legends = array(current.legend)
+  const dataZoom = array(option.dataZoom).map((zoom, index) => {
+    const old = zooms[index]
+    if (!old || old.type !== zoom.type || !Number.isFinite(old.start) || !Number.isFinite(old.end)) { return zoom }
+    const { startValue: _startValue, endValue: _endValue, ...rest } = zoom
+    return { ...rest, start: old.start, end: old.end }
+  })
+  const legend = array(option.legend).map((item, index) => ({
+    ...item,
+    ...(legends[index]?.selected ? { selected: legends[index].selected } : {}),
+  }))
+  return {
+    ...option,
+    ...(dataZoom.length ? { dataZoom } : {}),
+    ...(legend.length ? { legend } : {}),
+  }
+}
+
 export function useMrrChart(
   option: MaybeRefOrGetter<ECOption>,
   loading: MaybeRefOrGetter<boolean> = false,
@@ -26,6 +48,7 @@ export function useMrrChart(
     loadingText = '数据加载中',
   } = options
 
+  const reducedMotion = useMediaQuery('(prefers-reduced-motion: reduce)')
   const chartRef = shallowRef<HTMLElement | null>(null)
   const chartInstance = shallowRef<EChartsType | null>(null)
   let active = true
@@ -33,6 +56,7 @@ export function useMrrChart(
   let themeFrame: number | null = null
   let themeSignature = ''
   let retryTimer: number | null = null
+  let lastRenderedOption: ECOption | undefined
 
   /**
    * 只有「影响图表配色」的根节点变化才需要重绘：明暗模式、主色、配色方案。
@@ -47,13 +71,15 @@ export function useMrrChart(
     return [
       root.classList.contains('dark') ? 'dark' : 'light',
       root.dataset.mrrPalette ?? '',
+      root.dataset.motion ?? '',
+      String(reducedMotion.value),
       style.getPropertyValue('--color-primary').trim(),
       style.getPropertyValue('--mrr-card').trim(),
     ].join('|')
   }
 
   function scheduleThemeRender() {
-    if (themeFrame !== null) {
+    if (!active || themeFrame !== null) {
       return
     }
     // 同一帧内的多次属性变更合并成一次检查。
@@ -64,7 +90,7 @@ export function useMrrChart(
         return
       }
       themeSignature = next
-      render()
+      render(true)
     })
   }
 
@@ -108,7 +134,7 @@ export function useMrrChart(
       chart.showLoading('default', {
         text: loadingText,
         color: mrrChartColor('primary'),
-        maskColor: 'rgba(255, 255, 255, 0.72)',
+        maskColor: getComputedStyle(document.documentElement).getPropertyValue('--mrr-chart-loading-mask').trim() || (document.documentElement.classList.contains('dark') ? 'rgba(16, 20, 28, 0.72)' : 'rgba(255, 255, 255, 0.72)'),
         textColor: mrrChartColor('neutral'),
         fontSize: 12,
       })
@@ -118,16 +144,21 @@ export function useMrrChart(
     }
   }
 
-  function render() {
+  function render(preserveView = false) {
+    const existing = chartInstance.value
     const chart = ensureChart()
     if (!chart) {
       return
     }
 
-    chart.setOption(applyMrrChartTheme(toValue(option)), {
+    const source = toValue(option)
+    const themed = applyMrrChartTheme(source)
+    const next = preserveView && source === lastRenderedOption && existing === chart ? preserveChartView(themed, chart.getOption() as ECOption) : themed
+    chart.setOption(next, {
       notMerge: true,
       lazyUpdate: false,
     })
+    lastRenderedOption = source
     syncLoading()
   }
 
@@ -157,6 +188,8 @@ export function useMrrChart(
     () => nextTick(syncLoading),
   )
 
+  watch(reducedMotion, scheduleThemeRender)
+
   onMounted(() => {
     active = true
     nextTick(render)
@@ -165,7 +198,7 @@ export function useMrrChart(
     themeObserver = new MutationObserver(scheduleThemeRender)
     themeObserver.observe(document.documentElement, {
       attributes: true,
-      attributeFilter: ['class', 'style', 'data-mrr-palette'],
+      attributeFilter: ['class', 'style', 'data-mrr-palette', 'data-motion'],
     })
   })
 
@@ -174,13 +207,18 @@ export function useMrrChart(
     // 缓存期间可能切换过主题：激活时的 render 会按当前主题重绘，这里同步签名避免重复绘制。
     themeSignature = readThemeSignature()
     nextTick(() => {
-      render()
+      render(true)
       resize()
     })
   })
 
   onDeactivated(() => {
     active = false
+    clearRetryTimer()
+    if (themeFrame !== null) {
+      window.cancelAnimationFrame(themeFrame)
+      themeFrame = null
+    }
   })
 
   onBeforeUnmount(() => {

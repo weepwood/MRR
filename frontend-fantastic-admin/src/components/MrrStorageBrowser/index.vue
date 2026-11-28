@@ -3,6 +3,7 @@ import type { StorageEntry } from './presentation'
 import { ArrowLeft, ArrowUp, ChevronDown, ChevronRight, ChevronUp, Copy, File, FileArchive, FileImage, FileText, Folder, Info, LayoutGrid, List, Maximize, Minimize, RefreshCw, Search } from 'lucide-vue-next'
 import { computed, nextTick, onBeforeUnmount, onDeactivated, onMounted, ref, watch } from 'vue'
 import AppEmpty from '@/components/AppEmpty/index.vue'
+import MrrCursorPagination from '@/components/MrrCursorPagination/index.vue'
 import { Z_INDEX } from '@/constants/z-index'
 import { copyText as copyToClipboard } from '@/utils/copy-text'
 import { entryType, formatDate, formatFileSize, isImage } from './presentation'
@@ -13,6 +14,8 @@ const props = defineProps<{
   breadcrumbs: { label: string, path: string }[]
   selected?: Entry | null
   pageLabel: string
+  pageNumber?: number
+  maxReachablePage?: number
   summary?: string
   sourceDetail?: { label: string, value: string }
   loading: boolean
@@ -35,8 +38,7 @@ const emit = defineEmits<{
   navigate: [path: string]
   select: [entry: Entry | undefined]
   open: [entry: Entry]
-  previous: []
-  next: []
+  jump: [page: number]
 }>()
 
 const address = defineModel<string>('address', { required: true })
@@ -438,6 +440,9 @@ onBeforeUnmount(() => {
           <table v-else class="file-table" aria-label="文件列表">
             <thead>
               <tr>
+                <th scope="col" class="file-sequence">
+                  序号
+                </th>
                 <th
                   v-for="column in columns"
                   :key="column.key"
@@ -460,6 +465,9 @@ onBeforeUnmount(() => {
                 @click="selectRow(entry, $event)"
                 @dblclick="emit('open', entry)"
               >
+                <td class="file-sequence">
+                  {{ index + 1 }}
+                </td>
                 <td>
                   <button
                     type="button"
@@ -529,20 +537,16 @@ onBeforeUnmount(() => {
       </div>
 
       <div class="browser-footer">
-        <div class="page-statistics" role="status">
-          <strong>{{ pageLabel }}</strong>
-          <span v-if="keyword">匹配 {{ visibleEntries.length }} / {{ entries.length }} 项</span>
-          <span v-else-if="summary">{{ summary }}</span>
-          <span v-if="selected" class="selection-status">已选择 1 项</span>
-        </div>
-        <el-button-group aria-label="分页">
-          <el-button :disabled="loading || !canPreviousPage" @click="emit('previous')">
-            上一页
-          </el-button>
-          <el-button :disabled="loading || !canNextPage" @click="emit('next')">
-            下一页
-          </el-button>
-        </el-button-group>
+        <MrrCursorPagination :page="pageNumber" :max-reachable-page="maxReachablePage" :loading="loading" :can-previous="canPreviousPage" :can-next="canNextPage" @jump="emit('jump', $event)">
+          <template #summary>
+            <div class="page-statistics">
+              <strong>{{ pageLabel }}</strong>
+              <span v-if="keyword">匹配 {{ visibleEntries.length }} / {{ entries.length }} 项</span>
+              <span v-else-if="summary">{{ summary }}</span>
+              <span v-if="selected" class="selection-status">已选择 1 项</span>
+            </div>
+          </template>
+        </MrrCursorPagination>
       </div>
     </div>
   </section>
@@ -633,8 +637,7 @@ onBeforeUnmount(() => {
 }
 
 .location-bar > .el-button-group,
-.listing-controls > .el-button-group,
-.browser-footer > .el-button-group {
+.listing-controls > .el-button-group {
   display: inline-flex;
   flex: none;
 }
@@ -852,9 +855,16 @@ onBeforeUnmount(() => {
   cursor: pointer;
 }
 
-.file-table th:nth-child(2),
-.file-table th:nth-child(3) {
+.file-table th.column-type,
+.file-table th.column-size {
   width: 74px;
+}
+
+.file-table .file-sequence {
+  width: 52px;
+  padding-inline: 4px;
+  color: var(--mrr-muted-foreground);
+  text-align: center;
 }
 
 .file-table th:last-child {

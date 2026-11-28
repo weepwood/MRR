@@ -156,6 +156,24 @@ describe('chrome 86 color-mix 回退契约', () => {
     expect(mark.covering.has('.security-mark')).toBe(true)
   })
 
+  it('主按钮与危险按钮在旧浏览器保留可见描边和危险悬停底色', () => {
+    const { covering } = notBlockAwareness('assets/styles/element-plus/foundation-buttons.css')
+    expect(covering.has('.el-button--danger:not(.is-link):not(.is-text):not(.is-plain):not(.is-disabled):hover')).toBe(true)
+    expect(covering.has('body .el-button--primary.is-plain')).toBe(true)
+    expect(covering.has('body .el-button--primary.is-plain:not(.is-disabled):hover')).toBe(true)
+    expect(covering.has('body .el-button--danger.is-plain')).toBe(true)
+  })
+
+  it('导航模式示意图和影像分类选中态先有可用基线，再按能力增强', () => {
+    const settings = read('views/settings/components/AppConfigPanel.vue')
+    expect(settings).toMatch(/\.mode::after\s*\{[^}]*background: var\(--el-color-primary\);[^}]*opacity: 0\.6;/)
+    expect(settings).toMatch(/\.mode-container\s*\{[^}]*background: var\(--mrr-tone-primary-soft\);/)
+    expect(settings).toMatch(/@supports \(color: color-mix\([^)]*\)\)\s*\{\s*\.mode-container\s*\{/)
+    const types = read('views/statistics/archive/components/TypeFilterBar.vue')
+    expect(types).toMatch(/\.type-tab-entry\.active\s*\{[^}]*border-color: var\(--mrr-navigation-active-border\);/)
+    expect(types).not.toMatch(/\.type-tab-entry\.active\s*\{[^}]*color-mix\(/)
+  })
+
   it('焦点环不自己算混色，走已带回退的 --mrr-ring', () => {
     for (const file of ['components/MrrTableActions/index.vue', 'components/SystemAdminContactPopover/index.vue']) {
       const css = read(file)
@@ -168,8 +186,8 @@ describe('chrome 86 color-mix 回退契约', () => {
 describe('分段标签的 Chrome 86 选择器契约', () => {
   it('首尾标签使用等价显式选择器而非 :is()', () => {
     const css = read('assets/styles/components/form-controls.css')
-    expect(css).toContain('.mrr-segmented-tabs:not(.appearance-tabs) > .el-tabs__header .el-tabs__item:nth-child(2),')
-    expect(css).toContain('.mrr-segmented-tabs:not(.appearance-tabs) > .el-tabs__header .el-tabs__item:last-child {')
+    expect(css).toContain('.mrr-segmented-tabs > .el-tabs__header .el-tabs__item:nth-child(2),')
+    expect(css).toContain('.mrr-segmented-tabs > .el-tabs__header .el-tabs__item:last-child {')
     expect(css.replace(/\/\*[\s\S]*?\*\//g, '')).not.toMatch(/:is\(/)
   })
 })

@@ -1,8 +1,10 @@
 import type { Page } from '@playwright/test'
 import { expect, test } from '@playwright/test'
 import { examples } from '../src/views/ui-components/catalog'
+import { isolateLocalVisualSettings } from './helpers/local-visual-settings'
 
 async function openGallery(page: Page, theme = 'light') {
+  await isolateLocalVisualSettings(page)
   await page.addInitScript(theme => localStorage.setItem('MRR-ADMIN:app-settings', JSON.stringify({
     app: { colorScheme: theme, enableMotion: false },
     menu: { mode: 'single' },
@@ -39,9 +41,10 @@ test('真实控件可编辑，禁用和加载按钮不可执行，示例不写�
   const primary = page.getByTestId('role-primary')
   await primary.click()
   await expect(page.getByText('已触发 1 次示例操作')).toBeVisible()
-  await page.getByText('禁用', { exact: true }).click()
+  const state = page.getByRole('radiogroup', { name: '按钮示例状态', exact: true })
+  await state.getByText('禁用', { exact: true }).click()
   await expect(primary).toBeDisabled()
-  await page.getByText('加载', { exact: true }).click()
+  await state.getByText('加载', { exact: true }).click()
   await expect(primary).toBeDisabled()
   await page.getByRole('button', { name: '重置所有示例' }).click()
   await expect(primary).toBeEnabled()
@@ -90,6 +93,7 @@ test('组件目录准确索引统一控件，表单对照保留标签、只读�
 
 test('演示表格可筛选、翻页和触发行操作', async ({ page }) => {
   await openGallery(page)
+  await page.setViewportSize({ width: 1440, height: 900 })
   await page.getByRole('button', { name: /数据与组合/ }).click()
   await page.getByLabel('筛选示例', { exact: true }).fill('暗色')
   await page.getByLabel('筛选示例', { exact: true }).press('Enter')
@@ -97,6 +101,18 @@ test('演示表格可筛选、翻页和触发行操作', async ({ page }) => {
   await expect(page.locator('.el-table')).toContainText('DEMO-003')
   await page.getByRole('button', { name: '查看示例', exact: true }).click()
   await expect(page.getByText('DEMO-003：已触发查看示例')).toBeVisible()
+  await expect(page.getByRole('button', { name: '删除示例', exact: true })).toBeDisabled()
+  await expect(page.getByRole('button', { name: '更多操作', exact: true })).toHaveCount(0)
+  await page.setViewportSize({ width: 1024, height: 900 })
+  await expect(page.getByRole('button', { name: '查看示例', exact: true })).toBeVisible()
+  await expect(page.getByRole('button', { name: '更多操作', exact: true })).toBeVisible()
+  await page.setViewportSize({ width: 768, height: 900 })
+  await expect(page.getByRole('button', { name: '查看示例', exact: true })).toHaveCount(0)
+  await page.getByRole('button', { name: '更多操作', exact: true }).click()
+  await expect(page.getByRole('menuitem', { name: '删除示例', exact: true })).toHaveAttribute('aria-disabled', 'true')
+  await page.getByRole('menuitem', { name: '编辑示例', exact: true }).click()
+  await expect(page.getByText('DEMO-003：已触发编辑示例')).toBeVisible()
+  await page.setViewportSize({ width: 1440, height: 900 })
   await page.getByRole('button', { name: '重置筛选', exact: true }).click()
   await page.locator('.el-pagination .btn-next').click()
   await expect(page.locator('.el-table')).toContainText('DEMO-004')
@@ -128,7 +144,7 @@ test('失败与空态可恢复，对话框和抽屉可确认与关闭', async ({
   await expect(page.getByText('抽屉示例已确认。')).toBeVisible()
 })
 
-test('页头尺寸示例：紧凑页头更矮，长说明折行后仍完整显示', async ({ page }) => {
+test('页头尺寸示例：相同内容的业务页头等高，长说明折行后仍完整显示', async ({ page }) => {
   await openGallery(page)
   await page.setViewportSize({ width: 1920, height: 900 })
   await page.getByRole('button', { name: /基础与导航/ }).click()
@@ -145,7 +161,7 @@ test('页头尺寸示例：紧凑页头更矮，长说明折行后仍完整显�
   const heights = () => page.locator('.pattern-sample .mrr-page-header').evaluateAll(nodes => nodes.map(node => node.getBoundingClientRect().height))
   await expect.poll(async () => {
     const [standard, compact] = await heights()
-    return compact < standard
+    return Math.abs(compact - standard) <= 1
   }).toBe(true)
   const longDescription = page.getByRole('switch', { name: '使用长说明（检查折行）', exact: true })
   await expect(longDescription).toHaveAttribute('aria-checked', 'false')
@@ -155,7 +171,7 @@ test('页头尺寸示例：紧凑页头更矮，长说明折行后仍完整显�
   await expect.poll(() => page.locator('.pattern-sample .mrr-page-header__description').evaluateAll(nodes => nodes.every(node => node.scrollWidth <= node.clientWidth + 1))).toBe(true)
 })
 
-test('动效示例：刷新期间保留结果并标记忙碌，结束后换成下一批', async ({ page }) => {
+test('动效示例：刷新期间保留结果并标记忙碌，结束后换成下一页', async ({ page }) => {
   await openGallery(page)
   await page.getByRole('button', { name: /反馈与浮层/ }).click()
   const content = page.locator('.mrr-data-table-panel__content').filter({ has: page.locator('.el-table') }).first()
@@ -206,4 +222,103 @@ test('未登录访问仍进入既有登录流程', async ({ browser, baseURL }) 
   finally {
     await context.close()
   }
+})
+
+test('专用滚动区域随内容增减更新遮罩，保留原生水平滚动与验证码部分输入', async ({ page }) => {
+  await openGallery(page)
+  await page.getByLabel('查找组件', { exact: true }).fill('专用交互')
+  const scroll = page.getByTestId('special-scroll')
+  await expect(scroll).toHaveAttribute('data-mask-start', 'false')
+  await expect(scroll).toHaveAttribute('data-mask-end', 'false')
+  await page.getByRole('button', { name: '增加滚动内容' }).click()
+  await expect(scroll).toHaveAttribute('data-mask-end', 'true')
+  const viewport = scroll.locator('.scroll-area-viewport')
+  await viewport.hover()
+  await page.mouse.wheel(0, 200)
+  await expect.poll(() => viewport.evaluate(el => el.scrollLeft)).toBeGreaterThan(0)
+  await expect(scroll).toHaveAttribute('data-mask-start', 'true')
+  await page.getByRole('button', { name: '回到起点' }).click()
+  await expect.poll(() => viewport.evaluate(el => el.scrollLeft)).toBe(0)
+  // A single wheel event must not be processed by both viewport and Reka root.
+  const mapped = await viewport.evaluate((el) => {
+    const event = new WheelEvent('wheel', { deltaY: 120, bubbles: true, cancelable: true })
+    el.dispatchEvent(event)
+    return { offset: el.scrollLeft, consumed: event.defaultPrevented }
+  })
+  expect(mapped).toEqual({ offset: 120, consumed: true })
+  await viewport.hover()
+  await page.mouse.wheel(100, 0)
+  await expect.poll(() => viewport.evaluate(el => el.scrollLeft)).toBeGreaterThan(120)
+  await page.getByRole('button', { name: '回到起点' }).click()
+  await expect.poll(() => viewport.evaluate(el => el.scrollLeft)).toBe(0)
+  const boundaryConsumed = await viewport.evaluate((el) => {
+    const event = new WheelEvent('wheel', { deltaY: -120, bubbles: true, cancelable: true })
+    el.dispatchEvent(event)
+    return event.defaultPrevented
+  })
+  expect(boundaryConsumed).toBe(false)
+  await page.getByRole('button', { name: '缩减滚动内容' }).click()
+  await expect(scroll).toHaveAttribute('data-mask-end', 'false')
+  const first = page.getByRole('textbox', { name: '验证码第 1 位' })
+  const last = page.getByRole('textbox', { name: '验证码第 6 位' })
+  await expect(first).toHaveValue('1')
+  await expect(last).toHaveValue('6')
+  await last.focus()
+  await last.press('Backspace')
+  await expect(page.getByText(/当前已输入 5 位/)).toBeVisible()
+  await last.fill('9')
+  await expect(page.getByText(/当前已输入 6 位/)).toBeVisible()
+  await page.getByRole('button', { name: '清空验证码' }).click()
+  await expect(first).toHaveValue('')
+  await expect(last).toHaveValue('')
+  await page.getByRole('button', { name: '填入合成验证码' }).click()
+  await expect(first).toHaveValue('0')
+  await expect(last).toHaveValue('5')
+  const compact = page.getByRole('button', { name: '触发紧凑示例操作' })
+  await compact.focus()
+  await compact.press('Enter')
+  await expect(page.getByText(/已触发紧凑操作 1 次/)).toBeVisible()
+})
+
+test('展厅游标示例仅展示实际批次，查询与重置回到首批', async ({ page }) => {
+  await openGallery(page)
+  await page.getByRole('button', { name: /数据与组合/ }).click()
+  const cursor = page.getByRole('switch', { name: '游标分页示例' })
+  await cursor.focus()
+  await cursor.press('Space')
+  await expect(cursor).toHaveAttribute('aria-checked', 'true')
+  await expect(page.locator('.mrr-cursor-pagination .el-pager .is-active')).toHaveText('1')
+  await expect(page.locator('.mrr-cursor-pagination__summary')).toHaveText('本批 3 项 · 总数未知')
+  await page.getByRole('button', { name: '下一页', exact: true }).click()
+  await expect(page.locator('.mrr-cursor-pagination .el-pager .is-active')).toHaveText('2')
+  await expect(page.locator('.mrr-cursor-pagination__summary')).toHaveText('本批 2 项 · 总数未知')
+  await expect(page.getByRole('button', { name: '下一页', exact: true })).toBeDisabled()
+  await page.getByLabel('筛选示例', { exact: true }).fill('暗色')
+  await page.getByLabel('筛选示例', { exact: true }).press('Enter')
+  await expect(page.locator('.mrr-cursor-pagination .el-pager .is-active')).toHaveText('1')
+  await expect(page.locator('.mrr-cursor-pagination__summary')).toHaveText('本批 1 项 · 总数未知')
+  await page.getByRole('button', { name: '重置筛选', exact: true }).click()
+  await expect(page.locator('.mrr-cursor-pagination .el-pager .is-active')).toHaveText('1')
+  await expect(page.locator('.mrr-cursor-pagination__summary')).toHaveText('本批 3 项 · 总数未知')
+})
+
+test('返回顶部在隐藏计时后仍可通过键盘聚焦与触发', async ({ page }) => {
+  await openGallery(page)
+  await page.evaluate(() => document.documentElement.scrollTo({ top: 800, behavior: 'instant' }))
+  await expect.poll(() => page.evaluate(() => document.documentElement.scrollTop)).toBeGreaterThanOrEqual(200)
+  const back = page.getByRole('button', { name: '回到顶部', exact: true })
+  await expect(back).toBeVisible()
+  await expect.poll(() => back.evaluate(el => el.getBoundingClientRect().left >= document.documentElement.getBoundingClientRect().right - 1), { timeout: 6000 }).toBe(true)
+  await back.focus()
+  await expect(back).toBeFocused()
+  await expect.poll(() => back.evaluate((el) => {
+    const glyph = el.querySelector('svg, i')!
+    const button = el.getBoundingClientRect()
+    const icon = glyph.getBoundingClientRect()
+    return icon.width <= 16.5 && icon.height <= 16.5 && button.width - icon.width >= 10
+  })).toBe(true)
+  await expect.poll(() => back.evaluate(el => el.getBoundingClientRect().right <= window.innerWidth)).toBe(true)
+  await back.press('Enter')
+  await expect.poll(() => page.evaluate(() => document.documentElement.scrollTop)).toBe(0)
+  await expect(back).toHaveCount(0)
 })

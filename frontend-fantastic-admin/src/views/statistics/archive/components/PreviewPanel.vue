@@ -51,6 +51,7 @@ const imageViewerIndex = ref(0)
 const imageViewerRef = ref<{ setActiveItem: (index: number) => void } | null>(null)
 let touchStartX = 0
 let pageObserver: IntersectionObserver | null = null
+let observerGeneration = 0
 /* 滚轮连续触发会一次跳多页：一次手势只允许切换一张（300ms 锁） */
 let wheelNavLockUntil = 0
 /* 滚动驱动的选中（IntersectionObserver）不回滚对齐，外部选中（点缩略图/键盘）才居中 */
@@ -144,13 +145,15 @@ function onImgLoad(event: Event) {
 }
 
 function observePages() {
+  const generation = ++observerGeneration
   pageObserver?.disconnect()
   pageObserver = null
   nextTick(() => {
-    if (displayMode.value !== 'scroll' || !previewScroller.value || typeof IntersectionObserver === 'undefined') {
+    if (generation !== observerGeneration || displayMode.value !== 'scroll' || !previewScroller.value || typeof IntersectionObserver === 'undefined') {
       return
     }
     pageObserver = new IntersectionObserver((entries) => {
+      if (generation !== observerGeneration) { return }
       const visiblePage = entries
         .filter(entry => entry.isIntersecting)
         .sort((first, second) => second.intersectionRatio - first.intersectionRatio)[0]
@@ -161,7 +164,7 @@ function observePages() {
         emit('select', index)
       }
     }, { root: previewScroller.value, threshold: 0.6 })
-    pageRefs.value.forEach((page) => {
+    pageRefs.value.slice(0, props.previewList.length).forEach((page) => {
       if (page) {
         pageObserver?.observe(page)
       }
@@ -185,11 +188,18 @@ watch(() => props.index, (index) => {
   }
 })
 
-watch(displayMode, observePages)
+watch([displayMode, () => props.previewList, previewScroller], observePages, { flush: 'post' })
+watch(() => props.previewList, (urls) => {
+  // Failed URLs from previous searches must not accumulate indefinitely.
+  const current = new Set(urls)
+  failedImageUrls.value = new Set([...failedImageUrls.value].filter(url => current.has(url)))
+  pageRefs.value.length = urls.length
+})
 
 onMounted(observePages)
 
 onUnmounted(() => {
+  observerGeneration++
   pageObserver?.disconnect()
   pageObserver = null
 })
@@ -301,7 +311,7 @@ onUnmounted(() => {
   width: 100%;
   height: 100%;
   min-height: 0;
-  padding: 24px;
+  padding: var(--mrr-space-3);
   overflow: auto;
   background: var(--surface-alt);
   border: 1px solid var(--divider);
@@ -355,7 +365,7 @@ onUnmounted(() => {
   height: auto;
   margin: 0 auto;
   background: var(--el-bg-color);
-  box-shadow: 0 2px 8px rgb(0 0 0 / 10%);
+  box-shadow: var(--mrr-shadow-xs);
 }
 
 .single-stage .fit-image {
@@ -401,7 +411,7 @@ onUnmounted(() => {
   margin: 0 auto;
   color: var(--text-secondary);
   text-align: center;
-  background: radial-gradient(circle at top, hsl(var(--primary) / 8%), transparent 48%), var(--surface);
+  background: var(--surface);
   border: 1px dashed var(--divider);
   border-radius: var(--mrr-radius-card);
 }
@@ -446,7 +456,7 @@ onUnmounted(() => {
 
 @media (max-width: 720px) {
   .preview-stage {
-    padding: 16px;
+    padding: var(--mrr-space-2);
   }
 
   .preview-image-placeholder {

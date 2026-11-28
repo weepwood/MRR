@@ -16,7 +16,6 @@ import com.zjcxph.imgapi.utils.MedicalRecordCodeUtils;
 import com.zjcxph.imgapi.utils.SecretPolicy;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.BeanUtils;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
@@ -46,6 +45,8 @@ public class ExternalArchiveAccessService {
     private static final TypeReference<List<ExternalArchiveCaseDTO>> CASE_LIST_TYPE = new TypeReference<>() { };
     private static final Logger logger = LoggerFactory.getLogger(ExternalArchiveAccessService.class);
 
+    @org.springframework.beans.factory.annotation.Value("${mrr.audit.external.strict-intent:false}")
+    private boolean strictIntent;
     private final IntegrationProperties properties;
     private final SearchService searchService;
     private final ScanService scanService;
@@ -85,7 +86,7 @@ public class ExternalArchiveAccessService {
                 clientId, timestamp, nonce, signature, method, path, rawBody, clientIp
         );
         validateExternalUser(request.getExternalUserId());
-
+        strictAudit(client.getClientId(),request.getExternalUserId().trim(),null,null,"TICKET_CREATE",null,clientIp);
         List<ExternalArchiveCaseDTO> cases = resolveCases(request);
         LocalDateTime expiresAt = LocalDateTime.now().plusSeconds(properties.getTicketTtlSeconds());
         long expiresAtMillis = toEpochMillis(expiresAt);
@@ -107,6 +108,7 @@ public class ExternalArchiveAccessService {
                 expiresAt,
                 clientIp
         );
+        strictTerminal(grant,"TICKET_CREATE",clientIp,"archives="+grant.cases().size());
         return new IssuedTicket(ticket, grant, properties.getTicketTtlSeconds());
     }
 
@@ -120,6 +122,7 @@ public class ExternalArchiveAccessService {
             throw new BusinessException(401, "访问票据无效、已使用或已过期");
         }
 
+        strictAudit(stored.getClientId(),stored.getExternalUserId(),null,null,"SESSION_CREATE",null,clientIp);
         List<ExternalArchiveCaseDTO> cases = deserializeCases(stored.getGrantJson());
         LocalDateTime expiresAt = LocalDateTime.now().plusSeconds(properties.getSessionTtlSeconds());
         ExternalArchiveGrant sessionGrant = new ExternalArchiveGrant(
@@ -140,6 +143,7 @@ public class ExternalArchiveAccessService {
                 expiresAt,
                 clientIp
         );
+        strictTerminal(sessionGrant,"SESSION_CREATE",clientIp,"expiresIn="+properties.getSessionTtlSeconds());
         return new IssuedSession(sessionToken, sessionGrant, properties.getSessionTtlSeconds());
     }
 
@@ -152,7 +156,10 @@ public class ExternalArchiveAccessService {
         if (stored == null) {
             throw new BusinessException(401, "外部影像会话已过期或已退出");
         }
-        accessMapper.touchSession(sessionHash);
+        // A concurrent revocation/expiry between SELECT and UPDATE must deny this request.
+        if (accessMapper.touchSession(sessionHash) != 1) {
+            throw new BusinessException(401, "外部影像会话已过期或已退出");
+        }
         return toGrant(stored);
     }
 
@@ -169,7 +176,7 @@ public class ExternalArchiveAccessService {
             throw new BusinessException(403, "当前外部会话无权访问该病案");
         }
 
-        List<Scan> scans = scanService.getImageListByCode(
+        List<Scan> scans = scanService.getFreshImageListByCode(
                 normalizedBah,
                 MedicalRecordCodeUtils.toSearchTerm(bah),
                 normalizedSjh,
@@ -177,11 +184,16 @@ public class ExternalArchiveAccessService {
         );
         List<BAHDataResponseDTO> result = new ArrayList<>(scans.size());
         for (Scan scan : scans) {
-            if (!grant.allows(scan.getBah(), scan.getSjh())) {
+            if (!ExternalArchiveGrant.keyOf(normalizedBah, normalizedSjh).equals(ExternalArchiveGrant.keyOf(scan.getBah(), scan.getSjh()))) {
                 continue;
             }
             BAHDataResponseDTO dto = new BAHDataResponseDTO();
-            BeanUtils.copyProperties(scan, dto);
+            dto.setId(scan.getId());
+            dto.setFilename(scan.getFilename());
+            dto.setBtype(scan.getBtype());
+            dto.setPages(scan.getPages());
+            dto.setUploadDate(scan.getUploadDate());
+            dto.setUploadFlag(scan.getUploadFlag());
             dto.setBah(MedicalRecordCodeUtils.normalize(scan.getBah()));
             dto.setSjh(MedicalRecordCodeUtils.normalize(scan.getSjh()));
             dto.setImg_url("/api/v1/external/archive/image/" + scan.getId());
@@ -191,18 +203,50 @@ public class ExternalArchiveAccessService {
         return result;
     }
 
-    public Scan requireImage(ExternalArchiveGrant grant, Integer imageId) {
-        if (imageId == null) {
-            throw new BusinessException(400, "影像 ID 不能为空");
+    /** Strict candidate: an audit write failure denies release of credentials/medical bytes.
+     * Ticket/session writes participate in the existing transaction, not an independent commit. */
+    public void requireAuditIntent(ExternalArchiveGrant grant,String bah,String sjh,String action,Integer imageId,String clientIp){
+        if(grant!=null)strictAudit(grant.clientId(),grant.externalUserId(),bah,sjh,action,imageId,clientIp);
+    }
+
+    public void recordContextOutcome(ExternalArchiveGrant grant,String ip,String requestId){
+        if(strictIntent)recordAudit(grant,null,null,"SESSION_CONTEXT",null,ip,null,requestId,"SUCCESS",null);
+    }
+    public void auditRevocationIntent(ExternalArchiveGrant grant,String ip){
+        try{requireAuditIntent(grant,null,null,"SESSION_LOGOUT",null,ip);}
+        catch(BusinessException ignored){logger.error("External revocation audit unavailable; preserving security revocation");}
+    }
+
+    private void strictTerminal(ExternalArchiveGrant grant,String action,String ip,String detail){
+        if(!strictIntent)return;
+        try{
+            String trace=trustedTrace();
+            if(trace==null||accessMapper.insertAccessLog(grant.clientId(),grant.externalUserId(),null,null,action,null,
+                    truncate(ip,64),null,"SUCCESS",trace,detail)!=1)throw new IllegalStateException("External terminal not confirmed");
+        }catch(RuntimeException e){
+            logger.warn("External transactional terminal rejected: type={}",e.getClass().getSimpleName());
+            throw new BusinessException(503,"外部医疗审计暂不可用");
         }
-        Scan scan = scanService.findById(imageId);
-        if (scan == null) {
-            throw new BusinessException(404, "影像不存在");
+    }
+
+    private String trustedTrace(){
+        if(org.springframework.web.context.request.RequestContextHolder.getRequestAttributes()
+                instanceof org.springframework.web.context.request.ServletRequestAttributes attrs
+                &&attrs.getRequest().getAttribute("requestId") instanceof String id)return id;
+        return null;
+    }
+
+    private void strictAudit(String client,String user,String bah,String sjh,String action,Integer imageId,String ip){
+        if(!strictIntent)return;
+        String trace=trustedTrace();
+        try{
+            if(trace==null||accessMapper.insertAccessLog(client,user,blankToNull(MedicalRecordCodeUtils.normalizeOrEmpty(bah)),
+                    blankToNull(MedicalRecordCodeUtils.normalizeOrEmpty(sjh)),action,imageId,
+                    truncate(ip,64),null,"INTENT",trace,null)!=1)throw new IllegalStateException("External audit intent not confirmed");
+        }catch(RuntimeException e){
+            logger.warn("External audit intent rejected: type={}",e.getClass().getSimpleName());
+            throw new BusinessException(503,"外部医疗审计暂不可用");
         }
-        if (!grant.allows(scan.getBah(), scan.getSjh())) {
-            throw new BusinessException(403, "当前外部会话无权访问该影像");
-        }
-        return scan;
     }
 
     public void recordAudit(
@@ -220,6 +264,8 @@ public class ExternalArchiveAccessService {
         if (grant == null) {
             return;
         }
+        // Strict credentials and their terminal audit commit atomically in the service transaction.
+        if(strictIntent&&("TICKET_CREATE".equals(action)||"SESSION_CREATE".equals(action)))return;
         try {
             accessMapper.insertAccessLog(
                     grant.clientId(),
@@ -235,7 +281,7 @@ public class ExternalArchiveAccessService {
                     truncate(detail, 500)
             );
         } catch (RuntimeException exception) {
-            logger.error("Failed to persist external archive audit log: {}", exception.getMessage(), exception);
+            logger.error("Failed to persist external archive audit log: errorType={}", exception.getClass().getSimpleName());
         }
     }
 
@@ -360,7 +406,7 @@ public class ExternalArchiveAccessService {
             throw new BusinessException(400, "病案号大于等于 10000000 时必须在 archives 中同时提供上架号");
         }
 
-        List<Scan> scans = scanService.getImageListByCode(
+        List<Scan> scans = scanService.getFreshImageListByCode(
                 normalizedBah,
                 MedicalRecordCodeUtils.toSearchTerm(rawBah),
                 normalizedSjh,

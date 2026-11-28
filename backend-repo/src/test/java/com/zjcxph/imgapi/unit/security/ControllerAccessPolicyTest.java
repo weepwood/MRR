@@ -57,6 +57,110 @@ class ControllerAccessPolicyTest {
         assertThat(ApiAccessPolicy.isPublicApiPath(ApiAccessPolicy.REGISTRATION_PATH)).isTrue();
     }
 
+    @Test
+    void exportDeclaredAccessMatrix() throws Exception {
+        var scanner = new ClassPathScanningCandidateComponentProvider(false);
+        scanner.addIncludeFilter(new AnnotationTypeFilter(RestController.class));
+        var rows = new java.util.TreeSet<String>();
+        for (BeanDefinition candidate : scanner.findCandidateComponents(CONTROLLER_PACKAGE)) {
+            if (candidate.getBeanClassName() == null) continue;
+            Class<?> type = ClassUtils.forName(candidate.getBeanClassName(), getClass().getClassLoader());
+            var classPaths = mappingPaths(AnnotatedElementUtils.findMergedAnnotation(type, RequestMapping.class));
+            for (Method method : type.getDeclaredMethods()) {
+                var mapping = AnnotatedElementUtils.findMergedAnnotation(method, RequestMapping.class);
+                if (mapping == null) continue;
+                var declaration = resolveDeclaration(type,
+                        AnnotatedElementUtils.findMergedAnnotation(method, RequirePermissions.class),
+                        hasAuthenticatedOnly(method));
+                var methods = mappingMethods(mapping).stream().map(RequestMethod::name).toList();
+                if (methods.isEmpty()) methods = List.of("ANY");
+                for (String verb : methods) {
+                    for (String path : combinePaths(classPaths, mappingPaths(mapping))) {
+                        String[] override = ApiAccessPolicy.requiredPermissionOverride(verb, path);
+                        String access = ApiAccessPolicy.isPublicApiPath(path) ? "PUBLIC_PATH"
+                                : override != null ? String.join(" + ", override)
+                                : declaration.authenticatedOnly() ? "AUTHENTICATED"
+                                : declaration.permissions() == null ? "UNDECLARED"
+                                : String.join(" + ", declaration.permissions().value());
+                        rows.add(verb + "\t" + path + "\t" + type.getSimpleName() + "#" + method.getName() + "\t" + access);
+                    }
+                }
+            }
+        }
+        assertThat(rows).isNotEmpty().noneMatch(row -> row.endsWith("\tUNDECLARED"));
+        var output = java.nio.file.Path.of("target", "api-access-matrix.tsv");
+        java.nio.file.Files.createDirectories(output.getParent());
+        java.nio.file.Files.writeString(output, "method\tpath\thandler\tdeclared_access\n" + String.join("\n", rows) + "\n");
+        System.out.println("MRR declared API matrix rows: " + rows.size());
+    }
+
+    @Test
+    void exerciseActualAuthorizationForAllDeclaredRoutesAndExportReviewInventory() throws Exception {
+        var scanner = new ClassPathScanningCandidateComponentProvider(false);
+        scanner.addIncludeFilter(new AnnotationTypeFilter(RestController.class));
+        var authorization = new com.zjcxph.imgapi.interceptors.AuthorizationInterceptor();
+        var rows = new java.util.TreeSet<String>();
+        int probes = 0;
+        for (var candidate : scanner.findCandidateComponents(CONTROLLER_PACKAGE)) {
+            if (candidate.getBeanClassName()==null) continue;
+            Class<?> type = ClassUtils.forName(candidate.getBeanClassName(),getClass().getClassLoader());
+            var factory = new org.springframework.beans.factory.support.DefaultListableBeanFactory();
+            factory.registerBeanDefinition("controller",new org.springframework.beans.factory.support.RootBeanDefinition(type));
+            var roots = mappingPaths(AnnotatedElementUtils.findMergedAnnotation(type,RequestMapping.class));
+            for (Method method:type.getDeclaredMethods()) {
+                var mapping = AnnotatedElementUtils.findMergedAnnotation(method,RequestMapping.class);
+                if(mapping==null) continue;
+                var handler=new org.springframework.web.method.HandlerMethod("controller",factory,method);
+                var declaration=resolveDeclaration(type,AnnotatedElementUtils.findMergedAnnotation(method,RequirePermissions.class),hasAuthenticatedOnly(method));
+                var verbs=mappingMethods(mapping).stream().map(RequestMethod::name).toList();
+                if(verbs.isEmpty()) verbs=List.of("ANY");
+                for(String verb:verbs) for(String path:combinePaths(roots,mappingPaths(mapping))) {
+                    String concrete=path.replaceAll("\\{[^}]+}","1").replace("**","fixture").replace("*","fixture");
+                    if(path.contains("action:pause|resume|cancel")) concrete=concrete.substring(0,concrete.lastIndexOf('/')+1)+"pause";
+                    String httpVerb=verb.equals("ANY")?"GET":verb;
+                    boolean publicPath=ApiAccessPolicy.isPublicApiPath(concrete);
+                    var override=ApiAccessPolicy.requiredPermissionOverride(httpVerb,concrete);
+                    List<String> required=override!=null?List.of(override):declaration.permissions()==null?List.of():List.of(declaration.permissions().value());
+                    String label=httpVerb+" "+concrete+" "+type.getSimpleName()+"#"+method.getName();
+                    var request = new org.springframework.mock.web.MockHttpServletRequest(httpVerb,concrete);
+                    var response = new org.springframework.mock.web.MockHttpServletResponse();
+                    assertThat(authorization.preHandle(request,response,handler)).as(label+" anonymous").isEqualTo(publicPath);
+                    if(!publicPath) assertThat(response.getStatus()).as(label).isEqualTo(401);
+                    probes++;
+                    if(!publicPath) {
+                        var session=new com.zjcxph.imgapi.common.AuthSession();
+                        session.setId(1L);session.setUsername("synthetic-policy-review");
+                        request.setAttribute(com.zjcxph.imgapi.interceptors.AuthorizationInterceptor.AUTH_SESSION_ATTRIBUTE,session);
+                        session.setPermissions(List.of());
+                        response=new org.springframework.mock.web.MockHttpServletResponse();
+                        assertThat(authorization.preHandle(request,response,handler)).as(label+" empty permissions").isEqualTo(required.isEmpty());
+                        if(!required.isEmpty()) assertThat(response.getStatus()).isEqualTo(403);
+                        probes++;
+                        session.setPermissions(required);
+                        assertThat(authorization.preHandle(request,new org.springframework.mock.web.MockHttpServletResponse(),handler)).as(label+" declared permissions").isTrue();
+                        probes++;
+                        for(String removed:required) {
+                            var subset=required.stream().filter(p->!p.equals(removed)).toList();
+                            if(com.zjcxph.imgapi.utils.PermissionResolver.hasPermission(subset,removed)) continue;
+                            session.setPermissions(subset);
+                            response=new org.springframework.mock.web.MockHttpServletResponse();
+                            assertThat(authorization.preHandle(request,response,handler)).as(label+" without "+removed).isFalse();
+                            assertThat(response.getStatus()).isEqualTo(403);
+                            probes++;
+                        }
+                    }
+                    rows.add(verb+"\t"+path+"\t"+type.getSimpleName()+"#"+method.getName()+"\t"+method.getGenericReturnType().getTypeName()
+                        +"\t"+(publicPath?"PUBLIC_INTERCEPTOR_ONLY":required.isEmpty()?"AUTHENTICATED_INTERCEPTOR_ONLY":"PERMISSION_INTERCEPTOR_PASS")
+                        +"\tUNVERIFIED_CONTROLLER_BODY_AND_RESOURCE_SCOPE");
+                }
+            }
+        }
+        var output=java.nio.file.Path.of("target","api-runtime-policy-review.tsv");
+        java.nio.file.Files.createDirectories(output.getParent());
+        java.nio.file.Files.writeString(output,"method\tpath\thandler\tdeclared_return_type\tinterceptor_evidence\tremaining_scope\n"+String.join("\n",rows)+"\n");
+        System.out.println("MRR_RUNTIME_POLICY routes="+rows.size()+" probes="+probes);
+    }
+
     private void inspectController(Class<?> controllerClass, List<String> violations) {
         RequestMapping classMapping = AnnotatedElementUtils.findMergedAnnotation(controllerClass, RequestMapping.class);
         List<String> classPaths = mappingPaths(classMapping);

@@ -55,15 +55,12 @@ public class ArchiveExportJobRepository {
         }
         return queryOne("""
                 SELECT * FROM app.archive_export_job
-                WHERE (
-                        owner_user_id = ?
-                        OR (owner_user_id IS NULL AND owner_username = ?)
-                      )
+                WHERE owner_user_id = ?
                   AND idempotency_key = ?
                   AND status <> 'EXPIRED'
                 ORDER BY created_at DESC
                 LIMIT 1
-                """, ownerUserId, ownerUsername, idempotencyKey);
+                """, ownerUserId, idempotencyKey);
     }
 
     public List<ArchiveExportJob> findActiveByOwner(
@@ -76,10 +73,7 @@ public class ArchiveExportJobRepository {
         }
         return jdbcTemplate.query("""
                 SELECT * FROM app.archive_export_job
-                WHERE (
-                        owner_user_id = ?
-                        OR (owner_user_id IS NULL AND owner_username = ?)
-                      )
+                WHERE owner_user_id = ?
                   AND format = ?
                   AND (
                       status IN ('PENDING', 'PROCESSING')
@@ -89,7 +83,7 @@ public class ArchiveExportJobRepository {
                     CASE WHEN status IN ('PENDING', 'PROCESSING') THEN 0 ELSE 1 END,
                     created_at DESC
                 LIMIT ?
-                """, ROW_MAPPER, ownerUserId, ownerUsername, format, limit);
+                """, ROW_MAPPER, ownerUserId, format, limit);
     }
 
     public record RecoveryCursor(LocalDateTime createdAt, String id) { }
@@ -203,6 +197,15 @@ public class ArchiveExportJobRepository {
                 SET status = 'CANCELLED', cancel_requested = TRUE,
                     completed_at = ?, updated_at = CURRENT_TIMESTAMP
                 WHERE id = CAST(? AS UUID) AND status IN ('PENDING', 'PROCESSING')
+                """, timestamp(completedAt), id);
+    }
+
+    /** A caller without a successful worker claim can settle only a pending cancelled row. */
+    public int markPendingCancelled(String id, LocalDateTime completedAt) {
+        return jdbcTemplate.update("""
+                UPDATE app.archive_export_job
+                SET status = 'CANCELLED', completed_at = ?, updated_at = CURRENT_TIMESTAMP
+                WHERE id = CAST(? AS UUID) AND status = 'PENDING' AND cancel_requested
                 """, timestamp(completedAt), id);
     }
 

@@ -167,6 +167,23 @@ class UserControllerTest {
     }
 
     @Test
+    void reopenRegistration_success() throws Exception {
+        AuthUserProfileDTO reopened = new AuthUserProfileDTO();
+        reopened.setId(2L);
+        reopened.setStatus("pending");
+        when(authService.reopenRegistration(2L, 1L, "127.0.0.1")).thenReturn(reopened);
+        var result = userController.reopenRegistration(2L, httpServletRequest);
+        assertThat(result.getCode()).isEqualTo(200);
+        assertThat(result.getData().getStatus()).isEqualTo("pending");
+        verify(authService).reopenRegistration(2L, 1L, "127.0.0.1");
+        var method = UserController.class.getMethod("reopenRegistration", Long.class, HttpServletRequest.class);
+        assertThat(method.getAnnotation(org.springframework.web.bind.annotation.PostMapping.class).value())
+                .containsExactly("/users/{id}/registration/reopen");
+        assertThat(method.getAnnotation(com.zjcxph.imgapi.annotation.RequirePermissions.class).value())
+                .containsExactly("user:manage");
+    }
+
+    @Test
     @DisplayName("GET currentUser — 已登录返回用户会话")
     void currentUser_loggedIn() {
         AuthSession session = adminSession();

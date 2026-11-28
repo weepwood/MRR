@@ -2,8 +2,7 @@
 import type { PatientRecord } from '@/api/modules/patients'
 import type { MrrTableAction } from '@/components/MrrTableActions/types'
 import type { EffectiveSystemSettings } from '@/utils/system-settings'
-import { RefreshCw as Refresh, Search, Upload } from 'lucide-vue-next'
-import { computed, onMounted, onUnmounted, reactive, ref } from 'vue'
+import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { getPatients } from '@/api/modules/patients'
 import AppEmpty from '@/components/AppEmpty/index.vue'
@@ -15,22 +14,20 @@ import MrrFilterBar from '@/components/MrrFilterBar/index.vue'
 import MrrPageHeader from '@/components/MrrPageHeader/index.vue'
 import MrrPageShell from '@/components/MrrPageShell/index.vue'
 import MrrTableActions from '@/components/MrrTableActions/index.vue'
+import { useCrudList } from '@/composables/useCrudList'
 import { useTableActionLayout } from '@/composables/useTableActionLayout'
+import { useUserStore } from '@/store/modules/user'
 import useAuth from '@/utils/composables/useAuth'
 import { copyText as copyToClipboard } from '@/utils/copy-text'
 import { loadEffectiveSystemSettings, SYSTEM_SETTINGS_UPDATED_EVENT } from '@/utils/system-settings'
+import { tableSequenceColumn } from '@/utils/table-sequence'
 import PatientAnalyticsPanel from './components/PatientAnalyticsPanel.vue'
 import PatientEditDialog from './components/PatientEditDialog.vue'
 
 defineOptions({ name: 'PatientsPage' })
 
 const router = useRouter()
-const loading = ref(false)
-const tableData = ref<PatientRecord[]>([])
 const error = ref('')
-const page = ref(1)
-const size = ref(20)
-const total = ref(0)
 const revealedIdCards = ref(new Set<string>())
 const patientIdCardRevealEnabled = ref(false)
 const patientIdCardCopyEnabled = ref(false)
@@ -40,7 +37,66 @@ const analyticsRefreshKey = ref(0)
 const { auth } = useAuth()
 const canEditPatients = computed(() => auth('record:edit'))
 
-const filters = reactive({ keyword: '' })
+const userStore = useUserStore()
+const canReadPatients = computed(() => userStore.isSessionVerified && auth('record:read'))
+const {
+  list: tableData,
+  total,
+  loadedRowOffset,
+  pageNum: page,
+  pageSize: size,
+  loading,
+  query: filters,
+  loadData,
+  handleSearch,
+  resetFilters,
+  handlePageChange,
+  handleSizeChange,
+} = useCrudList<PatientRecord, { keyword: string }>({
+  defaultQuery: { keyword: '' },
+  immediate: false,
+  session: {
+    key: () => String(userStore.sessionEpoch),
+    allowed: () => canReadPatients.value,
+    onReset: () => {
+      error.value = ''
+      revealedIdCards.value.clear()
+      editDialogVisible.value = false
+      editingPatient.value = undefined
+    },
+  },
+  fetchApi: async (params, { isCurrent }) => {
+    if (isCurrent()) { error.value = '' }
+    try {
+      const res = await getPatients({ page: params.page, size: params.size, ...(params.keyword.trim() && { keyword: params.keyword.trim() }) })
+      if (isCurrent()) { revealedIdCards.value.clear() }
+      const payload = res.data
+      return {
+        list: Array.isArray(payload?.list) ? payload.list : [],
+        total: Number(payload?.total || 0),
+        page: payload?.page ?? params.page,
+        size: payload?.size ?? params.size,
+      }
+    }
+    catch (err: unknown) {
+      if (isCurrent()) {
+        error.value = err instanceof Error ? err.message : '患者列表加载失败'
+        revealedIdCards.value.clear()
+      }
+      return { list: [], total: 0, page: params.page, size: params.size }
+    }
+  },
+})
+watch(canEditPatients, (allowed) => {
+  if (!allowed) {
+    editDialogVisible.value = false
+    editingPatient.value = undefined
+  }
+}, { flush: 'sync' })
+watch([() => userStore.sessionEpoch, canReadPatients], ([, allowed]) => {
+  if (allowed) { void loadData() }
+})
+
 const patientActions: MrrTableAction[] = [
   {
     key: 'edit',
@@ -55,51 +111,9 @@ const {
   actionColumnWidth: patientActionColumnWidth,
 } = useTableActionLayout(patientActions.length, 1)
 
-async function loadData() {
-  loading.value = true
-  try {
-    error.value = ''
-    const params = { page: page.value, size: size.value, ...(filters.keyword.trim() && { keyword: filters.keyword.trim() }) }
-    const res = await getPatients(params)
-    const payload = res.data ?? { list: [], total: 0 }
-    tableData.value = Array.isArray(payload.list) ? payload.list : []
-    total.value = Number(payload.total || 0)
-    revealedIdCards.value.clear()
-  }
-  catch (err: unknown) {
-    tableData.value = []
-    total.value = 0
-    error.value = err instanceof Error ? err.message : '患者列表加载失败'
-  }
-  finally {
-    loading.value = false
-  }
-}
-
 function refreshAll() {
   void loadData()
   analyticsRefreshKey.value += 1
-}
-
-function handleSearch() {
-  page.value = 1
-  void loadData()
-}
-
-function resetFilters() {
-  filters.keyword = ''
-  handleSearch()
-}
-
-function handlePageChange(nextPage: number) {
-  page.value = nextPage
-  void loadData()
-}
-
-function handleSizeChange(nextSize: number) {
-  size.value = nextSize
-  page.value = 1
-  void loadData()
 }
 
 function openDataExchange() {
@@ -107,6 +121,7 @@ function openDataExchange() {
 }
 
 function handleEdit(row: PatientRecord) {
+  if (!canReadPatients.value || !canEditPatients.value) { return }
   editingPatient.value = { ...row }
   editDialogVisible.value = true
 }
@@ -118,6 +133,7 @@ function handlePatientAction(action: string, row: PatientRecord) {
 }
 
 function handlePatientSaved(updated: PatientRecord) {
+  if (!canReadPatients.value || !canEditPatients.value || editingPatient.value?.id !== updated.id) { return }
   const index = tableData.value.findIndex(item => item.id === updated.id)
   if (index >= 0) {
     tableData.value[index] = updated
@@ -192,43 +208,44 @@ onUnmounted(() => {
 <template>
   <MrrPageShell compact>
     <MrrPageHeader
-      size="compact"
+      eyebrow="Patient Management"
       title="患者管理"
       description="查询和编辑患者基本信息，并查看身份证完整性与重复患者情况。"
     >
       <template #actions>
-        <el-button :loading="loading" :icon="Refresh" @click="refreshAll">
+        <el-button :loading="loading" @click="refreshAll">
+          <FaIcon v-if="!loading" name="i-lucide:refresh-cw" aria-hidden="true" />
           刷新
         </el-button>
-        <el-button :icon="Upload" @click="openDataExchange">
+        <el-button @click="openDataExchange">
+          <FaIcon name="i-lucide:upload" aria-hidden="true" />
           数据导入导出
         </el-button>
       </template>
     </MrrPageHeader>
 
-    <PatientAnalyticsPanel :refresh-key="analyticsRefreshKey">
+    <PatientAnalyticsPanel v-if="canReadPatients" :key="userStore.sessionEpoch" :refresh-key="analyticsRefreshKey">
       <template #patients>
         <MrrDataTablePanel
           title="患者列表"
           description="支持按病案号、姓名、身份证号、科室、病区或床位查询。"
-          :count="loading || error ? undefined : total"
+          :count="!loading && !error && !total ? 0 : undefined"
           :loading="loading"
           :result-key="tableData"
         >
           <template #filters>
-            <MrrFilterBar embedded labelled>
-              <div class="mrr-filter-field patient-keyword">
-                <label for="patients-keyword">关键词</label>
+            <MrrFilterBar embedded :focus-ring="false">
+              <div class="mrr-filter-field patient-keyword mrr-filter-field--keyword">
                 <el-input
                   id="patients-keyword"
                   v-model="filters.keyword"
                   aria-label="关键词"
-                  placeholder="例如病案号或姓名"
+                  placeholder="搜索病案号或姓名"
                   clearable
                   @keyup.enter="handleSearch"
                 >
                   <template #prefix>
-                    <el-icon><Search /></el-icon>
+                    <FaIcon name="i-lucide:search" aria-hidden="true" />
                   </template>
                 </el-input>
               </div>
@@ -246,13 +263,10 @@ onUnmounted(() => {
           <AppLoading v-if="loading && !tableData.length" type="table" :rows="8" />
           <AppError v-else-if="error" :message="error" @retry="loadData" />
           <AppEmpty v-else-if="!tableData.length" description="暂无患者记录" />
-          <!--
-            列宽改为 min-width：原来 9 个固定 width 列合计约 1240px（不含操作列），
-            1366 宽屏下容器放不下，操作列被挤出视区需要横向滚动；
-            宽屏下又不会伸展，右侧留出空白。min-width 让 el-table 按容器分配余量。
-          -->
+          <!-- 短字段使用稳定宽度，科室、病区弹性分配余量，窄屏保留原生横向滚动。 -->
           <el-table v-else :data="tableData" stripe class="patients-table">
-            <el-table-column prop="bah" label="病案号" min-width="130">
+            <el-table-column v-bind="tableSequenceColumn(loadedRowOffset, tableData.length)" />
+            <el-table-column prop="bah" label="病案号" width="132" show-overflow-tooltip>
               <template #default="{ row }">
                 <router-link
                   v-if="row.bah"
@@ -266,8 +280,8 @@ onUnmounted(() => {
                 <span v-else>—</span>
               </template>
             </el-table-column>
-            <el-table-column prop="name" label="姓名" min-width="90" />
-            <el-table-column prop="idCard" label="身份证号" min-width="190">
+            <el-table-column prop="name" label="姓名" width="112" show-overflow-tooltip />
+            <el-table-column prop="idCard" label="身份证号" width="220">
               <template #default="{ row }">
                 <!-- 无身份证号的标本行（导入前/带病案号入院）不渲染任何可点控件 -->
                 <div class="id-card-cell">
@@ -292,12 +306,12 @@ onUnmounted(() => {
                 </div>
               </template>
             </el-table-column>
-            <el-table-column prop="department" label="科室" min-width="120" show-overflow-tooltip />
-            <el-table-column prop="bingqu" label="病区" min-width="120" show-overflow-tooltip />
-            <el-table-column prop="chuangwei" label="床位" min-width="90" show-overflow-tooltip />
-            <el-table-column prop="ruyuan" label="入院日期" min-width="110" />
-            <el-table-column prop="admissiontime" label="入院时间" min-width="160" show-overflow-tooltip />
-            <el-table-column prop="id" label="ID" min-width="80" />
+            <el-table-column prop="department" label="科室" min-width="140" show-overflow-tooltip />
+            <el-table-column prop="bingqu" label="病区" min-width="130" show-overflow-tooltip />
+            <el-table-column prop="chuangwei" label="床位" width="90" show-overflow-tooltip />
+            <el-table-column prop="ruyuan" label="入院日期" width="120" show-overflow-tooltip />
+            <el-table-column prop="admissiontime" label="入院时间" width="176" show-overflow-tooltip />
+            <el-table-column prop="id" label="ID" width="108" show-overflow-tooltip />
             <el-table-column
               v-if="canEditPatients"
               label="操作"
@@ -321,7 +335,7 @@ onUnmounted(() => {
               v-model:page-size="size"
               :total="total"
               :page-sizes="[10, 20, 50, 100]"
-              layout="sizes, prev, pager, next, jumper"
+              layout="total, prev, pager, next, jumper, sizes"
               @current-change="handlePageChange"
               @size-change="handleSizeChange"
             />
@@ -331,6 +345,8 @@ onUnmounted(() => {
     </PatientAnalyticsPanel>
 
     <PatientEditDialog
+      v-if="canReadPatients && canEditPatients"
+      :key="userStore.sessionEpoch"
       v-model="editDialogVisible"
       :patient="editingPatient"
       @saved="handlePatientSaved"
@@ -339,10 +355,6 @@ onUnmounted(() => {
 </template>
 
 <style scoped>
-.patient-keyword {
-  flex: 1 1 280px;
-}
-
 /* 身份证号用等宽字体：掩码 * 与数字等宽，逐行上下对齐，掩码位数一眼可数。 */
 .id-card-toggle,
 .id-card-copy,
@@ -376,11 +388,5 @@ onUnmounted(() => {
   color: var(--mrr-navigation-active-foreground);
   text-decoration: underline;
   text-underline-offset: 2px;
-}
-
-@media (max-width: 760px) {
-  .patient-keyword {
-    flex: 1 1 100%;
-  }
 }
 </style>

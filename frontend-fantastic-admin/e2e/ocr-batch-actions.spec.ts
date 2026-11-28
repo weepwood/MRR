@@ -26,6 +26,7 @@ const runningBatch = {
  */
 
 test('取消运行中批次必须先确认，保持运行则不发请求', async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 })
   let cancelRequested = false
   await page.route('**/api/v1/ocr/batches**', async (route) => {
     const url = new URL(route.request().url())
@@ -54,13 +55,16 @@ test('取消运行中批次必须先确认，保持运行则不发请求', async
   await page.waitForTimeout(500)
   expect(cancelRequested).toBe(false)
 
-  // 再次取消并确认：发出 POST，行状态变为取消中
-  await page.getByRole('row', { name: /synthetic-running/ }).getByRole('button', { name: '取消' }).click()
+  // Narrow layout must still require the exact same confirmation.
+  await page.setViewportSize({ width: 768, height: 900 })
+  await page.getByRole('row', { name: /synthetic-running/ }).getByRole('button', { name: '更多操作' }).click()
+  await page.getByRole('menuitem', { name: '取消', exact: true }).click()
   await dialog.getByRole('button', { name: '取消批次' }).click()
   await expect.poll(() => cancelRequested).toBe(true)
 })
 
 test('操作失败时展示服务端错误信息而不是泛化文案', async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 })
   await page.route('**/api/v1/ocr/batches**', async (route) => {
     const url = new URL(route.request().url())
     if (url.pathname.endsWith('/cancel') && route.request().method() === 'POST') {
@@ -79,4 +83,27 @@ test('操作失败时展示服务端错误信息而不是泛化文案', async ({
   await dialog.getByRole('button', { name: '取消批次' }).click()
 
   await expect(page.getByText('OCR 服务中断（合成错误）')).toBeVisible({ timeout: 10_000 })
+})
+
+test('批次首次加载、读取失败与空结果使用明确的独立反馈', async ({ page }) => {
+  let release!: () => void
+  const gate = new Promise<void>((resolve) => { release = resolve })
+  let attempts = 0
+  await page.route('**/api/v1/ocr/batches**', async (route) => {
+    attempts++
+    if (attempts === 1) {
+      await gate
+      await route.fulfill({ status: 503, json: { code: 503, message: '合成失败' } })
+    }
+    else {
+      await route.fulfill({ json: reply([]) })
+    }
+  })
+  await page.goto('/ocr-batches')
+  await expect(page.getByLabel('内容加载中')).toBeVisible()
+  release()
+  await expect(page.getByText('批次读取失败，请稍后刷新')).toBeVisible()
+  await expect(page.getByText('暂无批次记录，可在上方创建')).toHaveCount(0)
+  await page.getByRole('button', { name: '重试', exact: true }).click()
+  await expect(page.getByText('暂无批次记录，可在上方创建')).toBeVisible()
 })

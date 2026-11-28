@@ -126,4 +126,92 @@ describe('系统设置的可保存基线只来自服务器', () => {
     await flushPromises()
     expect(state.loaded.value).toBe(true)
   })
+  it('保存确认期间重复调用仅提交一次', async () => {
+    const state = await setup(fromServer())
+    state.settings.value.systemShortName = '合成改动'
+    let resolve!: () => void
+    const decision = new Promise<void>((yes) => { resolve = yes })
+    confirm.mockReturnValue(decision)
+    const first = state.handleSave()
+    const second = state.handleSave()
+    resolve()
+    await Promise.all([first, second])
+    expect(confirm).toHaveBeenCalledTimes(1)
+    expect(api.saveSystemSettings).toHaveBeenCalledTimes(1)
+  })
+
+  it('确认期间新增编辑不进入已经确认的提交', async () => {
+    const state = await setup(fromServer())
+    state.settings.value.systemShortName = '合成已确认'
+    let resolve!: () => void
+    confirm.mockReturnValueOnce(new Promise<void>((yes) => { resolve = yes }))
+    const task = state.handleSave()
+    state.settings.value.systemShortName = '合成未确认'
+    resolve()
+    expect(await task).toBe(false)
+    expect(api.saveSystemSettings).not.toHaveBeenCalled()
+    expect(state.isDirty.value).toBe(true)
+    expect(state.settings.value.systemShortName).toBe('合成未确认')
+  })
+
+  it('确认保存期间不允许重载、恢复或丢弃草稿', async () => {
+    const state = await setup(fromServer())
+    state.settings.value.systemShortName = '合成草稿'
+    let resolve!: () => void
+    const decision = new Promise<void>((yes) => { resolve = yes })
+    confirm.mockReturnValue(decision)
+    vi.mocked(loadEffectiveSystemSettings).mockResolvedValue(fromServer())
+    const save = state.handleSave()
+    const reload = state.handleReload()
+    const reset = state.handleReset()
+    state.discardUnsavedChanges()
+    resolve()
+    await Promise.all([save, reload, reset])
+    expect(confirm).toHaveBeenCalledTimes(1)
+    expect(loadEffectiveSystemSettings).toHaveBeenCalledTimes(1)
+    expect(api.saveSystemSettings).toHaveBeenCalledExactlyOnceWith(expect.objectContaining({ systemShortName: '合成草稿' }))
+  })
+
+  it('已确认开发者模式配置在第二次确认期间变化时拒绝提交', async () => {
+    const state = await setup(fromServer())
+    state.settings.value.developerModeEnabled = true
+    state.settings.value.developerModeAllowedSources = '127.0.0.1'
+    let resolve!: () => void
+    confirm.mockResolvedValueOnce(undefined).mockReturnValueOnce(new Promise<void>((yes) => { resolve = yes }))
+    const task = state.handleSave()
+    await flushPromises()
+    expect(confirm).toHaveBeenCalledTimes(2)
+    state.settings.value.systemShortName = '合成未确认'
+    resolve()
+    expect(await task).toBe(false)
+    expect(api.saveSystemSettings).not.toHaveBeenCalled()
+  })
+
+  it('组件销毁后迟到确认不会发起保存', async () => {
+    const state = await setup(fromServer())
+    state.settings.value.systemShortName = '合成草稿'
+    let resolve!: () => void
+    confirm.mockReturnValueOnce(new Promise<void>((yes) => { resolve = yes }))
+    const task = state.handleSave()
+    wrappers.pop()!.unmount()
+    resolve()
+    expect(await task).toBe(false)
+    expect(api.saveSystemSettings).not.toHaveBeenCalled()
+    expect(success).not.toHaveBeenCalled()
+  })
+
+  it('请求在途的新草稿不会被成功响应标为已保存', async () => {
+    const state = await setup(fromServer())
+    state.settings.value.systemShortName = '合成已提交'
+    let resolve!: (value: Awaited<ReturnType<typeof api.saveSystemSettings>>) => void
+    vi.mocked(api.saveSystemSettings).mockReturnValueOnce(new Promise((yes) => { resolve = yes }))
+    const task = state.handleSave()
+    await flushPromises()
+    expect(api.saveSystemSettings).toHaveBeenCalledExactlyOnceWith(expect.objectContaining({ systemShortName: '合成已提交' }))
+    state.settings.value.systemShortName = '合成后续草稿'
+    resolve({ data: undefined } as Awaited<ReturnType<typeof api.saveSystemSettings>>)
+    expect(await task).toBe(true)
+    expect(state.settings.value.systemShortName).toBe('合成后续草稿')
+    expect(state.changedKeys.value).toEqual(['systemShortName'])
+  })
 })

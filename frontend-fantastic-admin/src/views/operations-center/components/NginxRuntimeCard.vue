@@ -6,6 +6,7 @@ import AppError from '@/components/AppError/index.vue'
 import MrrSectionCard from '@/components/MrrSectionCard/index.vue'
 import { formatDateTime } from '@/utils/display-format'
 import { hasPermission } from '@/utils/session'
+import { tableSequenceColumn } from '@/utils/table-sequence'
 
 const canRead = computed(() => hasPermission('system:read'))
 const canManage = computed(() => canRead.value && hasPermission('system:manage'))
@@ -153,6 +154,7 @@ onBeforeUnmount(clear)
       <template v-if="tail?.state === 'AVAILABLE'">
         <p>最多读取末尾 64 KiB、最近 50 条完整行；{{ tail.truncated ? '已截断；' : '' }}无法解析 {{ tail.omitted }} 条。错误时间为服务器本地时间，不含时区。仅显示白名单字段，不显示请求路径、IP、请求头及错误正文。</p>
         <el-table :data="tail.entries" max-height="360" empty-text="暂无可展示的日志摘要">
+          <el-table-column v-bind="tableSequenceColumn()" />
           <el-table-column prop="time" label="日志时间" min-width="190" />
           <el-table-column v-if="kind === 'access'" prop="method" label="方法" width="100" />
           <el-table-column v-if="kind === 'access'" prop="status" label="状态码" width="100" />

@@ -11,7 +11,22 @@ export async function sampleAuthModeSwitch(page: Page, reverseInFlight = false) 
       const box = shell.getBoundingClientRect()
       return { top: box.top, height: box.height, bottom: box.bottom, documentHeight: document.documentElement.scrollHeight }
     }
-    await Promise.all(shell.getAnimations().map(animation => animation.finished))
+    async function waitForAnimationEnd(animations: Animation[]) {
+      await Promise.all(animations.map(async (animation) => {
+        try {
+          await animation.finished
+        }
+        catch (error) {
+          // Removing or replacing a native transition rejects finished with
+          // AbortError. Only accept actual cancellation, not readiness or
+          // arbitrary exceptions; sampled geometry and final DOM still assert.
+          if (!(error instanceof DOMException && error.name === 'AbortError' && animation.playState === 'idle')) {
+            throw error
+          }
+        }
+      }))
+    }
+    await waitForAnimationEnd(shell.getAnimations())
 
     async function sample(mode: 'login' | 'register') {
       const previous = new Set(document.getAnimations())
@@ -84,7 +99,14 @@ export async function sampleAuthModeSwitch(page: Page, reverseInFlight = false) 
 
     const forward = await sample('register')
     if (!reverseInFlight) {
-      await Promise.all(forward.animations.map(animation => animation.finished))
+      await waitForAnimationEnd(forward.animations)
+      const deadline = performance.now() + 1500
+      while (document.querySelector('.login-form') && performance.now() < deadline) {
+        await nextFrame()
+      }
+      if (document.querySelector('.login-form') || !document.querySelector('.register-form')) {
+        throw new Error('Register transition did not settle into the expected form')
+      }
       await nextFrame()
     }
     const registered = geometry()

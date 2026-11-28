@@ -1,4 +1,7 @@
 import { expect, test } from '@playwright/test'
+import { isolateLocalVisualSettings } from './helpers/local-visual-settings'
+
+test.beforeEach(async ({ page }) => { await isolateLocalVisualSettings(page) })
 
 for (const theme of ['light', 'dark'] as const) {
   test(`${theme} 图表卡跟随全局圆角并完整呈现窄屏说明`, async ({ page }) => {
@@ -16,7 +19,7 @@ for (const theme of ['light', 'dark'] as const) {
       await page.setViewportSize({ width, height: 1000 })
       await expect(card).toHaveCSS('border-radius', '20px')
       await expect(card.getByRole('heading', { name: '扫描趋势', level: 2 })).toBeVisible()
-      const description = card.getByText('柱形展示扫描页数，折线展示扫描记录数；默认展示近 90 日，可在图表内滚动鼠标滚轮调整时间范围', { exact: true })
+      const description = card.getByText('柱形展示扫描页数，折线展示扫描记录数；默认展示最近 90 个有数据的统计日，可在图表内滚动鼠标滚轮调整时间范围', { exact: true })
       await expect(description).toHaveCSS('white-space', 'normal')
       await expect.poll(() => description.evaluate(element => element.scrollWidth <= element.clientWidth + 1)).toBe(true)
       await expect(card.getByText(/共 \d+ 个统计日/)).toBeVisible()

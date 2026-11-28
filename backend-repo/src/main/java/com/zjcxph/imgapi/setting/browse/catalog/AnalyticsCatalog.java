@@ -402,7 +402,7 @@ public final class AnalyticsCatalog {
                         DbBrowseColumn.number("total_issues", "问题总数", true, false),
                         DbBrowseColumn.number("critical_count", "严重数", true, false),
                         DbBrowseColumn.number("warning_count", "警告数", true, false),
-                        DbBrowseColumn.text("error_message", "错误信息", false, false, 500),
+                        DbBrowseColumn.hidden("error_message", "历史错误原文", ColumnType.TEXT),
                         DbBrowseColumn.dateTime("started_at", "开始时间", true),
                         DbBrowseColumn.dateTime("completed_at", "完成时间", true)
                 ))

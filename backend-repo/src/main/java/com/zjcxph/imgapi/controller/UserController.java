@@ -145,6 +145,15 @@ public class UserController {
         return Result.success("注册申请已拒绝", rejected);
     }
 
+    @Operation(summary = "恢复已拒绝注册申请为待审核")
+    @RequirePermissions({"user:manage"})
+    @PostMapping("/users/{id}/registration/reopen")
+    public Result<AuthUserProfileDTO> reopenRegistration(@PathVariable Long id, HttpServletRequest httpRequest) {
+        AuthSession administrator = requireCurrentUser();
+        return Result.success("注册申请已恢复待审核", authService.reopenRegistration(
+                id, administrator.getId(), IpUtil.getClientIp(httpRequest)));
+    }
+
     @Operation(summary = "管理员重置用户密码")
     @RequirePermissions({"user:manage"})
     @PostMapping("/users/{id}/password/reset")

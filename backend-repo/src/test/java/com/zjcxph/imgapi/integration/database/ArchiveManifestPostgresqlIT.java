@@ -239,6 +239,73 @@ class ArchiveManifestPostgresqlIT extends PostgresqlIntegrationTestSupport {
         assertThat(repo.resume(archive,newer,8)).isFalse();
     }
 
+    @Test
+    @org.springframework.transaction.annotation.Transactional(propagation=org.springframework.transaction.annotation.Propagation.NOT_SUPPORTED)
+    void reverseScanManifestLockOrderProducesRealDeadlockAndRetryDoesNotDuplicate() throws Exception {
+        var manager=new org.springframework.jdbc.datasource.DataSourceTransactionManager(jdbc.getDataSource());
+        var tx=new org.springframework.transaction.support.TransactionTemplate(manager);
+        tx.setTimeout(8);
+        var repo=new ArchiveManifestRepository(jdbc);
+        long archive=archive();
+        int scan=scan(archive,1,1);
+        long id=tx.execute(status->repo.create(archive,7L).orElseThrow());
+        var lease=tx.execute(status->repo.claim(UUID.randomUUID()).orElseThrow());
+        assertThat(lease.id()).isEqualTo(id);
+        var candidate=repo.next(lease).orElseThrow();
+        var gate=new java.util.concurrent.CyclicBarrier(2);
+        var executor=java.util.concurrent.Executors.newFixedThreadPool(2);
+        try {
+            var forward=executor.submit(()->{
+                try {
+                    return tx.execute(status->{
+                        jdbc.queryForObject("SELECT id FROM app.mrr_archive_manifest WHERE id=? FOR UPDATE",Long.class,id);
+                        await(gate);
+                        assertThat(repo.advance(lease,candidate,"MISSING_OR_UNREADABLE",0,null)).isTrue();
+                        return "advanced";
+                    });
+                } catch(org.springframework.dao.DataAccessException failure) { return deadlock(failure); }
+            });
+            var reverse=executor.submit(()->{
+                try {
+                    return tx.execute(status->{
+                        jdbc.queryForObject("SELECT id FROM app.mr_scan WHERE id=? FOR UPDATE",Integer.class,scan);
+                        await(gate);
+                        jdbc.queryForObject("SELECT id FROM app.mrr_archive_manifest WHERE id=? FOR UPDATE",Long.class,id);
+                        return "reverse";
+                    });
+                } catch(org.springframework.dao.DataAccessException failure) { return deadlock(failure); }
+            });
+            String a=forward.get(10,java.util.concurrent.TimeUnit.SECONDS);
+            String b=reverse.get(10,java.util.concurrent.TimeUnit.SECONDS);
+            assertThat(a.equals("40P01") ^ b.equals("40P01")).isTrue();
+            if(a.equals("40P01")) assertThat(Boolean.TRUE.equals(tx.execute(status->repo.advance(lease,candidate,"MISSING_OR_UNREADABLE",0,null)))).isTrue();
+            assertThat(repo.get(id).orElseThrow().processed()).isEqualTo(1);
+            assertThat(repo.anomalies(id,0)).hasSize(1);
+            assertThat(Boolean.TRUE.equals(tx.execute(status->repo.advance(lease,candidate,"MISSING_OR_UNREADABLE",0,null)))).isFalse();
+            System.out.println("MRR_MANIFEST_DEADLOCK forward="+a+" reverse="+b+" processed=1 anomalies=1");
+        } finally {
+            executor.shutdownNow();
+            executor.awaitTermination(10,java.util.concurrent.TimeUnit.SECONDS);
+            jdbc.update("DELETE FROM app.mrr_archive_manifest WHERE id=?",id);
+            jdbc.update("DELETE FROM app.mr_scan WHERE id=?",scan);
+            jdbc.update("DELETE FROM app.mr_archive WHERE id=?",archive);
+        }
+    }
+
+    private static void await(java.util.concurrent.CyclicBarrier barrier) {
+        try { barrier.await(3,java.util.concurrent.TimeUnit.SECONDS); }
+        catch(Exception failure) { throw new IllegalStateException("synthetic lock barrier",failure); }
+    }
+
+    private static String deadlock(org.springframework.dao.DataAccessException failure) {
+        Throwable current=failure;
+        while(current!=null) {
+            if(current instanceof java.sql.SQLException sql && "40P01".equals(sql.getSQLState())) return "40P01";
+            current=current.getCause();
+        }
+        throw failure;
+    }
+
     private long archive() {
         return jdbc.queryForObject("INSERT INTO app.mr_archive(bah) VALUES ('123456') RETURNING id", Long.class);
     }

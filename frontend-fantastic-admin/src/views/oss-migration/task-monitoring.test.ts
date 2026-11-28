@@ -2,6 +2,7 @@ import type { MigrationJob } from '@/api/modules/oss'
 import { flushPromises, mount, shallowMount } from '@vue/test-utils'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { h, KeepAlive, nextTick, ref } from 'vue'
+import { getReviewImage } from '@/api/modules/classification'
 import * as api from '@/api/modules/oss'
 import Page from './index.vue'
 
@@ -15,6 +16,7 @@ vi.mock('./composables/useMigrationPolling', async (importOriginal) => {
 vi.mock('@/composables/useTableActionLayout', () => ({ useTableActionLayout: () => ({ maxInlineActions: ref(1), actionColumnWidth: ref(120) }) }))
 vi.mock('element-plus', () => ({ ElMessage: { error, success: vi.fn(), warning: vi.fn() } }))
 vi.mock('@/ui/components/ActionDialog', () => ({ actionDialog: { confirm: vi.fn() } }))
+vi.mock('@/api/modules/classification', () => ({ getReviewImage: vi.fn() }))
 vi.mock('@/api/modules/oss', () => Object.fromEntries(['cancelMigrationJob', 'createMigrationJob', 'getMigrationJob', 'getMigrationJobs', 'getMigrationLogs', 'getMigrationReadiness', 'getMigrationStatistics', 'getPendingFolders', 'getPendingManagementRecords', 'getWaitingSjhRecords', 'retryMigrationScans', 'uploadByBah', 'uploadToOss'].map(name => [name, vi.fn()])))
 
 interface State {
@@ -22,7 +24,12 @@ interface State {
   currentJob?: MigrationJob
   jobs: MigrationJob[]
   jobPage: number
-  loading: { jobs: boolean, detail: boolean }
+  loading: { jobs: boolean, detail: boolean, records: boolean, logs: boolean }
+  records: { id?: number }[]
+  logs: { scanId?: number }[]
+  logPage: number
+  loadRecords: () => Promise<void>
+  loadLogs: () => Promise<void>
   loadJobs: () => Promise<void>
   showJobDetail: (job: MigrationJob) => Promise<void>
   jobDetail?: MigrationJob
@@ -30,6 +37,12 @@ interface State {
   jobHistoryPage?: number
   jobDetailError: boolean
   jobDrawerVisible: boolean
+  migrationPreviewVisible: boolean
+  migrationPreviewUrl: string
+  migrationPreviewLoading: boolean
+  migrationPreviewError: string
+  showMigrationPreview: (id: number) => Promise<void>
+  logActions: (row: { scanId?: number, migrationStatus?: string, ossUrl?: string }) => unknown[]
 }
 function deferred<T>() {
   let resolve!: (value: T) => void
@@ -61,6 +74,48 @@ afterEach(() => {
   vi.restoreAllMocks()
 })
 
+describe('迁移受控影像预览', () => {
+  it('成功日志无签名地址也可通过当前 Scan ID 预览，关闭时回收 Blob', async () => {
+    const create = vi.fn(() => 'blob:synthetic-preview')
+    const revoke = vi.fn()
+    vi.stubGlobal('URL', class extends URL {
+      static createObjectURL = create
+      static revokeObjectURL = revoke
+    })
+    try {
+      const { vm } = await setup()
+      expect(vm.logActions({ scanId: 7, migrationStatus: 'success' })).toHaveLength(1)
+      expect(vm.logActions({ scanId: 8, migrationStatus: 'failed', ossUrl: 'https://invalid.example/' })).toHaveLength(0)
+      vi.mocked(getReviewImage).mockResolvedValueOnce(new Blob(['synthetic'], { type: 'image/png' }))
+      await vm.showMigrationPreview(7)
+      expect(getReviewImage).toHaveBeenCalledWith(7, expect.any(AbortSignal))
+      expect(vm.migrationPreviewUrl).toBe('blob:synthetic-preview')
+      vm.migrationPreviewVisible = false
+      await nextTick()
+      expect(revoke).toHaveBeenCalledWith('blob:synthetic-preview')
+      expect(vm.migrationPreviewUrl).toBe('')
+    }
+    finally { vi.unstubAllGlobals() }
+  })
+  it('关闭预览后拒绝迟到内容，并将拒绝响应显示为安全提示', async () => {
+    const { vm } = await setup()
+    const pending = deferred<Blob>()
+    vi.mocked(getReviewImage).mockReturnValueOnce(pending.promise)
+    const task = vm.showMigrationPreview(7)
+    const signal = vi.mocked(getReviewImage).mock.calls.at(-1)?.[1]
+    vm.migrationPreviewVisible = false
+    await nextTick()
+    expect(signal?.aborted).toBe(true)
+    pending.resolve(new Blob(['synthetic'], { type: 'image/png' }))
+    await task
+    expect(vm.migrationPreviewUrl).toBe('')
+    vi.mocked(getReviewImage).mockRejectedValueOnce(new Error('synthetic forbidden'))
+    await vm.showMigrationPreview(8)
+    expect(vm.migrationPreviewError).toBe('当前影像不可读取或无访问权限')
+    expect(vm.migrationPreviewLoading).toBe(false)
+  })
+})
+
 describe('oSS任务监控一致性', () => {
   it('历史任务页不清除readiness确认的当前活动任务，也不停止追踪', async () => {
     const { vm } = await setup()
@@ -84,6 +139,63 @@ describe('oSS任务监控一致性', () => {
     current.resolve(history(20))
     await b
     expect(vm.jobs[0]?.id).toBe(20)
+  })
+  it('旧迁移记录响应不能覆盖新查询或提前结束加载', async () => {
+    const { vm } = await setup()
+    const first = deferred<Awaited<ReturnType<typeof api.getPendingManagementRecords>>>()
+    const second = deferred<Awaited<ReturnType<typeof api.getPendingManagementRecords>>>()
+    vi.mocked(api.getPendingManagementRecords).mockReturnValueOnce(first.promise).mockReturnValueOnce(second.promise)
+    const a = vm.loadRecords()
+    const b = vm.loadRecords()
+    first.resolve({ data: { list: [{ id: 1 }] } } as Awaited<ReturnType<typeof api.getPendingManagementRecords>>)
+    await a
+    expect(vm.loading.records).toBe(true)
+    expect(vm.records).toEqual([])
+    second.resolve({ data: { list: [{ id: 2 }] } } as Awaited<ReturnType<typeof api.getPendingManagementRecords>>)
+    await b
+    expect(vm.records[0]?.id).toBe(2)
+    expect(vm.loading.records).toBe(false)
+  })
+  it('迟到的旧日志页不能覆盖当前页', async () => {
+    const { vm } = await setup()
+    const first = deferred<Awaited<ReturnType<typeof api.getMigrationLogs>>>()
+    vi.mocked(api.getMigrationLogs).mockReturnValueOnce(first.promise).mockResolvedValueOnce({ data: { list: [{ scanId: 20 }], total: 40 } } as Awaited<ReturnType<typeof api.getMigrationLogs>>)
+    const a = vm.loadLogs()
+    vm.logPage = 2
+    await vm.loadLogs()
+    first.resolve({ data: { list: [{ scanId: 10 }], total: 40 } } as Awaited<ReturnType<typeof api.getMigrationLogs>>)
+    await a
+    expect(vm.logs[0]?.scanId).toBe(20)
+    expect(vm.loading.logs).toBe(false)
+  })
+  it('缓存离页使记录与日志在途读取失效，返回后补读并忽略旧错误', async () => {
+    const visible = ref(true)
+    const parent = mount({ setup: () => () => h(KeepAlive, null, { default: () => visible.value ? h(Page) : h('div') }) }, { global: globalOptions })
+    wrappers.push(parent)
+    await flushPromises()
+    const vm = parent.findComponent(Page).vm as unknown as State
+    const records = deferred<Awaited<ReturnType<typeof api.getPendingManagementRecords>>>()
+    const logs = deferred<Awaited<ReturnType<typeof api.getMigrationLogs>>>()
+    vi.mocked(api.getPendingManagementRecords).mockReturnValueOnce(records.promise)
+    vi.mocked(api.getMigrationLogs).mockReturnValueOnce(logs.promise)
+    const a = vm.loadRecords()
+    const b = vm.loadLogs()
+    visible.value = false
+    await nextTick()
+    expect(vm.loading.records).toBe(false)
+    expect(vm.loading.logs).toBe(false)
+    vi.mocked(api.getPendingManagementRecords).mockClear().mockResolvedValue({ data: { list: [{ id: 2 }] } } as Awaited<ReturnType<typeof api.getPendingManagementRecords>>)
+    vi.mocked(api.getMigrationLogs).mockClear().mockResolvedValue({ data: { list: [{ scanId: 20 }] } } as Awaited<ReturnType<typeof api.getMigrationLogs>>)
+    visible.value = true
+    await flushPromises()
+    expect(api.getPendingManagementRecords).toHaveBeenCalledTimes(1)
+    expect(api.getMigrationLogs).toHaveBeenCalledTimes(1)
+    records.reject(new Error('synthetic old record failure'))
+    logs.resolve({ data: { list: [{ scanId: 10 }] } } as Awaited<ReturnType<typeof api.getMigrationLogs>>)
+    await Promise.all([a, b])
+    expect(vm.records[0]?.id).toBe(2)
+    expect(vm.logs[0]?.scanId).toBe(20)
+    expect(error).not.toHaveBeenCalled()
   })
   it('详情乱序返回时只显示最后选择的任务', async () => {
     const { vm } = await setup()

@@ -1,9 +1,8 @@
 <script setup lang="ts">
 import type { LogRecord, PaginatedResult } from '@/api/types'
-/* eslint-disable antfu/if-newline, curly, vue/singleline-html-element-content-newline */
 import type { MrrTableAction } from '@/components/MrrTableActions/types'
+/* eslint-disable antfu/if-newline, curly, vue/singleline-html-element-content-newline */
 import { useMediaQuery } from '@vueuse/core'
-import { Copy as CopyIcon, RefreshCw as Refresh } from 'lucide-vue-next'
 import { computed, onBeforeUnmount, onDeactivated, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { getLogById, searchSystemLogs } from '@/api/modules/logs'
@@ -26,6 +25,7 @@ import { copyText as copyToClipboard } from '@/utils/copy-text'
 import { formatDateTime, isRedactedLogText } from '@/utils/display-format'
 import { checkSessionPermission } from '@/utils/permission'
 import { isSessionAccessDenied } from '@/utils/session-access-denied'
+import { tableSequenceColumn } from '@/utils/table-sequence'
 
 defineOptions({ name: 'LogsPage' })
 
@@ -103,11 +103,18 @@ const defaultQuery: LogsQuery = {
 const routeRequestId = computed(() => typeof route.query.requestId === 'string' ? route.query.requestId.trim() : '')
 const linkedRequestId = ref(routeRequestId.value)
 
-const { clearResults, list, total, loading, resultVersion, pageNum, pageSize, query, handleSearch, handlePageChange, loadData } = useCrudList<
+type AdvancedKey = 'clientIp' | 'requestUri' | 'method' | 'responseStatus'
+const advancedKeys: AdvancedKey[] = ['clientIp', 'requestUri', 'method', 'responseStatus']
+function advancedSnapshot(values: Partial<Record<AdvancedKey, unknown>>) {
+  return advancedKeys.map(key => String(values[key] ?? '').trim())
+}
+const appliedAdvanced = ref<string[] | null>(null)
+
+const { clearResults, list, total, loadedRowOffset, loading, resultVersion, pageNum, pageSize, query, handleSearch, handlePageChange, loadData } = useCrudList<
   LogRecord,
   LogsQuery
 >({
-  session: { resetQuery: defaultQuery, key: () => userStore.token, allowed: () => canReadLogs.value, onReset: () => { error.value = ''; lastRefreshedAt.value = ''; linkedRequestId.value = ''; closeDetail() } },
+  session: { resetQuery: defaultQuery, key: () => userStore.token, allowed: () => canReadLogs.value, onReset: () => { appliedAdvanced.value = null; error.value = ''; lastRefreshedAt.value = ''; linkedRequestId.value = ''; closeDetail() } },
   fetchApi: async (params, { isCurrent, silent }) => {
     const { page, size, keyword, username, clientIp, requestUri, method, responseStatus, timeRange } = params
     const apiParams: Parameters<typeof searchSystemLogs>[0] = { page, size }
@@ -124,6 +131,7 @@ const { clearResults, list, total, loading, resultVersion, pageNum, pageSize, qu
     try {
       const response = await searchSystemLogs(apiParams, userStore.token)
       if (isCurrent()) {
+        appliedAdvanced.value = advancedSnapshot(apiParams)
         error.value = ''
         lastRefreshedAt.value = new Date().toLocaleTimeString('zh-CN', { hour12: false })
       }
@@ -138,12 +146,16 @@ const { clearResults, list, total, loading, resultVersion, pageNum, pageSize, qu
       // 静默轮询失败返回 undefined：useCrudList 保留现有列表，不进空态/错误态。
       if (silent) { return undefined }
       const msg = e instanceof Error ? e.message : '加载日志记录失败'
-      if (isCurrent()) error.value = msg
+      if (isCurrent()) { error.value = msg; appliedAdvanced.value = null }
       return { list: [], total: 0, page: 1, size: 20 } as PaginatedResult<LogRecord>
     }
   },
   defaultQuery: { ...defaultQuery, keyword: linkedRequestId.value },
 })
+
+const advancedCount = computed(() => advancedSnapshot(query).filter(Boolean).length)
+const appliedAdvancedCount = computed(() => appliedAdvanced.value?.filter(Boolean).length)
+const advancedDirty = computed(() => appliedAdvanced.value !== null && JSON.stringify(advancedSnapshot(query)) !== JSON.stringify(appliedAdvanced.value))
 
 function searchFromStart(keyword = '') {
   Object.assign(query, defaultQuery, { keyword, timeRange: [] })
@@ -157,6 +169,12 @@ watch([() => route.path, routeRequestId], ([path, requestId]) => {
   detailVisible.value = false
   void searchFromStart(requestId)
 })
+
+function handleFilterEnter(event: Event | KeyboardEvent) {
+  if (!(event instanceof KeyboardEvent) || event.isComposing || event.repeat) { return }
+  event.preventDefault()
+  void handleSearch()
+}
 
 function resetFilters() {
   if (linkedRequestId.value) {
@@ -264,60 +282,36 @@ function statusTagType(status: string | number) {
 
 <template>
   <MrrPageShell>
-    <MrrPageHeader size="compact" title="日志管理" eyebrow="Operation Logs" description="按请求 ID、真实 URI、接口模板、业务参数、用户、IP、状态码和时间范围追溯接口访问。">
+    <MrrPageHeader title="日志管理" eyebrow="Operation Logs" description="按请求 ID、真实 URI、接口模板、业务参数、用户、IP、状态码和时间范围追溯接口访问。">
       <!-- 自动刷新说明放 #meta（DESIGN.md §3.3），与运行错误中心一致；原来与刷新按钮挤在操作区，窄屏下把按钮推出页头。 -->
       <template #meta>
         <span class="auto-refresh-note" aria-live="polite">每 30 秒自动刷新<template v-if="lastRefreshedAt"> · 上次 {{ lastRefreshedAt }}</template></span>
       </template>
       <template #actions>
         <el-button :loading="loading" @click="loadData()">
-          <el-icon><Refresh /></el-icon>
+          <FaIcon name="i-lucide:refresh-cw" aria-hidden="true" />
           刷新
         </el-button>
       </template>
     </MrrPageHeader>
 
-    <MrrDataTablePanel title="日志记录" :count="total" :loading="loading" :result-key="resultVersion">
+    <MrrDataTablePanel title="日志记录" :loading="loading" :result-key="resultVersion">
       <template #filters>
         <el-form label-position="top" @submit.prevent>
-          <MrrFilterBar embedded layout="grid">
-            <el-form-item label="关键字" for="logs-keyword">
+          <MrrFilterBar embedded :focus-ring="false" :advanced-count="advancedCount" :applied-advanced-count="appliedAdvancedCount" :advanced-dirty="advancedDirty">
+            <el-form-item class="mrr-filter-field--keyword" label="关键字" for="logs-keyword">
               <el-input
                 id="logs-keyword"
                 v-model="query.keyword"
                 clearable
                 placeholder="Request ID / URI / 参数 / 审计目标"
-                @keyup.enter="handleSearch"
+                @keydown.enter="handleFilterEnter"
               />
             </el-form-item>
-            <el-form-item label="用户" for="logs-username">
-              <MrrUserSearchSelect
-                id="logs-username"
-                v-model="query.username"
-                placeholder="搜索已存在用户名"
-                @update:model-value="handleSearch"
-              />
-            </el-form-item>
-            <el-form-item label="客户端 IP" for="logs-client-ip">
-              <el-input id="logs-client-ip" v-model="query.clientIp" clearable placeholder="127.0.0.1" @keyup.enter="handleSearch" />
-            </el-form-item>
-            <el-form-item label="请求 URI" for="logs-request-uri">
-              <el-input id="logs-request-uri" v-model="query.requestUri" clearable placeholder="真实路径或接口模板" @keyup.enter="handleSearch" />
-            </el-form-item>
-            <el-form-item label="方法" for="logs-method">
-              <el-select id="logs-method" v-model="query.method" class="mrr-single-select" clearable placeholder="全部请求方法">
-                <el-option v-for="item in methodOptions" :key="item" :label="item" :value="item" />
-              </el-select>
-            </el-form-item>
-            <el-form-item label="状态码" for="logs-status">
-              <el-select id="logs-status" v-model="query.responseStatus" class="mrr-single-select" clearable placeholder="全部状态码">
-                <el-option v-for="item in statusOptions" :key="item.label" :label="item.label" :value="item.value" />
-              </el-select>
-            </el-form-item>
-            <el-form-item label="访问时间" class="mrr-filter-bar__range">
+            <el-form-item label="访问时间" class="mrr-filter-field--datetime">
               <el-date-picker
                 v-model="query.timeRange"
-                type="datetimerange"
+                aria-label="访问时间（未选择则不限时间）" type="datetimerange"
                 :popper-options="rangePickerPopperOptions"
                 range-separator="至"
                 start-placeholder="开始时间"
@@ -326,6 +320,32 @@ function statusTagType(status: string | number) {
                 format="YYYY-MM-DD HH:mm:ss"
               />
             </el-form-item>
+            <el-form-item class="mrr-filter-field--keyword" label="用户" for="logs-username">
+              <MrrUserSearchSelect
+                id="logs-username"
+                v-model="query.username"
+                placeholder="搜索已存在用户名"
+                @update:model-value="handleSearch"
+              />
+            </el-form-item>
+            <template #advanced>
+              <el-form-item label="客户端 IP" for="logs-client-ip">
+                <el-input id="logs-client-ip" v-model="query.clientIp" clearable placeholder="127.0.0.1" @keydown.enter="handleFilterEnter" />
+              </el-form-item>
+              <el-form-item class="mrr-filter-field--keyword" label="请求 URI" for="logs-request-uri">
+                <el-input id="logs-request-uri" v-model="query.requestUri" clearable placeholder="真实路径或接口模板" @keydown.enter="handleFilterEnter" />
+              </el-form-item>
+              <el-form-item label="方法" for="logs-method">
+                <el-select id="logs-method" v-model="query.method" class="mrr-single-select" clearable placeholder="全部请求方法">
+                  <el-option v-for="item in methodOptions" :key="item" :label="item" :value="item" />
+                </el-select>
+              </el-form-item>
+              <el-form-item label="状态码" for="logs-status">
+                <el-select id="logs-status" v-model="query.responseStatus" class="mrr-single-select" clearable placeholder="全部状态码">
+                  <el-option v-for="item in statusOptions" :key="item.label" :label="item.label" :value="item.value" />
+                </el-select>
+              </el-form-item>
+            </template>
             <template #actions>
               <MrrFilterActionButton action="search" :pending="loading" :busy="loading" @click="handleSearch">
                 查询
@@ -344,30 +364,31 @@ function statusTagType(status: string | number) {
         :description="linkedRequestId && query.keyword === linkedRequestId ? '未找到该 Request ID 对应的访问日志' : '暂无日志记录'"
       />
       <el-table v-else :data="list" stripe>
-        <el-table-column prop="accessTime" label="访问时间" min-width="180">
+        <el-table-column v-bind="tableSequenceColumn(loadedRowOffset, list.length)" />
+        <el-table-column prop="accessTime" label="访问时间" width="176">
           <template #default="{ row }">{{ formatDateTime(row.accessTime) }}</template>
         </el-table-column>
-        <el-table-column prop="requestId" label="Request ID" min-width="170" show-overflow-tooltip>
+        <el-table-column prop="requestId" label="Request ID" min-width="200">
           <template #default="{ row }">
-            <template v-if="row.requestId">
-              <span class="log-mono">{{ row.requestId }}</span>
+            <div v-if="row.requestId" class="mrr-table-inline-content">
+              <span class="log-mono mrr-table-inline-content__text" :title="row.requestId">{{ row.requestId }}</span>
               <el-button
                 link type="primary" class="copy-link" aria-label="复制 Request ID"
                 @click="copyText(row.requestId, 'Request ID 已复制')"
               >
-                <el-icon><CopyIcon /></el-icon>
+                <FaIcon name="i-lucide:copy" aria-hidden="true" />
               </el-button>
-            </template>
+            </div>
             <template v-else>-</template>
           </template>
         </el-table-column>
-        <el-table-column prop="username" label="用户" min-width="120">
+        <el-table-column prop="username" label="用户" width="132" show-overflow-tooltip>
           <template #default="{ row }">{{ row.username || '-' }}</template>
         </el-table-column>
-        <el-table-column prop="clientIp" label="客户端 IP" min-width="140">
+        <el-table-column prop="clientIp" label="客户端 IP" width="148" show-overflow-tooltip>
           <template #default="{ row }"><span class="log-mono">{{ row.clientIp || '-' }}</span></template>
         </el-table-column>
-        <el-table-column prop="method" label="方法" width="100">
+        <el-table-column prop="method" label="方法" width="92" class-name="mrr-table-status-column">
           <template #default="{ row }">
             <el-tag :type="methodTagType(row.method)">{{ row.method || '-' }}</el-tag>
           </template>
@@ -375,7 +396,7 @@ function statusTagType(status: string | number) {
         <el-table-column prop="requestUri" label="真实请求 URI" min-width="280" show-overflow-tooltip>
           <template #default="{ row }"><span class="log-mono">{{ row.requestUri || '-' }}</span></template>
         </el-table-column>
-        <el-table-column prop="responseStatus" label="状态码" width="100">
+        <el-table-column prop="responseStatus" label="状态码" width="92" class-name="mrr-table-status-column">
           <template #default="{ row }">
             <el-tag :type="statusTagType(row.responseStatus)">{{ row.responseStatus || '-' }}</el-tag>
           </template>
@@ -405,17 +426,17 @@ function statusTagType(status: string | number) {
           v-model:page-size="pageSize"
           :page-sizes="[10, 20, 50, 100]"
           :total="total"
-          layout="total, sizes, prev, pager, next, jumper"
+          layout="total, prev, pager, next, jumper, sizes"
           @size-change="handleSearch"
           @current-change="handlePageChange"
         />
       </template>
     </MrrDataTablePanel>
 
-    <el-dialog v-model="detailVisible" title="接口访问审计详情" width="min(900px, 92vw)" class="log-detail">
+    <el-dialog v-model="detailVisible" align-center title="接口访问审计详情" width="min(900px, 92vw)" class="log-detail">
       <AppLoading v-if="detailLoading" />
       <AppError v-else-if="detailError" :message="detailError" @retry="retryDetail" />
-      <el-descriptions v-else-if="currentLog" :column="isNarrowScreen ? 1 : 2" border>
+      <el-descriptions v-else-if="currentLog" direction="vertical" class="mrr-detail-descriptions" :column="isNarrowScreen ? 1 : 2" border>
         <el-descriptions-item label="日志 ID">{{ currentLog.id || '-' }}</el-descriptions-item>
         <el-descriptions-item label="Request ID">
           <span class="detail-value">{{ currentLog.requestId || '-' }}</span>
@@ -439,34 +460,34 @@ function statusTagType(status: string | number) {
         <el-descriptions-item label="状态码">{{ currentLog.responseStatus || '-' }}</el-descriptions-item>
         <el-descriptions-item label="访问时间">{{ formatDateTime(currentLog.accessTime) }}</el-descriptions-item>
         <el-descriptions-item label="耗时">{{ formatExecuteTime(currentLog.executeTime) }}</el-descriptions-item>
-        <el-descriptions-item label="真实请求 URI" :span="2">
+        <el-descriptions-item label="真实请求 URI" :span="isNarrowScreen ? 1 : 2">
           <span class="detail-value">{{ currentLog.requestUri || '-' }}</span>
         </el-descriptions-item>
-        <el-descriptions-item label="接口模板" :span="2">
+        <el-descriptions-item label="接口模板" :span="isNarrowScreen ? 1 : 2">
           <span class="detail-value">{{ currentLog.endpointTemplate || '-' }}</span>
         </el-descriptions-item>
-        <el-descriptions-item label="Referer" :span="2">
+        <el-descriptions-item label="Referer" :span="isNarrowScreen ? 1 : 2">
           <span class="detail-value">{{ currentLog.referer || '-' }}</span>
         </el-descriptions-item>
-        <el-descriptions-item label="Query String" :span="2">
+        <el-descriptions-item label="Query String" :span="isNarrowScreen ? 1 : 2">
           <pre class="detail-pre">{{ currentLog.queryString || '-' }}</pre>
         </el-descriptions-item>
-        <el-descriptions-item label="Request Body" :span="2">
+        <el-descriptions-item label="Request Body" :span="isNarrowScreen ? 1 : 2">
           <pre class="detail-pre">{{ currentLog.requestBody || '-' }}</pre>
         </el-descriptions-item>
         <el-descriptions-item label="审计动作">{{ currentLog.auditAction || '-' }}</el-descriptions-item>
         <el-descriptions-item label="审计目标">{{ currentLog.auditTarget || '-' }}</el-descriptions-item>
-        <el-descriptions-item label="审计描述" :span="2">
+        <el-descriptions-item label="审计描述" :span="isNarrowScreen ? 1 : 2">
           <span class="detail-value">{{ currentLog.auditDescription || '-' }}</span>
         </el-descriptions-item>
-        <el-descriptions-item label="异常信息" :span="2">
+        <el-descriptions-item label="异常信息" :span="isNarrowScreen ? 1 : 2">
           <el-alert
             v-if="isRedactedLogText(currentLog.errorMessage)" type="info" :closable="false" show-icon
             title="该记录写入时异常正文被整体脱敏，原始内容未落盘、无法恢复；修复后新产生的记录会显示异常类名。"
           />
           <pre v-else class="detail-pre error-detail">{{ currentLog.errorMessage || '-' }}</pre>
         </el-descriptions-item>
-        <el-descriptions-item label="User-Agent" :span="2">
+        <el-descriptions-item label="User-Agent" :span="isNarrowScreen ? 1 : 2">
           <span class="detail-value">{{ currentLog.userAgent || '-' }}</span>
         </el-descriptions-item>
       </el-descriptions>
@@ -486,7 +507,6 @@ function statusTagType(status: string | number) {
 }
 
 .copy-link {
-  margin-left: var(--mrr-space-1);
   vertical-align: middle;
 }
 
@@ -495,8 +515,6 @@ function statusTagType(status: string | number) {
   display: flex;
   flex-direction: column;
   max-height: calc(100vh - 48px);
-  margin-top: 24px;
-  margin-bottom: 24px;
 }
 
 :global(.log-detail .el-dialog__header) {
@@ -512,8 +530,6 @@ function statusTagType(status: string | number) {
 @media (max-width: 760px) {
   :global(.log-detail.el-dialog) {
     max-height: calc(100vh - 32px);
-    margin-top: 16px;
-    margin-bottom: 16px;
   }
 
   :global(.log-detail .el-descriptions__label) {

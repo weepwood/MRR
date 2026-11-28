@@ -92,22 +92,23 @@ async function copyTrace() {
     <div v-if="props.requestId" class="query-failure-trace">
       <span class="trace-label">追踪编号</span>
       <div class="trace-field">
-        <input
-          :value="props.requestId"
+        <el-input
+          :model-value="props.requestId"
           readonly
           aria-label="本次请求追踪编号"
           class="trace-input"
           @focus="selectTrace"
-        >
-        <button
-          type="button"
-          class="trace-copy"
+        />
+        <el-button
+          text
+          :auto-insert-space="false"
+          class="trace-copy mrr-embedded-icon-action"
           aria-label="复制追踪编号"
           title="复制追踪编号"
           @click="copyTrace"
         >
-          <FaIcon name="i-lucide:copy" />
-        </button>
+          <FaIcon name="i-lucide:copy" aria-hidden="true" />
+        </el-button>
       </div>
     </div>
 
@@ -232,7 +233,6 @@ async function copyTrace() {
   flex: 1;
   min-width: 0;
   height: var(--mrr-input-height);
-  padding: 0;
   font-family: var(--mrr-font-mono);
   font-size: 12px;
   color: var(--text-primary);
@@ -240,33 +240,26 @@ async function copyTrace() {
   border: 0;
 }
 
-.trace-input:focus {
-  outline: none;
-}
-
-.trace-copy {
-  display: grid;
-  flex: none;
-  place-items: center;
-  width: 24px;
-  height: 24px;
-  font-size: 13px;
-  color: var(--text-secondary);
-  cursor: pointer;
+.trace-input :deep(.el-input__wrapper) {
+  padding: 0;
   background: transparent;
-  border: 0;
-  border-radius: var(--mrr-radius-sm);
-  transition: color var(--mrr-motion-feedback) var(--mrr-ease-out), background-color var(--mrr-motion-feedback) var(--mrr-ease-out);
+  box-shadow: none;
 }
 
-.trace-copy:hover {
-  color: var(--el-color-primary);
-  background: var(--el-fill-color);
+.trace-input :deep(.el-input__inner) {
+  font: inherit;
+  color: inherit;
 }
 
-.trace-copy:focus-visible {
-  outline: 2px solid var(--mrr-ring);
-  outline-offset: 1px;
+.trace-input :deep(.el-input__wrapper.is-focus) {
+  box-shadow: none;
+}
+
+.trace-copy.el-button {
+  --mrr-embedded-action-size: 24px;
+  --mrr-embedded-action-icon-size: 13px;
+
+  color: var(--text-secondary);
 }
 
 .query-failure-actions {

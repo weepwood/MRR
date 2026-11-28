@@ -98,7 +98,7 @@ public class OcrBatchService {
         if(!jobs.enabled()) return;
         for(String id:mapper.runnable()) {
             try {transactions.executeWithoutResult(tx->advance(id));}
-            catch(BusinessException e) {mapper.status(id,"PAUSED","AUTH_OR_QUEUE_BLOCKED");}
+            catch(BusinessException e) {mapper.pauseRunningOnDispatchFailure(id);}
             catch(org.springframework.dao.DuplicateKeyException e) { /* Same archive raced a manual request; cursor transaction rolls back. */ }
         }
     }

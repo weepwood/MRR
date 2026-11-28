@@ -27,7 +27,9 @@ import java.sql.Connection;
 import static org.assertj.core.api.Assertions.*;
 import static org.mockito.Mockito.mock;
 
-@MybatisTest(properties="app.data-quality.repair-enabled=true")
+// This cached Spring context only tests repair transactions; it must not claim
+// quality jobs belonging to independent JVM/other integration test fixtures.
+@MybatisTest(properties={"app.data-quality.repair-enabled=true","app.data-quality.async-enabled=false"})
 @ImportAutoConfiguration(FlywayAutoConfiguration.class)
 @AutoConfigureTestDatabase(replace=AutoConfigureTestDatabase.Replace.NONE)
 @Import({DataQualityRepairOrderService.class,RepairOrderTransactionPostgresqlIT.Dependencies.class})
@@ -99,7 +101,22 @@ class RepairOrderTransactionPostgresqlIT extends PostgresqlIntegrationTestSuppor
             assertThat(jdbc.queryForObject("SELECT archive_id FROM app.mr_scan WHERE id=?",Long.class,scan)).isNull();
             assertThat(service.get(id).status()).isEqualTo("APPROVED");
             assertThat(service.events(id,0)).hasSize(2);
-            assertThat(service.apply(id,12).status()).isEqualTo("APPLIED");
+            var contenders=java.util.concurrent.Executors.newFixedThreadPool(2);
+            var gate=new java.util.concurrent.CountDownLatch(1);
+            try {
+                java.util.concurrent.Callable<Boolean> apply=()->{
+                    gate.await();
+                    try { return "APPLIED".equals(service.apply(id,12).status()); }
+                    catch (DataAccessException | com.zjcxph.imgapi.exception.BusinessException conflict) { return false; }
+                };
+                var first=contenders.submit(apply);var second=contenders.submit(apply);
+                gate.countDown();
+                assertThat(first.get(8,java.util.concurrent.TimeUnit.SECONDS)
+                        ^second.get(8,java.util.concurrent.TimeUnit.SECONDS)).isTrue();
+                assertThat(service.get(id).status()).isEqualTo("APPLIED");
+                assertThat(service.events(id,0)).extracting(DataQualityRepairOrderService.Event::action)
+                        .containsExactly("PROPOSED","APPROVED","APPLIED");
+            } finally { contenders.shutdownNow(); }
             assertThat(service.verify(id,13).status()).isEqualTo("VERIFIED");
             assertThat(service.events(id,0)).extracting(DataQualityRepairOrderService.Event::action)
                 .containsExactly("PROPOSED","APPROVED","APPLIED","VERIFIED");

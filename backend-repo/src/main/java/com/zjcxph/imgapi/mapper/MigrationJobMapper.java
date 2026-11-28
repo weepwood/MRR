@@ -38,7 +38,7 @@ public interface MigrationJobMapper {
     int markRunning(@Param("id") Long id, @Param("startedAt") Date startedAt);
 
     @Update("update migration_job set processed_count = #{processedCount}, failed_count = #{failedCount}, " +
-            "rate = #{rate}, updated_at = NOW() where id = #{id}")
+            "rate = #{rate}, updated_at = NOW() where id = #{id} and status in ('running', 'cancelling')")
     int updateProgress(@Param("id") Long id,
                        @Param("processedCount") long processedCount,
                        @Param("failedCount") long failedCount,
@@ -51,7 +51,7 @@ public interface MigrationJobMapper {
             "error_message = CASE WHEN cancel_requested " +
             "THEN COALESCE(NULLIF(#{errorMessage}, ''), '管理员已请求安全取消，任务已停止') " +
             "ELSE #{errorMessage} END, completed_at = #{completedAt}, updated_at = NOW() " +
-            "where id = #{id}")
+            "where id = #{id} and status in ('pending', 'running', 'cancelling')")
     int complete(@Param("id") Long id,
                  @Param("status") String status,
                  @Param("totalCount") long totalCount,
@@ -64,6 +64,12 @@ public interface MigrationJobMapper {
     @Update("update migration_job set cancel_requested = true, status = 'cancelling', updated_at = NOW() " +
             "where id = #{id} and status in ('pending', 'running')")
     int requestCancel(@Param("id") Long id);
+
+    // Only a task that has never been started may be settled without worker ownership.
+    @Update("update migration_job set status = 'cancelled', completed_at = #{completedAt}, updated_at = NOW(), " +
+            "error_message = '管理员已请求安全取消，任务尚未开始' " +
+            "where id = #{id} and status in ('pending', 'cancelling') and cancel_requested = true and started_at is null")
+    int cancelUnstarted(@Param("id") Long id, @Param("completedAt") Date completedAt);
 
     @Select("select cancel_requested from migration_job where id = #{id}")
     Boolean isCancelRequested(@Param("id") Long id);

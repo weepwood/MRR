@@ -1,5 +1,8 @@
 import type { Page } from '@playwright/test'
 import { expect, test } from '@playwright/test'
+import { isolateLocalVisualSettings } from './helpers/local-visual-settings'
+
+test.beforeEach(async ({ page }) => { await isolateLocalVisualSettings(page) })
 
 /** 打开设置页并等首次读取完成，否则后续改写会被 loadSettings 的返回值覆盖。 */
 async function openSettings(page: Page, section: string) {
@@ -9,22 +12,40 @@ async function openSettings(page: Page, section: string) {
 }
 
 test.describe('系统设置分类布局', () => {
-  test('分区图标与两行标题说明等高', async ({ page }) => {
+  test('分类目录随实际工作区宽度收纳，保持当前设置和页面边界', async ({ page }) => {
+    await page.addInitScript(() => {
+      localStorage.setItem('MRR-ADMIN:app-settings', JSON.stringify({ layout: { enableMobileAdaptation: true } }))
+    })
     await page.setViewportSize({ width: 1440, height: 900 })
     await openSettings(page, 'system')
+    const layout = page.locator('.settings-layout')
+    for (const width of [1440, 1280, 1024, 760, 375, 1440]) {
+      await page.setViewportSize({ width, height: 900 })
+      await expect.poll(() => layout.evaluate(el => el.classList.contains('settings-layout--compact') === (el.getBoundingClientRect().width < 800))).toBe(true)
+      await expect.poll(() => layout.evaluate(el => el.scrollWidth <= el.clientWidth + 1)).toBe(true)
+      await expect(page.getByRole('heading', { name: '系统信息', exact: true })).toBeVisible()
+      if (await layout.evaluate(el => el.classList.contains('settings-layout--compact'))) {
+        await expect(page.getByRole('combobox', { name: '设置分类', exact: true })).toBeVisible()
+      }
+      else {
+        await expect(page.getByRole('navigation', { name: '设置分类' })).toBeVisible()
+      }
+    }
+  })
 
+  test('分区图标固定40px，与标题说明垂直居中', async ({ page }) => {
+    await page.setViewportSize({ width: 1440, height: 900 })
+    await openSettings(page, 'system')
     const icon = page.locator('.section-icon')
     const copy = page.locator('.section-title > div').last()
+    await expect(icon).toHaveCSS('width', '40px')
+    await expect(icon).toHaveCSS('height', '40px')
+    await expect(icon).toHaveCSS('font-size', '20px')
     await expect.poll(async () => {
-      const iconBox = await icon.boundingBox()
-      const copyBox = await copy.boundingBox()
-      return Math.abs((iconBox?.height ?? 0) - (copyBox?.height ?? 0))
+      const a = (await icon.boundingBox())!
+      const b = (await copy.boundingBox())!
+      return Math.abs(a.y + a.height / 2 - b.y - b.height / 2)
     }).toBeLessThanOrEqual(1)
-    await expect.poll(async () => {
-      const iconBox = await icon.boundingBox()
-      return Math.abs((iconBox?.width ?? 0) - (iconBox?.height ?? 0))
-    }).toBeLessThanOrEqual(1)
-    await expect(icon).toHaveCSS('font-size', '22px')
   })
 
   test('按功能分类切换设置内容', async ({ page }) => {
@@ -45,7 +66,7 @@ test.describe('系统设置分类布局', () => {
     await expect(page.getByText('系统管理员与技术支持', { exact: true })).toBeVisible()
     // 左侧不再展示配置状态，未保存状态只由页头保存按钮的可用性表达。
     await expect(page.locator('.settings-sidebar')).not.toContainText('配置状态')
-    await expect(page.locator('.page-header .header-actions').getByRole('button', { name: '保存设置' })).toBeDisabled()
+    await expect(page.locator('.settings-command-buttons').getByRole('button', { name: '保存设置' })).toBeDisabled()
 
     await page.locator('.settings-nav-item').filter({ hasText: '档案浏览' }).click()
     await expect(page.locator('.section-header').getByRole('heading', { name: '档案浏览' })).toBeVisible()
@@ -171,15 +192,15 @@ test.describe('系统设置分类布局', () => {
     await page.goto('/settings?section=archive', { waitUntil: 'domcontentloaded' })
 
     const content = page.locator('.settings-content')
-    await expect(page.locator('.settings-page > .page-header')).toBeInViewport()
+    await expect(page.locator('.settings-page > .mrr-page-header')).toBeInViewport()
     await expect(page.getByRole('navigation', { name: '设置分类' })).toBeInViewport()
     await expect(content).toHaveCSS('overflow-y', 'visible')
     await expect(content.getByText('默认图片来源', { exact: true })).toBeVisible()
     await expect(content.getByText('默认浏览方式', { exact: true })).toBeVisible()
     await expect(page.getByRole('heading', { name: '目录路由规则' })).toBeVisible()
 
-    // 保存入口固定在页头，排序为「重新加载 → 恢复默认 → 保存设置」，页面底部不再有保存行。
-    await expect(page.locator('.page-header .header-actions').getByRole('button')).toHaveText(['重新加载', '恢复默认', '保存设置'])
+    // 保存入口归入分区命令区，保持原有操作排序与确认语义。
+    await expect(page.locator('.settings-command-buttons').getByRole('button')).toHaveText(['重新加载', '恢复默认', '保存设置'])
     await expect(page.locator('.settings-save-action')).toHaveCount(0)
 
     await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight))
@@ -195,7 +216,7 @@ test.describe('系统设置分类布局', () => {
     await expect(systemName).toBeVisible({ timeout: 20_000 })
     const originalName = await systemName.inputValue()
     await systemName.fill(`${originalName}-临时`)
-    await expect(page.locator('.page-header .header-actions').getByRole('button', { name: '保存设置' })).toBeEnabled()
+    await expect(page.locator('.settings-command-buttons').getByRole('button', { name: '保存设置' })).toBeEnabled()
 
     const userMenu = page.locator('.menu-item-container').filter({ hasText: '用户管理' }).first()
     const dialog = page.getByRole('dialog', { name: '有未保存的设置' })
@@ -223,7 +244,7 @@ test.describe('系统设置分类布局', () => {
     await expect(page).toHaveURL(/\/settings/)
     await expect(page.locator('.settings-content[aria-busy="false"]')).toBeVisible({ timeout: 20_000 })
     await expect(page.getByRole('textbox', { name: '系统名称', exact: true })).toHaveValue(originalName)
-    await expect(page.locator('.page-header .header-actions').getByRole('button', { name: '保存设置' })).toBeDisabled()
+    await expect(page.locator('.settings-command-buttons').getByRole('button', { name: '保存设置' })).toBeDisabled()
   })
 
   test('保存设置先列出修改项，取消则不写入', async ({ page }) => {
@@ -235,7 +256,7 @@ test.describe('系统设置分类布局', () => {
 
     const originalName = await systemName.inputValue()
     const editedName = `${originalName}-保存确认`
-    const saveButton = page.locator('.page-header .header-actions').getByRole('button', { name: '保存设置' })
+    const saveButton = page.locator('.settings-command-buttons').getByRole('button', { name: '保存设置' })
     const dialog = page.getByRole('dialog', { name: '确认保存设置' })
 
     await systemName.fill(editedName)
@@ -276,7 +297,7 @@ test.describe('系统设置分类布局', () => {
     await expect(systemName).toBeVisible({ timeout: 20_000 })
     const originalName = await systemName.inputValue()
     const editedName = `${originalName}-离开保存`
-    const saveButton = page.locator('.page-header .header-actions').getByRole('button', { name: '保存设置' })
+    const saveButton = page.locator('.settings-command-buttons').getByRole('button', { name: '保存设置' })
 
     await systemName.fill(editedName)
     await page.locator('.menu-item-container').filter({ hasText: '用户管理' }).first().click()

@@ -1,0 +1,36 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1100 590" role="img" aria-labelledby="title desc">
+<title id="title">内部影像导出执行路径</title>
+<desc id="desc">整案和选中 ZIP 直接创建任务，选中 PDF 请求计划，计划可能为客户端、后端流或后端任务。后台任务排队处理中，成功才可下载，失败取消过期分别处置。检查当前请求归属。</desc>
+<rect width="1100" height="590" rx="12" fill="#f1f5f9"/>
+<g font-family="HarmonyOS Sans SC, PingFang SC, Microsoft YaHei, sans-serif" font-size="17" fill="#020817">
+<text x="28" y="42" font-size="26" font-weight="700">内部影像导出执行路径</text>
+<text x="28" y="69" font-size="15" fill="#64748b">按当前候选实现 · 外部 Ticket 下载不在本图范围</text>
+<g fill="#fff" stroke="#e2e8f0" stroke-width="1.5">
+<rect x="28" y="94" width="232" height="72" rx="8"/>
+<rect x="284" y="94" width="788" height="72" rx="8"/>
+<rect x="28" y="210" width="232" height="70" rx="8"/>
+<rect x="284" y="210" width="248" height="70" rx="8"/>
+<rect x="554" y="210" width="248" height="70" rx="8"/>
+<rect x="824" y="210" width="248" height="70" rx="8"/>
+<rect x="28" y="323" width="504" height="112" rx="8"/>
+<rect x="554" y="323" width="248" height="112" rx="8"/>
+<rect x="824" y="323" width="248" height="112" rx="8"/>
+</g>
+<g stroke="#94a3b8" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+<path d="M144 166 V210 m-5 -6 5 6 5 -6 M678 166 V186 H408 V210 m-5 -6 5 6 5 -6 M678 186 V210 m-5 -6 5 6 5 -6 M678 186 H948 V210 m-5 -6 5 6 5 -6"/>
+<path d="M144 280 V301 H280 V323 m-5 -6 5 6 5 -6 M408 280 V301 H280 M678 280 V323 m-5 -6 5 6 5 -6 M948 280 V323 m-5 -6 5 6 5 -6"/>
+<path d="M280 435 V458 H550 V480 M678 435 V458 H550 M948 435 V458 H550"/>
+</g>
+<text x="44" y="122" font-size="19" font-weight="700">整案 ZIP / 选中 ZIP</text><text x="44" y="147" font-size="15" fill="#64748b">直接创建后台任务</text>
+<text x="304" y="123" font-size="19" font-weight="700">选中 PDF</text><text x="304" y="148" font-size="15" fill="#64748b">以真实影像 ID 请求计划</text>
+<text x="44" y="240" font-size="18" font-weight="700">BACKEND_JOB</text><text x="44" y="263" font-size="15" fill="#64748b">ZIP 独立任务状态</text>
+<text x="302" y="240" font-size="18" font-weight="700">BACKEND_JOB</text><text x="302" y="263" font-size="15" fill="#64748b">PDF 后台任务</text>
+<text x="572" y="240" font-size="18" font-weight="700">BACKEND_STREAM</text><text x="572" y="263" font-size="15" fill="#64748b">后端直接返回内容</text>
+<text x="842" y="240" font-size="18" font-weight="700">CLIENT_PDF</text><text x="842" y="263" font-size="15" fill="#64748b">浏览器取图和合成</text>
+<text x="44" y="353" font-size="18" font-weight="700">排队 → 处理中 → 服务端终态</text><text x="44" y="380" font-size="15" fill="#166534">SUCCESS：下载仍有效的文件</text><text x="44" y="405" font-size="15" fill="#b45309">FAILED / CANCELLED / EXPIRED：核对状态再处理</text>
+<text x="572" y="356" font-size="18" font-weight="700">读取文件响应</text><text x="572" y="383" font-size="15" fill="#64748b">检查大小与有效内容</text><text x="572" y="407" font-size="15" fill="#64748b">失败不保存旧结果</text>
+<text x="842" y="356" font-size="18" font-weight="700">生成 PDF Blob</text><text x="842" y="383" font-size="15" fill="#64748b">切页或离页取消取图</text><text x="842" y="407" font-size="15" fill="#64748b">解码结束后释放资源</text>
+<rect x="28" y="480" width="1044" height="84" rx="9" fill="#eff6ff" stroke="#bfdbfe"/>
+<text x="48" y="510" font-size="19" font-weight="700" fill="#2563eb">核对任务 / 请求归属，再保存当前文件</text><text x="48" y="538" font-size="16" fill="#475569">切换、取消、过期或权限拒绝时停止使用旧结果；服务端生成成功不等于用户下载完成。</text>
+</g>
+</svg>

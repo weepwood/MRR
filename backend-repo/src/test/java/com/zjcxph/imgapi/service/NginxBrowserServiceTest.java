@@ -101,6 +101,74 @@ class NginxBrowserServiceTest {
         assertEquals("image/jpeg", remoteFile.contentType());
     }
 
+    @org.junit.jupiter.params.ParameterizedTest
+    @org.junit.jupiter.params.provider.ValueSource(booleans = {true, false})
+    void stalledUpstreamBodyTimesOutAndNextRequestWorks(boolean directory) throws Exception {
+        var release = new java.util.concurrent.CountDownLatch(1);
+        var sent = new java.util.concurrent.CountDownLatch(1);
+        var executor = java.util.concurrent.Executors.newSingleThreadExecutor();
+        server.createContext("/images/stalled/", exchange -> {
+            try (exchange) {
+                exchange.getResponseHeaders().set("Content-Type", "application/json");
+                exchange.sendResponseHeaders(200, 100);
+                exchange.getResponseBody().write('[');
+                exchange.getResponseBody().flush();
+                sent.countDown();
+                try { release.await(8, java.util.concurrent.TimeUnit.SECONDS); }
+                catch (InterruptedException interrupted) { Thread.currentThread().interrupt(); }
+            }
+        });
+        var image = new ImageProperties();
+        image.setServerUrlDefault("http://127.0.0.1:" + server.getAddress().getPort() + "/images/");
+        image.setUsername("reader"); image.setPassword("secret");
+        var properties = new ArchiveImageSourceProperties();
+        properties.setNginxConnectTimeout(Duration.ofSeconds(2));
+        properties.setNginxReadTimeout(Duration.ofMillis(500));
+        try (var client = java.net.http.HttpClient.newHttpClient()) {
+            var browser = new NginxBrowserService(image, properties, new ObjectMapper(), client);
+            try {
+                var read = executor.submit(() -> {
+                    if (directory) { browser.browse("default", "stalled/", 0, 20); }
+                    else try (var stream = browser.openFile("default", "stalled/file.jpg").inputStream()) {
+                        assertEquals('[', stream.read());
+                        stream.read();
+                    }
+                    return null;
+                });
+                assertTrue(sent.await(2, java.util.concurrent.TimeUnit.SECONDS));
+                var failure = assertThrows(java.util.concurrent.ExecutionException.class,
+                        () -> read.get(2, java.util.concurrent.TimeUnit.SECONDS));
+                Throwable cause = failure.getCause();
+                if (directory) cause = cause.getCause();
+                assertTrue(cause instanceof java.net.SocketTimeoutException, "expected body read timeout: " + cause);
+            } finally { release.countDown(); executor.shutdownNow(); }
+            try (var next = browser.openFile("default", "0013.jpg").inputStream()) {
+                assertArrayEquals("image-data".getBytes(StandardCharsets.UTF_8), next.readAllBytes());
+            }
+        }
+    }
+
+    @Test
+    void metadataParsingFailureClosesOpenedResponse() throws Exception {
+        var client = org.mockito.Mockito.mock(java.net.http.HttpClient.class);
+        @SuppressWarnings("unchecked")
+        var response = (java.net.http.HttpResponse<InputStream>) org.mockito.Mockito.mock(java.net.http.HttpResponse.class);
+        var closed = new java.util.concurrent.atomic.AtomicInteger();
+        var input = new java.io.ByteArrayInputStream(new byte[]{1}) {
+            @Override public void close() { closed.incrementAndGet(); }
+        };
+        org.mockito.Mockito.when(response.body()).thenReturn(input);
+        org.mockito.Mockito.when(response.statusCode()).thenReturn(200);
+        org.mockito.Mockito.when(response.headers()).thenReturn(java.net.http.HttpHeaders.of(
+                java.util.Map.of("Content-Length", java.util.List.of("invalid")), (name,value) -> true));
+        org.mockito.Mockito.when(client.send(org.mockito.ArgumentMatchers.any(java.net.http.HttpRequest.class),
+                org.mockito.ArgumentMatchers.<java.net.http.HttpResponse.BodyHandler<InputStream>>any())).thenReturn(response);
+        var image = new ImageProperties(); image.setServerUrlDefault("http://127.0.0.1:" + server.getAddress().getPort() + "/images/");
+        var browser = new NginxBrowserService(image, new ArchiveImageSourceProperties(), new ObjectMapper(), client);
+        assertThrows(RuntimeException.class, () -> browser.openFile("default", "0013.jpg"));
+        assertEquals(1, closed.get());
+    }
+
     private void handleRequest(HttpExchange exchange) throws IOException {
         if (!"Basic cmVhZGVyOnNlY3JldA==".equals(exchange.getRequestHeaders().getFirst("Authorization"))) {
             send(exchange, 401, "text/plain", "unauthorized".getBytes(StandardCharsets.UTF_8));

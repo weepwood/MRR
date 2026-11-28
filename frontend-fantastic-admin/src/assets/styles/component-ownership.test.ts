@@ -128,4 +128,42 @@ describe('唯一基础控件归属', () => {
     const legacy = sources(root).filter(file => /\bFaSwitch\b|\.fa-switch\b/.test(fs.readFileSync(file, 'utf8')))
     expect(legacy.map(file => path.relative(root, file))).toEqual([])
   })
+  it('已迁移的业务字段不恢复重复原生实现', () => {
+    const fields = [
+      ['views/data-relations/ArchiveManifestCard.vue', /<select\b/, '<el-select'],
+      ['views/statistics/archive/components/OcrPanel.vue', /<textarea\b/, '<el-input'],
+      ['views/statistics/archive/components/ArchiveQueryFailure.vue', /<input\b/, '<el-input'],
+      ['layouts/components/Topbar/Toolbar/NavSearch/search.vue', /<input\b/, '<el-input'],
+    ] as const
+    for (const [file, legacy, control] of fields) {
+      const source = fs.readFileSync(path.join(root, file), 'utf8')
+      expect(source, file).not.toMatch(legacy)
+      expect(source, file).toContain(control)
+    }
+  })
+
+  it('业务图标尺寸与设置滑块使用共享归属', () => {
+    const read = (file: string) => fs.readFileSync(path.join(root, file), 'utf8')
+    expect(read('assets/styles/tokens.css')).toContain('--mrr-control-icon-size: 16px')
+    expect(read('assets/styles/tokens.css')).toContain('--mrr-button-icon-gap: 6px')
+    expect(read('assets/styles/element-plus/foundation-buttons.css')).toContain('var(--mrr-control-icon-size)')
+    expect(read('ui/components/FaIcon/index.vue')).toContain('mrr-icon')
+    expect(read('assets/styles/components/form-controls.css')).toContain('.mrr-settings-slider-control')
+    for (const file of ['ArchiveSettings.vue', 'SecuritySettings.vue']) {
+      const source = read(`views/settings/components/${file}`)
+      expect(source).toContain('mrr-settings-slider-control')
+      expect(source).not.toMatch(/\.slider-control\s*:deep/)
+    }
+  })
+  it('业务页头只允许公共实现和唯一尺寸', () => {
+    const css = fs.readFileSync(path.join(root, 'assets/styles/components/page-header.css'), 'utf8')
+    expect(css).not.toContain('mrr-page-header--compact')
+    expect(css).not.toContain('--mrr-summary-min-height')
+    for (const file of ['views/settings/components/UnifiedSettingsPage.vue', 'views/help/index.vue']) {
+      const source = fs.readFileSync(path.join(root, file), 'utf8')
+      expect(source).toContain('<MrrPageShell')
+      expect(source).toContain('<MrrPageHeader')
+      expect(source).not.toMatch(/<header class="(?:page-header|help-header)"/)
+    }
+  })
 })

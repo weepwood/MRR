@@ -174,6 +174,8 @@ export default defineConfig({
             { text: 'OSS 迁移管理', link: '/user-guide/oss-migration' },
             { text: '存储与文件浏览', link: '/user-guide/storage-browser' },
             { text: '数据关系工作台', link: '/user-guide/data-relation-workbench' },
+            { text: '数据交换中心', link: '/user-guide/data-exchange' },
+            { text: '数据交换核对清单', link: '/user-guide/data-exchange-checklist' },
           ],
         },
         {
@@ -223,6 +225,8 @@ export default defineConfig({
     config: (md) => { MermaidMarkdown(md) },
   },
   vite: {
+    // Keep original SVG figures as addressable, hashed build assets.
+    build: { assetsInlineLimit: 0 },
     plugins: [MermaidPlugin()],
     optimizeDeps: { include: ['mermaid'] },
   },

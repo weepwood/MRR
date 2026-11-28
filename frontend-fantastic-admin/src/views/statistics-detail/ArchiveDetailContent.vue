@@ -3,16 +3,18 @@
 import type { StatisticsRecord, StatisticsSummary, TypeStatistics } from '@/api/types'
 import type { MetricTone } from '@/components/MrrMetricCard/types'
 import type { MrrTableAction } from '@/components/MrrTableActions/types'
+import { useMediaQuery } from '@vueuse/core'
 import { ElMessage } from 'element-plus'
 import { LayoutDashboard as DataBoard, Download, RefreshCw as Refresh } from 'lucide-vue-next'
+import { computed, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue'
 
-import { computed, onBeforeUnmount, onMounted, reactive, ref } from 'vue'
 import { useRouter } from 'vue-router'
-
 import { exportStatisticsCsv, getStatisticsList, getStatisticsSummary } from '@/api/modules/statistics'
+
 import AppEmpty from '@/components/AppEmpty/index.vue'
 import AppError from '@/components/AppError/index.vue'
 import AppLoading from '@/components/AppLoading/index.vue'
+import MrrDataTablePanel from '@/components/MrrDataTablePanel/index.vue'
 import MrrFilterActionButton from '@/components/MrrFilterActionButton/index.vue'
 import MrrPageHeader from '@/components/MrrPageHeader/index.vue'
 import MrrPageShell from '@/components/MrrPageShell/index.vue'
@@ -24,6 +26,7 @@ import { copyText as copyToClipboard } from '@/utils/copy-text'
 import { downloadBlob } from '@/utils/file-download'
 import { formatMedicalRecordCode } from '@/utils/medical-record-code'
 import { getRequestErrorMessage } from '@/utils/request-error-message'
+import { pageRowOffset, tableSequenceColumn } from '@/utils/table-sequence'
 import { ARCHIVE_DEFAULT_PAGE_SIZE, getArchivePageSize } from './archive-layout'
 
 defineOptions({ name: 'StatisticsDetailPage' })
@@ -71,9 +74,20 @@ const listData = ref<ListData>({
 })
 
 const currentPage = ref(1)
+const compactPagination = useMediaQuery('(max-width: 760px)')
 const pageSize = ref(ARCHIVE_DEFAULT_PAGE_SIZE)
 const archiveShelfRef = ref<HTMLElement | null>(null)
 const archiveDisplayMode = ref<ArchiveDisplayMode>('folder')
+const manualListSize = ref<number>()
+const archivePageSizes = computed(() => [...new Set([10, 20, 50, 100, pageSize.value])].sort((a, b) => a - b))
+const paginationLayout = computed(() => [
+  'total',
+  'prev',
+  'pager',
+  'next',
+  ...(listData.value.total > pageSize.value ? ['jumper'] : []),
+  ...(archiveDisplayMode.value === 'list' ? ['sizes'] : []),
+].join(', '))
 const selectedArchive = ref<ArchiveItem | null>(null)
 const selectedArchiveKey = ref('')
 
@@ -121,7 +135,7 @@ const currentSort = computed(() => sortOptions.find(item => item.key === sortKey
 interface SummaryCard {
   label: string
   value: string
-  note: string
+  note?: string
   tone: MetricTone
   icon: string
 }
@@ -132,10 +146,10 @@ function formatSummaryValue(value: unknown) {
 }
 
 const summaryCards = computed<SummaryCard[]>(() => [
-  { label: '档案袋总数', value: formatSummaryValue(listData.value.total || 0), note: '符合当前筛选条件的统计记录', tone: 'blue', icon: 'i-lucide:folder-open' },
-  { label: '病案数量', value: formatSummaryValue(summaryData.value?.uniqueBAHCount ?? 0), note: '系统内已归档病案号数量', tone: 'green', icon: 'i-lucide:contact-round' },
-  { label: '总页数', value: formatSummaryValue(summaryData.value?.total?.totalPages ?? 0), note: '统计表累计扫描页数', tone: 'violet', icon: 'i-lucide:file-text' },
-  { label: '当前患者', value: selectedArchive.value?.patientName ? normalizeText(selectedArchive.value.patientName) : '未选择', note: '当前选中档案袋对应患者', tone: 'amber', icon: 'i-lucide:user-round' },
+  { label: '档案袋总数（当前筛选）', value: formatSummaryValue(listData.value.total || 0), tone: 'blue', icon: 'i-lucide:folder-open' },
+  { label: '病案数量（已归档）', value: formatSummaryValue(summaryData.value?.uniqueBAHCount ?? 0), tone: 'green', icon: 'i-lucide:contact-round' },
+  { label: '总页数（累计）', value: formatSummaryValue(summaryData.value?.total?.totalPages ?? 0), tone: 'violet', icon: 'i-lucide:file-text' },
+  { label: '当前患者', value: selectedArchive.value?.patientName ? normalizeText(selectedArchive.value.patientName) : '未选择', tone: 'amber', icon: 'i-lucide:user-round' },
 ])
 
 function normalizeText(value: unknown) {
@@ -174,7 +188,7 @@ function archiveKey(item: ArchiveItem, index = 0) {
 }
 
 function tableIndex(index: number) {
-  return (currentPage.value - 1) * pageSize.value + index + 1
+  return pageRowOffset(listData.value.page, listData.value.size) + index + 1
 }
 
 function typeTone(type: string | undefined) {
@@ -291,7 +305,7 @@ function resetSearch() {
 }
 
 function updateArchivePageSize(containerWidth: number, reload = true) {
-  const nextPageSize = getArchivePageSize(containerWidth)
+  const nextPageSize = archiveDisplayMode.value === 'list' && manualListSize.value !== undefined ? manualListSize.value : getArchivePageSize(containerWidth)
   if (nextPageSize === pageSize.value) {
     return
   }
@@ -307,6 +321,19 @@ function handleArchiveShelfResize() {
   updateArchivePageSize(archiveShelfRef.value?.clientWidth ?? 0)
 }
 
+function handleListSizeChange(size: number) {
+  if (archiveDisplayMode.value !== 'list' || !archivePageSizes.value.includes(size)) { return }
+  manualListSize.value = size
+  pageSize.value = size
+  currentPage.value = 1
+  void loadArchiveList()
+}
+function handleArchivePageChange() {
+  if (!loading.value) { void loadArchiveList() }
+}
+watch(archiveDisplayMode, () => {
+  updateArchivePageSize(archiveShelfRef.value?.clientWidth ?? 0)
+})
 function startArchiveResizeObserver() {
   if (typeof ResizeObserver !== 'undefined') {
     resizeObserver = new ResizeObserver(handleArchiveShelfResize)
@@ -331,7 +358,7 @@ function selectArchiveFromList(item: ArchiveItem) {
 }
 
 function archiveRowClassName({ row, rowIndex }: { row: ArchiveItem, rowIndex: number }) {
-  return selectedArchiveKey.value === archiveKey(row, rowIndex) ? 'archive-list-row-selected' : ''
+  return selectedArchiveKey.value === archiveKey(row, rowIndex) ? 'archive-list-row-selected current-row' : ''
 }
 
 function openArchive(item = selectedArchive.value) {
@@ -438,43 +465,46 @@ onBeforeUnmount(() => {
       <MrrMetricCard v-for="item in summaryCards" :key="item.label" v-bind="item" />
     </section>
 
-    <MrrSectionCard title="档案筛选" description="可按患者姓名、病人 ID、住院科室、设备、负责人或日期定位档案袋">
-      <template #actions>
-        <el-tag type="info">
-          {{ listData.total || 0 }} 条
-        </el-tag>
-      </template>
-
-      <div class="filter-grid">
-        <el-input v-model="filters.bah" class="filter-bah" clearable aria-label="病案号" placeholder="病案号" @keyup.enter="handleSearch" />
-        <el-input v-model="filters.sjh" class="filter-sjh" clearable aria-label="上架号" placeholder="上架号" @keyup.enter="handleSearch" />
-        <el-input v-model="filters.keyword" class="filter-keyword" clearable aria-label="综合筛选" placeholder="患者姓名、病人 ID、科室、设备或负责人"
-          @keyup.enter="handleSearch" />
-        <el-select v-model="filters.type" class="filter-type" clearable aria-label="档案类型" placeholder="全部类型" @change="handleSearch">
+    <MrrSectionCard class="archive-filter-card" title="档案筛选" description="可按患者姓名、病人 ID、住院科室、设备、负责人或日期定位档案袋">
+      <MrrFilterBar embedded :focus-ring="false">
+        <el-input id="detail-filter-bah" v-model="filters.bah" class="filter-bah mrr-filter-field--code" clearable aria-label="病案号" @keyup.enter="handleSearch">
+          <template #prefix>
+            <label for="detail-filter-bah" class="mrr-filter-prefix">病案号</label>
+          </template>
+        </el-input>
+        <el-input id="detail-filter-sjh" v-model="filters.sjh" class="filter-sjh mrr-filter-field--code" clearable aria-label="上架号" @keyup.enter="handleSearch">
+          <template #prefix>
+            <label for="detail-filter-sjh" class="mrr-filter-prefix">上架号</label>
+          </template>
+        </el-input>
+        <el-input v-model="filters.keyword" class="filter-keyword mrr-filter-field--keyword" clearable aria-label="综合筛选" placeholder="患者姓名、病人 ID、科室、设备或负责人"
+          @keyup.enter="handleSearch">
+          <template #prefix>
+            <FaIcon name="i-lucide:search" aria-hidden="true" />
+          </template>
+        </el-input>
+        <el-select v-model="filters.type" class="filter-type mrr-single-select" clearable aria-label="档案类型" placeholder="全部类型" @change="handleSearch">
           <el-option v-for="item in typeOptions" :key="item" :label="item" :value="item" />
         </el-select>
-        <el-date-picker v-model="filters.dateRange" class="filter-date" type="daterange" :popper-options="rangePickerPopperOptions" range-separator="至"
+        <el-date-picker v-model="filters.dateRange" class="filter-date mrr-filter-field--range" aria-label="归档日期范围" type="daterange" :popper-options="rangePickerPopperOptions" range-separator="至"
           start-placeholder="归档开始日期" end-placeholder="归档结束日期" value-format="YYYY-MM-DD" />
-        <el-select v-model="sortKey" class="filter-sort" aria-label="排序方式" @change="handleSearch">
+        <el-select v-model="sortKey" class="filter-sort mrr-single-select" aria-label="排序方式" @change="handleSearch">
           <el-option v-for="item in sortOptions" :key="item.key" :label="item.label" :value="item.key" />
         </el-select>
-        <div class="filter-actions">
+        <template #actions>
           <MrrFilterActionButton action="search" :pending="loading" :busy="loading" @click="handleSearch">
             查询
           </MrrFilterActionButton>
           <MrrFilterActionButton action="reset" :pending="loading" :busy="loading" @click="resetSearch">
             重置
           </MrrFilterActionButton>
-        </div>
-      </div>
+        </template>
+      </MrrFilterBar>
     </MrrSectionCard>
 
     <section class="content-layout">
-      <div ref="archiveShelfRef" class="archive-shelf">
-        <div class="archive-toolbar">
-          <h2 class="archive-toolbar-title">
-档案列表
-</h2>
+      <MrrDataTablePanel title="档案列表" :loading="loading" :result-key="listData.list">
+        <template #actions>
           <el-radio-group v-model="archiveDisplayMode" aria-label="档案展示方式">
             <el-radio-button value="folder">
               档案袋
@@ -483,8 +513,9 @@ onBeforeUnmount(() => {
               列表
             </el-radio-button>
           </el-radio-group>
-        </div>
+        </template>
 
+        <div ref="archiveShelfRef" class="archive-shelf">
         <AppLoading v-if="loading" type="table" :rows="8" />
         <AppError v-else-if="error" :message="error" @retry="loadArchiveList" />
         <AppEmpty v-else-if="!listData.list.length" description="暂无统计明细" />
@@ -561,13 +592,9 @@ onBeforeUnmount(() => {
           </article>
         </div>
         <div v-else class="archive-list-wrap">
-          <el-table :data="listData.list" :row-class-name="archiveRowClassName" class="archive-list" row-key="id"
+          <el-table :data="listData.list" :row-class-name="archiveRowClassName" class="archive-list" row-key="id" stripe
             @row-click="selectArchiveFromList">
-            <el-table-column label="#" width="72" align="center">
-              <template #default="{ $index }">
-                {{ tableIndex($index) }}
-              </template>
-            </el-table-column>
+            <el-table-column v-bind="tableSequenceColumn(pageRowOffset(listData.page, listData.size), listData.list.length)" />
             <el-table-column label="患者" min-width="150">
               <template #default="{ row }">
                 <div class="archive-patient-cell">
@@ -591,7 +618,7 @@ onBeforeUnmount(() => {
                 {{ formatDate(row.dischargeDate) }}
               </template>
             </el-table-column>
-            <el-table-column label="档案类型" min-width="110">
+            <el-table-column label="档案类型" min-width="132" class-name="mrr-table-status-column">
               <template #default="{ row }">
                 <el-tag size="small" :type="typeTone(row.type)">
                   {{ normalizeText(row.type) }}
@@ -639,49 +666,21 @@ onBeforeUnmount(() => {
             </el-table-column>
           </el-table>
         </div>
-
-        <div class="pagination-wrapper">
-          <el-pagination v-model:current-page="currentPage" :page-size="pageSize" :total="listData.total"
-            layout="total, prev, pager, next, jumper" @current-change="loadArchiveList" />
-        </div>
-      </div>
+</div>
+        <template #pagination>
+          <el-pagination v-model:current-page="currentPage" :page-size="pageSize" :page-sizes="archivePageSizes" :total="listData.total"
+            :pager-count="compactPagination ? 5 : 7" :disabled="loading"
+            :layout="paginationLayout" @update:page-size="handleListSizeChange" @current-change="handleArchivePageChange" />
+        </template>
+      </MrrDataTablePanel>
     </section>
   </MrrPageShell>
 </template>
 
 <style scoped>
-.filter-grid {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--mrr-space-3);
-  align-items: center;
-}
-
-.filter-bah,
-.filter-sjh {
-  flex: 0 0 140px;
-}
-
-.filter-keyword {
-  flex: 1 1 300px;
-  min-width: 240px;
-}
-
-.filter-type,
-.filter-sort {
-  flex: 0 0 190px;
-}
-
-.filter-date {
-  flex: 1 1 290px;
-  min-width: 260px;
-}
-
-.filter-actions {
-  display: flex;
-  flex: 0 0 auto;
-  gap: var(--mrr-space-2);
-  margin-left: auto;
+.archive-filter-card {
+  --mrr-embedded-filter-bottom-space: 0px;
+  --mrr-embedded-filter-divider-width: 0px;
 }
 
 .content-layout,
@@ -690,35 +689,16 @@ onBeforeUnmount(() => {
   gap: var(--mrr-space-4);
 }
 
-.archive-toolbar {
-  display: flex;
-  gap: var(--mrr-space-3);
-  align-items: center;
-  justify-content: space-between;
-}
-
-/* 与分区卡标题同档（14px / 650）：它是「档案筛选」卡下方的同级分区，原 16px / 700 比卡标题还重。 */
-.archive-toolbar-title {
-  margin: 0;
-  font-size: var(--mrr-font-size-md);
-  font-weight: 650;
-  color: var(--text-primary);
-}
-
 .archive-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 340px), 1fr));
   gap: var(--mrr-space-4);
 }
 
-.archive-list-wrap {
-  overflow-x: auto;
-  border: 1px solid var(--divider);
-  border-radius: var(--mrr-radius-md);
-}
-
-.archive-list {
-  min-width: 1320px;
+.archive-list-wrap,
+.archive-shelf,
+.content-layout {
+  min-width: 0;
 }
 
 .archive-bah {
@@ -751,15 +731,13 @@ onBeforeUnmount(() => {
   cursor: pointer;
 }
 
-:deep(.el-table__row.archive-list-row-selected > td.el-table__cell) {
-  background: hsl(var(--primary) / 8%);
-}
-
 .archive-folder-card {
   --folder-accent: var(--color-primary);
   --folder-tint: var(--mrr-tone-primary-soft);
 
   position: relative;
+  display: grid;
+  min-width: 0;
   padding: var(--mrr-space-3) var(--mrr-space-2) var(--mrr-space-2);
   isolation: isolate;
 }
@@ -827,6 +805,7 @@ onBeforeUnmount(() => {
 .folder-top,
 .folder-footer {
   display: flex;
+  flex-wrap: wrap;
   gap: var(--mrr-space-2);
   align-items: center;
 }
@@ -847,7 +826,7 @@ onBeforeUnmount(() => {
   padding: 2px var(--mrr-space-2);
   font-size: var(--mrr-font-size-xs);
   font-weight: 600;
-  color: var(--folder-accent);
+  color: var(--mrr-tone-primary-ink);
   background: color-mix(in srgb, var(--folder-accent) 10%, transparent);
   border-radius: var(--mrr-radius-pill);
 }
@@ -883,7 +862,8 @@ onBeforeUnmount(() => {
   font: inherit;
   color: var(--text-primary);
   text-align: left;
-  white-space: nowrap;
+  overflow-wrap: anywhere;
+  white-space: normal;
   cursor: pointer;
   outline: none;
   background: none;
@@ -915,8 +895,10 @@ onBeforeUnmount(() => {
 }
 
 .folder-department {
+  min-width: 0;
   font-weight: 600;
   color: var(--text-primary);
+  overflow-wrap: anywhere;
 }
 
 .folder-meta-dot {
@@ -961,14 +943,12 @@ onBeforeUnmount(() => {
 
 .folder-code-value {
   min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
   font-family: var(--mrr-font-mono);
   font-size: var(--mrr-font-size-md);
   font-weight: 600;
   font-variant-numeric: tabular-nums;
   color: var(--text-primary);
-  white-space: nowrap;
+  overflow-wrap: anywhere;
 }
 
 .folder-copy {
@@ -1033,30 +1013,6 @@ onBeforeUnmount(() => {
 
 .archive-folder-card:hover .folder-action span {
   transform: var(--mrr-motion-decor, translateX(3px));
-}
-
-.pagination-wrapper {
-  display: flex;
-  justify-content: flex-end;
-}
-
-@media (max-width: 720px) {
-  .filter-bah,
-  .filter-sjh,
-  .filter-keyword,
-  .filter-type,
-  .filter-date,
-  .filter-sort,
-  .filter-actions {
-    flex: 1 1 100%;
-    min-width: 0;
-    margin-left: 0;
-  }
-
-  .archive-toolbar {
-    flex-direction: column;
-    align-items: flex-start;
-  }
 }
 
 @media (max-width: 480px) {

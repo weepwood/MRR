@@ -3,7 +3,9 @@ import type {
   SystemErrorEvent,
   SystemErrorOverview,
 } from '@/api/modules/system-errors'
+import type { MrrTableAction } from '@/components/MrrTableActions/types'
 /* eslint-disable vue/singleline-html-element-content-newline */
+import { useMediaQuery } from '@vueuse/core'
 import { RefreshCw as Refresh } from 'lucide-vue-next'
 import { computed, onBeforeUnmount, onDeactivated, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
@@ -22,15 +24,22 @@ import MrrFilterBar from '@/components/MrrFilterBar/index.vue'
 import MrrMetricCard from '@/components/MrrMetricCard/index.vue'
 import MrrPageHeader from '@/components/MrrPageHeader/index.vue'
 import MrrPageShell from '@/components/MrrPageShell/index.vue'
+import MrrTableActions from '@/components/MrrTableActions/index.vue'
 import { useCrudList } from '@/composables/useCrudList'
+import { useTableActionLayout } from '@/composables/useTableActionLayout'
 import { useUserStore } from '@/store/modules/user'
 import useVisibleInterval from '@/utils/composables/useVisibleInterval'
 import { copyText as copyToClipboard } from '@/utils/copy-text'
 import { formatDateTime, isRedactedLogText } from '@/utils/display-format'
 import { checkSessionPermission } from '@/utils/permission'
 import { isSessionAccessDenied } from '@/utils/session-access-denied'
+import { tableSequenceColumn } from '@/utils/table-sequence'
 
 defineOptions({ name: 'RuntimeErrorsPage' })
+const isNarrowScreen = useMediaQuery('(max-width: 760px)')
+
+const detailActions: MrrTableAction[] = [{ key: 'detail', label: '详情', icon: 'i-lucide:eye', tone: 'primary', placement: 'inline' }]
+const { maxInlineActions: detailMaxInlineActions, actionColumnWidth: detailActionColumnWidth } = useTableActionLayout(1, 1)
 
 const userStore = useUserStore()
 const router = useRouter()
@@ -128,7 +137,7 @@ function rangeStart(range: string) {
   return undefined
 }
 
-const { clearResults, query, list, total, loading, resultVersion, pageNum: page, pageSize: size, loadData, handleSearch } = useCrudList<SystemErrorEvent, typeof defaultQuery>({
+const { clearResults, query, list, total, loadedRowOffset, loading, resultVersion, pageNum: page, pageSize: size, loadData, handleSearch } = useCrudList<SystemErrorEvent, typeof defaultQuery>({
   session: { resetQuery: defaultQuery, key: () => userStore.token, allowed: () => canReadErrors.value, onReset: () => { resetOverview(); lastRefreshedAt.value = null; error.value = ''; linkedRequestId.value = ''; moduleGeneration++; moduleOptions.value = []; closeDetail() } },
   defaultQuery: { ...defaultQuery, keyword: linkedRequestId.value },
   fetchApi: async ({ page, size, keyword, level, module, range }, { isCurrent, silent }) => {
@@ -329,7 +338,6 @@ function levelTagType(level: string) {
 <template>
   <MrrPageShell class="runtime-errors-page">
     <MrrPageHeader
-      size="compact"
       eyebrow="Runtime Error Center"
       title="运行错误中心"
       description="集中查看后端 WARN / ERROR，按指纹合并重复事件，并通过错误编号、Request ID 关联接口访问日志。"
@@ -346,27 +354,21 @@ function levelTagType(level: string) {
     </MrrPageHeader>
 
     <section class="mrr-metric-grid mrr-metric-grid--four" :aria-busy="overviewLoading" aria-label="运行错误概览">
-      <button type="button" class="metric-action" title="点击仅看 ERROR 错误组" @click="applyLevelFilter('ERROR')">
-        <MrrMetricCard label="ERROR 错误组" :value="overviewValue(overview.errorGroups)" value-tone="danger" note="点击仅看 ERROR" />
-      </button>
-      <button type="button" class="metric-action" title="点击仅看 WARN 错误组" @click="applyLevelFilter('WARN')">
-        <MrrMetricCard label="WARN 错误组" :value="overviewValue(overview.warnGroups)" value-tone="warning" note="点击仅看 WARN" />
-      </button>
-      <MrrMetricCard label="近24小时活跃错误组" :value="overviewValue(overview.recentOccurrences)" note="按最后发生时间统计" />
-      <button type="button" class="metric-action" title="点击查看全部错误组" @click="resetFilters">
-        <MrrMetricCard label="累计错误组" :value="overviewValue(overview.totalGroups)" :note="overviewReady ? `累计 ${overview.totalOccurrences} 次 · 点击查看全部` : '点击查看全部'" />
-      </button>
+      <MrrMetricCard icon="i-lucide:circle-x" label="ERROR 错误组" :value="overviewValue(overview.errorGroups)" value-tone="danger" action-label="点击仅看 ERROR 错误组" @activate="applyLevelFilter('ERROR')" />
+      <MrrMetricCard icon="i-lucide:triangle-alert" label="WARN 错误组" :value="overviewValue(overview.warnGroups)" value-tone="warning" action-label="点击仅看 WARN 错误组" @activate="applyLevelFilter('WARN')" />
+      <MrrMetricCard icon="i-lucide:activity" label="近24小时活跃错误组" :value="overviewValue(overview.recentOccurrences)" note="按最后发生时间统计" />
+      <MrrMetricCard icon="i-lucide:layers" label="累计错误组" :value="overviewValue(overview.totalGroups)" :note="overviewReady ? `累计 ${overview.totalOccurrences} 次` : undefined" action-label="点击查看全部错误组" @activate="resetFilters" />
     </section>
     <div v-if="overviewError" class="overview-status">
       <span role="status">{{ overviewReady ? '概览刷新失败，显示上次成功的数据。' : '概览加载失败，不影响错误列表。' }}</span>
       <el-button size="small" :loading="overviewLoading" @click="loadOverview">重试概览</el-button>
     </div>
 
-    <MrrDataTablePanel title="运行错误组" :count="total" :loading="loading" :result-key="resultVersion" class="runtime-errors-panel">
+    <MrrDataTablePanel title="运行错误组" :loading="loading" :result-key="resultVersion" class="runtime-errors-panel">
       <template #filters>
         <!-- 筛选栏对齐用户管理页模式：无可见标签，控件 aria-label + 自描述占位符 -->
-        <MrrFilterBar embedded>
-          <div class="runtime-errors-filter__field runtime-errors-filter__keyword">
+        <MrrFilterBar embedded :focus-ring="false">
+          <div class="runtime-errors-filter__field runtime-errors-filter__keyword mrr-filter-field--keyword">
             <el-input
               id="runtime-errors-keyword"
               v-model="query.keyword"
@@ -374,7 +376,9 @@ function levelTagType(level: string) {
               aria-label="关键字"
               placeholder="错误编号 / Request ID / 异常 / 消息"
               @keyup.enter="handleSearch"
-            />
+            >
+              <template #prefix><FaIcon name="i-lucide:search" aria-hidden="true" /></template>
+            </el-input>
           </div>
           <div class="runtime-errors-filter__field runtime-errors-filter__select">
             <el-select
@@ -421,30 +425,31 @@ function levelTagType(level: string) {
         :description="linkedRequestId && query.keyword === linkedRequestId ? '未找到相关运行错误。错误组仅保留最近一次关联的 Request ID。' : '暂无运行错误事件'"
       />
       <el-table v-else :data="list" stripe class="runtime-errors-table">
-        <el-table-column prop="lastSeenAt" label="最后发生" min-width="175">
+        <el-table-column v-bind="tableSequenceColumn(loadedRowOffset, list.length)" />
+        <el-table-column prop="lastSeenAt" label="最后发生" width="176">
           <template #default="{ row }">{{ formatDateTime(row.lastSeenAt) }}</template>
         </el-table-column>
-        <el-table-column prop="errorId" label="错误编号" min-width="190" show-overflow-tooltip>
+        <el-table-column prop="errorId" label="错误编号" width="184" show-overflow-tooltip>
           <template #default="{ row }"><span class="detail-code runtime-errors__id">{{ row.errorId || '-' }}</span></template>
         </el-table-column>
-        <el-table-column prop="level" label="级别" width="90">
+        <el-table-column prop="level" label="级别" width="90" class-name="mrr-table-status-column">
           <template #default="{ row }">
             <el-tag :type="levelTagType(row.level)">{{ row.level }}</el-tag>
           </template>
         </el-table-column>
-        <el-table-column prop="module" label="模块" min-width="120" show-overflow-tooltip>
+        <el-table-column prop="module" label="模块" min-width="132">
           <template #default="{ row }">
-            <button type="button" class="module-filter" :title="`点击按模块 ${row.module} 筛选`" @click="filterByModule(row.module)">
+            <el-button link :auto-insert-space="false" class="module-filter mrr-inline-action mrr-table-text-link" :title="`点击按模块 ${row.module} 筛选`" @click="filterByModule(row.module)">
               {{ row.module || '-' }}
-            </button>
+            </el-button>
           </template>
         </el-table-column>
-        <el-table-column label="错误摘要" min-width="360" show-overflow-tooltip>
+        <el-table-column label="错误摘要" min-width="300" show-overflow-tooltip>
           <template #default="{ row }">
             <span>{{ summaryDisplay(row as SystemErrorEvent) }}</span>
           </template>
         </el-table-column>
-        <el-table-column prop="requestId" label="Request ID" min-width="155" show-overflow-tooltip>
+        <el-table-column prop="requestId" label="Request ID" width="176" show-overflow-tooltip>
           <template #default="{ row }"><span class="detail-code runtime-errors__id">{{ row.requestId || '-' }}</span></template>
         </el-table-column>
         <el-table-column prop="occurrenceCount" label="次数" width="90" align="right" />
@@ -455,9 +460,9 @@ function levelTagType(level: string) {
             </span>
           </template>
         </el-table-column>
-        <el-table-column label="操作" width="90" fixed="right" align="center">
+        <el-table-column label="操作" :width="detailActionColumnWidth" fixed="right" align="center">
           <template #default="{ row }">
-            <el-button link type="primary" @click="openDetail(row as SystemErrorEvent)">详情</el-button>
+            <MrrTableActions :actions="detailActions" :max-inline="detailMaxInlineActions" @select="openDetail(row as SystemErrorEvent)" />
           </template>
         </el-table-column>
       </el-table>
@@ -468,14 +473,14 @@ function levelTagType(level: string) {
           v-model:page-size="size"
           :page-sizes="[10, 20, 50, 100]"
           :total="total"
-          layout="total, sizes, prev, pager, next, jumper"
+          layout="total, prev, pager, next, jumper, sizes"
           @size-change="handleSearch"
           @current-change="loadData()"
         />
       </template>
     </MrrDataTablePanel>
 
-    <el-dialog v-model="detailVisible" title="运行错误详情" width="880px" top="5vh">
+    <el-dialog v-model="detailVisible" align-center title="运行错误详情" width="880px">
       <div v-if="current && canReadAccessLogs && current?.requestId" class="detail-links">
         <el-button size="small" @click="openAccessLog(current?.requestId)">
           查看访问记录
@@ -483,36 +488,44 @@ function levelTagType(level: string) {
       </div>
       <AppLoading v-if="detailLoading" type="card" :cols="1" />
       <AppError v-else-if="detailError" :message="detailError" @retry="retryDetail" />
-      <el-descriptions v-else-if="current" :column="2" border>
-        <el-descriptions-item label="错误编号">
-          <code class="detail-code">{{ current.errorId }}</code>
-          <el-button link type="primary" @click="copyText(current?.errorId || '', '错误编号已复制')">
-            复制
-          </el-button>
-        </el-descriptions-item>
-        <el-descriptions-item label="级别">
-          <el-tag :type="levelTagType(current.level)">{{ current.level }}</el-tag>
-        </el-descriptions-item>
-        <el-descriptions-item label="累计次数">{{ current.occurrenceCount }}</el-descriptions-item>
-        <el-descriptions-item label="模块">{{ current.module || '-' }}</el-descriptions-item>
-        <el-descriptions-item label="首次发生">{{ formatDateTime(current.firstSeenAt) }}</el-descriptions-item>
-        <el-descriptions-item label="最后发生">{{ formatDateTime(current.lastSeenAt) }}</el-descriptions-item>
-        <el-descriptions-item label="线程" :span="2">{{ current.threadName || '-' }}</el-descriptions-item>
-        <el-descriptions-item label="Request ID" :span="2">
-          <code class="detail-code">{{ current.requestId || '-' }}</code>
-          <el-button v-if="current?.requestId" link type="primary" @click="copyText(current?.requestId || '', 'Request ID 已复制')">
-            复制
-          </el-button>
-        </el-descriptions-item>
-        <el-descriptions-item label="记录器" :span="2">{{ current.loggerName }}</el-descriptions-item>
-        <el-descriptions-item label="异常类型" :span="2">{{ current.exceptionType || '-' }}</el-descriptions-item>
-        <el-descriptions-item label="错误摘要" :span="2">
+      <div v-else-if="current" class="error-detail-content">
+        <h3 class="error-detail-heading">事件概况</h3>
+        <el-descriptions direction="vertical" class="mrr-detail-descriptions" :column="isNarrowScreen ? 1 : 2" border>
+          <el-descriptions-item label="错误编号">
+            <code class="detail-code">{{ current.errorId }}</code>
+            <el-button link type="primary" @click="copyText(current?.errorId || '', '错误编号已复制')">
+              复制
+            </el-button>
+          </el-descriptions-item>
+          <el-descriptions-item label="级别">
+            <el-tag :type="levelTagType(current.level)">{{ current.level }}</el-tag>
+          </el-descriptions-item>
+          <el-descriptions-item label="累计次数">{{ current.occurrenceCount }}</el-descriptions-item>
+          <el-descriptions-item label="模块">{{ current.module || '-' }}</el-descriptions-item>
+          <el-descriptions-item label="首次发生">{{ formatDateTime(current.firstSeenAt) }}</el-descriptions-item>
+          <el-descriptions-item label="最后发生">{{ formatDateTime(current.lastSeenAt) }}</el-descriptions-item>
+        </el-descriptions>
+        <h3 class="error-detail-heading">请求与技术信息</h3>
+        <el-descriptions direction="vertical" class="mrr-detail-descriptions" :column="isNarrowScreen ? 1 : 2" border>
+          <el-descriptions-item label="线程">{{ current.threadName || '-' }}</el-descriptions-item>
+          <el-descriptions-item label="Request ID">
+            <code class="detail-code">{{ current.requestId || '-' }}</code>
+            <el-button v-if="current?.requestId" link type="primary" @click="copyText(current?.requestId || '', 'Request ID 已复制')">
+              复制
+            </el-button>
+          </el-descriptions-item>
+          <el-descriptions-item label="记录器">{{ current.loggerName }}</el-descriptions-item>
+          <el-descriptions-item label="异常类型">{{ current.exceptionType || '-' }}</el-descriptions-item>
+        </el-descriptions>
+        <section class="error-detail-diagnostics" aria-labelledby="error-summary-heading">
+          <h3 id="error-summary-heading" class="error-detail-heading">错误摘要</h3>
           <pre class="detail-pre summary-pre">{{ summaryDisplay(current) }}</pre>
-        </el-descriptions-item>
-        <el-descriptions-item label="异常堆栈" :span="2">
+        </section>
+        <section class="error-detail-diagnostics" aria-labelledby="error-stack-heading">
+          <h3 id="error-stack-heading" class="error-detail-heading">异常堆栈</h3>
           <pre class="detail-pre">{{ current.stackTrace || '该事件没有异常堆栈。' }}</pre>
-        </el-descriptions-item>
-      </el-descriptions>
+        </section>
+      </div>
     </el-dialog>
   </MrrPageShell>
 </template>
@@ -526,38 +539,7 @@ function levelTagType(level: string) {
   margin-bottom: var(--mrr-space-3);
 }
 
-/* 指标卡与模块名都承担「点击筛选」交互，外观退成卡片但语义是按钮。 */
-.metric-action {
-  padding: 0;
-  font: inherit;
-  text-align: left;
-  cursor: pointer;
-  background: transparent;
-  border: 0;
-
-  /* 与内部指标卡同半径，焦点轮廓才会贴合卡片外形（原用 md，比卡片小一档，四角露出缝）。 */
-  border-radius: var(--mrr-radius-card);
-}
-
-.metric-action:focus-visible {
-  outline: 2px solid var(--el-color-primary);
-  outline-offset: 2px;
-}
-
-/*
- * 可点击的指标卡要有悬停反馈（DESIGN.md §2.7：可点击卡片悬停升一档阴影并加深描边，不靠位移）；
- * 原来三张能点、一张不能点，外观完全相同，用户无从分辨。
- */
-.metric-action :deep(.mrr-metric-card) {
-  transition: border-color var(--mrr-motion-feedback) var(--mrr-ease-out), box-shadow var(--mrr-motion-feedback) var(--mrr-ease-out);
-}
-
-.metric-action:hover :deep(.mrr-metric-card) {
-  border-color: var(--mrr-border-strong);
-  box-shadow: var(--mrr-shadow-sm);
-}
-
-.module-filter {
+.module-filter.el-button {
   padding: 0;
   font: inherit;
   color: var(--el-text-color-regular);
@@ -602,6 +584,25 @@ function levelTagType(level: string) {
   font-variant-numeric: tabular-nums;
 }
 
+.error-detail-content {
+  display: grid;
+  gap: var(--mrr-space-3);
+  min-width: 0;
+}
+
+.error-detail-heading {
+  margin: 0;
+  font-size: var(--mrr-font-size-md);
+  font-weight: var(--mrr-font-weight-heading);
+  color: var(--mrr-foreground);
+}
+
+.error-detail-diagnostics {
+  display: grid;
+  gap: var(--mrr-space-2);
+  min-width: 0;
+}
+
 .detail-pre {
   box-sizing: border-box;
   max-height: 420px;
@@ -609,8 +610,9 @@ function levelTagType(level: string) {
   padding: var(--mrr-space-3);
   overflow: auto;
   border-radius: var(--mrr-radius-md);
-  background: var(--el-fill-color-light);
-  color: var(--el-text-color-primary);
+  background: var(--mrr-muted);
+  border: 1px solid var(--mrr-border);
+  color: var(--mrr-foreground);
   font-family: var(--mrr-font-mono);
   font-size: var(--mrr-font-size-xs);
   line-height: 1.6;
@@ -620,29 +622,6 @@ function levelTagType(level: string) {
 
 .summary-pre {
   max-height: 180px;
-}
-
-.runtime-errors-filter__field {
-  display: grid;
-  min-width: 0;
-}
-
-.runtime-errors-filter__keyword {
-  flex: 1 1 320px;
-  min-width: 260px;
-}
-
-.runtime-errors-filter__select {
-  flex: 0 1 190px;
-  width: 190px;
-}
-
-@media (max-width: 760px) {
-  .runtime-errors-filter__keyword,
-  .runtime-errors-filter__select {
-    flex: 1 1 100%;
-    width: 100%;
-  }
 }
 
 /* 频次热的错误组用数据编码色提示；纯色声明，Chrome 86 安全。 */

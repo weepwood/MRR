@@ -4,7 +4,6 @@
 [![Vue](https://img.shields.io/badge/Vue-3.5-4FC08D)](https://vuejs.org/)
 [![PostgreSQL](https://img.shields.io/badge/PostgreSQL-16-336791)](https://www.postgresql.org/)
 [![VitePress](https://img.shields.io/badge/VitePress-1.5-646CFF)](https://vitepress.dev/)
-[![License](https://img.shields.io/badge/License-MIT-blue)](LICENSE)
 
 MRR 面向医疗机构的病案扫描、归档、检索、调阅、导出、统计、数据治理和运维场景。系统以患者、病案主档、扫描图片、实体档案位置和多来源文件为核心，提供管理端、影像档案袋、外部系统调阅、权限审计、OSS 迁移、运行诊断与 Windows 原生部署能力。
 
@@ -22,6 +21,16 @@ MRR 主要解决：
 - 在 Windows Server 内网环境中完成部署、升级、回滚、维护和排障。
 
 MRR 不是 DICOM 诊断工作站，不提供窗宽窗位、医学测量、多帧诊断播放或自动医学结论。
+
+## 文档导航与阅读路径
+
+![病案业务操作路径](vitepress-doc/user-guide/assets/business-workflow.svg)
+
+- **病案人员**：[用户手册](vitepress-doc/user-guide/index.md)、[影像查询与导出](vitepress-doc/user-guide/images.md)、[数据交换](vitepress-doc/user-guide/data-exchange.md)。
+- **管理员**：[账号](vitepress-doc/user-guide/accounts.md)、[系统设置](vitepress-doc/user-guide/admin.md)、[数据治理](vitepress-doc/user-guide/data-relation-workbench.md)。
+- **开发与运维**：[内部文档](vitepress-doc/internal/index.md)、[架构边界](ARCHITECTURE.md)、[生产运行手册](vitepress-doc/internal/runbook.md)、[发布门禁](vitepress-doc/internal/release.md)。
+
+当前开发分支中的候选改进与已发布版本不是同一个概念。以运行实例、正式 Release 与包内清单判定部署版本；研发剩余任务及风险证据仅在 [ROADMAP.md](ROADMAP.md) 维护。以下图解使用虚构编号与逻辑流程，不包含患者资料。
 
 ## 当前能力
 
@@ -95,7 +104,7 @@ MRR 不是 DICOM 诊断工作站，不提供窗宽窗位、医学测量、多帧
 | 影像档案袋 | `/archive` 或 `/archive/embed` | `record:read` |
 | 外部影像调阅 | `/archive/external?ticket=...` | 有效的一次性 Ticket |
 | Nginx 文件浏览 | `/nginx-browser` | `record:read` |
-| OSS 文件浏览 | `/oss-browser` | `record:read` |
+| OSS 文件浏览 | `/oss-browser` | `record:manage`（当前候选入口） |
 | 运维诊断中心 | `/operations-center` | `system:read` |
 | 运行错误中心 | `/runtime-errors` | `system:error:read` |
 | 服务状态 | `/status` | 公开脱敏信息 |

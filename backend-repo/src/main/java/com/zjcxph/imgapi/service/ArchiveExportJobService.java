@@ -187,13 +187,16 @@ public class ArchiveExportJobService {
             cancellation.set(true);
         }
         if ("PENDING".equals(job.getStatus())) {
-            repository.markCancelled(id, LocalDateTime.now());
+            repository.markPendingCancelled(id, LocalDateTime.now());
         }
         return ArchiveExportJobResponse.from(requireOwned(session, id));
     }
 
     public Path requireDownloadFile(AuthSession session, String id) throws IOException {
-        ArchiveExportJob job = requireOwned(session, id);
+        return requireDownloadFile(session, requireOwned(session, id));
+    }
+
+    private Path requireDownloadFile(AuthSession session, ArchiveExportJob job) throws IOException {
         requirePermission(session, job.getFormat());
         if (Set.of("PENDING", "PROCESSING").contains(job.getStatus())) {
             throw new BusinessException(409, "导出任务尚未完成");
@@ -213,8 +216,25 @@ public class ArchiveExportJobService {
     }
 
     public ArchiveExportTempFileManager.DownloadLease openDownload(AuthSession session, String id) throws IOException {
-        Path file = requireDownloadFile(session, id);
-        return tempFileManager.openDownload(file.toString(), session.getId());
+        ArchiveExportJob job = requireOwned(session, id);
+        Path file = requireDownloadFile(session, job);
+        var lease = tempFileManager.openDownload(file.toString(), session.getId());
+        try {
+            Long expected = job.getOutputBytes();
+            // Check the opened handle before any HTTP representation metadata or bytes are published.
+            if (expected == null || expected <= 0 || lease.length() != expected
+                    || !lease.matchesSha256(job.getSha256())) {
+                throw new BusinessException(409, "导出文件与完成记录不一致，请重新导出");
+            }
+            return lease;
+        } catch (IOException | RuntimeException failure) {
+            try {
+                lease.close();
+            } catch (IOException closeFailure) {
+                failure.addSuppressed(closeFailure);
+            }
+            throw failure;
+        }
     }
 
     public ArchiveExportJob requireOwned(AuthSession session, String id) {
@@ -350,7 +370,7 @@ public class ArchiveExportJobService {
         if (repository.markProcessing(id, job.getFileName(), job.getFilePath(),
                 LocalDateTime.now().plus(properties.getRetention())) == 0) {
             if (repository.isCancelRequested(id)) {
-                repository.markCancelled(id, LocalDateTime.now());
+                repository.markPendingCancelled(id, LocalDateTime.now());
             }
             return;
         }
@@ -383,9 +403,22 @@ public class ArchiveExportJobService {
             ArchiveExportService.ExportProgress progress = new ArchiveExportService.ExportProgress() {
                 private int lastCompleted;
                 private long lastWrite = System.nanoTime();
+                private long lastCancelPoll;
+                private boolean cancellationChecked;
                 @Override
                 public boolean isCancelled() {
-                    return cancellation.get() || Thread.currentThread().isInterrupted();
+                    if (cancellation.get() || Thread.currentThread().isInterrupted()) return true;
+                    long now = System.nanoTime();
+                    // Keep local cancellation immediate; observe durable cancellation at bounded checkpoints.
+                    if (!cancellationChecked || now - lastCancelPoll >= 1_000_000_000L) {
+                        cancellationChecked = true;
+                        lastCancelPoll = now;
+                        if (repository.isCancelRequested(id)) {
+                            cancellation.set(true);
+                            return true;
+                        }
+                    }
+                    return false;
                 }
 
                 @Override
@@ -424,7 +457,7 @@ public class ArchiveExportJobService {
         } catch (ArchiveExportCancelledException exception) {
             repository.markCancelled(id, LocalDateTime.now());
         } catch (Exception exception) {
-            logger.error("Archive export job failed: jobId={}", id, exception);
+            logger.error("Archive export job failed: jobId={}, errorType={}", id, exception.getClass().getSimpleName());
             if (repository.markFailed(id, publicFailureMessage(exception), LocalDateTime.now()) == 0
                     && repository.isCancelRequested(id)) {
                 repository.markCancelled(id, LocalDateTime.now());
@@ -540,8 +573,8 @@ public class ArchiveExportJobService {
         if (job.getOwnerUserId() != null) {
             return Objects.equals(session.getId(), job.getOwnerUserId());
         }
-        // 仅兼容迁移前没有 owner_user_id 的历史任务。
-        return Objects.equals(session.getUsername(), job.getOwnerUsername());
+        // 历史用户名不能证明当前账号拥有医疗导出资源；仅保留上方管理员访问契约。
+        return false;
     }
 
     private String normalizeFormat(String value) {

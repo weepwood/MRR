@@ -9,9 +9,10 @@ import subprocess
 from scripts.backend_test_scope import classify_paths as backend_scope
 from scripts.backend_test_scope import requires_real_checks
 from scripts.ci_build_scope import needs_release_build
+from scripts.ci_targeted_e2e import select_plan
 from scripts.frontend_test_scope import classify_paths as frontend_scope
 
-JOBS = ('frontend', 'backend', 'integration', 'windows', 'recovery', 'release', 'development')
+JOBS = ('frontend', 'backend', 'integration', 'windows', 'recovery', 'release', 'development', 'e2e', 'docs')
 PAGES_DEMO_SMOKE_WORKFLOW = '.github/workflows/deploy-pages-demo.yml'
 # Narrow allowlist: a business view's index.vue can contain permissions,
 # patient identifiers, export or migration logic despite its harmless filename.
@@ -51,9 +52,11 @@ DEVELOPMENT_INPUTS = {
 def classify_paths(paths, mode='pr') -> dict[str, bool]:
     paths = [p.strip().replace('\\', '/').removeprefix('./') for p in paths if p.strip()]
     frontend, backend = frontend_scope(paths), backend_scope(paths)
-    pages_demo_smoke = frontend.e2e_changed or frontend.build_changed or any(
-        path in (PAGES_DEMO_SMOKE_WORKFLOW, 'VERSION', 'release-baseline.json')
+    pages_demo_smoke = frontend.build_changed or any(
+        path in (PAGES_DEMO_SMOKE_WORKFLOW, 'VERSION', 'release-baseline.json',
+                 FRONTEND_ROOT + 'e2e/smoke-pages-demo.mjs')
         or (path.startswith(FRONTEND_ROOT) and not path.lower().endswith('.md')
+            and not path.startswith((FRONTEND_ROOT + 'e2e/', FRONTEND_ROOT + 'e2e-live/'))
             and not is_presentation_path(path))
         for path in paths
     )
@@ -63,11 +66,13 @@ def classify_paths(paths, mode='pr') -> dict[str, bool]:
                    or p in ('.github/workflows/windows-database-recovery.yml', 'deploy/windows/mrrctl.ps1') for p in paths)
     live = requires_real_checks(paths)
     development = any(p in DEVELOPMENT_INPUTS or p.startswith(('backend-repo/.mvn/', 'backend-repo/examples/', 'vitepress-doc/.vitepress/')) for p in paths)
-    # Mock browser E2E is deferred to full release validation. Main integration
-    # has its own real JAR browser flow, selected by the integration mode below.
+    mock_full, mock_specs = select_plan(paths, critical=frontend.e2e_changed)
+    docs = any(p.startswith("vitepress-doc/") or p in ("VERSION", "release-baseline.json") for p in paths)
+    # PR feedback owns mock regression; the complete release already includes it.
     scope = dict(development=development, frontend=frontend.frontend_changed, backend=backend.backend_changed or live or recovery or database_tools,
                  build=frontend.build_changed, postgres=backend.integration_changed or database_tools or live,
-                 e2e=False,
+                 e2e=mock_full or bool(mock_specs), docs=docs, candidate_deferred=False,
+                 candidate_required=mode in ('pr', 'draft') and needs_release_build(paths),
                  pages_demo_smoke=pages_demo_smoke,
                  integration=live,
                  live=live, windows=any(p.startswith('deploy/windows/') or p in ('scripts/dev.ps1', 'scripts/dev.py') for p in paths),
@@ -92,11 +97,15 @@ def classify_paths(paths, mode='pr') -> dict[str, bool]:
             scope.update(integration=True, build=True, postgres=True, live=True)
         scope['release'] = False
         scope['e2e'] = False
-    elif mode != 'pr':
+    elif mode not in ('pr', 'draft'):
         raise ValueError('Unsupported verification mode.')
+    if mode == 'draft' and scope['release']:
+        # A deferred candidate is feedback only: pr-gate must fail closed.
+        # Ready-for-review triggers a fresh complete cumulative selection.
+        scope.update(release=False, candidate_deferred=True)
     # PR 集成 job 只有在前端确有改动时才重新构建前端；
     # main/手动集成若选中真实联调，必须嵌入生产前端。
-    scope['integration_frontend'] = scope['integration'] and (mode != 'pr' or frontend.frontend_changed)
+    scope['integration_frontend'] = scope['integration'] and (mode not in ('pr', 'draft') or frontend.frontend_changed)
     if scope['integration']:
         # Production frontend/backend/live checks share one runner and no large intermediate artifacts.
         scope.update(frontend=False, backend=recovery)
@@ -105,7 +114,7 @@ def classify_paths(paths, mode='pr') -> dict[str, bool]:
         # Native development lifecycle checks are additional to the production candidate.
         native_windows = any(p in ('scripts/dev.py', 'scripts/dev.ps1', 'scripts/tests/test_dev.py') for p in paths)
         scope.update(frontend=False, backend=False, integration=False, integration_frontend=False,
-                     windows=native_windows, recovery=False)
+                     windows=native_windows, recovery=False, e2e=False, docs=False)
     return scope
 
 
@@ -118,6 +127,15 @@ def validate_results(selected: dict, results: dict) -> None:
         result = results.get(job)
         if result != 'success' and (required or result != 'skipped'):
             raise ValueError(f'{job}: required={required}, result={result!r}.')
+
+
+def require_candidate_admission(deferred: str, required: str, release_selected: bool) -> None:
+    if deferred not in ('true', 'false') or required not in ('true', 'false'):
+        raise ValueError('Missing/invalid candidate deferral or requirement output.')
+    if deferred == 'true':
+        raise ValueError('Draft feedback only: full candidate deferred. Mark ready for review and pass the full cumulative gate before merge.')
+    if required == 'true' and not release_selected:
+        raise ValueError('Required full candidate was not selected.')
 
 
 def successful_base(runs: list[dict]) -> str | None:
@@ -133,7 +151,7 @@ def main() -> None:
     parser = argparse.ArgumentParser(__doc__)
     commands = parser.add_subparsers(dest='command', required=True)
     select = commands.add_parser('scope')
-    select.add_argument('--mode', choices=('pr', 'main', 'integration'), required=True)
+    select.add_argument('--mode', choices=('pr', 'draft', 'main', 'integration'), required=True)
     select.add_argument('--base')
     select.add_argument('--head', default='HEAD')
     select.add_argument('--runs', type=Path)
@@ -151,6 +169,7 @@ def main() -> None:
                 raise ValueError(f'Missing/invalid scope output: {job}.')
             selected[job] = value == 'true'
         validate_results(selected, {key: value['result'] for key, value in needs.items()})
+        require_candidate_admission(outputs.get('candidate_deferred'), outputs.get('candidate_required'), selected['release'])
         print('All selected checks succeeded.')
         return
     base = args.base
@@ -166,10 +185,17 @@ def main() -> None:
            else git('ls-tree', '-r', '--name-only', '-z', args.head))
     paths = raw.split('\0')
     scope = classify_paths(paths, args.mode)
+    mock_full, mock_specs = select_plan(paths, critical=frontend_scope(paths).e2e_changed)
+    if scope['e2e'] and mock_specs:
+        existing = set(git('ls-tree', '-r', '--name-only', args.head).splitlines())
+        if any(FRONTEND_ROOT + spec not in existing for spec in mock_specs):
+            mock_full = True
     with args.output.open('a', encoding='utf-8') as output:
         for key, value in scope.items():
             output.write(f'{key}={str(value).lower()}\n')
         output.write(f'base={base or ""}\n')
+        output.write(f'mock_full={str(mock_full).lower()}\n')
+        output.write('targeted_e2e_specs=' + json.dumps(mock_specs, separators=(',', ':')) + '\n')
     print(json.dumps(scope, sort_keys=True))
 
 

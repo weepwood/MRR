@@ -81,7 +81,7 @@ public class OssMigrationManagementController {
         boolean hasMore = safeRecords.size() > limit;
         List<Scan> visibleRecords = hasMore ? safeRecords.subList(0, limit) : safeRecords;
         Map<String, Object> response = new HashMap<>();
-        response.put("list", visibleRecords);
+        response.put("list", visibleRecords.stream().map(com.zjcxph.imgapi.utils.MigrationLogPrivacy::migrationRecord).toList());
         response.put("returned", visibleRecords.size());
         response.put("limit", limit);
         response.put("hasMore", hasMore);

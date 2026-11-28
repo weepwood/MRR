@@ -36,7 +36,11 @@ public final class AuditPayloadSanitizer {
 
     public static String protectedTarget(String target) {
         if (target == null) return null;
-        if (target.startsWith("hmac:v1:") || target.equals("[REDACTED]")) return target;
+        if (isProtected(target)) return target;
+        if (target.contains(";")) {
+            String[] tokens = target.split(";", -1);
+            if (tokens.length == 2 && isProtected(tokens[0]) && isProtected(tokens[1])) return target;
+        }
         if (target.startsWith("sjh:")) return protectedValue(target.substring(4));
         String[] parts = target.split(":", 2);
         if (parts.length == 2) {
@@ -44,6 +48,38 @@ public final class AuditPayloadSanitizer {
             return first.startsWith("hmac:") || second.startsWith("hmac:") ? first + ";" + second : "[REDACTED]";
         }
         return protectedValue(target);
+    }
+
+    private static boolean isProtected(String value) {
+        return value != null && (value.equals("[REDACTED]") || value.matches("hmac:v1:[0-9a-f]{64}"));
+    }
+
+    private static String protectedCode(String value) {
+        return isProtected(value) ? value : protectedValue(value);
+    }
+
+    /** Parameter names are not proof that their values are non-sensitive. */
+    private static boolean safeValue(String name, String value) {
+        if (value == null) return false;
+        String upper = value.toUpperCase(java.util.Locale.ROOT);
+        return switch (name) {
+            case "page", "size", "limit", "offset" -> value.matches("[0-9]{1,7}");
+            case "force", "enabled" -> Set.of("TRUE", "FALSE").contains(upper);
+            case "format" -> Set.of("ZIP", "PDF", "CSV", "XLSX", "JSON").contains(upper);
+            case "sortorder" -> Set.of("ASC", "DESC", "ASCENDING", "DESCENDING").contains(upper);
+            case "sortby" -> Set.of("ID", "CREATEDAT", "UPDATEDAT", "ACCESSTIME", "STARTEDAT",
+                    "COMPLETEDAT", "BAH", "SJH", "PAGES", "STATUS", "CREATED_AT", "UPDATED_AT", "ACCESS_TIME").contains(upper);
+            case "status" -> Set.of("ACTIVE", "DISABLED", "PENDING", "RUNNING", "SUCCESS", "FAILED",
+                    "PROCESSING", "CANCELLED", "CANCEL_REQUESTED", "EXPIRED", "NORMAL", "DELETED",
+                    "APPROVED", "REJECTED", "VERIFIED", "APPLIED", "PAUSED").contains(upper);
+            case "scope" -> Set.of("ALL", "SELECTION", "SELECTED", "ARCHIVE", "PAGE", "CURRENT", "WHOLE_ARCHIVE", "SELECTED_IMAGES").contains(upper);
+            case "startdate", "enddate" -> {
+                try { yield value.matches("[0-9]{4}-[0-9]{2}-[0-9]{2}") && java.time.LocalDate.parse(value) != null; }
+                catch (java.time.DateTimeException invalid) { yield false; }
+            }
+            // Free-text type/btype values are not an established closed enumeration.
+            default -> false;
+        };
     }
 
     public static String protectedValue(String value) {
@@ -84,9 +120,8 @@ public final class AuditPayloadSanitizer {
             return result;
         }
         String normalized = key.toLowerCase(java.util.Locale.ROOT).replaceAll("[-_\\[\\]]", "");
-        if (SAFE.contains(normalized) && (node.isNumber() || node.isBoolean()
-                || node.isTextual() && node.asText().matches("[A-Za-z0-9_:., +/\\-]{0,100}"))) return node;
-        return JSON.getNodeFactory().textNode(CODES.contains(normalized) ? protectedValue(node.asText()) : "[REDACTED]");
+        if (SAFE.contains(normalized) && node.isValueNode() && safeValue(normalized, node.asText())) return node;
+        return JSON.getNodeFactory().textNode(CODES.contains(normalized) ? protectedCode(node.asText()) : "[REDACTED]");
     }
 
     public static String query(String query) {
@@ -100,8 +135,8 @@ public final class AuditPayloadSanitizer {
                 String value = parts.length > 1 ? URLDecoder.decode(parts[1], StandardCharsets.UTF_8) : "";
                 String key = name.toLowerCase(java.util.Locale.ROOT).replaceAll("[-_\\[\\]]", "");
                 String safeName = knownName(name) ? name : "omittedField";
-                String safeValue = SAFE.contains(key) && value.matches("[A-Za-z0-9_:., +/\\-]{0,100}")
-                        ? value : CODES.contains(key) ? protectedValue(value) : "[REDACTED]";
+                String safeValue = SAFE.contains(key) && safeValue(key, value)
+                        ? value : CODES.contains(key) ? protectedCode(value) : "[REDACTED]";
                 if (!result.isEmpty()) result.append('&');
                 result.append(safeName).append('=').append(URLEncoder.encode(safeValue, StandardCharsets.UTF_8));
             }

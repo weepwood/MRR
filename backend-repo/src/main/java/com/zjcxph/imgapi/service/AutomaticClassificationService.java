@@ -1,5 +1,7 @@
 package com.zjcxph.imgapi.service;
 
+import com.zjcxph.imgapi.security.MedicalAccess;
+
 import com.zjcxph.imgapi.common.AuthSession;
 import com.zjcxph.imgapi.exception.BusinessException;
 import com.zjcxph.imgapi.mapper.*;
@@ -19,12 +21,12 @@ public class AutomaticClassificationService {
     public record RollbackResult(int reverted,int skipped,long nextAfterAuditId) {}
     private static final org.slf4j.Logger LOG=org.slf4j.LoggerFactory.getLogger(AutomaticClassificationService.class);
     private final AutomaticClassificationMapper mapper;private final ClassificationMapper classifications;private final OcrBatchMapper batches;
-    private final OcrMapper ocr;private final OcrInput input;private final OcrAccess access;private final ImageTypeService types;
+    private final OcrMapper ocr;private final OcrInput input;private final MedicalAccess access;private final ImageTypeService types;
     private final OcrQualityGate quality;private final OcrLoadGuard guard;private final OcrJobService jobs;private final OcrBatchService batchService;
     private final TransactionTemplate transactions;private final AtomicBoolean running=new AtomicBoolean();
     private final ExecutorService executor=Executors.newSingleThreadExecutor(r->{Thread t=new Thread(r,"ocr-auto-apply");t.setDaemon(true);return t;});
     public AutomaticClassificationService(AutomaticClassificationMapper mapper,ClassificationMapper classifications,OcrBatchMapper batches,
-            OcrMapper ocr,OcrInput input,OcrAccess access,ImageTypeService types,OcrQualityGate quality,OcrLoadGuard guard,
+            OcrMapper ocr,OcrInput input,MedicalAccess access,ImageTypeService types,OcrQualityGate quality,OcrLoadGuard guard,
             OcrJobService jobs,OcrBatchService batchService,TransactionTemplate transactions) {
         this.mapper=mapper;this.classifications=classifications;this.batches=batches;this.ocr=ocr;this.input=input;this.access=access;
         this.types=types;this.quality=quality;this.guard=guard;this.jobs=jobs;this.batchService=batchService;this.transactions=transactions;

@@ -16,6 +16,7 @@ import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.cache.annotation.Caching;
 import org.springframework.stereotype.Service;
+import com.zjcxph.imgapi.security.MedicalAccess;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
@@ -34,8 +35,11 @@ public class ScanServiceImpl implements ScanService {
     private final ScanMapper scanMapper;
     private final ImageTypeService imageTypes;
 
-    public ScanServiceImpl(ScanMapper scanMapper,ImageTypeService imageTypes) {
+    private final MedicalAccess medicalAccess;
+
+    public ScanServiceImpl(ScanMapper scanMapper,ImageTypeService imageTypes, MedicalAccess medicalAccess) {
         this.scanMapper = scanMapper;
+        this.medicalAccess = medicalAccess;
         this.imageTypes=imageTypes;
     }
 
@@ -170,6 +174,7 @@ public class ScanServiceImpl implements ScanService {
             @CacheEvict(value = "scanLookupByCode", allEntries = true)
     })
     public Scan create(Scan scan) {
+        medicalAccess.requireCurrentWrite("record:edit");
         normalizeStoredCodes(scan);
         if (scanMapper.insert(scan) > 0) {
             // archive_id 由数据库触发器解析，重新读取以返回数据库最终状态。
@@ -188,6 +193,7 @@ public class ScanServiceImpl implements ScanService {
             @CacheEvict(value = "scanById", key = "#id")
     })
     public boolean softDeleteById(Integer id) {
+        medicalAccess.requireCurrentWrite("record:edit");
         return scanMapper.softDeleteById(id) > 0;
     }
 
@@ -201,6 +207,7 @@ public class ScanServiceImpl implements ScanService {
             @CacheEvict(value = "scanById", key = "#scan.id")
     })
     public Scan update(Scan scan) {
+        medicalAccess.requireCurrentWrite("record:edit");
         normalizeStoredCodes(scan);
         if (scan.getBtype()!=null) imageTypes.manual(scan.getId(),scan.getBtype());
         if (scanMapper.update(scan) > 0) {

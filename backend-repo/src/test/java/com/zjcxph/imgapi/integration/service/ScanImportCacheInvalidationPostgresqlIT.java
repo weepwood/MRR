@@ -73,6 +73,9 @@ class ScanImportCacheInvalidationPostgresqlIT extends PostgresqlIntegrationTestS
     @MockitoBean
     private ImageTypeService imageTypeService;
 
+    @MockitoBean
+    private com.zjcxph.imgapi.security.MedicalAccess medicalAccess;
+
     @BeforeEach
     void resetTablesAndCaches() {
         resetTables();

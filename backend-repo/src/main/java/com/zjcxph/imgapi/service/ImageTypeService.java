@@ -6,7 +6,7 @@ import com.zjcxph.imgapi.exception.BusinessException;
 import com.zjcxph.imgapi.mapper.ClassificationMapper;
 import com.zjcxph.imgapi.mapper.ClassificationMapper.*;
 import com.zjcxph.imgapi.mapper.OcrMapper;
-import com.zjcxph.imgapi.ocr.OcrAccess;
+import com.zjcxph.imgapi.security.MedicalAccess;
 import com.zjcxph.imgapi.ocr.OcrInput;
 import com.zjcxph.imgapi.utils.AuthContext;
 import org.slf4j.MDC;
@@ -18,9 +18,9 @@ import java.util.Objects;
 /** Sole application path for formal image-type mutation, with short atomic audit transactions. */
 @Service
 public class ImageTypeService {
-    private final ClassificationMapper mapper; private final OcrMapper ocr; private final OcrAccess access;
+    private final ClassificationMapper mapper; private final OcrMapper ocr; private final MedicalAccess access;
     private final OcrInput input; private final TransactionTemplate transactions; private final CacheManager caches;
-    public ImageTypeService(ClassificationMapper mapper,OcrMapper ocr,OcrAccess access,OcrInput input,
+    public ImageTypeService(ClassificationMapper mapper,OcrMapper ocr,MedicalAccess access,OcrInput input,
                             TransactionTemplate transactions,CacheManager caches) {
         this.mapper=mapper;this.ocr=ocr;this.access=access;this.input=input;this.transactions=transactions;this.caches=caches;
     }

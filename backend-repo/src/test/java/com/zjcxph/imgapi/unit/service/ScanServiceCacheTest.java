@@ -352,7 +352,7 @@ class ScanServiceCacheTest {
 
         @Bean
         ScanService scanService(ScanMapper scanMapper,com.zjcxph.imgapi.service.ImageTypeService imageTypes) {
-            return new ScanServiceImpl(scanMapper,imageTypes);
+            return new ScanServiceImpl(scanMapper,imageTypes, org.mockito.Mockito.mock(com.zjcxph.imgapi.security.MedicalAccess.class));
         }
     }
 }

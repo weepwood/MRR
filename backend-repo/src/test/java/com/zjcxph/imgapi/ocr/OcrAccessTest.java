@@ -1,5 +1,7 @@
 package com.zjcxph.imgapi.ocr;
 
+import com.zjcxph.imgapi.security.MedicalAccess;
+
 import com.zjcxph.imgapi.common.AuthSession;
 import com.zjcxph.imgapi.entity.AuthUser;
 import com.zjcxph.imgapi.exception.BusinessException;
@@ -10,7 +12,7 @@ import static org.mockito.Mockito.*;
 
 class OcrAccessTest {
     private final AuthUserMapper users = mock(AuthUserMapper.class);
-    private final OcrAccess access = new OcrAccess(users, mock(com.zjcxph.imgapi.mapper.AuthRoleMapper.class));
+    private final MedicalAccess access = new MedicalAccess(users, mock(com.zjcxph.imgapi.mapper.AuthRoleMapper.class));
 
     @Test void rejectsMissingIdentityAndRevokedPermission() {
         assertThrows(BusinessException.class, () -> access.require(null, "ocr:run"));

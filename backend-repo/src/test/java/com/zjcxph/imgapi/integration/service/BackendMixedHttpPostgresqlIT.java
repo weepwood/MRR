@@ -104,7 +104,7 @@ class BackendMixedHttpPostgresqlIT extends PostgresqlIntegrationTestSupport {
         mvc.addBeanFactoryPostProcessor(factory -> {
             factory.registerSingleton("loginInterceptor", login);
             factory.registerSingleton("qualityController", new DataQualityController(service));
-            factory.registerSingleton("scanController", new ScanController(new ScanServiceImpl(scans, null), null));
+            factory.registerSingleton("scanController", new ScanController(new ScanServiceImpl(scans, null, org.mockito.Mockito.mock(com.zjcxph.imgapi.security.MedicalAccess.class)), null));
         });
         var servlet = Tomcat.addServlet(context, "mvc", new DispatcherServlet(mvc));
         servlet.setLoadOnStartup(1);

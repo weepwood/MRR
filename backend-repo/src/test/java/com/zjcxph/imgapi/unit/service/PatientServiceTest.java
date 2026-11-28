@@ -28,6 +28,9 @@ class PatientServiceTest {
     @Mock
     private SearchMapper searchMapper;
 
+    @Mock
+    private com.zjcxph.imgapi.security.MedicalAccess medicalAccess;
+
     @InjectMocks
     private PatientService patientService;
 

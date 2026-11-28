@@ -144,7 +144,7 @@ class ScanMapperPostgresqlIT extends PostgresqlIntegrationTestSupport {
                 VALUES ('987654319','987654322','http-cursor-second.jpg','synthetic',1) RETURNING id
                 """, Integer.class);
         var service = new com.zjcxph.imgapi.service.impl.ScanServiceImpl(scanMapper,
-                org.mockito.Mockito.mock(com.zjcxph.imgapi.service.ImageTypeService.class));
+                org.mockito.Mockito.mock(com.zjcxph.imgapi.service.ImageTypeService.class), org.mockito.Mockito.mock(com.zjcxph.imgapi.security.MedicalAccess.class));
         // Isolated MVC contract test, not a substitute for application permission tests.
         var mvc = org.springframework.test.web.servlet.setup.MockMvcBuilders.standaloneSetup(
                 new com.zjcxph.imgapi.controller.ScanController(service,

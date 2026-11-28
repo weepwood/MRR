@@ -4,6 +4,7 @@ import com.zjcxph.imgapi.exception.BusinessException;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
+import com.zjcxph.imgapi.security.MedicalAccess;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
@@ -18,15 +19,17 @@ public class DataQualityRepairOrderService {
     private final DeploymentReadinessService readiness;
     private final MaintenanceModeService maintenance;
     private final boolean enabled;
+    private final MedicalAccess medicalAccess;
 
     public DataQualityRepairOrderService(JdbcTemplate jdbc, DataQualityService quality,
             DeploymentReadinessService readiness, MaintenanceModeService maintenance,
-            @Value("${app.data-quality.repair-enabled:false}") boolean enabled) {
+            @Value("${app.data-quality.repair-enabled:false}") boolean enabled, MedicalAccess medicalAccess) {
         this.jdbc = jdbc;
         this.quality = quality;
         this.readiness = readiness;
         this.maintenance = maintenance;
         this.enabled = enabled;
+        this.medicalAccess = medicalAccess;
     }
 
     public record Order(long id, long issueId, Integer scanId, long targetArchiveId,
@@ -237,6 +240,7 @@ public class DataQualityRepairOrderService {
         if (actor <= 0) throw new BusinessException(401,"无效操作者");
         if (!enabled) throw new BusinessException(503,"修复工单已关闭");
         if (readiness.isReadOnly() || maintenance.isEnabled()) throw new BusinessException(503,"系统处于只读模式");
+        medicalAccess.requireWrite(actor,"system:manage","record:manage");
     }
 
     private void lockArchive() {

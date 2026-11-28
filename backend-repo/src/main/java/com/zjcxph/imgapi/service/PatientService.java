@@ -4,6 +4,7 @@ import com.zjcxph.imgapi.dto.req.PatientUpdateRequest;
 import com.zjcxph.imgapi.entity.Patient;
 import com.zjcxph.imgapi.mapper.SearchMapper;
 import org.springframework.stereotype.Service;
+import com.zjcxph.imgapi.security.MedicalAccess;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
@@ -28,12 +29,16 @@ public class PatientService {
 
     private final SearchMapper searchMapper;
 
-    public PatientService(SearchMapper searchMapper) {
+    private final MedicalAccess medicalAccess;
+
+    public PatientService(SearchMapper searchMapper, MedicalAccess medicalAccess) {
         this.searchMapper = searchMapper;
+        this.medicalAccess = medicalAccess;
     }
 
     @Transactional
     public Patient update(Integer id, PatientUpdateRequest request) {
+        medicalAccess.requireCurrentWrite("record:edit");
         if (id == null || id <= 0) {
             throw new IllegalArgumentException("患者 ID 无效");
         }

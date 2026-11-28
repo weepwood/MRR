@@ -1,5 +1,7 @@
 package com.zjcxph.imgapi.integration.mapper;
 
+import com.zjcxph.imgapi.security.MedicalAccess;
+
 import com.zjcxph.imgapi.common.AuthSession;
 import com.zjcxph.imgapi.exception.BusinessException;
 import com.zjcxph.imgapi.integration.PostgresqlIntegrationTestSupport;
@@ -34,12 +36,12 @@ class AutomaticClassificationPostgresqlIT extends PostgresqlIntegrationTestSuppo
     @Autowired AutomaticClassificationMapper mapper;@Autowired ClassificationMapper classifications;
     @Autowired OcrBatchMapper batches;@Autowired OcrMapper ocr;@Autowired JdbcTemplate jdbc;@Autowired PlatformTransactionManager manager;
     @TempDir Path temporary;
-    AutomaticClassificationService service;ImageTypeService types;OcrQualityGate quality;OcrAccess access;OcrInput input;
+    AutomaticClassificationService service;ImageTypeService types;OcrQualityGate quality;MedicalAccess access;OcrInput input;
     OcrJobService jobs;
     AuthSession actor;String batchId;String jobId;Long archive;String sourceHash;List<Integer> scans;
     @BeforeEach void setup() throws Exception {
         actor=new AuthSession();actor.setId(876L);actor.setUsername("synthetic-authorizer");actor.setRoleCode("ADMIN");AuthContext.setCurrentUser(actor);
-        access=mock(OcrAccess.class);when(access.require(anyLong(),any(String[].class))).thenReturn(actor);
+        access=mock(MedicalAccess.class);when(access.require(anyLong(),any(String[].class))).thenReturn(actor);
         when(access.requireWrite(anyLong(),any(String[].class))).thenReturn(actor);
         when(access.requireExecutionWrite(anyLong(),any(String[].class))).thenReturn(actor);
         sourceHash="a".repeat(64);input=mock(OcrInput.class);when(input.prepare(anyInt(),any())).thenAnswer(i->new OcrInput.Prepared(temporary.resolve("synthetic.ocr"),sourceHash));
@@ -125,7 +127,7 @@ class AutomaticClassificationPostgresqlIT extends PostgresqlIntegrationTestSuppo
             return new OcrInput.Prepared(temporary.resolve("synthetic.ocr"),sourceHash);
         });
         var guard=mock(OcrLoadGuard.class);when(guard.allowed()).thenReturn(true);
-        var actual=new AutomaticClassificationService(mapper,classifications,batches,ocr,input,new OcrAccess(users,roles),types,quality,guard,jobs,mock(OcrBatchService.class),new TransactionTemplate(manager));
+        var actual=new AutomaticClassificationService(mapper,classifications,batches,ocr,input,new MedicalAccess(users,roles),types,quality,guard,jobs,mock(OcrBatchService.class),new TransactionTemplate(manager));
         var executor=java.util.concurrent.Executors.newSingleThreadExecutor();
         try {
             var pending=executor.submit(actual::runOne);

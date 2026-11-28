@@ -1,5 +1,7 @@
 package com.zjcxph.imgapi.service;
 
+import com.zjcxph.imgapi.security.MedicalAccess;
+
 import com.zjcxph.imgapi.common.AuthSession;
 import com.zjcxph.imgapi.exception.BusinessException;
 import com.zjcxph.imgapi.mapper.OcrMapper;
@@ -15,12 +17,12 @@ import java.util.UUID;
 
 @Service
 public class OcrJobService {
-    private final OcrMapper mapper; private final ScanMapper scans; private final OcrAccess access;
+    private final OcrMapper mapper; private final ScanMapper scans; private final MedicalAccess access;
     private final OcrEngine engine; private final OcrInput input; private final SystemSettingService settings;
     private final TransactionTemplate transactions;
     private final ClassificationService classification;
     private final OcrLoadGuard loadGuard;
-    public OcrJobService(OcrMapper mapper, ScanMapper scans, OcrAccess access, OcrEngine engine,
+    public OcrJobService(OcrMapper mapper, ScanMapper scans, MedicalAccess access, OcrEngine engine,
                          OcrInput input, SystemSettingService settings, TransactionTemplate transactions,ClassificationService classification,OcrLoadGuard loadGuard) {
         this.mapper=mapper; this.scans=scans; this.access=access; this.engine=engine;
         this.input=input; this.settings=settings; this.transactions=transactions;

@@ -56,7 +56,7 @@ class ArchiveLinkRefreshPostgresqlIT extends PostgresqlIntegrationTestSupport {
         com.zjcxph.imgapi.entity.Scan patch = new com.zjcxph.imgapi.entity.Scan();
         patch.setId(id);
         patch.setSjh("  ");
-        new com.zjcxph.imgapi.service.impl.ScanServiceImpl(mapper, org.mockito.Mockito.mock(com.zjcxph.imgapi.service.ImageTypeService.class)).update(patch);
+        new com.zjcxph.imgapi.service.impl.ScanServiceImpl(mapper, org.mockito.Mockito.mock(com.zjcxph.imgapi.service.ImageTypeService.class), org.mockito.Mockito.mock(com.zjcxph.imgapi.security.MedicalAccess.class)).update(patch);
         assertThat(jdbc.queryForObject("SELECT sjh FROM app.mr_scan WHERE id=?", String.class, id)).isNull();
         assertThat(jdbc.queryForObject("SELECT archive_id FROM app.mr_scan WHERE id=?", Long.class, id)).isNull();
         assertThat(jdbc.queryForObject("SELECT bah FROM app.mr_scan WHERE id=?", String.class, id)).isEqualTo("10000001");

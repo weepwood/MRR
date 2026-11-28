@@ -1,5 +1,7 @@
 package com.zjcxph.imgapi.service;
 
+import com.zjcxph.imgapi.security.MedicalAccess;
+
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.zjcxph.imgapi.common.AuthSession;
 import com.zjcxph.imgapi.exception.BusinessException;
@@ -14,9 +16,9 @@ import java.util.*;
 public class ClassificationCatalogService {
     public record Bundle(String name,List<Rule> rules,List<Lexicon> lexicon) {}
     private final ClassificationCatalogMapper catalog; private final ClassificationMapper mapper;
-    private final OcrAccess access; private final TransactionTemplate transactions;
+    private final MedicalAccess access; private final TransactionTemplate transactions;
     private final ClassificationEngine engine=new ClassificationEngine();
-    public ClassificationCatalogService(ClassificationCatalogMapper catalog,ClassificationMapper mapper,OcrAccess access,TransactionTemplate transactions) {
+    public ClassificationCatalogService(ClassificationCatalogMapper catalog,ClassificationMapper mapper,MedicalAccess access,TransactionTemplate transactions) {
         this.catalog=catalog;this.mapper=mapper;this.access=access;this.transactions=transactions;
     }
     public String create(AuthSession session,Bundle bundle) {

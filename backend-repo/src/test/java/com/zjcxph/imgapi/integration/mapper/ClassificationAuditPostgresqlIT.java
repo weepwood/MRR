@@ -1,5 +1,7 @@
 package com.zjcxph.imgapi.integration.mapper;
 
+import com.zjcxph.imgapi.security.MedicalAccess;
+
 import com.zjcxph.imgapi.common.AuthSession;
 import com.zjcxph.imgapi.integration.PostgresqlIntegrationTestSupport;
 import com.zjcxph.imgapi.mapper.ClassificationMapper;
@@ -38,7 +40,7 @@ class ClassificationAuditPostgresqlIT extends PostgresqlIntegrationTestSupport {
     ImageTypeService service; AuthSession actor; int scan; Long archive;
     @BeforeEach void setup() {
         actor=new AuthSession();actor.setId(9999999999L);actor.setUsername("synthetic-auditor");actor.setRoleCode("ADMIN");actor.setStatus("active");
-        AuthContext.setCurrentUser(actor); OcrAccess access=mock(OcrAccess.class);
+        AuthContext.setCurrentUser(actor); MedicalAccess access=mock(MedicalAccess.class);
         when(access.require(anyLong(),any(String[].class))).thenReturn(actor);
         when(access.requireWrite(anyLong(),any(String[].class))).thenReturn(actor);
         OcrInput input=mock(OcrInput.class);
@@ -53,7 +55,7 @@ class ClassificationAuditPostgresqlIT extends PostgresqlIntegrationTestSupport {
         AuthContext.clear();
     }
     @Test void classificationFailureMustNotDiscardSuccessfulOcrFact() {
-        var access=mock(OcrAccess.class);when(access.require(anyLong(),any(String[].class))).thenReturn(actor);
+        var access=mock(MedicalAccess.class);when(access.require(anyLong(),any(String[].class))).thenReturn(actor);
         when(access.requireWrite(anyLong(),any(String[].class))).thenReturn(actor);
         var input=mock(OcrInput.class);when(input.prepare(anyInt(),any())).thenAnswer(i->new OcrInput.Prepared(temporary.resolve("synthetic.ocr"),"a".repeat(64)));
         var engine=mock(OcrEngine.class);when(engine.fingerprint(anyString())).thenReturn("b".repeat(64));
@@ -93,7 +95,7 @@ class ClassificationAuditPostgresqlIT extends PostgresqlIntegrationTestSupport {
     }
     @Test void ocrVersionReplacementMustWaitForReviewCommit() throws Exception {
         Long suggestion=suggestion();
-        var access=mock(OcrAccess.class);
+        var access=mock(MedicalAccess.class);
         var writer=java.util.concurrent.Executors.newSingleThreadExecutor();
         var pending=new java.util.concurrent.atomic.AtomicReference<java.util.concurrent.Future<?>>();
         var started=new java.util.concurrent.CountDownLatch(1);
@@ -149,7 +151,7 @@ class ClassificationAuditPostgresqlIT extends PostgresqlIntegrationTestSupport {
             }
         };
         try {
-            var actual=new ImageTypeService(mapper,ocr,new OcrAccess(users,roles),input,tx,new ConcurrentMapCacheManager());
+            var actual=new ImageTypeService(mapper,ocr,new MedicalAccess(users,roles),input,tx,new ConcurrentMapCacheManager());
             assertThatThrownBy(()->{
                 if("manual".equals(action)) actual.manual(scan,3);
                 else actual.review(session,suggestion,action.toUpperCase(java.util.Locale.ROOT),null);

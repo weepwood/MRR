@@ -33,6 +33,9 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 @ImportAutoConfiguration(FlywayAutoConfiguration.class)
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
 class DataExchangeValidationPostgresqlIT extends PostgresqlIntegrationTestSupport {
+    @org.springframework.test.context.bean.override.mockito.MockitoBean
+    private com.zjcxph.imgapi.security.MedicalAccess importAccess;
+
     private static final String PATIENT_HEADERS = "bah,name,idcard,ruyuan,admissiontime,department,bingqu,chuangwei\n";
     private static final String STATISTICS_HEADERS =
             "bah,cid,openerno,date,type,pages,sjh,patientname,inpatientdepartment,patientid,dischargedate\n";

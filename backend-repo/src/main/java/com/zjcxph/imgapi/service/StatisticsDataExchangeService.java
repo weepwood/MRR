@@ -5,6 +5,7 @@ import com.zjcxph.imgapi.service.importer.DataExchangeImportSupport;
 import com.zjcxph.imgapi.service.importer.TabularImportFileReader;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
+import com.zjcxph.imgapi.security.MedicalAccess;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -46,13 +47,16 @@ public class StatisticsDataExchangeService {
 
     private final JdbcTemplate jdbcTemplate;
     private final TabularImportFileReader fileReader;
+    private final MedicalAccess medicalAccess;
 
     public StatisticsDataExchangeService(
             JdbcTemplate jdbcTemplate,
-            TabularImportFileReader fileReader
+            TabularImportFileReader fileReader,
+            MedicalAccess medicalAccess
     ) {
         this.jdbcTemplate = jdbcTemplate;
         this.fileReader = fileReader;
+        this.medicalAccess = medicalAccess;
     }
 
     @Transactional(rollbackFor = Exception.class)
@@ -282,6 +286,8 @@ public class StatisticsDataExchangeService {
         int insertedRows = rows.size() - updatedRows - databaseDuplicates;
 
         if (!dryRun) {
+            // Parsing and temporary staging stay outside the authorization fence.
+            medicalAccess.requireCurrentWrite("record:edit");
             jdbcTemplate.update("""
                     update mr_statistics t
                     set bah = s.bah,

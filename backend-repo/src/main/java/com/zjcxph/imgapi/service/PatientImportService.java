@@ -5,6 +5,7 @@ import com.zjcxph.imgapi.dto.resp.PatientImportResult;
 import com.zjcxph.imgapi.service.importer.TabularImportFileReader;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
+import com.zjcxph.imgapi.security.MedicalAccess;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -54,10 +55,12 @@ public class PatientImportService {
 
     private final JdbcTemplate jdbcTemplate;
     private final TabularImportFileReader fileReader;
+    private final MedicalAccess medicalAccess;
 
-    public PatientImportService(JdbcTemplate jdbcTemplate, TabularImportFileReader fileReader) {
+    public PatientImportService(JdbcTemplate jdbcTemplate, TabularImportFileReader fileReader, MedicalAccess medicalAccess) {
         this.jdbcTemplate = jdbcTemplate;
         this.fileReader = fileReader;
+        this.medicalAccess = medicalAccess;
     }
 
     @Transactional(rollbackFor = Exception.class)
@@ -290,6 +293,8 @@ public class PatientImportService {
 
         int insertedRows = 0;
         if (!dryRun) {
+            // Parsing and temporary staging stay outside the authorization fence.
+            medicalAccess.requireCurrentWrite("record:edit");
             insertedRows = jdbcTemplate.update("""
                     insert into mr_patient
                     (bah, name, idcard, ruyuan, admissiontime, department, bingqu, chuangwei)

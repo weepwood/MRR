@@ -35,7 +35,8 @@ class ScanDataExchangeServiceTest {
         service = new ScanDataExchangeService(
                 jdbcTemplate,
                 new TabularImportFileReader(),
-                cacheManager
+                cacheManager,
+                org.mockito.Mockito.mock(com.zjcxph.imgapi.security.MedicalAccess.class)
         );
     }
 

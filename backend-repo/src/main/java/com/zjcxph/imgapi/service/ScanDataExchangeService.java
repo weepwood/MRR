@@ -9,6 +9,7 @@ import org.springframework.cache.CacheManager;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.core.RowCallbackHandler;
 import org.springframework.stereotype.Service;
+import com.zjcxph.imgapi.security.MedicalAccess;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.support.TransactionSynchronization;
 import org.springframework.transaction.support.TransactionSynchronizationManager;
@@ -46,15 +47,18 @@ public class ScanDataExchangeService {
 
     private final JdbcTemplate jdbcTemplate;
     private final TabularImportFileReader fileReader;
+    private final MedicalAccess medicalAccess;
     private final CacheManager cacheManager;
 
     public ScanDataExchangeService(
             JdbcTemplate jdbcTemplate,
             TabularImportFileReader fileReader,
-            CacheManager cacheManager
+            CacheManager cacheManager,
+            MedicalAccess medicalAccess
     ) {
         this.jdbcTemplate = jdbcTemplate;
         this.fileReader = fileReader;
+        this.medicalAccess = medicalAccess;
         this.cacheManager = cacheManager;
     }
 
@@ -352,6 +356,8 @@ public class ScanDataExchangeService {
         int insertedRows = rows.size() - existingPaths;
 
         if (!dryRun) {
+            // Parsing and temporary staging stay outside the authorization fence.
+            medicalAccess.requireCurrentWrite("record:edit");
             jdbcTemplate.update("""
                     insert into mr_archive as target (sjh, bah)
                     select s.sjh, max(s.bah)

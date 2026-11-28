@@ -32,7 +32,7 @@ class PatientImportServiceTest {
 
     @BeforeEach
     void setUp() {
-        patientImportService = new PatientImportService(jdbcTemplate, new TabularImportFileReader());
+        patientImportService = new PatientImportService(jdbcTemplate, new TabularImportFileReader(), org.mockito.Mockito.mock(com.zjcxph.imgapi.security.MedicalAccess.class));
     }
 
     @Test

@@ -39,6 +39,7 @@ class ArchiveExportJobDownloadTest {
         var file = Files.write(directory.resolve("synthetic.zip"), new byte[]{1,2,3,4}).toRealPath();
         job.setFilePath(file.toString());
         job.setOutputBytes(4L);
+        job.setSha256(org.apache.commons.codec.digest.DigestUtils.sha256Hex(new byte[]{1,2,3,4}));
         when(repository.findById(job.getId())).thenReturn(java.util.Optional.of(job));
         java.util.function.Supplier<MockHttpServletRequest> requests = () -> {
             var request = new MockHttpServletRequest("GET", "/download");

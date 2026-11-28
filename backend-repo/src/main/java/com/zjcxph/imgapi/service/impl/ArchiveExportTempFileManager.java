@@ -168,6 +168,26 @@ public class ArchiveExportTempFileManager {
         }
 
         public long length() { return length; }
+
+        /** Verify the actual opened file, using bounded memory and positional reads. */
+        public boolean matchesSha256(String expected) throws IOException {
+            if (expected == null || !expected.matches("[0-9a-fA-F]{64}") || channel.size() != length) return false;
+            var digest = org.apache.commons.codec.digest.DigestUtils.getSha256Digest();
+            var buffer = java.nio.ByteBuffer.allocate(64 * 1024);
+            long position = 0;
+            while (position < length) {
+                buffer.clear();
+                buffer.limit((int) Math.min(buffer.capacity(), length - position));
+                int count = channel.read(buffer, position);
+                if (count <= 0) return false;
+                position += count;
+                buffer.flip();
+                digest.update(buffer);
+            }
+            return channel.size() == length && java.security.MessageDigest.isEqual(
+                    digest.digest(), java.util.HexFormat.of().parseHex(expected));
+        }
+
         public void seek(long offset) throws IOException { channel.position(offset); }
         public int read(byte[] buffer, int offset, int count) throws IOException {
             return channel.read(java.nio.ByteBuffer.wrap(buffer, offset, count));

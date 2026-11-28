@@ -219,11 +219,15 @@ public class ArchiveExportJobService {
         ArchiveExportJob job = requireOwned(session, id);
         Path file = requireDownloadFile(session, job);
         var lease = tempFileManager.openDownload(file.toString(), session.getId());
-        Long expected = job.getOutputBytes();
-        // Validate the opened handle, not a separate path stat. Never publish stale
-        // completion metadata for a file whose length no longer matches.
-        if (expected == null || expected <= 0 || lease.length() != expected) {
-            var failure = new BusinessException(409, "导出文件与完成记录不一致，请重新导出");
+        try {
+            Long expected = job.getOutputBytes();
+            // Check the opened handle before any HTTP representation metadata or bytes are published.
+            if (expected == null || expected <= 0 || lease.length() != expected
+                    || !lease.matchesSha256(job.getSha256())) {
+                throw new BusinessException(409, "导出文件与完成记录不一致，请重新导出");
+            }
+            return lease;
+        } catch (IOException | RuntimeException failure) {
             try {
                 lease.close();
             } catch (IOException closeFailure) {
@@ -231,7 +235,6 @@ public class ArchiveExportJobService {
             }
             throw failure;
         }
-        return lease;
     }
 
     public ArchiveExportJob requireOwned(AuthSession session, String id) {

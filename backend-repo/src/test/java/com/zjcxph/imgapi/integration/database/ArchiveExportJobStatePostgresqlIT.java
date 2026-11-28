@@ -299,6 +299,41 @@ class ArchiveExportJobStatePostgresqlIT extends PostgresqlIntegrationTestSupport
         }
     }
 
+    @org.junit.jupiter.params.ParameterizedTest
+    @org.junit.jupiter.params.provider.ValueSource(strings={"same-length", "missing-digest"})
+    void downloadRequiresVerifiedContentAndReleasesRejectedLease(String scenario) throws Exception {
+        var repository = new ArchiveExportJobRepository(jdbc);
+        String id = insert(repository);
+        var exporter = exporter();
+        byte[] original = {1, 2, 3, 4};
+        doAnswer(call -> { call.<OutputStream>getArgument(1).write(original); return null; })
+                .when(exporter).writeBatchZip(any(), any(), any());
+        var service = service(repository, exporter);
+        ReflectionTestUtils.invokeMethod(service, "runJob", id);
+        var job = repository.findById(id).orElseThrow();
+        assertThat(job.getStatus()).isEqualTo("SUCCESS");
+        var session = new com.zjcxph.imgapi.common.AuthSession();
+        session.setId(1L); session.setUsername("synthetic-export-user");
+        session.setPermissions(List.of("record:read", "record:download"));
+        Path output = Path.of(job.getFilePath());
+        if ("same-length".equals(scenario)) Files.write(output, new byte[]{4, 3, 2, 1});
+        else jdbc.update("UPDATE app.archive_export_job SET sha256=NULL WHERE id=CAST(? AS UUID)", id);
+        for (int attempt=0; attempt<3; attempt++) {
+            assertThatThrownBy(() -> { try (var ignored = service.openDownload(session,id)) { } })
+                    .isInstanceOf(com.zjcxph.imgapi.exception.BusinessException.class)
+                    .satisfies(error -> assertThat(((com.zjcxph.imgapi.exception.BusinessException)error).getCode()).isEqualTo(409));
+        }
+        assertThat(repository.findById(id).orElseThrow().getStatus()).isEqualTo("SUCCESS");
+        assertThat(Files.size(output)).isEqualTo(4L);
+        Files.write(output, original);
+        jdbc.update("UPDATE app.archive_export_job SET sha256=? WHERE id=CAST(? AS UUID)",job.getSha256(),id);
+        try (var lease = service.openDownload(session,id)) {
+            byte[] actual = new byte[4];
+            assertThat(lease.read(actual,0,4)).isEqualTo(4);
+            assertThat(actual).isEqualTo(original);
+        }
+    }
+
     private ArchiveExportService exporter() {
         ArchiveExportService exporter = mock(ArchiveExportService.class);
         PathDO item = new PathDO();

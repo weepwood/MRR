@@ -200,6 +200,15 @@ public class ArchiveExportJobRepository {
                 """, timestamp(completedAt), id);
     }
 
+    /** A caller without a successful worker claim can settle only a pending cancelled row. */
+    public int markPendingCancelled(String id, LocalDateTime completedAt) {
+        return jdbcTemplate.update("""
+                UPDATE app.archive_export_job
+                SET status = 'CANCELLED', completed_at = ?, updated_at = CURRENT_TIMESTAMP
+                WHERE id = CAST(? AS UUID) AND status = 'PENDING' AND cancel_requested
+                """, timestamp(completedAt), id);
+    }
+
     public int requestCancel(String id) {
         return jdbcTemplate.update("""
                 UPDATE app.archive_export_job

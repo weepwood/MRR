@@ -187,7 +187,7 @@ public class ArchiveExportJobService {
             cancellation.set(true);
         }
         if ("PENDING".equals(job.getStatus())) {
-            repository.markCancelled(id, LocalDateTime.now());
+            repository.markPendingCancelled(id, LocalDateTime.now());
         }
         return ArchiveExportJobResponse.from(requireOwned(session, id));
     }
@@ -367,7 +367,7 @@ public class ArchiveExportJobService {
         if (repository.markProcessing(id, job.getFileName(), job.getFilePath(),
                 LocalDateTime.now().plus(properties.getRetention())) == 0) {
             if (repository.isCancelRequested(id)) {
-                repository.markCancelled(id, LocalDateTime.now());
+                repository.markPendingCancelled(id, LocalDateTime.now());
             }
             return;
         }

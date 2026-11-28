@@ -116,6 +116,48 @@ class ArchiveExportJobStatePostgresqlIT extends PostgresqlIntegrationTestSupport
         }
     }
 
+    @org.junit.jupiter.params.ParameterizedTest
+    @org.junit.jupiter.params.provider.ValueSource(strings={"stale-cancel", "lost-claim", "pending-cancel"})
+    @Transactional(propagation = Propagation.NOT_SUPPORTED)
+    void unclaimedCancellationCannotSettleActiveWorker(String scenario) throws Exception {
+        var repository = spy(new ArchiveExportJobRepository(jdbc));
+        String id = insert(repository);
+        var exporter = exporter();
+        try {
+            var independent = new ArchiveExportJobRepository(jdbc);
+            Runnable claim = () -> {
+                assertThat(independent.markProcessing(id,"synthetic.zip",null,LocalDateTime.now().plusHours(1))).isEqualTo(1);
+                independent.updateProgress(id,1);
+            };
+            var service = service(repository,exporter);
+            var session = new com.zjcxph.imgapi.common.AuthSession();
+            session.setId(1L); session.setUsername("synthetic-export-user");
+            session.setPermissions(List.of("record:read","record:download"));
+            if ("lost-claim".equals(scenario)) {
+                doAnswer(call -> { claim.run(); assertThat(independent.requestCancel(id)).isEqualTo(1); return 0; })
+                        .when(repository).markProcessing(eq(id),any(),any(),any());
+                ReflectionTestUtils.invokeMethod(service,"runJob",id);
+            } else {
+                if ("stale-cancel".equals(scenario)) doAnswer(call -> { claim.run(); return independent.requestCancel(id); })
+                        .when(repository).requestCancel(id);
+                service.cancel(session,id);
+            }
+            var current = independent.findById(id).orElseThrow();
+            assertThat(current.getCancelRequested()).isTrue();
+            if ("pending-cancel".equals(scenario)) {
+                assertThat(current.getStatus()).isEqualTo("CANCELLED");
+                assertThat(current.getCompletedAt()).isNotNull();
+            } else {
+                assertThat(current.getStatus()).isEqualTo("PROCESSING");
+                assertThat(current.getProcessedCount()).isEqualTo(1);
+                assertThat(current.getCompletedAt()).isNull();
+                assertThat(independent.markCancelled(id,LocalDateTime.now())).isEqualTo(1);
+                assertThat(independent.findById(id).orElseThrow().getStatus()).isEqualTo("CANCELLED");
+            }
+            verifyNoInteractions(exporter);
+        } finally { jdbc.update("DELETE FROM app.archive_export_job WHERE id=CAST(? AS UUID)",id); }
+    }
+
     @Test
     void workerFailureDoesNotExposeStorageDetails() throws Exception {
         ArchiveExportJobRepository repository = new ArchiveExportJobRepository(jdbc);

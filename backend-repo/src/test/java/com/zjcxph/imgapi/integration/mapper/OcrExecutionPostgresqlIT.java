@@ -89,6 +89,67 @@ class OcrExecutionPostgresqlIT extends PostgresqlIntegrationTestSupport {
         assertThat(mapper.job(current.getId()).getStatus()).isEqualTo("SUCCESS");
     }
 
+    @org.junit.jupiter.params.ParameterizedTest
+    @org.junit.jupiter.params.provider.ValueSource(strings={"revoke", "source", "version"})
+    @org.springframework.transaction.annotation.Transactional(propagation=org.springframework.transaction.annotation.Propagation.NOT_SUPPORTED)
+    void committedOcrFactDoesNotAuthorizeStaleClassification(String change,
+            @org.junit.jupiter.api.io.TempDir java.nio.file.Path temp) throws Exception {
+        Job current=job(); int scan=scan(current.getArchiveId());
+        long actor=jdbc.queryForObject("INSERT INTO app.mr_auth_user(username,password_hash,role_code,status) VALUES (?,'synthetic','ADMIN','active') RETURNING id",Long.class,"synthetic-ocr-actor-"+UUID.randomUUID());
+        current.setOwnerUserId(actor);
+        String hash="a".repeat(64),fingerprint="b".repeat(64);
+        current.setConfigSnapshot(com.zjcxph.imgapi.ocr.OcrProtocol.JSON.writeValueAsString(new Config("synthetic",fingerprint,30,65536,.7)));
+        String replacement=UUID.randomUUID().toString();
+        try {
+            mapper.insert(current);mapper.insertItem(current.getId(),scan);mapper.planned(current.getId(),1);
+            var engine=org.mockito.Mockito.mock(com.zjcxph.imgapi.ocr.OcrEngine.class);
+            var input=org.mockito.Mockito.mock(com.zjcxph.imgapi.ocr.OcrInput.class);
+            var settings=org.mockito.Mockito.mock(com.zjcxph.imgapi.service.SystemSettingService.class);
+            var classification=org.mockito.Mockito.mock(com.zjcxph.imgapi.service.ClassificationService.class);
+            var guard=org.mockito.Mockito.mock(com.zjcxph.imgapi.ocr.OcrLoadGuard.class);
+            var path=java.nio.file.Files.createFile(temp.resolve("synthetic.ocr"));
+            org.mockito.Mockito.when(settings.getSetting("ocrEnabled")).thenReturn("true");
+            org.mockito.Mockito.when(engine.fingerprint("synthetic")).thenReturn(fingerprint);
+            org.mockito.Mockito.when(input.prepare(org.mockito.ArgumentMatchers.eq(scan),org.mockito.ArgumentMatchers.any())).thenReturn(new com.zjcxph.imgapi.ocr.OcrInput.Prepared(path,hash));
+            org.mockito.Mockito.when(engine.recognize(org.mockito.ArgumentMatchers.eq("synthetic"),org.mockito.ArgumentMatchers.eq(path),org.mockito.ArgumentMatchers.eq(30),org.mockito.ArgumentMatchers.eq(65536),org.mockito.ArgumentMatchers.any()))
+                    .thenReturn(new com.zjcxph.imgapi.ocr.OcrProtocol.Result("synthetic",1,1,java.util.List.of(),"synthetic"));
+            var tx=new org.springframework.transaction.support.TransactionTemplate(transactionManager) {
+                private boolean changed;
+                @Override public <T> T execute(org.springframework.transaction.support.TransactionCallback<T> callback) {
+                    T result=super.execute(callback);
+                    if (!changed && Boolean.TRUE.equals(result)) {
+                        changed=true;
+                        assertThat(mapper.fact(scan)).isNotNull();
+                        // Actual independent committed database mutation between the two service transactions.
+                        switch(change) {
+                            case "revoke" -> jdbc.update("UPDATE app.mr_auth_user SET status='disabled' WHERE id=?",actor);
+                            case "source" -> jdbc.update("UPDATE app.mr_scan SET uploadflag=0 WHERE id=?",scan);
+                            case "version" -> jdbc.update("UPDATE app.mr_scan_ocr SET result_version=? WHERE scan_id=?",replacement,scan);
+                            default -> throw new AssertionError(change);
+                        }
+                    }
+                    return result;
+                }
+            };
+            var service=new com.zjcxph.imgapi.service.OcrJobService(mapper,scans,new com.zjcxph.imgapi.ocr.OcrAccess(users),engine,input,settings,tx,classification,guard);
+            service.runOne();
+            org.mockito.Mockito.verifyNoInteractions(classification);
+            var item=mapper.items(current.getId(),0,50).getFirst();
+            assertThat(item.getOcrResultVersion()).isNull();
+            assertThat(item.getStatus()).isEqualTo("FAILED");
+            assertThat(item.getFailureCode()).isEqualTo("revoke".equals(change)?"AUTH_REVOKED":"SOURCE_CHANGED");
+            assertThat(mapper.job(current.getId()).getStatus()).isEqualTo("FAILED");
+            assertThat(mapper.job(current.getId()).getLeaseToken()).isNull();
+            assertThat(mapper.fact(scan)).isNotNull();
+            if ("version".equals(change)) assertThat(mapper.fact(scan).getResultVersion()).isEqualTo(replacement);
+        } finally {
+            com.zjcxph.imgapi.integration.OcrTestDataCleanup.purge(jdbc,transactionManager,current.getArchiveId(),null);
+            jdbc.update("DELETE FROM app.mr_auth_user WHERE id=?",actor);
+        }
+    }
+
+    @Autowired com.zjcxph.imgapi.mapper.AuthUserMapper users;
+
     @Test void claimsWithFencingAndRecoversExpiredPageWithoutLosingProgress() {
         Job job=job(); int scan=scan(job.getArchiveId()); mapper.insert(job); mapper.insertItem(job.getId(),scan); mapper.planned(job.getId(),1);
         Job claimed=mapper.claim("token-one"); assertThat(claimed.getId()).isEqualTo(job.getId());

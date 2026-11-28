@@ -161,6 +161,7 @@ public class OcrJobService {
             transactions.executeWithoutResult(tx->{
                 mapper.lock(job.getId());
                 if(!mapper.alive(job.getId(),token)) return;
+                if(!validateClassificationInput(job,token,item,fact)) return;
                 mapper.complete(job.getId(),item.getScanId(),"LOW_CONFIDENCE".equals(fact.getStatus())?"LOW_CONFIDENCE":"NO_MATCH",fact.getStatus(),fact.getResultVersion(),null);
                 classification.classify(job,item,fact);
                 mapper.release(job.getId(),token);
@@ -168,10 +169,32 @@ public class OcrJobService {
         } catch(Exception failure) {
             transactions.executeWithoutResult(tx->{
                 mapper.lock(job.getId());if(!mapper.alive(job.getId(),token)) return;
+                if(!validateClassificationInput(job,token,item,fact)) return;
                 mapper.complete(job.getId(),item.getScanId(),"NO_MATCH",fact.getStatus(),fact.getResultVersion(),"CLASSIFICATION_FAILED");
                 mapper.release(job.getId(),token);
             });
         }
+    }
+    /** Revalidate the committed OCR fact and durable owner authorization in the classification transaction. */
+    private boolean validateClassificationInput(Job job,String token,Item item,Fact fact) {
+        String failure=null;
+        try {
+            access.require(job.getOwnerUserId(),"record:read","ocr:run");
+        } catch (BusinessException denied) {
+            failure="AUTH_REVOKED";
+        }
+        if (failure==null) {
+            Fact current=mapper.factForCurrentArchive(item.getScanId(),job.getArchiveId());
+            if (current==null || !Objects.equals(current.getResultVersion(),fact.getResultVersion())
+                    || !Objects.equals(current.getContentHash(),fact.getContentHash())
+                    || !Objects.equals(current.getStatus(),fact.getStatus())) {
+                failure="SOURCE_CHANGED";
+            }
+        }
+        if (failure==null) return true;
+        mapper.complete(job.getId(),item.getScanId(),"FAILED","FAILED",null,failure);
+        mapper.release(job.getId(),token);
+        return false;
     }
     private int integer(String key,int fallback,int min,int max) {
         try { return Math.max(min,Math.min(max,Integer.parseInt(settings.getSetting(key)))); } catch (Exception e) { return fallback; }

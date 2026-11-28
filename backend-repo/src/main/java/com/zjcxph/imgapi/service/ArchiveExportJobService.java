@@ -400,9 +400,22 @@ public class ArchiveExportJobService {
             ArchiveExportService.ExportProgress progress = new ArchiveExportService.ExportProgress() {
                 private int lastCompleted;
                 private long lastWrite = System.nanoTime();
+                private long lastCancelPoll;
+                private boolean cancellationChecked;
                 @Override
                 public boolean isCancelled() {
-                    return cancellation.get() || Thread.currentThread().isInterrupted();
+                    if (cancellation.get() || Thread.currentThread().isInterrupted()) return true;
+                    long now = System.nanoTime();
+                    // Keep local cancellation immediate; observe durable cancellation at bounded checkpoints.
+                    if (!cancellationChecked || now - lastCancelPoll >= 1_000_000_000L) {
+                        cancellationChecked = true;
+                        lastCancelPoll = now;
+                        if (repository.isCancelRequested(id)) {
+                            cancellation.set(true);
+                            return true;
+                        }
+                    }
+                    return false;
                 }
 
                 @Override

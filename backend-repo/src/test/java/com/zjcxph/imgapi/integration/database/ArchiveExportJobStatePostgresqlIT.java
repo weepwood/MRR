@@ -82,6 +82,40 @@ class ArchiveExportJobStatePostgresqlIT extends PostgresqlIntegrationTestSupport
         assertThat(directory.resolve(id + ".zip")).doesNotExist();
     }
 
+    @org.junit.jupiter.params.ParameterizedTest
+    @org.junit.jupiter.params.provider.ValueSource(strings={"ZIP", "PDF"})
+    @Transactional(propagation = Propagation.NOT_SUPPORTED)
+    void committedCancellationIsObservedDuringWritingWithoutLocalSignal(String format) throws Exception {
+        var repository = spy(new ArchiveExportJobRepository(jdbc));
+        String id = insert(repository);
+        jdbc.update("UPDATE app.archive_export_job SET format=? WHERE id=CAST(? AS UUID)", format, id);
+        var exporter = exporter();
+        var observed = new java.util.concurrent.atomic.AtomicBoolean();
+        org.mockito.stubbing.Answer<Void> write = invocation -> {
+            var progress = invocation.<ArchiveExportService.ExportProgress>getArgument(2);
+            invocation.<OutputStream>getArgument(1).write(1);
+            // A separate repository writes the durable flag; no in-process worker signal is delivered.
+            assertThat(new ArchiveExportJobRepository(jdbc).requestCancel(id)).isEqualTo(1);
+            observed.set(progress.isCancelled());
+            if (observed.get()) throw new com.zjcxph.imgapi.exception.ArchiveExportCancelledException();
+            invocation.<OutputStream>getArgument(1).write(2);
+            return null;
+        };
+        doAnswer(write).when(exporter).writeBatchZip(any(),any(),any());
+        doAnswer(write).when(exporter).writeBatchPdf(any(),any(),any());
+        try {
+            ReflectionTestUtils.invokeMethod(service(repository, exporter), "runJob", id);
+            assertThat(observed.get()).as("durable cancellation observed before more output").isTrue();
+            var job=repository.findById(id).orElseThrow();
+            assertThat(job.getStatus()).isEqualTo("CANCELLED");
+            assertThat(job.getOutputBytes()).isZero();
+            assertThat(Path.of(job.getFilePath())).doesNotExist();
+            verify(repository,never()).markSuccess(anyString(),anyLong(),anyString(),any());
+        } finally {
+            jdbc.update("DELETE FROM app.archive_export_job WHERE id=CAST(? AS UUID)",id);
+        }
+    }
+
     @Test
     void workerFailureDoesNotExposeStorageDetails() throws Exception {
         ArchiveExportJobRepository repository = new ArchiveExportJobRepository(jdbc);

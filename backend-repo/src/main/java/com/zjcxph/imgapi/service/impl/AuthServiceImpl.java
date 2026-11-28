@@ -189,7 +189,7 @@ public class AuthServiceImpl implements AuthService {
         if (created == null) {
             throw new BusinessException("注册申请保存失败，请稍后重试");
         }
-        securityAudit.info("event=USER_REGISTRATION_SUBMITTED targetUserId={} username={} sourceIp={} status=PENDING result=SUCCESS",
+        auditSuccessAfterCommit(false, "event=USER_REGISTRATION_SUBMITTED targetUserId={} username={} sourceIp={} status=PENDING result=SUCCESS",
                 created.getId(), username, clientIp);
         return new RegistrationResultDTO(
                 created.getId(), created.getUsername(), created.getDisplayName(), created.getStatus(), created.getAppliedAt());
@@ -213,7 +213,7 @@ public class AuthServiceImpl implements AuthService {
         }
 
         AuthUser approved = authUserMapper.findById(userId);
-        securityAudit.info("event=USER_REGISTRATION_APPROVED actorUserId={} targetUserId={} username={} roleCode={} sourceIp={} result=SUCCESS",
+        auditSuccessAfterCommit(false, "event=USER_REGISTRATION_APPROVED actorUserId={} targetUserId={} username={} roleCode={} sourceIp={} result=SUCCESS",
                 administratorId, userId, target.getUsername(), roleCode, clientIp);
         return toProfile(approved);
     }
@@ -238,7 +238,7 @@ public class AuthServiceImpl implements AuthService {
         }
 
         AuthUser rejected = authUserMapper.findById(userId);
-        securityAudit.warn("event=USER_REGISTRATION_REJECTED actorUserId={} targetUserId={} username={} sourceIp={} reason={} result=SUCCESS",
+        auditSuccessAfterCommit(true, "event=USER_REGISTRATION_REJECTED actorUserId={} targetUserId={} username={} sourceIp={} reason={} result=SUCCESS",
                 administratorId, userId, target.getUsername(), clientIp, sanitizeAuditText(rejectReason));
         return toProfile(rejected);
     }
@@ -259,7 +259,7 @@ public class AuthServiceImpl implements AuthService {
         if (authUserMapper.reopenRegistration(userId) != 1) {
             throw new BusinessException(409, "注册申请状态已发生变化，请刷新后重试");
         }
-        securityAudit.warn("event=USER_REGISTRATION_REOPENED actorUserId={} targetUserId={} username={} sourceIp={} result=SUCCESS",
+        auditSuccessAfterCommit(true, "event=USER_REGISTRATION_REOPENED actorUserId={} targetUserId={} username={} sourceIp={} result=SUCCESS",
                 administratorId, userId, target.getUsername(), clientIp);
         return toProfile(authUserMapper.findById(userId));
     }
@@ -326,7 +326,7 @@ public class AuthServiceImpl implements AuthService {
         authUserMapper.insertUser(user);
 
         AuthUser created = authUserMapper.findByUsername(username);
-        securityAudit.info("event=USER_CREATED actorUserId={} targetUserId={} username={} roleCode={} sourceIp={} tempExpiresAt={} result=SUCCESS",
+        auditSuccessAfterCommit(false, "event=USER_CREATED actorUserId={} targetUserId={} username={} roleCode={} sourceIp={} tempExpiresAt={} result=SUCCESS",
                 administratorId, created == null ? null : created.getId(), username, roleCode, clientIp, expiresAt);
         return new UserCredentialResultDTO(toProfile(created), temporaryPassword, expiresAt);
     }
@@ -369,7 +369,7 @@ public class AuthServiceImpl implements AuthService {
         }
 
         AuthUser updated = authUserMapper.findById(userId);
-        securityAudit.warn("event=USER_PASSWORD_RESET actorUserId={} targetUserId={} username={} sourceIp={} passwordVersion={} tempExpiresAt={} result=SUCCESS",
+        auditSuccessAfterCommit(true, "event=USER_PASSWORD_RESET actorUserId={} targetUserId={} username={} sourceIp={} passwordVersion={} tempExpiresAt={} result=SUCCESS",
                 administratorId, userId, target.getUsername(), clientIp,
                 updated == null ? null : updated.effectivePasswordVersion(), expiresAt);
         return new UserCredentialResultDTO(toProfile(updated), temporaryPassword, expiresAt);
@@ -406,7 +406,7 @@ public class AuthServiceImpl implements AuthService {
                 user.effectivePasswordVersion(), true) != 1) {
             throw credentialChanged();
         }
-        securityAudit.info("event=USER_FIRST_PASSWORD_CHANGED actorUserId={} targetUserId={} sourceIp={} result=SUCCESS",
+        auditSuccessAfterCommit(false, "event=USER_FIRST_PASSWORD_CHANGED actorUserId={} targetUserId={} sourceIp={} result=SUCCESS",
                 userId, userId, clientIp);
     }
 
@@ -439,7 +439,7 @@ public class AuthServiceImpl implements AuthService {
         if (updated == 0) {
             return null;
         }
-        securityAudit.info("event=USER_ROLE_OR_STATUS_CHANGED actorUserId={} targetUserId={} roleCode={} status={} result=SUCCESS",
+        auditSuccessAfterCommit(false, "event=USER_ROLE_OR_STATUS_CHANGED actorUserId={} targetUserId={} roleCode={} status={} result=SUCCESS",
                 AuthContext.getCurrentUser() == null ? null : AuthContext.getCurrentUser().getId(),
                 id, nextRoleCode, nextStatus);
         return toProfile(authUserMapper.findById(id));
@@ -462,7 +462,7 @@ public class AuthServiceImpl implements AuthService {
         }
         int updated = authUserMapper.updateStatus(id, "disabled");
         if (updated > 0) {
-            securityAudit.warn("event=USER_DISABLED actorUserId={} targetUserId={} previousStatus={} result=SUCCESS",
+            auditSuccessAfterCommit(true, "event=USER_DISABLED actorUserId={} targetUserId={} previousStatus={} result=SUCCESS",
                     AuthContext.getCurrentUser() == null ? null : AuthContext.getCurrentUser().getId(),
                     id, user.getStatus());
         }
@@ -487,7 +487,7 @@ public class AuthServiceImpl implements AuthService {
                 user.effectivePasswordVersion(), false) != 1) {
             throw credentialChanged();
         }
-        securityAudit.info("event=USER_PASSWORD_CHANGED actorUserId={} targetUserId={} result=SUCCESS", userId, userId);
+        auditSuccessAfterCommit(false, "event=USER_PASSWORD_CHANGED actorUserId={} targetUserId={} result=SUCCESS", userId, userId);
     }
 
     @Override
@@ -515,15 +515,26 @@ public class AuthServiceImpl implements AuthService {
         String roleCode = role.getCode();
         boolean permissionsEdited = permissions != null;
         // A successful security event must refer to the committed role change, not a rolled-back write.
-        org.springframework.transaction.support.TransactionSynchronizationManager.registerSynchronization(
-                new org.springframework.transaction.support.TransactionSynchronization() {
-                    @Override
-                    public void afterCommit() {
-                        securityAudit.info("event=ROLE_UPDATED actorUserId={} roleCode={} permissionsEdited={} result=SUCCESS",
-                                actorId, roleCode, permissionsEdited);
-                    }
-                });
+        auditSuccessAfterCommit(false, "event=ROLE_UPDATED actorUserId={} roleCode={} permissionsEdited={} result=SUCCESS",
+                actorId, roleCode, permissionsEdited);
         return role;
+    }
+
+    /** Capture immutable event arguments now; publish success only after the enclosing transaction commits. */
+    private void auditSuccessAfterCommit(boolean warning, String template, Object... arguments) {
+        Runnable publish = () -> {
+            if (warning) securityAudit.warn(template, arguments);
+            else securityAudit.info(template, arguments);
+        };
+        if (org.springframework.transaction.support.TransactionSynchronizationManager.isActualTransactionActive()) {
+            org.springframework.transaction.support.TransactionSynchronizationManager.registerSynchronization(
+                    new org.springframework.transaction.support.TransactionSynchronization() {
+                        @Override public void afterCommit() { publish.run(); }
+                    });
+        } else {
+            // Non-transactional callers (including direct unit tests) have no pending commit.
+            publish.run();
+        }
     }
 
     private void requireLoginAllowed(AuthUser user, String clientIp) {

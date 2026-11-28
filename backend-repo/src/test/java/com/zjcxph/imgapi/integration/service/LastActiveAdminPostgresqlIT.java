@@ -314,6 +314,60 @@ class LastActiveAdminPostgresqlIT extends PostgresqlIntegrationTestSupport {
         }
     }
 
+    @Test
+    void accountDisableAuditOnlyReportsCommittedSuccess() {
+        assertAccountMutationAuditCommitBoundary(true);
+    }
+
+    @Test
+    void accountUpdateAuditOnlyReportsCommittedSuccess() {
+        assertAccountMutationAuditCommitBoundary(false);
+    }
+
+    private void assertAccountMutationAuditCommitBoundary(boolean disable) {
+        var logger = (ch.qos.logback.classic.Logger) org.slf4j.LoggerFactory.getLogger("SECURITY_AUDIT");
+        var audit = new ch.qos.logback.core.read.ListAppender<ch.qos.logback.classic.spi.ILoggingEvent>();
+        audit.start();
+        logger.addAppender(audit);
+        String event = disable ? "USER_DISABLED" : "USER_ROLE_OR_STATUS_CHANGED";
+        var before = userMapper.findById(firstId);
+        try {
+            installActor(secondId);
+            var tx = new TransactionTemplate(transactionManager);
+            Runnable mutation = () -> {
+                if (disable) service.disableUser(firstId);
+                else {
+                    var request = new AuthUserUpdateRequest();
+                    request.setRoleCode("DOCTOR");
+                    request.setStatus("active");
+                    service.updateUser(firstId, request);
+                }
+            };
+            tx.executeWithoutResult(status -> { mutation.run(); status.setRollbackOnly(); });
+            var rolledBack = userMapper.findById(firstId);
+            assertThat(rolledBack.getRoleCode()).isEqualTo(before.getRoleCode());
+            assertThat(rolledBack.getStatus()).isEqualTo(before.getStatus());
+            assertThat(rolledBack.effectivePasswordVersion()).isEqualTo(before.effectivePasswordVersion());
+            assertThat(audit.list).noneMatch(e -> e.getMessage().startsWith("event=" + event + " "));
+            tx.executeWithoutResult(status -> {
+                mutation.run();
+                assertThat(audit.list).noneMatch(e -> e.getMessage().startsWith("event=" + event + " "));
+            });
+            var committed = userMapper.findById(firstId);
+            if (disable) assertThat(committed.getStatus()).isEqualTo("disabled");
+            else assertThat(committed.getRoleCode()).isEqualTo("DOCTOR");
+            var events = audit.list.stream().filter(e -> e.getMessage().startsWith("event=" + event + " ")).toList();
+            assertThat(events).hasSize(1);
+            assertThat(events.getFirst().getArgumentArray()).containsExactly(disable
+                    ? new Object[]{secondId, firstId, before.getStatus()}
+                    : new Object[]{secondId, firstId, "DOCTOR", "active"});
+        } finally {
+            logger.detachAppender(audit);
+            audit.stop();
+            com.zjcxph.imgapi.utils.AuthContext.clear();
+        }
+    }
+
     private void installActor(long id) {
         var user = userMapper.findById(id);
         var session = new com.zjcxph.imgapi.common.AuthSession();

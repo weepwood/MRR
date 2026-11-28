@@ -92,6 +92,54 @@ class OssMigrationManagementMapperPostgresqlIT extends PostgresqlIntegrationTest
         assertThat(cancelling.getCancelRequested()).isTrue();
     }
 
+    @org.junit.jupiter.params.ParameterizedTest
+    @org.junit.jupiter.params.provider.ValueSource(booleans={true,false})
+    @org.springframework.transaction.annotation.Transactional(propagation=org.springframework.transaction.annotation.Propagation.NOT_SUPPORTED)
+    void unclaimedWorkerCannotFinishCancellationOfStartedJob(boolean cancelBeforeRead) {
+        long id=jdbcTemplate.queryForObject("INSERT INTO app.migration_job(status,mode,total_count,processed_count,failed_count) VALUES ('pending','folder',100,0,0) RETURNING id",Long.class);
+        try {
+            var jobs=org.mockito.Mockito.mock(com.zjcxph.imgapi.mapper.MigrationJobMapper.class,org.mockito.AdditionalAnswers.delegatesTo(migrationJobs));
+            Runnable startAndCancel=()->{
+                assertThat(migrationJobs.markRunning(id,new java.util.Date())).isEqualTo(1);
+                assertThat(migrationJobs.updateProgress(id,7,2,java.math.BigDecimal.valueOf(7))).isEqualTo(1);
+                assertThat(migrationJobs.requestCancel(id)).isEqualTo(1);
+            };
+            if(cancelBeforeRead) startAndCancel.run();
+            else org.mockito.Mockito.doAnswer(call->{startAndCancel.run();return 0;}).when(jobs).markRunning(org.mockito.ArgumentMatchers.eq(id),org.mockito.ArgumentMatchers.any());
+            var source=org.mockito.Mockito.mock(com.zjcxph.imgapi.service.impl.MigrationSourceResolver.class);
+            var service=new com.zjcxph.imgapi.service.impl.MigrationServiceImpl(
+                org.mockito.Mockito.mock(com.zjcxph.imgapi.service.OssService.class),scanMapper,migrationLogs,jobs,source,Runnable::run,
+                org.mockito.Mockito.mock(org.springframework.cache.CacheManager.class));
+            org.springframework.test.util.ReflectionTestUtils.invokeMethod(service,"runMigrationJob",id);
+            var current=migrationJobs.findById(id);
+            assertThat(current.getStatus()).isEqualTo("cancelling");
+            assertThat(current.getProcessedCount()).isEqualTo(7L);
+            assertThat(current.getFailedCount()).isEqualTo(2L);
+            assertThat(current.getCompletedAt()).isNull();
+            org.mockito.Mockito.verifyNoInteractions(source);
+        } finally { jdbcTemplate.update("DELETE FROM app.migration_job WHERE id=?",id); }
+    }
+
+    @Test
+    @org.springframework.transaction.annotation.Transactional(propagation=org.springframework.transaction.annotation.Propagation.NOT_SUPPORTED)
+    void cancellationBeforeAnyWorkerStartsCanStillSettle() {
+        long id=jdbcTemplate.queryForObject("INSERT INTO app.migration_job(status,mode,total_count,processed_count,failed_count) VALUES ('pending','folder',100,0,0) RETURNING id",Long.class);
+        try {
+            assertThat(migrationJobs.requestCancel(id)).isEqualTo(1);
+            var source=org.mockito.Mockito.mock(com.zjcxph.imgapi.service.impl.MigrationSourceResolver.class);
+            var service=new com.zjcxph.imgapi.service.impl.MigrationServiceImpl(
+                org.mockito.Mockito.mock(com.zjcxph.imgapi.service.OssService.class),scanMapper,migrationLogs,migrationJobs,source,Runnable::run,
+                org.mockito.Mockito.mock(org.springframework.cache.CacheManager.class));
+            org.springframework.test.util.ReflectionTestUtils.invokeMethod(service,"runMigrationJob",id);
+            var current=migrationJobs.findById(id);
+            assertThat(current.getStatus()).isEqualTo("cancelled");
+            assertThat(current.getTotalCount()).isEqualTo(100L);
+            assertThat(current.getProcessedCount()).isZero();
+            assertThat(current.getCompletedAt()).isNotNull();
+            org.mockito.Mockito.verifyNoInteractions(source);
+        } finally { jdbcTemplate.update("DELETE FROM app.migration_job WHERE id=?",id); }
+    }
+
     @Test
     void lateWorkerCannotRewriteTerminalJob(){
         long id=jdbcTemplate.queryForObject("INSERT INTO app.migration_job(status,mode) VALUES ('running','folder') RETURNING id",Long.class);

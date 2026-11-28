@@ -637,23 +637,25 @@ public class MigrationServiceImpl implements MigrationService {
         long plannedTotal = job.getTotalCount() == null ? 0 : job.getTotalCount();
         long processed = 0;
         long failed = 0;
+        boolean claimed = false;
 
         try {
             if (Boolean.TRUE.equals(migrationJobMapper.isCancelRequested(jobId))) {
-                completeCancelledJob(job, 0, 0);
+                cancelUnstartedJob(jobId);
                 return;
             }
 
             Date startedAt = new Date();
             if (migrationJobMapper.markRunning(jobId, startedAt) == 0) {
                 if (Boolean.TRUE.equals(migrationJobMapper.isCancelRequested(jobId))) {
-                    completeCancelledJob(job, 0, 0);
+                    cancelUnstartedJob(jobId);
                 } else {
                     logger.warn("Migration job {} could not transition from pending to running", jobId);
                 }
                 return;
             }
 
+            claimed = true;
             int afterId = 0;
             boolean cancelled = false;
             boolean exhausted = false;
@@ -765,6 +767,11 @@ public class MigrationServiceImpl implements MigrationService {
             );
         } catch (Exception exception) {
             logger.error("Migration job error: jobId={}, type={}",jobId,exception.getClass().getSimpleName());
+            if (!claimed) {
+                // A rejected or uncertain claim cannot authorize terminal writes against another worker.
+                invalidateSummaryCaches();
+                return;
+            }
             boolean cancelled = Boolean.TRUE.equals(migrationJobMapper.isCancelRequested(jobId));
             migrationJobMapper.complete(
                     jobId,
@@ -786,19 +793,10 @@ public class MigrationServiceImpl implements MigrationService {
         return job != null && ("running".equals(job.getStatus()) || "cancelling".equals(job.getStatus()));
     }
 
-    private void completeCancelledJob(MigrationJob job, long processed, long failed) {
-        long total = job.getTotalCount() == null ? 0 : job.getTotalCount();
-        migrationJobMapper.complete(
-                job.getId(),
-                "cancelled",
-                total,
-                processed,
-                failed,
-                calculateRate(processed, total),
-                "管理员已请求安全取消，任务尚未开始或已停止领取新记录",
-                new Date()
-        );
-        invalidateSummaryCaches();
+    private void cancelUnstartedJob(Long jobId) {
+        if (migrationJobMapper.cancelUnstarted(jobId, new Date()) == 1) {
+            invalidateSummaryCaches();
+        }
     }
 
     private BigDecimal calculateRate(long processed, long total) {

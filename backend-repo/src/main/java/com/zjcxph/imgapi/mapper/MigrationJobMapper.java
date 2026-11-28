@@ -65,6 +65,12 @@ public interface MigrationJobMapper {
             "where id = #{id} and status in ('pending', 'running')")
     int requestCancel(@Param("id") Long id);
 
+    // Only a task that has never been started may be settled without worker ownership.
+    @Update("update migration_job set status = 'cancelled', completed_at = #{completedAt}, updated_at = NOW(), " +
+            "error_message = '管理员已请求安全取消，任务尚未开始' " +
+            "where id = #{id} and status in ('pending', 'cancelling') and cancel_requested = true and started_at is null")
+    int cancelUnstarted(@Param("id") Long id, @Param("completedAt") Date completedAt);
+
     @Select("select cancel_requested from migration_job where id = #{id}")
     Boolean isCancelRequested(@Param("id") Long id);
 

@@ -201,6 +201,7 @@ public class AuthServiceImpl implements AuthService {
                                                    RegistrationApprovalRequest request,
                                                    Long administratorId,
                                                    String clientIp) {
+        authRoleMapper.lockAdminRole();
         requireActiveAdministrator(administratorId);
         AuthUser target = requirePendingRegistration(userId);
         String roleCode = normalizeRoleCode(request.getRoleCode(), null);
@@ -223,6 +224,7 @@ public class AuthServiceImpl implements AuthService {
                                                   RegistrationRejectionRequest request,
                                                   Long administratorId,
                                                   String clientIp) {
+        authRoleMapper.lockAdminRole();
         requireActiveAdministrator(administratorId);
         AuthUser target = requirePendingRegistration(userId);
         String rejectReason = trimToNull(request.getRejectReason());
@@ -295,6 +297,7 @@ public class AuthServiceImpl implements AuthService {
     public UserCredentialResultDTO createUser(AdminCreateUserRequest request,
                                                Long administratorId,
                                                String clientIp) {
+        authRoleMapper.lockAdminRole();
         requireActiveAdministrator(administratorId);
         String username = Optional.ofNullable(request.getUsername()).map(String::trim).orElse("");
         if (authUserMapper.findByUsername(username) != null) {
@@ -341,6 +344,7 @@ public class AuthServiceImpl implements AuthService {
             throw new BusinessException("不能通过管理员重置接口修改自己的密码，请使用个人修改密码功能");
         }
 
+        authRoleMapper.lockAdminRole();
         AuthUser administrator = requireActiveAdministrator(administratorId);
         if (!PasswordUtil.matches(request.getAdministratorPassword(), administrator.getPasswordHash())) {
             securityAudit.warn("event=USER_PASSWORD_RESET actorUserId={} targetUserId={} sourceIp={} result=DENIED reason=ADMIN_PASSWORD_MISMATCH",

@@ -224,6 +224,97 @@ class BackendMixedHttpPostgresqlIT extends PostgresqlIntegrationTestSupport {
     }
 
     @Test
+    void exportRangeAndAbortedSocketReleaseRealHttpDownloadLease() throws Exception {
+        String role = "SYNTHETIC_EXPORT_HTTP_" + java.util.UUID.randomUUID();
+        String username = "synthetic-export-http-" + java.util.UUID.randomUUID();
+        String id = java.util.UUID.randomUUID().toString();
+        var props = new com.zjcxph.imgapi.config.ArchiveExportProperties();
+        props.setTempDirectory(directory.resolve("exports").toString());
+        props.setMaxConcurrentDownloads(2); props.setMaxConcurrentDownloadsPerUser(2);
+        var files = new com.zjcxph.imgapi.service.impl.ArchiveExportTempFileManager(props);
+        files.initialize();
+        var repository = new com.zjcxph.imgapi.repository.ArchiveExportJobRepository(jdbc);
+        var service = new com.zjcxph.imgapi.service.ArchiveExportJobService(
+                org.mockito.Mockito.mock(com.zjcxph.imgapi.service.ArchiveExportService.class),repository,files,props,Runnable::run);
+        var mode = new DeveloperModeService(settings, false, "127.0.0.1,::1", new ImageDeliveryProperties());
+        var login = new LoginInterceptor(users, mode, new DeveloperApiAccessService(settings, mode));
+        var tomcat = new Tomcat(); tomcat.setBaseDir(directory.toString()); tomcat.setPort(0);
+        var connector = tomcat.getConnector(); connector.setProperty("address","127.0.0.1");
+        var context = tomcat.addContext("",directory.toString());
+        var mvc = new AnnotationConfigWebApplicationContext(); mvc.register(MvcConfig.class);
+        mvc.addBeanFactoryPostProcessor(beans -> {
+            beans.registerSingleton("loginInterceptor",login);
+            beans.registerSingleton("exportController",new com.zjcxph.imgapi.controller.ArchiveExportJobController(
+                    service,repository,org.mockito.Mockito.mock(com.zjcxph.imgapi.service.DeploymentReadinessService.class)));
+        });
+        var servlet = Tomcat.addServlet(context,"mvc",new DispatcherServlet(mvc));
+        servlet.setLoadOnStartup(1); servlet.setAsyncSupported(true); context.addServletMappingDecoded("/","mvc");
+        var workers = Executors.newFixedThreadPool(2);
+        Path file = directory.resolve("exports").toRealPath().resolve(id+".zip");
+        try {
+            jdbc.update("INSERT INTO app.mr_auth_role(code,name,permissions) VALUES (?,?,'record:read,record:download')",role,role);
+            long actor=jdbc.queryForObject("INSERT INTO app.mr_auth_user(username,password_hash,role_code,status,must_change_password,password_version) VALUES (?,'synthetic',?,'active',false,1) RETURNING id",Long.class,username,role);
+            byte[] block=new byte[1024*1024]; new java.util.Random(42).nextBytes(block);
+            var hash=org.apache.commons.codec.digest.DigestUtils.getSha256Digest();
+            try(var out=java.nio.file.Files.newOutputStream(file)) { for(int i=0;i<128;i++){out.write(block);hash.update(block);} }
+            String digest=java.util.HexFormat.of().formatHex(hash.digest()); long size=java.nio.file.Files.size(file);
+            var job=new com.zjcxph.imgapi.entity.ArchiveExportJob(); job.setId(id); job.setOwnerUserId(actor); job.setOwnerUsername(username);
+            job.setFormat("ZIP");job.setScope("SELECTED_IMAGES");job.setStatus("PENDING");job.setPlannedCount(1);job.setEstimatedBytes(size);
+            repository.insert(job);
+            assertThat(repository.markProcessing(id,"synthetic.zip",file.toString(),java.time.LocalDateTime.now().plusHours(1))).isEqualTo(1);
+            assertThat(repository.markSuccess(id,size,digest,java.time.LocalDateTime.now())).isEqualTo(1);
+            JwtUtil.configure("synthetic-export-http-key-not-used-outside-test-0123456789");
+            var session=new AuthSession();session.setId(actor);session.setUsername(username);session.setPasswordVersion(1);session.setStatus("active");
+            String token=JwtUtil.getToken(session);
+            tomcat.start();int port=connector.getLocalPort();String path="/api/v1/archive-exports/jobs/"+id+"/download";
+            var client=HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(3)).build();
+            Callable<Long> range=()->{
+                long start=System.nanoTime();
+                var request=HttpRequest.newBuilder(URI.create("http://127.0.0.1:"+port+path)).timeout(Duration.ofSeconds(15))
+                        .header("Authorization","Bearer "+token).header("Range","bytes=0-0").GET().build();
+                var response=client.send(request,HttpResponse.BodyHandlers.ofByteArray());
+                assertThat(response.statusCode()).isEqualTo(206);
+                assertThat(response.body()).containsExactly(block[0]);
+                assertThat(response.headers().firstValue("X-Archive-SHA256")).contains(digest);
+                assertThat(response.headers().firstValue("Content-Range")).contains("bytes 0-0/"+size);
+                return (System.nanoTime()-start)/1000000;
+            };
+            range.call(); // warm-up
+            for(int i=0;i<3;i++) System.out.println("MRR_EXPORT_HTTP_RANGE_128M_MS "+range.call());
+            var first=workers.submit(range);var second=workers.submit(range);
+            System.out.println("MRR_EXPORT_HTTP_CONCURRENT_128M_MS "+first.get(20,TimeUnit.SECONDS)+" "+second.get(20,TimeUnit.SECONDS));
+            long aborted;
+            try(var socket=new java.net.Socket()) {
+                socket.setReceiveBufferSize(4096);socket.setSoTimeout(15000);
+                socket.connect(new java.net.InetSocketAddress("127.0.0.1",port),3000);
+                socket.getOutputStream().write(("GET "+path+" HTTP/1.1\r\nHost: 127.0.0.1\r\nAuthorization: Bearer "+token+"\r\nConnection: close\r\n\r\n").getBytes(java.nio.charset.StandardCharsets.US_ASCII));
+                var in=socket.getInputStream();var headers=new java.io.ByteArrayOutputStream();
+                int matched=0;byte[] end={13,10,13,10};
+                while(matched<4 && headers.size()<16384){int b=in.read();assertThat(b).isNotEqualTo(-1);headers.write(b);matched=b==end[matched]?matched+1:(b==13?1:0);}
+                assertThat(headers.toString(java.nio.charset.StandardCharsets.US_ASCII)).startsWith("HTTP/1.1 200");
+                assertThat(in.read()).isEqualTo(Byte.toUnsignedInt(block[0]));
+                synchronized(files) { assertThat((Integer)ReflectionTestUtils.getField(files,"downloadCount")).isGreaterThan(0); }
+                socket.setSoLinger(true,0);aborted=System.nanoTime();
+            }
+            long deadline=System.nanoTime()+TimeUnit.SECONDS.toNanos(10);
+            int active;
+            do { synchronized(files){active=(Integer)ReflectionTestUtils.getField(files,"downloadCount");} if(active==0)break;Thread.sleep(20); } while(System.nanoTime()<deadline);
+            assertThat(active).isZero();
+            System.out.println("MRR_EXPORT_HTTP_ABORT_RELEASE_MS "+(System.nanoTime()-aborted)/1000000);
+            range.call();
+            assertThat(repository.findById(id).orElseThrow().getStatus()).isEqualTo("SUCCESS");
+            assertThat(files.deleteManagedFile(file.toString())).isTrue();
+            assertThat(dataSource.unwrap(HikariDataSource.class).getHikariPoolMXBean().getActiveConnections()).isZero();
+        } finally {
+            workers.shutdownNow();
+            try {tomcat.stop();} finally {tomcat.destroy();mvc.close();}
+            jdbc.update("DELETE FROM app.archive_export_job WHERE id=CAST(? AS UUID)",id);
+            jdbc.update("DELETE FROM app.mr_auth_user WHERE username=?",username);
+            jdbc.update("DELETE FROM app.mr_auth_role WHERE code=?",role);
+        }
+    }
+
+    @Test
     void delegatedRoleRevocationDeniesInFlightHttpWrite() throws Exception {
         String role = "SYNTHETIC_HTTP_ROLE_" + java.util.UUID.randomUUID();
         String target = role + "_TARGET";

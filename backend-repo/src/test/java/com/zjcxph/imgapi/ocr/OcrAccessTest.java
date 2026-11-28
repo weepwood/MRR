@@ -10,25 +10,25 @@ import static org.mockito.Mockito.*;
 
 class OcrAccessTest {
     private final AuthUserMapper users = mock(AuthUserMapper.class);
-    private final OcrAccess access = new OcrAccess(users);
+    private final OcrAccess access = new OcrAccess(users, mock(com.zjcxph.imgapi.mapper.AuthRoleMapper.class));
 
     @Test void rejectsMissingIdentityAndRevokedPermission() {
         assertThrows(BusinessException.class, () -> access.require(null, "ocr:run"));
         AuthSession claimed = new AuthSession(); claimed.setId(9L); claimed.setRoleCode("ADMIN");
         AuthUser user = user(); user.setPermissionsCsv("record:read,ocr:read");
-        when(users.findById(9L)).thenReturn(user);
+        when(users.findSessionById(9L)).thenReturn(user);
         assertThrows(BusinessException.class, () -> access.require(claimed.getId(), "ocr:run"));
     }
 
     @Test void disabledAdministratorCannotExecutePersistedAuthorization() {
         AuthUser user = user(); user.setRoleCode("ADMIN"); user.setStatus("disabled");
-        when(users.findById(9L)).thenReturn(user);
+        when(users.findSessionById(9L)).thenReturn(user);
         assertThrows(BusinessException.class, () -> access.require(9L, "ocr:run"));
     }
 
     @Test void resolvesRealActorFromDatabaseInsteadOfTaskUsername() {
         AuthUser user = user(); user.setPermissionsCsv("record:read,ocr:run");
-        when(users.findById(9L)).thenReturn(user);
+        when(users.findSessionById(9L)).thenReturn(user);
         assertEquals("synthetic-operator", access.require(9L, "ocr:run").getUsername());
     }
 

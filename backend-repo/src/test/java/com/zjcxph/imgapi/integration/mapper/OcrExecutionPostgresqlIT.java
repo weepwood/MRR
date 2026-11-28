@@ -142,7 +142,7 @@ class OcrExecutionPostgresqlIT extends PostgresqlIntegrationTestSupport {
                         }
                 }
             };
-            var service=new com.zjcxph.imgapi.service.OcrJobService(mapper,scans,new com.zjcxph.imgapi.ocr.OcrAccess(users),engine,input,settings,tx,classification,guard);
+            var service=new com.zjcxph.imgapi.service.OcrJobService(mapper,scans,new com.zjcxph.imgapi.ocr.OcrAccess(users,roles),engine,input,settings,tx,classification,guard);
             service.runOne();
             if(fallback) org.mockito.Mockito.verify(classification).classify(org.mockito.ArgumentMatchers.any(),org.mockito.ArgumentMatchers.any(),org.mockito.ArgumentMatchers.any());
             else org.mockito.Mockito.verifyNoInteractions(classification);
@@ -166,6 +166,7 @@ class OcrExecutionPostgresqlIT extends PostgresqlIntegrationTestSupport {
     }
 
     @Autowired com.zjcxph.imgapi.mapper.AuthUserMapper users;
+    @Autowired com.zjcxph.imgapi.mapper.AuthRoleMapper roles;
 
     @Test void claimsWithFencingAndRecoversExpiredPageWithoutLosingProgress() {
         Job job=job(); int scan=scan(job.getArchiveId()); mapper.insert(job); mapper.insertItem(job.getId(),scan); mapper.planned(job.getId(),1);

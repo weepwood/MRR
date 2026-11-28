@@ -40,6 +40,7 @@ class AutomaticClassificationPostgresqlIT extends PostgresqlIntegrationTestSuppo
     @BeforeEach void setup() throws Exception {
         actor=new AuthSession();actor.setId(876L);actor.setUsername("synthetic-authorizer");actor.setRoleCode("ADMIN");AuthContext.setCurrentUser(actor);
         access=mock(OcrAccess.class);when(access.require(anyLong(),any(String[].class))).thenReturn(actor);
+        when(access.requireWrite(anyLong(),any(String[].class))).thenReturn(actor);
         sourceHash="a".repeat(64);input=mock(OcrInput.class);when(input.prepare(anyInt(),any())).thenAnswer(i->new OcrInput.Prepared(temporary.resolve("synthetic.ocr"),sourceHash));
         quality=mock(OcrQualityGate.class);when(quality.enabled()).thenReturn(true);when(quality.checksum()).thenReturn("c".repeat(64));when(quality.permits(anyString(),anyString(),anyInt())).thenReturn(true);
         var guard=mock(OcrLoadGuard.class);when(guard.allowed()).thenReturn(true);jobs=mock(OcrJobService.class);when(jobs.enabled()).thenReturn(true);

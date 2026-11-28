@@ -92,7 +92,7 @@ public class OcrJobService {
         Item item=null;
         try {
             if (job.isCancelRequested()) { finish(job,token,null,null,"CANCELLED"); return; }
-            access.require(job.getOwnerUserId(),"record:read","ocr:run");
+            requireJobOwner(job);
             item=mapper.next(job.getId());
             if (item==null) { finish(job,token,null,null,null); return; }
             if (mapper.processing(job.getId(),item.getScanId(),token)!=1) return;
@@ -104,6 +104,7 @@ public class OcrJobService {
             if (!config.fingerprint().equals(engine.fingerprint(config.profile()))) throw new OcrFailure("MODEL_INVALID");
             final String jobId=job.getId();
             try (var prepared=input.prepare(item.getScanId(),()->!enabled()||!mapper.alive(jobId,token))) {
+                requireJobOwner(job);
                 Fact fact=mapper.factForCurrentArchive(item.getScanId(),job.getArchiveId());
                 if (fact==null || !prepared.hash().equals(fact.getContentHash()) || !config.fingerprint().equals(fact.getModelChecksum())
                         || !"rgb-exif-v1".equals(fact.getPreprocessingVersion())
@@ -147,7 +148,7 @@ public class OcrJobService {
         boolean saved=Boolean.TRUE.equals(transactions.execute(tx->{
             mapper.lock(job.getId());
             if(!mapper.alive(job.getId(),token)) return false;
-            access.require(job.getOwnerUserId(),"record:read","ocr:run");
+            requireJobOwner(job);
             if(!mapper.belongs(item.getScanId(),job.getArchiveId())) throw new OcrFailure("SOURCE_CHANGED");
             Fact old=mapper.fact(item.getScanId());
             if(old==null || !Objects.equals(old.getResultVersion(),fact.getResultVersion())) {
@@ -191,7 +192,7 @@ public class OcrJobService {
     private boolean validateClassificationInput(Job job,String token,Item item,Fact fact) {
         String failure=null;
         try {
-            access.require(job.getOwnerUserId(),"record:read","ocr:run");
+            requireJobOwner(job);
         } catch (BusinessException denied) {
             failure="AUTH_REVOKED";
         }
@@ -207,6 +208,10 @@ public class OcrJobService {
         mapper.complete(job.getId(),item.getScanId(),"FAILED","FAILED",null,failure);
         mapper.release(job.getId(),token);
         return false;
+    }
+    private void requireJobOwner(Job job) {
+        if(job.getBatchId()==null) access.require(job.getOwnerUserId(),"record:read","ocr:run");
+        else access.require(job.getOwnerUserId(),"record:read","ocr:run","ocr:batch-run");
     }
     private int integer(String key,int fallback,int min,int max) {
         try { return Math.max(min,Math.min(max,Integer.parseInt(settings.getSetting(key)))); } catch (Exception e) { return fallback; }

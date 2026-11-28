@@ -40,6 +40,7 @@ class ClassificationAuditPostgresqlIT extends PostgresqlIntegrationTestSupport {
         actor=new AuthSession();actor.setId(9999999999L);actor.setUsername("synthetic-auditor");actor.setRoleCode("ADMIN");actor.setStatus("active");
         AuthContext.setCurrentUser(actor); OcrAccess access=mock(OcrAccess.class);
         when(access.require(anyLong(),any(String[].class))).thenReturn(actor);
+        when(access.requireWrite(anyLong(),any(String[].class))).thenReturn(actor);
         OcrInput input=mock(OcrInput.class);
         when(input.prepare(anyInt(),any())).thenAnswer(i->new OcrInput.Prepared(temporary.resolve("synthetic.ocr"),"a".repeat(64)));
         service=new ImageTypeService(mapper,ocr,access,input,new TransactionTemplate(transactionManager),new ConcurrentMapCacheManager());
@@ -53,6 +54,7 @@ class ClassificationAuditPostgresqlIT extends PostgresqlIntegrationTestSupport {
     }
     @Test void classificationFailureMustNotDiscardSuccessfulOcrFact() {
         var access=mock(OcrAccess.class);when(access.require(anyLong(),any(String[].class))).thenReturn(actor);
+        when(access.requireWrite(anyLong(),any(String[].class))).thenReturn(actor);
         var input=mock(OcrInput.class);when(input.prepare(anyInt(),any())).thenAnswer(i->new OcrInput.Prepared(temporary.resolve("synthetic.ocr"),"a".repeat(64)));
         var engine=mock(OcrEngine.class);when(engine.fingerprint(anyString())).thenReturn("b".repeat(64));
         when(engine.recognize(anyString(),any(),anyInt(),anyInt(),any())).thenReturn(new OcrProtocol.Result("x",100,100,java.util.List.of(new OcrProtocol.Line("合成标题",.99,java.util.List.of(0.,0.,80.,20.))),"b".repeat(64)));
@@ -95,8 +97,12 @@ class ClassificationAuditPostgresqlIT extends PostgresqlIntegrationTestSupport {
         var writer=java.util.concurrent.Executors.newSingleThreadExecutor();
         var pending=new java.util.concurrent.atomic.AtomicReference<java.util.concurrent.Future<?>>();
         var started=new java.util.concurrent.CountDownLatch(1);
-        when(access.require(anyLong(),any(String[].class))).thenAnswer(call->{
-            if(org.springframework.transaction.support.TransactionSynchronizationManager.isActualTransactionActive()) {
+        when(access.require(anyLong(),any(String[].class))).thenReturn(actor);
+        when(access.requireWrite(anyLong(),any(String[].class))).thenReturn(actor);
+        var observedOcr=mock(OcrMapper.class,org.mockito.AdditionalAnswers.delegatesTo(ocr));
+        doAnswer(call->{
+            var fact=ocr.lockFact(call.getArgument(0));
+            {
                 var replacement=writer.submit(()->{started.countDown();jdbc.update("UPDATE app.mr_scan_ocr SET result_version=?,content_hash=? WHERE scan_id=?",UUID.randomUUID().toString(),"c".repeat(64),scan);});
                 pending.set(replacement);
                 assertThat(started.await(5,java.util.concurrent.TimeUnit.SECONDS)).isTrue();
@@ -104,11 +110,11 @@ class ClassificationAuditPostgresqlIT extends PostgresqlIntegrationTestSupport {
                         .as("OCR version must remain stable until the audited type transaction commits")
                         .isInstanceOf(java.util.concurrent.TimeoutException.class);
             }
-            return actor;
-        });
+            return fact;
+        }).when(observedOcr).lockFact(anyInt());
         var input=mock(OcrInput.class);
         when(input.prepare(anyInt(),any())).thenAnswer(i->new OcrInput.Prepared(temporary.resolve("synthetic.ocr"),"a".repeat(64)));
-        var reviewer=new ImageTypeService(mapper,ocr,access,input,new TransactionTemplate(transactionManager),new ConcurrentMapCacheManager());
+        var reviewer=new ImageTypeService(mapper,observedOcr,access,input,new TransactionTemplate(transactionManager),new ConcurrentMapCacheManager());
         try {reviewer.review(actor,suggestion,"ACCEPT",null);}
         finally {try {if(pending.get()!=null) pending.get().get(5,java.util.concurrent.TimeUnit.SECONDS);}finally{writer.shutdownNow();}}
         assertThat(mapper.scan(scan).getBtype()).isEqualTo(3);
@@ -120,6 +126,44 @@ class ClassificationAuditPostgresqlIT extends PostgresqlIntegrationTestSupport {
         assertThat(mapper.scan(scan).getBtype()).isZero();
         assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM app.mr_image_type_audit WHERE scan_id=?",Integer.class,scan)).isZero();
     }
+    @Autowired com.zjcxph.imgapi.mapper.AuthUserMapper users;
+    @Autowired com.zjcxph.imgapi.mapper.AuthRoleMapper roles;
+
+    @org.junit.jupiter.params.ParameterizedTest
+    @org.junit.jupiter.params.provider.ValueSource(strings={"manual","reject","accept"})
+    void revocationBeforeMutationTransactionPreventsFormalChange(String action) {
+        Long suggestion="manual".equals(action)?null:suggestion();
+        String role="OCR_TEST_"+UUID.randomUUID();
+        jdbc.update("INSERT INTO app.mr_auth_role(code,name,permissions) VALUES (?,?,'record:edit,classification:review')",role,role);
+        Long id=jdbc.queryForObject("INSERT INTO app.mr_auth_user(username,password_hash,role_code,status) VALUES (?,'synthetic',?,'active') RETURNING id",Long.class,"synthetic-"+UUID.randomUUID(),role);
+        var session=new AuthSession();session.setId(id);session.setPasswordVersion(1);AuthContext.setCurrentUser(session);
+        var input=mock(OcrInput.class);
+        when(input.prepare(anyInt(),any())).thenAnswer(i->new OcrInput.Prepared(temporary.resolve("synthetic.ocr"),"a".repeat(64)));
+        var tx=new TransactionTemplate(transactionManager) {
+            int calls=0;
+            @Override public <T> T execute(org.springframework.transaction.support.TransactionCallback<T> callback) {
+                // Review first reads a suggestion snapshot. Revoke before the actual write transaction.
+                if(++calls==("manual".equals(action)?1:2))
+                    jdbc.update("UPDATE app.mr_auth_role SET permissions='record:read' WHERE code=?",role);
+                return super.execute(callback);
+            }
+        };
+        try {
+            var actual=new ImageTypeService(mapper,ocr,new OcrAccess(users,roles),input,tx,new ConcurrentMapCacheManager());
+            assertThatThrownBy(()->{
+                if("manual".equals(action)) actual.manual(scan,3);
+                else actual.review(session,suggestion,action.toUpperCase(java.util.Locale.ROOT),null);
+            }).isInstanceOf(com.zjcxph.imgapi.exception.BusinessException.class);
+            assertThat(mapper.scan(scan).getBtype()).isZero();
+            assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM app.mr_image_type_audit WHERE scan_id=?",Integer.class,scan)).isZero();
+            if(suggestion!=null) assertThat(mapper.lockSuggestion(suggestion).getReviewStatus()).isEqualTo("PENDING");
+        } finally {
+            AuthContext.clear();
+            jdbc.update("DELETE FROM app.mr_auth_user WHERE id=?",id);
+            jdbc.update("DELETE FROM app.mr_auth_role WHERE code=?",role);
+        }
+    }
+
     private Long suggestion() {
         var job=new OcrModels.Job();job.setId(UUID.randomUUID().toString());job.setArchiveId(archive);job.setCreatedBy(actor.getUsername());job.setOwnerUserId(actor.getId());job.setConfigSnapshot("{}");job.setRuleSetVersion("test");job.setLexiconVersion("test");ocr.insert(job);
         var fact=new OcrModels.Fact();fact.setScanId(scan);fact.setArchiveId(archive);fact.setStatus("SUCCEEDED");fact.setOcrText("合成手术记录");fact.setLinesJson("[]");fact.setContentHash("a".repeat(64));fact.setResultVersion(UUID.randomUUID().toString());fact.setConfidence(.99);ocr.saveFact(fact);

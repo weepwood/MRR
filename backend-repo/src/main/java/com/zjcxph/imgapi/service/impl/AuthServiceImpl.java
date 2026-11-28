@@ -508,8 +508,21 @@ public class AuthServiceImpl implements AuthService {
         if (description != null) role.setDescription(description);
         if (permissions != null) role.setPermissions(permissions);
         if (sortOrder != null) role.setSortOrder(sortOrder);
-        authRoleMapper.update(role);
-        logger.info("Role updated: code={}, name={}, permissions={}", code, role.getName(), role.getPermissions());
+        if (authRoleMapper.update(role) != 1) {
+            throw new BusinessException(409, "角色状态已发生变化，请刷新后重试");
+        }
+        Long actorId = AuthContext.getCurrentUser().getId();
+        String roleCode = role.getCode();
+        boolean permissionsEdited = permissions != null;
+        // A successful security event must refer to the committed role change, not a rolled-back write.
+        org.springframework.transaction.support.TransactionSynchronizationManager.registerSynchronization(
+                new org.springframework.transaction.support.TransactionSynchronization() {
+                    @Override
+                    public void afterCommit() {
+                        securityAudit.info("event=ROLE_UPDATED actorUserId={} roleCode={} permissionsEdited={} result=SUCCESS",
+                                actorId, roleCode, permissionsEdited);
+                    }
+                });
         return role;
     }
 

@@ -229,6 +229,91 @@ class LastActiveAdminPostgresqlIT extends PostgresqlIntegrationTestSupport {
         }
     }
 
+    @Test
+    void revokedDelegatedRoleCannotWriteAfterConcurrentPermissionChange() throws Exception {
+        String code = "SYNTHETIC_" + UUID.randomUUID();
+        jdbc.update("insert into app.mr_auth_role(code,name,permissions) values (?, 'Synthetic manager', 'role:manage')", code);
+        jdbc.update("update app.mr_auth_user set role_code = ? where id = ?", code, firstId);
+        var workers = Executors.newSingleThreadExecutor();
+        String runId = "mrr-role-race-" + UUID.randomUUID();
+        var tx = new TransactionTemplate(transactionManager);
+        try {
+            installActor(secondId);
+            Future<String> result = tx.execute(status -> {
+                service.updateRole(code, null, null, "role:read", null);
+                Future<String> task = workers.submit(() -> {
+                    installActor(firstId);
+                    try {
+                        return tx.execute(worker -> {
+                            jdbc.queryForObject("select set_config('application_name', ?, true)", String.class, runId);
+                            service.updateRole(code, null, "Denied modification", null, null);
+                            return "SUCCESS";
+                        });
+                    } catch (BusinessException denied) {
+                        return denied.getMessage();
+                    } finally {
+                        com.zjcxph.imgapi.utils.AuthContext.clear();
+                    }
+                });
+                long deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(5);
+                while (!task.isDone() && System.nanoTime() < deadline) {
+                    jdbc.execute("select pg_stat_clear_snapshot()");
+                    int waiting = jdbc.queryForObject("select count(*) from pg_stat_activity where application_name = ? and wait_event_type = 'Lock'", Integer.class, runId);
+                    if (waiting == 1) return task;
+                    try { Thread.sleep(25); } catch (InterruptedException e) {
+                        Thread.currentThread().interrupt(); throw new RuntimeException(e);
+                    }
+                }
+                throw new AssertionError("Competing delegated operation did not reach the common lock");
+            });
+            assertThat(result.get(5, TimeUnit.SECONDS)).isEqualTo("当前账号没有操作权限");
+            assertThat(roleMapper.findByCode(code).getDescription()).isNull();
+            assertThat(roleMapper.findByCode(code).getPermissions()).isEqualTo("role:read");
+            assertThat(userMapper.findById(firstId).getRoleCode()).isEqualTo(code);
+        } finally {
+            workers.shutdownNow();
+            com.zjcxph.imgapi.utils.AuthContext.clear();
+            assertThat(workers.awaitTermination(5, TimeUnit.SECONDS)).isTrue();
+            jdbc.update("update app.mr_auth_user set role_code = 'ADMIN' where id = ?", firstId);
+            jdbc.update("delete from app.mr_auth_role where code = ?", code);
+        }
+    }
+
+    @Test
+    void roleChangeSecurityAuditIdentifiesActorAndOnlyReportsCommittedSuccess() {
+        String code = "SYNTHETIC_" + UUID.randomUUID();
+        jdbc.update("insert into app.mr_auth_role(code,name,permissions) values (?, 'Synthetic role', 'role:read')", code);
+        var logger = (ch.qos.logback.classic.Logger) org.slf4j.LoggerFactory.getLogger("SECURITY_AUDIT");
+        var audit = new ch.qos.logback.core.read.ListAppender<ch.qos.logback.classic.spi.ILoggingEvent>();
+        audit.start();
+        logger.addAppender(audit);
+        try {
+            installActor(secondId);
+            var tx = new TransactionTemplate(transactionManager);
+            tx.executeWithoutResult(status -> {
+                service.updateRole(code, null, "Rolled back", "user:manage", null);
+                assertThat(audit.list).noneMatch(event -> event.getMessage().contains("event=ROLE_UPDATED"));
+                status.setRollbackOnly();
+            });
+            assertThat(roleMapper.findByCode(code).getPermissions()).isEqualTo("role:read");
+            assertThat(audit.list).noneMatch(event -> event.getMessage().contains("event=ROLE_UPDATED"));
+            tx.executeWithoutResult(status -> {
+                service.updateRole(code, null, "Committed", "role:manage", null);
+                assertThat(audit.list).noneMatch(event -> event.getMessage().contains("event=ROLE_UPDATED"));
+            });
+            assertThat(roleMapper.findByCode(code).getPermissions()).isEqualTo("role:manage");
+            var events = audit.list.stream().filter(event -> event.getMessage().contains("event=ROLE_UPDATED")).toList();
+            assertThat(events).hasSize(1);
+            assertThat(events.getFirst().getArgumentArray()).contains(Long.valueOf(secondId), code);
+            assertThat(events.getFirst().getMessage()).contains("actorUserId=", "result=SUCCESS");
+        } finally {
+            logger.detachAppender(audit);
+            audit.stop();
+            com.zjcxph.imgapi.utils.AuthContext.clear();
+            jdbc.update("delete from app.mr_auth_role where code = ?", code);
+        }
+    }
+
     private void installActor(long id) {
         var user = userMapper.findById(id);
         var session = new com.zjcxph.imgapi.common.AuthSession();

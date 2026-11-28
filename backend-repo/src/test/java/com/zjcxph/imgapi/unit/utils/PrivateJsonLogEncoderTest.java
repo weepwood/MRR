@@ -132,6 +132,42 @@ class PrivateJsonLogEncoderTest {
         } finally { context.stop(); }
     }
 
+    @org.junit.jupiter.params.ParameterizedTest
+    @org.junit.jupiter.params.provider.ValueSource(strings={"expired", "status", "reset"})
+    void deniedAccountAuditRetainsTrustedIdentityWithoutPrivateArguments(String scenario) throws Exception {
+        var context = new LoggerContext();
+        try {
+            String template = switch (scenario) {
+                case "expired" -> "event=USER_TEMP_PASSWORD_EXPIRED targetUserId={} username={} sourceIp={} result=DENIED";
+                case "status" -> "event=USER_LOGIN_STATUS_DENIED targetUserId={} username={} status={} sourceIp={} result=DENIED";
+                default -> "event=USER_PASSWORD_RESET actorUserId={} targetUserId={} sourceIp={} result=DENIED reason=ADMIN_PASSWORD_MISMATCH";
+            };
+            Object[] args = switch (scenario) {
+                case "expired" -> new Object[]{77L,"SYNTHETIC_PRIVATE","SYNTHETIC_PRIVATE"};
+                case "status" -> new Object[]{77L,"SYNTHETIC_PRIVATE","SYNTHETIC_PRIVATE","SYNTHETIC_PRIVATE"};
+                default -> new Object[]{42L,77L,"SYNTHETIC_PRIVATE"};
+            };
+            var encoder = new PrivateJsonLogEncoder(); var json = new com.fasterxml.jackson.databind.ObjectMapper();
+            java.util.function.BiFunction<String,Object[],LoggingEvent> event = (logger,arguments) -> {
+                var value = new LoggingEvent(getClass().getName(),context.getLogger(logger),Level.WARN,template,null,arguments);
+                value.setMDCPropertyMap(java.util.Map.of()); return value;
+            };
+            byte[] bytes = encoder.encode(event.apply("SECURITY_AUDIT",args));
+            var audit = json.readTree(bytes).path("security_audit");
+            assertThat(audit.path("event").asText()).isEqualTo(template.substring(6,template.indexOf(' ')));
+            assertThat(audit.path("result").asText()).isEqualTo("DENIED");
+            assertThat(audit.path("target_user_id").asLong()).isEqualTo(77L);
+            assertThat(audit.has("actor_user_id")).isEqualTo("reset".equals(scenario));
+            if ("reset".equals(scenario)) assertThat(audit.path("actor_user_id").asLong()).isEqualTo(42L);
+            assertThat(audit.size()).isEqualTo("reset".equals(scenario)?4:3);
+            assertThat(new String(bytes,StandardCharsets.UTF_8)).doesNotContain("SYNTHETIC_PRIVATE");
+            assertThat(json.readTree(encoder.encode(event.apply(BUSINESS_LOGGER,args))).has("security_audit")).isFalse();
+            Object[] invalid=args.clone(); invalid[0]=0L;
+            assertThat(json.readTree(encoder.encode(event.apply("SECURITY_AUDIT",invalid))).has("security_audit")).isFalse();
+            assertThat(json.readTree(encoder.encode(event.apply("SECURITY_AUDIT",java.util.Arrays.copyOf(args,args.length+1)))).has("security_audit")).isFalse();
+        } finally {context.stop();}
+    }
+
     @Test void legacyStackOnlyRetainsTechnicalClassNamesAndFrames() {
         assertThat(PrivateJsonLogEncoder.safeStoredStack("SYNTHETIC-PATIENT\njava.lang.IllegalStateException: SYNTHETIC-PATIENT\n\tat com.example.Synthetic.run(Synthetic.java:12)"))
                 .contains("Synthetic.java:12").doesNotContain("SYNTHETIC-PATIENT");

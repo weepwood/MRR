@@ -61,7 +61,7 @@ public class PrivateJsonLogEncoder extends EncoderBase<ILoggingEvent> {
                 "role_target", protectedRole, "permissions_edited", permissionsEdited, "result", "SUCCESS"));
     }
 
-    /** Only exact, reviewed account success templates may expose stable internal user IDs. */
+    /** Only exact, reviewed account audit templates may expose stable internal user IDs. */
     private static void appendAccountAudit(LinkedHashMap<String, Object> row, ILoggingEvent event) {
         if (!"SECURITY_AUDIT".equals(event.getLoggerName()) || event.getMessage() == null) return;
         String template = event.getMessage();
@@ -76,11 +76,14 @@ public class PrivateJsonLogEncoder extends EncoderBase<ILoggingEvent> {
             case "event=USER_FIRST_PASSWORD_CHANGED actorUserId={} targetUserId={} sourceIp={} result=SUCCESS",
                  "event=USER_DISABLED actorUserId={} targetUserId={} previousStatus={} result=SUCCESS" -> 3;
             case "event=USER_PASSWORD_CHANGED actorUserId={} targetUserId={} result=SUCCESS" -> 2;
+            case "event=USER_TEMP_PASSWORD_EXPIRED targetUserId={} username={} sourceIp={} result=DENIED",
+                 "event=USER_PASSWORD_RESET actorUserId={} targetUserId={} sourceIp={} result=DENIED reason=ADMIN_PASSWORD_MISMATCH" -> 3;
+            case "event=USER_LOGIN_STATUS_DENIED targetUserId={} username={} status={} sourceIp={} result=DENIED" -> 4;
             default -> 0;
         };
         Object[] args = event.getArgumentArray();
         if (count == 0 || args == null || args.length != count) return;
-        boolean hasActor = !template.startsWith("event=USER_REGISTRATION_SUBMITTED ");
+        boolean hasActor = template.contains(" actorUserId={} ");
         if (!(args[hasActor ? 1 : 0] instanceof Long target) || target <= 0) return;
         var audit = new LinkedHashMap<String, Object>();
         if (hasActor) {
@@ -89,7 +92,7 @@ public class PrivateJsonLogEncoder extends EncoderBase<ILoggingEvent> {
         }
         audit.put("event", template.substring("event=".length(), template.indexOf(' ')));
         audit.put("target_user_id", target);
-        audit.put("result", "SUCCESS");
+        audit.put("result", template.contains(" result=DENIED") ? "DENIED" : "SUCCESS");
         row.put("security_audit", audit);
     }
 

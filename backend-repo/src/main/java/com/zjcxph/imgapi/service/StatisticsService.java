@@ -53,6 +53,8 @@ public interface StatisticsService {
     // 统计每个病案号的记录数和总页数
     List<BAHStatisticsDTO> getBAHStatistics();
 
+    List<BAHStatisticsDTO> getDashboardBAHStatistics();
+
     // 统计每个日期的记录数和总页数
     List<DateStatisticsDTO> getDateStatistics();
 

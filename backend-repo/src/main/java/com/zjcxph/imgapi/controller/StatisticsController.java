@@ -240,11 +240,8 @@ public class StatisticsController {
         );
         dashboard.put("recentTrend", recentDateStats);
 
-        List<BAHStatisticsDTO> bahStats = statisticsService.getBAHStatistics();
-        if (bahStats.size() > 10) {
-            bahStats = bahStats.subList(0, 10);
-        }
-        dashboard.put("topBAH", bahStats);
+        // Preserve the existing first-ten-by-BAH contract without materializing all groups.
+        dashboard.put("topBAH", statisticsService.getDashboardBAHStatistics());
 
         return Result.success(dashboard);
     }

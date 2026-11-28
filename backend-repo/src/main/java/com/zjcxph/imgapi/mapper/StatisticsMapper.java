@@ -77,12 +77,17 @@ public interface StatisticsMapper {
     List<Statistics> findByDate(@Param("date") String date);
 
     // 统计每个病案号的记录数和总页数，合并短值与补零值
-    @Select("SELECT " + CANONICAL_BAH_EXPRESSION + " AS bah, " +
+    String BAH_SUMMARY_SQL = "SELECT " + CANONICAL_BAH_EXPRESSION + " AS bah, " +
             "COUNT(*) AS recordCount, SUM(pages) AS totalPages " +
             "FROM mr_statistics " +
             "GROUP BY " + CANONICAL_BAH_EXPRESSION + " " +
-            "ORDER BY bah")
+            "ORDER BY bah";
+
+    @Select(BAH_SUMMARY_SQL)
     List<BAHStatisticsDTO> getBAHStatistics();
+
+    @Select(BAH_SUMMARY_SQL + " LIMIT 10")
+    List<BAHStatisticsDTO> getDashboardBAHStatistics();
 
     // 统计每个日期的记录数和总页数
     @Select("SELECT date, COUNT(*) as recordCount, SUM(pages) as totalPages " +

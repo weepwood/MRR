@@ -127,6 +127,11 @@ public class StatisticsServiceImpl implements StatisticsService {
     }
 
     @Override
+    public List<BAHStatisticsDTO> getDashboardBAHStatistics() {
+        return statisticsMapper.getDashboardBAHStatistics();
+    }
+
+    @Override
     public List<DateStatisticsDTO> getDateStatistics() {
         return statisticsMapper.getDateStatistics();
     }

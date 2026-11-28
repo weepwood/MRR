@@ -31,6 +31,7 @@ public class PrivateJsonLogEncoder extends EncoderBase<ILoggingEvent> {
             row.put("argument_count", event.getArgumentArray() == null ? 0 : event.getArgumentArray().length);
             // Explicit security-event schema only; never serialize generic log parameters.
             appendRoleAudit(row, event);
+            appendAccountAudit(row, event);
             for (String key : new String[]{"requestId"}) {
                 String value = event.getMDCPropertyMap().get(key);
                 if (value != null && value.matches("[A-Za-z0-9_-]{1,80}")) row.put(key, value);
@@ -58,6 +59,38 @@ public class PrivateJsonLogEncoder extends EncoderBase<ILoggingEvent> {
         String protectedRole = com.zjcxph.imgapi.utils.AuditPayloadSanitizer.protectedValue("security-role:v1:" + encodedRole);
         row.put("security_audit", java.util.Map.of("event", "ROLE_UPDATED", "actor_user_id", actor,
                 "role_target", protectedRole, "permissions_edited", permissionsEdited, "result", "SUCCESS"));
+    }
+
+    /** Only exact, reviewed account success templates may expose stable internal user IDs. */
+    private static void appendAccountAudit(LinkedHashMap<String, Object> row, ILoggingEvent event) {
+        if (!"SECURITY_AUDIT".equals(event.getLoggerName()) || event.getMessage() == null) return;
+        String template = event.getMessage();
+        int count = switch (template) {
+            case "event=USER_REGISTRATION_SUBMITTED targetUserId={} username={} sourceIp={} status=PENDING result=SUCCESS" -> 3;
+            case "event=USER_REGISTRATION_APPROVED actorUserId={} targetUserId={} username={} roleCode={} sourceIp={} result=SUCCESS",
+                 "event=USER_REGISTRATION_REJECTED actorUserId={} targetUserId={} username={} sourceIp={} reason={} result=SUCCESS" -> 5;
+            case "event=USER_REGISTRATION_REOPENED actorUserId={} targetUserId={} username={} sourceIp={} result=SUCCESS",
+                 "event=USER_ROLE_OR_STATUS_CHANGED actorUserId={} targetUserId={} roleCode={} status={} result=SUCCESS" -> 4;
+            case "event=USER_CREATED actorUserId={} targetUserId={} username={} roleCode={} sourceIp={} tempExpiresAt={} result=SUCCESS",
+                 "event=USER_PASSWORD_RESET actorUserId={} targetUserId={} username={} sourceIp={} passwordVersion={} tempExpiresAt={} result=SUCCESS" -> 6;
+            case "event=USER_FIRST_PASSWORD_CHANGED actorUserId={} targetUserId={} sourceIp={} result=SUCCESS",
+                 "event=USER_DISABLED actorUserId={} targetUserId={} previousStatus={} result=SUCCESS" -> 3;
+            case "event=USER_PASSWORD_CHANGED actorUserId={} targetUserId={} result=SUCCESS" -> 2;
+            default -> 0;
+        };
+        Object[] args = event.getArgumentArray();
+        if (count == 0 || args == null || args.length != count) return;
+        boolean hasActor = !template.startsWith("event=USER_REGISTRATION_SUBMITTED ");
+        if (!(args[hasActor ? 1 : 0] instanceof Long target) || target <= 0) return;
+        var audit = new LinkedHashMap<String, Object>();
+        if (hasActor) {
+            if (!(args[0] instanceof Long actor) || actor <= 0) return;
+            audit.put("actor_user_id", actor);
+        }
+        audit.put("event", template.substring("event=".length(), template.indexOf(' ')));
+        audit.put("target_user_id", target);
+        audit.put("result", "SUCCESS");
+        row.put("security_audit", audit);
     }
 
     public static String safeStack(IThrowableProxy proxy) {

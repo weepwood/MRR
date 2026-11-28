@@ -79,6 +79,59 @@ class PrivateJsonLogEncoderTest {
         }
     }
 
+    static java.util.stream.Stream<org.junit.jupiter.params.provider.Arguments> committedAccountEvents() {
+        return java.util.stream.Stream.of(
+                org.junit.jupiter.params.provider.Arguments.of("USER_REGISTRATION_SUBMITTED", "targetUserId={} username={} sourceIp={} status=PENDING", 3, false),
+                org.junit.jupiter.params.provider.Arguments.of("USER_REGISTRATION_APPROVED", "actorUserId={} targetUserId={} username={} roleCode={} sourceIp={}", 5, true),
+                org.junit.jupiter.params.provider.Arguments.of("USER_REGISTRATION_REJECTED", "actorUserId={} targetUserId={} username={} sourceIp={} reason={}", 5, true),
+                org.junit.jupiter.params.provider.Arguments.of("USER_REGISTRATION_REOPENED", "actorUserId={} targetUserId={} username={} sourceIp={}", 4, true),
+                org.junit.jupiter.params.provider.Arguments.of("USER_CREATED", "actorUserId={} targetUserId={} username={} roleCode={} sourceIp={} tempExpiresAt={}", 6, true),
+                org.junit.jupiter.params.provider.Arguments.of("USER_PASSWORD_RESET", "actorUserId={} targetUserId={} username={} sourceIp={} passwordVersion={} tempExpiresAt={}", 6, true),
+                org.junit.jupiter.params.provider.Arguments.of("USER_FIRST_PASSWORD_CHANGED", "actorUserId={} targetUserId={} sourceIp={}", 3, true),
+                org.junit.jupiter.params.provider.Arguments.of("USER_ROLE_OR_STATUS_CHANGED", "actorUserId={} targetUserId={} roleCode={} status={}", 4, true),
+                org.junit.jupiter.params.provider.Arguments.of("USER_DISABLED", "actorUserId={} targetUserId={} previousStatus={}", 3, true),
+                org.junit.jupiter.params.provider.Arguments.of("USER_PASSWORD_CHANGED", "actorUserId={} targetUserId={}", 2, true)
+        );
+    }
+
+    @org.junit.jupiter.params.ParameterizedTest
+    @org.junit.jupiter.params.provider.MethodSource("committedAccountEvents")
+    void committedAccountAuditRetainsOnlyTrustedNumericIdentities(String eventName, String fields, int count, boolean hasActor) throws Exception {
+        var context = new LoggerContext();
+        try {
+            String template = "event=" + eventName + " " + fields + " result=SUCCESS";
+            Object[] arguments = new Object[count];
+            java.util.Arrays.fill(arguments, "SYNTHETIC_PRIVATE_VALUE");
+            arguments[0] = hasActor ? 42L : 77L;
+            if (hasActor) arguments[1] = 77L;
+            var encoder = new PrivateJsonLogEncoder();
+            var json = new com.fasterxml.jackson.databind.ObjectMapper();
+            java.util.function.BiFunction<String,Object[],LoggingEvent> event = (logger,args) -> {
+                var value = new LoggingEvent(getClass().getName(), context.getLogger(logger), Level.INFO, template, null, args);
+                value.setMDCPropertyMap(java.util.Map.of());
+                return value;
+            };
+            byte[] encoded = encoder.encode(event.apply("SECURITY_AUDIT", arguments));
+            var audit = json.readTree(encoded).path("security_audit");
+            assertThat(audit.path("event").asText()).isEqualTo(eventName);
+            assertThat(audit.path("target_user_id").asLong()).isEqualTo(77L);
+            assertThat(audit.path("result").asText()).isEqualTo("SUCCESS");
+            assertThat(audit.has("actor_user_id")).isEqualTo(hasActor);
+            if (hasActor) assertThat(audit.path("actor_user_id").asLong()).isEqualTo(42L);
+            assertThat(audit.size()).isEqualTo(hasActor ? 4 : 3);
+            assertThat(new String(encoded, StandardCharsets.UTF_8)).doesNotContain("SYNTHETIC_PRIVATE_VALUE");
+            assertThat(json.readTree(encoder.encode(event.apply(BUSINESS_LOGGER, arguments))).has("security_audit")).isFalse();
+            Object[] invalid = arguments.clone(); invalid[0] = "42";
+            assertThat(json.readTree(encoder.encode(event.apply("SECURITY_AUDIT", invalid))).has("security_audit")).isFalse();
+            invalid[0] = -1L;
+            assertThat(json.readTree(encoder.encode(event.apply("SECURITY_AUDIT", invalid))).has("security_audit")).isFalse();
+            assertThat(json.readTree(encoder.encode(event.apply("SECURITY_AUDIT", java.util.Arrays.copyOf(arguments,count+1)))).has("security_audit")).isFalse();
+            var unknown = new LoggingEvent(getClass().getName(), context.getLogger("SECURITY_AUDIT"), Level.INFO, template + " unknown={}", null, arguments);
+            unknown.setMDCPropertyMap(java.util.Map.of());
+            assertThat(json.readTree(encoder.encode(unknown)).has("security_audit")).isFalse();
+        } finally { context.stop(); }
+    }
+
     @Test void legacyStackOnlyRetainsTechnicalClassNamesAndFrames() {
         assertThat(PrivateJsonLogEncoder.safeStoredStack("SYNTHETIC-PATIENT\njava.lang.IllegalStateException: SYNTHETIC-PATIENT\n\tat com.example.Synthetic.run(Synthetic.java:12)"))
                 .contains("Synthetic.java:12").doesNotContain("SYNTHETIC-PATIENT");

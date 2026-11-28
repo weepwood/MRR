@@ -57,6 +57,7 @@ class RepairOrderTransactionPostgresqlIT extends PostgresqlIntegrationTestSuppor
         }
         @Bean DeploymentReadinessService readiness() { return mock(DeploymentReadinessService.class); }
         @Bean MaintenanceModeService maintenance() { return mock(MaintenanceModeService.class); }
+        @Bean com.zjcxph.imgapi.security.MedicalAccess medicalAccess() { return mock(com.zjcxph.imgapi.security.MedicalAccess.class); }
     }
 
     @Test

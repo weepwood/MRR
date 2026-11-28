@@ -52,7 +52,7 @@ class OcrExecutionPostgresqlIT extends PostgresqlIntegrationTestSupport {
         current.setConfigSnapshot(com.zjcxph.imgapi.ocr.OcrProtocol.JSON.writeValueAsString(
                 new Config("synthetic",fingerprint,30,65536,0.7)));
         mapper.insert(current);mapper.insertItem(current.getId(),scan);mapper.planned(current.getId(),1);
-        var access=org.mockito.Mockito.mock(com.zjcxph.imgapi.ocr.OcrAccess.class);
+        var access=org.mockito.Mockito.mock(com.zjcxph.imgapi.security.MedicalAccess.class);
         var engine=org.mockito.Mockito.mock(com.zjcxph.imgapi.ocr.OcrEngine.class);
         var input=org.mockito.Mockito.mock(com.zjcxph.imgapi.ocr.OcrInput.class);
         var settings=org.mockito.Mockito.mock(com.zjcxph.imgapi.service.SystemSettingService.class);
@@ -142,7 +142,7 @@ class OcrExecutionPostgresqlIT extends PostgresqlIntegrationTestSupport {
                         }
                 }
             };
-            var service=new com.zjcxph.imgapi.service.OcrJobService(mapper,scans,new com.zjcxph.imgapi.ocr.OcrAccess(users),engine,input,settings,tx,classification,guard);
+            var service=new com.zjcxph.imgapi.service.OcrJobService(mapper,scans,new com.zjcxph.imgapi.security.MedicalAccess(users,roles),engine,input,settings,tx,classification,guard);
             service.runOne();
             if(fallback) org.mockito.Mockito.verify(classification).classify(org.mockito.ArgumentMatchers.any(),org.mockito.ArgumentMatchers.any(),org.mockito.ArgumentMatchers.any());
             else org.mockito.Mockito.verifyNoInteractions(classification);
@@ -166,6 +166,7 @@ class OcrExecutionPostgresqlIT extends PostgresqlIntegrationTestSupport {
     }
 
     @Autowired com.zjcxph.imgapi.mapper.AuthUserMapper users;
+    @Autowired com.zjcxph.imgapi.mapper.AuthRoleMapper roles;
 
     @Test void claimsWithFencingAndRecoversExpiredPageWithoutLosingProgress() {
         Job job=job(); int scan=scan(job.getArchiveId()); mapper.insert(job); mapper.insertItem(job.getId(),scan); mapper.planned(job.getId(),1);

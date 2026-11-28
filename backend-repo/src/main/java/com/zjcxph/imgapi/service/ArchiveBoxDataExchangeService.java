@@ -6,6 +6,7 @@ import com.zjcxph.imgapi.service.importer.TabularImportFileReader;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.core.RowCallbackHandler;
 import org.springframework.stereotype.Service;
+import com.zjcxph.imgapi.security.MedicalAccess;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -49,13 +50,16 @@ public class ArchiveBoxDataExchangeService {
 
     private final JdbcTemplate jdbcTemplate;
     private final TabularImportFileReader fileReader;
+    private final MedicalAccess medicalAccess;
 
     public ArchiveBoxDataExchangeService(
             JdbcTemplate jdbcTemplate,
-            TabularImportFileReader fileReader
+            TabularImportFileReader fileReader,
+            MedicalAccess medicalAccess
     ) {
         this.jdbcTemplate = jdbcTemplate;
         this.fileReader = fileReader;
+        this.medicalAccess = medicalAccess;
     }
 
     @Transactional(rollbackFor = Exception.class)
@@ -301,6 +305,8 @@ public class ArchiveBoxDataExchangeService {
         int insertedRows = rows.size() - updatedRows;
 
         if (!dryRun) {
+            // Parsing and temporary staging stay outside the authorization fence.
+            medicalAccess.requireCurrentWrite("record:edit");
             jdbcTemplate.update("""
                     insert into mr_archive as target (sjh, bah)
                     select distinct s.sjh, s.bah

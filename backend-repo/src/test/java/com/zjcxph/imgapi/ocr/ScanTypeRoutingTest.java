@@ -10,7 +10,7 @@ import static org.mockito.Mockito.*;
 class ScanTypeRoutingTest {
     @Test void bothLegacyTypeEndpointAndGenericUpdateUseAuditedMutation() {
         ScanMapper mapper=mock(ScanMapper.class);ImageTypeService types=mock(ImageTypeService.class);
-        ScanServiceImpl service=new ScanServiceImpl(mapper,types);
+        ScanServiceImpl service=new ScanServiceImpl(mapper,types, org.mockito.Mockito.mock(com.zjcxph.imgapi.security.MedicalAccess.class));
         service.updateImageType(1,15);verify(types).manual(1,15);verify(mapper,never()).updateImageType(anyInt(),anyInt());
         Scan scan=new Scan();scan.setId(2);scan.setBtype(11);service.update(scan);verify(types).manual(2,11);
     }

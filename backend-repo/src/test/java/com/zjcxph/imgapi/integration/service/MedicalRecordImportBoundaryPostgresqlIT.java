@@ -29,6 +29,9 @@ import static org.assertj.core.api.Assertions.assertThat;
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
 @DisplayName("病案号与上架号导入边界 PostgreSQL 16 集成测试")
 class MedicalRecordImportBoundaryPostgresqlIT extends PostgresqlIntegrationTestSupport {
+    @org.springframework.test.context.bean.override.mockito.MockitoBean
+    private com.zjcxph.imgapi.security.MedicalAccess importAccess;
+
 
     @Autowired
     private JdbcTemplate jdbcTemplate;

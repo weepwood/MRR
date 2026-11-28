@@ -1,5 +1,7 @@
 package com.zjcxph.imgapi.integration.mapper;
 
+import com.zjcxph.imgapi.security.MedicalAccess;
+
 import com.zjcxph.imgapi.common.AuthSession;
 import com.zjcxph.imgapi.exception.BusinessException;
 import com.zjcxph.imgapi.integration.PostgresqlIntegrationTestSupport;
@@ -34,12 +36,14 @@ class AutomaticClassificationPostgresqlIT extends PostgresqlIntegrationTestSuppo
     @Autowired AutomaticClassificationMapper mapper;@Autowired ClassificationMapper classifications;
     @Autowired OcrBatchMapper batches;@Autowired OcrMapper ocr;@Autowired JdbcTemplate jdbc;@Autowired PlatformTransactionManager manager;
     @TempDir Path temporary;
-    AutomaticClassificationService service;ImageTypeService types;OcrQualityGate quality;OcrAccess access;OcrInput input;
+    AutomaticClassificationService service;ImageTypeService types;OcrQualityGate quality;MedicalAccess access;OcrInput input;
     OcrJobService jobs;
     AuthSession actor;String batchId;String jobId;Long archive;String sourceHash;List<Integer> scans;
     @BeforeEach void setup() throws Exception {
         actor=new AuthSession();actor.setId(876L);actor.setUsername("synthetic-authorizer");actor.setRoleCode("ADMIN");AuthContext.setCurrentUser(actor);
-        access=mock(OcrAccess.class);when(access.require(anyLong(),any(String[].class))).thenReturn(actor);
+        access=mock(MedicalAccess.class);when(access.require(anyLong(),any(String[].class))).thenReturn(actor);
+        when(access.requireWrite(anyLong(),any(String[].class))).thenReturn(actor);
+        when(access.requireExecutionWrite(anyLong(),any(String[].class))).thenReturn(actor);
         sourceHash="a".repeat(64);input=mock(OcrInput.class);when(input.prepare(anyInt(),any())).thenAnswer(i->new OcrInput.Prepared(temporary.resolve("synthetic.ocr"),sourceHash));
         quality=mock(OcrQualityGate.class);when(quality.enabled()).thenReturn(true);when(quality.checksum()).thenReturn("c".repeat(64));when(quality.permits(anyString(),anyString(),anyInt())).thenReturn(true);
         var guard=mock(OcrLoadGuard.class);when(guard.allowed()).thenReturn(true);jobs=mock(OcrJobService.class);when(jobs.enabled()).thenReturn(true);
@@ -95,6 +99,56 @@ class AutomaticClassificationPostgresqlIT extends PostgresqlIntegrationTestSuppo
             assertThat(jdbc.queryForObject("SELECT auto_status FROM app.mr_image_classification_suggestion WHERE scan_id=?",String.class,scans.getFirst())).isEqualTo("REVIEW_REQUIRED");
         } finally {jdbc.execute("ALTER TABLE app.mr_image_type_audit DROP CONSTRAINT ck_test_auto_failure");}
     }
+    @Test void lateAuthorizationFailureCannotOverwriteCommittedCancellation() {
+        when(access.require(anyLong(),any(String[].class))).thenAnswer(call->{
+            // Independent committed cancellation before the worker's exception handler.
+            batches.status(batchId,"CANCEL_REQUESTED",null);
+            throw new BusinessException(403,"revoked");
+        });
+        service.runOne();
+        assertThat(batches.batch(batchId).getStatus()).isEqualTo("CANCEL_REQUESTED");
+        verifyNoInteractions(input);
+        assertThat(classifications.scan(scans.getFirst()).getBtype()).isZero();
+    }
+
+    @Autowired AuthUserMapper users;
+    @Autowired AuthRoleMapper roles;
+    @Test void committedRevocationWhileWaitingOnAuthorizationLockPreventsAutoApply() throws Exception {
+        String role="AUTO_TEST_"+UUID.randomUUID();
+        jdbc.update("INSERT INTO app.mr_auth_role(code,name,permissions) VALUES (?,?,'record:read,ocr:run,ocr:batch-run,classification:auto-apply,classification:review')",role,role);
+        long id=jdbc.queryForObject("INSERT INTO app.mr_auth_user(username,password_hash,role_code,status) VALUES (?,'synthetic',?,'active') RETURNING id",Long.class,"synthetic-"+UUID.randomUUID(),role);
+        jdbc.update("UPDATE app.mr_ocr_batch SET owner_user_id=? WHERE id=?",id,batchId);
+        jdbc.update("UPDATE app.mr_smart_classification_job SET owner_user_id=? WHERE id=?",id,jobId);
+        var ready=new java.util.concurrent.CountDownLatch(1);
+        var gate=new java.util.concurrent.CountDownLatch(1);
+        when(input.prepare(anyInt(),any())).thenAnswer(call->{
+            ready.countDown();
+            if(!gate.await(5,java.util.concurrent.TimeUnit.SECONDS)) throw new AssertionError("source gate");
+            return new OcrInput.Prepared(temporary.resolve("synthetic.ocr"),sourceHash);
+        });
+        var guard=mock(OcrLoadGuard.class);when(guard.allowed()).thenReturn(true);
+        var actual=new AutomaticClassificationService(mapper,classifications,batches,ocr,input,new MedicalAccess(users,roles),types,quality,guard,jobs,mock(OcrBatchService.class),new TransactionTemplate(manager));
+        var executor=java.util.concurrent.Executors.newSingleThreadExecutor();
+        try {
+            var pending=executor.submit(actual::runOne);
+            assertThat(ready.await(5,java.util.concurrent.TimeUnit.SECONDS)).isTrue();
+            new TransactionTemplate(manager).executeWithoutResult(tx->{
+                roles.lockAdminRole();
+                jdbc.update("UPDATE app.mr_auth_role SET permissions='record:read' WHERE code=?",role);
+                gate.countDown();
+                // Before the fix the worker reads old committed permissions and finishes.
+                assertThatThrownBy(()->pending.get(500,java.util.concurrent.TimeUnit.MILLISECONDS)).isInstanceOf(java.util.concurrent.TimeoutException.class);
+            });
+            pending.get(5,java.util.concurrent.TimeUnit.SECONDS);
+            assertThat(classifications.scan(scans.getFirst()).getBtype()).isZero();
+            assertThat(batches.batch(batchId).getStatus()).isEqualTo("PAUSED");
+        } finally {
+            gate.countDown();executor.shutdownNow();actual.close();
+            jdbc.update("DELETE FROM app.mr_auth_user WHERE id=?",id);
+            jdbc.update("DELETE FROM app.mr_auth_role WHERE code=?",role);
+        }
+    }
+
     @Test void revokedAuthorizationPausesWithoutReadingOrChangingImage() {
         when(access.require(anyLong(),any(String[].class))).thenThrow(new BusinessException(403,"revoked"));service.runOne();
         assertThat(batches.batch(batchId).getStatus()).isEqualTo("PAUSED");verify(input,never()).prepare(anyInt(),any());

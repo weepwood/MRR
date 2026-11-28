@@ -31,6 +31,9 @@ class ScanServiceImplTest {
     @Mock
     private com.zjcxph.imgapi.service.ImageTypeService imageTypes;
 
+    @Mock
+    private com.zjcxph.imgapi.security.MedicalAccess medicalAccess;
+
     @InjectMocks
     private ScanServiceImpl scanService;
 

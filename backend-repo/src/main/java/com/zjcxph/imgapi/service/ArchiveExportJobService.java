@@ -56,6 +56,7 @@ public class ArchiveExportJobService {
     private final ArchiveExportTempFileManager tempFileManager;
     private final ArchiveExportProperties properties;
     private final Executor executor;
+    private final ArchiveExportExecutionAccess executionAccess;
     private final ConcurrentHashMap<String, AtomicBoolean> cancellationFlags = new ConcurrentHashMap<>();
     private final Set<String> submittedJobIds = ConcurrentHashMap.newKeySet();
     private boolean recoveryRequested;
@@ -68,12 +69,14 @@ public class ArchiveExportJobService {
             ArchiveExportJobRepository repository,
             ArchiveExportTempFileManager tempFileManager,
             ArchiveExportProperties properties,
-            @Qualifier("archiveExportExecutor") Executor executor) {
+            @Qualifier("archiveExportExecutor") Executor executor,
+            ArchiveExportExecutionAccess executionAccess) {
         this.archiveExportService = archiveExportService;
         this.repository = repository;
         this.tempFileManager = tempFileManager;
         this.properties = properties;
         this.executor = executor;
+        this.executionAccess = executionAccess;
     }
 
     public boolean shouldUseJob(ArchiveExportService.BatchZipExport export) {
@@ -384,6 +387,7 @@ public class ArchiveExportJobService {
             if (Boolean.TRUE.equals(job.getCancelRequested()) || repository.isCancelRequested(id)) {
                 throw new ArchiveExportCancelledException();
             }
+            executionAccess.require(job);
             ArchiveExportService.BatchZipExport export = prepare(job);
             if (export.itemCount() == 0) {
                 throw new IOException("病案已没有可导出的影像");
@@ -395,6 +399,7 @@ public class ArchiveExportJobService {
             if (!tempFileManager.deleteManagedFile(job.getFilePath())) {
                 throw new IOException("Export temporary cleanup unavailable");
             }
+            executionAccess.require(job);
             reservation = tempFileManager.reserve(id, estimateBytes(export), extension);
             if (repository.setOutputFile(id, reservation.path().toString()) == 0) {
                 throw new ArchiveExportCancelledException();
@@ -417,6 +422,7 @@ public class ArchiveExportJobService {
                             cancellation.set(true);
                             return true;
                         }
+                        executionAccess.require(job);
                     }
                     return false;
                 }
@@ -450,7 +456,7 @@ public class ArchiveExportJobService {
                 sha256 = DigestUtils.sha256Hex(input);
             }
             if (cancellation.get() || Thread.currentThread().isInterrupted() || repository.isCancelRequested(id)
-                    || repository.markSuccess(id, outputBytes, sha256, LocalDateTime.now()) == 0) {
+                    || executionAccess.publish(job, () -> repository.markSuccess(id, outputBytes, sha256, LocalDateTime.now())) == 0) {
                 throw new ArchiveExportCancelledException();
             }
             success = true;
@@ -480,6 +486,10 @@ public class ArchiveExportJobService {
 
     private String publicFailureMessage(Exception exception) {
         Throwable cause = NestedExceptionUtils.getMostSpecificCause(exception);
+        if (cause instanceof BusinessException business
+                && ArchiveExportExecutionAccess.REVOKED.equals(business.getReasonCode())) {
+            return ArchiveExportExecutionAccess.MESSAGE;
+        }
         if (cause instanceof ExportSizeLimitOutputStream.LimitExceededException
                 || (cause instanceof BusinessException business && business.getCode() == 413)) {
             return ExportSizeLimitOutputStream.LIMIT_MESSAGE;

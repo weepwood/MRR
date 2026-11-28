@@ -9,6 +9,7 @@ import com.zjcxph.imgapi.service.ArchiveBoxRecordService;
 import com.zjcxph.imgapi.utils.MedicalRecordCodeUtils;
 import com.zjcxph.imgapi.utils.PaginationUtils;
 import org.springframework.stereotype.Service;
+import com.zjcxph.imgapi.security.MedicalAccess;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
@@ -30,13 +31,17 @@ public class ArchiveBoxRecordServiceImpl implements ArchiveBoxRecordService {
 
     private final ArchiveBoxRecordMapper mapper;
 
-    public ArchiveBoxRecordServiceImpl(ArchiveBoxRecordMapper mapper) {
+    private final MedicalAccess medicalAccess;
+
+    public ArchiveBoxRecordServiceImpl(ArchiveBoxRecordMapper mapper, MedicalAccess medicalAccess) {
         this.mapper = mapper;
+        this.medicalAccess = medicalAccess;
     }
 
     @Override
     @Transactional
     public ArchiveBoxRecord create(ArchiveBoxRecordRequest request) {
+        medicalAccess.requireCurrentWrite("record:edit");
         ArchiveBoxRecord record = toEntity(null, request);
         ensureSjhNotDuplicated(record.getSjh(), null);
         mapper.insert(record);
@@ -46,6 +51,7 @@ public class ArchiveBoxRecordServiceImpl implements ArchiveBoxRecordService {
     @Override
     @Transactional
     public ArchiveBoxRecord update(Long id, ArchiveBoxRecordRequest request) {
+        medicalAccess.requireCurrentWrite("record:edit");
         ArchiveBoxRecord existing = mapper.findById(id);
         if (existing == null) {
             return null;
@@ -60,6 +66,7 @@ public class ArchiveBoxRecordServiceImpl implements ArchiveBoxRecordService {
     @Override
     @Transactional
     public boolean delete(Long id) {
+        medicalAccess.requireCurrentWrite("record:edit");
         return mapper.deleteById(id) > 0;
     }
 

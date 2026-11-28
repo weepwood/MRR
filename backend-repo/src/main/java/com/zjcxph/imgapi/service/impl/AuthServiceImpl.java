@@ -190,6 +190,7 @@ public class AuthServiceImpl implements AuthService {
         if (created == null) {
             throw new BusinessException("注册申请保存失败，请稍后重试");
         }
+        persistSecurityChange("USER_REGISTRATION_SUBMITTED", null, created.getId(), null, null);
         auditSuccessAfterCommit(false, "event=USER_REGISTRATION_SUBMITTED targetUserId={} username={} sourceIp={} status=PENDING result=SUCCESS",
                 created.getId(), username, clientIp);
         return new RegistrationResultDTO(
@@ -214,6 +215,7 @@ public class AuthServiceImpl implements AuthService {
         }
 
         AuthUser approved = authUserMapper.findById(userId);
+        persistSecurityChange("USER_REGISTRATION_APPROVED", administratorId, userId, null, null);
         auditSuccessAfterCommit(false, "event=USER_REGISTRATION_APPROVED actorUserId={} targetUserId={} username={} roleCode={} sourceIp={} result=SUCCESS",
                 administratorId, userId, target.getUsername(), roleCode, clientIp);
         return toProfile(approved);
@@ -239,6 +241,7 @@ public class AuthServiceImpl implements AuthService {
         }
 
         AuthUser rejected = authUserMapper.findById(userId);
+        persistSecurityChange("USER_REGISTRATION_REJECTED", administratorId, userId, null, null);
         auditSuccessAfterCommit(true, "event=USER_REGISTRATION_REJECTED actorUserId={} targetUserId={} username={} sourceIp={} reason={} result=SUCCESS",
                 administratorId, userId, target.getUsername(), clientIp, sanitizeAuditText(rejectReason));
         return toProfile(rejected);
@@ -260,6 +263,7 @@ public class AuthServiceImpl implements AuthService {
         if (authUserMapper.reopenRegistration(userId) != 1) {
             throw new BusinessException(409, "注册申请状态已发生变化，请刷新后重试");
         }
+        persistSecurityChange("USER_REGISTRATION_REOPENED", administratorId, userId, null, null);
         auditSuccessAfterCommit(true, "event=USER_REGISTRATION_REOPENED actorUserId={} targetUserId={} username={} sourceIp={} result=SUCCESS",
                 administratorId, userId, target.getUsername(), clientIp);
         return toProfile(authUserMapper.findById(userId));
@@ -322,6 +326,7 @@ public class AuthServiceImpl implements AuthService {
         authUserMapper.insertUser(user);
 
         AuthUser created = authUserMapper.findByUsername(username);
+        persistSecurityChange("USER_CREATED", administratorId, created == null ? null : created.getId(), null, null);
         auditSuccessAfterCommit(false, "event=USER_CREATED actorUserId={} targetUserId={} username={} roleCode={} sourceIp={} tempExpiresAt={} result=SUCCESS",
                 administratorId, created == null ? null : created.getId(), username, roleCode, clientIp, expiresAt);
         return new UserCredentialResultDTO(toProfile(created), temporaryPassword, expiresAt);
@@ -365,6 +370,7 @@ public class AuthServiceImpl implements AuthService {
         }
 
         AuthUser updated = authUserMapper.findById(userId);
+        persistSecurityChange("USER_PASSWORD_RESET", administratorId, userId, null, null);
         auditSuccessAfterCommit(true, "event=USER_PASSWORD_RESET actorUserId={} targetUserId={} username={} sourceIp={} passwordVersion={} tempExpiresAt={} result=SUCCESS",
                 administratorId, userId, target.getUsername(), clientIp,
                 updated == null ? null : updated.effectivePasswordVersion(), expiresAt);
@@ -398,10 +404,13 @@ public class AuthServiceImpl implements AuthService {
             throw new BusinessException("新密码不能与当前密码相同");
         }
 
-        if (authUserMapper.changePassword(userId, PasswordUtil.encode(request.getNewPassword()),
+        String passwordHash = PasswordUtil.encode(request.getNewPassword());
+        requireCurrentCredentialSession(userId);
+        if (authUserMapper.changePassword(userId, passwordHash,
                 user.effectivePasswordVersion(), true) != 1) {
             throw credentialChanged();
         }
+        persistSecurityChange("USER_FIRST_PASSWORD_CHANGED", userId, userId, null, null);
         auditSuccessAfterCommit(false, "event=USER_FIRST_PASSWORD_CHANGED actorUserId={} targetUserId={} sourceIp={} result=SUCCESS",
                 userId, userId, clientIp);
     }
@@ -435,6 +444,7 @@ public class AuthServiceImpl implements AuthService {
         if (updated == 0) {
             return null;
         }
+        persistSecurityChange("USER_ROLE_OR_STATUS_CHANGED", AuthContext.getCurrentUser().getId(), id, null, null);
         auditSuccessAfterCommit(false, "event=USER_ROLE_OR_STATUS_CHANGED actorUserId={} targetUserId={} roleCode={} status={} result=SUCCESS",
                 AuthContext.getCurrentUser() == null ? null : AuthContext.getCurrentUser().getId(),
                 id, nextRoleCode, nextStatus);
@@ -458,6 +468,7 @@ public class AuthServiceImpl implements AuthService {
         }
         int updated = authUserMapper.updateStatus(id, "disabled");
         if (updated > 0) {
+            persistSecurityChange("USER_DISABLED", AuthContext.getCurrentUser().getId(), id, null, null);
             auditSuccessAfterCommit(true, "event=USER_DISABLED actorUserId={} targetUserId={} previousStatus={} result=SUCCESS",
                     AuthContext.getCurrentUser() == null ? null : AuthContext.getCurrentUser().getId(),
                     id, user.getStatus());
@@ -479,10 +490,13 @@ public class AuthServiceImpl implements AuthService {
         if (oldPassword.equals(newPassword)) {
             throw new BusinessException("新密码不能与原密码相同");
         }
-        if (authUserMapper.changePassword(userId, PasswordUtil.encode(newPassword),
+        String passwordHash = PasswordUtil.encode(newPassword);
+        requireCurrentCredentialSession(userId);
+        if (authUserMapper.changePassword(userId, passwordHash,
                 user.effectivePasswordVersion(), false) != 1) {
             throw credentialChanged();
         }
+        persistSecurityChange("USER_PASSWORD_CHANGED", userId, userId, null, null);
         auditSuccessAfterCommit(false, "event=USER_PASSWORD_CHANGED actorUserId={} targetUserId={} result=SUCCESS", userId, userId);
     }
 
@@ -511,9 +525,22 @@ public class AuthServiceImpl implements AuthService {
         String roleCode = role.getCode();
         boolean permissionsEdited = permissions != null;
         // A successful security event must refer to the committed role change, not a rolled-back write.
+        persistSecurityChange("ROLE_UPDATED", actorId, null, roleCode, permissionsEdited);
         auditSuccessAfterCommit(false, "event=ROLE_UPDATED actorUserId={} roleCode={} permissionsEdited={} result=SUCCESS",
                 actorId, roleCode, permissionsEdited);
         return role;
+    }
+
+    /** Business success facts belong to the same transaction as the mutation. */
+    private void persistSecurityChange(String event, Long actor, Long target, String role, Boolean permissionsEdited) {
+        try {
+            if (authUserMapper.insertSecurityChangeAudit(event, actor, target, role, permissionsEdited) != 1) {
+                throw new BusinessException(503, "安全审计暂不可用，请稍后重试");
+            }
+        } catch (org.springframework.dao.DataAccessException failure) {
+            // Do not expose SQL, parameter values, or database details to callers.
+            throw new BusinessException(503, "安全审计暂不可用，请稍后重试");
+        }
     }
 
     /** Capture immutable event arguments now; publish success only after the enclosing transaction commits. */
@@ -622,12 +649,35 @@ public class AuthServiceImpl implements AuthService {
         if (session != null && session.getId() != null) {
             authUserMapper.lockAuthorizationActor(session.getId());
         }
-        AuthUser current = session == null || session.getId() == null
-                ? null : authUserMapper.findSessionById(session.getId());
+        AuthUser current = currentAuthorizationActor(session);
         if (current == null || !"active".equalsIgnoreCase(current.getStatus())
                 || current.isPasswordChangeRequired()
                 || current.effectivePasswordVersion() != session.effectivePasswordVersion()
                 || !toSession(current).hasPermission(permission)) {
+            throw new BusinessException(403, "当前账号没有操作权限");
+        }
+    }
+
+    /** HTTP calls re-observe the verified session after taking the existing authorization locks. */
+    private AuthUser currentAuthorizationActor(AuthSession session) {
+        if (session == null || session.getId() == null) return null;
+        String hash = AuthContext.getCurrentTokenHash();
+        if (hash == null) return authUserMapper.findSessionById(session.getId());
+        var current = authUserMapper.observeSession(session.getId(), hash);
+        return current != null && Boolean.FALSE.equals(current.getTokenRevoked()) ? current : null;
+    }
+
+    private void requireCurrentCredentialSession(Long userId) {
+        // Internal callers retain the existing credential CAS contract; HTTP auth supplies the hash.
+        if (AuthContext.getCurrentTokenHash() == null) return;
+        AuthSession session = AuthContext.getCurrentUser();
+        if (session == null || !java.util.Objects.equals(userId, session.getId())) {
+            throw new BusinessException(403, "当前账号没有操作权限");
+        }
+        authUserMapper.lockAuthorizationActor(userId);
+        AuthUser current = currentAuthorizationActor(session);
+        if (current == null || !"active".equalsIgnoreCase(current.getStatus())
+                || current.effectivePasswordVersion() != session.effectivePasswordVersion()) {
             throw new BusinessException(403, "当前账号没有操作权限");
         }
     }
@@ -641,6 +691,9 @@ public class AuthServiceImpl implements AuthService {
             throw new BusinessException(403, "当前账号不是有效管理员");
         }
         authUserMapper.lockAuthorizationActor(administratorId);
+        if (AuthContext.getCurrentTokenHash() != null && currentAuthorizationActor(session) == null) {
+            throw new BusinessException(403, "当前账号没有操作权限");
+        }
         AuthUser administrator = authUserMapper.findById(administratorId);
         if (administrator == null
                 || !"ADMIN".equalsIgnoreCase(administrator.getRoleCode())

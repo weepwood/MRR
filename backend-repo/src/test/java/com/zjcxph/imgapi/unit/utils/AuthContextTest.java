@@ -72,4 +72,23 @@ class AuthContextTest {
             assertThat(AuthContext.getCurrentUser()).isNull();
         }
     }
+
+    @Test
+    void verifiedTokenHashIsThreadLocalAndClearsWithIdentity() throws Exception {
+        var session = new AuthSession();
+        String hash = "a".repeat(64);
+        AuthContext.setCurrentUser(session,hash);
+        assertThat(AuthContext.getCurrentTokenHash()).isEqualTo(hash);
+        assertThat(new com.fasterxml.jackson.databind.ObjectMapper().writeValueAsString(session)).doesNotContain(hash,"tokenHash");
+        try (var other = java.util.concurrent.Executors.newSingleThreadExecutor()) {
+            assertThat(other.submit(AuthContext::getCurrentTokenHash).get()).isNull();
+        }
+        AuthContext.setCurrentUser(new AuthSession());
+        assertThat(AuthContext.getCurrentTokenHash()).isNull();
+        AuthContext.setCurrentUser(session,hash);
+        AuthContext.clear();
+        assertThat(AuthContext.getCurrentTokenHash()).isNull();
+        assertThat(AuthContext.getCurrentUser()).isNull();
+    }
+
 }

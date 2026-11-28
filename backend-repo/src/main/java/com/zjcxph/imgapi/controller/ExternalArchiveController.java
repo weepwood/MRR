@@ -102,11 +102,6 @@ public class ExternalArchiveController {
         logger.info(
                 "External archive ticket issued: archives={}", issued.grant().cases().size()
         );
-        externalArchiveAccessService.recordAudit(
-                issued.grant(), null, null, "TICKET_CREATE", null,
-                clientIp, servletRequest.getHeader("User-Agent"), requestId(servletRequest),
-                "SUCCESS", "archives=" + issued.grant().cases().size()
-        );
         return Result.success(new ExternalArchiveTicketResponse(
                 issued.token(), launchUrl, issued.expiresIn(), issued.grant().cases().size()
         ));
@@ -135,11 +130,6 @@ public class ExternalArchiveController {
         response.addHeader(HttpHeaders.SET_COOKIE, cookie.toString());
         response.setHeader("Referrer-Policy", "no-referrer");
         ExternalArchiveGrant grant = issued.grant();
-        externalArchiveAccessService.recordAudit(
-                grant, null, null, "SESSION_CREATE", null,
-                clientIp, request.getHeader("User-Agent"), requestId(request),
-                "SUCCESS", "expiresIn=" + issued.expiresIn()
-        );
         return Result.success(new ExternalArchiveSessionResponse(
                 grant.clientId(),
                 grant.externalUserId(),
@@ -169,7 +159,12 @@ public class ExternalArchiveController {
         ExternalArchiveGrant grant = requireGrant(request);
         if(!grant.allows(bah,sjh))throw new BusinessException(403,"当前外部会话无权访问该病案");
         externalArchiveAccessService.requireAuditIntent(grant,bah,sjh,"ARCHIVE_VIEW",null,IpUtil.getClientIp(request));
-        List<BAHDataResponseDTO> images = externalArchiveAccessService.loadImages(grant, bah, sjh);
+        List<BAHDataResponseDTO> images;
+        try { images = externalArchiveAccessService.loadImages(grant, bah, sjh); }
+        catch (RuntimeException failure) {
+            auditPreparationFailure(grant,bah,sjh,"ARCHIVE_VIEW",null,request,failure);
+            throw failure;
+        }
         String clientIp = IpUtil.getClientIp(request);
         logger.info(
                 "External archive viewed: images={}", images.size()
@@ -199,10 +194,13 @@ public class ExternalArchiveController {
         }
 
         externalArchiveAccessService.requireAuditIntent(grant,normalizedBah,normalizedSjh,"ARCHIVE_DOWNLOAD",null,IpUtil.getClientIp(request));
-        ArchiveExportService.BatchZipExport export =
-                archiveExportService.prepareExternalArchive(normalizedBah, normalizedSjh);
-        if (export.itemCount() == 0) {
-            throw new BusinessException(404, "未找到匹配档案的图片");
+        ArchiveExportService.BatchZipExport export;
+        try {
+            export=archiveExportService.prepareExternalArchive(normalizedBah, normalizedSjh);
+            if (export.itemCount() == 0) throw new BusinessException(404, "未找到匹配档案的图片");
+        } catch (RuntimeException failure) {
+            auditPreparationFailure(grant,normalizedBah,normalizedSjh,"ARCHIVE_DOWNLOAD",null,request,failure);
+            throw failure;
         }
 
         String clientIp = IpUtil.getClientIp(request);
@@ -243,7 +241,12 @@ public class ExternalArchiveController {
     ) {
         ExternalArchiveGrant grant = requireGrant(request);
         externalArchiveAccessService.requireAuditIntent(grant,null,null,"IMAGE_VIEW",id,IpUtil.getClientIp(request));
-        var scoped = imageContentService.openExternal(id, grant);
+        ImageContentService.ScopedImage scoped;
+        try { scoped = imageContentService.openExternal(id, grant); }
+        catch (RuntimeException failure) {
+            auditPreparationFailure(grant,null,null,"IMAGE_VIEW",id,request,failure);
+            throw failure;
+        }
         ImageContentService.ImageContent content = scoped.content();
         String clientIp = IpUtil.getClientIp(request);
         String userAgent = request.getHeader("User-Agent");
@@ -285,6 +288,13 @@ public class ExternalArchiveController {
                 "SUCCESS", null
         );
         return Result.success("外部影像会话已退出");
+    }
+
+    private void auditPreparationFailure(ExternalArchiveGrant grant,String bah,String sjh,String action,
+                                         Integer imageId,HttpServletRequest request,RuntimeException failure) {
+        String result=failure instanceof BusinessException business && business.getCode()==403?"DENIED":"FAILED";
+        externalArchiveAccessService.recordAudit(grant,bah,sjh,action,imageId,IpUtil.getClientIp(request),
+                request.getHeader("User-Agent"),requestId(request),result,"PREPARATION_FAILED");
     }
 
     private ExternalArchiveGrant requireGrant(HttpServletRequest request) {

@@ -104,7 +104,7 @@ class BackendMixedHttpPostgresqlIT extends PostgresqlIntegrationTestSupport {
         mvc.addBeanFactoryPostProcessor(factory -> {
             factory.registerSingleton("loginInterceptor", login);
             factory.registerSingleton("qualityController", new DataQualityController(service));
-            factory.registerSingleton("scanController", new ScanController(new ScanServiceImpl(scans, null), null));
+            factory.registerSingleton("scanController", new ScanController(new ScanServiceImpl(scans, null, org.mockito.Mockito.mock(com.zjcxph.imgapi.security.MedicalAccess.class)), null));
         });
         var servlet = Tomcat.addServlet(context, "mvc", new DispatcherServlet(mvc));
         servlet.setLoadOnStartup(1);
@@ -235,15 +235,20 @@ class BackendMixedHttpPostgresqlIT extends PostgresqlIntegrationTestSupport {
         files.initialize();
         var repository = new com.zjcxph.imgapi.repository.ArchiveExportJobRepository(jdbc);
         var service = new com.zjcxph.imgapi.service.ArchiveExportJobService(
-                org.mockito.Mockito.mock(com.zjcxph.imgapi.service.ArchiveExportService.class),repository,files,props,Runnable::run);
+                org.mockito.Mockito.mock(com.zjcxph.imgapi.service.ArchiveExportService.class),repository,files,props,Runnable::run, com.zjcxph.imgapi.support.ArchiveExportAccessFixtures.allow());
         var mode = new DeveloperModeService(settings, false, "127.0.0.1,::1", new ImageDeliveryProperties());
         var login = new LoginInterceptor(users, mode, new DeveloperApiAccessService(settings, mode));
         var tomcat = new Tomcat(); tomcat.setBaseDir(directory.toString()); tomcat.setPort(0);
         var connector = tomcat.getConnector(); connector.setProperty("address","127.0.0.1");
         var context = tomcat.addContext("",directory.toString());
-        var mvc = new AnnotationConfigWebApplicationContext(); mvc.register(MvcConfig.class);
+        var mvc = new AnnotationConfigWebApplicationContext(); mvc.register(MvcConfig.class,com.zjcxph.imgapi.config.MedicalAuditWebConfig.class);
         mvc.addBeanFactoryPostProcessor(beans -> {
             beans.registerSingleton("loginInterceptor",login);
+            beans.registerSingleton("disclosureLog",new com.zjcxph.imgapi.interceptors.LogInterceptor(
+                    org.mockito.Mockito.mock(com.zjcxph.imgapi.service.AsyncLogService.class),
+                    new SimpleMeterRegistry(),org.mockito.Mockito.mock(com.zjcxph.imgapi.setting.SettingRegistry.class)));
+            beans.registerSingleton("medicalAuditAdmissionInterceptor",new com.zjcxph.imgapi.audit.MedicalAuditAdmissionInterceptor(
+                    beans.getBeanProvider(com.zjcxph.imgapi.audit.MedicalAuditAdmission.class),jdbc,transactionManager));
             beans.registerSingleton("exportController",new com.zjcxph.imgapi.controller.ArchiveExportJobController(
                     service,repository,org.mockito.Mockito.mock(com.zjcxph.imgapi.service.DeploymentReadinessService.class)));
         });
@@ -277,7 +282,18 @@ class BackendMixedHttpPostgresqlIT extends PostgresqlIntegrationTestSupport {
                 assertThat(response.body()).containsExactly(block[0]);
                 assertThat(response.headers().firstValue("X-Archive-SHA256")).contains(digest);
                 assertThat(response.headers().firstValue("Content-Range")).contains("bytes 0-0/"+size);
-                return (System.nanoTime()-start)/1000000;
+                long elapsed=(System.nanoTime()-start)/1000000;
+                String trace=response.headers().firstValue("X-Request-Id").orElseThrow();
+                long deadline=System.nanoTime()+TimeUnit.SECONDS.toNanos(3);
+                List<String> phases;
+                do {
+                    phases=jdbc.queryForList("SELECT phase FROM app.medical_audit_event WHERE request_id=? AND actor_id=? ORDER BY phase",String.class,trace,actor);
+                    if(phases.size()==2)break;
+                    Thread.sleep(10);
+                }while(System.nanoTime()<deadline);
+                assertThat(phases).containsExactly("INTENT","OUTCOME");
+                assertThat(jdbc.queryForObject("SELECT http_status FROM app.medical_audit_event WHERE request_id=? AND phase='OUTCOME'",String.class,trace)).isEqualTo("206");
+                return elapsed;
             };
             range.call(); // warm-up
             for(int i=0;i<3;i++) System.out.println("MRR_EXPORT_HTTP_RANGE_128M_MS "+range.call());
@@ -309,13 +325,15 @@ class BackendMixedHttpPostgresqlIT extends PostgresqlIntegrationTestSupport {
             workers.shutdownNow();
             try {tomcat.stop();} finally {tomcat.destroy();mvc.close();}
             jdbc.update("DELETE FROM app.archive_export_job WHERE id=CAST(? AS UUID)",id);
+            jdbc.update("DELETE FROM app.medical_audit_event WHERE actor_id IN (SELECT id FROM app.mr_auth_user WHERE username=?)",username);
             jdbc.update("DELETE FROM app.mr_auth_user WHERE username=?",username);
             jdbc.update("DELETE FROM app.mr_auth_role WHERE code=?",role);
         }
     }
 
-    @Test
-    void delegatedRoleRevocationDeniesInFlightHttpWrite() throws Exception {
+    @org.junit.jupiter.params.ParameterizedTest
+    @org.junit.jupiter.params.provider.ValueSource(strings={"role", "token"})
+    void delegatedRoleRevocationDeniesInFlightHttpWrite(String revoked) throws Exception {
         String role = "SYNTHETIC_HTTP_ROLE_" + java.util.UUID.randomUUID();
         String target = role + "_TARGET";
         String username = "synthetic-http-role-" + java.util.UUID.randomUUID();
@@ -345,6 +363,7 @@ class BackendMixedHttpPostgresqlIT extends PostgresqlIntegrationTestSupport {
         var servlet = Tomcat.addServlet(context, "mvc", new DispatcherServlet(mvc));
         servlet.setLoadOnStartup(1);
         context.addServletMappingDecoded("/", "mvc");
+        String revokedHash = null;
         try {
             jdbc.update("INSERT INTO app.mr_auth_role(code,name,permissions) VALUES (?,?,'role:manage'), (?,?,'role:read')", role, role, target, target);
             long actor = jdbc.queryForObject("INSERT INTO app.mr_auth_user(username,password_hash,role_code,status,must_change_password,password_version) VALUES (?,'synthetic',?,'active',false,1) RETURNING id", Long.class, username, role);
@@ -352,6 +371,9 @@ class BackendMixedHttpPostgresqlIT extends PostgresqlIntegrationTestSupport {
             var session = new AuthSession();
             session.setId(actor); session.setUsername(username); session.setPasswordVersion(1); session.setStatus("active");
             String token = JwtUtil.getToken(session);
+            String otherToken = JwtUtil.getToken(session);
+            revokedHash = TokenBlacklist.tokenHash(JwtUtil.getJti(token));
+            assertThat(JwtUtil.getJti(otherToken)).isNotEqualTo(JwtUtil.getJti(token));
             tomcat.start();
             String base = "http://127.0.0.1:" + connector.getLocalPort() + "/api/v1/auth/roles/" + target;
             var client = HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(3)).build();
@@ -364,7 +386,8 @@ class BackendMixedHttpPostgresqlIT extends PostgresqlIntegrationTestSupport {
             var response = tx.execute(status -> {
                 authRoles.lockAdminRole();
                 int blocker = jdbc.queryForObject("select pg_backend_pid()", Integer.class);
-                jdbc.update("UPDATE app.mr_auth_role SET permissions='role:read' WHERE code=?", role);
+                if ("role".equals(revoked)) jdbc.update("UPDATE app.mr_auth_role SET permissions='role:read' WHERE code=?", role);
+                else blacklist.revoke(JwtUtil.getJti(token), JwtUtil.getExpirationMillis(token));
                 var pending = client.sendAsync(request.apply("denied"), HttpResponse.BodyHandlers.ofString());
                 long deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(5);
                 while (!pending.isDone() && System.nanoTime() < deadline) {
@@ -381,9 +404,17 @@ class BackendMixedHttpPostgresqlIT extends PostgresqlIntegrationTestSupport {
             assertThat(denied.statusCode()).isEqualTo(403);
             assertThat(denied.body()).contains("当前账号没有操作权限");
             assertThat(authRoles.findByCode(target).getDescription()).isEqualTo("permitted");
-            assertThat(client.send(request.apply("denied-again"), HttpResponse.BodyHandlers.ofString()).statusCode()).isEqualTo(403);
+            assertThat(client.send(request.apply("denied-again"), HttpResponse.BodyHandlers.ofString()).statusCode()).isEqualTo("role".equals(revoked)?403:401);
+            if ("token".equals(revoked)) {
+                var other = HttpRequest.newBuilder(URI.create(base)).timeout(Duration.ofSeconds(8))
+                        .header("Authorization","Bearer " + otherToken).header("Content-Type","application/json")
+                        .PUT(HttpRequest.BodyPublishers.ofString("{\"description\":\"other-session\"}")).build();
+                assertOk(client.send(other,HttpResponse.BodyHandlers.ofString()));
+                assertThat(authRoles.findByCode(target).getDescription()).isEqualTo("other-session");
+            }
         } finally {
             try { tomcat.stop(); } finally { tomcat.destroy(); mvc.close(); }
+            if (revokedHash != null) jdbc.update("DELETE FROM app.token_revocation WHERE token_hash=?", revokedHash);
             jdbc.update("DELETE FROM app.mr_auth_user WHERE username=?", username);
             jdbc.update("DELETE FROM app.mr_auth_role WHERE code IN (?,?)", role, target);
         }
@@ -494,8 +525,10 @@ class BackendMixedHttpPostgresqlIT extends PostgresqlIntegrationTestSupport {
     @EnableWebMvc
     static class MvcConfig implements WebMvcConfigurer {
         @Autowired LoginInterceptor login;
+        @Autowired(required=false) com.zjcxph.imgapi.interceptors.LogInterceptor disclosureLog;
         @Bean GlobalExceptionHandler errors() { return new GlobalExceptionHandler(); }
         @Override public void addInterceptors(InterceptorRegistry registry) {
+            if(disclosureLog!=null)registry.addInterceptor(disclosureLog);
             registry.addInterceptor(login);
             registry.addInterceptor(new AuthorizationInterceptor());
         }

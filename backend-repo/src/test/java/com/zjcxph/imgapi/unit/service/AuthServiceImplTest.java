@@ -56,6 +56,13 @@ class AuthServiceImplTest {
 
     @BeforeEach
     void setUp() {
+        org.mockito.Mockito.lenient().when(authUserMapper.insertSecurityChangeAudit(
+                org.mockito.ArgumentMatchers.anyString(),
+                org.mockito.ArgumentMatchers.nullable(Long.class),
+                org.mockito.ArgumentMatchers.nullable(Long.class),
+                org.mockito.ArgumentMatchers.nullable(String.class),
+                org.mockito.ArgumentMatchers.nullable(Boolean.class))).thenReturn(1);
+
         JwtUtil.configure("test-jwt-secret-key-for-auth-service-tests-123456");
         mockUser = new AuthUser();
         mockUser.setId(1L);

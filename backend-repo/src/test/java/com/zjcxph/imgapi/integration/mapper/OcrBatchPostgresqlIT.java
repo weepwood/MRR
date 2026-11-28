@@ -1,5 +1,7 @@
 package com.zjcxph.imgapi.integration.mapper;
 
+import com.zjcxph.imgapi.security.MedicalAccess;
+
 import com.zjcxph.imgapi.common.AuthSession;
 import com.zjcxph.imgapi.integration.PostgresqlIntegrationTestSupport;
 import com.zjcxph.imgapi.mapper.*;
@@ -30,7 +32,7 @@ class OcrBatchPostgresqlIT extends PostgresqlIntegrationTestSupport {
     OcrBatchService service;OcrLoadGuard guard;AuthSession actor;int first;int last;String batchId;Long archive;
     @BeforeEach void setup() {
         actor=new AuthSession();actor.setId(888L);actor.setUsername("synthetic-batch-operator");actor.setRoleCode("ADMIN");
-        var access=mock(OcrAccess.class);when(access.require(anyLong(),any(String[].class))).thenReturn(actor);
+        var access=mock(MedicalAccess.class);when(access.require(anyLong(),any(String[].class))).thenReturn(actor);
         var jobs=mock(OcrJobService.class);when(jobs.enabled()).thenReturn(true);
         when(jobs.configuration()).thenReturn(new OcrModels.Config("test","b".repeat(64),30,4194304,.7));
         guard=mock(OcrLoadGuard.class);when(guard.allowed()).thenReturn(true);
@@ -71,7 +73,7 @@ class OcrBatchPostgresqlIT extends PostgresqlIntegrationTestSupport {
         var rolledBack=new java.util.concurrent.CountDownLatch(1);
         var allowCatch=new java.util.concurrent.CountDownLatch(1);
         var pool=java.util.concurrent.Executors.newSingleThreadExecutor();
-        var blockedAccess=mock(OcrAccess.class);
+        var blockedAccess=mock(MedicalAccess.class);
         when(blockedAccess.require(anyLong(),any(String[].class))).thenThrow(new com.zjcxph.imgapi.exception.BusinessException(403,"synthetic revoked"));
         var jobs=mock(OcrJobService.class);when(jobs.enabled()).thenReturn(true);
         var hooked=new TransactionTemplate(manager) {
@@ -97,6 +99,34 @@ class OcrBatchPostgresqlIT extends PostgresqlIntegrationTestSupport {
             service.dispatch();
             assertThat(batches.batch(batchId).getStatus()).isEqualTo("CANCELLED");
         } finally {allowCatch.countDown();pool.shutdownNow();}
+    }
+
+    @Autowired AuthUserMapper users;
+    @Autowired AuthRoleMapper roles;
+    @Autowired ScanMapper scans;
+
+    @Test void revokedBatchPermissionPreventsAlreadyDispatchedChildFromReadingImage() {
+        String role="OCR_BATCH_TEST_"+UUID.randomUUID();
+        jdbc.update("INSERT INTO app.mr_auth_role(code,name,permissions) VALUES (?,?,'record:read,ocr:run,ocr:batch-run')",role,role);
+        Long id=jdbc.queryForObject("INSERT INTO app.mr_auth_user(username,password_hash,role_code,status) VALUES (?,'synthetic',?,'active') RETURNING id",Long.class,"synthetic-"+UUID.randomUUID(),role);
+        try {
+            actor.setId(id);
+            batchId=service.create(actor,new OcrBatchService.Request(first-1,first,1,UUID.randomUUID().toString(),false)).id();
+            service.dispatch();
+            String child=batches.jobs(batchId,"").getFirst();
+            jdbc.update("UPDATE app.mr_auth_role SET permissions='record:read,ocr:run' WHERE code=?",role);
+            var settings=mock(SystemSettingService.class);when(settings.getSetting("ocrEnabled")).thenReturn("true");
+            var engine=mock(OcrEngine.class);when(engine.fingerprint("test")).thenReturn("b".repeat(64));
+            var input=mock(OcrInput.class);when(input.prepare(anyInt(),any())).thenThrow(new OcrFailure("SYNTHETIC_UNAUTHORIZED_READ"));
+            var worker=new OcrJobService(queue,scans,new MedicalAccess(users,roles),engine,input,settings,new TransactionTemplate(manager),mock(ClassificationService.class),guard);
+            worker.runOne();
+            verifyNoInteractions(input);
+            assertThat(queue.job(child).getStatus()).isEqualTo("CANCELLED");
+            assertThat(queue.fact(first)).isNull();
+        } finally {
+            jdbc.update("DELETE FROM app.mr_auth_user WHERE id=?",id);
+            jdbc.update("DELETE FROM app.mr_auth_role WHERE code=?",role);
+        }
     }
 
     private void completeChildren() {jdbc.update("UPDATE app.mr_smart_classification_job SET status='SUCCESS',processed_count=planned_count,ocr_success_count=planned_count WHERE batch_id=?",batchId);}

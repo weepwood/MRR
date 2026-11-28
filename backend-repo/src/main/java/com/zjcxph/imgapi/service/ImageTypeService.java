@@ -6,7 +6,7 @@ import com.zjcxph.imgapi.exception.BusinessException;
 import com.zjcxph.imgapi.mapper.ClassificationMapper;
 import com.zjcxph.imgapi.mapper.ClassificationMapper.*;
 import com.zjcxph.imgapi.mapper.OcrMapper;
-import com.zjcxph.imgapi.ocr.OcrAccess;
+import com.zjcxph.imgapi.security.MedicalAccess;
 import com.zjcxph.imgapi.ocr.OcrInput;
 import com.zjcxph.imgapi.utils.AuthContext;
 import org.slf4j.MDC;
@@ -18,9 +18,9 @@ import java.util.Objects;
 /** Sole application path for formal image-type mutation, with short atomic audit transactions. */
 @Service
 public class ImageTypeService {
-    private final ClassificationMapper mapper; private final OcrMapper ocr; private final OcrAccess access;
+    private final ClassificationMapper mapper; private final OcrMapper ocr; private final MedicalAccess access;
     private final OcrInput input; private final TransactionTemplate transactions; private final CacheManager caches;
-    public ImageTypeService(ClassificationMapper mapper,OcrMapper ocr,OcrAccess access,OcrInput input,
+    public ImageTypeService(ClassificationMapper mapper,OcrMapper ocr,MedicalAccess access,OcrInput input,
                             TransactionTemplate transactions,CacheManager caches) {
         this.mapper=mapper;this.ocr=ocr;this.access=access;this.input=input;this.transactions=transactions;this.caches=caches;
     }
@@ -29,8 +29,9 @@ public class ImageTypeService {
         AuthSession session=AuthContext.getCurrentUser();
         AuthSession actor=access.require(session==null?null:session.getId(),"record:edit");
         return transactions.execute(tx->{
+            AuthSession currentActor=access.requireWrite(actor.getId(),"record:edit");
             TypeState scan=mapper.lockScan(scanId); requireActive(scan);
-            apply(scan,type,"MANUAL_EDIT",null,actor); return 1;
+            apply(scan,type,"MANUAL_EDIT",null,currentActor); return 1;
         });
     }
     public void review(AuthSession session,Long suggestionId,String action,Integer requestedType) {
@@ -41,8 +42,10 @@ public class ImageTypeService {
         if(snapshot==null) throw new BusinessException(404,"分类建议不存在");
         if("REJECT".equals(action)) {
             transactions.executeWithoutResult(tx->{
+                AuthSession currentActor=access.requireWrite(actor.getId(),"record:read","classification:review");
                 Suggestion current=mapper.lockSuggestion(suggestionId); requirePending(current);
-                mapper.reviewed(suggestionId,"REJECTED",null,actor.getUsername());
+                if(mapper.reviewed(suggestionId,"REJECTED",null,currentActor.getUsername())!=1)
+                    throw new BusinessException(409,"建议已被处理");
             }); return;
         }
         AuthSession authorized="OVERRIDE".equals(action)?access.require(actor.getId(),"classification:override"):actor;
@@ -51,6 +54,9 @@ public class ImageTypeService {
         final AuthSession reviewer=authorized;
         try(var source=input.prepare(snapshot.getScanId(),()->false)) {
             transactions.executeWithoutResult(tx->{
+                AuthSession currentActor=access.requireWrite(reviewer.getId(),"OVERRIDE".equals(action)
+                        ? new String[]{"record:read","classification:review","classification:override"}
+                        : new String[]{"record:read","classification:review"});
                 Suggestion current=mapper.lockSuggestion(suggestionId); requirePending(current);
                 TypeState scan=mapper.lockScan(current.getScanId()); requireActive(scan);
                 // Same lock order as automatic application: suggestion -> scan -> OCR fact.
@@ -60,10 +66,8 @@ public class ImageTypeService {
                         || !source.hash().equals(current.getOcrContentHash()) || !ocr.belongs(scan.getId(),scan.getArchiveId())
                         || scan.getTypeVersion()!=current.getOriginalTypeVersion() || !Objects.equals(scan.getBtype(),current.getOriginalType()))
                     throw new BusinessException(409,"影像或类型已变化，请重新生成建议");
-                access.require(reviewer.getId(),"record:read","classification:review");
-                if("OVERRIDE".equals(action)) access.require(reviewer.getId(),"classification:override");
-                apply(scan,type,"OVERRIDE".equals(action)?"OVERRIDE_SUGGESTION":"ACCEPT_SUGGESTION",current,reviewer);
-                if(mapper.reviewed(current.getId(),"OVERRIDE".equals(action)?"OVERRIDDEN":"ACCEPTED",type,reviewer.getUsername())!=1)
+                apply(scan,type,"OVERRIDE".equals(action)?"OVERRIDE_SUGGESTION":"ACCEPT_SUGGESTION",current,currentActor);
+                if(mapper.reviewed(current.getId(),"OVERRIDE".equals(action)?"OVERRIDDEN":"ACCEPTED",type,currentActor.getUsername())!=1)
                     throw new BusinessException(409,"建议已被处理");
             });
         }

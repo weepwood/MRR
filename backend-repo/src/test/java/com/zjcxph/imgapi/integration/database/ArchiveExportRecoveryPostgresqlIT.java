@@ -188,7 +188,7 @@ class ArchiveExportRecoveryPostgresqlIT extends PostgresqlIntegrationTestSupport
         var properties = new ArchiveExportProperties(); properties.setWorkerQueueCapacity(1);
         properties.setTempDirectory(directory.toString()); properties.setMaxFileBytes(10); properties.setMaxTotalBytes(100);
         var files = new ArchiveExportTempFileManager(properties); files.initialize();
-        return new ArchiveExportJobService(exporter, repository, files, properties, executor);
+        return new ArchiveExportJobService(exporter, repository, files, properties, executor, com.zjcxph.imgapi.support.ArchiveExportAccessFixtures.allow());
     }
     private String id(int value) { return new UUID(0, value).toString(); }
     private RecoveryCursor cursor(ArchiveExportJob row) { return new RecoveryCursor(row.getCreatedAt(), row.getId()); }

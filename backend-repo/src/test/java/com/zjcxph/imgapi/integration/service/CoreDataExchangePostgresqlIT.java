@@ -43,6 +43,9 @@ import static org.assertj.core.api.Assertions.assertThat;
 })
 @DisplayName("核心数据交换 PostgreSQL 16 + Flyway 集成测试")
 class CoreDataExchangePostgresqlIT extends PostgresqlIntegrationTestSupport {
+    @org.springframework.test.context.bean.override.mockito.MockitoBean
+    private com.zjcxph.imgapi.security.MedicalAccess importAccess;
+
 
     @Autowired
     private JdbcTemplate jdbcTemplate;

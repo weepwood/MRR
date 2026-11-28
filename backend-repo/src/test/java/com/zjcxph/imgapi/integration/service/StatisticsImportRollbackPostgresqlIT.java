@@ -32,6 +32,9 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
 @DisplayName("统计导入事务回滚 PostgreSQL 16 集成测试")
 class StatisticsImportRollbackPostgresqlIT extends PostgresqlIntegrationTestSupport {
+    @org.springframework.test.context.bean.override.mockito.MockitoBean
+    private com.zjcxph.imgapi.security.MedicalAccess importAccess;
+
 
     @Autowired
     private JdbcTemplate jdbcTemplate;

@@ -27,7 +27,7 @@ class ArchiveExportJobPolicyTest {
                 mock(ArchiveExportJobRepository.class),
                 mock(ArchiveExportTempFileManager.class),
                 properties,
-                (Executor) Runnable::run);
+                (Executor) Runnable::run, com.zjcxph.imgapi.support.ArchiveExportAccessFixtures.allow());
 
         assertThat(service.shouldUseJob(export(3, 1, "LOCAL"))).isTrue();
         assertThat(service.shouldUseJob(export(1, 1_000, "LOCAL"))).isTrue();

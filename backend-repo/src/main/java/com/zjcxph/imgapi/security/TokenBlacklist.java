@@ -14,6 +14,15 @@ public class TokenBlacklist {
     private final JdbcTemplate jdbc;
     public TokenBlacklist(JdbcTemplate jdbc) { this.jdbc = jdbc; }
 
+    /** Serialize logout of this session with sensitive writes fenced on the same account row. */
+    @org.springframework.transaction.annotation.Transactional(timeout = 10, rollbackFor = Exception.class)
+    public void revokeForUser(Long userId, String jti, long expiryTimestamp) {
+        if (userId == null || userId <= 0) throw new IllegalArgumentException("Token owner missing");
+        jdbc.queryForList("SELECT id FROM app.mr_auth_user WHERE id=? FOR NO KEY UPDATE", Long.class, userId);
+        // Even a concurrently deleted account must have this token revoked.
+        revoke(jti, expiryTimestamp);
+    }
+
     public void revoke(String jti, long expiryTimestamp) {
         if (jti == null || jti.isBlank()) throw new IllegalArgumentException("Token identifier missing");
         jdbc.update("INSERT INTO app.token_revocation(token_hash,expires_at) VALUES (?,?) "

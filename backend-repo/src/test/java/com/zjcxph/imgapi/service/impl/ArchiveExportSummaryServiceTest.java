@@ -16,7 +16,7 @@ import static org.mockito.ArgumentMatchers.*;
 class ArchiveExportSummaryServiceTest {
     final ScanMapper mapper = mock(ScanMapper.class);
     final ImageStorage storage = mock(ImageStorage.class);
-    final ScanServiceImpl scans = new ScanServiceImpl(mapper, mock(ImageTypeService.class));
+    final ScanServiceImpl scans = new ScanServiceImpl(mapper, mock(ImageTypeService.class), org.mockito.Mockito.mock(com.zjcxph.imgapi.security.MedicalAccess.class));
     final ArchiveExportServiceImpl exporter = new ArchiveExportServiceImpl(scans, storage);
 
     @BeforeEach

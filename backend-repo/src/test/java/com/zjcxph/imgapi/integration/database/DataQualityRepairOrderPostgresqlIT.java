@@ -77,7 +77,7 @@ class DataQualityRepairOrderPostgresqlIT extends PostgresqlIntegrationTestSuppor
         };
         var failing = new DataQualityRepairOrderService(failingJdbc,
                 new DataQualityServiceImpl(jdbc,new SimpleMeterRegistry()),
-                mock(DeploymentReadinessService.class),mock(MaintenanceModeService.class),true);
+                mock(DeploymentReadinessService.class),mock(MaintenanceModeService.class),true, org.mockito.Mockito.mock(com.zjcxph.imgapi.security.MedicalAccess.class));
         var tx = new org.springframework.transaction.support.TransactionTemplate(transactionManager);
         tx.setPropagationBehavior(org.springframework.transaction.TransactionDefinition.PROPAGATION_NESTED);
         assertThatThrownBy(() -> tx.execute(status -> failing.apply(order.id(),12L)))
@@ -191,7 +191,7 @@ class DataQualityRepairOrderPostgresqlIT extends PostgresqlIntegrationTestSuppor
 
     private DataQualityRepairOrderService service(boolean enabled) {
         return new DataQualityRepairOrderService(jdbc, new DataQualityServiceImpl(jdbc, new SimpleMeterRegistry()),
-                mock(DeploymentReadinessService.class), mock(MaintenanceModeService.class), enabled);
+                mock(DeploymentReadinessService.class), mock(MaintenanceModeService.class), enabled, org.mockito.Mockito.mock(com.zjcxph.imgapi.security.MedicalAccess.class));
     }
 
     private long fixture() {

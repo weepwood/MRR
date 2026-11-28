@@ -223,8 +223,10 @@ public class OssController {
         try {
             ossService.deleteObject(ossKey);
             return Result.success("删除成功");
+        } catch (IllegalArgumentException invalid) {
+            return Result.fail(400, "OSS 文件标识无效");
         } catch (Exception e) {
-            logger.error("删除 OSS 文件失败：{}", ossKey, e);
+            logger.error("删除 OSS 文件失败：errorType={}", e.getClass().getSimpleName());
             return Result.fail("删除失败");
         }
     }

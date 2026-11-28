@@ -65,6 +65,7 @@ class LastActiveAdminPostgresqlIT extends PostgresqlIntegrationTestSupport {
     @AfterEach
     void tearDown() {
         com.zjcxph.imgapi.utils.AuthContext.clear();
+        jdbc.update("delete from app.mr_security_change_audit where actor_user_id in (?, ?) or target_user_id in (?, ?)", firstId, secondId, firstId, secondId);
         jdbc.update("delete from app.mr_auth_user where id in (?, ?)", firstId, secondId);
         for (Map<String, Object> row : previousAdmins) {
             jdbc.update("update app.mr_auth_user set status = ? where id = ?", row.get("status"), row.get("id"));
@@ -312,16 +313,19 @@ class LastActiveAdminPostgresqlIT extends PostgresqlIntegrationTestSupport {
             var tx = new TransactionTemplate(transactionManager);
             tx.executeWithoutResult(status -> {
                 service.updateRole(code, null, "Rolled back", "user:manage", null);
+                assertThat(jdbc.queryForObject("select count(*) from app.mr_security_change_audit where event_type='ROLE_UPDATED' and target_role_code=? and actor_user_id=?", Integer.class, code, secondId)).isEqualTo(1);
                 assertThat(audit.list).noneMatch(event -> event.getMessage().contains("event=ROLE_UPDATED"));
                 status.setRollbackOnly();
             });
             assertThat(roleMapper.findByCode(code).getPermissions()).isEqualTo("role:read");
+            assertThat(jdbc.queryForObject("select count(*) from app.mr_security_change_audit where target_role_code=?", Integer.class, code)).isZero();
             assertThat(audit.list).noneMatch(event -> event.getMessage().contains("event=ROLE_UPDATED"));
             tx.executeWithoutResult(status -> {
                 service.updateRole(code, null, "Committed", "role:manage", null);
                 assertThat(audit.list).noneMatch(event -> event.getMessage().contains("event=ROLE_UPDATED"));
             });
             assertThat(roleMapper.findByCode(code).getPermissions()).isEqualTo("role:manage");
+            assertThat(jdbc.queryForObject("select count(*) from app.mr_security_change_audit where event_type='ROLE_UPDATED' and target_role_code=? and actor_user_id=? and target_user_id is null and permissions_edited is true", Integer.class, code, secondId)).isEqualTo(1);
             var events = audit.list.stream().filter(event -> event.getMessage().contains("event=ROLE_UPDATED")).toList();
             assertThat(events).hasSize(1);
             assertThat(events.getFirst().getArgumentArray()).contains(Long.valueOf(secondId), code);
@@ -332,6 +336,39 @@ class LastActiveAdminPostgresqlIT extends PostgresqlIntegrationTestSupport {
             com.zjcxph.imgapi.utils.AuthContext.clear();
             jdbc.update("delete from app.mr_auth_role where code = ?", code);
         }
+    }
+
+    @Test
+    void durableSecurityChangeAuditIsAtomicWithMutation() {
+        installActor(secondId);
+        var tx = new TransactionTemplate(transactionManager);
+        tx.executeWithoutResult(status -> {
+            assertThat(service.disableUser(firstId)).isEqualTo(1);
+            assertThat(countDisableAudit()).isEqualTo(1);
+            status.setRollbackOnly();
+        });
+        assertThat(userMapper.findById(firstId).getStatus()).isEqualTo("active");
+        assertThat(countDisableAudit()).isZero();
+        tx.executeWithoutResult(status -> assertThat(service.disableUser(firstId)).isEqualTo(1));
+        assertThat(userMapper.findById(firstId).getStatus()).isEqualTo("disabled");
+        assertThat(countDisableAudit()).isEqualTo(1);
+    }
+
+    @Test
+    void durableSecurityChangeAuditFailureRollsBackMutation() {
+        installActor(secondId);
+        var tx = new TransactionTemplate(transactionManager);
+        assertThatThrownBy(() -> tx.executeWithoutResult(status -> {
+            jdbc.execute("ALTER TABLE app.mr_security_change_audit ADD CONSTRAINT synthetic_audit_reject CHECK (actor_user_id <> " + secondId + ") NOT VALID");
+            service.disableUser(firstId);
+            status.setRollbackOnly();
+        })).isInstanceOf(BusinessException.class).hasMessage("安全审计暂不可用，请稍后重试");
+        assertThat(userMapper.findById(firstId).getStatus()).isEqualTo("active");
+        assertThat(countDisableAudit()).isZero();
+    }
+
+    private int countDisableAudit() {
+        return jdbc.queryForObject("select count(*) from app.mr_security_change_audit where event_type='USER_DISABLED' and actor_user_id=? and target_user_id=?", Integer.class, secondId, firstId);
     }
 
     @Test

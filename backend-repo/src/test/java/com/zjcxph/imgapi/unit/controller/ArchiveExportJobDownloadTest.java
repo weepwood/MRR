@@ -28,7 +28,7 @@ class ArchiveExportJobDownloadTest {
         files.initialize();
         var repository = mock(ArchiveExportJobRepository.class);
         var service = new ArchiveExportJobService(mock(com.zjcxph.imgapi.service.ArchiveExportService.class),
-                repository, files, props, Runnable::run);
+                repository, files, props, Runnable::run, com.zjcxph.imgapi.support.ArchiveExportAccessFixtures.allow());
         var controller = new ArchiveExportJobController(service, repository, mock(DeploymentReadinessService.class));
         var session = new AuthSession();
         session.setId(1L); session.setUsername("synthetic-user");

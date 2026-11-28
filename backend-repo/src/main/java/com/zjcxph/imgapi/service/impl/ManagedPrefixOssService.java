@@ -81,8 +81,11 @@ public class ManagedPrefixOssService implements OssService {
 
     @Override
     public void deleteObject(String ossKey) {
+        String safeKey = validateBrowserObjectKey(ossKey);
+        // Deletion must never normalize an identifier into a different object.
+        if (!safeKey.equals(ossKey)) throw new IllegalArgumentException("OSS Object Key 不允许首尾空白");
         executeRemote("delete", () -> {
-            delegate.deleteObject(ossKey);
+            delegate.deleteObject(safeKey);
             return null;
         });
     }

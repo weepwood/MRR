@@ -99,7 +99,7 @@ public class ExternalArchiveAccessService {
         );
 
         String ticket = randomToken();
-        accessMapper.insertTicket(
+        if(accessMapper.insertTicket(
                 sha256Hex(ticket),
                 grant.clientId(),
                 grant.externalUserId(),
@@ -107,7 +107,7 @@ public class ExternalArchiveAccessService {
                 serializeCases(grant.cases()),
                 expiresAt,
                 clientIp
-        );
+        )!=1) throw new BusinessException(503,"外部访问票据暂不可用");
         strictTerminal(grant,"TICKET_CREATE",clientIp,"archives="+grant.cases().size());
         return new IssuedTicket(ticket, grant, properties.getTicketTtlSeconds());
     }
@@ -134,7 +134,7 @@ public class ExternalArchiveAccessService {
         );
 
         String sessionToken = randomToken();
-        accessMapper.insertSession(
+        if(accessMapper.insertSession(
                 sha256Hex(sessionToken),
                 sessionGrant.clientId(),
                 sessionGrant.externalUserId(),
@@ -142,7 +142,7 @@ public class ExternalArchiveAccessService {
                 serializeCases(sessionGrant.cases()),
                 expiresAt,
                 clientIp
-        );
+        )!=1) throw new BusinessException(503,"外部访问会话暂不可用");
         strictTerminal(sessionGrant,"SESSION_CREATE",clientIp,"expiresIn="+properties.getSessionTtlSeconds());
         return new IssuedSession(sessionToken, sessionGrant, properties.getSessionTtlSeconds());
     }
@@ -203,22 +203,22 @@ public class ExternalArchiveAccessService {
         return result;
     }
 
-    /** Strict candidate: an audit write failure denies release of credentials/medical bytes.
-     * Ticket/session writes participate in the existing transaction, not an independent commit. */
+    /** External disclosure requires a confirmed dedicated ledger entry before opening the source.
+     * The optional experimental credential INTENT remains disabled by default. */
     public void requireAuditIntent(ExternalArchiveGrant grant,String bah,String sjh,String action,Integer imageId,String clientIp){
-        if(grant!=null)strictAudit(grant.clientId(),grant.externalUserId(),bah,sjh,action,imageId,clientIp);
+        if(grant!=null)writeAuditIntent(grant.clientId(),grant.externalUserId(),bah,sjh,action,imageId,clientIp);
     }
 
     public void recordContextOutcome(ExternalArchiveGrant grant,String ip,String requestId){
-        if(strictIntent)recordAudit(grant,null,null,"SESSION_CONTEXT",null,ip,null,requestId,"SUCCESS",null);
+        recordAudit(grant,null,null,"SESSION_CONTEXT",null,ip,null,requestId,"SUCCESS",null);
     }
     public void auditRevocationIntent(ExternalArchiveGrant grant,String ip){
         try{requireAuditIntent(grant,null,null,"SESSION_LOGOUT",null,ip);}
         catch(BusinessException ignored){logger.error("External revocation audit unavailable; preserving security revocation");}
     }
 
+    // Credentials and their committed issuance facts are atomic; no optional flag can waive this.
     private void strictTerminal(ExternalArchiveGrant grant,String action,String ip,String detail){
-        if(!strictIntent)return;
         try{
             String trace=trustedTrace();
             if(trace==null||accessMapper.insertAccessLog(grant.clientId(),grant.externalUserId(),null,null,action,null,
@@ -237,7 +237,10 @@ public class ExternalArchiveAccessService {
     }
 
     private void strictAudit(String client,String user,String bah,String sjh,String action,Integer imageId,String ip){
-        if(!strictIntent)return;
+        if(strictIntent)writeAuditIntent(client,user,bah,sjh,action,imageId,ip);
+    }
+
+    private void writeAuditIntent(String client,String user,String bah,String sjh,String action,Integer imageId,String ip){
         String trace=trustedTrace();
         try{
             if(trace==null||accessMapper.insertAccessLog(client,user,blankToNull(MedicalRecordCodeUtils.normalizeOrEmpty(bah)),
@@ -265,9 +268,9 @@ public class ExternalArchiveAccessService {
             return;
         }
         // Strict credentials and their terminal audit commit atomically in the service transaction.
-        if(strictIntent&&("TICKET_CREATE".equals(action)||"SESSION_CREATE".equals(action)))return;
+        if("TICKET_CREATE".equals(action)||"SESSION_CREATE".equals(action))return;
         try {
-            accessMapper.insertAccessLog(
+            if(accessMapper.insertAccessLog(
                     grant.clientId(),
                     grant.externalUserId(),
                     blankToNull(MedicalRecordCodeUtils.normalizeOrEmpty(bah)),
@@ -279,7 +282,7 @@ public class ExternalArchiveAccessService {
                     truncate(result, 20),
                     truncate(requestId, 128),
                     truncate(detail, 500)
-            );
+            )!=1) throw new IllegalStateException("External audit outcome not confirmed");
         } catch (RuntimeException exception) {
             logger.error("Failed to persist external archive audit log: errorType={}", exception.getClass().getSimpleName());
         }

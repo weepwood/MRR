@@ -47,6 +47,12 @@ class OssControllerTest {
     @InjectMocks
     private OssController controller;
 
+    @Test void rawDeleteRejectsNonManagedObjectBeforeRemoteCall() {
+        var actual=new OssController(migrationService,new com.zjcxph.imgapi.service.impl.ManagedPrefixOssService(ossService),deliveryProperties);
+        assertThat(actual.deleteOssFile("synthetic-unrelated.txt").getCode()).isEqualTo(400);
+        org.mockito.Mockito.verifyNoInteractions(ossService);
+    }
+
     @Test void gatewayArbitraryKeySigningIsDeniedBeforeStorageCall(){
         deliveryProperties.setMode(ImageDeliveryProperties.Mode.GATEWAY);
         assertThat(controller.getBrowserOssUrl("SYNTHETIC_PRIVATE_KEY").getCode()).isEqualTo(409);

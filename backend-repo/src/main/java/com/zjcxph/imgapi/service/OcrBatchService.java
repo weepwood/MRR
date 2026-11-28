@@ -1,5 +1,7 @@
 package com.zjcxph.imgapi.service;
 
+import com.zjcxph.imgapi.security.MedicalAccess;
+
 import com.zjcxph.imgapi.common.AuthSession;
 import com.zjcxph.imgapi.exception.BusinessException;
 import com.zjcxph.imgapi.mapper.OcrBatchMapper;
@@ -22,10 +24,10 @@ public class OcrBatchService {
                        boolean autoApply,String reasonCode,boolean discoveryDone,int processedCount,int successCount,int failedCount,int autoAppliedCount,int reviewRequiredCount) {
         static View from(Batch b) {return new View(b.getId(),b.getStatus(),b.getAfterId(),b.getUpperId(),b.getCursorId(),b.getMaxPages(),b.getDispatchedCount(),b.isAutoApply(),b.getReasonCode(),b.isDiscoveryDone(),b.getProcessedCount(),b.getSuccessCount(),b.getFailedCount(),b.getAutoAppliedCount(),b.getReviewRequiredCount());}
     }
-    private final OcrBatchMapper mapper;private final OcrMapper queue;private final OcrAccess access;
+    private final OcrBatchMapper mapper;private final OcrMapper queue;private final MedicalAccess access;
     private final OcrJobService jobs;private final OcrLoadGuard guard;private final TransactionTemplate transactions;
     private final OcrQualityGate quality;
-    public OcrBatchService(OcrBatchMapper mapper,OcrMapper queue,OcrAccess access,OcrJobService jobs,OcrLoadGuard guard,TransactionTemplate transactions,OcrQualityGate quality) {
+    public OcrBatchService(OcrBatchMapper mapper,OcrMapper queue,MedicalAccess access,OcrJobService jobs,OcrLoadGuard guard,TransactionTemplate transactions,OcrQualityGate quality) {
         this.mapper=mapper;this.queue=queue;this.access=access;this.jobs=jobs;this.guard=guard;this.transactions=transactions;
         this.quality=quality;
     }

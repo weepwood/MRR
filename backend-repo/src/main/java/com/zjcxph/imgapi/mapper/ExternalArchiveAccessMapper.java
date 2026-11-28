@@ -130,6 +130,7 @@ public interface ExternalArchiveAccessMapper {
                 #{clientIp}, #{userAgent}, #{result}, #{requestId}, #{detail}
             )
             """)
+    @Options(timeout=3)
     int insertAccessLog(
             @Param("clientId") String clientId,
             @Param("externalUserId") String externalUserId,

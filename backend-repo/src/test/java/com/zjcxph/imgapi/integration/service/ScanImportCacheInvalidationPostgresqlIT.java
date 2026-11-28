@@ -58,6 +58,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 @DisplayName("扫描记录导入后清理查询缓存 PostgreSQL 集成测试")
 class ScanImportCacheInvalidationPostgresqlIT extends PostgresqlIntegrationTestSupport {
 
+
     @Autowired
     private JdbcTemplate jdbcTemplate;
 
@@ -72,6 +73,9 @@ class ScanImportCacheInvalidationPostgresqlIT extends PostgresqlIntegrationTestS
 
     @MockitoBean
     private ImageTypeService imageTypeService;
+
+    @MockitoBean
+    private com.zjcxph.imgapi.security.MedicalAccess medicalAccess;
 
     @BeforeEach
     void resetTablesAndCaches() {

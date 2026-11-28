@@ -76,6 +76,18 @@ class ManagedPrefixOssServiceTest {
                 .hasMessageContaining("具体文件");
     }
 
+    @org.junit.jupiter.params.ParameterizedTest
+    @org.junit.jupiter.params.provider.ValueSource(strings={"unrelated-object.txt","private/secret.jpg","medical-records/../secret.jpg","medical-records/0012/"," medical-records/0012/file.jpg "})
+    void deleteCannotEscapeManagedExactFileKey(String key) {
+        assertThatThrownBy(()->service.deleteObject(key)).isInstanceOf(IllegalArgumentException.class);
+        org.mockito.Mockito.verifyNoInteractions(delegate);
+    }
+
+    @Test void exactManagedDeleteKeepsExistingDelegation() {
+        service.deleteObject(MANAGED_KEY);
+        verify(delegate).deleteObject(MANAGED_KEY);
+    }
+
     @Test
     @DisplayName("未初始化客户端映射为 OSS_NOT_CONFIGURED")
     void mapsUninitializedClientToNotConfigured() {

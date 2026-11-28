@@ -52,6 +52,8 @@ public interface OcrBatchMapper {
     // A failure is handled after the discovery transaction rolls back. Never revive a concurrent cancel/terminal state.
     @Update("UPDATE app.mr_ocr_batch SET status='PAUSED',reason_code='AUTH_OR_QUEUE_BLOCKED',updated_at=NOW() WHERE id=#{id} AND status='RUNNING'")
     int pauseRunningOnDispatchFailure(String id);
+    @Update("UPDATE app.mr_ocr_batch SET status='PAUSED',reason_code='AUTH_REVOKED',updated_at=NOW() WHERE id=#{id} AND status='RUNNING'")
+    int pauseRunningOnAuthorizationFailure(String id);
     @Update("UPDATE app.mr_ocr_batch SET reason_code=#{reason},updated_at=NOW() WHERE id=#{id}") void reason(@Param("id") String id,@Param("reason") String reason);
     @Update("""
         UPDATE app.mr_ocr_batch b SET processed_count=t.processed,success_count=t.success,failed_count=t.failed,

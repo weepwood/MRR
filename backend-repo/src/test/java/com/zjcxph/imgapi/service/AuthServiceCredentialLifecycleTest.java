@@ -49,6 +49,16 @@ class AuthServiceCredentialLifecycleTest {
         service = new AuthServiceImpl(authUserMapper, authRoleMapper, loginRateLimiter, runtimeSettingStore);
     }
 
+    @org.junit.jupiter.api.AfterEach
+    void clearActor() { com.zjcxph.imgapi.utils.AuthContext.clear(); }
+
+    private void installAdministrator(AuthUser actor) {
+        var session = new com.zjcxph.imgapi.common.AuthSession();
+        session.setId(actor.getId());
+        session.setPasswordVersion(actor.effectivePasswordVersion());
+        com.zjcxph.imgapi.utils.AuthContext.setCurrentUser(session);
+    }
+
     @Test
     void shouldCreateUserWithOneTimeTemporaryPassword() {
         AdminCreateUserRequest request = createRequest("active");
@@ -56,6 +66,7 @@ class AuthServiceCredentialLifecycleTest {
         AuthUser administrator = createdUser(1L, "admin", "ADMIN", false, 1);
         AuthRole role = new AuthRole();
         role.setCode("DOCTOR");
+        installAdministrator(administrator);
         when(authUserMapper.findById(1L)).thenReturn(administrator);
         when(authRoleMapper.findByCode("DOCTOR")).thenReturn(role);
         when(authUserMapper.findByUsername("doctor.test"))
@@ -81,6 +92,7 @@ class AuthServiceCredentialLifecycleTest {
         AuthUser administrator = createdUser(1L, "admin", "ADMIN", false, 1);
         AuthRole role = new AuthRole();
         role.setCode("DOCTOR");
+        installAdministrator(administrator);
         when(authUserMapper.findById(1L)).thenReturn(administrator);
         when(authRoleMapper.findByCode("DOCTOR")).thenReturn(role);
         when(authUserMapper.findByUsername("doctor.test")).thenReturn(null);
@@ -99,6 +111,7 @@ class AuthServiceCredentialLifecycleTest {
         AuthUser target = createdUser(2L, "doctor", "DOCTOR", false, 4);
         AuthUser updated = createdUser(2L, "doctor", "DOCTOR", true, 5);
 
+        installAdministrator(administrator);
         when(authUserMapper.findById(1L)).thenReturn(administrator);
         when(authUserMapper.findById(2L)).thenReturn(target, updated);
         when(authUserMapper.resetPassword(eq(2L), any(String.class), any(LocalDateTime.class), eq(1L), eq(4))).thenReturn(1);
@@ -162,6 +175,7 @@ class AuthServiceCredentialLifecycleTest {
         var admin = createdUser(1L, "synthetic-admin", "ADMIN", false, 3);
         admin.setPasswordHash(PasswordUtil.encode("SyntheticAdmin123"));
         var target = createdUser(2L, "synthetic", "DOCTOR", false, 4);
+        installAdministrator(admin);
         when(authUserMapper.findById(1L)).thenReturn(admin);
         when(authUserMapper.findById(2L)).thenReturn(target);
         var request = new AdminResetPasswordRequest();

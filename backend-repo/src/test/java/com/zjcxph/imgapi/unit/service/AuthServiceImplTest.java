@@ -75,6 +75,13 @@ class AuthServiceImplTest {
         AuthContext.clear();
     }
 
+    private void installAdministrator(AuthUser actor) {
+        var session = new com.zjcxph.imgapi.common.AuthSession();
+        session.setId(actor.getId());
+        session.setPasswordVersion(actor.effectivePasswordVersion());
+        AuthContext.setCurrentUser(session);
+    }
+
     private void installManager(AuthUser actor) {
         var session = new com.zjcxph.imgapi.common.AuthSession();
         session.setId(actor.getId());
@@ -265,6 +272,7 @@ class AuthServiceImplTest {
             AuthUser approved = pendingUser();
             approved.setStatus("active");
             approved.setRoleCode("DOCTOR");
+            installAdministrator(mockUser);
             when(authUserMapper.findById(1L)).thenReturn(mockUser);
             when(authUserMapper.findById(2L)).thenReturn(pending, approved);
             when(authRoleMapper.findByCode("DOCTOR")).thenReturn(role("DOCTOR"));
@@ -285,6 +293,7 @@ class AuthServiceImplTest {
             AuthUser rejected = pendingUser();
             rejected.setStatus("rejected");
             rejected.setRejectReason("身份信息无法核验");
+            installAdministrator(mockUser);
             when(authUserMapper.findById(1L)).thenReturn(mockUser);
             when(authUserMapper.findById(2L)).thenReturn(pending, rejected);
             when(authUserMapper.rejectRegistration(2L, "身份信息无法核验", 1L)).thenReturn(1);
@@ -321,6 +330,7 @@ class AuthServiceImplTest {
             rejected.setRejectReason("资料不完整");
             AuthUser reopened = pendingUser();
             reopened.setRejectReason("资料不完整");
+            installAdministrator(mockUser);
             when(authUserMapper.findById(1L)).thenReturn(mockUser);
             when(authUserMapper.findById(2L)).thenReturn(rejected, reopened);
             when(authUserMapper.reopenRegistration(2L)).thenReturn(1);
@@ -337,6 +347,7 @@ class AuthServiceImplTest {
         @Test
         void reopenRegistration_rejectsNonRejectedAndConcurrentChange() {
             AuthUser pending = pendingUser();
+            installAdministrator(mockUser);
             when(authUserMapper.findById(1L)).thenReturn(mockUser);
             when(authUserMapper.findById(2L)).thenReturn(pending);
             assertThatThrownBy(() -> authService.reopenRegistration(2L, 1L, null))
@@ -351,6 +362,7 @@ class AuthServiceImplTest {
         @Test
         void reopenRegistration_requiresActiveAdministrator() {
             mockUser.setStatus("disabled");
+            installAdministrator(mockUser);
             when(authUserMapper.findById(1L)).thenReturn(mockUser);
             assertThatThrownBy(() -> authService.reopenRegistration(2L, 1L, null))
                     .isInstanceOf(BusinessException.class).hasMessageContaining("有效管理员");
@@ -427,6 +439,7 @@ class AuthServiceImplTest {
         void disableUser_success() {
             installManager(mockUser);
             mockUser.setRoleCode("DOCTOR");
+            installAdministrator(mockUser);
             when(authUserMapper.findById(1L)).thenReturn(mockUser);
             when(authUserMapper.updateStatus(1L, "disabled")).thenReturn(1);
 

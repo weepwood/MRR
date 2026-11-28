@@ -54,6 +54,11 @@ public interface AuthUserMapper {
             "from mr_auth_user u left join mr_auth_role r on r.code = u.role_code where u.id = #{id}")
     AuthUser findSessionById(@Param("id") Long id);
 
+    /** Common role lock is acquired first by management operations. Fence concurrent credential writes on the actor row. */
+    @Select("select id from mr_auth_user where id = #{id} for no key update")
+    @org.apache.ibatis.annotations.Options(useCache = false, flushCache = org.apache.ibatis.annotations.Options.FlushCachePolicy.TRUE)
+    Long lockAuthorizationActor(@Param("id") Long id);
+
     @Select("select " + USER_COLUMNS +
             "from mr_auth_user u left join mr_auth_role r on r.code = u.role_code " +
             "where u.username = #{username}")

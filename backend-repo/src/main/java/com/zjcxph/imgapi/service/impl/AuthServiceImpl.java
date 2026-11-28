@@ -623,6 +623,9 @@ public class AuthServiceImpl implements AuthService {
     /** 在共同事务锁后读取实际角色权限，不信任请求进入时的权限快照。 */
     private void requireCurrentPermission(String permission) {
         AuthSession session = AuthContext.getCurrentUser();
+        if (session != null && session.getId() != null) {
+            authUserMapper.lockAuthorizationActor(session.getId());
+        }
         AuthUser current = session == null || session.getId() == null
                 ? null : authUserMapper.findSessionById(session.getId());
         if (current == null || !"active".equalsIgnoreCase(current.getStatus())
@@ -637,10 +640,17 @@ public class AuthServiceImpl implements AuthService {
         if (administratorId == null) {
             throw new BusinessException("管理员信息无效");
         }
+        AuthSession session = AuthContext.getCurrentUser();
+        if (session == null || !administratorId.equals(session.getId())) {
+            throw new BusinessException(403, "当前账号不是有效管理员");
+        }
+        authUserMapper.lockAuthorizationActor(administratorId);
         AuthUser administrator = authUserMapper.findById(administratorId);
         if (administrator == null
                 || !"ADMIN".equalsIgnoreCase(administrator.getRoleCode())
-                || !"active".equalsIgnoreCase(administrator.getStatus())) {
+                || !"active".equalsIgnoreCase(administrator.getStatus())
+                || administrator.isPasswordChangeRequired()
+                || administrator.effectivePasswordVersion() != session.effectivePasswordVersion()) {
             throw new BusinessException("当前账号不是有效管理员");
         }
         return administrator;

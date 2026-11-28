@@ -368,6 +368,53 @@ class LastActiveAdminPostgresqlIT extends PostgresqlIntegrationTestSupport {
         }
     }
 
+    @org.junit.jupiter.params.ParameterizedTest
+    @org.junit.jupiter.params.provider.ValueSource(booleans = {true, false})
+    void staleAdministratorCredentialCannotCreateAfterRoleLock(boolean resetRequired) throws Exception {
+        String username = "synthetic-credential-create-" + UUID.randomUUID();
+        var request = new com.zjcxph.imgapi.dto.req.AdminCreateUserRequest();
+        request.setUsername(username);
+        request.setRoleCode("DOCTOR");
+        var before = userMapper.findById(firstId);
+        try {
+            assertRevokedAdministratorCannotExecute("USER_CREATED", () -> {
+                roleMapper.lockAdminRole();
+                if (resetRequired) {
+                    assertThat(userMapper.resetPassword(firstId, "synthetic-reset-hash", java.time.LocalDateTime.now().plusHours(1), secondId, before.effectivePasswordVersion())).isEqualTo(1);
+                } else {
+                    assertThat(userMapper.changePassword(firstId, "synthetic-new-hash", before.effectivePasswordVersion(), false)).isEqualTo(1);
+                }
+            }, () -> service.createUser(request, firstId, null), "当前账号不是有效管理员");
+            assertThat(userMapper.findByUsername(username)).isNull();
+            var after = userMapper.findById(firstId);
+            assertThat(after.getStatus()).isEqualTo("active");
+            assertThat(after.getRoleCode()).isEqualTo("ADMIN");
+            assertThat(after.effectivePasswordVersion()).isEqualTo(before.effectivePasswordVersion()+1);
+            assertThat(after.isPasswordChangeRequired()).isEqualTo(resetRequired);
+        } finally {
+            jdbc.update("delete from app.mr_auth_user where username = ?", username);
+        }
+    }
+
+    @Test
+    void ordinaryCredentialWriteWithoutRoleLockStillFencesAdministratorRequest() throws Exception {
+        String username = "synthetic-actor-fence-" + UUID.randomUUID();
+        var request = new com.zjcxph.imgapi.dto.req.AdminCreateUserRequest();
+        request.setUsername(username);
+        request.setRoleCode("DOCTOR");
+        var before = userMapper.findById(firstId);
+        try {
+            // Personal password changes use the account row rather than the global role lock.
+            assertRevokedAdministratorCannotExecute("USER_CREATED", () ->
+                    assertThat(userMapper.changePassword(firstId, "synthetic-rotated-hash", before.effectivePasswordVersion(), false)).isEqualTo(1),
+                    () -> service.createUser(request, firstId, null), "当前账号不是有效管理员");
+            assertThat(userMapper.findByUsername(username)).isNull();
+            assertThat(userMapper.findById(firstId).effectivePasswordVersion()).isEqualTo(before.effectivePasswordVersion() + 1);
+        } finally {
+            jdbc.update("delete from app.mr_auth_user where username = ?", username);
+        }
+    }
+
     private void installActor(long id) {
         var user = userMapper.findById(id);
         var session = new com.zjcxph.imgapi.common.AuthSession();
@@ -384,6 +431,17 @@ class LastActiveAdminPostgresqlIT extends PostgresqlIntegrationTestSupport {
     }
 
     private void assertRevokedAdministratorCannotExecute(boolean demote, String auditEvent, Runnable operation, String denial) throws Exception {
+        assertRevokedAdministratorCannotExecute(auditEvent, () -> {
+            if (demote) {
+                var update = new AuthUserUpdateRequest();
+                update.setRoleCode("DOCTOR");
+                update.setStatus("active");
+                service.updateUser(firstId, update);
+            } else service.disableUser(firstId);
+        }, operation, denial);
+    }
+
+    private void assertRevokedAdministratorCannotExecute(String auditEvent, Runnable revoke, Runnable operation, String denial) throws Exception {
         var worker = Executors.newSingleThreadExecutor();
         String runId = "mrr-admin-write-race-" + UUID.randomUUID();
         var logger = (ch.qos.logback.classic.Logger) org.slf4j.LoggerFactory.getLogger("SECURITY_AUDIT");
@@ -393,14 +451,7 @@ class LastActiveAdminPostgresqlIT extends PostgresqlIntegrationTestSupport {
         try {
             installActor(secondId);
             Future<String> outcome = new TransactionTemplate(transactionManager).execute(status -> {
-                if (demote) {
-                    var update = new AuthUserUpdateRequest();
-                    update.setRoleCode("DOCTOR");
-                    update.setStatus("active");
-                    service.updateUser(firstId, update);
-                } else {
-                    service.disableUser(firstId);
-                }
+                revoke.run();
                 Future<String> result = worker.submit(() -> {
                     try {
                         installActor(firstId);
@@ -462,6 +513,7 @@ class LastActiveAdminPostgresqlIT extends PostgresqlIntegrationTestSupport {
                 service.disableUser(firstId);
                 Future<String> result = worker.submit(() -> {
                     try {
+                        installActor(firstId);
                         return new TransactionTemplate(transactionManager).execute(tx -> {
                             jdbc.queryForObject("select set_config('application_name', ?, true)", String.class, runId);
                             if (approve) {
@@ -477,6 +529,8 @@ class LastActiveAdminPostgresqlIT extends PostgresqlIntegrationTestSupport {
                         });
                     } catch (BusinessException failure) {
                         return failure.getMessage();
+                    } finally {
+                        com.zjcxph.imgapi.utils.AuthContext.clear();
                     }
                 });
                 long deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(5);

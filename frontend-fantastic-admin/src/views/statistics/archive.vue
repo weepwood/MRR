@@ -150,6 +150,20 @@ const archivePath = computed(() => route.name === 'archiveEmbedded' ? '/archive/
 const showBackToStatisticsDetail = computed(() => route.query.from === 'statistics-detail')
 const isExternalTicketMode = computed(() => archiveAccessMode.value === 'external-ticket')
 const showSelectionStatus = computed(() => archiveAccessMode.value === 'internal')
+// Distinguish an empty successful response from transport/validation failures.
+const viewerEmptyKind = computed(() => {
+  if (loading.value || idCardLoading.value) { return 'loading' as const }
+  if (images.value.length) { return 'filtered' as const }
+  if (lookupReason.value === 'NO_MATCHING_IMAGES' || (!lookupReason.value && errorMsg.value === '该病案暂未查询到影像')) { return 'empty' as const }
+  return errorMsg.value ? 'error' as const : 'idle' as const
+})
+const viewerEmptyDescription = computed(() => ({
+  loading: '正在查询影像',
+  filtered: '当前类型暂无影像',
+  empty: '未查询到影像',
+  error: '查询未完成',
+  idle: '暂无可预览影像',
+}[viewerEmptyKind.value]))
 
 const downloadButtonLoading = computed(() =>
   downloading.value || downloadJobDownloading.value || downloadJobCancelling.value,
@@ -880,6 +894,7 @@ onUnmounted(() => {
         'is-empty': !showViewer,
         'is-list-mode': viewMode === 'list',
         'is-wall-layout': isWallLayout,
+        'is-viewer-empty': showViewer && !filteredImages.length && viewerEmptyKind !== 'loading',
       }"
       :style="archiveWorkspaceStyle"
     >
@@ -1119,6 +1134,7 @@ onUnmounted(() => {
             ref="thumbStripRef"
             v-model:view-mode="viewMode"
             :images="filteredImages"
+            :empty-kind="viewerEmptyKind"
             :selected-index="selectedImageIndex"
             :is-selected="isSelected"
             :thumbnail-size="archiveDisplaySettings.archiveThumbnailSize"
@@ -1139,10 +1155,11 @@ onUnmounted(() => {
           :is-selected="currentImage ? isSelected(currentImage) : false"
           :show-selection-status="showSelectionStatus"
           :saving-type="savingType"
-          :loading="loading"
+          :loading="loading || idCardLoading"
           :fit-mode="archiveDisplaySettings.archiveFitMode"
           :preview-scale="archiveDisplaySettings.archivePreviewScale"
-          :empty-description="images.length ? '当前类型暂无影像' : '未查询到影像'"
+          :empty-description="viewerEmptyDescription"
+          :empty-kind="viewerEmptyKind"
           @toggle="toggleCurrent"
           @save-type="handleSaveType"
           @navigate="navigate"
@@ -1504,6 +1521,11 @@ onUnmounted(() => {
     min-height: 420px;
   }
 
+  .archive-workspace.has-viewer.is-viewer-empty .preview-panel {
+    height: 320px;
+    min-height: 0;
+  }
+
   .archive-wall-toolbar {
     bottom: 10px;
     flex-direction: column;
@@ -1561,6 +1583,15 @@ onUnmounted(() => {
   .archive-workspace.has-viewer .viewer-layout {
     height: min(68vh, 640px);
     min-height: 420px;
+  }
+
+  .archive-workspace.has-viewer.is-viewer-empty .viewer-layout {
+    height: 340px;
+    min-height: 0;
+  }
+
+  .archive-workspace.has-viewer.is-viewer-empty .preview-panel {
+    height: 340px;
   }
 
   .archive-workspace.has-viewer .viewer-layout :deep(.thumb-panel) {

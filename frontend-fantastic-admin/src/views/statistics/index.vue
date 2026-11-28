@@ -321,7 +321,6 @@ onMounted(refreshAll)
 <template>
   <MrrPageShell class="statistics-page">
     <MrrPageHeader
-      eyebrow="Records Statistics"
       title="病案扫描数据统计"
       description="汇总病案扫描规模、每日变化与病案明细，在一个页面完成统计查看和数据检索。"
     >
@@ -336,7 +335,7 @@ onMounted(refreshAll)
       </template>
     </MrrPageHeader>
 
-    <section v-if="hasMetricActivity" class="mrr-metric-grid" aria-label="核心统计指标">
+    <section v-if="hasMetricActivity" class="mrr-metric-grid mrr-metric-grid--mobile-compact" aria-label="核心统计指标">
       <MrrMetricCard
         label="总记录数"
         icon="i-lucide:layout-grid"

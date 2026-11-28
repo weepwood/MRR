@@ -79,8 +79,8 @@ watch(() => menuStore.actived, (val, oldVal) => {
         </el-button>
       </div>
       <component :is="useSlots('sub-sidebar-after-menu')" />
-      <div v-if="settingsStore.settings.menu.mode === 'single'" class="account-area flex-center px-3 pb-3">
-        <AccountButton :only-avatar="settingsStore.settings.menu.subMenuCollapse" dropdown-align="center" :dropdown-side="settingsStore.settings.menu.subMenuCollapse ? 'right' : 'top'" button-variant="secondary" :class="{ 'w-full': !settingsStore.settings.menu.subMenuCollapse }" />
+      <div v-if="settingsStore.settings.menu.mode === 'single'" class="account-area flex-center px-3 pb-3" :class="{ 'account-area--expanded': !settingsStore.settings.menu.subMenuCollapse }">
+        <AccountButton :only-avatar="settingsStore.settings.menu.subMenuCollapse" dropdown-align="center" :dropdown-side="settingsStore.settings.menu.subMenuCollapse ? 'right' : 'top'" :button-variant="settingsStore.settings.menu.subMenuCollapse ? 'secondary' : 'sidebar'" :class="{ 'w-full': !settingsStore.settings.menu.subMenuCollapse }" />
       </div>
       <component :is="useSlots('sub-sidebar-bottom')" />
     </div>
@@ -286,6 +286,34 @@ watch(() => menuStore.actived, (val, oldVal) => {
 
   .menu :deep(a.menu-item-container:not(.active):active) {
     background: var(--mrr-navigation-active);
+  }
+
+  /* Icon-only rail: all states share one centered square hit area.
+   * Only root items are affected; expanded rows and teleported popup links keep their layout. */
+  &.is-collapse .menu > :deep(.menu-item > .menu-item-container) {
+    box-sizing: border-box;
+    justify-content: center;
+    width: 36px;
+    height: 36px;
+    min-height: 36px;
+    padding: 0 !important;
+    margin-inline: auto;
+    border-radius: var(--mrr-radius-md);
+  }
+
+  .account-area {
+    box-sizing: border-box;
+    flex: 0 0 var(--g-toolbar-height);
+    height: var(--g-toolbar-height);
+    padding: 0 var(--mrr-space-2);
+    border-top: 1px solid var(--mrr-shell-divider);
+  }
+
+  .account-area--expanded {
+    :deep(.mrr-account-dropdown) {
+      width: 100%;
+      min-width: 0;
+    }
   }
 
   .collapse-area {

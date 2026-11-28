@@ -2,6 +2,7 @@
 import type { EffectiveSystemSettings } from '@/utils/system-settings'
 import { RouterLink } from 'vue-router'
 import { isRuntimeDeveloperModeEnabled } from '@/api/modules/developer-mode'
+import imgLogoDark from '@/assets/images/mrr-logo-dark.svg'
 import imgLogo from '@/assets/images/mrr-logo.svg'
 import {
   readLocalSystemSettings,
@@ -28,7 +29,7 @@ const props = withDefaults(
 const settingsStore = useSettingsStore()
 
 const title = ref(import.meta.env.VITE_APP_TITLE)
-const logo = ref(imgLogo)
+const logo = computed(() => settingsStore.currentColorScheme === 'dark' ? imgLogoDark : imgLogo)
 const developerModeEnabled = ref(readLocalSystemSettings()?.developerModeEnabled ?? false)
 let refreshTimer: ReturnType<typeof setInterval> | undefined
 
@@ -83,7 +84,7 @@ onBeforeUnmount(() => {
 <template>
   <component
     :is="canToggleSidebar ? 'div' : RouterLink" :to="canToggleSidebar ? undefined : to" :title="canToggleSidebar ? undefined : title"
-    class="h-[var(--g-sidebar-logo-height)] w-inherit flex-center gap-2 px-3 text-inherit no-underline" :class="{
+    class="h-[var(--g-sidebar-logo-height)] w-inherit flex-center gap-1 px-3 text-inherit no-underline" :class="{
       'logo-container--collapsible': canToggleSidebar,
       'cursor-default': !canToggleSidebar && !settingsStore.settings.home.enable,
     }"
@@ -94,15 +95,15 @@ onBeforeUnmount(() => {
       :aria-label="toggleLabel" :aria-expanded="!sidebarCollapsed" :title="toggleLabel"
       @click="settingsStore.toggleSidebarCollapse()"
     >
-      <img :src="logo" alt="" class="logo logo-mark size-[17px] shrink-0 object-contain">
+      <img :src="logo" alt="" class="logo logo-mark size-[22px] shrink-0 object-contain">
       <FaIcon :name="sidebarCollapsed ? 'i-lucide:panel-left-open' : 'i-lucide:panel-left-close'" class="logo-toggle-icon absolute size-[17px]" />
     </el-button>
     <component
       :is="canToggleSidebar ? RouterLink : 'span'" v-if="!sidebarCollapsed" :to="canToggleSidebar ? to : undefined"
-      class="min-h-[var(--mrr-control-height)] min-w-0 flex-center gap-2 text-inherit no-underline"
+      class="min-h-[var(--mrr-control-height)] min-w-0 flex-center gap-1 text-inherit no-underline"
       :class="{ 'cursor-default': !settingsStore.settings.home.enable }" :title="title"
     >
-      <img v-if="showLogo && !canToggleSidebar" :src="logo" :alt="`${title} logo`" class="logo size-[17px] shrink-0 object-contain">
+      <img v-if="showLogo && !canToggleSidebar" :src="logo" :alt="`${title} logo`" class="logo size-[22px] shrink-0 object-contain">
       <span v-if="showTitle" class="logo-title">
         <strong class="title-text">{{ title }}</strong>
         <small
@@ -159,7 +160,13 @@ onBeforeUnmount(() => {
   min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
+  font-size: var(--mrr-font-size-sm);
+  font-weight: 600;
+  line-height: 1.5;
   white-space: nowrap;
+
+  /* CJK/Latin ink sits slightly above the geometric line-box center. */
+  transform: translateY(1px);
 }
 
 .developer-mode-badge {

@@ -6,6 +6,8 @@ const APP_SHELL = [
   '/offline.html',
   '/manifest.json',
   '/favicon.svg',
+  '/favicon.ico',
+  '/pwa/apple-touch-icon.png',
   '/pwa/icon-192.png',
   '/pwa/icon-512.png',
   '/pwa/icon-maskable-512.png',
@@ -31,6 +33,7 @@ function isStaticApplicationAsset(pathname) {
     || pathname.startsWith('/browser_upgrade/')
     || pathname.startsWith('/pwa/')
     || pathname === '/favicon.svg'
+    || pathname === '/favicon.ico'
     || pathname === '/manifest.json'
 }
 

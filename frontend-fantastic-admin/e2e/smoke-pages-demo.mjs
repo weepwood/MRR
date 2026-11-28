@@ -436,8 +436,23 @@ async function smokePagesDemo() {
     assert.match(page.url(), /\/MRR\/#\/records/, '刷新必须保留 hash 路由')
 
     // 演示模式退出登录：守卫不得用 Dev User 自动重新登录，登录页必须可以驻留。
-    await page.getByRole('button', { name: '账号菜单：Dev User' }).click({ timeout: 15_000 })
-    await page.getByRole('menuitem', { name: '退出登录' }).click({ timeout: 15_000 })
+    const openLogout = async () => {
+      await page.getByRole('button', { name: '账号菜单：Dev User' }).click({ timeout: 15_000 })
+      await page.getByRole('menuitem', { name: '退出登录' }).click({ timeout: 15_000 })
+      const dialog = page.getByRole('dialog', { name: '确认退出登录？' })
+      await dialog.waitFor({ state: 'visible', timeout: 15_000 })
+      return dialog
+    }
+    const initialToken = await page.evaluate(() => localStorage.getItem('mrr:auth:token'))
+    assert.ok(initialToken, '主动退出前必须存在演示会话')
+    let logoutDialog = await openLogout()
+    await logoutDialog.getByRole('button', { name: '取消', exact: true }).click({ timeout: 15_000 })
+    await logoutDialog.waitFor({ state: 'hidden', timeout: 15_000 })
+    assert.match(page.url(), /#\/records/, '取消退出必须保留当前页面')
+    assert.equal(await page.evaluate(() => localStorage.getItem('mrr:auth:token')), initialToken, '取消退出不能清除会话')
+    assert.equal(await page.evaluate(() => sessionStorage.getItem('mrr:demo:logged-out')), null)
+    logoutDialog = await openLogout()
+    await logoutDialog.getByRole('button', { name: '退出登录', exact: true }).click({ timeout: 15_000 })
     await page.waitForURL(/#\/login/, { timeout: 15_000 })
     await page.waitForSelector('#login-account', { timeout: 15_000 })
     await page.waitForTimeout(1200)

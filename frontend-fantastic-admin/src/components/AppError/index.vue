@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { RefreshCw as Refresh } from 'lucide-vue-next'
+import MrrErrorIllustration from '@/components/MrrErrorIllustration/index.vue'
 
 defineOptions({ name: 'AppError' })
 
@@ -25,7 +26,8 @@ function handleRetry() {
 
 <template>
   <div class="app-error mrr-content-enter" :class="{ 'is-compact': size === 'compact' }" role="alert">
-    <div class="app-error-icon i-lucide:triangle-alert mrr-status-pop" aria-hidden="true" />
+    <div v-if="size === 'compact'" class="app-error-icon i-lucide:triangle-alert" aria-hidden="true" />
+    <MrrErrorIllustration v-else class="app-error-art" variant="failure" />
     <p class="app-error-text">
       {{ message }}
     </p>
@@ -48,6 +50,11 @@ function handleRetry() {
   text-align: center;
 }
 
+.app-error-art {
+  width: min(96px, 100%);
+  margin-bottom: var(--mrr-space-3);
+}
+
 .app-error-icon {
   margin-bottom: var(--mrr-space-3);
   font-size: 36px;
@@ -56,8 +63,8 @@ function handleRetry() {
 }
 
 .app-error-text {
-  max-width: 100%;
-  margin: 0 0 var(--mrr-space-4);
+  max-width: min(100%, 440px);
+  margin: 0 0 var(--mrr-space-3);
   font-size: var(--mrr-font-size-sm);
   line-height: 1.6;
   color: var(--el-text-color-regular);

@@ -1,5 +1,8 @@
+import type { DashboardWidgetColor } from './dashboard-palette'
+import { isWidgetColor } from './dashboard-palette'
+
 export type DashboardWidgetSize = 'small' | 'wide' | 'large'
-export type DashboardWidgetColor = 'default' | 'blue' | 'green' | 'orange' | 'red' | 'purple'
+export type { DashboardWidgetColor } from './dashboard-palette'
 
 export interface DashboardWidgetDefinition {
   id: string
@@ -10,8 +13,10 @@ export interface DashboardWidgetDefinition {
   permission?: string
   defaultSize: DashboardWidgetSize
   defaultColor?: DashboardWidgetColor
+  group?: string
   defaultPinned?: boolean
   defaultVisible?: boolean
+  availableMetrics?: string[]
 }
 
 export interface DashboardWidgetPreference {
@@ -20,20 +25,20 @@ export interface DashboardWidgetPreference {
   description: string
   size: DashboardWidgetSize
   color: DashboardWidgetColor
+  backgroundColor?: DashboardWidgetColor
   pinned: boolean
   visible: boolean
   order: number
+  showDescription?: boolean
+  metricKeys?: string[]
+  showChart?: boolean
+  compact?: boolean
 }
 
 const widgetSizes: DashboardWidgetSize[] = ['small', 'wide', 'large']
-const widgetColors: DashboardWidgetColor[] = ['default', 'blue', 'green', 'orange', 'red', 'purple']
 
 function isWidgetSize(value: unknown): value is DashboardWidgetSize {
   return typeof value === 'string' && widgetSizes.includes(value as DashboardWidgetSize)
-}
-
-function isWidgetColor(value: unknown): value is DashboardWidgetColor {
-  return typeof value === 'string' && widgetColors.includes(value as DashboardWidgetColor)
 }
 
 function normalizeText(value: unknown, fallback: string) {
@@ -93,9 +98,14 @@ export function mergeWidgetPreferences(
       description: normalizeText(item.description, definition.description),
       size: isWidgetSize(item.size) ? item.size : definition.defaultSize,
       color: isWidgetColor(item.color) ? item.color : definition.defaultColor ?? 'default',
+      ...(isWidgetColor(item.backgroundColor) ? { backgroundColor: item.backgroundColor } : {}),
       pinned: typeof item.pinned === 'boolean' ? item.pinned : definition.defaultPinned === true,
       visible: typeof item.visible === 'boolean' ? item.visible : definition.defaultVisible !== false,
       order: merged.length,
+      ...(typeof item.showDescription === 'boolean' ? { showDescription: item.showDescription } : {}),
+      ...(Array.isArray(item.metricKeys) && definition.availableMetrics ? { metricKeys: definition.availableMetrics.filter(key => (item.metricKeys as unknown[]).includes(key)) } : {}),
+      ...(typeof item.showChart === 'boolean' ? { showChart: item.showChart } : {}),
+      ...(typeof item.compact === 'boolean' ? { compact: item.compact } : {}),
     })
   })
 
@@ -131,6 +141,7 @@ export function moveWidget(
   preferences: DashboardWidgetPreference[],
   sourceId: string,
   targetId: string,
+  after = false,
 ): DashboardWidgetPreference[] {
   if (sourceId === targetId) {
     return reindexWidgetPreferences([...preferences])
@@ -149,7 +160,7 @@ export function moveWidget(
   const next = [...sorted]
   const [source] = next.splice(sourceIndex, 1)
   const insertionIndex = next.findIndex(item => item.id === targetId)
-  next.splice(Math.max(0, insertionIndex), 0, source)
+  next.splice(Math.max(0, insertionIndex + (after ? 1 : 0)), 0, source)
   return reindexWidgetPreferences(next)
 }
 
@@ -165,7 +176,7 @@ export function setWidgetPinned(
 export function updateWidgetPreference(
   preferences: DashboardWidgetPreference[],
   widgetId: string,
-  patch: Partial<Pick<DashboardWidgetPreference, 'title' | 'description' | 'size' | 'color' | 'visible'>>,
+  patch: Partial<Pick<DashboardWidgetPreference, 'title' | 'description' | 'size' | 'color' | 'backgroundColor' | 'visible' | 'showDescription' | 'metricKeys' | 'showChart' | 'compact'>>,
 ): DashboardWidgetPreference[] {
   return preferences.map(item => item.id === widgetId ? { ...item, ...patch } : item)
 }

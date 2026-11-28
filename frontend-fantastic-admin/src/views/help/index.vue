@@ -105,7 +105,7 @@ onMounted(async () => {
 
 <template>
   <MrrPageShell class="help-center">
-    <MrrPageHeader eyebrow="MRR DOCUMENTATION" title="帮助与文档" description="用户手册、开发文档和运维指南由系统设置提供访问地址，实时 API 文档由当前后端服务提供。">
+    <MrrPageHeader title="帮助与文档" description="用户手册、开发文档和运维指南由系统设置提供访问地址，实时 API 文档由当前后端服务提供。">
       <template #actions>
         <div class="help-status">
           <span class="status-dot" />

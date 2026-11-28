@@ -19,12 +19,12 @@ const RETRY_INTERVAL_MS = 5000
  * 成功一次即停止，失败则按 {@link RETRY_INTERVAL_MS} 限流重试。
  * </p>
  */
-export function installUiSettingsSync(router: Router, pinia: Pinia): void {
+export function installUiSettingsSync(router: Router, pinia: Pinia): Promise<void> {
   const settingsStore = useSettingsStore(pinia)
   let synced = false
   let lastAttemptAt = 0
 
-  function attemptSync() {
+  async function attemptSync() {
     if (synced) {
       return
     }
@@ -36,14 +36,12 @@ export function installUiSettingsSync(router: Router, pinia: Pinia): void {
       return
     }
     lastAttemptAt = now
-    void settingsStore.loadUiSettings().then((ok) => {
-      synced = ok
-    })
+    synced = await settingsStore.loadUiSettings()
   }
 
   router.afterEach(() => {
-    attemptSync()
+    void attemptSync()
   })
 
-  attemptSync()
+  return attemptSync()
 }

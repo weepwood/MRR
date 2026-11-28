@@ -124,18 +124,12 @@ describe('chrome 86 color-mix 回退契约', () => {
     expect(css).toMatch(/@supports not \(color: color-mix\([^)]*\)\) \{[^@]*--el-table-header-bg-color:\s*var\(--mrr-muted\)/)
   })
 
-  it('工作台 widget 着色底面带静态回退', () => {
-    const { covering } = notBlockAwareness('views/home/DashboardWorkspace.vue')
-    for (const selector of [
-      '.dashboard-widget--color-blue',
-      '.dashboard-widget--color-green',
-      '.dashboard-widget--color-orange',
-      '.dashboard-widget--color-red',
-      '.dashboard-widget__icon, .widget-manager-item__icon',
-      '.pin-badge',
-    ]) {
-      expect(covering.has(selector)).toBe(true)
-    }
+  it('工作台表面、图标与拖拽反馈直接使用旧浏览器可用的静态颜色', () => {
+    const css = read('views/home/DashboardWorkspace.vue')
+    expect(css).toMatch(/background:\s*linear-gradient\(rgba?\(var\(--widget-tint-rgb\), var\(--widget-tint-alpha\)\)/)
+    expect(css).not.toMatch(/--widget-(surface|border):\s*color-mix/)
+    expect(css).toMatch(/background:\s*var\(--widget-icon-surface/)
+    expect(css).toMatch(/\.dashboard-widget\.is-drag-over\s*\{[^}]*border-color:\s*var\(--widget-accent\)/)
   })
 
   it('帮助页文档卡与注册页审核条带静态回退', () => {

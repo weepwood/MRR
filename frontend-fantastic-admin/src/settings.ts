@@ -7,6 +7,10 @@ const globalSettings: Settings.all = {
   app: {
     enableDynamicTitle: true,
   },
+  // 管理端窄窗口默认复用现有移动侧栏；保存过的显式关闭设置仍然优先。
+  layout: {
+    enableMobileAdaptation: true,
+  },
   menu: {
     mode: 'single',
     subMenuUniqueOpened: false,

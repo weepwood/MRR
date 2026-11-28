@@ -16,8 +16,8 @@ export function getStatisticsList(params: {
 }
 
 /** GET /api/v1/statistics/summary — 获取总体统计信息 */
-export function getStatisticsSummary() {
-  return getRequest<StatisticsSummary>('/api/v1/statistics/summary')
+export function getStatisticsSummary(signal?: AbortSignal) {
+  return getRequest<StatisticsSummary>('/api/v1/statistics/summary', { signal })
 }
 
 /** GET /api/v1/statistics/date-summary — 统计每个日期的记录数和总页数 */

@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import MrrErrorPage from '@/components/MrrErrorPage/index.vue'
+
 defineOptions({
   name: 'FaNotAllowed',
 })
@@ -37,20 +39,9 @@ function goBack() {
 </script>
 
 <template>
-  <div class="absolute left-[50%] top-[50%] flex flex-col items-center justify-between lg-flex-row -translate-x-50% -translate-y-50% lg-gap-12">
-    <FaIcon name="403" class="text-[300px] lg-text-[400px]" />
-    <div class="flex flex-col gap-4">
-      <h1 class="m-0 text-6xl font-sans">
-        403
-      </h1>
-      <div class="desc mx-0 text-xl text-secondary-foreground/50">
-        抱歉，你无权访问该页面
-      </div>
-      <div>
-        <el-button class="mrr-button-flow" type="primary" :auto-insert-space="false" @click="goBack">
-          {{ `${data.countdown} 秒后，返回主页` }}
-        </el-button>
-      </div>
-    </div>
-  </div>
+  <MrrErrorPage code="403" heading="暂无访问权限" description="当前账号无权访问此页面。如需使用此功能，请联系系统管理员确认权限。">
+    <el-button class="mrr-button-flow" type="primary" :auto-insert-space="false" @click="goBack">
+      返回首页 ({{ data.countdown }}s)
+    </el-button>
+  </MrrErrorPage>
 </template>

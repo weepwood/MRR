@@ -1,3 +1,4 @@
+import type { DashboardWidgetDefinition, DashboardWidgetPreference } from './dashboard-widgets'
 import { describe, expect, it } from 'vitest'
 import {
   createDefaultWidgetPreferences,
@@ -7,7 +8,6 @@ import {
   sortWidgetPreferences,
   updateWidgetPreference,
 } from './dashboard-widgets'
-import type { DashboardWidgetDefinition, DashboardWidgetPreference } from './dashboard-widgets'
 
 const definitions: DashboardWidgetDefinition[] = [
   {
@@ -66,6 +66,15 @@ describe('dashboard widgets', () => {
     const result = updateWidgetPreference(preferences, 'records', { color: 'orange' })
 
     expect(result.find(item => item.id === 'records')?.color).toBe('orange')
+  })
+
+  it('保留旧颜色语义并独立验证新底色', () => {
+    const old = mergeWidgetPreferences(definitions, [{ id: 'records', color: 'green' }])
+    expect(old[0]).toMatchObject({ color: 'green' })
+    expect(old[0].backgroundColor).toBeUndefined()
+    const next = updateWidgetPreference(old, 'records', { color: 'pink', backgroundColor: 'cyan' })
+    expect(mergeWidgetPreferences(definitions, next)[0]).toMatchObject({ color: 'pink', backgroundColor: 'cyan' })
+    expect(mergeWidgetPreferences(definitions, [{ id: 'records', color: 'teal', backgroundColor: 'url(test)' }])[0].backgroundColor).toBeUndefined()
   })
 
   it('置顶后应移动到普通组件之前并保留稳定顺序', () => {

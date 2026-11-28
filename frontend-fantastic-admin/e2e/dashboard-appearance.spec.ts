@@ -1,0 +1,50 @@
+import { expect, test } from '@playwright/test'
+import { isolateLocalVisualSettings } from './helpers/local-visual-settings'
+
+for (const [palette, theme] of [['mrr', 'light'], ['mrr', 'dark'], ['gr8r', 'light'], ['gr8r', 'dark']] as const) {
+  test(`${palette}/${theme} 首页外观模式与布局保持`, async ({ page }, info) => {
+    await isolateLocalVisualSettings(page)
+    await page.addInitScript(({ palette, theme }) => localStorage.setItem('MRR-ADMIN:app-settings', JSON.stringify({
+      app: { themePalette: palette, colorScheme: theme, enableMotion: false },
+      layout: { enableMobileAdaptation: true },
+    })), { palette, theme })
+    await page.goto('/')
+    const archive = page.locator('[data-widget-id="archive"]')
+    const records = page.locator('[data-widget-id="records"]')
+    const geometry = () => page.locator('.dashboard-grid > article').evaluateAll(els => els.map((el) => { const e = el as HTMLElement; return [e.dataset.widgetId, e.offsetLeft, e.offsetTop, e.offsetWidth, e.offsetHeight] }))
+    const tint = (el: typeof archive) => el.evaluate(e => getComputedStyle(e).getPropertyValue('--widget-tint-alpha').trim())
+    await expect(page.locator('[data-widget-id="monitoring"]')).toHaveAttribute('role', 'link')
+    expect(await tint(archive)).toBe('0.04')
+    expect(await tint(records)).toBe('0')
+    const before = await geometry()
+    await page.locator('.dashboard-header').hover()
+    await page.getByRole('button', { name: '管理模块' }).click()
+    const manager = page.getByRole('dialog', { name: '管理小组件' })
+    await manager.getByText('经典中性', { exact: true }).click()
+    expect(await tint(archive)).toBe('0')
+    await manager.getByText('柔和色彩', { exact: true }).click()
+    expect(await tint(records)).toBe('0.04')
+    const slider = manager.getByRole('slider')
+    await slider.focus()
+    await slider.press('End')
+    expect(await tint(records)).toBe('0.1')
+    await manager.getByText('业务聚焦', { exact: true }).click()
+    expect(await tint(records)).toBe('0')
+    await slider.focus()
+    await slider.press('Home')
+    expect(await tint(archive)).toBe('0')
+    await slider.press('ArrowRight')
+    expect(await tint(archive)).toBe('0.01')
+    await manager.getByRole('button', { name: '完成', exact: true }).click()
+    await expect(manager).toBeHidden()
+    expect(await geometry()).toEqual(before)
+    await page.reload()
+    await expect(archive).toBeVisible()
+    expect(await tint(archive)).toBe('0.01')
+    expect(await tint(records)).toBe('0')
+    await expect(archive).toHaveCSS('grid-row-start', 'span 2')
+    await page.screenshot({ path: info.outputPath('focus.png'), fullPage: true })
+    await page.setViewportSize({ width: 375, height: 900 })
+    await expect.poll(() => page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(375)
+  })
+}

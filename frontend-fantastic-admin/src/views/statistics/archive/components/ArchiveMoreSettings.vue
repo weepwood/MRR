@@ -10,6 +10,7 @@ import type { ViewMode } from '../types'
 import type { ArchivePreviewMode } from '@/utils/system-settings'
 import { Ellipsis as MoreFilled } from 'lucide-vue-next'
 import { ref } from 'vue'
+import MrrIllustration from '@/components/MrrIllustration/index.vue'
 
 const props = defineProps<{
   viewMode: ViewMode
@@ -110,6 +111,7 @@ const mouseGestures: { keys: string[], label: string }[] = [
           <div class="settings-row settings-row--stacked">
             <span>工作区布局</span>
             <el-segmented
+              class="layout-preview-segment"
               :model-value="props.layoutMode"
               size="small"
               :options="[
@@ -117,7 +119,14 @@ const mouseGestures: { keys: string[], label: string }[] = [
                 { label: '全景平铺', value: 'wall' },
               ]"
               @update:model-value="emit('update:layoutMode', $event as ArchiveLayoutMode)"
-            />
+            >
+              <template #default="{ item }">
+                <span class="layout-option-preview">
+                  <MrrIllustration :variant="item.value === 'wall' ? 'wall' : 'standard'" />
+                  <span>{{ item.label }}</span>
+                </span>
+              </template>
+            </el-segmented>
           </div>
 
           <template v-if="props.layoutMode === 'standard'">
@@ -323,14 +332,14 @@ const mouseGestures: { keys: string[], label: string }[] = [
 .settings-heading,
 .settings-row {
   display: flex;
-  gap: 12px;
+  gap: var(--mrr-space-3);
   align-items: center;
   justify-content: space-between;
 }
 
 .settings-row--stacked {
   display: grid;
-  gap: 8px;
+  gap: var(--mrr-space-2);
   justify-content: stretch;
 }
 
@@ -338,15 +347,44 @@ const mouseGestures: { keys: string[], label: string }[] = [
   width: 100%;
 }
 
+.archive-more-settings :deep(.el-segmented.layout-preview-segment) {
+  --el-segmented-item-selected-bg-color: var(--mrr-card);
+  --el-segmented-item-selected-color: var(--mrr-card-foreground);
+  --el-segmented-bg-color: var(--mrr-muted);
+
+  border-radius: var(--mrr-radius-lg);
+}
+
+.archive-more-settings :deep(.layout-preview-segment .el-segmented__item),
+.archive-more-settings :deep(.layout-preview-segment .el-segmented__item-selected) {
+  border-radius: var(--mrr-radius-md);
+}
+
+.archive-more-settings :deep(.layout-preview-segment .el-segmented__item-selected) {
+  box-shadow: inset 0 0 0 1px var(--mrr-primary);
+}
+
+.layout-option-preview {
+  display: grid;
+  gap: var(--mrr-space-1);
+  justify-items: center;
+  padding: var(--mrr-space-1);
+  white-space: nowrap;
+}
+
 .settings-heading strong {
-  font-size: 14px;
+  font-size: var(--mrr-font-size-md);
   color: var(--text-primary);
 }
 
 .settings-heading span,
 .settings-value {
-  font-size: 12px;
-  color: var(--text-secondary);
+  font-size: var(--mrr-font-size-xs);
+  color: var(--mrr-muted-foreground);
+}
+
+.settings-value {
+  font-variant-numeric: tabular-nums;
 }
 
 .settings-slider-row {
@@ -370,7 +408,7 @@ const mouseGestures: { keys: string[], label: string }[] = [
 
 .shortcut-list {
   display: grid;
-  gap: 8px;
+  gap: var(--mrr-space-2);
   padding: 0;
   margin: 0;
   list-style: none;
@@ -386,14 +424,14 @@ const mouseGestures: { keys: string[], label: string }[] = [
 .shortcut-keys {
   display: inline-flex;
   flex: none;
-  gap: 4px;
+  gap: var(--mrr-space-1);
 }
 
 .shortcut-keys kbd {
   min-width: 22px;
   padding: 2px var(--mrr-space-2);
   font-family: inherit;
-  font-size: 11px;
+  font-size: var(--mrr-font-size-xs);
   color: var(--text-primary);
   text-align: center;
   background: var(--surface);
@@ -404,14 +442,14 @@ const mouseGestures: { keys: string[], label: string }[] = [
 
 .shortcut-label {
   min-width: 0;
-  font-size: 12px;
-  color: var(--text-secondary);
+  font-size: var(--mrr-font-size-xs);
+  color: var(--mrr-muted-foreground);
   text-align: right;
 }
 
 .shortcut-group-title {
   margin-top: 2px;
   font-size: var(--mrr-font-size-xs);
-  color: var(--text-tertiary);
+  color: var(--mrr-muted-foreground);
 }
 </style>

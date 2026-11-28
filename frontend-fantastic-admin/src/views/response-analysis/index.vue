@@ -66,7 +66,6 @@ onMounted(loadData)
 <template>
   <MrrPageShell class="response-analysis-page">
     <MrrPageHeader
-      eyebrow="Response Insights"
       title="接口响应分析"
       description="默认汇总最近 365 天每日请求量、错误情况及前后端响应耗时，定位长期波动与异常日期。"
     >

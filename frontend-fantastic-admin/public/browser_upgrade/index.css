@@ -9,19 +9,21 @@
   align-items: center;
   justify-content: center;
   padding: 24px;
-  color: #7c2d12;
-  background: #fff7ed;
+  color: #172033;
+  background: #f3f6fb;
 }
 
 .browser-compat-content {
   display: flex;
   align-items: flex-start;
-  width: min(100%, 640px);
+  box-sizing: border-box;
+  width: 100%;
+  max-width: 640px;
   padding: 24px;
   background: #fff;
-  border: 1px solid #fdba74;
+  border: 1px solid #dce3eb;
   border-radius: 12px;
-  box-shadow: 0 12px 32px rgba(124, 45, 18, 0.18);
+  box-shadow: 0 12px 32px rgba(15, 23, 42, 0.1);
 }
 
 .browser-compat-icon {
@@ -97,7 +99,9 @@
   background: #fff7ed;
 }
 
-:focus-visible {
+#browser-compat-blocker :focus-visible,
+#mrr-startup-shell :focus-visible,
+#browser-compat-notice :focus-visible {
   outline: 2px solid #c2410c;
   outline-offset: 2px;
 }
@@ -134,4 +138,260 @@
   .browser-compat-button {
     width: 100%;
   }
+}
+
+/* Static bootstrap surface: no framework, no business data, no fabricated progress. */
+html[data-mrr-startup] #app {
+  opacity: 0;
+  visibility: hidden;
+}
+
+#mrr-startup-shell,
+.browser-compat-notice {
+  box-sizing: border-box;
+  font-family: system-ui, "Microsoft YaHei", sans-serif;
+  color: var(--mrr-foreground, #172033);
+}
+
+#mrr-startup-shell {
+  position: fixed;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  z-index: 10000;
+  overflow: auto;
+  background: var(--mrr-app-shell-bg, #f3f6fb);
+}
+
+#mrr-startup-shell[hidden],
+.browser-compat-notice[hidden],
+.startup-actions[hidden],
+.startup-actions button[hidden] {
+  display: none;
+}
+
+/* Restore the original four-color morphing animation, with the new lifecycle. */
+.startup-status,
+.browser-compat-notice {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 16px;
+  background: var(--mrr-card, #fff);
+  border: 1px solid var(--mrr-border, #dce3eb);
+  border-radius: 12px;
+}
+
+.startup-copy {
+  flex: 1;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.startup-copy h1,
+.startup-copy strong {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.startup-copy p {
+  margin: 4px 0 0;
+  font-size: 13px;
+  line-height: 1.6;
+  color: var(--mrr-muted-foreground, #52637b);
+}
+
+.startup-classic-loader {
+  position: relative;
+  width: 2.5em;
+  height: 2.5em;
+  transform: rotate(165deg);
+}
+
+.startup-classic-loader::before,
+.startup-classic-loader::after {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  display: block;
+  width: 0.5em;
+  height: 0.5em;
+  border-radius: 0.25em;
+  content: "";
+  transform: translate(-50%, -50%);
+}
+
+.startup-classic-loader::before {
+  animation: mrr-startup-before 2s infinite;
+  animation-delay: -1s;
+}
+
+.startup-classic-loader::after {
+  animation: mrr-startup-after 2s infinite;
+  animation-delay: -1s;
+}
+
+@keyframes mrr-startup-before {
+  0% {
+    width: 0.5em;
+    box-shadow: 1em -0.5em rgba(225, 20, 98, 0.75), -1em 0.5em rgba(111, 202, 220, 0.75);
+  }
+
+  35% {
+    width: 2.5em;
+    box-shadow: 0 -0.5em rgba(225, 20, 98, 0.75), 0 0.5em rgba(111, 202, 220, 0.75);
+  }
+
+  70% {
+    width: 0.5em;
+    box-shadow: -1em -0.5em rgba(225, 20, 98, 0.75), 1em 0.5em rgba(111, 202, 220, 0.75);
+  }
+
+  100% {
+    box-shadow: 1em -0.5em rgba(225, 20, 98, 0.75), -1em 0.5em rgba(111, 202, 220, 0.75);
+  }
+}
+
+@keyframes mrr-startup-after {
+  0% {
+    height: 0.5em;
+    box-shadow: 0.5em 1em rgba(61, 184, 143, 0.75), -0.5em -1em rgba(233, 169, 32, 0.75);
+  }
+
+  35% {
+    height: 2.5em;
+    box-shadow: 0.5em 0 rgba(61, 184, 143, 0.75), -0.5em 0 rgba(233, 169, 32, 0.75);
+  }
+
+  70% {
+    height: 0.5em;
+    box-shadow: 0.5em -1em rgba(61, 184, 143, 0.75), -0.5em 1em rgba(233, 169, 32, 0.75);
+  }
+
+  100% {
+    box-shadow: 0.5em 1em rgba(61, 184, 143, 0.75), -0.5em -1em rgba(233, 169, 32, 0.75);
+  }
+}
+
+.startup-classic-loader {
+  position: absolute;
+  top: calc(50% - 1.25em);
+  left: calc(50% - 1.25em);
+  font-size: 16px;
+}
+
+/* Keep normal startup as quiet as the old screen; announce genuine stages to AT. */
+#mrr-startup-shell:not([data-startup-state]) .startup-status {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0;
+}
+
+#mrr-startup-shell[data-startup-state] .startup-status {
+  position: absolute;
+  top: calc(50% + 56px);
+  right: 16px;
+  left: 16px;
+  box-sizing: border-box;
+  max-width: 440px;
+  margin: 0 auto;
+  text-align: center;
+  flex-direction: column;
+}
+
+#mrr-startup-shell[data-startup-state="failed"] .startup-classic-loader {
+  display: none;
+}
+
+#mrr-startup-shell[data-startup-state="failed"] .startup-status {
+  top: 50%;
+  transform: translateY(-50%);
+}
+
+[data-motion="off"] .startup-classic-loader::before,
+[data-motion="off"] .startup-classic-loader::after {
+  animation-play-state: paused;
+}
+
+.startup-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.startup-actions .browser-compat-button,
+.browser-compat-notice .browser-compat-button {
+  color: var(--mrr-foreground, #172033);
+  background: var(--mrr-card, #fff);
+  border-color: var(--mrr-border-strong, #94a3b8);
+}
+
+.browser-compat-notice {
+  position: fixed;
+  right: 16px;
+  bottom: 16px;
+  z-index: 9990;
+  width: 400px;
+  max-width: calc(100% - 32px);
+  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.12);
+}
+
+@media (prefers-color-scheme: dark) {
+  #mrr-startup-shell {
+    background: var(--mrr-app-shell-bg, #181e25);
+  }
+
+  #mrr-startup-shell,
+  .browser-compat-notice {
+    color: var(--mrr-foreground, #e6ebf2);
+  }
+
+  .startup-status,
+  .browser-compat-notice {
+    background: var(--mrr-card, #202833);
+    border-color: var(--mrr-border, #394553);
+  }
+
+  .startup-copy p {
+    color: var(--mrr-muted-foreground, #b2bfd0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .startup-classic-loader::before,
+  .startup-classic-loader::after {
+    animation-play-state: paused;
+  }
+}
+
+@media (max-width: 640px) {
+  .startup-actions {
+    justify-content: center;
+  }
+}
+
+/* No transition for a loader that was never shown. Ready content is already live. */
+#mrr-startup-shell[data-startup-state="leaving"] {
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity var(--mrr-motion-feedback, 120ms) ease-out;
+}
+
+#mrr-startup-shell[data-startup-state="leaving"] .startup-status {
+  display: none;
+}
+
+html.dark[data-mrr-startup] {
+  background: var(--mrr-app-shell-bg, #181e25);
+}
+
+html.dark #mrr-startup-shell {
+  background: var(--mrr-app-shell-bg, #181e25);
 }

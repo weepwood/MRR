@@ -114,7 +114,7 @@ onDeactivated(() => { active.value = false })
 
 .inline-preview h4 {
   margin: 0 0 var(--mrr-space-2);
-  font-size: 12px;
+  font-size: var(--mrr-font-size-xs);
   font-weight: 600;
   color: var(--mrr-muted-foreground);
 }
@@ -152,7 +152,7 @@ onDeactivated(() => { active.value = false })
   place-items: center;
   width: 100%;
   height: 100%;
-  padding: 8px;
+  padding: var(--mrr-space-2);
   cursor: zoom-in;
 }
 
@@ -166,25 +166,34 @@ onDeactivated(() => { active.value = false })
 
 .expand-icon {
   position: absolute;
-  right: 8px;
-  bottom: 8px;
+  right: var(--mrr-space-2);
+  bottom: var(--mrr-space-2);
   display: grid;
   place-items: center;
-  width: 26px;
-  height: 26px;
+  width: 28px;
+  height: 28px;
   color: var(--mrr-card-foreground);
   background: var(--mrr-card);
   border: 1px solid var(--mrr-border);
-  border-radius: var(--mrr-radius-md);
+  border-radius: var(--mrr-radius-sm);
+  box-shadow: var(--mrr-shadow-xs);
+  transition: background-color var(--mrr-motion-feedback) var(--mrr-ease-out), border-color var(--mrr-motion-feedback) var(--mrr-ease-out);
+}
+
+.inline-image:hover .expand-icon,
+.inline-image:focus-visible .expand-icon {
+  background: var(--mrr-muted);
+  border-color: var(--mrr-border-strong);
 }
 
 .inline-text {
   height: 100%;
   max-height: 100%;
-  padding: var(--mrr-space-3) 12px;
+  padding: var(--mrr-space-3);
   margin: 0;
   overflow: auto;
-  font-size: 12px;
+  font-family: var(--mrr-font-mono);
+  font-size: var(--mrr-font-size-xs);
   line-height: 1.6;
   overflow-wrap: anywhere;
   white-space: pre-wrap;
@@ -203,7 +212,7 @@ onDeactivated(() => { active.value = false })
   justify-content: space-between;
   min-height: 44px;
   padding: var(--mrr-space-2) var(--mrr-space-3);
-  font-size: 12px;
+  font-size: var(--mrr-font-size-xs);
   color: var(--mrr-muted-foreground);
 }
 </style>

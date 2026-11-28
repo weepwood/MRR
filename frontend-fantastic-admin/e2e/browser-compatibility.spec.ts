@@ -1,75 +1,50 @@
-import type { Page } from '@playwright/test'
-import { errors, expect, test } from '@playwright/test'
+import { expect, test } from '@playwright/test'
 
-async function expectApplicationToRemainStopped(page: Page) {
-  let applicationMounted = true
-  try {
-    await page.locator('#app > *').first().waitFor({
-      state: 'attached',
-      timeout: 15_000,
+for (const product of ['Chrome', 'Chromium', 'Edg']) {
+  test(`${product} 低于认证基线仍可进入登录并关闭提示`, async ({ browser }, info) => {
+    const context = await browser.newContext({
+      baseURL: test.info().project.use.baseURL,
+      storageState: { cookies: [], origins: [] },
+      userAgent: `Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) ${product}/85.0.0.0 Safari/537.36`,
     })
-  }
-  catch (error) {
-    if (!(error instanceof errors.TimeoutError)) {
-      throw error
+    try {
+      const page = await context.newPage()
+      await page.goto('/login')
+      await expect(page.locator('.login-page')).toBeVisible()
+      await expect(page.locator('#browser-compat-blocker')).toBeHidden()
+      const notice = page.locator('#browser-compat-notice')
+      await expect(notice).toBeVisible()
+      await expect(notice).toContainText('低于正式验收基线')
+      await page.screenshot({ path: info.outputPath('compatibility.png') })
+      await notice.getByRole('button', { name: '关闭兼容性提示' }).click()
+      await expect(notice).toBeHidden()
+      await expect(page.locator('.login-page')).toBeVisible()
     }
-    applicationMounted = false
-  }
-
-  expect(applicationMounted).toBe(false)
-  await expect(page.locator('#app')).toBeEmpty()
+    finally { await context.close() }
+  })
 }
 
-test.describe('浏览器兼容性阻断', () => {
-  test('Chrome 85 低于基线时阻止应用启动', async ({ browser }) => {
-    const context = await browser.newContext({
-      storageState: 'e2e/.auth/anonymous.json',
-      userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/85.0.0.0 Safari/537.36',
-    })
-    const page = await context.newPage()
-
-    await page.goto('/')
-
-    const blocker = page.locator('#browser-compat-blocker')
-    await expect(blocker).toBeVisible()
-    await expect(blocker).toContainText('检测到 Chrome 85.0.0.0')
-    await expect(blocker).toContainText('最低支持版本 Chrome 86')
-    // 覆盖“遮罩先出现、Vue 随后仍启动”的竞态。
-    await expectApplicationToRemainStopped(page)
-
-    await context.close()
+test('Chrome 86 认证基线不显示升级预警', async ({ browser }) => {
+  const context = await browser.newContext({
+    baseURL: test.info().project.use.baseURL,
+    storageState: { cookies: [], origins: [] },
+    userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/86.0.0.0 Safari/537.36',
   })
-
-  test('Chromium 85 同样按 Chrome 内核基线阻断', async ({ browser }) => {
-    const context = await browser.newContext({
-      storageState: 'e2e/.auth/anonymous.json',
-      userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chromium/85.0.0.0 Safari/537.36',
-    })
+  try {
     const page = await context.newPage()
+    await page.goto('/login')
+    await expect(page.locator('.login-page')).toBeVisible()
+    await expect(page.locator('#browser-compat-blocker')).toBeHidden()
+    await expect(page.locator('#browser-compat-notice')).toBeHidden()
+  }
+  finally { await context.close() }
+})
 
-    await page.goto('/')
-
-    const blocker = page.locator('#browser-compat-blocker')
-    await expect(blocker).toBeVisible()
-    await expect(blocker).toContainText('检测到 Chrome 85.0.0.0')
-    await expect(blocker).toContainText('最低支持版本 Chrome 86')
-    await expectApplicationToRemainStopped(page)
-
-    await context.close()
-  })
-
-  test('Chrome 86 可以进入应用', async ({ browser }) => {
-    const context = await browser.newContext({
-      storageState: 'e2e/.auth/admin.json',
-      userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/86.0.0.0 Safari/537.36',
-    })
-    const page = await context.newPage()
-
-    await page.goto('/', { waitUntil: 'domcontentloaded' })
-
-    await expect(page.locator('#browser-compat-blocker')).toBeHidden({ timeout: 20_000 })
-    await expect(page.getByRole('heading', { name: '管理概览' })).toBeVisible({ timeout: 20_000 })
-
-    await context.close()
-  })
+test('缺少不可补齐的 Proxy 才阻断应用', async ({ page }) => {
+  await page.addInitScript(() => { Object.defineProperty(window, 'Proxy', { value: undefined }) })
+  await page.goto('/login', { waitUntil: 'commit' })
+  await expect(page.locator('#browser-compat-blocker')).toBeVisible()
+  await expect(page.locator('#browser-compat-blocker')).toContainText('关键运行能力')
+  await expect(page.locator('#app')).toBeEmpty()
+  expect(await page.evaluate(() => window.__MRR_APP_STARTUP_BLOCKED__)).toBe(true)
 })

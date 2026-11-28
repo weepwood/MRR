@@ -441,7 +441,7 @@ onUnmounted(() => {
 
 <template>
   <MrrPageShell class="settings-page">
-    <MrrPageHeader eyebrow="System Settings" title="系统设置" description="统一管理系统标识、业务配置、访问安全与界面外观。">
+    <MrrPageHeader title="系统设置" description="统一管理系统标识、业务配置、访问安全与界面外观。">
       <template #badge>
         <el-tag v-if="settings.developerModeEnabled" type="danger" effect="dark" round>
           开发者模式已启用

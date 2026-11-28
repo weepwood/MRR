@@ -4,6 +4,7 @@ import { ElMessageBox } from 'element-plus'
 import { actOnRepairOrder, getRepairEvents, listRepairOrders, proposeRepairOrder } from '@/api/modules/repair-orders'
 import AppEmpty from '@/components/AppEmpty/index.vue'
 import AppError from '@/components/AppError/index.vue'
+import MrrIllustration from '@/components/MrrIllustration/index.vue'
 import MrrSectionCard from '@/components/MrrSectionCard/index.vue'
 import { formatDateTime } from '@/utils/display-format'
 import { isSessionAccessDenied } from '@/utils/session-access-denied'
@@ -285,7 +286,11 @@ onBeforeUnmount(clear)
         </template>
       </el-table-column>
     </el-table>
-    <AppEmpty v-else-if="!busy && !failed" description="暂无修复工单" />
+    <AppEmpty v-else-if="!busy && !failed" description="暂无修复工单">
+      <template #illustration>
+        <MrrIllustration variant="repair" compact />
+      </template>
+    </AppEmpty>
     <el-button v-if="more" :disabled="busy" @click="load(true)">
       加载更多工单
     </el-button>

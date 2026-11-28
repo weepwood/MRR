@@ -325,10 +325,15 @@
     grid-column: 1 / -1;
   }
 
+  .mrr-metric-grid--mobile-compact .mrr-metric-card {
+    min-height: 0;
+  }
+
   .mrr-metric-grid--mobile-compact .mrr-metric-card .el-card__body {
     grid-template-columns: minmax(0, 1fr);
     gap: var(--mrr-space-2);
     align-content: start;
+    min-height: 0;
   }
 
   .mrr-metric-grid--mobile-compact .mrr-metric-card__icon {

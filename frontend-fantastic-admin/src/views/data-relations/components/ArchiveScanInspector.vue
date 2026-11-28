@@ -28,6 +28,7 @@ const crossing = ref(false)
 const selectedIndex = computed(() => rows.value.findIndex(row => Number(row.id) === selectedId.value))
 const selected = computed(() => rows.value[selectedIndex.value])
 const focusMode = ref(false)
+const listCollapsed = ref(false)
 const ocrOpen = ref(false)
 const ocrPanel = ref<InstanceType<typeof OcrPanel>>()
 const canRead = computed(() => hasPermission('system:read') && hasPermission('record:read'))
@@ -55,12 +56,24 @@ const ocrTarget = computed({
 function toggleFocus() {
   focusMode.value = !focusMode.value
   if (focusMode.value) { ocrOpen.value = false }
+  else { listCollapsed.value = false }
 }
+// Restore focus when resizing removes the narrow-only disclosure.
+watch(splitList, async (split) => {
+  if (!split) { return }
+  const restore = inspector.value?.contains(document.activeElement) && document.activeElement?.classList.contains('scan-list-disclosure')
+  listCollapsed.value = false
+  if (restore) {
+    await nextTick()
+    listRegion.value?.querySelector<HTMLButtonElement>(`[data-scan-id="${selectedId.value}"]`)?.focus()
+  }
+})
 watch(canOcr, (allowed) => { if (!allowed) { ocrOpen.value = false } }, { flush: 'sync' })
 function clear() {
   ocrOpen.value = false
   selectedId.value = null
   focusMode.value = false
+  listCollapsed.value = false
 }
 function selectRow(index: number, focus = false) {
   if (!canRead.value || busy.value || index < 0 || index >= rows.value.length) { return }
@@ -189,7 +202,16 @@ onBeforeUnmount(reset)
 <template>
   <MrrSectionCard v-if="canRead" body-padding="compact" title="影像核对" description="按页码和影像 ID 分页读取当前有效影像，每页最多 50 条；实时列表并非固定快照。">
     <div ref="inspector" class="scan-inspector" :class="{ 'scan-inspector--split': splitList, 'scan-inspector--focus': focusMode }" :style="{ '--scan-list-width': `${listTarget}px` }">
-      <div :id="`scan-list-pane-${archiveId}`" class="scan-list-pane">
+      <el-button
+        v-if="focusMode && !splitList"
+        class="scan-list-disclosure"
+        :aria-expanded="!listCollapsed"
+        :aria-controls="`scan-list-pane-${archiveId}`"
+        @click="listCollapsed = !listCollapsed"
+      >
+        {{ listCollapsed ? '展开影像列表' : '收起影像列表' }}
+      </el-button>
+      <div v-show="!focusMode || splitList || !listCollapsed" :id="`scan-list-pane-${archiveId}`" class="scan-list-pane">
         <div class="scan-pagination">
           <el-button size="small" :icon="ChevronLeft" :disabled="busy || page === 0" @click="load(page - 1)">
             上一页
@@ -275,6 +297,16 @@ onBeforeUnmount(reset)
 .scan-list-pane,
 .scan-ocr-pane {
   min-width: 0;
+}
+
+.scan-list-disclosure {
+  justify-self: start;
+}
+
+@media (pointer: coarse) {
+  .scan-list-disclosure {
+    min-height: 44px;
+  }
 }
 
 .scan-pagination {

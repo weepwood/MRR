@@ -1,8 +1,8 @@
 import type { HealthInfo, MemoryInfo, RuntimeInfo, SystemInfo, SystemOverview } from '../types'
 import { getRequest } from '../index'
 
-export function getSystemHealth() {
-  return getRequest<HealthInfo>('/api/v1/system/health')
+export function getSystemHealth(signal?: AbortSignal) {
+  return getRequest<HealthInfo>('/api/v1/system/health', { signal })
 }
 
 export function getSystemOverview() {

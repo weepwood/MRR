@@ -5,6 +5,7 @@ import { isMotionEnabled } from '@/utils/motion-preference'
 import { useThumbLayout } from '../composables/useThumbLayout'
 import { getTypeLabel } from '../constants'
 import { isFocusSelectSuppressed } from '../utils/viewer-close-focus-guard'
+import ArchiveEmptyIllustration from './ArchiveEmptyIllustration.vue'
 
 defineOptions({ name: 'ThumbStrip' })
 
@@ -14,6 +15,7 @@ const props = withDefaults(defineProps<{
   isSelected: (img: GalleryImage) => boolean
   thumbnailSize?: number
   preloadCount?: number
+  emptyKind?: 'loading' | 'filtered' | 'empty' | 'error' | 'idle'
 }>(), {
   thumbnailSize: 200,
   preloadCount: 20,
@@ -196,7 +198,7 @@ defineExpose({ resetVisible, scrollToIndex })
         </el-button>
       </form>
     </div>
-    <div ref="thumbsContainer" class="thumb-strip" :class="[viewMode, { 'is-virtual': isVirtual }]" @scroll.passive="isVirtual && virtual.containerProps.onScroll()">
+    <div ref="thumbsContainer" class="thumb-strip" :class="[viewMode, { 'is-virtual': isVirtual, 'is-empty': !props.images.length }]" @scroll.passive="isVirtual && virtual.containerProps.onScroll()">
       <div class="thumb-items" :class="{ 'thumb-items--virtual': isVirtual }" :style="virtualStyle">
         <div
           v-for="{ data: img, index } in displayed"
@@ -253,7 +255,8 @@ defineExpose({ resetVisible, scrollToIndex })
         </div>
       </div>
       <div v-if="!props.images.length" class="empty-list">
-        暂无影像
+        <ArchiveEmptyIllustration v-if="props.emptyKind === 'empty' || props.emptyKind === 'filtered'" variant="thumb" />
+        <span>{{ props.emptyKind === 'loading' ? '正在查询…' : '暂无影像' }}</span>
       </div>
       <div v-else-if="!isVirtual && visibleCount < props.images.length" class="load-hint">
         滚动加载更多（{{ visibleCount }}/{{ props.images.length }}）
@@ -578,12 +581,29 @@ defineExpose({ resetVisible, scrollToIndex })
   color: var(--text-secondary);
 }
 
+.thumb-strip.is-empty {
+  display: grid;
+  place-items: center;
+  align-content: center;
+}
+
+.thumb-strip.is-empty .thumb-items {
+  display: none;
+}
+
+.empty-list {
+  display: grid;
+  gap: var(--mrr-space-2);
+  justify-items: center;
+  width: 100%;
+}
+
 .empty-list,
 .load-hint {
   grid-column: 1 / -1;
   padding: 16px 0;
   font-size: 12px;
-  color: var(--text-tertiary);
+  color: var(--mrr-muted-foreground);
   text-align: center;
 }
 

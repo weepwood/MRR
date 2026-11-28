@@ -8,6 +8,7 @@ import AppEmpty from '@/components/AppEmpty/index.vue'
 import { Z_INDEX } from '@/constants/z-index'
 import { isMotionEnabled } from '@/utils/motion-preference'
 import { suppressFocusSelect } from '../utils/viewer-close-focus-guard'
+import ArchiveEmptyIllustration from './ArchiveEmptyIllustration.vue'
 import PreviewActionBar from './PreviewActionBar.vue'
 import PreviewViewerToolbar from './PreviewViewerToolbar.vue'
 import 'element-plus/es/components/image-viewer/style/css'
@@ -26,6 +27,7 @@ const props = withDefaults(defineProps<{
   fitMode?: ArchiveFitMode
   previewScale?: number
   emptyDescription?: string
+  emptyKind?: 'loading' | 'filtered' | 'empty' | 'error' | 'idle'
 }>(), {
   savingType: false,
   showSelectionStatus: true,
@@ -294,7 +296,18 @@ onUnmounted(() => {
         </article>
       </div>
     </template>
-    <AppEmpty v-else icon="i-lucide:image-off" :description="props.emptyDescription" />
+    <div v-else class="archive-preview-empty" :aria-busy="props.loading">
+      <AppEmpty v-if="!props.loading" :icon="props.emptyKind === 'error' ? 'i-lucide:circle-alert' : 'i-lucide:image-off'" :description="props.emptyDescription">
+        <template v-if="props.emptyKind === 'empty' || props.emptyKind === 'filtered'" #illustration>
+          <ArchiveEmptyIllustration />
+        </template>
+        <template v-if="props.emptyKind === 'empty' || props.emptyKind === 'filtered'" #detail>
+          <p class="archive-preview-empty__hint">
+            {{ props.emptyKind === 'filtered' ? '切换影像类型以查看其他影像。' : '请核对查询条件，确认病案是否已扫描上架。' }}
+          </p>
+        </template>
+      </AppEmpty>
+    </div>
   </div>
 </template>
 
@@ -304,6 +317,50 @@ onUnmounted(() => {
   height: 100%;
   min-height: 0;
   overflow: hidden;
+}
+
+.archive-preview-empty {
+  box-sizing: border-box;
+  display: grid;
+  place-items: center;
+  align-content: center;
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+  padding: var(--mrr-space-4);
+  overflow: auto;
+  background: var(--surface-alt);
+  border: 1px solid var(--divider);
+  border-radius: var(--mrr-radius-card);
+}
+
+.archive-preview-empty :deep(.app-empty) {
+  width: 100%;
+  max-width: 400px;
+  padding: var(--mrr-space-3);
+  margin: 0;
+  animation: none;
+}
+
+.archive-preview-empty :deep(.app-empty-text) {
+  margin: var(--mrr-space-3) 0 var(--mrr-space-1);
+  font-size: var(--mrr-font-size-lg);
+  font-weight: 600;
+  color: var(--mrr-foreground);
+}
+
+.archive-preview-empty__hint {
+  margin: 0;
+  font-size: var(--mrr-font-size-sm);
+  line-height: 1.6;
+  color: var(--mrr-muted-foreground);
+  text-align: center;
+}
+
+@media (max-width: 760px) {
+  .archive-preview-empty :deep(.archive-empty-art) {
+    width: 176px;
+  }
 }
 
 .preview-stage {

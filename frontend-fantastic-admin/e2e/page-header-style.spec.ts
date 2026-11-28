@@ -39,23 +39,22 @@ test.describe('页面标题统一风格', () => {
     expect(await settingsTitle.evaluate(node => window.getComputedStyle(node).fontSize)).toBe(archiveTitleSize)
     // 页头图标原本一直由全局规则隐藏，属于死标记，已从模板移除。
     expect(await settingsHeader.locator('.header-icon').count()).toBe(0)
-    // 英文标题此前由 ::before 伪元素硬编码注入，不可翻译、无法被读屏获取；
-    // 现为真实 DOM 文本，因此断言从「伪元素内容」改为「真实可见文本」。
-    await expect(settingsHeader.locator('.mrr-page-header__eyebrow')).toHaveText('System Settings')
+    // 装饰性英文眉标题已从业务页移除，保留中文主标题。
+    await expect(settingsHeader.locator('.mrr-page-header__eyebrow')).toHaveCount(0)
     expect(await settingsHeader.evaluate(node => window.getComputedStyle(node).backgroundImage)).toBe('none')
 
     await page.goto('/help', { waitUntil: 'domcontentloaded' })
     const helpHeader = page.locator('.help-center > .mrr-page-header')
     const helpTitle = page.getByRole('heading', { name: '帮助与文档' })
     await expect(helpHeader).toBeVisible({ timeout: 20_000 })
-    await expect(page.getByText('MRR DOCUMENTATION', { exact: true })).toBeVisible()
+    await expect(page.getByText('MRR DOCUMENTATION', { exact: true })).toHaveCount(0)
     expect(await helpTitle.evaluate(node => window.getComputedStyle(node).fontSize)).toBe(archiveTitleSize)
     expect(await helpHeader.evaluate(node => window.getComputedStyle(node).backgroundImage)).toBe('none')
 
     await page.goto('/users', { waitUntil: 'domcontentloaded' })
     const usersTitle = page.getByRole('heading', { name: '用户管理' })
     await expect(usersTitle).toBeVisible({ timeout: 20_000 })
-    await expect(page.getByText('User Management', { exact: true })).toBeVisible()
+    await expect(page.getByText('User Management', { exact: true })).toHaveCount(0)
     await expect(page.locator('.mrr-page-header__icon')).toHaveCount(0)
     expect(await usersTitle.evaluate(node => window.getComputedStyle(node).fontSize)).toBe(archiveTitleSize)
 

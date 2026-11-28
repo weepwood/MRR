@@ -144,7 +144,7 @@ for (const item of pages) {
     await expect(disclosure).toHaveAttribute('aria-expanded', 'false')
     await expect(input).toBeHidden()
     await expect(disclosure).toContainText('已填写 1 项')
-    expect((await form.boundingBox())!.height).toBeLessThan(expandedHeight)
+    await expect.poll(async () => (await form.boundingBox())!.height).toBeLessThan(expandedHeight)
     const request = page.waitForRequest(req => req.method() === 'GET' && new URL(req.url()).pathname.endsWith(item.endpoint))
     await form.getByRole('button', { name: '查询', exact: true }).click()
     expect(new URL((await request).url()).searchParams.get('clientIp')).toBe('192.0.2.42')

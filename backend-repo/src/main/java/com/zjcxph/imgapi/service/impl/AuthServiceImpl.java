@@ -275,11 +275,6 @@ public class AuthServiceImpl implements AuthService {
     }
 
     @Override
-    public List<AuthUserProfileDTO> listUsers() {
-        return authUserMapper.findAll().stream().map(this::toProfile).toList();
-    }
-
-    @Override
     public PageResult<AuthUserProfileDTO> listUsersPaginated(int page, int size, String keyword, String roleCode, String status) {
         int normalizedPage = Math.max(page, 1);
         int normalizedSize = Math.min(Math.max(size, 1), 200);

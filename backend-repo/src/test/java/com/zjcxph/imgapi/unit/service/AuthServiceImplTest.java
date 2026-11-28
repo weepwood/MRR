@@ -421,10 +421,13 @@ class AuthServiceImplTest {
     @DisplayName("listUsers 方法")
     class ListUsersTests {
         @Test
-        @DisplayName("返回所有用户 Profile 列表")
+        @DisplayName("分页返回用户 Profile 列表")
         void listUsers_returnsProfiles() {
-            when(authUserMapper.findAll()).thenReturn(List.of(mockUser));
-            var profiles = authService.listUsers();
+            when(authUserMapper.findAllWithPagination(0, 20, null, null, null)).thenReturn(List.of(mockUser));
+            when(authUserMapper.countAll(null, null, null)).thenReturn(1);
+            var page = authService.listUsersPaginated(1, 20, null, null, null);
+            assertThat(page.getTotal()).isEqualTo(1L);
+            var profiles = page.getList();
             assertThat(profiles).hasSize(1);
             assertThat(profiles.getFirst().getUsername()).isEqualTo("admin");
             assertThat(profiles.getFirst().getPermissions()).contains("user:manage");

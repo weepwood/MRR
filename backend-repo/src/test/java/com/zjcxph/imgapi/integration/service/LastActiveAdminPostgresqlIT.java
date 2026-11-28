@@ -72,6 +72,26 @@ class LastActiveAdminPostgresqlIT extends PostgresqlIntegrationTestSupport {
     }
 
     @Test
+    void paginatedAccountProjectionDoesNotLoadCredentialHash() {
+        var original = userMapper.findById(firstId);
+        assertThat(original.getPasswordHash()).isNotBlank();
+        var rows = userMapper.findAllWithPagination(0, 20, original.getUsername(), null, null);
+        assertThat(rows).hasSize(1);
+        var row = rows.getFirst();
+        assertThat(row.getPasswordHash()).isNull();
+        assertThat(row.getId()).isEqualTo(original.getId());
+        assertThat(row.getUsername()).isEqualTo(original.getUsername());
+        assertThat(row.getRoleCode()).isEqualTo(original.getRoleCode());
+        assertThat(row.getPermissionsCsv()).isEqualTo(original.getPermissionsCsv());
+        var page = service.listUsersPaginated(1,20,original.getUsername(),null,null);
+        assertThat(page.getTotal()).isEqualTo(1L);
+        assertThat(page.getList()).hasSize(1);
+        assertThat(page.getList().getFirst().getId()).isEqualTo(firstId);
+        assertThat(page.getList().getFirst().getPasswordVersion()).isEqualTo(original.effectivePasswordVersion());
+        assertThat(userMapper.findById(firstId).getPasswordHash()).isEqualTo(original.getPasswordHash());
+    }
+
+    @Test
     void concurrentDisablesKeepOneActiveAdmin() throws Exception {
         assertConcurrentRemovalKeepsOne(false);
     }

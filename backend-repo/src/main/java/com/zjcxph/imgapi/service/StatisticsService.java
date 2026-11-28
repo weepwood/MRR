@@ -11,11 +11,6 @@ public interface StatisticsService {
 
     int MAX_EXPORT_ROWS = 100_000;
 
-    // 查询所有统计数据
-    List<Statistics> findAll();
-
-    // 查询所有统计数据（带分页）
-    List<Statistics> findAllWithPagination(int page, int size);
     List<Statistics> findWithConditionAndPagination(
             int page,
             int size,
@@ -40,8 +35,7 @@ public interface StatisticsService {
             String endDate
     );
 
-    // 获取总记录数
-    Long getTotalCount();
+    // 获取符合条件的总记录数
     Long getTotalCountByCondition(String keyword, String bah, String sjh, String type, String startDate, String endDate);
 
     // 根据病案号查询

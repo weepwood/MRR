@@ -24,18 +24,6 @@ public class StatisticsServiceImpl implements StatisticsService {
     }
 
     @Override
-    public List<Statistics> findAll() {
-        return statisticsMapper.findAll();
-    }
-
-    @Override
-    public List<Statistics> findAllWithPagination(int page, int size) {
-        PaginationUtils.validatePageParams(page, size);
-        int offset = PaginationUtils.calculateOffset(page, size);
-        return statisticsMapper.findAllWithPagination(offset, size);
-    }
-
-    @Override
     public List<Statistics> findWithConditionAndPagination(
             int page,
             int size,
@@ -89,11 +77,6 @@ public class StatisticsServiceImpl implements StatisticsService {
                 "date",
                 "asc"
         );
-    }
-
-    @Override
-    public Long getTotalCount() {
-        return statisticsMapper.getTotalCount();
     }
 
     @Override

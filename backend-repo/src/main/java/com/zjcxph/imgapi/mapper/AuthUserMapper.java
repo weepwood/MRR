@@ -69,10 +69,6 @@ public interface AuthUserMapper {
             "where u.id = #{id}")
     AuthUser findById(@Param("id") Long id);
 
-    @Select("select " + USER_COLUMNS +
-            "from mr_auth_user u left join mr_auth_role r on r.code = u.role_code order by u.id")
-    List<AuthUser> findAll();
-
     @Update("update mr_auth_user set last_login_at = #{lastLoginAt}, updated_at = CURRENT_TIMESTAMP where id = #{id}")
     int updateLastLoginAt(@Param("id") Long id, @Param("lastLoginAt") LocalDateTime lastLoginAt);
 
@@ -140,7 +136,10 @@ public interface AuthUserMapper {
 
     @Select({
             "<script>",
-            "SELECT u.*, r.name as role_name, r.permissions as permissions_csv",
+            "SELECT u.id, u.username, u.display_name, u.role_code, u.status, u.contact_info, u.apply_remark,",
+            "u.applied_at, u.reviewed_at, u.reviewed_by, u.reject_reason, u.must_change_password, u.password_version,",
+            "u.password_changed_at, u.temporary_password_expires_at, u.created_by, u.password_reset_at,",
+            "u.password_reset_by, u.last_login_at, u.created_at, u.updated_at, r.name as role_name, r.permissions as permissions_csv",
             "FROM mr_auth_user u LEFT JOIN mr_auth_role r ON u.role_code = r.code",
             "<where>",
             "  <if test='keyword != null and keyword != \"\"'>",
@@ -165,7 +164,6 @@ public interface AuthUserMapper {
             @Result(property = "id", column = "id"),
             @Result(property = "username", column = "username"),
             @Result(property = "displayName", column = "display_name"),
-            @Result(property = "passwordHash", column = "password_hash"),
             @Result(property = "roleCode", column = "role_code"),
             @Result(property = "roleName", column = "role_name"),
             @Result(property = "permissionsCsv", column = "permissions_csv"),

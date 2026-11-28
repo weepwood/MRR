@@ -45,8 +45,6 @@ public interface AuthService {
 
     AuthSession currentUser();
 
-    List<AuthUserProfileDTO> listUsers();
-
     PageResult<AuthUserProfileDTO> listUsersPaginated(int page, int size, String keyword, String roleCode, String status);
 
     default PageResult<AuthUserProfileDTO> listUsersPaginated(int page, int size) {

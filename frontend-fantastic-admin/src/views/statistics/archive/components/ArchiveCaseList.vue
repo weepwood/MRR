@@ -117,7 +117,7 @@ onBeforeUnmount(() => window.removeEventListener(ARCHIVE_DEPARTMENT_THEME_UPDATE
 .archive-case-card {
   display: grid;
   gap: var(--mrr-space-3);
-  padding: 12px;
+  padding: var(--mrr-card-inset-compact);
   background: var(--surface);
   border: 1px solid var(--divider);
   border-radius: var(--mrr-radius-card);
@@ -139,7 +139,7 @@ onBeforeUnmount(() => window.removeEventListener(ARCHIVE_DEPARTMENT_THEME_UPDATE
 .case-header small,
 .case-main small,
 .case-codes small {
-  color: var(--text-tertiary);
+  color: var(--mrr-muted-foreground);
 }
 
 .case-header small {
@@ -149,7 +149,7 @@ onBeforeUnmount(() => window.removeEventListener(ARCHIVE_DEPARTMENT_THEME_UPDATE
 
 .case-list {
   display: grid;
-  gap: 8px;
+  gap: var(--mrr-space-2);
   max-height: 260px;
   overflow: auto;
 }
@@ -173,6 +173,11 @@ onBeforeUnmount(() => window.removeEventListener(ARCHIVE_DEPARTMENT_THEME_UPDATE
   border-color: var(--mrr-navigation-active-border);
 }
 
+.case-item:focus-visible {
+  outline: 2px solid var(--mrr-ring);
+  outline-offset: -2px;
+}
+
 .case-item.active {
   color: var(--color-primary);
   background: var(--mrr-navigation-active);
@@ -180,15 +185,13 @@ onBeforeUnmount(() => window.removeEventListener(ARCHIVE_DEPARTMENT_THEME_UPDATE
 }
 
 .case-main {
-  gap: 3px;
+  gap: var(--mrr-space-1);
   min-width: 0;
 }
 
 .case-main strong,
 .case-main small {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  overflow-wrap: anywhere;
 }
 
 .case-main small,
@@ -198,13 +201,15 @@ onBeforeUnmount(() => window.removeEventListener(ARCHIVE_DEPARTMENT_THEME_UPDATE
 
 .case-codes {
   display: grid;
-  grid-template-columns: repeat(2, auto);
+  grid-template-columns: repeat(2, minmax(0, auto));
   gap: var(--mrr-space-3);
   font-variant-numeric: tabular-nums;
 }
 
 .case-codes span {
-  gap: 2px;
+  gap: var(--mrr-space-1);
+  min-width: 0;
+  overflow-wrap: anywhere;
 }
 
 @media (max-width: 480px) {

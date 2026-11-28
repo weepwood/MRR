@@ -10,7 +10,8 @@
     <meta name="renderer" content="webkit" />
     <meta name="force-rendering" content="webkit" />
     <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1" />
-    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="icon" href="/favicon.ico" sizes="16x16 32x32 48x48" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" sizes="any" />
     <!--
       预加载界面字体子集：登录页与导航首帧就会用到常规与中粗两档，
       不预加载时首屏先用系统字体渲染、字体到达后整体重排（FOUT），按钮宽度会跳一下。
@@ -19,7 +20,7 @@
     <link rel="preload" href="/fonts/harmonyos-sans-sc-ui-regular-8d2cc5f76603.woff2" as="font" type="font/woff2" crossorigin />
     <link rel="preload" href="/fonts/harmonyos-sans-sc-ui-medium-472b22229854.woff2" as="font" type="font/woff2" crossorigin />
     <link rel="manifest" href="/manifest.json" />
-    <link rel="apple-touch-icon" href="/pwa/icon-192.svg" />
+    <link rel="apple-touch-icon" sizes="180x180" href="/pwa/apple-touch-icon.png" />
     <link rel="stylesheet" href="/browser_upgrade/index.css" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover"/>
     <script>
@@ -36,6 +37,9 @@
             return
           }
           var saved = JSON.parse(raw)
+          if (saved && saved.app && saved.app.colorScheme === 'dark') {
+            document.documentElement.classList.add('dark')
+          }
           if (saved && saved.app && saved.app.enableMotion === false) {
             document.documentElement.dataset.motion = 'off'
           }
@@ -46,8 +50,8 @@
       })()
     </script>
     <meta name="application-name" content="MRR" />
-    <!-- 亮色沿用品牌图标蓝；暗色系统下改用暗色导航底，避免浏览器标题栏一条亮蓝压在暗色界面上。 -->
-    <meta name="theme-color" content="#0b63ce" media="(prefers-color-scheme: light)" />
+    <!-- 亮色沿用品牌主色；暗色系统下改用暗色导航底，避免浏览器标题栏一条明亮色带压在暗色界面上。 -->
+    <meta name="theme-color" content="#2563EB" media="(prefers-color-scheme: light)" />
     <meta name="theme-color" content="#131821" media="(prefers-color-scheme: dark)" />
     <meta name="mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
@@ -66,19 +70,39 @@
         <div class="browser-compat-copy">
           <div id="browser-compat-title" class="browser-compat-title">浏览器不受支持</div>
           <div id="browser-compat-message" class="browser-compat-message">
-            此系统无法在当前浏览器中继续运行，请升级浏览器后重试。
+            当前浏览器缺少系统启动所需的关键运行能力，请更换浏览器后重试。
           </div>
           <div id="browser-compat-requirement" class="browser-compat-requirement">
-            最低支持：Edge 111、Chrome 86、Firefox 114、Safari 16.4。
+            正式验收基线：Edge 111、Chrome 86、Firefox 114、Safari 16.4。
           </div>
           <div id="browser-compat-actions" class="browser-compat-actions" hidden>
-            <button id="browser-compat-continue" class="browser-compat-button browser-compat-button-primary" type="button">继续等待</button>
             <button id="browser-compat-reload" class="browser-compat-button" type="button">重新加载</button>
             <button id="browser-compat-back" class="browser-compat-button" type="button">返回上一页</button>
           </div>
         </div>
       </div>
     </div>
+    <div data-app-loading id="mrr-startup-shell" hidden>
+      <div class="startup-classic-loader" aria-hidden="true"></div>
+      <div class="startup-status">
+        <div class="startup-copy" role="status" aria-live="polite" aria-atomic="true">
+          <h1 id="startup-title">正在启动 MRR</h1>
+          <p id="startup-message">正在加载应用资源…</p>
+        </div>
+        <div class="startup-actions" id="startup-actions" hidden>
+          <button class="browser-compat-button" id="startup-reload" type="button">重新加载</button>
+          <button class="browser-compat-button" id="startup-back" type="button" hidden>返回上一页</button>
+        </div>
+      </div>
+    </div>
+    <aside id="browser-compat-notice" class="browser-compat-notice" hidden>
+      <div role="status" class="startup-copy">
+        <strong>当前浏览器版本较低</strong>
+        <p id="browser-compat-notice-message"></p>
+      </div>
+      <button type="button" id="browser-compat-dismiss" class="browser-compat-button" aria-label="关闭兼容性提示">关闭</button>
+    </aside>
+    <noscript><p>MRR 需要 JavaScript 才能安全运行。请启用 JavaScript 后重新加载。</p></noscript>
     <div id="app"></div>
     <script>
       (function () {
@@ -88,9 +112,18 @@
           Firefox: '114',
           Safari: '16.4'
         }
+        var revealTimer
         var startupTimeout
-        var initialStartupTimeoutMs = 15000
-        var continuedStartupTimeoutMs = 60000
+        var startupReady = false
+        var startupFailed = false
+        var compatibilityWarning = ''
+        var shell = document.getElementById('mrr-startup-shell')
+        var title = document.getElementById('startup-title')
+        var message = document.getElementById('startup-message')
+        var actions = document.getElementById('startup-actions')
+        var notice = document.getElementById('browser-compat-notice')
+        var blocker = document.getElementById('browser-compat-blocker')
+        document.documentElement.setAttribute('data-mrr-startup', 'pending')
 
         function compareVersions(current, minimum) {
           var currentParts = String(current || '0').split('.')
@@ -140,7 +173,7 @@
           }
 
           // Chromium 内核浏览器不一定携带 Chrome 标识，例如 Chromium 本身。
-          // 统一按内核主版本判断，低于 86 时必须显示升级提示。
+          // 低于认证版本仅作为预警；实际能力由启动检查决定。
           match = userAgent.match(/(?:Chrome|Chromium|CriOS)\/([\d.]+)/)
           if (match) {
             return { name: 'Chrome', version: match[1] }
@@ -149,155 +182,143 @@
           return { name: '当前浏览器', version: '' }
         }
 
-        function lacksRequiredFeatures() {
-          // 这里只检测会阻断应用启动的基础能力。color-mix()、backdrop-filter
-          // 等视觉增强能力允许在 Chrome 86 中降级，不能作为启动阻断条件。
-          return typeof window.Promise !== 'function'
-            || typeof window.fetch !== 'function'
-            || typeof window.URL !== 'function'
-            || typeof window.TextEncoder !== 'function'
-            || typeof Array.prototype.at !== 'function'
-            || typeof Array.prototype.findLast !== 'function'
+        function clearTimers() {
+          window.clearTimeout(revealTimer)
+          window.clearTimeout(startupTimeout)
         }
 
-        function showApplicationOverlay(reason, title, options) {
-          var blocker = document.getElementById('browser-compat-blocker')
-          var message = document.getElementById('browser-compat-message')
-          var titleElement = document.getElementById('browser-compat-title')
-          var requirement = document.getElementById('browser-compat-requirement')
-          var actions = document.getElementById('browser-compat-actions')
-
-          if (!blocker || !message || !titleElement || !requirement || !actions) {
-            return
+        function revealShell() {
+          if (!startupReady && !window.__MRR_APP_STARTUP_BLOCKED__) {
+            shell.hidden = false
           }
+        }
 
-          titleElement.textContent = title
-          message.textContent = reason
-          requirement.textContent = options.requirement || ''
-          requirement.style.display = options.requirement ? 'block' : 'none'
-          actions.hidden = !options.showActions
+        function goBack() {
+          if (window.history.length > 1) {
+            window.history.back()
+          } else {
+            window.location.href = '/'
+          }
+        }
+
+        function blockApplication() {
+          window.__MRR_APP_STARTUP_BLOCKED__ = true
+          clearTimers()
+          shell.hidden = true
+          document.documentElement.setAttribute('data-mrr-startup', 'blocked')
+          document.getElementById('browser-compat-message').textContent =
+            '当前浏览器缺少系统启动所需的关键运行能力，请切换到现代浏览器后重试。'
+          document.getElementById('browser-compat-actions').hidden = false
           blocker.style.display = 'flex'
         }
 
-        function hideRecoverableOverlay() {
-          var blocker = document.getElementById('browser-compat-blocker')
-          var actions = document.getElementById('browser-compat-actions')
-
-          if (window.__MRR_APP_STARTUP_BLOCKED__) {
-            return
-          }
-          window.__MRR_APP_STARTUP_DELAYED__ = false
-          if (actions) {
-            actions.hidden = true
-          }
-          if (blocker) {
-            blocker.style.display = 'none'
-          }
-        }
-
-        function blockApplication(reason, title) {
-          window.__MRR_APP_STARTUP_BLOCKED__ = true
-          window.clearTimeout(startupTimeout)
-          showApplicationOverlay(reason, title, {
-            requirement: '最低支持：Edge 111、Chrome 86、Firefox 114、Safari 16.4。',
-            showActions: false
-          })
-        }
-
-        function reportStartupFailure(reason) {
-          if (window.__MRR_APP_STARTUP_READY__ || window.__MRR_APP_STARTUP_BLOCKED__) {
-            return
-          }
-          blockApplication(reason, '系统启动失败')
+        function reportStartupFailure(kind) {
+          if (startupReady || window.__MRR_APP_STARTUP_BLOCKED__) return
+          startupFailed = true
+          clearTimers()
+          revealShell()
+          shell.setAttribute('data-startup-state', 'failed')
+          title.textContent = kind === 'resource' ? '应用资源加载失败' : '系统启动失败'
+          message.textContent = window.navigator.onLine === false
+            ? '当前设备处于离线状态。请恢复网络连接后重新加载。'
+            : '请重新加载页面。若问题持续，请联系管理员检查网络或服务器。'
+          actions.hidden = false
+          document.getElementById('startup-back').hidden = false
         }
 
         function showStartupDelay() {
-          if (window.__MRR_APP_STARTUP_READY__ || window.__MRR_APP_STARTUP_BLOCKED__) {
-            return
-          }
+          if (startupReady || startupFailed || window.__MRR_APP_STARTUP_BLOCKED__) return
           window.__MRR_APP_STARTUP_DELAYED__ = true
-          showApplicationOverlay(
-            '当前网络速度较慢或服务器响应时间较长，系统仍在后台加载。您可以继续等待，也可以重新加载页面。',
-            '系统启动较慢',
-            {
-              requirement: '继续等待不会绕过登录、权限或安全校验。',
-              showActions: true
-            }
-          )
+          revealShell()
+          shell.setAttribute('data-startup-state', 'slow')
+          title.textContent = '系统仍在加载'
+          message.textContent = '响应时间较长，系统会自动继续初始化。'
+          actions.hidden = false
         }
 
-        function scheduleStartupTimeout(timeout) {
-          window.clearTimeout(startupTimeout)
-          startupTimeout = window.setTimeout(showStartupDelay, timeout)
-        }
+        document.getElementById('startup-reload').addEventListener('click', function () {
+          window.location.reload()
+        })
+        document.getElementById('startup-back').addEventListener('click', goBack)
+        document.getElementById('browser-compat-reload').addEventListener('click', function () {
+          window.location.reload()
+        })
+        document.getElementById('browser-compat-back').addEventListener('click', goBack)
+        document.getElementById('browser-compat-dismiss').addEventListener('click', function () {
+          notice.hidden = true
+        })
 
-        var continueButton = document.getElementById('browser-compat-continue')
-        var reloadButton = document.getElementById('browser-compat-reload')
-        var backButton = document.getElementById('browser-compat-back')
-
-        if (continueButton) {
-          continueButton.addEventListener('click', function () {
-            hideRecoverableOverlay()
-            scheduleStartupTimeout(continuedStartupTimeoutMs)
-          })
-        }
-        if (reloadButton) {
-          reloadButton.addEventListener('click', function () {
-            window.location.reload()
-          })
-        }
-        if (backButton) {
-          backButton.addEventListener('click', function () {
-            if (window.history.length > 1) {
-              window.history.back()
-            } else {
-              window.location.href = '/'
-            }
-          })
+        // Only non-polyfillable prerequisites are checked before the Vite polyfill bundle.
+        // UA is not a capability or security check. IE document mode is an actual engine signal.
+        if (document.documentMode || typeof window.Proxy !== 'function'
+          || !('noModule' in document.createElement('script'))) {
+          blockApplication()
+          return
         }
 
         var browser = detectBrowser()
-        if (browser.unsupported) {
-          blockApplication('检测到不受支持的 ' + browser.name + '。请使用受支持版本的浏览器访问系统。', '浏览器不受支持')
-          return
-        }
-
         var minimumVersion = minimumVersions[browser.name]
-        if (minimumVersion && compareVersions(browser.version, minimumVersion) < 0) {
-          blockApplication(
-            '检测到 ' + browser.name + ' ' + browser.version + '，低于最低支持版本 ' + browser.name + ' ' + minimumVersion + '。请升级浏览器后重试。',
-            '浏览器不受支持'
-          )
-          return
+        if (browser.unsupported || (minimumVersion && compareVersions(browser.version, minimumVersion) < 0)) {
+          compatibilityWarning = '检测到 ' + browser.name + ' ' + browser.version
+            + '，低于正式验收基线。可以尝试继续使用，但部分功能可能受限，建议升级浏览器。'
         }
 
-        if (!minimumVersion && lacksRequiredFeatures()) {
-          blockApplication('当前浏览器缺少系统运行所需的关键功能，请升级浏览器后重试。', '浏览器不受支持')
-          return
-        }
+        revealTimer = window.setTimeout(revealShell, 500)
+        startupTimeout = window.setTimeout(showStartupDelay, 15000)
 
-        scheduleStartupTimeout(initialStartupTimeoutMs)
-
-        window.addEventListener('mrr:app-ready', function () {
-          window.__MRR_APP_STARTUP_READY__ = true
-          window.clearTimeout(startupTimeout)
-          hideRecoverableOverlay()
-        }, { once: true })
-
-        window.addEventListener('mrr:app-startup-failed', function () {
-          reportStartupFailure('系统启动失败。请刷新页面；若问题持续，请联系管理员并提供浏览器版本信息。')
-        }, { once: true })
-
-        window.addEventListener('error', function (event) {
-          var target = event.target
-          if (event.error || (target && target.tagName === 'SCRIPT')) {
-            reportStartupFailure('系统启动失败。请刷新页面；若问题持续，请联系管理员并提供浏览器版本信息。')
+        function updateStartupStage(event) {
+          if (startupReady || startupFailed || window.__MRR_APP_STARTUP_BLOCKED__) return
+          if (event.detail === 'runtime') {
+            message.textContent = '正在初始化应用运行环境…'
+          } else if (event.detail === 'route') {
+            message.textContent = '正在完成会话校验与页面初始化…'
+          } else if (event.detail === 'visual') {
+            message.textContent = '正在准备首屏显示…'
           }
-        }, true)
-
-        window.addEventListener('unhandledrejection', function () {
-          reportStartupFailure('系统启动失败。请刷新页面；若问题持续，请联系管理员并提供浏览器版本信息。')
-        })
+        }
+        window.addEventListener('mrr:startup-stage', updateStartupStage)
+        window.addEventListener('mrr:app-incompatible', blockApplication, { once: true })
+        window.addEventListener('mrr:app-ready', function () {
+          if (window.__MRR_APP_STARTUP_BLOCKED__) return
+          startupReady = true
+          window.__MRR_APP_STARTUP_READY__ = true
+          window.__MRR_APP_STARTUP_DELAYED__ = false
+          clearTimers()
+          window.removeEventListener('mrr:startup-stage', updateStartupStage)
+          window.removeEventListener('error', handleStartupError, true)
+          window.removeEventListener('mrr:app-incompatible', blockApplication)
+          document.documentElement.removeAttribute('data-mrr-startup')
+          // Reveal ready content immediately; only a visible loader fades out.
+          if (!shell.hidden && document.documentElement.dataset.motion !== 'off'
+            && !window.matchMedia('(prefers-reduced-motion: reduce)').matches
+            && !startupFailed) {
+            shell.setAttribute('data-startup-state', 'leaving')
+            shell.setAttribute('aria-hidden', 'true')
+            window.setTimeout(function () {
+              if (shell.parentNode) shell.parentNode.removeChild(shell)
+            }, 150)
+          } else {
+            shell.parentNode.removeChild(shell)
+          }
+          if (compatibilityWarning) {
+            document.getElementById('browser-compat-notice-message').textContent = compatibilityWarning
+            notice.hidden = false
+          }
+        }, { once: true })
+        window.addEventListener('mrr:app-startup-failed', function () {
+          reportStartupFailure('runtime')
+        }, { once: true })
+        function handleStartupError(event) {
+          var target = event.target
+          if (target && (target.tagName === 'SCRIPT' || (target.tagName === 'LINK' && target.rel === 'stylesheet'))) {
+            reportStartupFailure('resource')
+          } else if (event.error) {
+            reportStartupFailure('runtime')
+          }
+        }
+        window.addEventListener('error', handleStartupError, true)
+        // Noncritical async tasks can reject before the router is ready. Only explicit
+        // startup failures or resource errors are shown here; business errors keep their own UI.
       })()
     </script>
     <script type="module" src="/src/main.ts"></script>

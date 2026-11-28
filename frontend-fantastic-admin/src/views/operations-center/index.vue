@@ -675,7 +675,6 @@ onMounted(async () => {
 <template>
   <MrrPageShell class="operations-center">
     <MrrPageHeader
-      eyebrow="Operations & Diagnostics"
       title="运维诊断中心"
       description="集中发现问题、执行维护、跳转处理、重新验证并保留操作记录。"
     >
@@ -762,19 +761,19 @@ onMounted(async () => {
 
             <MrrSectionCard title="故障排查入口" description="从不同证据来源进入专用页面；时间范围及采样口径各自独立，不自动推断故障原因。">
               <div class="investigation-grid" :class="{ 'investigation-grid--narrow': dashboardWidth > 0 && dashboardWidth < 520 }">
-                <el-button v-for="link in investigationLinks" :key="link.path" class="investigation-link" @click="navigate(link.path)">
+                <el-button v-for="link in investigationLinks" :key="link.path" text class="investigation-link" @click="navigate(link.path)">
                   <span><strong>{{ link.label }}</strong><small>{{ link.description }}</small></span>
                   <FaIcon name="i-lucide:arrow-up-right" aria-hidden="true" />
                 </el-button>
-                <el-button class="investigation-link" @click="focusInvestigation('storage')">
+                <el-button text class="investigation-link" @click="focusInvestigation('storage')">
                   <span><strong>存储异常</strong><small>查看已采集的熔断与恢复事件</small></span>
                   <FaIcon name="i-lucide:arrow-down" aria-hidden="true" />
                 </el-button>
-                <el-button class="investigation-link" @click="focusInvestigation('history')">
+                <el-button text class="investigation-link" @click="focusInvestigation('history')">
                   <span><strong>运行历史</strong><small>比较相邻采样与运行状态变化</small></span>
                   <FaIcon name="i-lucide:arrow-down" aria-hidden="true" />
                 </el-button>
-                <el-button class="investigation-link" @click="focusInvestigation('nginx')">
+                <el-button text class="investigation-link" @click="focusInvestigation('nginx')">
                   <span><strong>网关诊断</strong><small>检查网关配置与运行观测</small></span>
                   <FaIcon name="i-lucide:arrow-down" aria-hidden="true" />
                 </el-button>
@@ -1443,6 +1442,18 @@ onMounted(async () => {
   margin: 0;
   padding: var(--mrr-space-3);
   white-space: normal;
+  border: 1px solid transparent;
+}
+
+.investigation-grid .investigation-link:hover,
+.investigation-grid .investigation-link:focus-visible {
+  background: var(--mrr-muted);
+  border-color: var(--mrr-border);
+}
+
+.investigation-grid .investigation-link:focus-visible {
+  outline: 2px solid var(--mrr-ring);
+  outline-offset: -2px;
 }
 
 .investigation-link :deep(> span) {

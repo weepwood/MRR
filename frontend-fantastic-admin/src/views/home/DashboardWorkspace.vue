@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import type { DashboardSource } from './dashboard-data'
+import type { DashboardAppearanceMode } from './dashboard-palette'
 import type {
   DashboardWidgetColor,
   DashboardWidgetDefinition,
@@ -13,6 +15,8 @@ import MrrPageShell from '@/components/MrrPageShell/index.vue'
 import { useUserStore } from '@/store/modules/user'
 import { actionDialog } from '@/ui/components/ActionDialog'
 import { hasPermission } from '@/utils/session'
+import { sourceMetrics } from './dashboard-data'
+import { appearanceModes, isWidgetColor, normalizeAppearance, paletteStyle, widgetAppearanceStyle, widgetPalette } from './dashboard-palette'
 import {
   createDefaultWidgetPreferences,
   mergeWidgetPreferences,
@@ -21,7 +25,11 @@ import {
   sortWidgetPreferences,
   updateWidgetPreference,
 } from './dashboard-widgets'
+import DashboardDataContent from './DashboardDataContent.vue'
+import HomeArchiveHistory from './HomeArchiveHistory.vue'
 import HomeArchiveLookup from './HomeArchiveLookup.vue'
+import { useDashboardData } from './useDashboardData'
+import { useWidgetLongPress } from './useWidgetLongPress'
 
 defineOptions({ name: 'DashboardWorkspace' })
 
@@ -39,16 +47,9 @@ const sizeOptions: Array<{ label: string, value: DashboardWidgetSize }> = [
   { label: '大', value: 'large' },
 ]
 
-const colorOptions: Array<{ label: string, value: DashboardWidgetColor }> = [
-  { label: '默认', value: 'default' },
-  { label: '蓝色', value: 'blue' },
-  { label: '绿色', value: 'green' },
-  { label: '橙色', value: 'orange' },
-  { label: '红色', value: 'red' },
-  { label: '紫色', value: 'purple' },
-]
+const colorOptions = widgetPalette
 
-const widgetDefinitions: DashboardWidgetDefinition[] = [
+const baseWidgetDefinitions: DashboardWidgetDefinition[] = [
   {
     id: 'archive',
     title: '影像档案袋',
@@ -70,6 +71,7 @@ const widgetDefinitions: DashboardWidgetDefinition[] = [
   },
   {
     id: 'statistics',
+    availableMetrics: sourceMetrics.statistics.map(item => item.key),
     title: '病案扫描统计',
     description: '按年份、科室和扫描状态查看统计结果。',
     icon: 'i-lucide:chart-column',
@@ -79,6 +81,7 @@ const widgetDefinitions: DashboardWidgetDefinition[] = [
   },
   {
     id: 'monitoring',
+    availableMetrics: sourceMetrics.health.map(item => item.key),
     title: '系统监控',
     description: '查看服务、数据库、内存和运行指标。',
     icon: 'i-lucide:activity',
@@ -88,6 +91,7 @@ const widgetDefinitions: DashboardWidgetDefinition[] = [
   },
   {
     id: 'statistics-detail',
+    availableMetrics: sourceMetrics.statistics.map(item => item.key),
     title: '统计明细',
     description: '查看病案扫描与档案记录的详细数据。',
     icon: 'i-lucide:table-2',
@@ -225,13 +229,71 @@ const widgetDefinitions: DashboardWidgetDefinition[] = [
   },
 ]
 
+// Functional categories are presentation only; permission and navigation stay on each definition.
+const widgetGroups = [
+  { label: '病案业务', color: 'blue', ids: ['archive', 'records', 'patients', 'archive-boxes'] },
+  { label: '统计分析', color: 'teal', ids: ['statistics', 'statistics-detail'] },
+  { label: '系统运维', color: 'amber', ids: ['monitoring', 'status', 'response-analysis'] },
+  { label: '日志与审计', color: 'slate', ids: ['audit-images', 'logs'] },
+  { label: '数据治理', color: 'indigo', ids: ['data-relations', 'oss-migration'] },
+  { label: '系统管理', color: 'purple', ids: ['users', 'permissions', 'settings', 'auth-test'] },
+  { label: '帮助与文档', color: 'slate', ids: ['help'] },
+] as const
+const widgetDefinitions: DashboardWidgetDefinition[] = widgetGroups.flatMap(group =>
+  group.ids.flatMap((id) => {
+    const definition = baseWidgetDefinitions.find(item => item.id === id)
+    return definition ? [{ ...definition, group: group.label, defaultColor: group.color }] : []
+  }),
+)
+
 const definitionsById = new Map(widgetDefinitions.map(definition => [definition.id, definition]))
 const preferences = ref<DashboardWidgetPreference[]>(createDefaultWidgetPreferences(widgetDefinitions))
+const appearance = ref(normalizeAppearance(null))
+const editorBackgroundChanged = ref(false)
 const editMode = ref(false)
 const managerVisible = ref(false)
 const editorVisible = ref(false)
+const settingsDialogVisible = computed({
+  get: () => managerVisible.value || editorVisible.value,
+  set: (visible: boolean) => {
+    if (!visible) {
+      managerVisible.value = false
+      editorVisible.value = false
+    }
+  },
+})
+// Keep content and geometry unchanged through the actual leave transition.
+const settingsView = ref<'manager' | 'editor'>('manager')
+const settingsFromManager = ref(true)
+const settingsDialogTitle = computed(() => settingsView.value === 'editor' ? '编辑小组件' : '管理小组件')
+watch(managerVisible, (visible) => {
+  if (visible && !editorVisible.value) {
+    settingsView.value = 'manager'
+    settingsFromManager.value = true
+  }
+}, { flush: 'sync' })
+let managerReturnFocus: HTMLElement | undefined
+async function closeWidgetEditor() {
+  editorVisible.value = false
+  if (managerVisible.value) {
+    settingsView.value = 'manager'
+    await nextTick()
+    if (managerReturnFocus?.isConnected) { managerReturnFocus.focus({ preventScroll: true }) }
+  }
+}
+function beforeSettingsClose(done: () => void) {
+  if (editorVisible.value && managerVisible.value) {
+    void closeWidgetEditor()
+  }
+  else {
+    done()
+  }
+}
+
 const editingWidgetId = ref('')
 const draggedWidgetId = ref('')
+const dragPreview = ref<DashboardWidgetPreference[] | null>(null)
+let dragBaseline: DashboardWidgetPreference[] | undefined
 const dragOverWidgetId = ref('')
 // 拖到「置顶状态不同」的卡片上时单独标记为不可放置，避免先亮起可放置高亮、松手后才被提示拒绝。
 const dragInvalidWidgetId = ref('')
@@ -240,6 +302,11 @@ const editorForm = reactive({
   description: '',
   size: 'small' as DashboardWidgetSize,
   color: 'default' as DashboardWidgetColor,
+  backgroundColor: 'default' as DashboardWidgetColor,
+  showDescription: true,
+  metricKeys: [] as string[],
+  showChart: true,
+  compact: false,
 })
 
 const storageKey = computed(() => {
@@ -254,7 +321,7 @@ function canAccessWidget(definition: DashboardWidgetDefinition) {
 const accessibleDefinitions = computed(() => widgetDefinitions.filter(canAccessWidget))
 const preferencesById = computed(() => new Map(preferences.value.map(item => [item.id, item])))
 
-const visibleWidgets = computed<DashboardWidgetView[]>(() => sortWidgetPreferences(preferences.value).flatMap((preference) => {
+const committedWidgets = computed<DashboardWidgetView[]>(() => sortWidgetPreferences(preferences.value).flatMap((preference) => {
   const definition = definitionsById.get(preference.id)
   if (!definition || !preference.visible || !canAccessWidget(definition)) {
     return []
@@ -262,10 +329,46 @@ const visibleWidgets = computed<DashboardWidgetView[]>(() => sortWidgetPreferenc
   return [{ ...definition, ...preference }]
 }))
 
-const accessibleWidgetCount = computed(() => accessibleDefinitions.value.length)
-const hiddenWidgetCount = computed(() => accessibleDefinitions.value.filter(definition => !isWidgetVisible(definition.id)).length)
-const welcomeDescription = computed(() => `欢迎回来${userStore.profile?.displayName ? `，${userStore.profile.displayName}` : ''}。按编号查询病案影像，或从下方进入常用模块。`)
-const canLookupArchive = computed(() => hasPermission('record:read'))
+// Draft ordering is view-only; permissions and network sources use committed state.
+const visibleWidgets = computed(() => {
+  if (!dragPreview.value) { return committedWidgets.value }
+  const rank = new Map(dragPreview.value.map((item, index) => [item.id, index]))
+  return [...committedWidgets.value].sort((a, b) => (rank.get(a.id) ?? 0) - (rank.get(b.id) ?? 0))
+})
+
+const welcomeDescription = computed(() => `欢迎回来${userStore.profile?.displayName ? `，${userStore.profile.displayName}` : ''}。`)
+function widgetSource(id: string): DashboardSource | undefined {
+  // These two modules are standard navigation entries, even for older stored metric selections.
+  return id === 'statistics-detail' ? 'statistics' : undefined
+}
+function selectedMetrics(widget: DashboardWidgetView) {
+  return widget.metricKeys ?? (widget.id === 'statistics-detail' ? [] : definitionsById.get(widget.id)?.availableMetrics ?? [])
+}
+function hasData(widget: DashboardWidgetView) {
+  return !!widgetSource(widget.id) && selectedMetrics(widget).length > 0
+}
+const activeSources = computed(() => [...new Set(committedWidgets.value.filter(hasData).map(widget => widgetSource(widget.id)!))].sort())
+const { states: dataStates, refresh: refreshData } = useDashboardData(() => userStore.sessionEpoch, () => activeSources.value)
+const editorSource = computed(() => widgetSource(editingWidgetId.value))
+const editorMetrics = computed(() => editorSource.value ? sourceMetrics[editorSource.value] : [])
+
+function loadAppearance() {
+  try {
+    appearance.value = normalizeAppearance(JSON.parse(localStorage.getItem(`${storageKey.value}:appearance`) ?? 'null'))
+  }
+  catch { appearance.value = normalizeAppearance(null) }
+}
+function updateAppearance(mode: DashboardAppearanceMode, strength = appearance.value.strength) {
+  appearance.value = normalizeAppearance({ mode, strength })
+  try { localStorage.setItem(`${storageKey.value}:appearance`, JSON.stringify(appearance.value)) }
+  catch { ElMessage.warning('当前浏览器无法保存首页外观') }
+}
+function changeAppearanceMode(value: unknown) {
+  if (appearanceModes.some(item => item.value === value)) { updateAppearance(value as DashboardAppearanceMode) }
+}
+function changeAppearanceStrength(value: unknown) {
+  if (typeof value === 'number') { updateAppearance(appearance.value.mode, value) }
+}
 
 function loadPreferences() {
   try {
@@ -312,7 +415,7 @@ function getWidgetColor(widgetId: string): DashboardWidgetColor {
 }
 
 function openWidget(widget: DashboardWidgetView) {
-  if (editMode.value) {
+  if (editMode.value || widget.id === 'archive' || hasData(widget)) {
     return
   }
   void router.push(widget.path)
@@ -351,6 +454,7 @@ function moveWidgetByKeyboard(widget: DashboardWidgetView, direction: -1 | 1) {
 }
 
 function handleWidgetKeydown(event: KeyboardEvent, widget: DashboardWidgetView) {
+  if (event.target !== event.currentTarget) { return }
   if (editMode.value) {
     const direction = REORDER_KEYS[event.key]
     if (direction && event.altKey && event.target === event.currentTarget) {
@@ -361,6 +465,7 @@ function handleWidgetKeydown(event: KeyboardEvent, widget: DashboardWidgetView) 
     }
     return
   }
+  if (widget.id === 'archive' || hasData(widget)) { return }
   if (event.key !== 'Enter' && event.key !== ' ') {
     return
   }
@@ -458,10 +563,50 @@ function handleSizeChange(widgetId: string, value: unknown) {
 }
 
 function handleColorChange(widgetId: string, value: unknown) {
-  if (value === 'default' || value === 'blue' || value === 'green' || value === 'orange' || value === 'red' || value === 'purple') {
-    applyPreferences(updateWidgetPreference(preferences.value, widgetId, { color: value }))
+  if (isWidgetColor(value)) {
+    const preference = getWidgetPreference(widgetId)
+    applyPreferences(updateWidgetPreference(preferences.value, widgetId, { color: value, backgroundColor: preference?.backgroundColor ?? preference?.color ?? 'default' }))
   }
 }
+
+const longPress = useWidgetLongPress({
+  start(id) {
+    if (editMode.value || managerVisible.value || editorVisible.value || !committedWidgets.value.some(item => item.id === id)) { return false }
+    dragBaseline = preferences.value
+    dragPreview.value = sortWidgetPreferences(preferences.value)
+    draggedWidgetId.value = id
+    return true
+  },
+  move(id) {
+    const source = draggedWidgetId.value
+    const compatible = id && id !== source && isDropCompatible(id)
+    dragOverWidgetId.value = compatible ? id : ''
+    dragInvalidWidgetId.value = id && id !== source && !isDropCompatible(id) ? id : ''
+    if (!compatible || !dragPreview.value || preferences.value !== dragBaseline) { return false }
+    const list = visibleWidgets.value
+    const from = list.findIndex(item => item.id === source)
+    const to = list.findIndex(item => item.id === id)
+    if (from < 0 || to < 0) { return false }
+    dragPreview.value = moveWidget(dragPreview.value, source, id, from < to)
+    return true
+  },
+  drop(id) {
+    if (!id || !dragPreview.value || preferences.value !== dragBaseline || !isDropCompatible(id)) { return }
+    const next = dragPreview.value
+    const before = sortWidgetPreferences(preferences.value)
+    if (next.some((item, index) => item.id !== before[index]?.id)) { applyPreferences(next) }
+  },
+  end() {
+    dragPreview.value = null
+    dragBaseline = undefined
+    handleDragEnd()
+  },
+})
+const longPressActive = longPress.active
+const longPressPoint = longPress.point
+const windowWidth = computed(() => { void longPressPoint.value; return document.documentElement.clientWidth })
+const draggedWidget = computed(() => committedWidgets.value.find(widget => widget.id === draggedWidgetId.value))
+watch([storageKey, () => userStore.sessionEpoch, editMode, managerVisible, editorVisible, () => committedWidgets.value.map(item => item.id).sort().join(',')], () => longPress.cancel(), { flush: 'sync' })
 
 function openWidgetEditor(widgetId: string) {
   const preference = getWidgetPreference(widgetId)
@@ -469,12 +614,24 @@ function openWidgetEditor(widgetId: string) {
   if (!preference || !definition) {
     return
   }
+  managerReturnFocus = managerVisible.value && document.activeElement instanceof HTMLElement ? document.activeElement : undefined
   editingWidgetId.value = widgetId
   editorForm.title = preference.title
   editorForm.description = preference.description
   editorForm.size = preference.size
   editorForm.color = preference.color
+  editorBackgroundChanged.value = false
+  editorForm.backgroundColor = preference.backgroundColor ?? preference.color
+  editorForm.showDescription = preference.showDescription !== false
+  editorForm.metricKeys = [...(preference.metricKeys ?? (widgetId === 'statistics-detail' ? [] : definition.availableMetrics ?? []))]
+  editorForm.showChart = preference.showChart !== false
+  editorForm.compact = preference.compact === true
+  settingsFromManager.value = managerVisible.value
+  settingsView.value = 'editor'
   editorVisible.value = true
+  if (managerVisible.value) {
+    void nextTick(() => document.querySelector<HTMLElement>('.widget-editor-form input')?.focus({ preventScroll: true }))
+  }
 }
 
 function restoreEditorDefaults() {
@@ -486,6 +643,12 @@ function restoreEditorDefaults() {
   editorForm.description = definition.description
   editorForm.size = definition.defaultSize
   editorForm.color = definition.defaultColor ?? 'default'
+  editorBackgroundChanged.value = false
+  editorForm.backgroundColor = editorForm.color
+  editorForm.showDescription = true
+  editorForm.metricKeys = [...(definition.id === 'statistics-detail' ? [] : definition.availableMetrics ?? [])]
+  editorForm.showChart = true
+  editorForm.compact = false
 }
 
 function saveWidgetEditor() {
@@ -498,8 +661,14 @@ function saveWidgetEditor() {
     description: editorForm.description.trim() || definition.description,
     size: editorForm.size,
     color: editorForm.color,
+    backgroundColor: editorForm.backgroundColor,
+    showDescription: editorForm.showDescription,
+    metricKeys: editorForm.metricKeys.filter(key => definition.availableMetrics?.includes(key)),
+    showChart: editorForm.showChart,
+    compact: editorForm.compact,
   }))
-  editorVisible.value = false
+  if (editorBackgroundChanged.value) { updateAppearance('custom') }
+  void closeWidgetEditor()
   ElMessage.success('小组件设置已保存')
 }
 
@@ -522,6 +691,19 @@ function handleWidgetCommand(command: unknown, widget: DashboardWidgetView) {
   }
 }
 
+async function applyGroupColors() {
+  try {
+    await actionDialog.confirm('仅将所有模块的图标和底色恢复为所属功能分区的配色，保留排列、大小、名称和显示状态。', '应用功能分区配色', {
+      confirmButtonText: '应用配色',
+      cancelButtonText: '取消',
+    })
+  }
+  catch { return }
+  applyPreferences(preferences.value.map((item) => {
+    const color = definitionsById.get(item.id)?.defaultColor ?? 'default'
+    return { ...item, color, backgroundColor: color }
+  }))
+}
 async function resetDashboard() {
   try {
     await actionDialog.confirm(
@@ -538,41 +720,26 @@ async function resetDashboard() {
     return
   }
   applyPreferences(createDefaultWidgetPreferences(widgetDefinitions))
+  updateAppearance('focus', 4)
   ElMessage.success('管理概览已恢复默认布局')
 }
 
-watch(storageKey, loadPreferences, { immediate: true })
+watch(storageKey, () => { loadPreferences(); loadAppearance() }, { immediate: true, flush: 'sync' })
 </script>
 
 <template>
   <MrrPageShell width="fluid">
-    <!--
-      页头只说明“这是哪里、我是谁”；小组件的数量与管理操作属于下方「常用模块」，
-      不再占据页面最显眼的位置。
-    -->
     <MrrPageHeader
+      class="dashboard-header"
+      :class="{ 'is-editing': editMode, 'is-managing': managerVisible || editorVisible }"
       title="管理概览"
       :description="welcomeDescription"
-    />
-
-    <!-- 首页主任务：直接按编号打开影像档案袋。无 record:read 的账号不显示。 -->
-    <HomeArchiveLookup v-if="canLookupArchive" />
-
-    <component :is="DemoScenarioControl" v-if="DemoScenarioControl" />
-
-    <section class="dashboard-workspace" aria-labelledby="dashboard-modules-title">
-      <header class="dashboard-workspace__head">
-        <div class="dashboard-workspace__title">
-          <h2 id="dashboard-modules-title">
-            常用模块
-          </h2>
-          <span class="dashboard-workspace__count">{{ visibleWidgets.length }} / {{ accessibleWidgetCount }}</span>
-        </div>
+    >
+      <template #actions>
         <div class="dashboard-workspace__actions">
           <el-button @click="managerVisible = true">
             <FaIcon name="i-lucide:layout-grid" />
             管理模块
-            <span v-if="hiddenWidgetCount" class="hidden-count" :aria-label="`${hiddenWidgetCount} 个已隐藏`">{{ hiddenWidgetCount }}</span>
           </el-button>
           <el-button :type="editMode ? 'primary' : undefined" @click="editMode = !editMode">
             <FaIcon :name="editMode ? 'i-lucide:check' : 'i-lucide:move'" />
@@ -583,36 +750,46 @@ watch(storageKey, loadPreferences, { immediate: true })
             恢复默认
           </el-button>
         </div>
-      </header>
+      </template>
+    </MrrPageHeader>
 
+    <component :is="DemoScenarioControl" v-if="DemoScenarioControl" />
+
+    <section class="dashboard-workspace" aria-label="常用模块">
       <div v-if="editMode" class="dashboard-workspace__notice">
         <FaIcon name="i-lucide:move" />
-        拖动卡片（或聚焦后按 Alt + 方向键）调整顺序；右上角菜单可修改大小、颜色、内容和置顶状态。
+        长按卡片或拖动卡片（也可聚焦后按 Alt + 方向键）调整顺序；右上角菜单可修改大小、颜色、内容和置顶状态。
       </div>
 
       <!-- TransitionGroup 只用于重排时的位移过渡（FLIP），卡片换位有连续轨迹而不是瞬移。 -->
-      <TransitionGroup v-if="visibleWidgets.length" tag="div" name="dashboard-widget" class="dashboard-grid" :class="{ 'is-editing': editMode }">
+      <TransitionGroup v-if="visibleWidgets.length" tag="div" name="dashboard-widget" class="dashboard-grid" :class="{ 'is-editing': editMode, 'has-data-widgets': activeSources.length > 0, 'is-live-dragging': longPressActive }">
         <article
           v-for="widget in visibleWidgets"
           :key="widget.id"
           class="dashboard-widget"
           :class="[
             `dashboard-widget--${widget.size}`,
-            `dashboard-widget--color-${widget.color}`,
+            `dashboard-widget--color-${widget.backgroundColor ?? widget.color}`,
             {
               'is-editing': editMode,
+              'has-content': widget.id === 'archive' || hasData(widget),
+              'is-action': widget.id === 'archive',
+              'is-compact': widget.compact,
               'is-pinned': widget.pinned,
               'is-dragging': draggedWidgetId === widget.id,
               'is-drag-over': dragOverWidgetId === widget.id,
               'is-drop-invalid': dragInvalidWidgetId === widget.id,
             },
           ]"
+          :style="widgetAppearanceStyle(widget.color, widget.backgroundColor ?? widget.color, widget.id, appearance)"
           :data-widget-id="widget.id"
           :draggable="editMode"
-          :role="editMode ? 'group' : 'link'"
+          :role="editMode || widget.id === 'archive' || hasData(widget) ? 'group' : 'link'"
           :aria-label="`${widget.title}${widget.pinned ? '，已置顶' : ''}${editMode ? '，按 Alt 加方向键调整位置' : ''}`"
           :aria-grabbed="editMode ? draggedWidgetId === widget.id : undefined"
-          tabindex="0"
+          :tabindex="editMode || (widget.id !== 'archive' && !hasData(widget)) ? 0 : undefined"
+          @pointerdown="longPress.pointerDown($event, widget.id)"
+          @touchstart.passive="longPress.touchStart($event, widget.id)"
           @click="openWidget(widget)"
           @keydown="handleWidgetKeydown($event, widget)"
           @dragstart="handleDragStart($event, widget.id)"
@@ -630,9 +807,12 @@ watch(storageKey, loadPreferences, { immediate: true })
                 <strong>{{ widget.title }}</strong>
                 <span v-if="widget.pinned" class="pin-badge">
                   <FaIcon name="i-lucide:pin" />
-                  置顶
+                  <span class="sr-only">置顶</span>
                 </span>
               </div>
+              <p v-if="widget.showDescription !== false" class="dashboard-widget__description">
+                {{ widget.description }}
+              </p>
             </div>
 
             <div v-if="editMode" class="dashboard-widget__tools" @click.stop>
@@ -671,11 +851,20 @@ watch(storageKey, loadPreferences, { immediate: true })
               </el-dropdown>
             </div>
             <!-- 整卡可点，头部箭头是唯一的入口暗示；底部不再重复「进入模块 →」。 -->
+            <div v-else-if="widget.id === 'archive'" class="archive-header-actions" @click.stop @keydown.stop>
+              <HomeArchiveHistory :key="userStore.sessionEpoch" />
+              <el-button text circle :aria-label="`进入${widget.title}`" @click.stop="router.push(widget.path)">
+                <FaIcon name="i-lucide:arrow-up-right" />
+              </el-button>
+            </div>
+            <el-button v-else-if="hasData(widget)" text circle :aria-label="`进入${widget.title}`" @click.stop="router.push(widget.path)">
+              <FaIcon name="i-lucide:arrow-up-right" />
+            </el-button>
             <FaIcon v-else name="i-lucide:chevron-right" class="dashboard-widget__arrow" aria-hidden="true" />
           </header>
-
-          <div class="dashboard-widget__body">
-            <p>{{ widget.description }}</p>
+          <div v-if="widget.id === 'archive' || hasData(widget)" class="dashboard-widget__content">
+            <HomeArchiveLookup v-if="widget.id === 'archive'" :key="userStore.sessionEpoch" :size="widget.size" :editing="editMode" />
+            <DashboardDataContent v-else-if="widgetSource(widget.id)" :source="widgetSource(widget.id)!" :state="dataStates[widgetSource(widget.id)!]" :size="widget.size" :metric-keys="selectedMetrics(widget)" :show-chart="widget.showChart" :preview="editMode" @refresh="refreshData(widgetSource(widget.id)!)" />
           </div>
         </article>
       </TransitionGroup>
@@ -690,73 +879,87 @@ watch(storageKey, loadPreferences, { immediate: true })
       </div>
     </section>
 
-    <el-dialog v-model="managerVisible" align-center title="管理小组件" width="860px">
-      <p class="dialog-description">
-        选择首页需要展示的模块，并设置大小、颜色和置顶状态。配置只保存在当前浏览器和当前账号下。
-      </p>
-      <div class="widget-manager-list">
-        <div v-for="definition in accessibleDefinitions" :key="definition.id" class="widget-manager-item">
-          <span class="widget-manager-item__icon" :class="`widget-manager-item__icon--${getWidgetColor(definition.id)}`">
-            <FaIcon :name="definition.icon" />
-          </span>
-          <div class="widget-manager-item__copy">
-            <strong>{{ getWidgetPreference(definition.id)?.title || definition.title }}</strong>
-            <small>{{ definition.description }}</small>
+    <Teleport to="body">
+      <div v-if="longPressActive && longPressPoint && draggedWidget" class="widget-drag-preview" aria-hidden="true" :style="{ ...widgetAppearanceStyle(draggedWidget.color, draggedWidget.backgroundColor ?? draggedWidget.color, draggedWidget.id, appearance), transform: `translate3d(${Math.max(8, Math.min(longPressPoint.x + 12, windowWidth - 200))}px, ${Math.max(8, longPressPoint.y - 52)}px, 0)` }">
+        <span class="widget-drag-preview__icon"><FaIcon :name="draggedWidget.icon" /></span>
+        <strong>{{ draggedWidget.title }}</strong>
+      </div>
+    </Teleport>
+
+    <el-dialog v-model="settingsDialogVisible" align-center :title="settingsDialogTitle" :width="settingsFromManager ? '860px' : '540px'" :before-close="beforeSettingsClose" class="dashboard-settings-dialog">
+      <div v-show="settingsView === 'manager'" class="widget-manager-view">
+        <p class="dialog-description">
+          选择首页模块，默认按功能分区配色；可以独立设置图标、底色、大小和置顶状态。配置只保存在当前浏览器和当前账号下。
+        </p>
+        <div class="dashboard-appearance-controls">
+          <div class="dashboard-appearance-row">
+            <strong>首页配色</strong>
+            <el-radio-group :model-value="appearance.mode" aria-label="首页配色风格" @change="changeAppearanceMode">
+              <el-radio-button v-for="mode in appearanceModes" :key="mode.value" :value="mode.value">
+                {{ mode.label }}
+              </el-radio-button>
+            </el-radio-group>
           </div>
-          <el-select
-            :model-value="getWidgetSize(definition.id)"
-            class="widget-size-select"
-            :disabled="!isWidgetVisible(definition.id)"
-            aria-label="卡片大小"
-            @change="handleSizeChange(definition.id, $event)"
-          >
-            <el-option v-for="option in sizeOptions" :key="option.value" :label="option.label" :value="option.value" />
-          </el-select>
-          <el-select
-            :model-value="getWidgetColor(definition.id)"
-            class="widget-color-select"
-            :disabled="!isWidgetVisible(definition.id)"
-            aria-label="卡片颜色"
-            @change="handleColorChange(definition.id, $event)"
-          >
-            <el-option v-for="option in colorOptions" :key="option.value" :label="option.label" :value="option.value">
-              <span class="color-option">
-                <span class="color-option__swatch" :class="`color-option__swatch--${option.value}`" />
-                {{ option.label }}
-              </span>
-            </el-option>
-          </el-select>
-          <el-button
-            text
-            :type="isWidgetPinned(definition.id) ? 'primary' : undefined"
-            :disabled="!isWidgetVisible(definition.id)"
-            @click="toggleWidgetPinned(definition.id)"
-          >
-            <FaIcon name="i-lucide:pin" />
-            {{ isWidgetPinned(definition.id) ? '已置顶' : '置顶' }}
-          </el-button>
-          <el-button text :disabled="!isWidgetVisible(definition.id)" @click="openWidgetEditor(definition.id)">
-            <FaIcon name="i-lucide:pencil" />编辑
-          </el-button>
-          <el-switch
-            :model-value="isWidgetVisible(definition.id)"
-            :aria-label="`${isWidgetVisible(definition.id) ? '隐藏' : '显示'}${definition.title}`"
-            @change="handleVisibilityChange(definition.id, $event)"
-          />
+          <div v-if="appearance.mode === 'tint' || appearance.mode === 'focus'" class="dashboard-appearance-row">
+            <span>背景染色强度</span>
+            <el-slider :model-value="appearance.strength" :min="0" :max="10" :step="1" :format-tooltip="value => `${value}%`" aria-label="背景染色强度" @input="changeAppearanceStrength" />
+            <span class="appearance-strength">{{ appearance.strength }}%</span>
+          </div>
+          <small>外观模式仅影响显示效果；原有单卡底色保留，可通过完全自定义恢复。</small>
+        </div>
+        <div class="widget-manager-list">
+          <div v-for="definition in accessibleDefinitions" :key="definition.id" class="widget-manager-item">
+            <span class="widget-manager-item__icon" :style="paletteStyle(getWidgetColor(definition.id), 'default')">
+              <FaIcon :name="definition.icon" />
+            </span>
+            <div class="widget-manager-item__copy">
+              <strong>{{ getWidgetPreference(definition.id)?.title || definition.title }}</strong>
+              <small>{{ definition.group }} · {{ definition.description }}</small>
+            </div>
+            <el-select
+              :model-value="getWidgetSize(definition.id)"
+              class="widget-size-select"
+              :disabled="!isWidgetVisible(definition.id)"
+              aria-label="卡片大小"
+              @change="handleSizeChange(definition.id, $event)"
+            >
+              <el-option v-for="option in sizeOptions" :key="option.value" :label="option.label" :value="option.value" />
+            </el-select>
+            <el-select
+              :model-value="getWidgetColor(definition.id)"
+              class="widget-color-select"
+              :disabled="!isWidgetVisible(definition.id)"
+              aria-label="图标颜色"
+              @change="handleColorChange(definition.id, $event)"
+            >
+              <el-option v-for="option in colorOptions" :key="option.value" :label="option.label" :value="option.value">
+                <span class="color-option">
+                  <span class="color-option__swatch" :style="{ '--swatch-color': option.accent }" />
+                  {{ option.label }}
+                </span>
+              </el-option>
+            </el-select>
+            <el-button
+              text
+              :type="isWidgetPinned(definition.id) ? 'primary' : undefined"
+              :disabled="!isWidgetVisible(definition.id)"
+              @click="toggleWidgetPinned(definition.id)"
+            >
+              <FaIcon name="i-lucide:pin" />
+              {{ isWidgetPinned(definition.id) ? '已置顶' : '置顶' }}
+            </el-button>
+            <el-button text :disabled="!isWidgetVisible(definition.id)" @click="openWidgetEditor(definition.id)">
+              <FaIcon name="i-lucide:pencil" />编辑
+            </el-button>
+            <el-switch
+              :model-value="isWidgetVisible(definition.id)"
+              :aria-label="`${isWidgetVisible(definition.id) ? '隐藏' : '显示'}${definition.title}`"
+              @change="handleVisibilityChange(definition.id, $event)"
+            />
+          </div>
         </div>
       </div>
-      <template #footer>
-        <el-button @click="resetDashboard">
-          恢复默认
-        </el-button>
-        <el-button type="primary" @click="managerVisible = false">
-          完成
-        </el-button>
-      </template>
-    </el-dialog>
-
-    <el-dialog v-model="editorVisible" align-center title="编辑小组件" width="540px">
-      <el-form label-position="top" class="widget-editor-form mrr-edit-form">
+      <el-form v-if="settingsView === 'editor'" label-position="top" class="widget-editor-form mrr-edit-form" :class="{ 'is-manager-editor': settingsFromManager }">
         <el-form-item label="组件名称">
           <el-input v-model="editorForm.title" maxlength="30" show-word-limit />
         </el-form-item>
@@ -770,19 +973,47 @@ watch(storageKey, loadPreferences, { immediate: true })
             </el-radio-button>
           </el-radio-group>
         </el-form-item>
-        <el-form-item label="卡片颜色">
-          <div class="color-picker-options">
+        <el-form-item label="展示内容">
+          <el-checkbox v-model="editorForm.showDescription">
+            模块说明
+          </el-checkbox>
+          <el-checkbox v-model="editorForm.compact">
+            紧凑密度
+          </el-checkbox>
+          <el-checkbox v-if="editorSource" v-model="editorForm.showChart">
+            可视化
+          </el-checkbox>
+        </el-form-item>
+        <el-form-item v-if="editorSource" label="指标选择">
+          <el-checkbox-group v-model="editorForm.metricKeys">
+            <el-checkbox v-for="metric in editorMetrics" :key="metric.key" :value="metric.key">
+              {{ metric.label }}
+            </el-checkbox>
+          </el-checkbox-group>
+        </el-form-item>
+        <div class="widget-editor-preview" :class="`dashboard-widget--color-${editorForm.backgroundColor}`" :style="widgetAppearanceStyle(editorForm.color, editorForm.backgroundColor, editingWidgetId, editorBackgroundChanged ? { ...appearance, mode: 'custom' } : appearance)">
+          <span class="widget-manager-item__icon"><FaIcon :name="definitionsById.get(editingWidgetId)?.icon || 'i-lucide:layout-grid'" /></span>
+          <strong>{{ editorForm.title }}</strong>
+          <p v-if="editorForm.showDescription">
+            {{ editorForm.description }}
+          </p>
+          <DashboardDataContent v-if="editorSource && editorForm.metricKeys.length" :source="editorSource" :state="dataStates[editorSource]" :size="editorForm.size" :metric-keys="editorForm.metricKeys" :show-chart="editorForm.showChart" preview />
+          <small v-if="editingWidgetId === 'archive'">病案号 · 上架号 · 最近查询</small>
+        </div>
+        <p class="dialog-description">
+          选择卡片底色并保存，将切换为完全自定义外观；其他卡片的原有底色配置不变。
+        </p>
+        <el-form-item v-for="field in ([['color', '图标颜色'], ['backgroundColor', '卡片底色']] as const)" :key="field[0]" :label="field[1]">
+          <div class="color-picker-options" :aria-label="field[1]" role="group">
             <button
               v-for="option in colorOptions"
               :key="option.value"
               type="button"
               class="color-picker-option"
-              :class="[
-                `color-picker-option--${option.value}`,
-                { 'is-selected': editorForm.color === option.value },
-              ]"
-              :aria-pressed="editorForm.color === option.value"
-              @click="editorForm.color = option.value"
+              :class="{ 'is-selected': editorForm[field[0]] === option.value }"
+              :style="{ '--swatch-color': field[0] === 'color' ? option.accent : option.surface }"
+              :aria-pressed="editorForm[field[0]] === option.value"
+              @click="editorForm[field[0]] = option.value; if (field[0] === 'backgroundColor') editorBackgroundChanged = true"
             >
               <span class="color-picker-option__swatch" />
               {{ option.label }}
@@ -791,15 +1022,28 @@ watch(storageKey, loadPreferences, { immediate: true })
         </el-form-item>
       </el-form>
       <template #footer>
-        <el-button @click="restoreEditorDefaults">
-          恢复该组件默认值
-        </el-button>
-        <el-button @click="editorVisible = false">
-          取消
-        </el-button>
-        <el-button type="primary" @click="saveWidgetEditor">
-          保存
-        </el-button>
+        <template v-if="settingsView === 'editor'">
+          <el-button @click="restoreEditorDefaults">
+            恢复该组件默认值
+          </el-button>
+          <el-button @click="closeWidgetEditor">
+            取消
+          </el-button>
+          <el-button type="primary" @click="saveWidgetEditor">
+            保存
+          </el-button>
+        </template>
+        <template v-else>
+          <el-button @click="applyGroupColors">
+            应用功能配色
+          </el-button>
+          <el-button @click="resetDashboard">
+            恢复默认
+          </el-button>
+          <el-button type="primary" @click="managerVisible = false">
+            完成
+          </el-button>
+        </template>
       </template>
     </el-dialog>
   </MrrPageShell>
@@ -820,60 +1064,59 @@ watch(storageKey, loadPreferences, { immediate: true })
   border-radius: var(--mrr-radius-pill);
 }
 
-.hidden-count {
-  display: inline-grid;
-  place-items: center;
-  min-width: 18px;
-  height: 18px;
-  padding-inline: var(--mrr-space-1);
-  margin-left: 2px;
-  font-size: 11px;
-  font-variant-numeric: tabular-nums;
-  color: var(--mrr-primary-foreground);
-  background: var(--mrr-primary);
-  border-radius: var(--mrr-radius-pill);
-}
-
 .dashboard-workspace {
   display: grid;
   gap: var(--mrr-space-4);
   min-width: 0;
 }
 
-/* 分区标题与分区卡（MrrSectionCard）同档：14px / 650；操作靠右，窄屏折到标题下方。 */
-.dashboard-workspace__head {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--mrr-space-3);
-  align-items: center;
-  justify-content: space-between;
-  min-width: 0;
-}
-
-.dashboard-workspace__title {
-  display: flex;
-  gap: var(--mrr-space-2);
-  align-items: baseline;
-  min-width: 0;
-}
-
-.dashboard-workspace__title h2 {
-  margin: 0;
-  font-size: var(--mrr-font-size-md);
-  font-weight: 650;
-  color: var(--mrr-foreground);
-}
-
-.dashboard-workspace__count {
-  font-size: var(--mrr-font-size-xs);
-  font-variant-numeric: tabular-nums;
-  color: var(--mrr-muted-foreground);
-}
-
 .dashboard-workspace__actions {
   display: flex;
   flex-wrap: wrap;
   gap: var(--mrr-space-2);
+}
+
+/* Keep the header geometry stable; keyboard focus and explicit editing always reveal actions.
+ * Coarse-pointer devices have no reliable hover, so retain visible controls there.
+ */
+@media (hover: hover) and (pointer: fine) {
+  .dashboard-workspace__actions,
+  .dashboard-widget__arrow,
+  .dashboard-widget .pin-badge {
+    opacity: 0;
+    transition: opacity var(--mrr-motion-feedback) var(--mrr-ease-out);
+  }
+
+  .dashboard-workspace__actions {
+    pointer-events: none;
+  }
+
+  .dashboard-header:hover .dashboard-workspace__actions,
+  .dashboard-header:focus-within .dashboard-workspace__actions,
+  .dashboard-header.is-editing .dashboard-workspace__actions,
+  .dashboard-header.is-managing .dashboard-workspace__actions {
+    pointer-events: auto;
+  }
+
+  .dashboard-header:hover .dashboard-workspace__actions,
+  .dashboard-header:focus-within .dashboard-workspace__actions,
+  .dashboard-header.is-editing .dashboard-workspace__actions,
+  .dashboard-header.is-managing .dashboard-workspace__actions,
+  .dashboard-widget:hover .dashboard-widget__arrow,
+  .dashboard-widget:focus-within .dashboard-widget__arrow,
+  .dashboard-widget:hover .pin-badge,
+  .dashboard-widget:focus-within .pin-badge,
+  .dashboard-widget.is-editing .pin-badge {
+    opacity: 1;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .dashboard-workspace__actions,
+    .dashboard-widget__arrow,
+    .dashboard-widget .pin-badge {
+      transition: none;
+    }
+  }
 }
 
 .dashboard-workspace__actions :deep(.el-button + .el-button) {
@@ -888,20 +1131,21 @@ watch(storageKey, loadPreferences, { immediate: true })
 .dashboard-grid {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
-
-  /*
-   * 去掉底栏后标准卡只剩「头部 56px + 两行说明 + 12px 底距」≈ 106px，
-   * 行高 132 → 116px，留 10px 余量给 125% 系统缩放下的行高取整。大卡（两行 + 间距）= 248px。
-   */
-  grid-auto-rows: 116px;
+  grid-auto-rows: minmax(84px, 1fr);
   grid-auto-flow: dense;
   gap: var(--mrr-space-4);
+}
+
+.dashboard-grid.has-data-widgets {
+  grid-auto-rows: minmax(84px, auto);
 }
 
 .dashboard-widget {
   --widget-accent: var(--mrr-primary);
   --widget-surface: var(--mrr-card);
   --widget-border: var(--mrr-border);
+  --widget-icon-size: 48px;
+  --widget-glyph-size: 24px;
 
   display: flex;
   flex-direction: column;
@@ -910,7 +1154,7 @@ watch(storageKey, loadPreferences, { immediate: true })
   overflow: hidden;
   color: var(--mrr-card-foreground);
   cursor: pointer;
-  background: var(--widget-surface);
+  background: linear-gradient(rgb(var(--widget-tint-rgb), var(--widget-tint-alpha)), rgb(var(--widget-tint-rgb), var(--widget-tint-alpha))) var(--widget-surface);
   border: 1px solid var(--widget-border);
   border-radius: var(--mrr-radius-xl);
   box-shadow: var(--mrr-shadow-xs);
@@ -920,86 +1164,6 @@ watch(storageKey, loadPreferences, { immediate: true })
     box-shadow var(--mrr-motion-feedback) var(--mrr-ease-out),
     opacity var(--mrr-motion-feedback) var(--mrr-ease-out),
     transform var(--mrr-motion-press) var(--mrr-ease-out);
-}
-
-.dashboard-widget--color-blue {
-  --widget-accent: var(--el-color-primary);
-  --widget-surface: color-mix(in srgb, var(--el-color-primary) 7%, var(--mrr-card));
-  --widget-border: color-mix(in srgb, var(--el-color-primary) 24%, var(--mrr-border));
-}
-
-.dashboard-widget--color-green {
-  --widget-accent: var(--el-color-success);
-  --widget-surface: color-mix(in srgb, var(--el-color-success) 7%, var(--mrr-card));
-  --widget-border: color-mix(in srgb, var(--el-color-success) 24%, var(--mrr-border));
-}
-
-.dashboard-widget--color-orange {
-  --widget-accent: var(--el-color-warning);
-  --widget-surface: color-mix(in srgb, var(--el-color-warning) 8%, var(--mrr-card));
-  --widget-border: color-mix(in srgb, var(--el-color-warning) 28%, var(--mrr-border));
-}
-
-.dashboard-widget--color-red {
-  --widget-accent: var(--el-color-danger);
-  --widget-surface: color-mix(in srgb, var(--el-color-danger) 7%, var(--mrr-card));
-  --widget-border: color-mix(in srgb, var(--el-color-danger) 24%, var(--mrr-border));
-}
-
-.dashboard-widget--color-purple {
-  --widget-accent: var(--mrr-tone-violet);
-  --widget-surface: var(--mrr-tone-violet-soft);
-  --widget-border: color-mix(in srgb, var(--mrr-tone-violet) 26%, var(--mrr-border));
-}
-
-/*
- * Chrome 86 回退：widget 的着色底面与描边是工作台上「这个区块属于哪类」的
- * 分层实色底信号，不能随 color-mix 一起失效。tone-soft / tone-border 在
- * browser-compatibility.css 已有静态定义，86 上可直接落到具体色值。
- */
-@supports not (color: color-mix(in srgb, #000 50%, #fff)) {
-  .dashboard-widget--color-blue {
-    --widget-surface: var(--mrr-tone-primary-soft);
-    --widget-border: var(--mrr-tone-primary-border);
-  }
-
-  .dashboard-widget--color-green {
-    --widget-surface: var(--mrr-tone-success-soft);
-    --widget-border: var(--mrr-tone-success-border);
-  }
-
-  .dashboard-widget--color-orange {
-    --widget-surface: var(--mrr-tone-warning-soft);
-    --widget-border: var(--mrr-tone-warning-border);
-  }
-
-  .dashboard-widget--color-red {
-    --widget-surface: var(--mrr-tone-danger-soft);
-    --widget-border: var(--mrr-tone-danger-border);
-  }
-
-  .dashboard-widget--color-purple {
-    --widget-border: var(--mrr-tone-violet-border);
-  }
-
-  .dashboard-widget:hover {
-    border-color: var(--widget-accent);
-  }
-
-  /* 悬停时图标块描边：含 var() 的 color-mix 在 86 上会失效成 currentColor，这里给实色。 */
-  .dashboard-widget:not(.is-editing):hover .dashboard-widget__icon {
-    border-color: var(--widget-accent, var(--mrr-primary));
-  }
-
-  .dashboard-widget__icon,
-  .widget-manager-item__icon {
-    background: var(--widget-surface);
-    border: 1px solid var(--widget-border);
-  }
-
-  .pin-badge {
-    background: var(--widget-surface);
-  }
 }
 
 .dashboard-widget--small {
@@ -1017,8 +1181,15 @@ watch(storageKey, loadPreferences, { immediate: true })
   grid-column: span 2;
 }
 
+/* 查询卡固定跨两行，保留用户选择的列宽；单列移动端自然排版。 */
+@media (min-width: 641px) {
+  .dashboard-widget.is-action {
+    grid-row: span 2;
+  }
+}
+
 .dashboard-widget:hover {
-  border-color: color-mix(in srgb, var(--widget-accent) 48%, var(--mrr-border));
+  border-color: var(--mrr-border-strong);
   box-shadow: var(--mrr-shadow-sm);
 }
 
@@ -1040,17 +1211,26 @@ watch(storageKey, loadPreferences, { immediate: true })
   cursor: grabbing;
 }
 
-.dashboard-widget.is-pinned {
-  box-shadow: 0 0 0 1px color-mix(in srgb, var(--widget-accent) 16%, transparent), var(--mrr-shadow-xs);
+.dashboard-widget.is-dragging {
+  cursor: grabbing;
+  user-select: none;
+  opacity: 0.45;
 }
 
-.dashboard-widget.is-dragging {
-  opacity: 0.45;
+.dashboard-grid.is-live-dragging .dashboard-widget.is-dragging {
+  background: var(--mrr-card);
+  border: 1px dashed var(--widget-accent);
+  box-shadow: none;
+  opacity: 0.5;
+}
+
+.dashboard-grid.is-live-dragging .dashboard-widget.is-dragging > * {
+  opacity: 0;
 }
 
 .dashboard-widget.is-drag-over {
   border-color: var(--widget-accent);
-  box-shadow: 0 0 0 2px color-mix(in srgb, var(--widget-accent) 18%, transparent);
+  box-shadow: 0 0 0 2px var(--widget-icon-surface);
 }
 
 /* 不可放置：中性虚线 + 禁止光标，与「可放置」的主色高亮明确区分。 */
@@ -1065,13 +1245,48 @@ watch(storageKey, loadPreferences, { immediate: true })
   transition: transform var(--mrr-motion-move) var(--mrr-ease-out);
 }
 
+@media (prefers-reduced-motion: reduce) {
+  .dashboard-widget-move { transition: none; }
+}
+
+.dashboard-widget.has-content .dashboard-widget__header {
+  flex: 0 0 auto;
+  padding-bottom: var(--mrr-space-2);
+}
+
+.dashboard-widget__content {
+  min-width: 0;
+  padding: 0 var(--mrr-space-4) var(--mrr-space-4);
+  cursor: default;
+}
+.dashboard-widget.has-content:not(.is-editing) { cursor: default; }
+.dashboard-widget.has-content:active:not(.is-editing) { transform: none; }
+.dashboard-widget.is-compact .dashboard-widget__header { gap: var(--mrr-space-2); padding: var(--mrr-space-2); }
+.dashboard-widget.is-compact .dashboard-widget__content { padding: 0 var(--mrr-space-2) var(--mrr-space-2); }
+.widget-editor-preview { display: grid; gap: var(--mrr-space-2); padding: var(--mrr-space-3); margin-bottom: var(--mrr-space-4); background: linear-gradient(rgb(var(--widget-tint-rgb), var(--widget-tint-alpha)), rgb(var(--widget-tint-rgb), var(--widget-tint-alpha))) var(--widget-surface, var(--mrr-card)); border: 1px solid var(--mrr-border); border-radius: var(--mrr-radius-lg); }
+.widget-editor-preview p { margin: 0; font-size: var(--mrr-font-size-xs); color: var(--mrr-muted-foreground); }
+
+.archive-header-actions {
+  display: flex;
+  gap: var(--mrr-space-1);
+  align-items: center;
+  align-self: start;
+}
+
+.archive-header-actions :deep(.el-button + .el-button) {
+  margin-left: 0;
+}
+
 .dashboard-widget__header {
   display: grid;
-  grid-template-columns: 32px minmax(0, 1fr) auto;
-  gap: var(--mrr-space-3);
+  flex: 1;
+  grid-template-columns: var(--widget-icon-size) minmax(0, 1fr) auto;
+  gap: var(--mrr-space-4);
   align-items: center;
   min-width: 0;
-  padding: var(--mrr-space-3) var(--mrr-space-3) var(--mrr-space-3);
+  padding: var(--mrr-space-4);
+  user-select: none;
+  -webkit-touch-callout: none;
 }
 
 .dashboard-widget__icon,
@@ -1083,21 +1298,21 @@ watch(storageKey, loadPreferences, { immediate: true })
   height: 32px;
   font-size: 15px;
   color: var(--widget-accent, var(--mrr-primary));
-  background: color-mix(in srgb, var(--widget-accent, var(--mrr-primary)) 10%, var(--mrr-card));
-  border: 1px solid color-mix(in srgb, var(--widget-accent, var(--mrr-primary)) 20%, var(--mrr-border));
+  background: var(--widget-icon-surface, var(--mrr-tone-primary-soft));
+  border: 1px solid transparent;
   border-radius: var(--mrr-radius-md);
 }
 
 /* 悬停时图标块与箭头同步染上强调色：一张卡只有一个「可进入」信号，但它会随指针亮起。 */
 .dashboard-widget__icon {
+  width: var(--widget-icon-size);
+  height: var(--widget-icon-size);
+  font-size: var(--widget-glyph-size);
+  border-radius: var(--mrr-radius-lg);
   transition:
     color var(--mrr-motion-feedback) var(--mrr-ease-out),
     background-color var(--mrr-motion-feedback) var(--mrr-ease-out),
     border-color var(--mrr-motion-feedback) var(--mrr-ease-out);
-}
-
-.dashboard-widget:not(.is-editing):hover .dashboard-widget__icon {
-  border-color: color-mix(in srgb, var(--widget-accent, var(--mrr-primary)) 36%, var(--mrr-border));
 }
 
 .dashboard-widget__heading {
@@ -1112,11 +1327,11 @@ watch(storageKey, loadPreferences, { immediate: true })
 }
 
 .dashboard-widget__title-row strong {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  font-size: var(--mrr-font-size-md);
+  min-width: 0;
+  font-size: var(--mrr-font-size-lg);
   font-weight: 650;
-  white-space: nowrap;
+  line-height: 1.4;
+  overflow-wrap: anywhere;
 }
 
 .pin-badge {
@@ -1124,14 +1339,14 @@ watch(storageKey, loadPreferences, { immediate: true })
   flex: 0 0 auto;
   gap: 3px;
   align-items: center;
-  padding: 2px var(--mrr-space-2);
+  padding: 2px var(--mrr-space-1);
   font-size: var(--mrr-font-size-xs);
   font-weight: 650;
 
   /* 用户可自定义主色，主色直接压在主色淡底上会跌破 4.5:1（默认主题实测 4.49:1）；
      文字改用前景色，科室/组件身份仍由淡底与图标承载 */
   color: var(--mrr-foreground);
-  background: color-mix(in srgb, var(--widget-accent) 10%, var(--mrr-card));
+  background: var(--widget-icon-surface);
   border-radius: var(--mrr-radius-pill);
 }
 
@@ -1153,7 +1368,7 @@ watch(storageKey, loadPreferences, { immediate: true })
   flex: 0 0 auto;
   font-size: 16px;
   color: var(--mrr-muted-foreground);
-  transition: color var(--mrr-motion-feedback) var(--mrr-ease-out), transform var(--mrr-motion-feedback) var(--mrr-ease-out);
+  transition: opacity var(--mrr-motion-feedback) var(--mrr-ease-out), color var(--mrr-motion-feedback) var(--mrr-ease-out), transform var(--mrr-motion-feedback) var(--mrr-ease-out);
 }
 
 .dashboard-widget:hover .dashboard-widget__arrow,
@@ -1162,36 +1377,13 @@ watch(storageKey, loadPreferences, { immediate: true })
   transform: var(--mrr-motion-decor, translateX(2px));
 }
 
-.dashboard-widget__body {
-  display: flex;
-  flex: 1;
-  flex-direction: column;
-  min-height: 0;
-  padding: 0 var(--mrr-space-3) var(--mrr-space-3);
-}
-
-.dashboard-widget__body p {
-  display: -webkit-box;
-  margin: 0;
-  overflow: hidden;
-  -webkit-line-clamp: 2;
-  font-size: var(--mrr-font-size-xs);
-  line-height: 1.6;
-  color: var(--mrr-muted-foreground);
-  -webkit-box-orient: vertical;
-}
-
-.dashboard-widget--large .dashboard-widget__body p {
-  -webkit-line-clamp: 7;
+.dashboard-widget__description {
+  margin: var(--mrr-space-1) 0 0;
   font-size: var(--mrr-font-size-sm);
+  line-height: 1.5;
+  color: var(--mrr-muted-foreground);
+  overflow-wrap: anywhere;
 }
-
-/*
- * 原底栏「进入模块 → / 拖动调整位置」已删除：
- * - 浏览态：与头部箭头重复，且小卡为了放下它而隐藏了说明，卡片只剩标题；
- * - 编辑态：与页面顶部的编辑提示条、拖动手柄的提示重复。
- * 现在所有尺寸都显示说明，入口暗示统一由头部箭头承担（编辑态换成工具按钮）。
- */
 
 .dashboard-empty {
   display: grid;
@@ -1226,6 +1418,37 @@ watch(storageKey, loadPreferences, { immediate: true })
   font-size: var(--mrr-font-size-xs);
   line-height: 1.6;
   color: var(--mrr-muted-foreground);
+}
+
+.dashboard-appearance-controls {
+  display: grid;
+  flex-shrink: 0;
+  gap: var(--mrr-space-2);
+  padding: 0 0 var(--mrr-space-3);
+  font-size: var(--mrr-font-size-sm);
+}
+
+.dashboard-appearance-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--mrr-space-3);
+  align-items: center;
+}
+
+.dashboard-appearance-row :deep(.el-slider) {
+  flex: 1;
+  min-width: 100px;
+  max-width: 280px;
+}
+
+.dashboard-appearance-controls small {
+  font-size: var(--mrr-font-size-xs);
+  color: var(--mrr-muted-foreground);
+}
+
+.appearance-strength {
+  min-width: 36px;
+  font-variant-numeric: tabular-nums;
 }
 
 .widget-manager-list {
@@ -1311,7 +1534,7 @@ watch(storageKey, loadPreferences, { immediate: true })
   width: 14px;
   height: 14px;
   background: var(--swatch-color, var(--mrr-card));
-  border: 1px solid color-mix(in srgb, var(--swatch-color, var(--mrr-border)) 44%, var(--mrr-border));
+  border: 1px solid var(--mrr-border);
   border-radius: 50%;
 }
 
@@ -1362,6 +1585,11 @@ watch(storageKey, loadPreferences, { immediate: true })
   border-radius: var(--mrr-radius-md);
 }
 
+.color-picker-option:focus-visible {
+  outline: 2px solid var(--mrr-ring);
+  outline-offset: 2px;
+}
+
 .color-picker-option:hover,
 .color-picker-option.is-selected {
   border-color: var(--swatch-color, var(--mrr-primary));
@@ -1374,6 +1602,29 @@ watch(storageKey, loadPreferences, { immediate: true })
 
 .widget-editor-form {
   margin-top: var(--mrr-space-2);
+}
+
+.widget-manager-view,
+.widget-editor-form.is-manager-editor {
+  height: min(62vh, 620px);
+  min-height: 0;
+  overflow-y: auto;
+}
+
+.widget-manager-view {
+  display: flex;
+  flex-direction: column;
+}
+
+.widget-manager-view .widget-manager-list {
+  flex: 1;
+  min-height: 0;
+}
+
+.widget-editor-form.is-manager-editor {
+  max-width: 540px;
+  padding: 2px var(--mrr-space-2);
+  margin: 0 auto;
 }
 
 @media (max-width: 1180px) {
@@ -1422,9 +1673,23 @@ watch(storageKey, loadPreferences, { immediate: true })
 }
 
 @media (max-width: 640px) {
+  .dashboard-widget {
+    --widget-icon-size: 44px;
+    --widget-glyph-size: 22px;
+  }
+
+  .dashboard-widget__header {
+    gap: var(--mrr-space-3);
+    padding: var(--mrr-space-3);
+  }
+
   .dashboard-grid {
     grid-template-columns: 1fr;
     grid-auto-rows: auto;
+
+    &.has-data-widgets {
+      grid-auto-rows: auto;
+    }
   }
 
   .dashboard-widget--small,
@@ -1432,7 +1697,7 @@ watch(storageKey, loadPreferences, { immediate: true })
   .dashboard-widget--large {
     grid-row: auto;
     grid-column: span 1;
-    min-height: 116px;
+    min-height: 84px;
   }
 
   .dashboard-widget--large {
@@ -1446,5 +1711,100 @@ watch(storageKey, loadPreferences, { immediate: true })
   .color-picker-options {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
+}
+</style>
+
+<style>
+:root {
+  --widget-violet-accent: var(--mrr-tone-violet);
+  --widget-rgb-default: 37, 99, 235;
+  --widget-rgb-blue: 37, 99, 235;
+  --widget-rgb-green: 21, 128, 61;
+  --widget-rgb-orange: 182, 101, 24;
+  --widget-rgb-red: 194, 65, 65;
+  --widget-rgb-purple: 124, 58, 237;
+  --widget-rgb-cyan: 8, 123, 148;
+  --widget-rgb-teal: 8, 125, 102;
+  --widget-rgb-pink: 181, 45, 112;
+  --widget-rgb-amber: 153, 99, 11;
+  --widget-rgb-indigo: 79, 70, 184;
+  --widget-rgb-slate: 82, 100, 123;
+  --widget-cyan: #087b94;
+  --widget-cyan-soft: #edf8fb;
+  --widget-teal: #087d66;
+  --widget-teal-soft: #edf8f3;
+  --widget-pink: #b52d70;
+  --widget-pink-soft: #fceff5;
+  --widget-amber: #99630b;
+  --widget-amber-soft: #fbf5e6;
+  --widget-indigo: #4f46b8;
+  --widget-indigo-soft: #f0effc;
+  --widget-slate: #52647b;
+  --widget-slate-soft: #eff3f8;
+}
+
+html.dark {
+  --widget-violet-accent: #c0a4f8;
+  --widget-rgb-default: 139, 171, 255;
+  --widget-rgb-blue: 139, 171, 255;
+  --widget-rgb-green: 115, 207, 142;
+  --widget-rgb-orange: 229, 183, 124;
+  --widget-rgb-red: 245, 145, 145;
+  --widget-rgb-purple: 192, 164, 248;
+  --widget-rgb-cyan: 105, 200, 223;
+  --widget-rgb-teal: 101, 209, 180;
+  --widget-rgb-pink: 240, 147, 189;
+  --widget-rgb-amber: 232, 189, 104;
+  --widget-rgb-indigo: 178, 169, 246;
+  --widget-rgb-slate: 184, 201, 221;
+  --widget-cyan: #69c8df;
+  --widget-cyan-soft: #20363e;
+  --widget-teal: #65d1b4;
+  --widget-teal-soft: #203a32;
+  --widget-pink: #f093bd;
+  --widget-pink-soft: #3e2937;
+  --widget-amber: #e8bd68;
+  --widget-amber-soft: #3d3425;
+  --widget-indigo: #b2a9f6;
+  --widget-indigo-soft: #322e48;
+  --widget-slate: #b8c9dd;
+  --widget-slate-soft: #2b3542;
+}
+
+.widget-drag-preview {
+  position: fixed;
+  inset: 0 auto auto 0;
+  z-index: 5000;
+  display: flex;
+  gap: var(--mrr-space-2);
+  align-items: center;
+  width: 192px;
+  max-width: calc(100vw - 16px);
+  padding: var(--mrr-space-2) var(--mrr-space-3);
+  font-size: var(--mrr-font-size-xs);
+  color: var(--mrr-card-foreground);
+  pointer-events: none;
+  background: var(--mrr-card);
+  border: 1px solid var(--mrr-border);
+  border-radius: var(--mrr-radius-md);
+  box-shadow: var(--mrr-shadow-md);
+}
+
+.widget-drag-preview__icon {
+  display: grid;
+  flex-shrink: 0;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  font-size: 18px;
+  color: var(--widget-accent);
+  background: var(--widget-icon-surface);
+  border-radius: var(--mrr-radius-md);
+}
+
+.widget-drag-preview strong {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 </style>

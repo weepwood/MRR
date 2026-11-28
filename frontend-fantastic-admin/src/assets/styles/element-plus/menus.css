@@ -12,7 +12,7 @@ body .el-dropdown__popper.mrr-account-menu {
   background: hsl(var(--popover));
   border: 1px solid var(--mrr-border);
   border-radius: var(--mrr-radius-lg);
-  box-shadow: 0 4px 6px -1px rgb(0 0 0 / 10%), 0 2px 4px -2px rgb(0 0 0 / 10%);
+  box-shadow: var(--mrr-shadow-md);
 }
 
 body .mrr-account-menu .el-dropdown-menu {
@@ -23,7 +23,12 @@ body .mrr-account-menu .el-dropdown-menu {
 }
 
 .mrr-account-label {
+  min-width: 0;
   list-style: none;
+}
+
+.mrr-account-label .account-name {
+  overflow-wrap: anywhere;
 }
 
 .mrr-account-separator {
@@ -58,12 +63,13 @@ body .mrr-account-menu .el-dropdown-menu__item.account-logout:not(.is-disabled):
 body .el-dropdown__popper.mrr-context-menu {
   box-sizing: border-box;
   min-width: 128px;
-  font-size: 14px;
+  max-width: calc(100vw - 24px);
+  font-size: var(--mrr-font-size-sm);
   color: hsl(var(--popover-foreground));
   background: hsl(var(--popover));
   border: 1px solid var(--mrr-border);
-  border-radius: calc(var(--radius) - 2px);
-  box-shadow: 0 4px 6px -1px rgb(0 0 0 / 10%), 0 2px 4px -2px rgb(0 0 0 / 10%);
+  border-radius: var(--mrr-radius-lg);
+  box-shadow: var(--mrr-shadow-md);
 }
 
 body .mrr-context-menu .el-dropdown-menu {
@@ -78,10 +84,10 @@ body .mrr-context-menu .el-dropdown-menu__item {
   min-height: 32px;
   padding: 6px 8px;
   margin: 0;
-  font-size: 14px;
+  font-size: var(--mrr-font-size-sm);
   line-height: 20px;
   color: hsl(var(--popover-foreground));
-  border-radius: calc(var(--radius) - 4px);
+  border-radius: var(--mrr-radius-md);
 }
 
 body .mrr-context-menu .el-dropdown-menu__item.is-disabled {
@@ -91,7 +97,7 @@ body .mrr-context-menu .el-dropdown-menu__item.is-disabled {
 
 .mrr-context-separator {
   height: 1px;
-  margin: 4px -4px;
+  margin: var(--mrr-space-1) var(--mrr-space-2);
   list-style: none;
   background: hsl(var(--border));
 }
@@ -111,7 +117,7 @@ body .el-dropdown__popper.mrr-table-action-menu--quiet {
   max-width: calc(100vw - 24px);
   border: 1px solid var(--mrr-border);
   border-radius: var(--mrr-radius-md);
-  box-shadow: var(--mrr-shadow-sm);
+  box-shadow: var(--mrr-shadow-md);
 }
 
 body .mrr-table-action-menu--quiet .el-dropdown-menu {
@@ -127,7 +133,7 @@ body .mrr-table-action-menu--quiet .el-dropdown-menu__item {
   min-height: 32px;
   padding: 6px var(--mrr-space-2);
   margin: 0;
-  font-size: 13px;
+  font-size: var(--mrr-font-size-sm);
   font-weight: 400;
   line-height: 20px;
   color: var(--mrr-popover-foreground);
@@ -162,5 +168,24 @@ body .mrr-table-action-menu--quiet .el-dropdown-menu__item.is-disabled {
   body .mrr-table-action-menu--quiet .el-dropdown-menu__item {
     min-height: 36px;
     padding-block: var(--mrr-space-2);
+  }
+}
+
+/* Icon and label share a stable optical baseline without changing native menu navigation. */
+body .mrr-account-menu .el-dropdown-menu__item > svg,
+body .mrr-context-menu .el-dropdown-menu__item > svg,
+body .mrr-table-action-menu--quiet .el-dropdown-menu__item > svg {
+  flex: 0 0 16px;
+  width: 16px;
+  height: 16px;
+  margin: 0;
+}
+
+@media (pointer: coarse) {
+  body .mrr-account-menu .el-dropdown-menu__item,
+  body .mrr-context-menu .el-dropdown-menu__item,
+  body .mrr-table-action-menu--quiet .el-dropdown-menu__item {
+    height: auto;
+    min-height: 44px;
   }
 }

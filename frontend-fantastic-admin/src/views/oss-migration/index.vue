@@ -905,7 +905,6 @@ onMounted(() => {
 <template>
   <MrrPageShell v-loading="loading.page && initialLoadDone" class="oss-migration-page">
     <MrrPageHeader
-      eyebrow="OSS Migration Control"
       title="OSS 迁移管理"
       description="统一通过 Nginx 获取原图，按上架号分组上传；缺少上架号的记录保留等待补齐。"
     >

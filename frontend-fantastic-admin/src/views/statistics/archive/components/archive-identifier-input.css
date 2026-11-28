@@ -1,0 +1,39 @@
+/*
+ * 半栏只有 141px：号码 14px + 0.09em 字距，逐位更好认；字体跟随项目统一字体，
+ * tabular-nums 让数字等宽、位数变化时不抖动。
+ * 字号变大后的空间由内边距和徽标让出来 —— 收窄左右内边距、缩小后缀图标与徽标，
+ * 保证 8 位病案号/上架号、18 位身份证都能整段显示，不出现横向滚动。
+ */
+.archive-identifier-input .el-input__inner {
+  font-size: var(--mrr-font-size-md);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.07em;
+}
+
+.archive-identifier-input .el-input__wrapper {
+  padding: 1px 6px 1px 8px;
+}
+
+/* 清空叉号在 14px 号码旁边显得过大，缩到与文字同高，顺带再省几像素。 */
+.archive-identifier-input .el-input__clear {
+  font-size: 12px;
+}
+
+/* 清空按钮和位数徽标共用 suffix 区，留一点间距免得挤成一个图标。 */
+.archive-identifier-input .el-input__suffix-inner {
+  gap: 3px;
+}
+
+/* Element 给后缀首个元素加了 8px 左外边距，与外层内边距重复，这里让给号码。 */
+.archive-identifier-input .el-input__suffix-inner > :first-child {
+  margin-left: 0;
+}
+
+/*
+ * 位数徽标排在清空叉号左侧（EP 的 DOM 顺序叉号在前，用 order 反转）：
+ * 徽标随聚焦出现/消失，宽度变化只发生在叉号左侧，叉号永远贴住右缘、位置不动。
+ */
+.archive-identifier-input .el-input__suffix-inner .length-badge {
+  order: -1;
+  margin-left: 0;
+}

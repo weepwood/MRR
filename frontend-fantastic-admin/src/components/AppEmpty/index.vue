@@ -26,10 +26,13 @@ function handleAction() {
 <template>
   <!-- 空态是查询结果的一部分，需要被读屏播报；AppError 用 role="alert"，空态用 status 更轻。 -->
   <div class="app-empty mrr-content-enter" :class="{ 'is-compact': size === 'compact' }" role="status" aria-live="polite">
-    <div class="app-empty-icon mrr-status-pop" :class="icon" aria-hidden="true" />
+    <slot name="illustration">
+      <div class="app-empty-icon mrr-status-pop" :class="icon" aria-hidden="true" />
+    </slot>
     <p class="app-empty-text">
       {{ description }}
     </p>
+    <slot name="detail" />
     <el-button v-if="actionText" type="primary" :size="size === 'compact' ? 'small' : undefined" :icon="actionIcon" @click="handleAction">
       {{ actionText }}
     </el-button>

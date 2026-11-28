@@ -444,7 +444,6 @@ onBeforeUnmount(() => {
 <template>
   <MrrPageShell class="statistics-detail-page">
     <MrrPageHeader
-      eyebrow="Archive Detail"
       title="病案明细档案袋"
       description="统一查看患者、住院、归档与扫描信息，支持筛选、排序、影像查看和整袋下载。"
     >

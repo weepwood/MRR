@@ -463,7 +463,6 @@ onMounted(refreshAll)
 <template>
   <MrrPageShell compact>
     <MrrPageHeader
-      eyebrow="Archive Box Management"
       title="档案装箱管理"
       description="维护实体病案与箱号的对应关系，支持按病案反查位置和按箱号查看箱内病案。"
     >
@@ -478,7 +477,7 @@ onMounted(refreshAll)
     </MrrPageHeader>
 
     <AppError v-if="summaryError" size="compact" :message="summaryError" @retry="loadSummary" />
-    <section v-else-if="hasMetricActivity" class="mrr-metric-grid mrr-metric-grid--four mrr-metric-grid--dense" aria-label="装箱概况">
+    <section v-else-if="hasMetricActivity" class="mrr-metric-grid mrr-metric-grid--four mrr-metric-grid--dense mrr-metric-grid--mobile-compact" aria-label="装箱概况">
       <MrrMetricCard
         v-for="card in metricCards"
         :key="card.label"

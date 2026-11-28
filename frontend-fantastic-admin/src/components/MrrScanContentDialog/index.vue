@@ -338,6 +338,14 @@ onBeforeUnmount(() => { observer?.disconnect(); clear() })
   white-space: normal;
 }
 
+/* Keep dense mouse workstations unchanged; touch readers need larger targets. */
+@media (pointer: coarse) {
+  .scan-tool-group :deep(.el-button) {
+    min-width: 44px;
+    min-height: 44px;
+  }
+}
+
 .scan-tool-group :deep(.el-button > span) {
   min-width: 0;
   overflow-wrap: anywhere;

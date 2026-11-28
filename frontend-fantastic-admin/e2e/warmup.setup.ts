@@ -101,14 +101,10 @@ async function attemptWarmRoute(page: Page, route: string) {
     return
   }
 
-  // 冷启动编译超过 15s 会弹出启动看门狗浮层；浮层本身不阻断挂载，
-  // 点击「继续等待」可把等待窗口延长到 60s，再继续等一轮。
-  const continueButton = page.locator('#browser-compat-continue')
-  if (await continueButton.isVisible().catch(() => false)) {
-    await continueButton.click()
-    if (await waitForApplicationMount(page)) {
-      return
-    }
+  // 慢启动默认继续，无需模拟点击；保留原第二轮等待预算。
+  if (await page.locator('[data-app-loading][data-startup-state="slow"]').isVisible().catch(() => false)
+    && await waitForApplicationMount(page)) {
+    return
   }
 
   throw new Error('应用未在预期时间内挂载')

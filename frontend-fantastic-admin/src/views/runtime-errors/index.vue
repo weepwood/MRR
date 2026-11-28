@@ -7,7 +7,7 @@ import type { MrrTableAction } from '@/components/MrrTableActions/types'
 /* eslint-disable vue/singleline-html-element-content-newline */
 import { useMediaQuery } from '@vueuse/core'
 import { RefreshCw as Refresh } from 'lucide-vue-next'
-import { computed, onBeforeUnmount, onDeactivated, onMounted, ref, watch } from 'vue'
+import { computed, nextTick, onBeforeUnmount, onDeactivated, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import {
   getSystemErrorDetail,
@@ -62,6 +62,25 @@ const canReadErrors = computed(() => userStore.isSessionVerified && checkSession
 ))
 let detailGeneration = 0
 let detailController: AbortController | undefined
+let detailReturnId: string | undefined
+let detailReturnTrigger: Element | null = null
+
+async function restoreDetailFocus() {
+  const id = detailReturnId
+  const original = detailReturnTrigger
+  detailReturnId = undefined
+  detailReturnTrigger = null
+  await nextTick()
+  const revision = detailGeneration
+  // Run after Element Plus has released the native focus trap.
+  await new Promise<void>(resolve => requestAnimationFrame(() => resolve()))
+  // Only fall back when the original action was replaced by a responsive layout.
+  if (!id || original?.isConnected || revision !== detailGeneration || detailVisible.value || !canReadErrors.value || route.path !== '/runtime-errors') { return }
+  const active = document.activeElement
+  if (active && active !== document.body && active !== document.documentElement && !active.closest('.el-dialog')) { return }
+  const row = [...document.querySelectorAll<HTMLElement>('.runtime-errors-page [data-error-action-id]')].find(el => el.dataset.errorActionId === id)
+  row?.querySelector<HTMLButtonElement>('button:not([disabled])')?.focus()
+}
 
 const current = ref<SystemErrorEvent | null>(null)
 const lastRefreshedAt = ref<Date | null>(null)
@@ -251,7 +270,11 @@ function closeDetail() {
 }
 
 watch(detailVisible, (visible) => { if (!visible) { clearDetail() } }, { flush: 'sync' })
-watch([() => userStore.token, canReadErrors, () => route.path], closeDetail, { flush: 'sync' })
+watch([() => userStore.token, canReadErrors, () => route.path], () => {
+  detailReturnId = undefined
+  detailReturnTrigger = null
+  closeDetail()
+}, { flush: 'sync' })
 onDeactivated(() => {
   overviewGeneration++
   overviewLoading.value = false
@@ -264,6 +287,10 @@ onBeforeUnmount(() => {
 
 async function openDetail(row: SystemErrorEvent) {
   if (!canReadErrors.value || route.path !== '/runtime-errors') { return }
+  if (!detailVisible.value) {
+    detailReturnId = String(row.id)
+    detailReturnTrigger = document.activeElement
+  }
   clearDetail()
   const generation = detailGeneration
   const controller = new AbortController()
@@ -338,7 +365,6 @@ function levelTagType(level: string) {
 <template>
   <MrrPageShell class="runtime-errors-page">
     <MrrPageHeader
-      eyebrow="Runtime Error Center"
       title="运行错误中心"
       description="集中查看后端 WARN / ERROR，按指纹合并重复事件，并通过错误编号、Request ID 关联接口访问日志。"
     >
@@ -353,7 +379,7 @@ function levelTagType(level: string) {
       </template>
     </MrrPageHeader>
 
-    <section class="mrr-metric-grid mrr-metric-grid--four" :aria-busy="overviewLoading" aria-label="运行错误概览">
+    <section class="mrr-metric-grid mrr-metric-grid--four mrr-metric-grid--mobile-compact" :aria-busy="overviewLoading" aria-label="运行错误概览">
       <MrrMetricCard icon="i-lucide:circle-x" label="ERROR 错误组" :value="overviewValue(overview.errorGroups)" value-tone="danger" action-label="点击仅看 ERROR 错误组" @activate="applyLevelFilter('ERROR')" />
       <MrrMetricCard icon="i-lucide:triangle-alert" label="WARN 错误组" :value="overviewValue(overview.warnGroups)" value-tone="warning" action-label="点击仅看 WARN 错误组" @activate="applyLevelFilter('WARN')" />
       <MrrMetricCard icon="i-lucide:activity" label="近24小时活跃错误组" :value="overviewValue(overview.recentOccurrences)" note="按最后发生时间统计" />
@@ -462,7 +488,7 @@ function levelTagType(level: string) {
         </el-table-column>
         <el-table-column label="操作" :width="detailActionColumnWidth" fixed="right" align="center">
           <template #default="{ row }">
-            <MrrTableActions :actions="detailActions" :max-inline="detailMaxInlineActions" @select="openDetail(row as SystemErrorEvent)" />
+            <MrrTableActions :data-error-action-id="String(row.id)" :actions="detailActions" :max-inline="detailMaxInlineActions" @select="openDetail(row as SystemErrorEvent)" />
           </template>
         </el-table-column>
       </el-table>
@@ -480,7 +506,7 @@ function levelTagType(level: string) {
       </template>
     </MrrDataTablePanel>
 
-    <el-dialog v-model="detailVisible" align-center title="运行错误详情" width="880px">
+    <el-dialog v-model="detailVisible" align-center title="运行错误详情" width="880px" @closed="restoreDetailFocus">
       <div v-if="current && canReadAccessLogs && current?.requestId" class="detail-links">
         <el-button size="small" @click="openAccessLog(current?.requestId)">
           查看访问记录

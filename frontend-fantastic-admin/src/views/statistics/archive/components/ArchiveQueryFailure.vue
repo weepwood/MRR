@@ -135,8 +135,8 @@ async function copyTrace() {
 .query-failure {
   display: grid;
   gap: var(--mrr-space-3);
-  padding: 12px;
-  background: var(--surface);
+  padding: var(--mrr-space-3);
+  background: var(--mrr-card);
   border: 1px solid var(--divider);
   border-radius: var(--mrr-radius-card);
 }
@@ -196,21 +196,21 @@ async function copyTrace() {
   margin: 0;
   font-size: 12px;
   line-height: 1.6;
-  color: var(--text-tertiary);
+  color: var(--mrr-muted-foreground);
   overflow-wrap: anywhere;
 }
 
 .query-failure-trace {
   display: grid;
-  gap: 4px;
+  gap: var(--mrr-space-1);
+  padding-top: var(--mrr-space-2);
+  border-top: 1px solid var(--mrr-border);
 }
 
 .trace-label {
-  font-size: 11px;
-  font-weight: 700;
-  color: var(--text-tertiary);
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
+  font-size: var(--mrr-font-size-xs);
+  font-weight: 500;
+  color: var(--mrr-muted-foreground);
 }
 
 .trace-field {

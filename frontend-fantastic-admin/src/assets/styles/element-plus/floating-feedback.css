@@ -9,23 +9,25 @@ body .el-popover.el-popper.mrr-light-popover {
   color: var(--mrr-popover-foreground);
   background: var(--mrr-popover);
   border: 1px solid var(--mrr-border);
-  border-radius: calc(var(--radius) - 2px);
-  box-shadow: 0 4px 6px -1px rgb(0 0 0 / 10%), 0 2px 4px -2px rgb(0 0 0 / 10%);
+  border-radius: var(--mrr-radius-lg);
+  box-shadow: var(--mrr-shadow-md);
 }
 
 body .el-popper.mrr-tooltip {
   z-index: 10000 !important;
   padding: 6px 12px;
-  font-size: 12px;
-  line-height: 16px;
+  font-size: var(--mrr-font-size-xs);
+  line-height: 1.5;
+  overflow-wrap: anywhere;
 }
 
 body .el-popover.el-popper.mrr-light-popover {
   width: max-content;
   min-width: min(288px, calc(100vw - 24px));
   padding: 16px;
-  font-size: 14px;
-  line-height: 21px;
+  font-size: var(--mrr-font-size-md);
+  line-height: 1.5;
+  overflow-wrap: anywhere;
 }
 
 .el-select__popper.el-popper,
@@ -175,4 +177,18 @@ body .el-date-table td.end-date .el-date-table-cell__text {
 
 body .el-date-table td.in-range .el-date-table-cell {
   background: var(--mrr-tone-primary-soft);
+}
+
+@media (pointer: coarse) {
+  body .el-select-dropdown__list:not(.el-vl__window) .el-select-dropdown__item,
+  body .el-dropdown__popper .el-dropdown-menu__item {
+    height: auto;
+    min-height: 44px;
+    line-height: 1.5;
+  }
+
+  body .el-select-dropdown__list:not(.el-vl__window) .el-select-dropdown__item {
+    display: flex;
+    align-items: center;
+  }
 }

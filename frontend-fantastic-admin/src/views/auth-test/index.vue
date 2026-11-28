@@ -34,7 +34,6 @@ function record(event: AuthTestHistoryEvent) {
 <template>
   <MrrPageShell class="auth-test-page">
     <MrrPageHeader
-      eyebrow="Authentication Playground"
       title="认证与外部访问测试台"
       description="测试内部 JWT、受保护 API、外部影像票据及 OSS 只读接口。外部票据模块会先检查后端配置，再引导生成并部署 HMAC Secret。"
     >

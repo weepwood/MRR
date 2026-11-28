@@ -149,7 +149,7 @@ onMounted(reloadAll)
     />
 
     <AppLoading v-else-if="summaryLoading && !summary" type="stats" />
-    <section v-if="summary" v-loading="summaryLoading" class="mrr-metric-grid mrr-metric-grid--four mrr-metric-grid--dense" aria-label="患者数据概况">
+    <section v-if="summary" v-loading="summaryLoading" class="mrr-metric-grid mrr-metric-grid--four mrr-metric-grid--dense mrr-metric-grid--mobile-compact" aria-label="患者数据概况">
       <MrrMetricCard
         icon="i-lucide:users-round"
         label="患者数据行"

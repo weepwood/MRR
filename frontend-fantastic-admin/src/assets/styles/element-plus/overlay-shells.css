@@ -44,11 +44,6 @@ body .el-dialog.mrr-dialog-shell.is-align-center {
   margin: auto;
 }
 
-body .el-dialog.mrr-dialog-shell.mrr-profile-dialog {
-  width: min(576px, 100%);
-  height: 500px;
-}
-
 body .el-dialog.mrr-dialog-shell.mrr-vscode-search {
   width: min(640px, 100%);
   background: var(--mrr-popover);
@@ -97,9 +92,10 @@ body .mrr-drawer-shell > .mrr-drawer-header {
   margin: 0;
   font-size: 18px;
   font-weight: 600;
-  line-height: 1;
+  line-height: 1.4;
   color: inherit;
   letter-spacing: -0.025em;
+  overflow-wrap: anywhere;
 }
 
 .mrr-drawer-heading .mrr-overlay-title {
@@ -110,8 +106,9 @@ body .mrr-drawer-shell > .mrr-drawer-header {
 .mrr-overlay-description {
   margin: 0;
   font-size: 14px;
-  line-height: 20px;
+  line-height: 1.5;
   color: hsl(var(--muted-foreground));
+  overflow-wrap: anywhere;
 }
 
 body .mrr-dialog-shell > .mrr-dialog-header-hidden {
@@ -135,7 +132,6 @@ body .mrr-dialog-shell > .mrr-dialog-body {
   min-height: 160px;
 }
 
-body .mrr-dialog-shell.mrr-profile-dialog > .mrr-dialog-body,
 body .mrr-dialog-shell.mrr-vscode-search > .mrr-dialog-body {
   min-height: 0;
   padding: 0;
@@ -231,6 +227,7 @@ body .el-dialog.mrr-dialog-shell.mrr-dialog-shell--business.is-align-center {
 
 body .el-dialog:not(.mrr-dialog-shell) > .el-dialog__header,
 body .mrr-dialog-shell--business > .mrr-dialog-header:not(.mrr-dialog-header-hidden) {
+  position: relative;
   box-sizing: border-box;
   display: flex;
   flex: 0 0 auto;
@@ -238,6 +235,7 @@ body .mrr-dialog-shell--business > .mrr-dialog-header:not(.mrr-dialog-header-hid
   justify-content: center;
   min-height: 56px;
   padding: var(--mrr-space-4) var(--mrr-space-5);
+  padding-inline-end: 52px;
   margin: 0;
   border-bottom: 1px solid var(--mrr-border);
 }
@@ -250,6 +248,7 @@ body .mrr-dialog-shell--business .mrr-overlay-title {
   line-height: 1.4;
   color: var(--mrr-card-foreground);
   letter-spacing: normal;
+  overflow-wrap: anywhere;
 }
 
 body .el-dialog:not(.mrr-dialog-shell) > .el-dialog__body,
@@ -283,12 +282,34 @@ body .mrr-dialog-shell--business > .mrr-overlay-footer > .el-button + .el-button
 
 body .el-dialog:not(.mrr-dialog-shell) .el-dialog__headerbtn,
 body .mrr-dialog-shell--business .el-dialog__headerbtn {
-  top: 14px;
+  position: absolute;
+  top: 50%;
   right: var(--mrr-space-4);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   width: 28px;
   height: 28px;
+  padding: 0;
+  margin: 0;
+  font-size: 16px;
+  line-height: 1;
   color: var(--mrr-muted-foreground);
   border-radius: var(--mrr-radius-sm);
+  opacity: 1;
+  transform: translateY(-50%);
+}
+
+body .el-dialog:not(.mrr-dialog-shell) .el-dialog__headerbtn .el-dialog__close,
+body .mrr-dialog-shell--business .el-dialog__headerbtn .el-dialog__close {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  font-size: 16px;
+  line-height: 1;
+  color: inherit;
 }
 
 body .el-dialog:not(.mrr-dialog-shell) .el-dialog__headerbtn:hover,
@@ -379,4 +400,46 @@ body .el-drawer.mrr-drawer-shell:not(.is-dragging) {
 body .mrr-dialog-mask.el-drawer-fade-enter-active,
 body .mrr-dialog-mask.el-drawer-fade-leave-active {
   transition: background-color var(--mrr-motion-overlay) var(--mrr-ease-out);
+}
+
+/* Custom dialog headers retain their appearance; only the close hit area grows on touch. */
+@media (pointer: coarse) {
+  body .mrr-dialog-shell .el-dialog__headerbtn,
+  body .mrr-drawer-shell .el-drawer__close-btn,
+  body .el-dialog:not(.mrr-dialog-shell) .el-dialog__headerbtn,
+  body .mrr-dialog-shell--business .el-dialog__headerbtn {
+    top: var(--mrr-space-2);
+    right: var(--mrr-space-2);
+    width: 44px;
+    height: 44px;
+  }
+
+  body .mrr-dialog-shell .mrr-overlay-title,
+  body .mrr-drawer-shell .mrr-overlay-title,
+  body .el-dialog:not(.mrr-dialog-shell) .el-dialog__title {
+    padding-right: var(--mrr-space-8);
+  }
+}
+
+/* Custom header slots share the same close-button exclusion zone as titles. */
+@media (max-width: 639px) {
+  body .el-dialog:not(.mrr-dialog-shell) > .el-dialog__header,
+  body .mrr-dialog-shell--business > .mrr-dialog-header:not(.mrr-dialog-header-hidden) {
+    padding-inline-end: 52px;
+  }
+}
+
+@media (pointer: coarse) {
+  body .el-dialog:not(.mrr-dialog-shell) .el-dialog__headerbtn,
+  body .mrr-dialog-shell--business .el-dialog__headerbtn {
+    top: 50%;
+    right: 6px;
+    width: 44px;
+    height: 44px;
+  }
+}
+
+body .mrr-dialog-shell--business > .mrr-dialog-header-hidden .el-dialog__headerbtn {
+  top: 8px;
+  transform: none;
 }

@@ -369,7 +369,6 @@ onUnmounted(pause)
 <template>
   <MrrPageShell class="monitoring-page">
     <MrrPageHeader
-      eyebrow="System & Database Monitor"
       title="系统与数据库监控"
       :description="refreshDescription"
     >

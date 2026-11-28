@@ -632,12 +632,11 @@ onMounted(loadData)
 <template>
   <MrrPageShell width="fluid">
     <MrrPageHeader
-      eyebrow="User Management"
       title="用户管理"
       description="管理系统账号、注册申请审核、角色、凭据状态、启停状态与最近登录信息。下方状态按当前页统计。"
     />
 
-    <section class="mrr-metric-grid mrr-metric-grid--four" aria-label="当前页账号状态" :aria-busy="loading" aria-live="polite">
+    <section class="mrr-metric-grid mrr-metric-grid--four mrr-metric-grid--mobile-compact" aria-label="当前页账号状态" :aria-busy="loading" aria-live="polite">
       <MrrMetricCard v-for="item in summaryCards" :key="item.label" v-bind="item" :value="hasMetricSnapshot ? item.value : '—'" />
     </section>
 

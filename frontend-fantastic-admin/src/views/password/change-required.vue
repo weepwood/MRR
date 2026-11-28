@@ -2,11 +2,13 @@
 /* eslint-disable antfu/if-newline, curly, vue/singleline-html-element-content-newline */
 import { ElMessage } from 'element-plus'
 import apiUser from '@/api/modules/user'
+import { useConfirmedLogout } from '@/composables/useConfirmedLogout'
 import ColorScheme from '@/layouts/components/Topbar/Toolbar/ColorScheme/index.vue'
 
 defineOptions({ name: 'PasswordChangeRequired' })
 
 const userStore = useUserStore()
+const { confirmLogout, logoutPending } = useConfirmedLogout()
 const loading = ref(false)
 const showCurrentPassword = ref(false)
 const showNewPassword = ref(false)
@@ -62,10 +64,6 @@ async function submit() {
   finally {
     loading.value = false
   }
-}
-
-async function logout() {
-  await userStore.logout()
 }
 </script>
 
@@ -146,7 +144,7 @@ async function logout() {
       </div>
 
       <div class="card-actions">
-        <el-button @click="logout">退出登录</el-button>
+        <el-button :disabled="logoutPending" @click="confirmLogout()">退出登录</el-button>
         <el-button type="primary" :loading="loading" @click="submit">保存新密码并重新登录</el-button>
       </div>
     </section>

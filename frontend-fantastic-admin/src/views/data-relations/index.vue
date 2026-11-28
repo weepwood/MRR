@@ -29,6 +29,7 @@ import AppError from '@/components/AppError/index.vue'
 import AppLoading from '@/components/AppLoading/index.vue'
 import MrrFilterActionButton from '@/components/MrrFilterActionButton/index.vue'
 import MrrFilterBar from '@/components/MrrFilterBar/index.vue'
+import MrrIllustration from '@/components/MrrIllustration/index.vue'
 import MrrResizeHandle from '@/components/MrrResizeHandle/index.vue'
 import MrrSectionCard from '@/components/MrrSectionCard/index.vue'
 import MrrStatusTag from '@/components/MrrStatusTag/index.vue'
@@ -532,7 +533,7 @@ onMounted(() => {
   <MrrPageShell class="relation-workbench">
     <MrrPageHeader
       :title="archiveOnly ? '病案工作台' : '数据关系工作台'"
-      :eyebrow="archiveOnly ? 'Medical Records' : 'Data Governance'"
+
       :description="archiveOnly ? '按病案号、上架号或主档 ID 查找病案，集中核对患者、扫描影像、文件完整性及关联异常。' : '以 mr_archive 为中心查看统计、患者、扫描、装箱和迁移数据，发现缺失关联与字段冲突。关联检查、影像完整性观察与修复预览集中查看。'"
     >
       <template #actions>
@@ -708,6 +709,13 @@ onMounted(() => {
                   </el-tag>
                 </button>
               </div>
+              <el-button
+                v-if="relationDetail && !detailLoading && !detailError && selectedArchive?.id === relationDetail.archive.id && hasPermission('system:read') && hasPermission('record:read')"
+                class="archive-reader-shortcut"
+                @click="focusArchiveSection('images')"
+              >
+                定位影像核对
+              </el-button>
             </MrrSectionCard>
           </div>
 
@@ -801,10 +809,10 @@ onMounted(() => {
               />
 
               <nav v-if="archiveOnly" class="archive-section-nav" aria-label="病案详情分区">
-                <el-button v-if="hasPermission('record:read')" @click="focusArchiveSection('images')">
+                <el-button v-if="hasPermission('system:read') && hasPermission('record:read')" @click="focusArchiveSection('images')">
                   影像核对
                 </el-button>
-                <el-button v-if="hasPermission('record:read')" @click="focusArchiveSection('manifest')">
+                <el-button v-if="hasPermission('system:read') && hasPermission('record:read')" @click="focusArchiveSection('manifest')">
                   文件完整性
                 </el-button>
                 <el-button v-if="canRepair" @click="focusArchiveSection('repairs')">
@@ -817,7 +825,7 @@ onMounted(() => {
                   关联记录
                 </el-button>
               </nav>
-              <section v-if="archiveOnly && selectedArchive && hasPermission('record:read')" data-archive-section="images" tabindex="-1" aria-label="影像核对分区">
+              <section v-if="archiveOnly && selectedArchive && hasPermission('system:read') && hasPermission('record:read')" data-archive-section="images" tabindex="-1" aria-label="影像核对分区">
                 <ArchiveScanInspector :key="`scan-${selectedArchive.id}`" :archive-id="selectedArchive.id" />
               </section>
               <section v-if="selectedArchive && hasPermission('system:read') && hasPermission('record:read')" data-archive-section="manifest" tabindex="-1" aria-label="文件完整性分区">
@@ -894,7 +902,8 @@ onMounted(() => {
             </template>
             <MrrSectionCard v-else-if="archiveOnly && !searchLoading" class="archive-start-card" title="病案详情" description="选择病案后在此核对相关信息">
               <div class="archive-start-content" role="status">
-                <span class="archive-start-icon" aria-hidden="true"><FaIcon name="i-lucide:folder-search" /></span>
+                <MrrIllustration v-if="!searchError" :variant="searchCompleted && !searchResults.length ? 'search' : 'archive'" />
+                <span v-else class="archive-start-icon" aria-hidden="true"><FaIcon name="i-lucide:circle-alert" /></span>
                 <h3>{{ searchError ? '病案查询未完成' : searchCompleted && !searchResults.length ? '未找到匹配病案' : searchResults.length ? '请选择病案主档' : '开始病案核对' }}</h3>
                 <p>{{ searchError ? '请在检索区重试查询。' : searchCompleted && !searchResults.length ? '检查查询类型与原始编号，或换用其他编号重新查询。' : searchResults.length ? '从检索结果选择对应主档，核对其关联记录。' : '使用病案号、上架号或主档 ID 进行检索。选中病案后即可查看当前权限允许的内容。' }}</p>
                 <div v-if="!searchCompleted && !searchError" class="archive-start-capabilities" aria-label="核对内容">
@@ -909,7 +918,11 @@ onMounted(() => {
                 </el-button>
               </div>
             </MrrSectionCard>
-            <AppEmpty v-else-if="!archiveOnly && !searchLoading && !searchError && (!searchCompleted || searchResults.length)" icon="i-lucide:git-fork" description="查询并选择一份病案后查看跨表关系" />
+            <AppEmpty v-else-if="!archiveOnly && !searchLoading && !searchError && (!searchCompleted || searchResults.length)" description="查询并选择一份病案后查看跨表关系">
+              <template #illustration>
+                <MrrIllustration variant="relations" />
+              </template>
+            </AppEmpty>
           </div>
         </div>
       </el-tab-pane>
@@ -1284,6 +1297,24 @@ p {
   color: var(--el-text-color-secondary);
 }
 
+.archive-reader-shortcut {
+  display: none;
+}
+
+@media (max-width: 1050px) {
+  .archive-reader-shortcut {
+    display: flex;
+    width: 100%;
+    margin-top: var(--mrr-space-2);
+  }
+}
+
+@media (pointer: coarse) {
+  .archive-reader-shortcut {
+    min-height: 44px;
+  }
+}
+
 .archive-section-nav {
   display: flex;
   flex-wrap: wrap;
@@ -1524,6 +1555,24 @@ p {
   .relation-grid,
   .relation-count-grid {
     grid-template-columns: 1fr;
+  }
+
+  .archive-stack--workspace .relation-count-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: var(--mrr-space-2);
+  }
+
+  .archive-stack--workspace .relation-count-grid .mrr-stat-tile {
+    padding: var(--mrr-space-2) var(--mrr-space-3);
+  }
+
+  .archive-stack--workspace .relation-count-grid .mrr-stat-tile:last-child {
+    grid-column: 1 / -1;
+  }
+
+  .archive-stack--workspace .relation-count-grid .mrr-stat-tile__label {
+    overflow-wrap: anywhere;
+    white-space: normal;
   }
 
   .search-type {

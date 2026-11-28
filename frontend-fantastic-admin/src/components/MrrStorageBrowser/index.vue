@@ -4,6 +4,7 @@ import { ArrowLeft, ArrowUp, ChevronDown, ChevronRight, ChevronUp, Copy, File, F
 import { computed, nextTick, onBeforeUnmount, onDeactivated, onMounted, ref, watch } from 'vue'
 import AppEmpty from '@/components/AppEmpty/index.vue'
 import MrrCursorPagination from '@/components/MrrCursorPagination/index.vue'
+import MrrIllustration from '@/components/MrrIllustration/index.vue'
 import { Z_INDEX } from '@/constants/z-index'
 import { copyText as copyToClipboard } from '@/utils/copy-text'
 import { entryType, formatDate, formatFileSize, isImage } from './presentation'
@@ -416,7 +417,11 @@ onBeforeUnmount(() => {
               :description="!available ? unavailableText : keyword ? '当前页没有匹配的条目' : '此目录为空'"
               :action-text="available && keyword ? '清除筛选' : undefined"
               @action="filter = ''"
-            />
+            >
+              <template v-if="available" #illustration>
+                <MrrIllustration :variant="keyword ? 'search' : 'folder'" compact />
+              </template>
+            </AppEmpty>
           </div>
           <div v-else-if="mode === 'icons'" class="file-grid">
             <button

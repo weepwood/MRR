@@ -179,7 +179,7 @@ onBeforeUnmount(() => {
 
 .recent-lookups__list {
   display: grid;
-  gap: 2px;
+  gap: var(--mrr-space-1);
   align-content: start;
   padding: 0;
   margin: 0;
@@ -211,7 +211,7 @@ onBeforeUnmount(() => {
 
 .recent-lookups__item:focus-visible {
   outline: 2px solid var(--mrr-ring);
-  outline-offset: 2px;
+  outline-offset: -2px;
 }
 
 .recent-lookups__star {
@@ -222,15 +222,16 @@ onBeforeUnmount(() => {
 
 .recent-lookups__codes {
   display: flex;
+  flex-wrap: wrap;
   grid-column: 2;
   gap: var(--mrr-space-2);
   align-items: baseline;
   min-width: 0;
-  overflow: hidden;
-  white-space: nowrap;
+  overflow-wrap: anywhere;
 }
 
 .recent-lookups__code {
+  min-width: 0;
   font-family: var(--mrr-font-mono);
   font-size: var(--mrr-font-size-md);
   font-weight: 600;
@@ -272,10 +273,12 @@ onBeforeUnmount(() => {
 @media (max-width: 760px) {
   .recent-lookups__item {
     grid-template-columns: 16px minmax(0, 1fr) auto;
+    column-gap: var(--mrr-space-2);
   }
 
   .recent-lookups__time {
-    display: none;
+    grid-column: 2 / -1;
+    white-space: normal;
   }
 }
 </style>

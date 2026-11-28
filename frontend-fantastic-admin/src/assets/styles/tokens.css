@@ -349,3 +349,9 @@
  * border-radius 决定，corner-shape 只改变圆角内部的曲率。开关与排除规则集中
  * 放在那个文件里，令牌层不再参与形状决策。
  */
+
+/* A bounded startup font fallback remains stable until the next document load. */
+:root[data-mrr-startup-font="system"] {
+  --mrr-font-sans: inter, -apple-system, blinkmacsystemfont, "Segoe UI", "Microsoft YaHei", sans-serif;
+  --mrr-font-mono: ui-monospace, "SFMono-Regular", "Menlo", "Monaco", "Consolas", "Liberation Mono", "Microsoft YaHei", monospace;
+}

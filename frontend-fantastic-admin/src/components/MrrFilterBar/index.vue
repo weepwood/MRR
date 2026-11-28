@@ -1,6 +1,8 @@
 <script setup lang="ts">
 import { useElementSize } from '@vueuse/core'
-import { computed, ref, useId } from 'vue'
+import { computed, nextTick, onBeforeUnmount, onDeactivated, onMounted, ref, useId } from 'vue'
+import { advanceDisclosureSpring } from '@/utils/disclosure-spring'
+import { isMotionEnabled } from '@/utils/motion-preference'
 
 defineOptions({ name: 'MrrFilterBar' })
 
@@ -38,6 +40,92 @@ const fields = ref<HTMLElement>()
 const { width: fieldsWidth } = useElementSize(computed(() => props.layout === 'grid' ? fields.value : undefined))
 const advancedExpanded = ref(false)
 const advancedId = useId()
+const advancedVisible = ref(false)
+const advancedViewport = ref<HTMLElement>()
+const advancedContent = ref<HTMLElement>()
+let frame: number | undefined
+let generation = 0
+let last = 0
+let target = 0
+let state = { x: 0, v: 0 }
+
+function cancelFrame() {
+  if (frame !== undefined) { cancelAnimationFrame(frame) }
+  frame = undefined
+}
+
+function settleAdvanced() {
+  cancelFrame()
+  generation++
+  advancedVisible.value = advancedExpanded.value
+  state = { x: advancedExpanded.value ? advancedContent.value?.getBoundingClientRect().height ?? 0 : 0, v: 0 }
+  advancedViewport.value?.style.removeProperty('height')
+  advancedViewport.value?.style.removeProperty('overflow')
+}
+
+function drawAdvanced() {
+  if (advancedViewport.value) { advancedViewport.value.style.height = `${Math.max(0, state.x)}px` }
+}
+
+function tickAdvanced(time: number) {
+  frame = undefined
+  if (!advancedViewport.value || !isMotionEnabled()) {
+    settleAdvanced()
+    return
+  }
+  // A responsive reflow can change the natural target while opening.
+  if (advancedExpanded.value) { target = advancedContent.value?.getBoundingClientRect().height ?? target }
+  state = advanceDisclosureSpring(state, target, Math.max(0, time - last) / 1000)
+  last = time
+  drawAdvanced()
+  if (Math.abs(state.x - target) < 0.5 && Math.abs(state.v) < 4) {
+    settleAdvanced()
+    return
+  }
+  frame = requestAnimationFrame(tickAdvanced)
+}
+
+async function toggleAdvanced() {
+  const viewport = advancedViewport.value
+  const now = performance.now()
+  if (frame !== undefined) {
+    state = advanceDisclosureSpring(state, target, Math.max(0, now - last) / 1000)
+    // Start from the last painted height, inheriting the current analytic velocity.
+    state.x = viewport?.getBoundingClientRect().height ?? state.x
+  }
+  else {
+    state = { x: advancedVisible.value ? viewport?.getBoundingClientRect().height ?? 0 : 0, v: 0 }
+  }
+  cancelFrame()
+  const revision = ++generation
+  advancedExpanded.value = !advancedExpanded.value
+  if (!isMotionEnabled() || typeof requestAnimationFrame !== 'function') {
+    settleAdvanced()
+    return
+  }
+  advancedVisible.value = true
+  if (viewport) {
+    viewport.style.overflow = 'hidden'
+    drawAdvanced()
+  }
+  await nextTick()
+  if (revision !== generation || !advancedViewport.value || !advancedContent.value) { return }
+  target = advancedExpanded.value ? advancedContent.value.getBoundingClientRect().height : 0
+  advancedViewport.value.style.overflow = 'hidden'
+  drawAdvanced()
+  last = performance.now()
+  frame = requestAnimationFrame(tickAdvanced)
+}
+
+// Stop on navigation/unmount, pagehide and preference changes (checked in each frame).
+onMounted(() => window.addEventListener('pagehide', settleAdvanced))
+onDeactivated(settleAdvanced)
+onBeforeUnmount(() => {
+  generation++
+  cancelFrame()
+  window.removeEventListener('pagehide', settleAdvanced)
+})
+
 // Chrome 86 supports ResizeObserver, but not CSS container queries. Use actual
 // available width (sidebar/inspector included), not the browser viewport.
 const columns = computed(() => {
@@ -54,7 +142,7 @@ const columns = computed(() => {
     <div v-if="slots.actions || slots.advanced || slots.business" class="mrr-filter-bar__commands">
       <div v-if="slots.actions || slots.advanced" class="mrr-filter-bar__actions">
         <slot name="actions" />
-        <el-button v-if="slots.advanced" class="mrr-filter-bar__disclosure" native-type="button" :aria-controls="advancedId" :aria-expanded="advancedExpanded" @click="advancedExpanded = !advancedExpanded">
+        <el-button v-if="slots.advanced" class="mrr-filter-bar__disclosure" native-type="button" :aria-controls="advancedId" :aria-expanded="advancedExpanded" @click="toggleAdvanced">
           高级筛选<span v-if="props.advancedCount > 0">（已填写 {{ props.advancedCount }} 项）</span>
           <FaIcon :name="advancedExpanded ? 'i-lucide:chevron-up' : 'i-lucide:chevron-down'" aria-hidden="true" />
         </el-button>
@@ -63,8 +151,10 @@ const columns = computed(() => {
         <slot name="business" />
       </div>
     </div>
-    <div v-if="slots.advanced" v-show="advancedExpanded" :id="advancedId" class="mrr-filter-bar__advanced">
-      <slot name="advanced" />
+    <div v-if="slots.advanced" v-show="advancedVisible" ref="advancedViewport" class="mrr-filter-bar__advanced-viewport">
+      <div :id="advancedId" ref="advancedContent" class="mrr-filter-bar__advanced" :class="{ 'is-collapsing': !advancedExpanded }" :aria-hidden="!advancedExpanded">
+        <slot name="advanced" />
+      </div>
     </div>
     <p v-if="slots.advanced && props.appliedAdvancedCount !== undefined && (props.appliedAdvancedCount > 0 || props.advancedDirty)" class="mrr-filter-bar__summary" role="status">
       列表已应用 {{ props.appliedAdvancedCount }} 项高级条件<span v-if="props.advancedDirty"> · 当前高级条件与列表结果不同</span>
@@ -271,8 +361,18 @@ const columns = computed(() => {
   border-color: var(--mrr-tone-primary-border);
 }
 
-.mrr-filter-bar__advanced {
+.mrr-filter-bar__advanced-viewport {
   flex: 1 1 100%;
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+}
+
+.mrr-filter-bar__advanced.is-collapsing {
+  visibility: hidden;
+}
+
+.mrr-filter-bar__advanced {
   padding-top: var(--mrr-space-3);
   border-top: 1px solid var(--mrr-shell-divider);
 }

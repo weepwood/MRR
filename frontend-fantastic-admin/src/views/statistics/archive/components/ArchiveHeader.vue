@@ -299,8 +299,8 @@ defineExpose({ openAllHistory })
             </div>
           </el-popover>
 
-          <el-dialog v-model="allHistoryVisible" align-center width="min(560px, calc(100vw - 32px))">
-            <template #header>
+          <el-dialog v-model="allHistoryVisible" title="查询记录" align-center width="560px">
+            <div class="history-dialog-content">
               <div class="history-dialog-header">
                 <div class="history-filter-actions" role="group" aria-label="筛选搜索记录">
                   <button
@@ -334,45 +334,45 @@ defineExpose({ openAllHistory })
                   </button>
                 </div>
               </div>
-            </template>
-            <Transition name="history-tab" mode="out-in">
-              <div v-if="activeHistory.length" :key="historyStatus" class="history-list history-dialog-list">
-                <div v-for="item in activeHistory" :key="item.key" class="history-item">
-                  <button class="history-main" type="button" @click="selectHistory(item)">
-                    <span class="history-main-content">
-                      <span class="history-primary">{{ item.bah ? `病案号 ${item.bah}` : `上架号 ${item.sjh}` }}</span>
-                      <span v-if="item.status === 'success'" class="history-secondary">上架号 {{ item.sjh || '-' }} · {{ item.imageCount }} 张影像 · 查询 {{ item.queryCount }} 次</span>
-                      <span v-else class="history-secondary">{{ item.failureReason }}</span>
-                    </span>
-                    <span class="history-main-trailing">
-                      <span v-if="item.status === 'failure'" class="history-status">查询失败</span>
-                      <time :datetime="new Date(item.searchedAt).toISOString()">{{ formatHistoryTime(item.searchedAt) }}</time>
-                    </span>
-                  </button>
-                  <button
-                    type="button"
-                    class="history-favorite-button"
-                    :class="{ 'is-favorite': item.favorite }"
-                    :aria-pressed="item.favorite"
-                    :aria-label="`${item.favorite ? '取消收藏' : '收藏'}${item.bah ? `病案号 ${item.bah}` : `上架号 ${item.sjh}`}`"
-                    @click.stop="toggleHistoryFavorite(item, $event)"
-                  >
-                    <span class="bookmark" aria-hidden="true">
-                      <svg class="bookmark-icon" viewBox="0 0 32 32" focusable="false">
-                        <path d="M27 4v27a1 1 0 0 1-1.625.781L16 24.281l-9.375 7.5A1 1 0 0 1 5 31V4a4 4 0 0 1 4-4h14a4 4 0 0 1 4 4z" />
-                      </svg>
-                    </span>
-                  </button>
+              <div class="history-dialog-results">
+                <div v-if="activeHistory.length" :key="historyStatus" class="history-list history-dialog-list">
+                  <div v-for="item in activeHistory" :key="item.key" class="history-item">
+                    <button class="history-main" type="button" @click="selectHistory(item)">
+                      <span class="history-main-content">
+                        <span class="history-primary">{{ item.bah ? `病案号 ${item.bah}` : `上架号 ${item.sjh}` }}</span>
+                        <span v-if="item.status === 'success'" class="history-secondary">上架号 {{ item.sjh || '-' }} · {{ item.imageCount }} 张影像 · 查询 {{ item.queryCount }} 次</span>
+                        <span v-else class="history-secondary">{{ item.failureReason }}</span>
+                      </span>
+                      <span class="history-main-trailing">
+                        <span v-if="item.status === 'failure'" class="history-status">查询失败</span>
+                        <time :datetime="new Date(item.searchedAt).toISOString()">{{ formatHistoryTime(item.searchedAt) }}</time>
+                      </span>
+                    </button>
+                    <button
+                      type="button"
+                      class="history-favorite-button"
+                      :class="{ 'is-favorite': item.favorite }"
+                      :aria-pressed="item.favorite"
+                      :aria-label="`${item.favorite ? '取消收藏' : '收藏'}${item.bah ? `病案号 ${item.bah}` : `上架号 ${item.sjh}`}`"
+                      @click.stop="toggleHistoryFavorite(item, $event)"
+                    >
+                      <span class="bookmark" aria-hidden="true">
+                        <svg class="bookmark-icon" viewBox="0 0 32 32" focusable="false">
+                          <path d="M27 4v27a1 1 0 0 1-1.625.781L16 24.281l-9.375 7.5A1 1 0 0 1 5 31V4a4 4 0 0 1 4-4h14a4 4 0 0 1 4 4z" />
+                        </svg>
+                      </span>
+                    </button>
+                  </div>
                 </div>
+                <AppEmpty
+                  v-else
+                  :key="historyStatus"
+                  size="compact"
+                  :icon="historyStatus === 'favorite' ? 'i-lucide:bookmark' : 'i-lucide:history'"
+                  :description="historyStatus === 'success' ? '暂无成功查询记录' : historyStatus === 'failure' ? '暂无失败查询记录' : '暂无收藏病案'"
+                />
               </div>
-              <AppEmpty
-                v-else
-                :key="historyStatus"
-                size="compact"
-                :icon="historyStatus === 'favorite' ? 'i-lucide:bookmark' : 'i-lucide:history'"
-                :description="historyStatus === 'success' ? '暂无成功查询记录' : historyStatus === 'failure' ? '暂无失败查询记录' : '暂无收藏病案'"
-              />
-            </Transition>
+            </div>
           </el-dialog>
         </template>
       </div>
@@ -505,7 +505,25 @@ defineExpose({ openAllHistory })
   display: grid;
   gap: var(--mrr-space-3);
   width: 100%;
-  padding-right: 16px;
+}
+
+.history-dialog-content {
+  display: grid;
+  gap: var(--mrr-space-3);
+  min-width: 0;
+}
+
+.history-dialog-results {
+  min-height: 144px;
+}
+
+.history-dialog-results :deep(.app-empty) {
+  min-height: 144px;
+  animation: none;
+}
+
+.history-dialog-results :deep(.app-empty-icon) {
+  animation: none;
 }
 
 .history-filter-button {
@@ -529,23 +547,6 @@ defineExpose({ openAllHistory })
     color var(--mrr-motion-feedback) var(--mrr-ease-out),
     background-color var(--mrr-motion-feedback) var(--mrr-ease-out),
     box-shadow var(--mrr-motion-feedback) var(--mrr-ease-out);
-}
-
-.history-tab-enter-active,
-.history-tab-leave-active {
-  transition:
-    opacity var(--mrr-motion-move) var(--mrr-ease-out),
-    transform var(--mrr-motion-move) var(--mrr-ease-out);
-}
-
-.history-tab-enter-from {
-  opacity: 0;
-  transform: var(--mrr-motion-decor, translateY(6px));
-}
-
-.history-tab-leave-to {
-  opacity: 0;
-  transform: var(--mrr-motion-decor, translateY(-4px));
 }
 
 .history-filter-button:hover {

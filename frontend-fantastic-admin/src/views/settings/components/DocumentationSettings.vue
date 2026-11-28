@@ -103,11 +103,11 @@ function openPreview(value: string) {
 <style scoped>
 .setting-section {
   display: grid;
-  gap: var(--mrr-space-5);
+  gap: var(--mrr-page-gap);
 }
 
 .setting-group {
-  padding: var(--mrr-space-5);
+  padding: var(--mrr-card-inset);
   background: var(--mrr-card);
   border: 1px solid var(--mrr-border);
   border-radius: var(--mrr-radius-card);
@@ -119,23 +119,34 @@ function openPreview(value: string) {
 
 .documentation-list {
   display: grid;
-  gap: var(--mrr-space-4);
-  margin-top: var(--mrr-space-5);
+  gap: 0;
+  margin-top: var(--mrr-space-4);
 }
 
 .documentation-item {
-  padding: var(--mrr-space-4);
-  background: var(--mrr-muted);
-  border: 1px solid var(--mrr-border);
-  border-radius: var(--mrr-radius-lg);
+  min-width: 0;
+  padding: var(--mrr-space-4) 0;
+  border-top: 1px solid var(--mrr-border);
+}
+
+.documentation-item:last-child {
+  padding-bottom: 0;
 }
 
 .item-heading {
   display: flex;
   gap: var(--mrr-space-4);
-  align-items: flex-start;
+  align-items: center;
   justify-content: space-between;
   margin-bottom: var(--mrr-space-3);
+}
+
+.item-heading > div {
+  min-width: 0;
+}
+
+.item-heading :deep(.el-button) {
+  flex-shrink: 0;
 }
 
 .item-heading strong {
@@ -144,7 +155,7 @@ function openPreview(value: string) {
 }
 
 .item-heading p {
-  margin: 4px 0 0;
+  margin: var(--mrr-space-1) 0 0;
   font-size: var(--mrr-font-size-xs);
   line-height: 1.6;
   color: var(--mrr-muted-foreground);
@@ -156,7 +167,7 @@ function openPreview(value: string) {
 
 .deployment-note {
   display: grid;
-  gap: var(--mrr-space-3);
+  gap: 0;
 }
 
 .deployment-note .group-heading {
@@ -166,11 +177,10 @@ function openPreview(value: string) {
 .route-example {
   display: grid;
   grid-template-columns: 120px minmax(0, 1fr);
-  gap: 4px var(--mrr-space-3);
-  align-items: center;
-  padding: var(--mrr-space-3);
-  border: 1px solid var(--mrr-border);
-  border-radius: var(--mrr-radius-lg);
+  gap: var(--mrr-space-1) var(--mrr-space-3);
+  align-items: baseline;
+  padding: var(--mrr-space-3) 0;
+  border-top: 1px solid var(--mrr-border);
 }
 
 .route-example span {
@@ -179,18 +189,29 @@ function openPreview(value: string) {
   color: var(--mrr-muted-foreground);
 }
 
+.route-example:last-child {
+  padding-bottom: 0;
+}
+
 .route-example code {
+  min-width: 0;
+  font-family: var(--mrr-font-mono);
+  font-size: var(--mrr-font-size-sm);
   overflow-wrap: anywhere;
 }
 
 .route-example small {
   grid-column: 2;
+  font-size: var(--mrr-font-size-xs);
+  line-height: 1.6;
   color: var(--mrr-muted-foreground);
 }
 
 @media (max-width: 680px) {
   .item-heading {
     flex-direction: column;
+    gap: var(--mrr-space-2);
+    align-items: flex-start;
   }
 
   .route-example {

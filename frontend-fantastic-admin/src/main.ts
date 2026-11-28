@@ -6,6 +6,7 @@ import { installClipboardFallback } from '@/utils/clipboard-fallback'
 import directive from '@/utils/directive'
 import { installPwa } from '@/utils/pwa'
 import { installRequestErrorFallback } from '@/utils/request-error-notification'
+import { waitForStartupVisualReady } from '@/utils/startup-visual-ready'
 import { installSystemSettingsRuntime } from '@/utils/system-settings'
 import { installUiSettingsSync } from '@/utils/ui-settings-sync'
 
@@ -33,6 +34,7 @@ async function installOfflineIcons() {
 }
 
 function startApplication() {
+  window.dispatchEvent(new CustomEvent('mrr:startup-stage', { detail: 'runtime' }))
   installSystemSettingsRuntime()
   installArchiveUserIdRouting(router)
   installClipboardFallback()
@@ -40,14 +42,21 @@ function startApplication() {
 
   const app = createApp(App)
   app.use(pinia)
+  window.dispatchEvent(new CustomEvent('mrr:startup-stage', { detail: 'route' }))
   app.use(router)
   app.use(uiProvider)
   installArchiveWatermark(router, pinia)
   // 全局界面外观与"其他"菜单外链改为服务端保存，登录后拉取并应用。
-  installUiSettingsSync(router, pinia)
+  const initialAppearance = installUiSettingsSync(router, pinia)
   directive(app)
   installRequestErrorFallback(app)
   app.mount('#app')
+  void router.isReady().then(async () => {
+    await nextTick()
+    window.dispatchEvent(new CustomEvent('mrr:startup-stage', { detail: 'visual' }))
+    await waitForStartupVisualReady(initialAppearance)
+    window.dispatchEvent(new Event('mrr:app-ready'))
+  }).catch(() => window.dispatchEvent(new Event('mrr:app-startup-failed')))
   installPwa()
 
   // 离线 Iconify 集合体积较大，仅在配置启用时才加载运行时与图标数据，
@@ -58,5 +67,22 @@ function startApplication() {
 }
 
 if (!window.__MRR_APP_STARTUP_BLOCKED__) {
-  startApplication()
+  // Run after production polyfills, not before them. Do not reject old UA strings.
+  const required = typeof Promise === 'function'
+    && typeof fetch === 'function'
+    && typeof URL === 'function'
+    && typeof TextEncoder === 'function'
+    && typeof Array.prototype.at === 'function'
+    && typeof Array.prototype.findLast === 'function'
+  if (!required) {
+    window.dispatchEvent(new Event('mrr:app-incompatible'))
+  }
+  else {
+    try {
+      startApplication()
+    }
+    catch {
+      window.dispatchEvent(new Event('mrr:app-startup-failed'))
+    }
+  }
 }

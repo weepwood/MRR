@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import type { ScanRecord } from '@/api/types'
-import type { MetricTone } from '@/components/MrrMetricCard/types'
 import type { MrrTableAction } from '@/components/MrrTableActions/types'
 import { useMediaQuery } from '@vueuse/core'
 import { computed, onBeforeUnmount, onMounted, reactive, ref } from 'vue'
@@ -134,29 +133,6 @@ function jumpToPage(target: number) {
 onMounted(loadData)
 onBeforeUnmount(() => { version++ })
 
-const summaryCards = computed(() => [
-  {
-    label: '当前批记录数',
-    value: list.value.length,
-    icon: 'i-lucide:files',
-    tone: 'blue' as MetricTone,
-  },
-  {
-    // 「读取方式：游标」是常量枚举，占指标卡位会稀释真指标的信噪比；
-    // 读取方式说明保留在筛选栏下方提示文案中。
-    label: '已选记录',
-    value: selectedRows.value.length,
-    icon: 'i-lucide:list-checks',
-    tone: 'violet' as MetricTone,
-  },
-  {
-    label: '当前批次',
-    value: pageNum.value,
-    icon: 'i-lucide:layers',
-    tone: 'amber' as MetricTone,
-  },
-])
-
 function handleSelectionChange(rows: ScanRecord[]) {
   selectedRows.value = rows
 }
@@ -207,14 +183,8 @@ function typeLabel(value: unknown) {
   <MrrPageShell class="records-page">
     <MrrPageHeader
       title="记录管理"
-      eyebrow="Scan Records"
-      description="默认按完整编号检索，也可选择兼容包含查询；结果分批加载，不做同步总数统计。"
+      description="按完整编号检索，支持兼容包含查询；按批次读取，不统计全量总数。"
     />
-
-    <!-- 三项都是当前批次的状态量，用紧凑摘要即可；原来三张 110px 高的指标卡把结果表推到首屏以下。 -->
-    <section class="mrr-metric-grid mrr-metric-grid--dense" aria-label="当前批次概况">
-      <MrrMetricCard v-for="item in summaryCards" :key="item.label" v-bind="item" />
-    </section>
 
     <MrrDataTablePanel title="扫描记录" description="按条件查询，结果按批次读取。">
       <template #filters>
@@ -281,6 +251,10 @@ function typeLabel(value: unknown) {
           原来放在页头，与勾选框隔着指标卡和筛选栏，用户不容易把两者联系起来。
         -->
         <div class="records-batch-actions">
+          <div class="records-batch-summary" role="status" aria-label="当前批次概况">
+            <span>第 <strong>{{ pageNum }}</strong> 批</span>
+            <span>当前批 <strong>{{ list.length }}</strong> 条</span>
+          </div>
           <span class="records-batch-actions__count" role="status">已选 {{ selectedRows.length }} 条</span>
           <el-button type="primary" :loading="downloading" :disabled="loading || !selectedRows.length" @click="handleBatchDownload">
             <FaIcon name="i-lucide:download" aria-hidden="true" />
@@ -433,10 +407,24 @@ function typeLabel(value: unknown) {
 
 .records-batch-actions {
   display: flex;
-  flex: 0 0 auto;
+  flex: 0 1 auto;
   flex-wrap: wrap;
   gap: var(--mrr-space-3);
   align-items: center;
+}
+
+.records-batch-summary {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--mrr-space-2);
+  align-items: baseline;
+  font-size: var(--mrr-font-size-sm);
+  font-variant-numeric: tabular-nums;
+  color: var(--mrr-muted-foreground);
+}
+
+.records-batch-summary strong {
+  color: var(--mrr-foreground);
 }
 
 .records-batch-actions__count {

@@ -12,7 +12,6 @@ import TurboConsole from 'unplugin-turbo-console/vite'
 import { ElementPlusResolver } from 'unplugin-vue-components/resolvers'
 import components from 'unplugin-vue-components/vite'
 import { loadEnv } from 'vite'
-import AppLoading from 'vite-plugin-app-loading'
 import Archiver from 'vite-plugin-archiver'
 import banner from 'vite-plugin-banner'
 import { compression } from 'vite-plugin-compression2'
@@ -132,8 +131,6 @@ export default function createVitePlugins(mode: string, isBuild = false) {
     viteEnv.VITE_BUILD_ARCHIVE && Archiver({
       archiveType: viteEnv.VITE_BUILD_ARCHIVE,
     }),
-
-    AppLoading('loading.html'),
 
     // https://github.com/unplugin/unplugin-turbo-console
     TurboConsole(),

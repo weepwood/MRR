@@ -210,7 +210,6 @@ onMounted(loadPermissions)
 <template>
   <MrrPageShell class="permissions-page">
     <MrrPageHeader
-      eyebrow="Permission Management"
       title="权限管理"
       description="按业务范围分配查看、编辑、输出和系统管理权限。修改保存后，用户重新登录生效。"
     >

@@ -152,6 +152,15 @@ onBeforeUnmount(() => {
     visibility: hidden;
     transform: translateX(calc((var(--g-main-sidebar-width) + var(--g-sub-sidebar-width)) * -1));
 
+    /* Only the mobile drawer needs delayed visibility when closing.
+     * Desktop must not inherit a visibility delay when the startup shell is removed. */
+    transition:
+      width var(--mrr-motion-move) var(--mrr-ease-out),
+      top var(--mrr-motion-move) var(--mrr-ease-out),
+      transform var(--mrr-motion-overlay) var(--mrr-ease-out),
+      box-shadow var(--mrr-motion-overlay) var(--mrr-ease-out),
+      visibility 0s linear var(--mrr-motion-overlay);
+
     &.show {
       visibility: visible;
       box-shadow: 20px 0 48px rgb(15 23 42 / 18%);
@@ -208,14 +217,13 @@ onBeforeUnmount(() => {
 
     /*
      * 桌面端收起/展开属于「展开收起」，走 move 档；移动端抽屉属于浮层，走 overlay 档。
-     * visibility 参与过渡（0 时长 + overlay 延迟），收起时元素先滑出再退出无障碍树。
+     * visibility 的延迟仅用于上方移动端抽屉，不参与桌面首屏揭示。
      */
     transition:
       width var(--mrr-motion-move) var(--mrr-ease-out),
       top var(--mrr-motion-move) var(--mrr-ease-out),
       transform var(--mrr-motion-overlay) var(--mrr-ease-out),
-      box-shadow var(--mrr-motion-overlay) var(--mrr-ease-out),
-      visibility 0s linear var(--mrr-motion-overlay);
+      box-shadow var(--mrr-motion-overlay) var(--mrr-ease-out);
   }
 
   .main-sidebar-container:not(.main-sidebar-leave-active) + .sub-sidebar-container {

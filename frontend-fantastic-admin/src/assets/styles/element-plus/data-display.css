@@ -47,6 +47,8 @@ body .el-table {
   --el-table-row-hover-bg-color: color-mix(in srgb, var(--mrr-muted) 72%, var(--mrr-card));
   --el-table-border-color: var(--mrr-border);
   --el-table-current-row-bg-color: var(--mrr-tone-primary-soft);
+  --el-table-fixed-left-column: inset 6px 0 6px -6px var(--mrr-border-strong);
+  --el-table-fixed-right-column: inset -6px 0 6px -6px var(--mrr-border-strong);
 
   font-size: var(--mrr-font-size-sm);
 
@@ -56,10 +58,16 @@ body .el-table {
   background: var(--mrr-card);
 }
 
-/* Dark stripe uses the same cool semantic surface, including fixed cells.
+/* Subtle stripe uses the same semantic surface, including fixed cells.
  * No changes to column widths, selection priority or pagination. */
-html.dark body .el-table {
+body .el-table {
   --el-fill-color-lighter: var(--mrr-table-stripe-bg);
+}
+
+@supports (color: color-mix(in srgb, #000 50%, #fff)) {
+  body .el-table {
+    --el-fill-color-lighter: color-mix(in srgb, var(--mrr-table-stripe-bg) 55%, var(--mrr-card));
+  }
 }
 
 /*

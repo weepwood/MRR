@@ -60,7 +60,10 @@ export function installArchiveWatermark(router: Router, pinia: Pinia): void {
     watermarkElement.dataset.archiveWatermark = 'true'
     Object.assign(watermarkElement.style, {
       position: 'fixed',
-      inset: '0',
+      top: '0',
+      right: '0',
+      bottom: '0',
+      left: '0',
       zIndex: WATERMARK_Z_INDEX,
       pointerEvents: 'none',
       backgroundRepeat: 'repeat',

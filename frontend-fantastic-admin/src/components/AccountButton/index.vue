@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import type { HTMLAttributes } from 'vue'
+import { useConfirmedLogout } from '@/composables/useConfirmedLogout'
 import { cn } from '@/utils'
 import Profile from './profile.vue'
 
@@ -7,7 +8,7 @@ const props = withDefaults(defineProps<{
   onlyAvatar?: boolean
   dropdownAlign?: 'start' | 'center' | 'end'
   dropdownSide?: 'left' | 'right' | 'top' | 'bottom'
-  buttonVariant?: 'secondary' | 'ghost'
+  buttonVariant?: 'secondary' | 'ghost' | 'sidebar'
   class?: HTMLAttributes['class']
 }>(), {
   dropdownAlign: 'end',
@@ -19,6 +20,7 @@ const router = useRouter()
 
 const settingsStore = useSettingsStore()
 const userStore = useUserStore()
+const { confirmLogout, logoutPending } = useConfirmedLogout()
 
 const isProfileShow = ref(false)
 const menuOpen = ref(false)
@@ -45,13 +47,13 @@ function closeOnEscape(event: KeyboardEvent) {
       }, props.class)"
     >
       <el-avatar :src="userStore.avatar" class="mrr-account-avatar" :class="{ 'mrr-account-avatar--fill': onlyAvatar }">
-        <FaIcon name="i-lucide:user-round" class="size-6 text-[var(--text-secondary)]" />
+        <FaIcon name="i-lucide:user-round" class="size-6 text-[var(--text-secondary)]" :class="{ 'account-sidebar-glyph': buttonVariant === 'sidebar' }" />
       </el-avatar>
       <div v-if="!onlyAvatar" class="min-w-0 flex-center-between flex-1 gap-2">
         <div class="flex-1 truncate text-start">
           {{ userStore.account }}
         </div>
-        <FaIcon name="i-lucide:chevrons-up-down" class="size-4 shrink-0 text-[var(--text-secondary)]" />
+        <FaIcon name="i-lucide:chevrons-up-down" class="account-trigger-chevron size-4 shrink-0 text-[var(--text-secondary)]" />
       </div>
     </el-button>
     <template #dropdown>
@@ -86,7 +88,7 @@ function closeOnEscape(event: KeyboardEvent) {
         <li role="separator" class="mrr-account-separator" />
         <el-dropdown-item
           class="account-logout min-h-9 cursor-pointer gap-2.5 px-2.5 text-[var(--color-danger)] focus:bg-[var(--mrr-navigation-hover)] focus:text-[var(--color-danger)]"
-          @click="userStore.logout(settingsStore.settings.home.fullPath)"
+          :disabled="logoutPending" @click="confirmLogout(settingsStore.settings.home.fullPath)"
         >
           <FaIcon name="i-lucide:log-out" class="size-4 shrink-0" />
           退出登录
@@ -94,7 +96,7 @@ function closeOnEscape(event: KeyboardEvent) {
       </el-dropdown-menu>
     </template>
   </el-dropdown>
-  <MrrDialog v-model="isProfileShow" title="个人设置" appearance="custom" align-center :header="false" :footer="false" :close-on-click-overlay="false" :close-on-press-escape="false" class="mrr-profile-dialog overflow-hidden" content-class="min-h-full p-0 flex">
+  <MrrDialog v-model="isProfileShow" title="个人设置" width="460px" align-center :footer="false" :close-on-click-overlay="false" :close-on-press-escape="false" class="mrr-profile-dialog">
     <Profile />
   </MrrDialog>
 </template>
@@ -102,6 +104,46 @@ function closeOnEscape(event: KeyboardEvent) {
 <style scoped>
 .account-trigger[data-state="open"] {
   background: var(--mrr-navigation-active);
+}
+
+/* Expanded single sidebar only: a quiet account row, not a toolbar button. */
+.el-button.mrr-migrated-toolbar.account-trigger.is-text[data-variant="sidebar"] {
+  width: 100%;
+  height: calc(var(--g-toolbar-height) - 8px);
+  min-height: calc(var(--g-toolbar-height) - 8px);
+  padding: 0 var(--mrr-space-2);
+  font-size: var(--mrr-font-size-sm);
+  font-weight: 500;
+  color: var(--text-primary);
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: var(--mrr-radius-lg);
+  box-shadow: none;
+}
+
+.el-button.mrr-migrated-toolbar.account-trigger.is-text[data-variant="sidebar"]:not(.is-disabled):hover,
+.el-button.mrr-migrated-toolbar.account-trigger.is-text[data-variant="sidebar"][data-state="open"] {
+  background: var(--mrr-navigation-hover);
+  border-color: transparent;
+}
+
+.account-trigger[data-variant="sidebar"] :deep(.mrr-account-avatar) {
+  --el-avatar-size: 28px;
+
+  background: var(--mrr-muted);
+  border-radius: var(--mrr-radius-lg);
+}
+
+.account-trigger[data-variant="sidebar"] :deep(.account-sidebar-glyph) {
+  width: 20px;
+  height: 20px;
+  font-size: 20px;
+}
+
+.account-trigger[data-variant="sidebar"] :deep(.account-trigger-chevron) {
+  width: 14px;
+  height: 14px;
+  font-size: 14px;
 }
 
 .account-name {
